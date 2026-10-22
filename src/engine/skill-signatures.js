@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
 import { SIGNATURES as KNIGHT } from './sig-knight.js';
 import { SIGNATURES as MAGE } from './sig-mage.js';
-import { SIGNATURES as ROGUE } from './sig-rogue.js';
+import { SIGNATURES as ROGUE, PRELUDES as ROGUE_PRELUDES } from './sig-rogue.js';
 import { SIGNATURES as BARBARIAN } from './sig-barbarian.js';
 
 /**
@@ -64,6 +64,9 @@ const RANGER = {
       _e.copy(o).addScaledVector(f, d); const t = d / SPEED;
       impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 2.2, JADE, .3, { angle: .785, grow: .4, delay: t });
       impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.6, JADE, .32, { grow: 1, delay: t });
+      // 관통점: 화살 진행에 수직으로 그어지는 꿰뚫음 자국 + 바닥 가시 매듭(꿰인 자리가 남는다).
+      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 2.2, JADE, .34, { angle: (impact._screenAngle?.(f) ?? 0) + 1.5708, stretch: 1.2, grow: .9, delay: t });
+      if (!lite) impact.mark(_e, JADE, { radius: 1.1, life: .6, style: MARK_STYLE.thorn, angle: d * .4, delay: t });
     }
   },
   // 일제 사격: 실제 세 발(±0.24rad)과 같은 방향으로 바닥에 세 갈래 대시 궤적이 뚜렷이 갈라지고,
@@ -84,7 +87,7 @@ const RANGER = {
     const { impact, f, player, lite } = ctx; const o = _a.copy(player.pos).setY(.6);
     _d.set(-f.x, 0, -f.z);
     _b.copy(player.pos).setY(.08);
-    rail(impact, _b, _d, 0, 5.1, 1.7, JADE, { width: .42, speed: 8, life: .55, style: BEAM_STYLE.gale });
+    rail(impact, _b, _d, 0, 5.1, 1.7, JADE, { width: .6, speed: 8, life: .6, style: BEAM_STYLE.gale });
     for (let i = 0; i < 4; i++) {
       const t = i * .14; _e.copy(player.pos).addScaledVector(_d, 8 * t * .85);
       impact.mark(_e, i % 2 ? JADE : JADE_HOT, { radius: 1.5 + i * .3, life: .5, style: MARK_STYLE.compass, angle: i * .7, delay: t });
@@ -116,7 +119,7 @@ const RANGER = {
   ranger_quickshot(ctx) {
     const { impact, f, player } = ctx; const SPEED = 28, AIM = 6.5;
     _b.copy(player.pos).addScaledVector(f, AIM);
-    impact.mark(_b, JADE_HOT, { radius: 1.8, life: .8, style: MARK_STYLE.reticle });
+    impact.mark(_b, JADE_HOT, { radius: 2.2, life: .85, style: MARK_STYLE.reticle });
     impact.mark(_b, JADE, { radius: 1.1, life: .5, style: MARK_STYLE.thorn, delay: .24 + AIM / SPEED });
     impact.mark(_b, JADE, { radius: 2.5, life: .65, style: MARK_STYLE.reticle, angle: .785, delay: .06 });
     const o = bow(ctx, _a);
@@ -126,7 +129,9 @@ const RANGER = {
       impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .9 + i * .25, JADE_HOT, .09, { angle: .3, grow: .5, delay: d });
       impact._emit(IMPACT_KIND.ring, _b.x, .5, _b.z, 1.6 + i * .45, JADE, .28, { grow: 1, delay: d + AIM / SPEED });
       _e.copy(player.pos).setY(.08).addScaledVector(f, 1 + i * 1.7);
-      impact.beam(_e, f, 1.4, JADE, { width: .2, fade: .45, delay: d });
+      impact.beam(_e, f, 1.4, JADE, { width: .3, fade: .45, delay: d });
+      // 과녁 명중 박자마다 엇갈린 X 자(세 박자 = 세 획).
+      impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9, i === 2 ? JADE_HOT : JADE, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: d + AIM / SPEED });
     }
   },
   // 속박의 화살: 다섯 발 방향으로 바닥을 기는 덩굴 물결 대시(이끼빛) + 부채 + 앞으로 차례로 돋는 가시 매듭.
@@ -137,11 +142,11 @@ const RANGER = {
     for (let i = -2; i <= 2; i++) {
       if (lite && i % 2) continue;
       rotY(f, i * .18, _d);
-      rail(impact, _b, _d, 1, 10, 3, i ? MOSS : VINE, { width: .34, speed: 28, life: .7, style: BEAM_STYLE.vine });
+      rail(impact, _b, _d, 1, 10, 3, i ? MOSS : VINE, { width: .5, speed: 28, life: .75, style: BEAM_STYLE.vine });
     }
     for (let i = 0; i < 4; i++) {
       _e.copy(player.pos).addScaledVector(f, 2.6 + i * 2.2);
-      impact.mark(_e, VINE, { radius: 1 + i * .3, life: .65, style: MARK_STYLE.thorn, delay: .04 + i * .08, angle: i * .9 });
+      impact.mark(_e, VINE, { radius: 1.3 + i * .35, life: .75, style: MARK_STYLE.thorn, delay: .04 + i * .08, angle: i * .9 });
     }
   },
   // 질풍 사냥: 영웅 발밑에서 바깥으로 감겨 나가는 세 갈래 회오리 나선(쌍나선 바람 짧은 줄 15개, 안쪽부터 차례로) +
@@ -152,7 +157,7 @@ const RANGER = {
     for (let a = 0; a < arms; a++) for (let j = 0; j < 5; j++) {
       const ang = a * (Math.PI * 2 / arms) + j * .55, r = .9 + j * .62;
       _e.set(_b.x + Math.cos(ang) * r, .08, _b.z + Math.sin(ang) * r); _d.set(-Math.sin(ang), 0, Math.cos(ang));
-      impact.beam(_e, _d, .8 + j * .25, j % 2 ? JADE : JADE_HOT, { width: .2, style: BEAM_STYLE.gale, fade: .5, delay: j * .05 });
+      impact.beam(_e, _d, .9 + j * .3, j % 2 ? JADE : JADE_HOT, { width: .3, style: BEAM_STYLE.gale, fade: .6, delay: j * .05 });
     }
     for (let w = 0; w < 3; w++) {
       impact.mark(player.pos, JADE, { radius: 1.5 + w * .35, life: .4, style: MARK_STYLE.compass, angle: w * .9, delay: w * .12 });
@@ -184,6 +189,30 @@ const RANGER = {
       if (!lite) impact._emit(IMPACT_KIND.mark, _b.x, .06, _b.z, 2.6, JADE, .45, { stretch: MARK_STYLE.thorn, delay: hitT });
     }
   },
+};
+
+/**
+ * 궁극기 예비 표식: 궁극기는 시전 연출(ultCinematic) 동안 판정이 늦게 오므로, skills.js start 에서 바로 부르는 예비 표식이다.
+ * 시전 전부터 '어디로 무엇이 올지'가 보인다. 서명과 같은 인스턴스 층만 쓰고 Math.random 을 쓰지 않는다.
+ * @type {Record<string, (ctx: SigCtx) => void>}
+ */
+export const SKILL_PRELUDES = {
+  // 폭풍의 일곱 화살: 발밑 나침 고리가 조여들고, 일곱 갈래 방향으로 가는 바람 예고선이 깔리며, 둘레 바람이 활로 모인다.
+  ranger_tempest(ctx) {
+    const { impact, f, player, lite } = ctx;
+    impact.mark(player.pos, JADE, { radius: 4.2, life: 1.3, style: MARK_STYLE.compass, angle: yawOf(f) + .2 });
+    _b.copy(player.pos).setY(.08);
+    for (let i = -3; i <= 3; i++) {
+      rotY(f, i * .18, _d); _e.copy(_b).addScaledVector(_d, 1.2);
+      impact.beam(_e, _d, 6, i % 2 ? DEEP : JADE, { width: .16, style: BEAM_STYLE.gale, fade: 1.2 });
+    }
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 3.4;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .28, JADE_HOT, .5,
+        { vx: -Math.cos(a) * 6 - Math.sin(a) * 5, vy: 2, vz: -Math.sin(a) * 6 + Math.cos(a) * 5, stretch: 1, grow: 1, delay: (i % 4) * .15 });
+    }
+  },
+  ...ROGUE_PRELUDES,
 };
 
 /** 영웅별 서명 합본. 궁수는 이 파일, 나머지 영웅은 sig-<영웅>.js 가 맡는다. */

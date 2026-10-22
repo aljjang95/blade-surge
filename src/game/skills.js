@@ -5,6 +5,7 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
@@ -55,6 +56,12 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
       size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.ranger.life, visual: 'arrow', ...options });
   }
   audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
+}
+/** 궁극기 예비 표식: 시전 연출 동안 판정이 늦게 오므로 start 에서 바로 인스턴스 층 표식을 깐다(판정·난수 무관, 동작 줄이기 생략). */
+function skillPrelude(game, p, id) {
+  const impact = game.fx?.impact, fn = SKILL_PRELUDES[id];
+  if (!impact || !fn || game.app?.reducedMotion?.matches || typeof p.forward !== 'function') return;
+  try { fn({ fx: game.fx, impact, player: p, at: p.pos, f: p.forward(new THREE.Vector3()), lite: !!game.fx.lite, scale: 1 }); } catch (error) { console.warn('skill prelude', id, error); }
 }
 /** 암살자 그림자 파동: 노란 shockwave 원화에 보라를 곱하면 갈색이 돼서, 보라 소용돌이 원화(singularity)를 지면에 눕힌다.
  *  shockTex 와 같은 드로우콜 1·같은 밝기 감쇠(decorativeBurstGain)·Math.random 미사용. */
@@ -180,6 +187,7 @@ export const SKILLS = {
   },
   ranger_tempest: {
     dur: 1,
+    start(game, p) { skillPrelude(game, p, 'ranger_tempest'); },
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
@@ -549,7 +557,7 @@ export const SKILLS = {
   },
   thousand: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0xd0a0ff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0xd0a0ff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); },
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
