@@ -6,7 +6,7 @@
 
 Vite 6 / Three.js WebGL2 / React + R3F 일부 연출 / TypeScript / Cloudflare Workers Static Assets + Workers AI + Durable Objects; 공개 배포 D1 소유 잠금
 
-Worker는 ASSETS·AI·DIALOGUE_BUDGET·PARTIES 바인딩을 사용한다. 동행 생성·협동 상태를 포함하므로 서버 없는 정적 앱이라는 과거 설명은 폐기했다. 배포 컨트롤러는 D1 `apex-rsi`의 DEPLOY 소유 잠금을 공유하고 정확한 HEAD·live version·artifact·rollback·receipt를 검사한다. 토큰 경로는 vault 자식 주입 `apex-vault run cloudflare -- bun run deploy`, 기존 PC OAuth 경로는 명시 `node tools/deploy.mjs --auth=wrangler`다. Claude 클라우드 세션은 `apex cf -- node tools/deploy.mjs`(Cloudflare 호출은 apex 프록시, Workers 자산 업로드만 업로드 세션 JWT로 직접)다. 불명확한 원격 결과는 같은 HEAD·같은 인증 경로의 `--reconcile`로 확인한다. raw Wrangler upload나 lock steal은 배포 진입점이 아니다. 실제 유료 대화·광고·결제·Android 검증의 기존 범위는 유지한다.
+Worker는 ASSETS·AI·DIALOGUE_BUDGET·PARTIES·SOCIAL 바인딩과 D1 `COMMERCE_DB`를 사용한다. MMO 계정 API `/api/v1/*`(P1, `worker/v1/`)는 `V1_ENABLED=false` 기본 비활성이며 D1 마이그레이션 `worker/v1/migrations`와 시크릿 `SESSION_HMAC`이 필요하다([MMO_P1_IMPLEMENTATION.md](MMO_P1_IMPLEMENTATION.md)). 동행 생성·협동 상태를 포함하므로 서버 없는 정적 앱이라는 과거 설명은 폐기했다. 배포 컨트롤러는 D1 `apex-rsi`의 DEPLOY 소유 잠금을 공유하고 정확한 HEAD·live version·artifact·rollback·receipt를 검사한다. 토큰 경로는 vault 자식 주입 `apex-vault run cloudflare -- bun run deploy`, 기존 PC OAuth 경로는 명시 `node tools/deploy.mjs --auth=wrangler`다. Claude 클라우드 세션은 `apex cf -- node tools/deploy.mjs`(Cloudflare 호출은 apex 프록시, Workers 자산 업로드만 업로드 세션 JWT로 직접)다. 불명확한 원격 결과는 같은 HEAD·같은 인증 경로의 `--reconcile`로 확인한다. raw Wrangler upload나 lock steal은 배포 진입점이 아니다. 실제 유료 대화·광고·결제·Android 검증의 기존 범위는 유지한다.
 
 ## 최신 제품 계약
 
@@ -31,6 +31,7 @@ bun run check
 - `bun.lock`
 - `vite.config.js`
 - `worker/index.ts`
+- `worker/v1/router.ts`
 - `wrangler.jsonc`
 - `tools/deploy.mjs`
 - `tools/deploy-guard.mjs`
