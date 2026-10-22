@@ -106,15 +106,75 @@ test('오프라인에서 보관본이 없으면 RemoteAssetError 로 실패하�
   expect(calls.length).toBe(failed);   // 실패 직후 반복 호출은 네트워크를 다시 두드리지 않는다
 });
 
-test('일시 실패는 재시도로 복구하고, 호스트가 다른 빌드를 주면(해시 불일치) 쓰되 보관하지 않는다', async () => {
+test('일시 실패는 재시도로 복구하고, 호스트가 다른 빌드를 주면(해시 불일치) 실패로 처리해 쓰지도 보관하지도 않는다', async () => {
   const flaky = setup({ failures: 1 });
   await flaky.assets.init();
   expect((await flaky.assets.ensure(['/img/expansion/ember_vault.webp'])).failed).toEqual([]);
   const skew = setup({ served: { ...bodies, 'img/expansion/ember_vault.webp': 'DIFFERENT BUILD' } });
   await skew.assets.init();
-  expect((await skew.assets.ensure(['/img/expansion/ember_vault.webp'])).failed).toEqual([]);
-  expect(skew.assets.stats.hashMismatches).toBe(1);
+  expect((await skew.assets.ensure(['/img/expansion/ember_vault.webp'])).failed).toEqual(['img/expansion/ember_vault.webp']);
+  expect(skew.assets.stats.hashMismatches).toBe(3);   // 첫 시도 + 재시도 2회
+  expect(skew.assets.stats.failures).toBe(1);
   expect(skew.caches.cache.store.size).toBe(0);
+  expect(skew.urls.length).toBe(0);
+  await expect(skew.assets.readBuffer('/img/expansion/ember_vault.webp')).rejects.toBeInstanceOf(RemoteAssetError);
+});
+
+test('호스트가 사라진 remote 경로를 SPA 폴백(text/html 200)으로 돌려줘도 실패로 처리한다', async () => {
+  const fetchImpl = async (url: string) => (url === '/asset-manifest.json' ? new Response(JSON.stringify(manifest()))
+    : new Response('<!doctype html><title>app</title>', { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } }));
+  const caches = fakeCaches();
+  const assets = createRemoteAssets({ channel: 'googleplay', fetchImpl: fetchImpl as any, caches, origin: 'https://localhost', wait: async () => {}, urlApi: { createObjectURL: () => 'blob:x', revokeObjectURL() {} } });
+  await assets.init();
+  expect((await assets.ensure(['/img/encounters/forge_captain.webp'])).failed).toEqual(['img/encounters/forge_captain.webp']);
+  expect(assets.stats.htmlResponses).toBe(3);
+  expect(caches.cache.store.size).toBe(0);
+});
+
+test('보관본이 있지만 blob 이 아직 없으면 assetUrl 이 ensure 로 보관본을 읽는다(네트워크 없이)', async () => {
+  const caches = fakeCaches();
+  const first = setup({ caches }); await first.assets.init();
+  await first.assets.ensure(['/img/encounters/forge_captain.webp']);
+  const callsBefore = first.calls.length;
+  // 복원이 부팅 예산에 못 닿은 상황: 보관본 목록은 알지만 blob 은 없다.
+  const slow = Object.assign(Object.create(caches.cache), { match: async (url: string) => { await new Promise(resolve => setTimeout(resolve, 30)); return caches.cache.match(url); } });
+  const second = setup({ caches: { open: async () => slow } }); await second.assets.init({ restoreBudgetMs: 0 });
+  const url = second.assets.assetUrl('/img/encounters/forge_captain.webp');
+  expect(url.startsWith(HOST)).toBe(true);
+  await new Promise(resolve => setTimeout(resolve, 120));
+  expect(second.calls.length).toBe(0);
+  expect(second.assets.assetUrl('/img/encounters/forge_captain.webp').startsWith('blob:')).toBe(true);
+  expect(callsBefore).toBeGreaterThan(0);
+});
+
+test('낮은 우선순위(사전 내려받기)는 동시 1개만 쓰고 높은 우선순위 슬롯을 비워 둔다', async () => {
+  let active = 0, peakLow = 0; const release: (() => void)[] = [];
+  const fetchImpl = async (url: string) => {
+    if (url === '/asset-manifest.json') return new Response(JSON.stringify(manifest()));
+    active += 1; peakLow = Math.max(peakLow, active);
+    await new Promise<void>(resolve => release.push(resolve)); active -= 1;
+    const path = url.slice(HOST.length + 1).split('?')[0];
+    return new Response(bodies[path], { headers: { 'content-type': 'application/octet-stream' } });
+  };
+  const assets = createRemoteAssets({ channel: 'googleplay', fetchImpl: fetchImpl as any, caches: fakeCaches(), origin: 'https://localhost', wait: async () => {}, urlApi: { createObjectURL: () => 'blob:x', revokeObjectURL() {} } });
+  await assets.init();
+  const lowDone = assets.ensure(['/img/encounters/forge_captain.webp', '/bgm/regions/forge.ogg', '/img/expansion/ember_vault.webp'], { priority: 'low' });
+  await new Promise(resolve => setTimeout(resolve, 5));
+  expect(peakLow).toBe(1);
+  const high = assets.ensure(['/assets/hero_knight_t2-Ab12.glb']);   // 화면이 지금 필요한 파일은 낮은 우선순위가 밀려도 바로 받는다
+  await new Promise(resolve => setTimeout(resolve, 5));
+  expect(peakLow).toBe(2);
+  while (release.length || active) { release.shift()?.(); await new Promise(resolve => setTimeout(resolve, 2)); }
+  await Promise.all([lowDone, high]);
+});
+
+test('ensure 도 실패 직후 쉬는 경로는 다시 받지 않는다', async () => {
+  const { assets, calls } = setup({ failures: 3 });
+  await assets.init();
+  expect((await assets.ensure(['/img/expansion/ember_vault.webp'])).failed.length).toBe(1);
+  const n = calls.length;
+  expect((await assets.ensure(['/img/expansion/ember_vault.webp'])).failed.length).toBe(1);
+  expect(calls.length).toBe(n);
 });
 
 test('진행 표시: 받는 동안 active 이고 끝나면 꺼진다. 묶음 사전 내려받기는 보관된 파일을 건너뛴다', async () => {

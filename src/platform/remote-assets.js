@@ -40,9 +40,10 @@ export function createRemoteAssets(options = {}) {
   const cooling = new Map();          // 경로 -> 실패 후 암묵 재시도를 쉬는 시각(UI 가 URL 을 다시 물을 때마다 재시도하지 않게)
   const now = options.now ?? (() => Date.now());
   const listeners = new Set();
-  const stats = { cacheHits: 0, networkFetches: 0, failures: 0, fallbackHits: 0, hashMismatches: 0, restored: 0, pruned: 0 };
+  const stats = { cacheHits: 0, networkFetches: 0, failures: 0, fallbackHits: 0, hashMismatches: 0, htmlResponses: 0, restored: 0, pruned: 0 };
   const progress = { pendingFiles: 0, pendingBytes: 0, doneBytes: 0, totalBytes: 0, failed: 0 };
-  let queue = [], running = 0;
+  let queue = [], running = 0, runningLow = 0;
+  const LOW_SLOTS = options.lowSlots ?? 1;   // 사전 내려받기는 동시 이만큼만(나머지 슬롯은 화면이 지금 필요한 파일 몫)
 
   const notify = () => { for (const listener of listeners) { try { listener({ ...progress, active: progress.pendingFiles > 0 }); } catch { /* 표시 실패가 로딩을 막지 않는다 */ } } };
 
@@ -65,13 +66,13 @@ export function createRemoteAssets(options = {}) {
   function isRemote(input) { const n = enabled ? normalize(input) : null; return !!n && remote.has(n.path); }
 
   /** 동기 해석. remote 가 아니면 입력 그대로, 보관본이 있으면 blob URL, 없으면 호스트 URL(그리고 백그라운드로 보관 시작). */
-  function assetUrl(input) {
+  function assetUrl(input, { prefetch = true } = {}) {
     if (!enabled) return input;
     const n = normalize(input);
     if (!n || !remote.has(n.path)) return input;
     const blob = blobUrls.get(n.path);
     if (blob) return blob + n.fragment;
-    if (!cachedPaths.has(n.path) && !((cooling.get(n.path) || 0) > now())) void ensure([n.path]).catch(() => {});
+    if (prefetch && !inflight.has(n.path) && !((cooling.get(n.path) || 0) > now())) void ensure([n.path]).catch(() => {});
     return remoteUrl(n.path) + n.fragment;
   }
 
@@ -96,11 +97,15 @@ export function createRemoteAssets(options = {}) {
       try {
         const response = await fetchImpl(url, { mode: 'cors', credentials: 'omit', signal: controller?.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const type = response.headers?.get?.('content-type') || null;
+        // 정식 호스트는 사라진 경로를 SPA 폴백(index.html, 200)으로 돌려줄 수 있다. 이미지·곡·모델 자리에 HTML 이 오면 실패다.
+        if (/text\/html/i.test(type || '') && extOf(path) !== 'html') { stats.htmlResponses += 1; throw new Error('HTML response for a binary asset'); }
         const buffer = await response.arrayBuffer();
         stats.networkFetches += 1;
+        // 내용 해시가 매니페스트와 다르면 다른 빌드의 파일이거나 폴백 문서이므로 쓰지도 보관하지도 않고 실패로 센다(재시도 뒤 RemoteAssetError).
         const actual = await sha16(buffer);
-        if (actual && actual !== entry.h) { stats.hashMismatches += 1; console.warn(`remote asset hash mismatch (host serves another build): ${path}`); return { buffer, verified: false, type: response.headers?.get?.('content-type') || null }; }
-        return { buffer, verified: true, type: response.headers?.get?.('content-type') || null };
+        if (actual && actual !== entry.h) { stats.hashMismatches += 1; throw new Error(`hash mismatch (host serves another build): ${path}`); }
+        return { buffer, type };
       } catch (error) { last = error; }
       finally { if (timer) clearTimeout(timer); }
       if (attempt < retries) await wait(700 * (attempt + 1) ** 2);
@@ -126,7 +131,8 @@ export function createRemoteAssets(options = {}) {
     const entry = remote.get(path);
     const job = (async () => {
       const hit = await fromCache(path);
-      if (hit) {
+      if (hit && /text\/html/i.test(hit.headers?.get?.('content-type') || '') && extOf(path) !== 'html') { try { await (await openCache())?.delete(cacheKey(path)); } catch { /* 다음에 다시 치운다 */ } cachedPaths.delete(path); }
+      else if (hit) {
         const buffer = await hit.arrayBuffer();
         stats.cacheHits += 1; cachedPaths.add(path);
         makeBlobUrl(path, buffer, hit.headers?.get?.('content-type'));
@@ -134,11 +140,9 @@ export function createRemoteAssets(options = {}) {
       }
       progress.pendingFiles += 1; progress.pendingBytes += entry.b; progress.totalBytes += entry.b; notify();
       try {
-        const { buffer, verified, type } = await download(path);
-        if (verified) {
-          const store = await openCache();
-          if (store) { try { await store.put(cacheKey(path), new Response(buffer.slice(0), { status: 200, headers: { 'content-type': mimeFor(path, type), 'content-length': String(buffer.byteLength) } })); cachedPaths.add(path); } catch { /* 저장 공간 부족이어도 이번 세션은 쓴다 */ } }
-        }
+        const { buffer, type } = await download(path);
+        const store = await openCache();
+        if (store) { try { await store.put(cacheKey(path), new Response(buffer.slice(0), { status: 200, headers: { 'content-type': mimeFor(path, type), 'content-length': String(buffer.byteLength) } })); cachedPaths.add(path); } catch { /* 저장 공간 부족이어도 이번 세션은 쓴다 */ } }
         makeBlobUrl(path, buffer, type);
         return buffer;
       } catch (error) { stats.failures += 1; progress.failed += 1; cooling.set(path, now() + 30000); throw error; }
@@ -150,13 +154,16 @@ export function createRemoteAssets(options = {}) {
   }
 
   function pump() {
-    while (running < concurrency && queue.length) {
-      const task = queue.shift(); running += 1;
-      fetchOne(task.path).then(task.resolve, task.reject).finally(() => { running -= 1; pump(); });
+    while (running < concurrency) {
+      const index = queue.findIndex((task) => !task.low || runningLow < LOW_SLOTS);
+      if (index < 0) break;
+      const [task] = queue.splice(index, 1); running += 1; if (task.low) runningLow += 1;
+      fetchOne(task.path).then(task.resolve, task.reject).finally(() => { running -= 1; if (task.low) runningLow -= 1; pump(); });
     }
   }
   const schedule = (path, priority) => new Promise((resolve, reject) => {
-    const task = { path, resolve, reject };
+    if (priority === 'high') for (const queued of queue) if (queued.path === path) queued.low = false;
+    const task = { path, resolve, reject, low: priority === 'low' };
     if (priority === 'high') queue.unshift(task); else queue.push(task);
     pump();
   });
@@ -165,7 +172,12 @@ export function createRemoteAssets(options = {}) {
   async function ensure(inputs, { priority = 'high' } = {}) {
     const paths = [...new Set((Array.isArray(inputs) ? inputs : [inputs]).map((input) => normalize(input)?.path).filter((path) => path && remote.has(path)))];
     const failed = [];
-    if (enabled) await Promise.all(paths.map((path) => (cachedPaths.has(path) && (blobUrls.has(path) || extOf(path) === 'glb') ? Promise.resolve() : schedule(path, priority).catch(() => { failed.push(path); }))));
+    if (enabled) await Promise.all(paths.map((path) => {
+      if (cachedPaths.has(path) && (blobUrls.has(path) || extOf(path) === 'glb')) return Promise.resolve();
+      // 최근에 실패한 경로는 쉬는 동안 다시 부르지 않는다(실패로만 보고). 읽기 요청(readBuffer)은 로더가 자체 폴백을 쓰므로 쉬지 않는다.
+      if (!inflight.has(path) && (cooling.get(path) || 0) > now()) { failed.push(path); return Promise.resolve(); }
+      return schedule(path, priority).catch(() => { failed.push(path); });
+    }));
     return { requested: paths.length, failed };
   }
 
