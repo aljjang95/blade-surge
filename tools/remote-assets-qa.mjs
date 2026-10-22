@@ -29,6 +29,9 @@ const headerRules = [];
 }
 const headersFor = (pathname) => Object.assign({}, ...headerRules.filter((rule) => rule.re.test(pathname)).map((rule) => rule.headers));
 
+// 로비 진입 때 백그라운드로 받는 첫 보스 곡 묶음(early-music)만 부팅·1-1 구간의 허용 호스트 요청이다(화면·모델·일러스트는 전부 core 여야 한다).
+const EARLY = new Set(['/bgm/regions/boss.ogg', '/bgm/expansion/flow-combat.mp3']);
+const unexpectedHost = () => log.host.filter((r) => !EARLY.has(r.path.split('?')[0]));
 const log = { local: [], host: [], hostOffline: false, hostDelay: 0, bad: [] };
 async function serve(route, root, label, request) {
   const url = new URL(request.url());
@@ -117,7 +120,7 @@ try {
   check('스트리밍이 켜지고(googleplay 빌드) 매니페스트를 읽었다', aBoot?.enabled === true, aBoot);
   const apkFetchedRemote = log.local.filter((r) => /^\/(bgm\/regions\/(forge|frost|tide|crown|homecoming|arena)|assets\/(hero_.*_t[23]|avatar_)|video\/)/.test(r.path));
   check('부팅 중 APK 쪽에는 remote 파일을 한 번도 요청하지 않았다', apkFetchedRemote.length === 0, apkFetchedRemote.slice(0, 3));
-  check('부팅 중 정식 호스트 요청이 없다(첫 화면은 전부 core)', log.host.length === 0, log.host.map((r) => r.path.split('?')[0]));
+  check('부팅 중 정식 호스트 요청이 없다(첫 화면은 전부 core)', unexpectedHost().length === 0, unexpectedHost().map((r) => r.path.split('?')[0]));
   await a.shot('01-lobby');
   await openMenuTab(a, 'stage'); await a.page.waitForTimeout(600);
   await a.shot('02-campaign-1');
@@ -129,7 +132,7 @@ try {
   await a.shot('04-battle-1-1');
   const aBattle = await a.page.evaluate(() => ({ active: window.app.battle.active, kills: window.app.battle.kills }));
   check('1-1 전투가 열리고 진행된다', aBattle.active, aBattle);
-  check('1-1 까지 정식 호스트 요청과 로컬 404 가 없다', log.host.length === 0 && log.bad.length === 0, { ...snapshot(), host: log.host.map((r) => r.path.split('?')[0]), bad: log.bad.slice(0, 3) });
+  check('1-1 까지 정식 호스트 요청과 로컬 404 가 없다', unexpectedHost().length === 0 && log.bad.length === 0, { ...snapshot(), host: log.host.map((r) => r.path.split('?')[0]), bad: log.bad.slice(0, 3) });
   await a.page.evaluate(() => { window.app.testPause = false; window.app.toLobby(); });
   await a.page.waitForFunction(() => window.app.mode === 'lobby', null, { timeout: 60000 });
   report.phases.A = { bootMs, requests: snapshot(), stats: await a.stats(), hostPaths: log.host.map((r) => r.path.split('?')[0] + ' ' + r.status) };
