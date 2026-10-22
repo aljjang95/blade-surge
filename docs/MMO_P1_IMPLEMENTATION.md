@@ -27,7 +27,7 @@
 
 ## 3. 코디네이터 적용 순서 (운영)
 
-1. D1 `blade-surge-commerce-production`에 `worker/v1/migrations/0001_accounts.sql` 적용(`wrangler d1 migrations apply`, `migrations_dir` 설정 추가됨). 재적용 무해.
+1. D1 `blade-surge-commerce-production`에 `worker/v1/migrations/0001_accounts.sql`·`0002_rate_limits.sql`(스키마 v2, 레이트 카운터) 적용(`wrangler d1 migrations apply`, `migrations_dir` 설정 추가됨). 재적용 무해.
 2. 시크릿 `SESSION_HMAC`(32자 이상) 등록. 없으면 v1은 `session-unavailable` 503으로 닫힌다.
 3. `V1_ENABLED=true`로 그림자 모드 개방(M1). `V1_SERVER_AUTHORITY_PERCENT`는 **0 유지**(아래 4장 이전에는 컷오버 금지).
 4. 그림자 기간 `parity_log`(match=0)·`audit_flags`·`legacy_saves.report` 모니터링.
@@ -37,7 +37,9 @@
 - **서버 권위 컷오버 전 필수**: 원정·마을·여정·장인·소탕(`sweep`)·부활 보석 차감·가챠·보석 상점은 아직 `/cmd`가 없다. 서버 권위 계정에서는 이 경로의 로컬 변화가 서버 문서 적용 때 사라질 수 있어(서버 소유 필드만 덮어쓰도록 줄였지만 골드·보석 등은 서버 소유) 컷오버 비율은 0으로 둔다. 가챠는 P2-D, 원정은 `expedition-economy.js`의 `Date.now()` 직접 호출을 주입 시계로 바꾸는 작업이 선행.
 - 강화(서버 난수)는 클라이언트가 먼저 로컬 결과를 보이고 서버 결과로 정정한다(서버 권위 모드). 연출 후 공개 흐름으로 바꾸는 UI 작업이 필요.
 - 서버 권위 모드에서 패배 판은 패배 정산을 보내지만, 앱 종료로 정산되지 않은 티켓은 2시간 뒤 만료(에너지 환불 없음). 프리페치 티켓(오프라인 3장)은 미구현.
-- 레이트 리밋 `RateGate` DO(세션 10/시간 등)는 미구현. 새 계정 생성은 소셜 허브 예약 경로만 거친다.
+- 레이트 리밋은 D1 고정 창 카운터(`worker/v1/limit.ts`, `v1_rate`)로 구현: `/auth/session` IP당 60/10분(새 계정 생성 30/시간), `/auth/recover` 20/10분, `/import` 20/시간(모두 `cf-connecting-ip` 해시), 계정별 `/cmd` 240/분·`/runs/start` 30/분. 초과 시 429 + `Retry-After`. 별도 바인딩이 없어 폴백 걱정이 없고, 수치는 베타 지표로 보정한다. 0002 미적용이면 `schemaReady`가 닫혀 전체 503이다.
+- 별·풀클리어는 서버가 `hpLost`·`revives`·`roomsCleared`로 계산한다(`serverRating`). 방 배치는 클라이언트가 만들어 서버가 총 방 수를 모르므로 기준 방 수를 개연성 표의 `maxRooms - 4`로 대신한다. 후속: 방 배치를 티켓 `seed`에서 결정적으로 만들면 총 방 수를 서버가 알 수 있다.
+- 임포트·스냅샷 정화 상한의 경과일은 세이브의 `created`가 아니라 서버 계정 생성 시각 기준이다. 오래 해 온 로컬 세이브를 방금 만든 계정에 올리면 상한(1일치)으로 절삭되고 원문은 `legacy_saves`에 보존된다(복원 절차는 운영 몫). 정당한 장기 플레이어의 절삭이 베타 지표에서 문제로 보이면 상한식을 조정한다.
 - Play Games·토스 연동은 501(`provider-unavailable`). 소셜 허브의 구글 연동 테이블과 v1 `account_links`는 아직 별개다.
 - 네이티브 Keystore 보안 저장소는 `src/net/secure-storage.js` 인터페이스 뒤에 붙일 예정(현재 localStorage + IndexedDB).
 - 정화 상한·T1 표의 수치는 "가정" + 헤드리스 보정값이다. 베타 지표로 다시 맞춘다.
