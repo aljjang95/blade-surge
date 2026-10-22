@@ -42,13 +42,14 @@ export function zigzag(impact, from, to, segs, jitter, color, { width = .08, del
   return used;
 }
 
-/** 바닥에서 솟는 얼음 가시: 비스듬히 선 짧은 광선. 흰 섬광 대신 진한 하늘색 결정 실루엣. */
+/** 바닥에서 솟는 얼음 가시: 비스듬히 선 짧은 얼음 광선(BEAM_STYLE.ice). 흰 심 광선은 바닥 위에서 흰 방사선으로 읽혔다(h1c):
+ *  심은 옅은 하늘색, 가장자리는 진한 청, 끝으로 갈수록 가늘어지는 결정 실루엣. */
 function iceSpikes(impact, c, n, r0, r1, color, { delay = 0, h = 1.4, width = .1, fade = .45, phase = 0 } = {}) {
   for (let i = 0; i < n; i++) {
     const a = phase + (i / n) * TAU + (impact.rng.next() - .5) * .5, r = r0 + (r1 - r0) * impact.rng.next();
     _a.set(c.x + Math.cos(a) * r, .02, c.z + Math.sin(a) * r);
     _b.set(Math.cos(a) * .45, 1, Math.sin(a) * .45);
-    impact.beam(_a, _b, h * (.7 + impact.rng.next() * .6), color, { speed: 14, width, delay, fade });
+    impact.beam(_a, _b, h * (.7 + impact.rng.next() * .6), color, { speed: 14, width, delay, fade, style: BEAM_STYLE.ice });
   }
 }
 
@@ -104,7 +105,7 @@ function frostSpiral(impact, c, arms, segs, r0, r1, phase, { width = .4, fade = 
       const a0 = base + t0 * 1.7, a1 = base + t1 * 1.7, q0 = r0 + (r1 - r0) * t0, q1 = r0 + (r1 - r0) * t1;
       _p0.set(c.x + Math.cos(a0) * q0, .08, c.z + Math.sin(a0) * q0);
       _d.set(c.x + Math.cos(a1) * q1 - _p0.x, 0, c.z + Math.sin(a1) * q1 - _p0.z);
-      impact.beam(_p0, _d, _d.length(), k % 2 ? C.frostMid : C.frostDeep, { width: width * (1.25 - t0 * .5), fade, delay: delay + k * .03 });
+      impact.beam(_p0, _d, _d.length(), k % 2 ? C.frostMid : C.frostDeep, { width: width * (1.25 - t0 * .5), fade, delay: delay + k * .03, style: BEAM_STYLE.ice });
     }
   }
 }
