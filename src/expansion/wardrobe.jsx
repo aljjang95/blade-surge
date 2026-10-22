@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
 import { applyLook } from '../game/look.js';
 import { HEROES } from '../data/heroes.js';
-import { ITEM_BY_ID } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_INFO, rarityRank } from '../data/items.js';
 
 /** 실제로 보이는 스킨과 착용 무기의 대기 동작 범위를 생성 시 한 번 측정한다. */
 export function measureWardrobeFrame(instance) {
@@ -159,15 +159,19 @@ function WardrobeView({ app, id, equipment, avatarId, view, previewLabel }) {
   }, []);
   const armor = ITEM_BY_ID[equipment.armor?.id];
   const close = zoom >= 1.8;
+  // 발밑 원판은 장착한 장비 중 최고 등급색. 아바타 미리보기·시착 중에도 장비 등급은 그대로 보인다.
+  const top = ['weapon', 'armor', 'ring', 'boots'].map(slot => ITEM_BY_ID[equipment[slot]?.id]).filter(Boolean).sort((a, b) => rarityRank(b.rarity) - rarityRank(a.rarity))[0];
+  const ground = top && top.rarity !== 'N' ? RARITY_INFO[top.rarity].color : null;
   return <div className="wardrobe-view"><h3>{HEROES[id].name} · 착용 모습</h3>
     <div className="wardrobe-canvas" ref={hostRef}><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced||covered?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
       <FitCamera frame={frame} zoom={zoom}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} avatarId={avatarId} yaw={yaw} reduced={reduced} onFit={setFrame}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
+      {ground && <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.015,0]}><ringGeometry args={[1.08,1.25,64]}/><meshBasicMaterial color={ground} transparent opacity={.85} toneMapped={false}/></mesh>}
     </Canvas>{!frame && <p className="wardrobe-loading" role="status">착용 모습을 불러오는 중</p>}
     {previewLabel && <span className="wardrobe-badge">{previewLabel}</span>}</div>
     <div className="wardrobe-controls"><button aria-label="착용 모습 왼쪽 회전" onClick={()=>setYaw(yaw-Math.PI/4)}>↶</button><button onClick={()=>setYaw(0)}>정면</button><button aria-label="착용 모습 오른쪽 회전" onClick={()=>setYaw(yaw+Math.PI/4)}>↷</button><button aria-label={close?'전신 보기':'상반신 확대'} aria-pressed={close} onClick={()=>setZoom(close?1:WARDROBE_ZOOM_CLOSE)}>{close?'전신':'상반신'}</button></div>
-    <p className="wardrobe-caption">{armor?armor.name:'기본 의상'}</p>
+    <p className="wardrobe-caption">{avatarId?'아바타 착용 · 장비 성능 유지':(armor?armor.name:'기본 의상')}{top&&<b style={{color:RARITY_INFO[top.rarity].color}}> · {RARITY_INFO[top.rarity].name}</b>}</p>
   </div>;
 }
 
