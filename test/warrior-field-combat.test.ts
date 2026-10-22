@@ -14,6 +14,9 @@ test('마무리 준비 중 회피·피격 취소는 예약된 몰이를 종료�
     expect(target.pos.toArray()).toEqual(before.toArray());expect(target.gatherT).toBe(time);
     f.game.paused=false;
     if(cancel==='dodge')p.dodge(new Vector3(1,0,0));else p.hurt(20,{kb:6});
+    // 강타 피격은 짧은 정지(FEEL.hitstop.base.received)를 건다. 정지 프레임은 시뮬레이션을 멈추므로 정지가 끝난 첫 진행 프레임에서 확인한다.
+    if(cancel==='hurt')expect(f.game.timeCtl.stop).toBeGreaterThan(0);
+    for(let i=0;i<30&&f.game.timeCtl.stop>0;i++){const at=target.pos.clone();stepCombatFlow(f,1/60);expect(target.pos.toArray()).toEqual(at.toArray());}
     stepCombatFlow(f,1/60);
     expect(target.gatherT).toBe(0);expect(target.gatherWindupOwner).toBeNull();
     expect(target.pos.toArray()).toEqual(before.toArray());

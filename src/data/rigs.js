@@ -6,7 +6,8 @@
 export const RIGS = {
   library: {
     idle: 'idle', idleCombat: 'idle', walk: 'walk', run: 'run', back: 'walk',
-    hit: ['hit'], death: ['death'], spawn: 'spawn', dodge: 'run',
+    // hitHeavy: 강타·치명타·마무리 피격 전용(선택 클립). 없으면 Actor.A 가 hit 으로 폴백한다(난수 소비 없음).
+    hit: ['hit'], hitHeavy: 'hitHeavy', death: ['death'], spawn: 'spawn', dodge: 'run',
     attack: ['attack', 'attack2'], attack2: 'attack2', attackHeavy: ['attackHeavy', 'attack'],
     attackSpin: ['attackSpin', 'attackHeavy', 'attack'], attackJump: ['attackJump', 'attackHeavy', 'attack'],
     cast: ['cast', 'attack'], summon: ['summon', 'roar', 'cast', 'attack'], raise: ['raise', 'cast', 'attack'], dash: 'run',
@@ -16,7 +17,7 @@ export const RIGS = {
   kaykit: {
     idle: 'Idle', idleCombat: 'Idle_Combat',
     walk: 'Walking_D_Skeletons', run: 'Running_A', back: 'Walking_Backwards',
-    hit: ['Hit_A', 'Hit_B'], death: ['Death_A', 'Death_B'],
+    hit: ['Hit_A', 'Hit_B'], hitHeavy: 'Hit_B', death: ['Death_A', 'Death_B'],
     spawn: 'Spawn_Ground', dodge: 'Dodge_Backward',
     attack: '1H_Melee_Attack_Slice_Horizontal',
     attackHeavy: '1H_Melee_Attack_Chop', attackSpin: '2H_Melee_Attack_Spin',
@@ -28,7 +29,7 @@ export const RIGS = {
   big: {
     idle: 'Idle', idleCombat: 'Idle',
     walk: 'Walk', run: 'Run', back: 'Walk',
-    hit: ['HitReact'], death: ['Death'],
+    hit: ['HitReact'], hitHeavy: 'HitReact', death: ['Death'],
     spawn: null, dodge: 'Jump',
     attack: 'Punch', attackHeavy: 'Weapon', attackSpin: 'Weapon',
     attackJump: 'Jump', cast: 'Punch', summon: 'Weapon', raise: 'Weapon', dash: 'Run',
@@ -38,7 +39,7 @@ export const RIGS = {
   blob: {
     idle: 'Idle', idleCombat: 'Idle',
     walk: 'Walk', run: 'Walk', back: 'Walk',
-    hit: ['HitRecieve'], death: ['Death'],
+    hit: ['HitRecieve'], hitHeavy: 'HitRecieve', death: ['Death'],
     spawn: null, dodge: 'Jump',
     attack: 'Bite_Front', attackHeavy: 'Bite_Front', attackSpin: 'Jump',
     attackJump: 'Jump', cast: 'Bite_Front', summon: 'Jump', raise: 'Jump', dash: 'Jump',
@@ -48,7 +49,7 @@ export const RIGS = {
   flying: {
     idle: 'Flying_Idle', idleCombat: 'Flying_Idle',
     walk: 'Fast_Flying', run: 'Fast_Flying', back: 'Fast_Flying',
-    hit: ['HitReact'], death: ['Death'],
+    hit: ['HitReact'], hitHeavy: 'HitReact', death: ['Death'],
     spawn: null, dodge: 'Fast_Flying',
     attack: 'Punch', attackHeavy: 'Headbutt', attackSpin: 'Headbutt',
     attackJump: 'Headbutt', cast: 'Punch', summon: 'Punch', raise: 'Punch', dash: 'Fast_Flying',

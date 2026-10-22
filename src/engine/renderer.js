@@ -16,6 +16,7 @@ import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
 import { setDeviceMaxAnisotropy } from './texture-sampling.js';
 import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
+import { FEEL, cameraKick } from '../game/feel.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -157,6 +158,7 @@ const LOBBY_GRADE = gradeFor('lobby');
 const GRADE_CHANNELS = Object.freeze(['cool', 'warm', 'lift', 'region']);
 const _rimDir = new THREE.Vector3();
 const _tintTarget = new THREE.Color();
+const _kickDir = new THREE.Vector3();
 
 /** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
 export const CAMERA_PRESETS = {
@@ -235,7 +237,7 @@ export class Renderer {
     this.rimLight = new THREE.DirectionalLight(0xb4d6ff, RIM_INTENSITY);
     this.scene.add(this.rimLight, this.rimLight.target);
     this._gradeKey = 'default'; this._grade = gradeFor('default'); this._gradeTarget = gradeFor('default');
-    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0; this.speedAccent = 0;
+    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0; this.speedAccent = 0; this.kickT = -1; this.kickAmt = 0; this.kickOffset = 0;
     // 카메라는 사용자 시점·지역 구도만 따른다. 동작 줄이기 선호는 후처리 왜곡을 끈다.
     this.postFxEnabled = true;
 
@@ -362,6 +364,15 @@ export class Renderer {
   shake() {}
   /** 화면 전체 FOV 줌 펄스도 쓰지 않는다(공격마다 화면이 확대·축소되지 않는다). */
   punch() {}
+  /** 궁극기 발동·보스 처치 같은 한 번의 큰 박자만 쓰는 방향성 카메라 펀치(m). 평타·스킬 명중에는 부르지 않는다.
+   * 렌더 카메라만 시선 방향으로 밀었다가 FEEL.camera 곡선대로 정확히 0 으로 되돌린다. rig·사용자 드래그/핀치 시점은 건드리지 않는다.
+   * 동작 줄이기 판정은 호출자(전투)가 한다. 진행 중 펀치보다 약한 새 펀치는 무시한다. */
+  kick(amount = 0) {
+    const a = Math.min(FEEL.camera.kickMax, Number.isFinite(amount) ? amount : 0);
+    if (!(a > 0)) return;
+    if (this.kickT >= 0 && cameraKick(this.kickT, this.kickAmt) >= a) return;
+    this.kickT = 0; this.kickAmt = a;
+  }
   /** 마지막 적 슬로우 가장자리 속도선 세기(0~1). 동작 줄이기·로비·낮은 화질에서는 update 가 0 으로 막는다. */
   setSpeedAccent(level = 0) { this.speedAccent = Number.isFinite(level) ? Math.max(0, Math.min(1, level)) : 0; }
   flashScreen(strength = 1, color = 0xffffff) {
@@ -375,6 +386,7 @@ export class Renderer {
     const rig = this.rig, cam = this.camera;
     let desired;
     if (rig.mode === 'lobby') {
+      this.kickT = -1; this.kickOffset = 0;   // 전투 펀치는 로비로 넘어오지 않는다
       const walking = this.lobbyNavigation;
       const portrait = this._width < this._height;
       // The walking plaza needs a clear view of the route ahead and nearby entrances.
@@ -408,6 +420,14 @@ export class Renderer {
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);
+      // 방향성 펀치: 시선 방향으로만 밀어 구도 중심(영웅)은 그대로다. 일시정지 중에는 진행하지 않는다.
+      this.kickOffset = 0;
+      if (this.kickT >= 0) {
+        if (!paused) this.kickT += realDt;
+        const off = cameraKick(this.kickT, this.kickAmt);
+        if (off > 0) { cam.position.addScaledVector(_kickDir.subVectors(look, cam.position).normalize(), off); this.kickOffset = off; }
+        else if (this.kickT > FEEL.camera.kickIn) this.kickT = -1;
+      }
     }
     // Arena supplies actual hero coordinates before this final camera update.
     this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');

@@ -11,7 +11,7 @@ import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
-import { FEEL, dodgeCancelOpen, comboQueueOpen, skillCancelOpen } from './feel.js';
+import { FEEL, attackBlend, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, heroRunTempo } from './feel.js';
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
@@ -221,7 +221,8 @@ export class Player extends Actor {
         this.vel.copy(this.moveDir).multiplyScalar(spd);
         this.faceDir(this.moveDir.x, this.moveDir.z);
         if (this.state !== 'move') { this.state = 'move'; this.play('Running_A', { fade: 0.15 }); }
-        this.action.timeScale = (1.1 + this.sprint * 0.35) * this.buffs.spd;
+        // 재생 배율은 실제 이동 속도(질주·버프·둔화 포함)를 따라가 디딤발이 바닥에서 덜 미끄러진다(feel.js locomotion).
+        this.action.timeScale = this.def.id in FEEL.locomotion.heroRunStride ? heroRunTempo(this.def.id, spd, this.sprint) : (1.1 + this.sprint * 0.35) * this.buffs.spd;
         this.footT += dt;
         if (this.footT > (this.sprint > 0.5 ? 0.2 : 0.28)) { this.footT = 0; this.game.fx.dust(this.pos, { n: this.sprint > 0.5 ? 3 : 2, size: 0.6 + this.sprint * 0.4, life: 0.5, speed: 1 }); }
         if (this.sprint > 0.6 && Math.random() < dt * 8) this.game.fx.embers(this.pos, this.def.color, { n: 1, radius: 0.4, life: 0.35, size: 0.2, rise: 1 });
@@ -287,6 +288,7 @@ export class Player extends Actor {
   startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    const prevState = this.state;   // 크로스페이드 길이를 고르는 직전 상태(공격 연타 vs 회피·대기에서 시작)
     // 구르기를 사격으로 끊으면 회피 무적도 그 순간 끝난다(다른 출처의 남은 무적은 유지). 회피→사격→회피 연쇄 무적 방지.
     if (this.state === 'dodge') this.invuln = Math.max(0, (this.invulnOther || 0) - this.stateT);
     // 수동 궁수: 사거리 안의 보이는 적을 조준한다(공격 시작 시점). 대상이 없으면 아래 기존 규칙으로 쏜다.
@@ -312,7 +314,7 @@ export class Player extends Actor {
     }
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
     const layered = manualBow && this.bowLayers && c.anim === 'Bow_Shoot';
-    this.playTimed(layered ? 'RangerBowUpper' : c.anim, dur, { fade: ['knight','barbarian'].includes(this.def.id) ? .035 : .06 });
+    this.playTimed(layered ? 'RangerBowUpper' : c.anim, dur, { fade: attackBlend(prevState, this.def.weapon) });
     if (layered) this.startBowLegs();
     gatherWarriorWindup(this, c, dur);
     this.ticksLeft = c.ticks ? c.ticks - 1 : 0; this.nextTick = 0; this.through = null;
@@ -500,7 +502,7 @@ export class Player extends Actor {
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone()).multiplyScalar(backstep ? -1 : 1);
     if (!backstep) this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
-    this.play(backstep && this.has('dodge') ? this.A('dodge') : 'Dodge_Forward', { once: true, fade: 0.05, speed: 1.6 });
+    this.play(backstep && this.has('dodge') ? this.A('dodge') : 'Dodge_Forward', { once: true, fade: FEEL.blend.dodge, speed: 1.6 });
     audio.dodgeRelease();
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
@@ -615,7 +617,11 @@ export class Player extends Actor {
       audio.hit('hurt'); audio.vibe(heavy ? [30, 20, 30] : 8); audio.bark(`hero_${this.def.voiceId || this.def.id}_hurt`, { n: 3, vol: heavy ? .8 : .6, min: .7 });
       if (!heavy && this.motionRoot) this.receiveImpact(dirx, dirz, .18);
     }
-    if (heavy) this.knockback(dirx, dirz, kb);
+    if (heavy) {
+      this.knockback(dirx, dirz, kb);
+      // 강타를 맞은 순간 짧게 멈춰 무게를 읽게 한다(동작 줄이기에서는 멈추지 않는다). 연속 정지 재무장 규칙은 ImpactClock 이 지킨다.
+      if (!this.game.app?.reducedMotion?.matches) this.game.timeCtl?.hitstop?.(FEEL.hitstop.base.received);
+    }
     if (this.game.hasProc('blood_rage') && (this._bloodCd || 0) <= this.game.elapsed) { this._bloodCd = this.game.elapsed + 1.5; this.game.bloodBurst(this); }
     // 스킬/궁극기 중엔 슈퍼아머. 기본 콤보 중에도 경타(kb<6)는 끊지 못한다 — 무리 속에서 잡몹 한 대마다 콤보가 1타로 돌아가던 것이 '끊김'의 절반
     const armored = !heavy || this.state === 'skill' || this.state === 'ult' || this.state === 'dodge';
@@ -623,7 +629,7 @@ export class Player extends Actor {
       // 회피와 같은 실행 경계: 타격 전에는 반복하고 마무리 타격을 실행했으면 첫 타로 돌아간다.
       if (this.state === 'attack' && this.current) { this.comboResume = { idx: this.hitDone ? (this.comboIdx + 1) % this.def.combo.length : this.comboIdx, t: 1.2 }; }
       this.attackBufferYaw = null; this.comboQueuedYaw = null;
-      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 });
+      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: FEEL.blend.hurt, speed: 1.6 });
     }
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
@@ -947,7 +953,7 @@ export class Player extends Actor {
     } else if (this.state === 'skill' || this.state === 'ult') {
       const c = this.skillCtx; c.t += dt;
       const castT = (c.impl.dur || 0.8) * c.sk.castAt;
-      if (!c.cast && c.t >= castT) { c.cast = true; c.impl.cast?.(this.game, this, c); this.game.onSkillReleased?.(this,c); }
+      if (!c.cast && c.t >= castT) { c.cast = true; if (this.state === 'ult') this.game.ultRelease?.(this); c.impl.cast?.(this.game, this, c); this.game.onSkillReleased?.(this,c); }
       c.impl.update?.(this.game, this, c, dt);
       if (c.t >= (c.impl.total || c.impl.dur || 0.8)) { c.done = true; c.impl.end?.(this.game, this, c); this.state = 'idle'; this.vel.set(0, 0, 0); this.stopTrail(); this.play('Idle', { fade: 0.2 }); }
     }

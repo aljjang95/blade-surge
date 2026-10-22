@@ -4,7 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
-import { FEEL, KillChain, killSlowmo, slowAccentFor, slowAccentLevel } from './feel.js';
+import { FEEL, KillChain, cinematicBeat, killSlowmo, slowAccentFor, slowAccentLevel } from './feel.js';
 import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
@@ -627,7 +627,9 @@ export class Battle {
       this.bossDefeated = true; this.hazards?.clear();
       // 처치 연출과 결과 사이에 잔여 기믹이 승리를 뒤집지 않는다.
       if (this.player.alive) this.player.invuln = Math.max(this.player.invuln, 4);
-      this.timeCtl.slowmo(0.15, 1.8); this.renderer.punch(1.4); this.renderer.flashScreen(0.9, 0xffffff); this.renderer.aberr = 2; this.renderer.shake(1);
+      // 보스 처치 박자: 짧은 정지 → 깊은 슬로우(끝 .8초 동안 부드럽게 복귀) + 한 번의 카메라 펀치. 동작 줄이기는 정지만.
+      this.playBeat('bossKill');
+      this.renderer.punch(1.4); this.renderer.flashScreen(0.9, 0xffffff); this.renderer.aberr = 2; this.renderer.shake(1);
       this.fx.explosion(e.pos, { size: 12, life: 0.8, color: 0xffd0a0 }); this.fx.holyBurst(e.pos, { size: 14, life: 0.7 });
       this.fx.burst(e.pos.clone().setY(1.5), 0xff5050, { n: 80, speed: 14, size: 0.6, up: 1 }); this.fx.shockTex(e.pos, 0xffd060, { r1: 16, life: 0.9 });
       audio.boom({ vol: 1, dur: 1.4, low: 40 }); audio.play('jingle_win1', { vol: 0.8, delay: 0.8 }); audio.vibe([100, 50, 100, 50, 200]); this.after(0.3, () => audio.voice(`${this.bossKey}_death`)); this.after(3.4, () => audio.voice('boss_kill'));
@@ -862,11 +864,23 @@ export class Battle {
   // ---------------- 궁극기 연출 ----------------
   ultCinematic(sk, p) {
     this.ui.ultCinema(sk.name, p.def);
-    this.timeCtl.slowmo(0.25, 0.7); this.renderer.radial = 0.35; this.renderer.punch(1.2); this.renderer.aberr = 0.8;
+    this.playBeat('ultStart'); this.renderer.radial = 0.35; this.renderer.punch(1.2); this.renderer.aberr = 0.8;
     audio.ultimateDuck(); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
     this.fx.castCircle(p.pos, p.def.color, { radius: 5, life: 1.2 });
     this.fx.light(p.pos, p.def.color, 12, 14, 1.2);
     for (const e of this.enemies) if (e.alive && !e.isBoss && e.pos.distanceToSquared(p.pos) <= 4.5 ** 2) e.stun = Math.max(e.stun, 0.3);
+  }
+
+  /** 궁극기가 실제로 터지는 순간(Player 의 cast). 짧은 정지와 시선 방향 카메라 펀치 한 번. */
+  ultRelease(p) { if (p === this.player) this.playBeat('ultRelease'); }
+  /** 연출 박자(FEEL.cinematic)를 시간 시계·렌더러에 나눠 보낸다. 동작 줄이기에서는 정지만 남는다. */
+  playBeat(kind) {
+    const beat = cinematicBeat(kind, !!this.app?.reducedMotion?.matches);
+    if (!beat) return null;
+    if (beat.stop > 0) this.timeCtl.hitstop(beat.stop);
+    if (beat.slowmo) this.timeCtl.slowmo(beat.slowmo.scale, beat.slowmo.sec, beat.slowmo.ease);
+    if (beat.kick > 0) this.renderer?.kick?.(beat.kick);
+    return beat;
   }
 
   // ---------------- 프레임 ----------------
