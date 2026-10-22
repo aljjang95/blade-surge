@@ -59,6 +59,8 @@ try {
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });
   await page.locator('#boot-start').tap();
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), null, { timeout: 180000 });
+  // 피해 숫자(DOM, CSS 애니메이션이라 실제 시간에 따라 깜빡임)는 흰 픽셀 지표를 오염시키므로 기본으로 숨긴다(--show-dmg 로 표시).
+  if (!process.argv.includes('--show-dmg')) await page.addStyleTag({ content: '#dmg-layer{visibility:hidden!important}' });
   await page.waitForTimeout(1000);
   for (const hero of heroes) {
     const start = await page.evaluate(async hero => {
