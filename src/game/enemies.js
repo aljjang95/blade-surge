@@ -505,7 +505,7 @@ export class Enemy extends Actor {
           if (this.def.ranged && !this.special && !this.def.pattern) this.faceDir(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
           this.telegraph = this.hitAt * this.attackDur - this.stateT;
         }
-        if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
+        if (this.special === 'dash') { this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT); this.dashWarning?.setProgress(this.stateT / (this.attackDur * .45)); }
         if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
       }
       if (t >= 1) { this.signatures?.clear(); this.clearDashWarning(); this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
@@ -556,6 +556,10 @@ export class Enemy extends Actor {
     this.playTimed(anim, dur, { fade: 0.08, phase: this.rigName === 'library' ? 'monster' : undefined, hitAt: this.hitAt, impactAt: this.libraryAsset?.impacts?.[clipKey] ?? this.hitAt });
     this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
+    // 보스(중간·최종 포함) 일반 패턴: 고유기와 같은 바닥 셰이더 예고(boss) + 가슴 높이 차지 빛. 판정 도형·경고 시간은 그대로다.
+    // 바닥 위험색은 돌진 통로와 같은 적색(셰이더의 붉은 색 분기: 짙은 진홍 채움·노란 열기 테)으로 통일하고, 정체성 색은 차지 빛·탄막·영혼비가 맡는다.
+    const boss = this.isBoss, identity = boss ? this.def.projColor ?? 0xff5040 : 0xff3030, danger = 0xff3030;
+    if (boss) g.fx.bossCharge?.(this.pos, this.special === 'soulrain' ? 0x80ff90 : identity, { life: this.telegraph, scale: this.def.scale, reduced: !!g.app?.reducedMotion?.matches, summon: this.special === 'summon' });
     if (this.special === 'dash') {
       const p = this.player, dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
       const dd = Math.hypot(dx, dz) || 1, travel = Math.min(9, dd + 1.5);
@@ -570,12 +574,13 @@ export class Enemy extends Actor {
     }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
     // 부채꼴 탄막 예고: 정체성 색(초록 탄)과 위험 적색을 반씩 섞어 바닥 위에서 '맞으면 아프다'로 읽힌다(보스 고유기 예고와 같은 규칙). 도형·시간 불변.
-    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
-    else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
-    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
-    else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
-    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
-    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 1 });
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, boss ? danger : _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, boss, life: dur * this.hitAt, thickness: .6 });
+    else if (this.special === 'spin') g.fx.ring(this.pos, danger, { r0: 4.2, r1: 4.8, telegraph: true, boss, life: dur * this.hitAt, y: 0.06, width: 1 });
+    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), danger, { r0: 3.6, r1: 4.2, telegraph: true, boss, life: dur * this.hitAt, y: 0.06 });
+    // 소환진은 피해 범위가 아니므로 위험 적색 대신 보스 정체성 색으로 그린다(일반 적 소환은 기존 적색).
+    else if (this.special === 'summon') { g.fx.castCircle(this.pos, boss ? identity : 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
+    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, boss ? danger : 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, boss, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
+    else g.fx.slashArc(this.pos, this.yaw, danger, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, boss, life: dur * this.hitAt, tilt: 0, thickness: 1 });
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   playerHit(target, damage, options, point = target.pos) {

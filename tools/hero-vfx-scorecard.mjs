@@ -12,6 +12,7 @@ import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { metrics } from './vfx-metrics.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const root = path.resolve(import.meta.dirname, '..');
@@ -21,31 +22,6 @@ const heroes = (arg('heroes') || 'knight,ranger,mage,rogue,barbarian').split(','
 const only = arg('only') ? new Set(arg('only').split(',')) : null;
 const VIEW = { width: 844, height: 390 };
 await fs.mkdir(out, { recursive: true });
-
-async function metrics(png, basePng) {
-  const a = await sharp(png).raw().toBuffer({ resolveWithObject: true });
-  const b = basePng ? await sharp(basePng).raw().toBuffer() : null;
-  const { data, info } = a, ch = info.channels, n = info.width * info.height;
-  let bright = 0, white = 0, changed = 0, satSum = 0; const hues = new Array(12).fill(0);
-  for (let i = 0, p = 0; p < n; p++, i += ch) {
-    const r = data[i], g = data[i + 1], bl = data[i + 2];
-    const luma = .2126 * r + .7152 * g + .0722 * bl;
-    if (luma >= 220) bright++;
-    if (r >= 235 && g >= 235 && bl >= 235) white++;
-    if (b && Math.abs(r - b[i]) + Math.abs(g - b[i + 1]) + Math.abs(bl - b[i + 2]) > 60) {
-      changed++;
-      const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl), s = mx ? (mx - mn) / mx : 0; satSum += s;
-      if (s >= .35 && mx > 60) {
-        let h; const d = mx - mn;
-        if (mx === r) h = ((g - bl) / d) % 6; else if (mx === g) h = (bl - r) / d + 2; else h = (r - g) / d + 4;
-        hues[Math.floor((((h * 60) + 360) % 360) / 30)]++;
-      }
-    }
-  }
-  const top = hues.map((v, i) => [i * 30, v]).sort((x, y) => y[1] - x[1]).slice(0, 2).filter(x => x[1] > 0).map(x => x[0]);
-  const r4 = v => +(v / n).toFixed(4);
-  return { bright: r4(bright), white: r4(white), changed: r4(changed), sat: changed ? +(satSum / changed).toFixed(3) : 0, hue: top };
-}
 
 const server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } });
 await server.listen();

@@ -69,7 +69,9 @@ test('처치는 영웅색 파편과 위로 오르는 영혼 불꽃을 내고 .5�
 });
 
 test('보스 고유기 예고 셰이더는 같은 uniform 으로 미터 두께 경계·어두운 띠·적색 채움·임박 맥동을 그린다', () => {
-  expect(bossSignatureFragmentShader).toContain('uniform float shape, safeRadius, opacity, fired, progress;');
+  expect(bossSignatureFragmentShader).toContain('uniform float shape, safeRadius, opacity, fired, progress, arc;');
+  // 일반 보스 패턴의 부채꼴(shape 3) 도형도 같은 셰이더가 그린다.
+  expect(bossSignatureFragmentShader).toContain('atan(p.y,p.x)');
   for (const token of ['band', 'urgent', 'pulse', 'front', 'danger']) expect(bossSignatureFragmentShader).toContain(token);
 });
 
