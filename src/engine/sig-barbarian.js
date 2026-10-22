@@ -11,6 +11,8 @@ import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
 export const BARB_COLORS = Object.freeze({ ember: 0xff5a1e, flame: 0xff8a26, crimson: 0xe0221a, blood: 0xb81410, molten: 0xffa83a });
 const { ember: EMBER, flame: FLAME, crimson: CRIMSON, blood: BLOOD, molten: MOLTEN } = BARB_COLORS;
 const TAU = Math.PI * 2;
+/** 큰 지면 표식(6m 이상)은 가산이라 원색 그대로면 바닥이 분홍·크림으로 바랜다. 같은 색상을 어둡게 낮춰 채도를 지킨다. */
+const DEEP_EMBER = 0xb8380e, DEEP_CRIMSON = 0xa0140e;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
 /** 실제 임팩트 층인지(테스트 대역·미초기화 FX 에서 도우미가 전투 루프를 깨지 않게). */
 const live = (impact) => !!impact && impact.enabled !== false && typeof impact.beam === 'function' && typeof impact.mark === 'function' && !!impact.rng;
@@ -47,17 +49,16 @@ function sparks(impact, c, n, speed, color, { delay = 0, up = 4, life = .4, size
   }
 }
 
-/** 몸을 감는 도끼 호 3개 + 접선으로 튀는 불똥. 회오리 매 판정 틱(i)마다 skills.js 가 부른다. */
+/** 도는 도끼 호 + 바닥 부채꼴 쓸기 + 접선으로 튀는 불똥. 회오리 매 판정 틱(i)마다 skills.js 가 부른다. */
 export function barbWhirlTick(game, pos, i) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || game.app?.reducedMotion?.matches) return 0;
-  const lite = !!game.fx.lite, before = impact.spawned, R = 2.3, base = i * 1.5;
-  for (let j = 0; j < (lite ? 2 : 3); j++) {
-    const a = base + j * (TAU / 3);
-    _d.set(-Math.sin(a), 0, Math.cos(a));
-    impact._emit(IMPACT_KIND.cut, pos.x + Math.cos(a) * R, 1.0, pos.z + Math.sin(a) * R, 2.5, j === 0 ? FLAME : EMBER, .24, { angle: impact._screenAngle(_d), grow: .8 });
-  }
+  const lite = !!game.fx.lite, before = impact.spawned, R = 2.2, base = i * 1.5;
+  // 도끼 호 하나: skills.js 참격 스프라이트와 같은 방향(sin, cos)(i×1.5)의 날 끝 자리에 작게. 크게 여러 장 겹치면 영웅을 덮는 옅은 기둥이 됐다.
+  const a = Math.PI / 2 - base;
+  _d.set(-Math.sin(a), 0, Math.cos(a));
+  impact._emit(IMPACT_KIND.cut, pos.x + Math.cos(a) * R, .9, pos.z + Math.sin(a) * R, 1.6, EMBER, .2, { angle: impact._screenAngle(_d), stretch: 1.3, grow: .8 });
   // 바닥 부채꼴 쓸기: 판정 반경(3.8m)을 따라 도는 붉은 날 궤적.
-  impact.mark(pos, CRIMSON, { radius: 3.8, life: .22, style: MARK_STYLE.fan, angle: base });
+  impact.mark(pos, CRIMSON, { radius: 3.8, life: .22, style: MARK_STYLE.fan, angle: a });
   const n = lite ? 3 : 7;
   for (let k = 0; k < n; k++) {
     const a = base + (k / n) * TAU, r = 1.6 + impact.rng.next() * 1.4;
@@ -71,8 +72,8 @@ export function barbWhirlTick(game, pos, i) {
 export function barbRushEnd(game, center, f) {
   const impact = game?.fx?.impact; if (!live(impact) || !center || game.app?.reducedMotion?.matches) return 0;
   const lite = !!game.fx.lite, before = impact.spawned;
-  impact.mark(center, CRIMSON, { radius: 6.2, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
-  impact._emit(IMPACT_KIND.ring, center.x, .6, center.z, 6.4, EMBER, .3, { grow: 1 });
+  impact.mark(center, DEEP_CRIMSON, { radius: 6.2, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
+  impact._emit(IMPACT_KIND.ring, center.x, .6, center.z, 4.5, EMBER, .3, { grow: 1 });
   lavaFissures(impact, center, lite ? 4 : 8, .8, 7, EMBER, { phase: yawOf(f) });
   risingEmbers(impact, center, lite ? 5 : 12, 3, FLAME);
   return impact.spawned - before;
@@ -89,9 +90,9 @@ export const SIGNATURES = {
   // 대지 분쇄: 내리친 자리에서 용암 균열 열 갈래가 판정 반경(8m)까지 갈라지고, 세 박자(0/.08/.16) 고리와 불씨가 솟는다.
   quake(ctx) {
     const { impact, at, lite } = ctx;
-    impact.mark(at, CRIMSON, { radius: 8, life: .6, style: MARK_STYLE.thorn });
+    impact.mark(at, DEEP_CRIMSON, { radius: 8, life: .6, style: MARK_STYLE.thorn });
     lavaFissures(impact, at, lite ? 5 : 10, .6, 8.5, EMBER, { speed: 55 });
-    for (const [i, d] of [0, .08, .16].entries()) impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 3 + i * 2.6, i === 1 ? MOLTEN : EMBER, .3, { grow: 1, delay: d });
+    for (const [i, d] of [0, .08, .16].entries()) impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 2.4 + i * 1, i === 1 ? MOLTEN : EMBER, .3, { grow: 1, delay: d });
     risingEmbers(impact, at, lite ? 6 : 14, 4, FLAME, { delay: .04 });
   },
   // 광폭화: 붉은 분노 오라 — 발밑 진홍 가시 고리 두 겹(반대 회전) + 몸을 따라 솟구치는 핏빛 불꽃 줄기 두 물결.
@@ -106,12 +107,12 @@ export const SIGNATURES = {
   // 착탄: 세로 도끼 호 + 용암 균열 열두 갈래 + 큰 고리 두 겹 + 불씨 기둥.
   hell_axe(ctx) {
     const { impact, at: t, lite } = ctx; const FALL = .5;
-    impact.mark(t, CRIMSON, { radius: 6, life: FALL + .5, style: MARK_STYLE.thorn });
+    impact.mark(t, DEEP_CRIMSON, { radius: 6, life: FALL + .5, style: MARK_STYLE.thorn });
     _a.set(t.x, 16, t.z); _d.set(0, -1, 0);
     impact.beam(_a, _d, 16, EMBER, { speed: 32, tail: 7, width: .32 });
     impact._emit(IMPACT_KIND.cut, t.x, 2.2, t.z, 5.5, FLAME, .32, { angle: -Math.PI / 2 + .25, grow: .7, delay: FALL - .04 });
-    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 7, EMBER, .34, { grow: 1, delay: FALL });
-    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 11, CRIMSON, .42, { grow: 1, delay: FALL + .1 });
+    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 4.8, EMBER, .34, { grow: 1, delay: FALL });
+    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 3.2, CRIMSON, .3, { grow: 1, delay: FALL + .08 });
     lavaFissures(impact, t, lite ? 6 : 12, .8, 10, EMBER, { delay: FALL, speed: 60, width: .13 });
     risingEmbers(impact, t, lite ? 7 : 16, 4.5, FLAME, { delay: FALL, rise: 9 });
     sparks(impact, t, lite ? 4 : 8, 13, MOLTEN, { delay: FALL });
@@ -139,17 +140,17 @@ export const SIGNATURES = {
       impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 3, i % 2 ? CRIMSON : EMBER, .28, { grow: 1, delay: d });
       if (!lite) risingEmbers(impact, _b, 3, 1, MOLTEN, { delay: d, rise: 10 });
     }
-    impact.mark(c, EMBER, { radius: 6.4, life: 1.4, style: MARK_STYLE.thorn, delay: .75 });
+    impact.mark(c, DEEP_EMBER, { radius: 6.4, life: 1.4, style: MARK_STYLE.thorn, delay: .75 });
     lavaFissures(impact, c, lite ? 4 : 8, 1, 6.4, CRIMSON, { delay: .75, speed: 30, width: .09, fade: 1 });
   },
   // 혈왕·대지붕괴: 두 번 무너진다 — 0초 진홍 가시 고리(6m) + 핏빛 균열, .2초 불씨 가시 고리(8m) + 더 긴 균열·큰 고리·불기둥 불씨.
   bloodquake(ctx) {
     const { impact, player, lite } = ctx; const c = player.pos;
-    impact.mark(c, BLOOD, { radius: 6, life: .5, style: MARK_STYLE.thorn });
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 6.5, CRIMSON, .3, { grow: 1 });
+    impact.mark(c, DEEP_CRIMSON, { radius: 6, life: .5, style: MARK_STYLE.thorn });
+    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
     lavaFissures(impact, c, lite ? 4 : 8, .6, 6, CRIMSON, { speed: 50 });
-    impact.mark(c, EMBER, { radius: 8, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 9.5, EMBER, .36, { grow: 1, delay: .2 });
+    impact.mark(c, DEEP_EMBER, { radius: 8, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
+    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.6, EMBER, .34, { grow: 1, delay: .2 });
     lavaFissures(impact, c, lite ? 6 : 12, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });
     risingEmbers(impact, c, lite ? 6 : 14, 5, FLAME, { delay: .2, rise: 8 });
     risingEmbers(impact, c, lite ? 3 : 6, 2.5, CRIMSON, { rise: 6 });
@@ -158,7 +159,7 @@ export const SIGNATURES = {
   // 용암 균열 열네 갈래, 거대 고리 두 겹, 불씨 분수.
   cataclysm(ctx) {
     const { impact, at, lite } = ctx; const T = .3;
-    impact.mark(at, CRIMSON, { radius: 9, life: T + .55, style: MARK_STYLE.thorn });
+    impact.mark(at, DEEP_CRIMSON, { radius: 9, life: T + .55, style: MARK_STYLE.thorn });
     impact.mark(at, EMBER, { radius: 4.5, life: T + .2, style: MARK_STYLE.thorn, angle: .31 });
     risingEmbers(impact, at, lite ? 3 : 7, 2, CRIMSON, { rise: 4 });
     _d.set(0, 1, 0);
@@ -167,8 +168,8 @@ export const SIGNATURES = {
       _a.set(at.x + Math.cos(a) * r, 0, at.z + Math.sin(a) * r);
       impact.beam(_a, _d, 9 + (i === 0 ? 4 : 0), i === 0 ? FLAME : EMBER, { speed: 55, tail: 6, width: i === 0 ? .42 : .24, delay: T + i * .03 });
     }
-    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 10, EMBER, .38, { grow: 1, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 15, CRIMSON, .46, { grow: 1, delay: T + .1 });
+    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 5.5, EMBER, .38, { grow: 1, delay: T });
+    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 3.6, CRIMSON, .3, { grow: 1, delay: T + .1 });
     lavaFissures(impact, at, lite ? 7 : 14, 1, 11, EMBER, { speed: 65, delay: T, width: .14 });
     risingEmbers(impact, at, lite ? 8 : 16, 5, FLAME, { delay: T, rise: 11 });
     sparks(impact, at, lite ? 4 : 8, 15, MOLTEN, { delay: T });

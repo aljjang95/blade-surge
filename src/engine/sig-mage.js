@@ -13,6 +13,8 @@ import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
 export const MAGE_COLORS = Object.freeze({
   fire: 0xff5a1a, fireHot: 0xffa030, bolt: 0x5aa8ff, boltHot: 0xa8dcff, frost: 0x2a9cff, frostHot: 0x6ccaff,
   arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starGold: 0xffc85a, prism: 0x7fe0ff,
+  // 큰 지면 표식(6m 이상)은 가산이라 원색이면 바닥이 하얗게 바랜다(눈보라·절대영도의 흰 바퀴). 같은 색상을 낮춰 진한 하늘색을 지킨다.
+  frostDeep: 0x135c9e, frostMid: 0x1f7fd0,
 });
 const C = MAGE_COLORS;
 const TAU = Math.PI * 2;
@@ -65,8 +67,8 @@ function fireBlast(impact, c, size, { delay = 0, lite = false } = {}) {
 export function mageBolt(game, from, to, step = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
   const before = impact.spawned, lite = !!game.fx.lite;
-  zigzag(impact, from, to, lite ? 4 : 6, 1, C.bolt, { width: .09, fade: .24 });
-  if (!lite) zigzag(impact, from, to, 4, 1.6, C.boltHot, { width: .04, fade: .16 });
+  zigzag(impact, from, to, lite ? 4 : 6, 1, C.bolt, { width: .15, fade: .3 });
+  if (!lite) zigzag(impact, from, to, 4, 1.6, C.boltHot, { width: .06, fade: .2 });
   impact._emit(IMPACT_KIND.star, to.x, to.y, to.z, step < 2 ? 1.3 : 1, C.bolt, .14, { angle: .4 + step, grow: .5 });
   impact._emit(IMPACT_KIND.ring, to.x, to.y, to.z, 1.2, C.boltHot, .2, { grow: 1 });
   return impact.spawned - before;
@@ -87,7 +89,7 @@ export function mageMeteorFall(game, start, pt, fall = .4) {
 export function mageFrostTick(game, pos, i, radius = 6.8) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned;
-  impact.mark(pos, C.frost, { radius, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
+  impact.mark(pos, C.frostDeep, { radius, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
   iceSpikes(impact, pos, game.fx.lite ? 3 : 7, 1.5, radius - .5, i % 2 ? C.frost : C.frostHot, { phase: i * .9 });
   return impact.spawned - before;
 }
@@ -122,22 +124,22 @@ export const SIGNATURES = {
     const { impact, player } = ctx;
     _p0.set(player.pos.x + .6, 9, player.pos.z - .4); _p1.copy(player.pos).setY(1.8);
     _stars[0].copy(_p0); _stars[1].copy(_p1);
-    zigzag(impact, _stars[0], _stars[1], 6, 1.1, C.bolt, { width: .1, fade: .22 });
+    zigzag(impact, _stars[0], _stars[1], 6, 1.1, C.bolt, { width: .16, fade: .3 });
     impact._emit(IMPACT_KIND.star, _stars[1].x, _stars[1].y, _stars[1].z, 1.2, C.bolt, .14, { angle: .4, grow: .5 });
     impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 2.6, C.bolt, .26, { grow: 1 });
   },
   // 빙결 폭풍: 판정 반경(6.8m) 서리 가시 고리가 폭풍 내내 남고 바깥 둘레에 얼음 가시 벽이 솟는다. 틱마다는 mageFrostTick.
   blizzard(ctx) {
     const { impact, player, lite } = ctx;
-    impact.mark(player.pos, C.frost, { radius: 6.8, life: 2.6, style: MARK_STYLE.thorn });
-    impact.mark(player.pos, C.frostHot, { radius: 3.4, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
+    impact.mark(player.pos, C.frostDeep, { radius: 6.8, life: 2.6, style: MARK_STYLE.thorn });
+    impact.mark(player.pos, C.frostMid, { radius: 3.4, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
     iceSpikes(impact, player.pos, lite ? 6 : 14, 6.2, 7, C.frost, { h: 1.8, width: .12, fade: 1.2 });
   },
   // 메테오 스톰(궁극기): 낙하 구역(7.8m)에 주황 나침 표식과 열기 고리가 먼저 깔린다. 한 발마다의 궤적·폭발은 mageMeteorFall.
   meteor(ctx) {
     const { impact, at } = ctx;
     impact.mark(at, C.fire, { radius: 7.8, life: 1.8, style: MARK_STYLE.compass });
-    impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 8.5, C.fire, .4, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 4.5, C.fire, .36, { grow: 1 });
   },
   // 프리즘 난반사: 손끝 청록 별빛에서 빛이 세 갈래(청록·보라·청)로 갈라져 앞으로 뻗는다. 튕길 때는 magePrismBounce.
   arc_reflect(ctx) {
@@ -153,13 +155,13 @@ export const SIGNATURES = {
   // 시간 봉인: 바닥 시계판(skills.js)에 더해 열두 시각 눈금 자리에 보라 별빛이 한 바퀴 차례로 켜지고 큰 보라 고리가 퍼진다.
   chrono_seal(ctx) {
     const { impact, player, lite } = ctx; const c = player.pos;
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 10.5, C.arcane, .5, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.5, C.arcane, .4, { grow: 1 });
     const n = lite ? 6 : 12;
     for (let k = 0; k < n; k++) {
       const a = Math.PI / 2 - (k / n) * TAU;
       impact._emit(IMPACT_KIND.star, c.x + Math.cos(a) * 6.4, .25, c.z - Math.sin(a) * 6.4, .75, C.arcaneHot, .5, { angle: a, grow: .6, delay: k * .035 });
     }
-    impact.mark(c, C.arcane, { radius: 9.5, life: 1.2, style: MARK_STYLE.clock, angle: Math.PI / 6 });
+    impact.mark(c, 0x4a32b0, { radius: 9.5, life: 1.2, style: MARK_STYLE.clock, angle: Math.PI / 6 });
   },
   // 성좌·별감옥: 일곱 별(금빛 점)이 차례로 켜지며 남색 별자리 선(칠각성)으로 이어지고, .24초(판정)에 중심 별빛·고리와
   // 별가루가 안쪽으로 빨려든다.
@@ -168,14 +170,14 @@ export const SIGNATURES = {
     for (let k = 0; k < N; k++) {
       const a = (k / N) * TAU + .2 + (impact.rng.next() - .5) * .3, r = R * (.82 + impact.rng.next() * .22);
       _stars[k].set(at.x + Math.cos(a) * r, .35, at.z + Math.sin(a) * r);
-      impact._emit(IMPACT_KIND.star, _stars[k].x, .5, _stars[k].z, .95, C.starGold, .62 - k * .02, { angle: .3 + k, grow: .7, delay: k * .025 });
+      impact._emit(IMPACT_KIND.star, _stars[k].x, .5, _stars[k].z, 1.3, C.starGold, .62 - k * .02, { angle: .3 + k, grow: .7, delay: k * .025 });
     }
     for (let k = 0; k < N; k++) {
       const j = (k + 3) % N; _d.copy(_stars[j]).sub(_stars[k]);
-      impact.beam(_stars[k], _d, _d.length(), C.star, { speed: 70, width: .055, delay: k * .025, fade: .45 });
+      impact.beam(_stars[k], _d, _d.length(), C.star, { speed: 70, width: .09, delay: k * .025, fade: .45 });
     }
     impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 2.6, C.star, .2, { angle: .3, grow: .4, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 8, C.star, .34, { grow: 1, delay: T });
+    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
     const n = lite ? 5 : 12;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU, r = 6;
@@ -187,8 +189,8 @@ export const SIGNATURES = {
   // 진한 하늘색 결정 균열이 바깥으로 뻗는다. 흰 텍스처 덩어리 대신 가시·선의 실루엣.
   absolute_zero(ctx) {
     const { impact, at, lite } = ctx; const T = .35;
-    impact.mark(at, C.frost, { radius: 9, life: T + .6, style: MARK_STYLE.thorn });
-    impact.mark(at, C.frostHot, { radius: 5, life: T + .1, style: MARK_STYLE.thorn, angle: .3 });
+    impact.mark(at, C.frostDeep, { radius: 9, life: T + .6, style: MARK_STYLE.thorn });
+    impact.mark(at, C.frostMid, { radius: 5, life: T + .1, style: MARK_STYLE.thorn, angle: .3 });
     const n = lite ? 7 : 14;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU + (impact.rng.next() - .5) * .3; _d.set(Math.cos(a), 0, Math.sin(a));
@@ -196,7 +198,7 @@ export const SIGNATURES = {
       impact.beam(_a, _d, 7 + impact.rng.next() * 3, i % 2 ? C.frost : C.frostHot, { speed: 55, width: .12, delay: T, fade: .55 });
     }
     iceSpikes(impact, at, lite ? 8 : 18, 1, 8.5, C.frost, { delay: T, h: 2.2, width: .13, fade: .7 });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 11, C.frost, .42, { grow: 1, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 6, C.frostHot, .3, { grow: 1, delay: T + .06 });
+    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 5, C.frost, .4, { grow: 1, delay: T });
+    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 3.2, C.frostHot, .3, { grow: 1, delay: T + .06 });
   },
 };

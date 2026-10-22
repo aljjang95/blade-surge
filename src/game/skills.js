@@ -416,7 +416,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a9cff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
