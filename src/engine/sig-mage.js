@@ -103,6 +103,11 @@ export function mageFrostTick(game, pos, i, radius = 6.8) {
   // 큰 가시 고리는 옅은 흰 바퀴로 읽혀 몸 둘레 3m 서리 고리만 두고, 판정 반경은 얼음 가시가 채운다.
   impact.mark(pos, C.frostMid, { radius: 3, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
   iceSpikes(impact, pos, game.fx.lite ? 4 : 8, 1.5, radius - .3, i % 2 ? C.frost : C.frostHot, { phase: i * .9, width: .3, h: 1.7 });
+  // 얼음 결정 반짝임: 판정 반경 안 네 점에 진한 하늘색 작은 별(결정면).
+  for (let k = 0; k < (game.fx.lite ? 2 : 4); k++) {
+    const a = i * 1.3 + k * 1.57, r = 2.2 + ((i + k) % 3) * 1.4;
+    impact._emit(IMPACT_KIND.star, pos.x + Math.cos(a) * r, .9 + (k % 2) * .6, pos.z + Math.sin(a) * r, .6, C.frostMid, .3, { angle: a, grow: .6, delay: k * .05 });
+  }
   // 폭풍의 회전: 몸을 감아 도는 서리 줄기(접선 속도). 흰 눈송이 대신 하늘색 선.
   const n = game.fx.lite ? 4 : 9;
   for (let k = 0; k < n; k++) {
@@ -134,7 +139,7 @@ export function magePrismBounce(game, pos, dir, n = 0) {
 export function magePrismTrail(game, from, to) {
   const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
   _d.copy(to).sub(from); const l = _d.length(); if (!(l > .01)) return 0;
-  return impact.beam(from, _d, l, C.prismDeep, { width: .3, fade: .22 }) ? 1 : 0;
+  return impact.beam(from, _d, l, C.prismDeep, { width: .36, fade: .45 }) ? 1 : 0;
 }
 
 /**
@@ -169,6 +174,11 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.2, C.fireHot, .2, { grow: 1, delay: .05 });
     impact._streaks(_a, f, lite ? 5 : 12, 12, .36, C.fireHot, { up: 1.2, spread: .5, size: .24 });
     impact.beam(_a, f, 6.5, C.fire, { speed: 15, tail: 3.5, width: .5, style: BEAM_STYLE.gale });
+    // 화염구가 지나는 길에 떨어지는 불똥(화염구 속도 15m/s 와 같은 박자).
+    for (let k = 0; k < (lite ? 3 : 6); k++) {
+      const d = 1.2 + k * 1.1; _b.copy(_a).addScaledVector(f, d);
+      impact._emit(IMPACT_KIND.streak, _b.x, _b.y, _b.z, .22, k % 2 ? C.fire : C.fireHot, .4, { vx: f.z * 3 * (k % 2 ? 1 : -1), vy: 1, vz: -f.x * 3 * (k % 2 ? 1 : -1), stretch: 1, grow: 1, gravity: 14, delay: d / 15 });
+    }
     // 발밑 화염 학파 문양: 작은 주황 나침 폭발 표식(공용 룬 대신).
     impact.mark(ctx.player.pos, C.fire, { radius: 2.2, life: .5, style: MARK_STYLE.compass, angle: Math.atan2(f.z, f.x) });
   },

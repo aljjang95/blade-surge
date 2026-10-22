@@ -82,7 +82,7 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   expect(barbWhirlTick(g, new THREE.Vector3(), 3)).toBeLessThanOrEqual(12);
   expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(36);
   expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(22);
-  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(20);
+  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(24);
   expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(5);
   v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;

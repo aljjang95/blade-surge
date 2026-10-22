@@ -199,7 +199,12 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.6, EMBER, .34, { grow: 1, delay: .2 });
     lavaFissures(impact, c, lite ? 6 : 12, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });
     risingEmbers(impact, c, lite ? 5 : 10, 5, FLAME, { delay: .2, rise: 8 });
-    risingEmbers(impact, c, lite ? 3 : 6, 2.5, CRIMSON, { rise: 6 });
+    // 두 번째 붕괴 순간 둘레에서 솟는 핏빛 기둥 여섯(혈왕의 '피의 대지').
+    _d.set(0, 1, 0);
+    for (let i = 0; i < (lite ? 3 : 6); i++) {
+      const a = (i / 6) * TAU + .26; _a.set(c.x + Math.cos(a) * 4.2, 0, c.z + Math.sin(a) * 4.2);
+      impact.beam(_a, _d, 6, i % 2 ? CRIMSON : BLOOD, { speed: 40, tail: 4, width: .34, delay: .2 + i * .02 });
+    }
     // 무너지는 대지: 핏빛 바위 가시(0초, 6m 안) → 불씨 바위 가시(.2초, 8m 안)가 바깥으로 비스듬히 솟는다.
     earthSpikes(impact, c, lite ? 4 : 8, 3, 6, CRIMSON, { h: 2.2, width: .32 });
     earthSpikes(impact, c, lite ? 5 : 10, 5, 8.5, EMBER, { delay: .2, h: 2.8, width: .36, phase: .3 });
