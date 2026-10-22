@@ -58,6 +58,11 @@ export const SKILL_SIGNATURES = {
   ranger_binding(ctx) {
     const { impact, f, player } = ctx;
     impact.mark(player.pos, VINE, { radius: 7, life: .55, style: MARK_STYLE.fan, angle: yawOf(f) });
+    // 부채 안을 따라 차례로 돋는 가시 매듭 셋(덩굴이 뻗어 나가는 박자).
+    for (let i = 0; i < 3; i++) {
+      _b.copy(player.pos).addScaledVector(f, 2.4 + i * 1.9);
+      impact.mark(_b, VINE, { radius: .7 + i * .15, life: .45, style: MARK_STYLE.thorn, delay: .05 + i * .06, angle: i * .9 });
+    }
   },
   // 질풍 사냥: 발밑 작은 나침 고리 + 몸을 감고 도는 바람 불똥(접선 속도) 세 박자.
   gale_hunt(ctx) {
