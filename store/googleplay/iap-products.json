@@ -1,0 +1,92 @@
+{
+  "_comment": "src/shared/iap-catalog.js 에서 생성됨(node tools/play-iap-register.mjs --write-json). 직접 고치지 말고 카탈로그를 고친다. 가격은 후보이며 등록·공개는 대표님 확인 뒤.",
+  "packageName": "com.theluxurylord.bladesurge",
+  "catalogVersion": 1,
+  "products": [
+    {
+      "id": "remove_ads_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 4900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "광고 제거",
+          "description": "전면 광고를 영구히 끕니다(계정 단위, 기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Remove Ads",
+          "description": "Permanently turns off interstitial ads (per account, restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "starter_pack_v1",
+      "type": "consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 1200,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "첫 구매 스타터 팩",
+          "description": "SSR 확정 소환권 1 · 보석 1,000 · 골드 50,000 (계정당 1회)"
+        },
+        {
+          "languageCode": "en-US",
+          "title": "First Purchase Starter Pack",
+          "description": "1 guaranteed SSR summon ticket, 1,000 gems, 50,000 gold (once per account)."
+        }
+      ]
+    },
+    {
+      "id": "monthly_card_v1",
+      "type": "subscription",
+      "kind": "subscription",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "basePlanId": "monthly",
+      "billingPeriodDuration": "P1M",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "월정액 카드",
+          "description": "결제할 때마다 보석 1,200 + 기간 중 매일 보석 100 (자동 갱신, 언제든 해지)"
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Monthly Card",
+          "description": "1,200 gems on every payment plus 100 gems daily while active (auto-renews, cancel anytime)."
+        }
+      ]
+    },
+    {
+      "id": "season_pass_s1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 9900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "시즌 1 프리미엄 패스",
+          "description": "시즌 1 동안 프리미엄 보상 줄을 엽니다(이미 달성한 단계도 받을 수 있음)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Season 1 Premium Pass",
+          "description": "Unlocks the premium reward track for Season 1 (already reached tiers can be claimed)."
+        }
+      ]
+    }
+  ]
+}
