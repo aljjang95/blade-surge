@@ -29,7 +29,7 @@ export function nextRegionGroup(progress) {
 
 /**
  * @param {ReturnType<import('./remote-assets.js').createRemoteAssets>} assets
- * @param {{nav?: Navigator, idle?: (fn: () => void) => void}} [options]
+ * @param {{nav?: Navigator, idle?: (fn: () => void) => void, now?: () => number}} [options]
  */
 export function createPrefetcher(assets, { nav = globalThis.navigator, idle = (fn) => (globalThis.requestIdleCallback ? globalThis.requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500)), now = () => Date.now() } = {}) {
   let running = false;
