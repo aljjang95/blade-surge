@@ -1,7 +1,7 @@
 // MMO P1-G: 로컬 세이브 → 서버 계정 이전 (docs/MMO_DESIGN.md 4장). 원문은 legacy_saves에 보존하고
 // 정화(normalizeSave 재사용 + 재화 상한 절삭)한 문서만 account_docs.core가 된다. 로컬 세이브는 지우지 않는다.
-import { casCommit, REV_GUARD, type GuardedWrite } from './db';
-import { fail, onlyKeys } from './http';
+import { casCommit, ledgerReceipt, REV_GUARD, type GuardedWrite } from './db';
+import { CID, fail, onlyKeys } from './http';
 import type { Authed, Ctx } from './auth';
 import { loadAccountDoc } from './cmd';
 import { docOf, loadEconomy } from './state';
@@ -47,4 +47,32 @@ export async function importLegacy(c: Ctx, auth: Authed, body: Record<string, un
     projection: next.projection, writes });
   if (!outcome.ok) fail(409, outcome.reason === 'duplicate' ? 'install-imported' : 'conflict');
   return { status, report, rev: outcome.rev, doc: JSON.parse(next.text), stateHash: parityHash(eco.s), clientMatch: body.clientHash === undefined ? null : body.clientHash === parityHash(eco.s), serverTime: c.now };
+}
+
+/**
+ * 그림자 모드(M1) 재동기화: 로컬이 정본인 동안 전투 보상처럼 명령 밖에서 바뀐 상태를 서버 그림자 문서로 맞춘다.
+ * 임포트와 같은 정화 규칙을 적용하므로 컷오버 때 넘어가는 값도 같은 상한 안이다. 서버 권위 계정은 거부한다.
+ */
+export async function shadowSnapshot(c: Ctx, auth: Authed, body: Record<string, unknown>) {
+  onlyKeys(body, ['cid', 'save', 'clientHash'], ['cid', 'save']);
+  if (typeof body.cid !== 'string' || !CID.test(body.cid)) fail(400, 'cid');
+  if (auth.account.authority !== 'shadow') fail(409, 'server-authority');
+  if (!body.save || typeof body.save !== 'object' || Array.isArray(body.save)) fail(400, 'save');
+  const accountId = auth.account.account_id, opId = `snap:${accountId}:${body.cid}`;
+  const replay = await ledgerReceipt(c.db, opId, accountId);
+  if (replay) return { ...(replay.receipt as object), replayed: true };
+  const doc = await loadAccountDoc(c.db, accountId);
+  const result = sanitizeLegacySave(body.save, { now: c.now });
+  if (!result.ok) fail(400, 'save');
+  // 상한 계산의 경과일은 서버가 처음 본 문서의 created를 기준으로 한다(로컬 created 조작 무효).
+  const created = Number((doc.state as { created?: unknown }).created);
+  const eco = loadEconomy({ ...result.state, created: Number.isSafeInteger(created) ? created : result.state.created }, { now: c.now });
+  const next = docOf(eco), hash = parityHash(eco.s);
+  const receipt = { rev: doc.rev + 1, stateHash: hash, clamped: result.report.clamped, match: body.clientHash === undefined ? null : body.clientHash === hash, serverTime: c.now };
+  const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
+    ledger: { opId, kind: 'shadow-snapshot', delta: { clamped: result.report.clamped }, receipt }, projection: next.projection,
+    writes: body.clientHash === undefined ? [] : [{ sql: `INSERT INTO parity_log(account_id, op, client_hash, server_hash, match, at) SELECT ?, 'snapshot', ?, ?, ?, ? WHERE ${REV_GUARD}`,
+      values: [accountId, body.clientHash as string, hash, body.clientHash === hash ? 1 : 0, c.now] }] });
+  if (!outcome.ok) fail(409, 'conflict');
+  return receipt;
 }

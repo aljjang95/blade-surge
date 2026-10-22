@@ -5,7 +5,7 @@ import { IMPORT_LIMIT, json, readJson } from './http';
 import { createSession, link, logoutAll, recover, requireSession, unlink, type AuthDeps, type AuthEnv, type Ctx } from './auth';
 import { getMe, runCommand } from './cmd';
 import { settleRun, startRun } from './runs';
-import { importLegacy } from './import';
+import { importLegacy, shadowSnapshot } from './import';
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 
 export const V1_PREFIX = '/api/v1';
@@ -51,6 +51,7 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       if (path === '/auth/logout-all') return json(await logoutAll(c, auth));
       if (path === '/cmd') return json(await runCommand(c, auth, await readJson(request)));
       if (path === '/import') return json(await importLegacy(c, auth, await readJson(request, IMPORT_LIMIT)));
+      if (path === '/shadow/snapshot') return json(await shadowSnapshot(c, auth, await readJson(request, IMPORT_LIMIT)));
       if (path === '/runs/start') return json(await startRun(c, auth, await readJson(request)));
       const settle = path.match(/^\/runs\/([A-Za-z0-9_-]{8,64})\/settle$/);
       if (settle) return json(await settleRun(c, auth, settle[1], await readJson(request)));
