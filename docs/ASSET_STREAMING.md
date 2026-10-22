@@ -6,8 +6,8 @@ AAB 가 서명 서비스 한도(약 100MB)에 닿고 콘텐츠(3개월치 지역
 
 ## core / remote 분할 — `tools/optimize/asset-split.json`
 - 규칙은 위에서부터 첫 일치가 이긴다. 산출물의 모든 파일이 core 또는 remote 로 분류돼야 한다(안 되면 빌드·`test/asset-split.test.ts` 실패).
-- core: 부팅·제목·로비(1지역 마을)·튜토리얼 1-1·1지역(곡 3곡 + 중간 보스 곡 + 소환 곡, 조우 일러스트, 키아트)·UI·글꼴·효과음·VFX 텍스처·1단계 영웅·몬스터 전부·원정 던전 보스 일러스트(로비 카드가 부팅 직후 그린다).
-- remote(묶음): `region-2..6`(그 지역 곡·조우 일러스트·키아트), `arena`, `expeditions`(던전 상세 키아트·몬스터 일러스트), `cinematic`(입장 영상), `heroes-t2`·`heroes-t3`(2·3단계 갑옷 몸체), `avatars`(아바타 몸체), `bgm-extra`(규칙에 없는 새 BGM — 기본이 remote).
+- core: 부팅·제목·로비(1지역 마을)·튜토리얼 1-1·1지역(곡 3곡 + 중간 보스 곡 + 조우 일러스트, 키아트)·UI·글꼴·효과음·VFX 텍스처·1단계 영웅·몬스터 전부·원정 던전 보스 일러스트(로비 카드가 부팅 직후 그린다).
+- remote(묶음): `region-2..6`(그 지역 곡·조우 일러스트·키아트), `arena`, `expeditions`(던전 상세 키아트·몬스터 일러스트), `cinematic`(입장 영상), `heroes-t2`·`heroes-t3`(2·3단계 갑옷 몸체), `avatars`(아바타 몸체), `bgm-extra`(규칙에 없는 새 BGM — 기본이 remote. 소환 화면 곡 bgm_gacha 1.7MB 도 여기).
 - 새 지역 곡·마을 스킨 곡은 `bgm/` 에 두면 자동으로 remote 다. 새 일러스트·모델은 규칙에 한 줄 추가한다.
 - 빌드(`vite build`)가 최적화 직후 `asset-manifest.json`(런타임용: remote 의 경로 → 내용 해시 16자·크기·묶음)을 쓰고, 스토어 채널은 `asset-manifest.full.json`(core 파일별 해시)도 만든다.
   `tools/build-channel.mjs googleplay|onestore` 가 web 폴더를 비우고 빌드한 뒤 remote 파일을 지우고, core 가 하나도 빠지지 않았고(해시 포함) remote 가 남지 않았는지 검사한다(실패하면 빌드 실패).
@@ -38,3 +38,8 @@ AAB 가 서명 서비스 한도(약 100MB)에 닿고 콘텐츠(3개월치 지역
 - 산출물 분할: core 1521개 83.0MB / remote 81개 46.5MB(11개 묶음, 최적화 산출물 기준).
 - `bash tools/build-aab-cloud.sh --version-code 3 --version-name 1.0.2`: 서명 없는 AAB 61,186,426바이트(58.4MiB, sha256 585c7164…). 이전 99.94MB 대비 약 39% 감소. 업로드하지 않았다.
 - `node tools/remote-assets-qa.mjs`: 24/24 통과(로컬 404·호스트 404·CORS 0, 폴백 0, 두 번째 로드 내려받기 0·보관본 복원).
+
+### 갱신(10진 60MB 이하)
+- 소환 곡 `bgm_gacha.mp3`(1.7MB)를 core 에서 remote(`bgm-extra`)로 옮겼다. 곡은 화면이 열릴 때 받으며 화면·입력은 막지 않는다(곡이 도착할 때까지 무음).
+- 서명 없는 AAB 59,506,280바이트(59.5MB, 56.8MiB, sha256 48cc8686…) — 10진 60MB 안에서 여유는 0.49MB뿐이다. 새 core 에셋을 추가할 때는 remote 규칙부터 본다.
+- 시도했다가 되돌린 것: 2지역 이후 몬스터 몸체(대악마·나무 수호자·불사조 ≈3.5MB)를 remote 로 옮기면 부팅의 `preloadAll`/`App.boot` 이 `MODEL_LIST` 전체를 즉시 로드(`this.models`, 환경맵·셰이더 워밍)하므로 부팅이 호스트 요청을 하게 돼 QA 가 실패한다. 이 몬스터를 remote 로 보내려면 부팅 예열을 지연 로딩으로 바꾸는 별도 작업이 필요하다.
