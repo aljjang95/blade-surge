@@ -4,7 +4,7 @@ import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
 /**
  * rogue 스킬 '모양 언어' 서명(h1b). skill-signatures.js 가 합친다. 규칙은 그 파일 머리 주석과 같다:
  * 인스턴스 임팩트 층(드로우콜 1)만 쓰고, 판정 시각은 delay 칸으로 맞추며, 프레임당 할당·Math.random 을 쓰지 않는다.
- * 암살자: 질주 = 바닥 그림자 칼날 궤적 / 독무 = 조준 원 → 착탄 독 가시 고리 / 난무 = 앞 반원 잔상 칼날 박자 /
+ * 암살자: 질주 = 바닥 그림자 칼날 궤적 / 독무 = 조준 원 → 착탄 두 겹 독 웅덩이 테 + 독 기둥 / 난무 = 앞 반원 잔상 칼날 박자 /
  * 천 개의 칼날 = 하늘에서 꽂히는 칼날 비 + 가시 대원 / 표식 = 둘레 표식 원 + 분신 X 자국 / 공허 보법 = 순간이동 별꼴 연쇄 /
  * 야행 = 둘레를 도는 칼날 행렬 / 일식 = 수렴하는 가시 원 → 일식 고리(짙은 보라 테 + 자홍 코로나).
  * 색은 짙은 보라·자홍 위주로 쓴다(가산 혼합에서 밝은 연보라는 흰 덩어리가 된다). 흰 심을 가진 별빛은 작게, 100ms 이하.
@@ -45,13 +45,22 @@ export const SIGNATURES = {
       _d.copy(_b).sub(_a);
       impact.beam(_a, _d, _d.length() * .8, i % 2 ? POISON : MAGENTA, { width: .14, fade: .35, delay: k0 * LAND });
     }
-    impact.mark(at, POISON, { radius: 4.4, life: .9, style: MARK_STYLE.thorn, delay: LAND, angle: .3 });
+    // 착탄: 적 무리 한가운데라 가운데 요소는 가려진다 → 바닥 독 웅덩이 경계를 적 바깥까지 넓게 두 겹(바깥 짙은 보라 가시 테 5.8m,
+    // 안쪽 독 초록 가시 테 4.4m)으로 1.5초 남기고, 테 위에서 독 기둥이 차례로 피어오르며 거품이 솟는다.
+    impact.mark(at, DEEP, { radius: 5.8, life: 1.5, style: MARK_STYLE.thorn, delay: LAND, angle: .9 });
+    impact.mark(at, POISON, { radius: 4.4, life: 1.5, style: MARK_STYLE.thorn, delay: LAND, angle: .3 });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 2.4, DEEP, .38, { grow: 1, delay: LAND });
-    impact._emit(IMPACT_KIND.star, at.x, .6, at.z, 1.4, POISON, .1, { angle: .3, grow: .5, delay: LAND });
+    impact._emit(IMPACT_KIND.star, at.x, .6, at.z, 1.2, POISON, .1, { angle: .3, grow: .5, delay: LAND });
+    _d.set(0, 1, 0);
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * 6.2831853 + .4, r = 3.6 + (i % 2) * 1.6;
+      _a.set(at.x + Math.cos(a) * r, .1, at.z + Math.sin(a) * r);
+      impact.beam(_a, _d, 2.6 + (i % 3) * .6, i % 2 ? MAGENTA : POISON, { speed: 5, tail: 1.8, width: .3, delay: LAND + (i % 4) * .14 });
+    }
     for (let i = 0, n = lite ? 5 : 12; i < n; i++) {
-      const a = i * 2.4, r = .8 + (i % 3) * 1.1;
-      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .3, at.z + Math.sin(a) * r, .32, i % 3 ? POISON : MAGENTA, .7,
-        { vx: Math.cos(a) * .6, vy: 2.6 + (i % 4) * .6, vz: Math.sin(a) * .6, stretch: .5, grow: 1, gravity: -1, delay: LAND + (i % 3) * .08 });
+      const a = i * 2.4, r = 1.2 + (i % 3) * 1.5;
+      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .3, at.z + Math.sin(a) * r, .34, i % 3 ? POISON : MAGENTA, .9,
+        { vx: Math.cos(a) * .6, vy: 2.4 + (i % 4) * .6, vz: Math.sin(a) * .6, stretch: .5, grow: 1, gravity: -1, delay: LAND + (i % 4) * .15 });
     }
   },
   // 환영 난무: 앞 반원에 잔상 칼날 자국이 실제 베기 박자(0.115초)로 좌우를 번갈아 그어지고, 마지막에 X 자 마무리.
