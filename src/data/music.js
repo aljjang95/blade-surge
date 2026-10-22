@@ -1,5 +1,5 @@
 import { STORE_CHANNEL } from '../platform/store-channel.js';
-import { activeCampaignTownChapter, campaignTownMusic } from './campaign-towns.js';
+import { activeCampaignTownChapter } from './campaign-towns.js';
 
 export const MUSIC_MIX = Object.freeze({ fade: 0.7, volume: 0.55 });
 /** Android 스토어 빌드(WebView 는 Opus 를 항상 재생한다)만 지역곡을 더 작은 Opus(.ogg)로 받는다. 웹·앱인토스(iOS 사파리 포함)는 원본 mp3 그대로다. */
@@ -44,7 +44,7 @@ export function flowMusicBriefForRoute(routeId) {
 export function musicForScene({ scene = 'battle', stage = null, boss = false } = {}) {
   if (scene === 'gacha') return 'bgm_gacha';
   // 로비는 열려 있는 캠페인 마을의 지역 곡을 쓴다(1지역 마을은 기존 로비 곡).
-  if (scene === 'lobby') return campaignTownMusic(activeCampaignTownChapter());
+  if (scene === 'lobby') return townMusic(activeCampaignTownChapter());
   if (stage?.expedition?.kind === 'arena') return 'regions/arena';
   if (boss) return bossMusic(stage);
   if (stage?.expedition?.kind === 'dungeon' && stage?.expedition?.depth === 'deep') {
@@ -118,7 +118,7 @@ export const bgmTrimGain = name => Math.pow(10, (BGM_LOOPS[name]?.trimDb || 0) /
 
 // ---------- 캠페인 마을 곡 (X-1..X-10 지역 마을, 캠페인 마을 레인 c3 의 CAMPAIGN_TOWNS 와 같은 id) ----------
 // 마을 전용 곡은 FlowMusic 생성 대기다(docs/audio/flowmusic-brief-h2.md). 대기 중에는 c3 의 campaignTownMusic 과 같은 대체 곡:
-// 1지역은 기존 로비곡, 2~6지역은 그 지역 던전곡. c3 병합 뒤 campaignTownMusic(chapter) 는 townMusic(chapter) 를 돌려주면 된다.
+// 1지역은 기존 로비곡, 2~6지역은 그 지역 던전곡. 로비(musicForScene)는 townMusic 을 써서 생성곡이 오면 status 만 바꾸면 된다.
 export const TOWN_CUE_PLAN = Object.freeze([
   Object.freeze({ id: 'town-bellgarden', chapter: 1, town: 'bellgarden', fallback: 'regions/lobby', status: 'external-gui-pending' }),
   Object.freeze({ id: 'town-emberforge', chapter: 2, town: 'emberforge', fallback: 'regions/forge', status: 'external-gui-pending' }),
