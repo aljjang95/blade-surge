@@ -29,10 +29,11 @@ const headerRules = [];
 }
 const headersFor = (pathname) => Object.assign({}, ...headerRules.filter((rule) => rule.re.test(pathname)).map((rule) => rule.headers));
 
-const log = { local: [], host: [], hostOffline: false, bad: [] };
+const log = { local: [], host: [], hostOffline: false, hostDelay: 0, bad: [] };
 async function serve(route, root, label, request) {
   const url = new URL(request.url());
   if (url.pathname.startsWith('/api/')) return route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"qa-mock"}' });
+  if (label === 'host' && log.hostDelay) await new Promise((resolve) => setTimeout(resolve, log.hostDelay));
   const rel = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
   const file = path.join(root, rel);
   if (!file.startsWith(root)) return route.fulfill({ status: 403, body: '' });
@@ -197,6 +198,28 @@ try {
   report.phases.C = { bootMs: bootC, stats: cStats, hostRequestsWhileOffline: log.host.length - hostCountBefore };
   check('두 번째 로드는 네트워크 내려받기 0건, 모두 보관본', cStats.networkFetches === 0 && cStats.cacheHits > 0 && cStats.failures === 0, cStats);
   check('두 번째 로드에서 정식 호스트로 나간 성공 응답이 없다', log.host.length === hostCountBefore, log.host.slice(hostCountBefore, hostCountBefore + 3));
+
+  // ===== D. 내려받는 동안 표시: 호스트를 느리게 만들어 로비·전투에서 가장자리 표시가 플레이 영역을 가리지 않는지 본다 =====
+  log.hostOffline = false; log.hostDelay = 9000;
+  await c.page.evaluate(() => window.app.toLobby?.());
+  void c.page.evaluate(() => window.__remoteAssets.prefetchGroup('region-4'));
+  await c.page.waitForTimeout(1600);
+  await c.shot('11-indicator-lobby');
+  const dockLobby = await c.page.evaluate(() => { const n = document.querySelector('.remote-dl'); if (!n || n.hidden) return null; const r = n.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), text: n.textContent, pe: getComputedStyle(n).pointerEvents }; });
+  check('내려받는 동안 가장자리 표시가 뜬다(입력을 막지 않는다)', !!dockLobby && dockLobby.pe === 'none' && dockLobby.y <= 2, dockLobby);
+  await c.page.evaluate(() => { window.app.eco.s.energy = 100; window.app.startStage(window.__stageDef(1, 1)); });
+  await c.page.waitForFunction(() => window.app.battle?.active && !window.app.stageStarting && !!window.app.battle.player, null, { timeout: 240000 });
+  await c.page.evaluate(() => { const app = window.app; app.testPause = true; app.battle.player.auto = true; app.ui.closeModal?.(); for (let i = 0; i < 240; i++) app.step(1 / 60, i === 239); });
+  await c.page.waitForTimeout(500);
+  await c.shot('12-indicator-battle');
+  const dockBattle = await c.page.evaluate(() => {
+    const n = document.querySelector('.remote-dl'); if (!n || n.hidden) return null; const r = n.getBoundingClientRect();
+    const hud = [...document.querySelectorAll('#hud *')].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).visibility !== 'hidden' && b.bottom > r.top && b.top < r.bottom && b.right > r.left && b.left < r.right && !e.contains(n) && !n.contains(e); })
+      .map((e) => (e.id || e.className || e.tagName).toString().slice(0, 40));
+    return { y: Math.round(r.y), h: Math.round(r.height), w: Math.round(r.width), overlaps: hud.slice(0, 6) };
+  });
+  check('전투 중에도 표시는 위쪽 가장자리 띠이고 HUD 와 겹치지 않는다', !!dockBattle && dockBattle.y <= 2 && dockBattle.h <= 30 && dockBattle.overlaps.length === 0, dockBattle);
+  log.hostDelay = 0;
   report.errors.push(...a.errors, ...c.errors);
 } catch (error) {
   check('QA 실행 중 예외 없음', false, String(error.stack || error).slice(0, 600));

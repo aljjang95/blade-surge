@@ -7,6 +7,7 @@ import { bgmUrl, musicForScene, townMusic } from '../src/data/music.js';
 import { ENCOUNTER_ART } from '../src/data/encounter-art.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
 import manifest from '../asset-library/manifest.json';
+import { NATIVE_ORIGINS } from '../worker/native-cors';
 
 // core/remote 분할표(tools/optimize/asset-split.json)의 계약: 모든 산출물 파일이 분류되고, 첫 지역·부팅에 필요한 파일은 반드시 core 이며,
 // 낡은 remote 규칙이 남지 않고, 빠진 core 나 APK 에 남은 remote 가 있으면 검사가 실패한다.
@@ -154,4 +155,26 @@ test('(빌드 산출물이 있을 때) 스토어 web 폴더는 매니페스트 �
   // 빌드가 끝난 폴더 크기는 core 합계와 같다(매니페스트·버전 파일 몇 KB 제외).
   const bytes = walk(join(dir, 'web')).reduce((sum, file) => sum + statSync(file).size, 0);
   expect(bytes - full.core.bytes).toBeLessThan(64 * 1024); // asset-manifest.json·version.json 만큼
+});
+
+// 정식 호스트가 remote 파일을 Capacitor 앱 출처(https://localhost)에 CORS 로 내주는지: public/_headers 가 remote 규칙이 닿는 모든 최상위 폴더에 허용 출처를 붙여야 한다.
+// 정적 자산은 Worker 를 거치지 않고 Static Assets 가 직접 응답하므로(wrangler.jsonc run_worker_first 는 /api/* 뿐) CORS 는 _headers 로만 붙는다.
+test('_headers: remote 가 있는 모든 폴더에 앱 출처 CORS 가 있고, 그 값은 worker/native-cors.ts 의 허용 출처다', () => {
+  const rules: { prefix: string; headers: Record<string, string> }[] = [];
+  let current: { prefix: string; headers: Record<string, string> } | null = null;
+  for (const line of readFileSync(join(root, 'public/_headers'), 'utf8').split('\n')) {
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    if (!/^\s/.test(line)) { current = { prefix: line.trim().replace(/\*$/, ''), headers: {} }; rules.push(current); }
+    else { const [k, ...v] = line.trim().split(':'); current!.headers[k.trim().toLowerCase()] = v.join(':').trim(); }
+  }
+  const folders = new Set(split.rules.filter((rule: any) => rule.class === 'remote').map((rule: any) => '/' + rule.glob.split('/')[0] + '/'));
+  expect([...folders].sort()).toEqual(['/assets/', '/bgm/', '/img/', '/models/', '/video/']);
+  for (const folder of folders) {
+    const rule = rules.find(entry => entry.prefix === folder);
+    expect(rule, folder).toBeDefined();
+    const allow = rule!.headers['access-control-allow-origin'];
+    expect(NATIVE_ORIGINS, folder).toContain(allow);
+    expect(allow).not.toBe('*');
+    expect(rule!.headers['access-control-allow-credentials']).toBeUndefined();
+  }
 });
