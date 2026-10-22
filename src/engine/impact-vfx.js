@@ -32,7 +32,7 @@ export const HERO_COMBO = Object.freeze({
   knight: Object.freeze({ shape: 'arc', color: 0xffc23a, hot: 0xffe27a, base: 1.55, grow: .5 }),
   ranger: Object.freeze({ shape: 'arrow', color: 0x3fe0a0, hot: 0x9fffd8, base: .7, grow: .45 }),
   mage: Object.freeze({ shape: 'orb', color: 0x5aa8ff, hot: 0x9fd0ff, base: .85, grow: .5 }),
-  rogue: Object.freeze({ shape: 'cross', color: 0xb466ff, hot: 0xe2b8ff, base: 1.2, grow: .45 }),
+  rogue: Object.freeze({ shape: 'cross', color: 0xb466ff, hot: 0xe2b8ff, deep: 0x8a3cff, base: 1.2, grow: .45 }),
   barbarian: Object.freeze({ shape: 'smash', color: 0xff5a1e, hot: 0xff9a3a, base: 1.1, grow: .55 }),
 });
 
@@ -350,9 +350,11 @@ export class ImpactVfx {
   /** 치명타 공통 신호(영웅과 무관): 짧고 날카로운 금빛 십자(.14초) → 진한 금 충격 고리 → 네 갈래 금 파편 눈금이 .4초 남는다.
    *  크게 번지는 별빛 대신 가는 십자와 고리로 읽게 해 백화를 늘리지 않고, 판정 뒤 .2~.4초 화면에도 '치명'이 남는다. */
   _crit(at, dir, angle, T) {
-    const x = at.x, y = at.y + .05, z = at.z;
+    // 십자와 눈금은 적 머리 위(+.55m)에 띄운다. 위에서 내려다보는 카메라에서 영웅 바로 앞 적의 타격점은 영웅 몸과 겹쳐
+    // 영웅 초점 마스크(.45배)에 눌려 보이지 않았다. 고리는 접촉점에 남는다.
+    const x = at.x, y = at.y + .55, z = at.z;
     this._emit(IMPACT_KIND.star, x, y, z, T.core * 2.7, CRIT_COLOR, .14, { angle: 0, grow: .55 });
-    this._emit(IMPACT_KIND.ring, x, y, z, T.ring * 1.35, CRIT_DEEP, .3, { grow: 1 });
+    this._emit(IMPACT_KIND.ring, x, at.y, z, T.ring * 1.35, CRIT_DEEP, .3, { grow: 1 });
     if (this.lite) { this._streaks(at, dir, 2, T.speed * 1.15, T.streakLife, CRIT_COLOR, { spread: 1.6, size: .28 }); return; }
     // 십자 네 끝에 금 파편 눈금: 화면 기준 상하좌우로 짧게 밀려나며 .42초 머문다(잔광).
     const e = this.camera?.matrixWorld?.elements;
@@ -405,7 +407,7 @@ export class ImpactVfx {
     const flames = this.lite ? 1 : boss ? 4 : elite ? 3 : 2;
     for (let i = 0; i < flames; i++) {
       const a = this.rng.next() * 6.2831853, r = i ? .25 + this.rng.next() * .3 : 0;
-      this._emit(IMPACT_KIND.flame, x + Math.cos(a) * r, y - .3, z + Math.sin(a) * r, (i ? .32 : .42) * k, i ? (HERO_COMBO[hero]?.hot ?? P.accent) : P.accent, .58 + this.rng.next() * .14,
+      this._emit(IMPACT_KIND.flame, x + Math.cos(a) * r, y + .25, z + Math.sin(a) * r, (i ? .32 : .42) * k, i ? (HERO_COMBO[hero]?.hot ?? P.accent) : P.accent, .58 + this.rng.next() * .14,
         { vy: 1.5, grow: .5, gravity: -4.5, delay: .04 + i * .05 });
     }
     if (!this.lite) this._heroKill(hero, pos, P, k);
@@ -483,10 +485,11 @@ export class ImpactVfx {
       // 암살자: 보라 교차 베기 — 두 자국이 한 박자 차로 X 를 긋고, 단계가 오르면 세 번째 가로 자국. 마무리는 네 갈래 자국 + 보라 파편.
       const w = .72 + .18 * s;
       this._emit(IMPACT_KIND.cut, x, y, z, C.base * g, C.color, .17, { angle: angle + w, stretch: 1.25, grow: .92 });
-      this._emit(IMPACT_KIND.cut, x, y + .03, z, C.base * g * .92, C.hot, .17, { angle: angle - w, stretch: 1.25, grow: .92, delay: .03 });
+      this._emit(IMPACT_KIND.cut, x, y + .03, z, C.base * g * .92, C.deep, .17, { angle: angle - w, stretch: 1.25, grow: .92, delay: .03 });
       if (s > .6 && !lite) this._emit(IMPACT_KIND.cut, x, y + .06, z, C.base * g * .8, C.color, .15, { angle, stretch: 1.4, grow: .92, delay: .06 });
       if (finisher) {
-        for (let i = 0; i < 2; i++) this._emit(IMPACT_KIND.cut, x, y + .05, z, C.base * g * 1.15, i ? C.hot : C.color, .2, { angle: angle + 1.5708 * i + .785, stretch: 1.5, grow: .92, delay: .07 + i * .025 });
+        // 마무리 X 두 자국은 중심을 비켜 위·아래로 벌려 긋는다(네 자국이 한 점에 겹쳐 하얗게 타던 것을 막는다).
+        for (let i = 0; i < 2; i++) this._emit(IMPACT_KIND.cut, x, y + (i ? -.35 : .35), z, C.base * g * .95, C.deep, .2, { angle: angle + 1.5708 * i + .785, stretch: 1.5, grow: .92, delay: .07 + i * .025 });
         for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
           const a = (i / n) * 6.2831853 + .3, sp = 6 + this.rng.next() * 3;
           this._emit(IMPACT_KIND.shard, x, y, z, .2, C.color, .3, { vx: Math.cos(a) * sp, vy: 1.5, vz: Math.sin(a) * sp, angle: a, stretch: 1.8, grow: .8, gravity: 10, delay: .07 });
