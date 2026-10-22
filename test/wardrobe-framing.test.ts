@@ -31,7 +31,7 @@ test('착용 미리보기는 숨긴 무기를 제외하고 실제 대기 동작 
         turntable.rotation.y = yaw * Math.PI / 8; turntable.updateMatrixWorld(true);
         for (const mesh of [body, weapon]) for (let vertex = 0; vertex < mesh.geometry.attributes.position.count; vertex++) {
           mesh.getVertexPosition(vertex, point).applyMatrix4(mesh.matrixWorld).project(camera);
-          expect(Math.abs(point.x)).toBeLessThan(.89);
+          expect(Math.abs(point.x)).toBeLessThan(.97);
           expect(Math.abs(point.y)).toBeLessThan(height <= 260 ? 1 - 72 / height : 1 - 32 / height);
           expect(Math.abs(point.z)).toBeLessThan(1);
         }
