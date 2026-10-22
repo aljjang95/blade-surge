@@ -80,6 +80,47 @@ test('궁수 스킬 8개 모두 서명이 있고, 서명마다 모양 구성이 
   expect(new Set(['pierce', 'volley', 'retreat', 'storm', 'quick', 'bind', 'gale'].map(sig)).size).toBe(7);
 });
 
+test('궁수 서명: Math.random 미사용, 시전 프레임 칸 상한(투사체 궤적 몫 남김), lite 는 더 적게, 큰 빌보드 고리 없음', () => {
+  const ctx = (v: ImpactVfx, lite = false) => ({ fx: null, impact: v, player: { pos: new THREE.Vector3(1, 0, 2) }, at: new THREE.Vector3(1, 0, 9), f: new THREE.Vector3(0, 0, 1), lite, scale: 1 } as any);
+  // 궁극기는 일곱 발 × 3칸(궤적·번짐·활 끝 고리) + 레시피 burst 3 을 같은 프레임에 쓴다.
+  const arrows: Record<string, number> = { ranger_tempest: 7, ranger_binding: 5, ranger_volley: 3, gale_hunt: 3 };
+  for (const id of HERO_SKILLS.ranger) {
+    const v = make(); const nativeRandom = Math.random; let calls = 0;
+    Math.random = () => { calls++; return nativeRandom(); };
+    try { SKILL_SIGNATURES[id](ctx(v)); } finally { Math.random = nativeRandom; }
+    expect(calls).toBe(0);
+    expect(v.ring.high + 3 + (arrows[id] ?? 1) * 3).toBeLessThanOrEqual(72);
+    for (let i = 0; i < v.ring.high; i++) if (v.ring.a.aShape[i * 4] === IMPACT_KIND.ring) expect(v.ring.a.aShape[i * 4 + 1]).toBeLessThanOrEqual(3.5);
+    const lite = make(); SKILL_SIGNATURES[id](ctx(lite, true));
+    expect(lite.ring.high).toBeLessThanOrEqual(v.ring.high);
+    lite.dispose(); v.dispose();
+  }
+});
+
+test('궁수 관통 관통점·폭풍 일곱 갈래·화살비 낙하가 판정 시각과 맞는다', () => {
+  const ctx = (v: ImpactVfx) => ({ fx: null, impact: v, player: { pos: new THREE.Vector3() }, at: new THREE.Vector3(0, 0, 7), f: new THREE.Vector3(0, 0, 1), lite: false, scale: 1 } as any);
+  // 관통: 화살(27m/s)이 4·8·12m 를 지나는 순간 별빛.
+  let v = make(); SKILL_SIGNATURES.ranger_pierce(ctx(v));
+  const stars = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.star && v.ring.a.aLife[i * 2] > 0).map(i => v.ring.a.aLife[i * 2]);
+  expect(stars.map(t => +t.toFixed(4))).toEqual([4 / 27, 8 / 27, 12 / 27].map(t => +t.toFixed(4)));
+  v.dispose();
+  // 폭풍: 바닥 갈래 방향이 일곱 개(실제 화살 ±3×0.18rad).
+  v = make(); SKILL_SIGNATURES.ranger_tempest(ctx(v));
+  const dirs = new Set<number>();
+  for (let i = 0; i < v.ring.high; i++) if (v.ring.a.aShape[i * 4] === IMPACT_KIND.beam) dirs.add(+Math.atan2(v.ring.a.aVel[i * 3], v.ring.a.aVel[i * 3 + 2]).toFixed(3));
+  expect(dirs.size).toBe(7);
+  v.dispose();
+  // 화살비: 하늘 광선 머리가 .16 + i×.09 초에 바닥에 닿는다.
+  v = make(); SKILL_SIGNATURES.skyfall_arrows(ctx(v));
+  const hits: number[] = [];
+  for (let i = 0; i < v.ring.high; i++) {
+    const A = v.ring.a; if (A.aShape[i * 4] !== IMPACT_KIND.beam || A.aShape[i * 4 + 1] > .2) continue;
+    hits.push(+(A.aLife[i * 2] + Math.hypot(A.aVel[i * 3], A.aVel[i * 3 + 1], A.aVel[i * 3 + 2]) / A.aMotion[i * 2]).toFixed(3));
+  }
+  expect(hits).toEqual([.16, .25, .34, .43, .52]);
+  v.dispose();
+});
+
 test('궁수 레시피는 전방 흰 바람 섬광을 쓰지 않고, 동작 줄이기에서는 서명을 생략한다', () => {
   for (const id of HERO_SKILLS.ranger) {
     const calls: any[] = []; const rec = (k: string) => (...a: any[]) => calls.push([k, ...a]);

@@ -62,7 +62,7 @@ export const SIGNATURES = {
   // 천 개의 칼날(궁극기): 둘레 가시 대원(지름 16m) + 하늘에서 비스듬히 꽂히는 칼날 광선이 여덟 박자(0.15초) 동안 쏟아지고,
   // 꽂힌 자리마다 엇갈린 칼날 자국이 남는다. 마지막 박자에 큰 짙은 고리.
   thousand(ctx) {
-    const { impact, player, lite } = ctx; const rng = impact.rng, R = 7, SPEED = 60;
+    const { impact, player, lite } = ctx; const rng = impact.rng, R = 7, SPEED = 72;
     impact.mark(player.pos, VIOLET, { radius: 8, life: 1.5, style: MARK_STYLE.thorn, angle: .2 });
     impact.mark(player.pos, MAGENTA, { radius: 5, life: 1.2, style: MARK_STYLE.thorn, angle: 1.1, delay: .3 });
     const n = lite ? 6 : 14;

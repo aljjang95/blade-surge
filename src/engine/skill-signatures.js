@@ -43,19 +43,25 @@ function rail(impact, from, dir, d0, d1, seg, color, { width = .2, speed = 28, l
 
 /** @type {Record<string, (ctx: SigCtx) => void>} */
 const RANGER = {
-  // 관통: 화살이 지나는 길을 따라 바닥에 굵은 레일(가운데 대시 + 양옆 가는 두 가닥)이 차례로 켜지고,
+  // 관통: 화살이 지나는 길을 따라 바닥에 굵은 레일(가운데 대시 + 양옆 가는 두 가닥)과 2m 마다 가로 침목이 차례로 켜진다.
+  // 카메라가 진행 방향을 내려다보는 구도라 세로 선은 짧게 보이므로, 화면에 가로로 길게 서는 침목이 '일직선 레일'을 읽게 한다.
   // 화살이 4·8·12m 를 지나는 순간 관통점마다 십자 별빛과 작은 고리가 꿰인다.
   ranger_pierce(ctx) {
     const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 27;
     _b.copy(player.pos).setY(.07);
-    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .32, speed: SPEED, life: .7 });
-    if (!lite) for (const side of [-.5, .5]) rail(impact, _b, f, .8, 12.2, 1.9, JADE_HOT, { width: .05, speed: SPEED, life: .6, side });
-    impact.beam(o, f, 16, JADE, { speed: SPEED, tail: 9, width: .2 });
+    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .4, speed: SPEED, life: .7 });
+    if (!lite) for (const side of [-.55, .55]) rail(impact, _b, f, .8, 12.2, 1.9, JADE_HOT, { width: .06, speed: SPEED, life: .6, side });
+    _d.set(-f.z, 0, f.x);
+    for (let d = 1.5; d < 12; d += 2) {
+      _e.copy(_b).addScaledVector(f, d).addScaledVector(_d, -.75);
+      impact.beam(_e, _d, 1.5, JADE_HOT, { width: .07, fade: .55, delay: d / SPEED });
+    }
+    impact.beam(o, f, 16, JADE, { speed: SPEED, tail: 9, width: .22 });
     impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, JADE_HOT, .1, { angle: yawOf(f) * .2, grow: .5 });
     for (const d of [4, 8, 12]) {
       _e.copy(o).addScaledVector(f, d); const t = d / SPEED;
-      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.7, JADE, .3, { angle: .785, grow: .4, delay: t });
-      impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.5, JADE, .32, { grow: 1, delay: t });
+      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 2.2, JADE, .3, { angle: .785, grow: .4, delay: t });
+      impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.6, JADE, .32, { grow: 1, delay: t });
     }
   },
   // 일제 사격: 실제 세 발(±0.24rad)과 같은 방향으로 바닥에 세 갈래 대시 궤적이 뚜렷이 갈라지고,
@@ -108,7 +114,8 @@ const RANGER = {
   ranger_quickshot(ctx) {
     const { impact, f, player } = ctx; const SPEED = 28, AIM = 6.5;
     _b.copy(player.pos).addScaledVector(f, AIM);
-    impact.mark(_b, JADE_HOT, { radius: 1.6, life: .8, style: MARK_STYLE.reticle });
+    impact.mark(_b, JADE_HOT, { radius: 1.8, life: .8, style: MARK_STYLE.reticle });
+    impact.mark(_b, JADE, { radius: 1.1, life: .5, style: MARK_STYLE.thorn, delay: .24 + AIM / SPEED });
     impact.mark(_b, JADE, { radius: 2.5, life: .65, style: MARK_STYLE.reticle, angle: .785, delay: .06 });
     const o = bow(ctx, _a);
     for (let i = 0; i < 3; i++) {
@@ -135,11 +142,18 @@ const RANGER = {
       impact.mark(_e, VINE, { radius: 1 + i * .3, life: .65, style: MARK_STYLE.thorn, delay: .04 + i * .08, angle: i * .9 });
     }
   },
-  // 질풍 사냥: 영웅 둘레를 감는 회오리 세 겹(접선 불똥, 박자마다 반경이 커진다) + 박자마다 회전하며 커지는 나침 고리 + 쌍나선 바람 화살 줄.
+  // 질풍 사냥: 영웅 발밑에서 바깥으로 감겨 나가는 세 갈래 회오리 나선(쌍나선 바람 짧은 줄 15개, 안쪽부터 차례로) +
+  // 박자마다 몸을 감고 도는 접선 불똥 + 작은 나침 고리 + 쌍나선 바람 화살 줄. 판정 박자는 0, .12, .24초.
   gale_hunt(ctx) {
-    const { impact, f, player, lite } = ctx; const n = lite ? 4 : 8, o = bow(ctx, _a);
+    const { impact, f, player, lite } = ctx; const n = lite ? 3 : 6, arms = lite ? 2 : 3, o = bow(ctx, _a);
+    _b.copy(player.pos).setY(.08);
+    for (let a = 0; a < arms; a++) for (let j = 0; j < 5; j++) {
+      const ang = a * (Math.PI * 2 / arms) + j * .55, r = .9 + j * .62;
+      _e.set(_b.x + Math.cos(ang) * r, .08, _b.z + Math.sin(ang) * r); _d.set(-Math.sin(ang), 0, Math.cos(ang));
+      impact.beam(_e, _d, .8 + j * .25, j % 2 ? JADE : JADE_HOT, { width: .2, style: BEAM_STYLE.gale, fade: .5, delay: j * .05 });
+    }
     for (let w = 0; w < 3; w++) {
-      impact.mark(player.pos, w === 1 ? JADE : JADE_HOT, { radius: 2.2 + w * .8, life: .5, style: MARK_STYLE.compass, angle: w * .9, delay: w * .12 });
+      impact.mark(player.pos, JADE, { radius: 1.5 + w * .35, life: .4, style: MARK_STYLE.compass, angle: w * .9, delay: w * .12 });
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + w * .5, r = 1.2 + w * .4;
         impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .4 + w * .45, player.pos.z + Math.sin(a) * r, .32, w === 1 ? JADE_HOT : JADE, .4,
@@ -153,7 +167,7 @@ const RANGER = {
   // 하늘에서 떨어지는 굵은 광선(번짐 + 심)이 판정 순간(.16+i×.09초)에 정확히 꽂혀 고리·별빛·가시 자국을 남긴다.
   skyfall_arrows(ctx) {
     const { impact, at, lite } = ctx;
-    const FALL = 16, SPEED = 90;
+    const FALL = 16, SPEED = 110;
     impact.mark(at, JADE, { radius: 6.4, life: 1, style: MARK_STYLE.compass, angle: .4 });
     for (let i = 0; i < 5; i++) {
       const hitT = .16 + i * .09;

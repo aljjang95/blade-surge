@@ -47,7 +47,9 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
 /** 암살자 그림자 파동: 노란 shockwave 원화에 보라를 곱하면 갈색이 돼서, 보라 소용돌이 원화(singularity)를 지면에 눕힌다.
  *  shockTex 와 같은 드로우콜 1·같은 밝기 감쇠(decorativeBurstGain)·Math.random 미사용. */
 function shadowWave(game, pos, r1, life) {
-  game.fx.groundTex(pos, 'singularity', 0xc890ff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
+  const fx = game.fx;
+  if (typeof fx.groundTex === 'function') fx.groundTex(pos, 'singularity', 0xc890ff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
+  else fx.shockTex?.(pos, 0xb26bff, { r1, life });
 }
 /** 적이 가장 밀집한 지점 (몹몰이 조준 보정) */
 function densest(game, p, range = 11, radius = 3.5) {
@@ -509,7 +511,7 @@ export const SKILLS = {
   },
   flurry: {
     dur: 1.4, total: 1.4,
-    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3 }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
+    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3, demon: true }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
     update(game, p, c, dt) {
       if (c.t > 0.3) p.vel.set(0, 0, 0);
       game.vacuum(p.pos, 4.5, 6);
@@ -848,7 +850,7 @@ export const SKILLS = {
   // ── 암살자 Lv.10 : 표식 + 분신 순간이동 참격 ──
   shadow_mark: {
     dur: 0.7,
-    start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7 }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7, demon: true }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
     cast(game, p, c) {
       const ts = targets(game, p, 8, 13);
       if (!ts.length) { shadowWave(game, p.pos, 5, 0.4); return; }
@@ -957,7 +959,7 @@ export const SKILLS = {
   absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0xccecff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
-  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
+  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
   gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
   skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
 
