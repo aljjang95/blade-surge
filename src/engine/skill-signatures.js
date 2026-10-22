@@ -59,6 +59,8 @@ const RANGER = {
       _d.negate(); impact.beam(_e, _d, 1.1, JADE, { width: .16, fade: .55, delay: d / SPEED }); _d.negate();
     }
     impact.beam(o, f, 16, JADE, { speed: SPEED, tail: 9, width: .22 });
+    // 관통 창날: 내려다보는 구도에서 화면 세로 기둥으로 서는 넓은 어두운 비취 번짐(화살이 지난 뒤에도 0.8초 남는다).
+    impact.beam(o, f, 13, DEEP, { width: .65, fade: .8 });
     impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, JADE_HOT, .1, { angle: yawOf(f) * .2, grow: .5 });
     for (const d of [4, 8, 12]) {
       _e.copy(o).addScaledVector(f, d); const t = d / SPEED;
@@ -126,6 +128,7 @@ const RANGER = {
     for (let i = 0; i < 3; i++) {
       const d = i * .12;
       impact.beam(o, f, 12, i === 2 ? JADE_HOT : JADE, { speed: SPEED, tail: 5, width: .18, delay: d });
+      impact.beam(o, f, AIM + 1, DEEP, { width: .42, fade: .4, delay: d });
       impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .9 + i * .25, JADE_HOT, .09, { angle: .3, grow: .5, delay: d });
       impact._emit(IMPACT_KIND.ring, _b.x, .5, _b.z, 1.6 + i * .45, JADE, .28, { grow: 1, delay: d + AIM / SPEED });
       _e.copy(player.pos).setY(.08).addScaledVector(f, 1 + i * 1.7);

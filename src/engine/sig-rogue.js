@@ -125,13 +125,13 @@ export const SIGNATURES = {
     for (let w = 0; w < 3; w++) for (let i = 0; i < n; i++) {
       const a = (i / n) * 6.2831853 + w * .55;
       _b.set(at.x + Math.cos(a) * R, .9, at.z + Math.sin(a) * R); _d.set(-Math.sin(a), 0, Math.cos(a));
-      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.6, w === 1 ? MAGENTA : VIOLET, .26, { angle: cutAngle(impact, _d), stretch: 1.1, grow: .9, delay: w * .1 });
+      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.3, w === 1 ? MAGENTA : DEEP, .26, { angle: cutAngle(impact, _d), stretch: 1.1, grow: .9, delay: w * .1 });
     }
     // 행렬 궤도: 둘레를 도는 바닥 호 12토막이 세 박자에 나눠 켜진다(돌아가는 칼날 행진).
     for (let j = 0, m = lite ? 6 : 12; j < m; j++) {
       const a = (j / m) * 6.2831853;
       _b.set(at.x + Math.cos(a) * (R - .4), .08, at.z + Math.sin(a) * (R - .4)); _d.set(-Math.sin(a), 0, Math.cos(a));
-      impact.beam(_b, _d, 6.2831853 * (R - .4) / m * .85, j % 2 ? DEEP : VIOLET, { width: .22, fade: .45, delay: (j % 3) * .1 });
+      impact.beam(_b, _d, 6.2831853 * (R - .4) / m * .85, j % 2 ? NIGHT : DEEP, { width: .26, fade: .45, delay: (j % 3) * .1 });
     }
     impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 3, DEEP, .36, { grow: 1, delay: .2 });
   },

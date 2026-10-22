@@ -74,3 +74,21 @@ test('암살자 레시피는 원화를 나눠 쓴다(전부 같은 그림자 참
   const tex = HERO_SKILLS.rogue.map((id: string) => { const r = (SKILL_VFX as any)[id]; return r.mode === 'none' ? 'none' : r.tex; });
   expect(new Set(tex).size).toBeGreaterThanOrEqual(4);
 });
+
+test('궁극기 예비 표식(시전 연출 중): 폭풍·천 개의 칼날 둘 다 있고, Math.random 미사용·칸 상한·lite 는 더 적게', async () => {
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  expect(Object.keys(SKILL_PRELUDES).sort()).toEqual(['ranger_tempest', 'thousand']);
+  for (const id of Object.keys(SKILL_PRELUDES)) {
+    const v = make(); const nativeRandom = Math.random; let calls = 0;
+    Math.random = () => { calls++; return nativeRandom(); };
+    try { SKILL_PRELUDES[id](ctxOf(v)); } finally { Math.random = nativeRandom; }
+    expect(calls).toBe(0);
+    expect(v.ring.high).toBeGreaterThan(3);
+    expect(v.ring.high).toBeLessThanOrEqual(SIG_MAX);
+    // 시전 전 표식은 바로(지연 .5초 안) 보인다.
+    expect(Math.min(...slots(v).map(x => x.start))).toBe(0);
+    const lite = make(); SKILL_PRELUDES[id](ctxOf(lite, true));
+    expect(lite.ring.high).toBeLessThanOrEqual(v.ring.high);
+    lite.dispose(); v.dispose();
+  }
+});
