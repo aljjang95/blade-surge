@@ -402,6 +402,8 @@ export class ImpactVfx {
   /**
    * 화살·관통 광선 한 줄. from 에서 dir 방향 length(m)까지 speed(m/s)로 머리가 나아가고 tail(m) 뒤에서 꼬리가 따라온다.
    * 화살과 같은 속도·궤적이라 '어디로 꿰뚫었는지'가 남는다. 돌려준 표(handle)로 명중 시 stopBeam 해 과녁에서 멈춘다.
+   * @param {any} from @param {any} dir @param {number} length @param {number} color
+   * @param {{speed?: number, tail?: number, width?: number, style?: number, delay?: number, fade?: number}} [opts]
    * @returns {{slot: number, start: number}|null}
    */
   beam(from, dir, length, color, { speed = 0, tail = 0, width = .09, style = BEAM_STYLE.line, delay = 0, fade = .12 } = {}) {
@@ -441,7 +443,9 @@ export class ImpactVfx {
     const r = this.ring; if (handle.slot < r.lo) r.lo = handle.slot; if (handle.slot > r.hi) r.hi = handle.slot;
     return true;
   }
-  /** 지면에 눕는 표식 한 장(조준 원·부채꼴·가시 고리·나침 고리). radius m, angle 은 월드 XZ 회전(라디안). */
+  /** 지면에 눕는 표식 한 장(조준 원·부채꼴·가시 고리·나침 고리). radius m, angle 은 월드 XZ 회전(라디안).
+   * @param {any} pos @param {number} color
+   * @param {{radius?: number, life?: number, style?: number, angle?: number, delay?: number, y?: number}} [opts] */
   mark(pos, color, { radius = 1.5, life = .6, style = MARK_STYLE.reticle, angle = 0, delay = 0, y = .06 } = {}) {
     if (!pos) return false;
     return this._emit(IMPACT_KIND.mark, pos.x, (pos.y || 0) + y, pos.z, radius, color, life, { angle, stretch: style, delay });

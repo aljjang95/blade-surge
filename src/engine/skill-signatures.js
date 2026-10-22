@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
+import { SIGNATURES as KNIGHT } from './sig-knight.js';
+import { SIGNATURES as MAGE } from './sig-mage.js';
+import { SIGNATURES as ROGUE } from './sig-rogue.js';
+import { SIGNATURES as BARBARIAN } from './sig-barbarian.js';
 
 /**
  * 스킬별 '모양 언어' 서명. castSkillVfx 가 레시피(바닥 룬·텍스처) 뒤에 한 번 부른다.
@@ -17,7 +21,7 @@ const yawOf = (f) => Math.atan2(f.z, f.x);
 function bow(ctx, out) { return out.copy(ctx.player.pos).addScaledVector(ctx.f, .9).setY(1.25); }
 
 /** @type {Record<string, (ctx: SigCtx) => void>} */
-export const SKILL_SIGNATURES = {
+const RANGER = {
   // 관통: 화살 궤적(광선)에 더해 바닥에 곧은 레일 한 줄이 즉시 깔렸다 사라진다 → '일직선으로 꿰뚫는다'.
   ranger_pierce(ctx) {
     const { impact, f } = ctx; const o = bow(ctx, _a);
@@ -91,3 +95,6 @@ export const SKILL_SIGNATURES = {
     }
   },
 };
+
+/** 영웅별 서명 합본. 궁수는 이 파일, 나머지 영웅은 sig-<영웅>.js 가 맡는다. */
+export const SKILL_SIGNATURES = { ...RANGER, ...KNIGHT, ...MAGE, ...ROGUE, ...BARBARIAN };

@@ -151,7 +151,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
       }
     }
     // 스킬 고유 모양 언어(광선·지면 표식·고리, 인스턴스 층). 동작 줄이기에서는 생략한다.
-    if (r.sig && !reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
+    if (!reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !(r.mode === 'ground' && size >= 10)) {

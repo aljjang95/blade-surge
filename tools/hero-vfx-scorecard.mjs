@@ -95,7 +95,7 @@ try {
         while (window.__pool.length < offsets.length) { const e = b.spawnEnemy(type, null, null, o.clone()); e.update = () => {}; window.__pool.push(e); }
         window.__pool.forEach((e, i) => { e.alive = true; e.dead = false; e.spawning = false; e.maxHp = e.hp = hp; e.pos.set(o.x + offsets[i][0], 0, o.z + offsets[i][1]); if (e.mesh) e.mesh.visible = true; if (e.group) e.group.visible = true; });
         p.pos.copy(o); p.vel.set(0, 0, 0); p.state = 'idle'; p.stateT = 0; p.skillCtx = null; p.stun = 0; p.invuln = 1e9; p.hp = p.maxHp;
-        p.cds.fill(0); p.mp = p.maxMp = 9999; p.ult = p.ultMax; p.auto = false; p.yaw = Math.PI; p.stats.crit = 0;
+        p.cds.fill(0); p.mp = p.maxMp = 9999; p.ult = p.ultMax; p.auto = false; p.sanctum = null; p.dr = 0; p.drT = 0; p.buffs.atk = p.buffs.spd = p.buffs.atkSpd = 1; p.buffs.t = 0; p.stormT = 0; p.yaw = Math.PI; p.stats.crit = 0;
         b.timers.length = 0; for (const q of b.projectiles) q.mesh?.removeFromParent?.(); b.projectiles.length = 0;
         app.input.clear(); app.fx.clearAll();
       };
