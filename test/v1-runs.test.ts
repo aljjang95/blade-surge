@@ -148,7 +148,8 @@ describe('MMO P1-E 런 티켓·정산', () => {
     expect(honest.r.body.fullClear).toBe(true);
     // 풀클리어 보너스(골드 +40%, 장비 1개)는 위조 쪽에 없다.
     expect(forged.r.body.got.find((g: any) => g.k === 'gold')?.n ?? 0).toBeLessThan(honest.r.body.got.find((g: any) => g.k === 'gold')?.n ?? 0);
-    expect(forged.items).toBeLessThan(honest.items);
+    // 장비 수는 처치 드롭 난수에 따라 달라 비교하지 않는다(간헐 실패 원인). 엘리트 장비 보너스는 fullClear에만 걸리고
+    // (economy.completeStage, dopamine-contract 테스트), 위조 쪽 fullClear가 false임을 위에서 단언한다.
     // 순수 함수 경계: 부활이 있으면 1별, stars·fullClear 필드는 계산에 영향이 없다.
     expect(serverRating(STAGE, { win: true, roomsCleared: referenceRooms(STAGE), hpLost: 0, revives: 1, stars: 3, fullClear: true } as any, 1000).stars).toBe(1);
     expect(serverRating(STAGE, { win: true, roomsCleared: 0, hpLost: 0, stars: 3, fullClear: true } as any, 1000)).toMatchObject({ stars: 2, fullClear: false });
