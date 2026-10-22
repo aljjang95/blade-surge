@@ -40,8 +40,8 @@ export function applyKnightSlashVariant(game, player, ctx, variantId) {
   }
   if (variant === 'fissure') {
     const at = player.pos.clone().addScaledVector(forward, 6).setY(0);
-    // 균열 예고: 4.2m 금빛 룬 원화(바닥을 덮어 다른 스킬과 같은 모양) 대신 판정 반경(3.2m) 가시 고리 + 갈라지는 균열 네 갈래(인스턴스 층).
-    game.fx.impact?.mark?.(at, 0xff9a18, { radius:3.2, life:1.45, style:MARK_STYLE.thorn, angle:Math.atan2(forward.z, forward.x) });
+    // 균열 예고: 4.2m 금빛 룬 원화(바닥을 덮어 다른 스킬과 같은 모양) 대신 중심 가시 고리(1.8m, 큰 표식은 굵은 바퀴가 된다) + 갈라지는 균열 네 갈래(인스턴스 층).
+    game.fx.impact?.mark?.(at, 0xff9a18, { radius:1.8, life:1.45, style:MARK_STYLE.thorn, angle:Math.atan2(forward.z, forward.x) });
     for (let i = 0; i < 4; i++) game.fx.impact?.beam?.(at.clone().setY(.07), _fissureDir.copy(forward).applyAxisAngle(_fissureUp, i * Math.PI / 2 + .4), 3.4, 0xff8a10, { speed:30, width:.06, fade:1.1 });
     [0.25,0.65,1.05].forEach((delay,index) => game.after(delay, () => {
       if (!valid()) return;
