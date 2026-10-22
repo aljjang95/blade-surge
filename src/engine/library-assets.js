@@ -161,12 +161,15 @@ export function mergeAnimPack(gltf, pack, packGltf) {
   return added;
 }
 
-function attachAnimPack(gltf, asset, load, warn) {
+export function attachAnimPack(gltf, asset, load, warn) {
   const pack = animPackFor(asset.id);
   if (!pack) return gltf;
   if (pack.source?.sha256 !== shippedSourceSha(asset)) { warn(`anim pack skipped (source changed): ${asset.id}`); return gltf; }
   return Promise.resolve().then(() => load(pack.path)).then((packGltf) => {
-    gltf.scene.userData.animPack = { asset: pack.asset, clips: mergeAnimPack(gltf, pack, packGltf) };
+    // 병합 중 예외도 팩만 버리고 원본 클립으로 계속한다(몸체 전체가 대체 경로로 떨어지지 않게). 덧붙이던 클립은 되돌린다.
+    const count = gltf.animations.length;
+    try { gltf.scene.userData.animPack = { asset: pack.asset, clips: mergeAnimPack(gltf, pack, packGltf) }; }
+    catch (error) { gltf.animations.length = count; warn(`anim pack merge failed, using source clips only: ${asset.id}`, error); }
     return gltf;
   }, (error) => { warn(`anim pack failed, using source clips only: ${asset.id}`, error); return gltf; });
 }

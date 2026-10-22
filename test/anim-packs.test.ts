@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import * as THREE from 'three';
 import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.mjs';
 import { loadHeroModel, loadModel, spawnCharacter, disposeCharacter } from '../src/engine/assets.js';
-import { animPacks, animPackFor, mergeAnimPack, shippedSourceSha } from '../src/engine/library-assets.js';
+import { animPacks, animPackFor, attachAnimPack, mergeAnimPack, shippedSourceSha } from '../src/engine/library-assets.js';
 import { HERO_PACK_ALIASES } from '../src/data/hero-library.js';
 import { RIGS, libraryPackRig, libraryClipKey } from '../src/data/rigs.js';
 import { Actor } from '../src/game/actor.js';
@@ -80,6 +80,24 @@ test('mergeAnimPack: 등록된 새 이름만 덧붙이고 같은 이름 원본 �
   expect(gltf.animations[0].duration).toBe(1);
 });
 
+test('attachAnimPack: 병합 중 예외는 팩만 버리고 원본 클립으로 계속한다(덧붙이던 클립은 되돌림)', async () => {
+  const asset = (manifest as any).assets.find((a: any) => a.id === 'slime');
+  const warns: string[] = [];
+  const gltf: any = { scene: { userData: {} }, animations: [new THREE.AnimationClip('hit', 1, [])] };
+  const broken = { animations: [new THREE.AnimationClip('hitKnockback', 1, []), null] };   // 두 번째 항목에서 예외
+  const out = await attachAnimPack(gltf, asset, () => broken, (m: string) => warns.push(m));
+  expect(out).toBe(gltf);
+  expect(gltf.animations.map((c: any) => c.name)).toEqual(['hit']);
+  expect(gltf.scene.userData.animPack).toBeUndefined();
+  expect(warns.some(m => m.includes('merge failed'))).toBe(true);
+});
+
+test('도적 팩에는 사망 클립이 없다(고단계 몸체 사망 보정 경로를 우회하지 않는다)', () => {
+  const rogue = animPackFor('hero_rogue_t1')!.clips as any;
+  expect(Object.keys(rogue).filter(n => n.startsWith('death'))).toEqual([]);
+  expect(Object.values(HERO_PACK_ALIASES.rogue)).not.toContain('death_back');
+});
+
 const v = () => new THREE.Vector3();
 function pose(inst: any, name: string, k: number) {
   inst.mixer.stopAllAction(); const clip = inst.clips[name]; const a = inst.mixer.clipAction(clip); a.reset(); a.play(); a.time = clip.duration * k; inst.mixer.update(0); inst.root.updateMatrixWorld(true);
@@ -115,8 +133,9 @@ test('영웅: 팩 클립이 실제 별칭으로 이어져 강타/좌우 피격·
       }
       expect(inst.clips.Hit_B).not.toBe(inst.clips.Hit_A);
       expect(new Set([inst.clips.Hit_A, inst.clips.Hit_B, inst.clips.Hit_L, inst.clips.Hit_R]).size).toBe(4);
-      if (heroId !== 'ranger') expect(inst.clips.Death_B).not.toBe(inst.clips.Death_A);
-      else expect(inst.clips.Death_B).toBe(inst.clips.death);   // 궁수 사망은 활 접지 계약(ranger-death-contact) 그대로
+      if (heroId !== 'ranger' && heroId !== 'rogue') expect(inst.clips.Death_B).not.toBe(inst.clips.Death_A);
+      // 도적·궁수 사망은 원본 그대로: 고단계 몸체 사망 보정(hero-body-motion)과 활 접지 계약(ranger-death-contact)이 원본 클립에 묶여 있다.
+      else for (const alias of ['Death_A', 'Death_B']) expect(inst.clips[alias], `${heroId}/${alias}`).toBe(inst.clips.death);
     } finally { disposeCharacter(inst.root, inst.mixer); }
   }
 });
@@ -138,7 +157,7 @@ test('영웅 새 피격·사망 클립은 실제 스킨이 바닥을 3cm 넘게 
   for (const heroId of ['knight', 'barbarian', 'mage', 'rogue']) {
     const inst = spawnCharacter(await loadHeroModel(heroId, 1));
     try {
-      for (const alias of ['Hit_B', 'Hit_L', 'Hit_R', 'Death_B', ...(heroId === 'rogue' ? [] : ['Death_A'])]) {
+      for (const alias of ['Hit_B', 'Hit_L', 'Hit_R', ...(heroId === 'rogue' ? [] : ['Death_A', 'Death_B'])]) {
         for (const k of [0, .2, .4, .6, .8, 1]) { pose(inst, alias, k); expect(skinMinY(inst.root), `${heroId}/${alias}@${k}`).toBeGreaterThan(-.03); }
       }
     } finally { disposeCharacter(inst.root, inst.mixer); }
@@ -172,7 +191,9 @@ test('모든 몬스터 팩 자산이 실제 로드에서 deathAlt·hitKnockback 
     expect(names.has('hitHeavy'), pack.asset).toBe(true);
     const kb = pack.clips.hitKnockback;
     expect(kb?.kind === 'hit-knockback', pack.asset).toBe(true);
-    expect(kb.seamDeg).toBeLessThan(1); expect(kb.rootDriftM).toBeLessThan(.01); expect(kb.rootRangeM).toBeGreaterThan(kb.baseRootRangeM);
+    expect(kb.seamDeg).toBeLessThan(1); expect(kb.rootDriftM).toBeLessThan(.01);
+    // 강타 경직(1.4배속 기준 0.5~0.72초) 안에 시작 자세로 돌아온다: 원본 피격이 2초인 대형 몬스터도 0.8초 이하.
+    expect(kb.duration, pack.asset).toBeLessThanOrEqual(.8);
   }
   const humanoids = REG.packs.filter((p: any) => p.clips.spawn).map((p: any) => p.asset).sort();
   expect(humanoids).toEqual(['bone_knight', 'demon_lord', 'frost_yeti', 'goblin_brute', 'goblin_chief', 'goblin_raider', 'shadow_soldier', 'skeleton_mage']);
