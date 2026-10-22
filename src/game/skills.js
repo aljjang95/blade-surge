@@ -416,7 +416,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a9cff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a9cff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.25, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
@@ -950,7 +950,7 @@ export const SKILLS = {
   cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
   star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x5a6cff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x3a9cff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55,color:0x2a8cff});}); } },
+  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x3a9cff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },

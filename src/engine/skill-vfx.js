@@ -47,7 +47,7 @@ export const SKILL_VFX = Object.freeze({
   // 대마도사
   fireball: R(GOLD, 'meteor', 'front', 'flash', 0xff7228, 4, { dist: 3 }),
   chain: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x70b8ff, 6),
-  blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x2a9cff, 7),
+  blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x2a9cff, 7, { gain: .6 }),
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'flash', 0x9fd8ff, 5, { dist: 4 }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a7cff, 9, { gain: .6 }),
