@@ -4,7 +4,7 @@
  "blender": "Blender 5.2.2 LTS",
  "scripts": {
   "tools/blender/anim_lib.py": "564c9437e95a7f509783e670b3e68ed50df623614a81de6903d861e98c1e9dbc",
-  "tools/blender/author_anim_packs.py": "dd53103145182d3807a0bbb11f05338658a585d9596b6a841e9a76c23e268f93"
+  "tools/blender/author_anim_packs.py": "42fc90d564114500458a5423903cd7b43c888eff65800cf9dd1b2afa79ba84f2"
  },
  "rule": "원본 GLB(메시·스킨·재질·텍스처)는 그대로 두고 새 클립만 뼈대와 함께 팩으로 낸다. 런타임은 원본을 읽은 뒤 팩 클립을 덧붙인다.",
  "packs": [
@@ -700,8 +700,8 @@
   {
    "asset": "bone_knight",
    "path": "/models/anim-packs/bone_knight.glb",
-   "sha256": "f4641a830a9e3b4627c672367807f8d437dfd481e9cc57072ca24bc4d2f86eac",
-   "bytes": 782768,
+   "sha256": "bb27f72140fa4f94c2a73f0aa44b0585aaa01268db8980aa5c0d110d790ce3d6",
+   "bytes": 735176,
    "source": {
     "path": "asset-library/normalized/bone_knight.glb",
     "sha256": "b366e0640829cddbe1731426bdbe68bd3c6e1a0ebca60604d5eb32158e354de1"
@@ -763,12 +763,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 112.8,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 112.8,
      "baseRootDriftM": 0,
@@ -782,8 +782,8 @@
   {
    "asset": "skeleton_mage",
    "path": "/models/anim-packs/skeleton_mage.glb",
-   "sha256": "4783d8e37e141c576cea81700204d5f7fb5832107bdb396f3a10b8b69728401d",
-   "bytes": 647060,
+   "sha256": "5179461fce96c580b723f256ada54d0761cc081ffc5426e12a74b4a5a1dcf2e6",
+   "bytes": 600188,
    "source": {
     "path": "asset-library/normalized/skeleton_mage.glb",
     "sha256": "e5e084ee796ab3ae281f6301ce3fc6033170870eeb274178166b43b990cb1919"
@@ -827,12 +827,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 57.6,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 104.8,
      "baseRootDriftM": 0,
@@ -846,8 +846,8 @@
   {
    "asset": "goblin_brute",
    "path": "/models/anim-packs/goblin_brute.glb",
-   "sha256": "15e0bb11f6aa56565315f316bacb57d6f5eecd271aa457649120093f8390ac19",
-   "bytes": 654284,
+   "sha256": "4addc4e5f3be2df3af437dd3fc16745801515f19924ebed0391e1ae0a58ab001",
+   "bytes": 607416,
    "source": {
     "path": "asset-library/normalized/goblin_brute.glb",
     "sha256": "27e29f2c44bbe27f313b1e475458c10f921226fb0bd89295c64c029f2edf540b"
@@ -891,12 +891,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 0,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 64.1,
      "baseRootDriftM": 0,
@@ -910,8 +910,8 @@
   {
    "asset": "frost_yeti",
    "path": "/models/anim-packs/frost_yeti.glb",
-   "sha256": "64cf35f96c3766acba20adae6814b9f64401138ced0134c4214b9f191da55141",
-   "bytes": 654776,
+   "sha256": "727aba8180175a2af82b9e1dbb123db10e6ece18353fcd1638368b625e3e981f",
+   "bytes": 607908,
    "source": {
     "path": "asset-library/normalized/frost_yeti.glb",
     "sha256": "ca0dcee08a616e1b2ee6c1fb43e9e195d7442c78fb7d20d2f812c1ce9c933be4"
@@ -955,12 +955,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 0,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 63.7,
      "baseRootDriftM": 0,
@@ -974,8 +974,8 @@
   {
    "asset": "demon_lord",
    "path": "/models/anim-packs/demon_lord.glb",
-   "sha256": "df47c06f162db46bd9cac8410dbf73c62ccfb65dcf21a5483aade7846fc9c167",
-   "bytes": 654668,
+   "sha256": "5e75bf4b2e58918edb5c4b360421dc1473180830cff24ba3efb46cf00a098ea1",
+   "bytes": 607800,
    "source": {
     "path": "asset-library/normalized/demon_lord.glb",
     "sha256": "b9936e6fd15b69b7dccb2ade8d06b23e00417c4b387ebb01f4afb5421118b29e"
@@ -1019,12 +1019,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 0,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 66.7,
      "baseRootDriftM": 0,
@@ -1038,8 +1038,8 @@
   {
    "asset": "goblin_raider",
    "path": "/models/anim-packs/goblin_raider.glb",
-   "sha256": "5fc37def51fb143bb0d889118bdd3810f9d0433c8558792bbc72529564ea6e38",
-   "bytes": 296912,
+   "sha256": "0e34513267fe9623aa14b7f39b9d508d351022a5c219126e19169cc7626e31cd",
+   "bytes": 278844,
    "source": {
     "path": "asset-library/normalized/goblin_raider.glb",
     "sha256": "936daf826e00a9f27ecb323e6b5bc9df884299eeabdc095bfec17b1ccf6c365e"
@@ -1101,12 +1101,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 48.8,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 119.5,
      "baseRootDriftM": 0,
@@ -1120,8 +1120,8 @@
   {
    "asset": "shadow_soldier",
    "path": "/models/anim-packs/shadow_soldier.glb",
-   "sha256": "b8c2dc825fb87b467f3afa7a018c76d13bf4cedbb7892d16d215413bcb5bb0a1",
-   "bytes": 297152,
+   "sha256": "e319d37b0557dcd0416af17a1423f25547025400cd82f4be8b303a6980115c1a",
+   "bytes": 279080,
    "source": {
     "path": "asset-library/normalized/shadow_soldier.glb",
     "sha256": "89db07c21e452512a5276bb356a637ead94f503421dd0121b29b985a3e2b2e87"
@@ -1183,12 +1183,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 48.8,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 98.5,
      "baseRootDriftM": 0,
@@ -1202,8 +1202,8 @@
   {
    "asset": "goblin_chief",
    "path": "/models/anim-packs/goblin_chief.glb",
-   "sha256": "0f0bb2dc6ae3608799a687cbbabc98d541f8855b2036770a508474ce453df700",
-   "bytes": 252276,
+   "sha256": "f4a168dfde0c7badf0eb1514ac9da9e0cadf9a1a7b2cd1fc21f501fa1ec097cc",
+   "bytes": 234204,
    "source": {
     "path": "asset-library/normalized/goblin_chief.glb",
     "sha256": "1907e1bb7833ae24c73b1969ebf52e70999e812188952228596bd97ad3da97f3"
@@ -1247,12 +1247,12 @@
      "minSkinZ": 0
     },
     "spawn": {
-     "duration": 2,
+     "duration": 1.25,
      "base": "roar",
      "kind": "spawn-rise",
      "endToIdleDeg": 0,
      "baseEndToIdleDeg": 0,
-     "frames": 49,
+     "frames": 31,
      "baseSeamDeg": 0,
      "seamDeg": 73.9,
      "baseRootDriftM": 0,

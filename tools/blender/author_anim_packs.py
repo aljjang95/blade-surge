@@ -241,19 +241,20 @@ def twist_death(ctx, name='death_b', turn=100.0, speed=0.9):
   ctx.add(name, times, out, base, 'death-twist', {'turnDeg': turn, 'speed': speed})
 
 
-def spawn_rise(ctx, name='spawn', dur=2.0):
-  """등장(인간형): 웅크린 자세(골반 내려앉음·윗몸 숙임, 발 고정)에서 일어서며 포효 클립 앞부분으로 섞여 들어간다."""
+def spawn_rise(ctx, name='spawn', dur=1.25):
+  """등장(인간형): 웅크린 자세(골반 내려앉음·윗몸 숙임, 발 고정)에서 일어서며 포효 클립 앞부분으로 섞여 들어간다.
+  게임은 1.7배속으로 재생하고 80% 지점에서 전투에 들어가므로(약 0.59초) 예전 팝인(0.42초)과 박자가 크게 다르지 않다."""
   roar = ctx.acts['roar']
   rdur = L.duration(roar)
   times = L.grid(dur)
-  # 포효의 0.0~1.6초 구간을 0.55초부터 재생(앞부분은 포효 첫 자세 유지)
-  rt = [min(rdur, max(0.0, (t - 0.55) * 1.1)) for t in times]
+  # 포효 앞부분을 0.3초부터 1.4배속으로(앞부분은 포효 첫 자세 유지)
+  rt = [min(rdur, max(0.0, (t - 0.3) * 1.4)) for t in times]
   frames = L.sample(ctx.arm, roar, rt)
   idle0 = ctx.clip('idle', times=[0.0])[1][0]
   hh = ctx.hh
   out = []
   for f, t in zip(frames, times):
-    crouch = 1.0 - L.smooth((t - 0.18) / 0.62)
+    crouch = 1.0 - L.smooth((t - 0.08) / 0.45)
     g = L.copy_basis(f)
     cap = ctx.legs.capture(g)
     L.translate_world(ctx.rig, g, ctx.hips, UP * (-0.42 * hh * crouch) + (-FWD) * (0.1 * hh * crouch))
@@ -262,8 +263,8 @@ def spawn_rise(ctx, name='spawn', dur=2.0):
     L.rotate_world(ctx.rig, g, ctx.arm_l, LEAN, D(12) * crouch)
     L.rotate_world(ctx.rig, g, ctx.arm_r, LEAN, D(-12) * crouch)
     out.append(plant(ctx, g, cap))
-  # 끝 0.3초는 대기 첫 자세로 수렴(등장 뒤 idleCombat 전환 이음새)
-  out = L.seam_blend(out, times, idle0, 0.85)
+  # 끝 30% 는 대기 첫 자세로 수렴(등장 뒤 idleCombat 전환 이음새)
+  out = L.seam_blend(out, times, idle0, 0.7)
   out, _ = L.ground_fix(ctx.arm, ctx.rig, out, times, ctx.hips)
   ctx.add(name, times, out, 'roar', 'spawn-rise', {'duration': dur})
 
