@@ -348,7 +348,7 @@ export class Enemy extends Actor {
     }
     const before = this.action;
     // 애니메이션 팩의 두 번째 사망(deathAlt)은 무리 번호 홀짝으로 번갈아 고른다(난수 없음, 군중이 한 방향으로만 쓰러지지 않게).
-    this.die(this.clips.deathAlt && (this.packId & 1) ? 'deathAlt' : null); this.state = 'dead'; this.telegraph = 0;
+    this.die(this.clips?.deathAlt && (this.packId & 1) ? 'deathAlt' : null); this.state = 'dead'; this.telegraph = 0;
     if (this.action && this.action !== before) this.action.timeScale = style.speed;   // 사망 클립이 실제로 재생될 때만
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;

@@ -41,7 +41,7 @@ test('등록부: 팩 파일 해시·크기, 생성 원본 해시, 저작 스크�
 test('팩 GLB 는 메시·스킨·재질·텍스처 없이 뼈대 노드와 등록된 클립만 담고, 모든 채널이 원본 노드 이름을 가리킨다', () => {
   for (const pack of REG.packs) {
     const doc = glbJson(file('public' + pack.path)), src = glbJson(file(pack.source.path));
-    expect(doc.meshes ?? [], pack.asset).toEqual([]);
+    expect(doc.meshes ?? []).toEqual([]);
     expect(doc.skins ?? []).toEqual([]); expect(doc.materials ?? []).toEqual([]); expect(doc.images ?? []).toEqual([]);
     expect(doc.animations.map((a: any) => a.name).sort()).toEqual(Object.keys(pack.clips).sort());
     const names = new Set(src.nodes.map((n: any) => n.name));
@@ -68,7 +68,7 @@ test('등록부 측정값: 제자리·이음새 보정 클립은 이음새 1° �
   const knight = animPackFor('hero_knight_t1')!.clips as any;
   expect(knight.slash_d_ip.baseRootDriftM).toBeGreaterThan(1); expect(knight.stab_ip.baseRootDriftM).toBeGreaterThan(1);
   expect(knight.death_fwd.baseRootDriftM).toBeGreaterThan(.5); expect(knight.death_fwd.rootDriftM).toBeLessThan(.05);
-  expect(animPackFor('hero_barbarian_t1')!.clips.spin_ip.baseRootDriftM).toBeGreaterThan(1.5);
+  expect((animPackFor('hero_barbarian_t1')!.clips as any).spin_ip.baseRootDriftM).toBeGreaterThan(1.5);
 });
 
 test('mergeAnimPack: 등록된 새 이름만 덧붙이고 같은 이름 원본 클립은 덮지 않는다', () => {
@@ -171,7 +171,7 @@ test('모든 몬스터 팩 자산이 실제 로드에서 deathAlt·hitKnockback 
     // 넉백 피격: 원본 hitHeavy(앞으로 움츠림)는 그대로 두고 따로 더한다. 시작·끝이 같은 자세, 골반은 제자리로 돌아오고 원본 피격보다 크게 밀린다.
     expect(names.has('hitHeavy'), pack.asset).toBe(true);
     const kb = pack.clips.hitKnockback;
-    expect(kb?.kind, pack.asset).toBe('hit-knockback');
+    expect(kb?.kind === 'hit-knockback', pack.asset).toBe(true);
     expect(kb.seamDeg).toBeLessThan(1); expect(kb.rootDriftM).toBeLessThan(.01); expect(kb.rootRangeM).toBeGreaterThan(kb.baseRootRangeM);
   }
   const humanoids = REG.packs.filter((p: any) => p.clips.spawn).map((p: any) => p.asset).sort();
