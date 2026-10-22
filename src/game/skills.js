@@ -768,7 +768,7 @@ export const SKILLS = {
           state.hit.add(e); state.bounces++;
           const mul = 1 + state.bounces * 0.22;
           game.damageEnemy(e, c.dmg * mul, { kind: 'magic', kb: 2.2, source: p, dirx: state.dir.x, dirz: state.dir.z, quietStop: state.bounces > 2 });
-          game.fx.flash(e.pos.clone().setY(1.2), 0x8fd0ff, { size: 1.8, life: 0.16 });
+          game.fx.flash(e.pos.clone().setY(1.2), 0x3a9cff, { size: 1.8, life: 0.16 });
           game.fx.burst(e.pos.clone().setY(1.1), 0xbfeaff, { n: 12, speed: 8, size: 0.3 });
           game.fx.shockTex(e.pos, 0x9fd8ff, { r1: 2.4, life: 0.25 });
           audio.clang({ vol: 0.3, freq: 1400 + state.bounces * 180, dur: 0.2 });

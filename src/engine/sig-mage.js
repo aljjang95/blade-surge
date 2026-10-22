@@ -15,6 +15,8 @@ export const MAGE_COLORS = Object.freeze({
   arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starLine: 0x6a7cff, starGold: 0xffc85a, prism: 0x7fe0ff,
   // 지면 서리 고리는 가산이라 원색이면 바닥이 하얗게 바랜다. 같은 색상을 낮춘 진한 하늘색으로 그린다.
   frostMid: 0x1f7fd0,
+  // 번개 광선은 심이 흰색 쪽으로 섞이고 가산이라, 원색 청을 쓰면 굵게 했을 때 흰 선이 된다. 진한 청으로 그려 청백을 유지한다.
+  boltDeep: 0x2a6cff, boltCore: 0x4a90ff, prismDeep: 0x2a90d0,
 });
 const C = MAGE_COLORS;
 const TAU = Math.PI * 2;
@@ -70,16 +72,16 @@ export function mageBolt(game, from, to, step = 0) {
   // 굵은 청색 번개 + 가는 청백 심 + 가운데서 아래로 갈라지는 가지 + 끝점 별빛·고리·튀는 전하.
   const F = _stars[6].copy(from), T = _stars[7].copy(to);
   // 광선 폭(width)은 가장자리까지의 반폭이고 보이는 심은 그 1/5 정도라, 번개는 두껍게 준다.
-  zigzag(impact, F, T, lite ? 4 : 6, 1, C.bolt, { width: .55, fade: .36 });
+  zigzag(impact, F, T, lite ? 4 : 6, 1, C.boltDeep, { width: .55, fade: .36 });
   if (!lite) {
-    zigzag(impact, F, T, 5, 1.4, C.boltHot, { width: .12, fade: .2 });
+    zigzag(impact, F, T, 5, 1.4, C.boltCore, { width: .12, fade: .2 });
     _stars[5].copy(F).lerp(T, .45); _a.copy(T).sub(F); _stars[4].set(-_a.z, 0, _a.x).normalize();
     _stars[3].copy(_stars[5]).addScaledVector(_stars[4], (step % 2 ? 1 : -1) * 1.6); _stars[3].y = Math.max(.2, _stars[5].y - 1.1);
-    zigzag(impact, _stars[5], _stars[3], 3, 1.2, C.bolt, { width: .26, fade: .26 });
+    zigzag(impact, _stars[5], _stars[3], 3, 1.2, C.boltDeep, { width: .26, fade: .26 });
   }
   impact._emit(IMPACT_KIND.star, T.x, T.y, T.z, step < 2 ? 1.3 : 1.05, C.bolt, .18, { angle: .4 + step, grow: .5 });
-  impact._emit(IMPACT_KIND.ring, T.x, T.y, T.z, 1.6, C.boltHot, .24, { grow: 1 });
-  if (!lite) impact._streaks(T, null, 4, 9, .22, C.boltHot, { up: 2, spread: 3, size: .16 });
+  impact._emit(IMPACT_KIND.ring, T.x, T.y, T.z, 1.6, C.boltDeep, .24, { grow: 1 });
+  if (!lite) impact._streaks(T, null, 4, 9, .22, C.bolt, { up: 2, spread: 3, size: .16 });
   return impact.spawned - before;
 }
 
@@ -145,15 +147,15 @@ export const SIGNATURES = {
     const { impact, player } = ctx;
     _p0.set(player.pos.x + .6, 9, player.pos.z - .4); _p1.copy(player.pos).setY(1.8);
     _stars[0].copy(_p0); _stars[1].copy(_p1);
-    zigzag(impact, _stars[0], _stars[1], 7, 1.1, C.bolt, { width: .55, fade: .34 });
-    zigzag(impact, _stars[0], _stars[1], 5, 1.5, C.boltHot, { width: .18, fade: .22 });
+    zigzag(impact, _stars[0], _stars[1], 7, 1.1, C.boltDeep, { width: .55, fade: .34 });
+    zigzag(impact, _stars[0], _stars[1], 5, 1.5, C.boltCore, { width: .18, fade: .22 });
     impact._emit(IMPACT_KIND.star, _stars[1].x, _stars[1].y, _stars[1].z, 1.8, C.bolt, .18, { angle: .4, grow: .5 });
-    impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 2.8, C.bolt, .28, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 2.8, C.boltDeep, .28, { grow: 1 });
     // 발밑 정전기: 바닥을 기는 짧은 번개 가지 여섯.
     for (let k = 0; k < (ctx.lite ? 3 : 6); k++) {
       const a = (k / 6) * TAU + .3; _stars[2].copy(player.pos).setY(.1);
       _stars[3].set(player.pos.x + Math.cos(a) * 2.6, .1, player.pos.z + Math.sin(a) * 2.6);
-      zigzag(impact, _stars[2], _stars[3], 3, 1.3, C.bolt, { width: .2, fade: .26, delay: .03 });
+      zigzag(impact, _stars[2], _stars[3], 3, 1.3, C.boltDeep, { width: .2, fade: .26, delay: .03 });
     }
   },
   // 빙결 폭풍: 판정 반경(6.8m) 서리 가시 고리가 폭풍 내내 남고 바깥 둘레에 얼음 가시 벽이 솟는다. 틱마다는 mageFrostTick.
@@ -180,7 +182,7 @@ export const SIGNATURES = {
       impact.beam(_a, _d, 10, col, { speed: 30, tail: 5, width: .22 });
     }
     // 발밑 프리즘 문양: 청록 조준 원(굴절 각을 재는 원).
-    impact.mark(ctx.player.pos, C.prism, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
+    impact.mark(ctx.player.pos, C.prismDeep, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
   },
   // 시간 봉인: 바닥 시계판(skills.js)에 더해 열두 시각 눈금 자리에 보라 별빛이 한 바퀴 차례로 켜지고 큰 보라 고리가 퍼진다.
   chrono_seal(ctx) {
