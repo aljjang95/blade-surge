@@ -1,6 +1,6 @@
 import {
   attackSound, skillSound, ultimateSound, heroSoundFiles, heroHitSound, heroForWeapon, HERO_IDS, HERO_HIT_VARIANTS, SWING_VARIANTS,
-  FX_VARIANTS, FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
+  FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
   COMBO_STINGERS, HIT_BUS_GAIN, HIT_PRIORITY, HIT_SOUND_FILES, HIT_VARIANTS, HIT_VOICES, HIT_VOICES_PREMIUM, HIT_WINDOW, KILL_SOUND,
   comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
 } from './combat-sound-library.js';
@@ -19,6 +19,24 @@ function createAudioRandom() {
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
 }
+import { BGM_CROSSFADE, BGM_LOOPS, bgmTrimGain, bossIntroKind } from '../data/music.js';
+import { BOSS_INTRO, EVENT_SOUND_FILES, EVENT_SOUNDS, FX_DERIVED_FILES, fxVariantCount, fxVariantName, lootSound } from './combat-sound-library.js';
+// SFX 두 버스를 합친 뒤의 이득. 마스터 리미터 앞 정점을 낮춰 타격 트랜지언트가 찌그러지지 않게 한다.
+export const SFX_SUM_GAIN = 0.5;
+// 타격 버스 덕킹 깊이(선형): 궁극기 -4.4dB, 보스 등장 스팅어 -6dB. 음악 덕킹과 따로 움직인다.
+export const HIT_DUCK = Object.freeze({
+  ultimate: Object.freeze({ amount: 0.6, hold: 0.55, recover: 0.9, attack: 0.03 }),
+  bossIntro: Object.freeze({ amount: 0.5, hold: 1.2, recover: 1.2, attack: 0.05 }),
+});
+const BOSS_WARNING_KINDS = new Set(['slam', 'crusher', 'soulrain', 'fan']);
+const EVENT_LOAD_TIMEOUT_MS = 30000;
+// 마스터 리미터: 음악·SFX·음성을 합친 출력이 0dBFS 를 넘지 않게 한다. 브라우저 압축기의 자동 메이크업
+// (-0.6 × 0dBFS 입력의 출력 dB)을 계산해 출력 이득에서 되돌린다 → 천장 약 -1.5dBFS.
+export const MASTER_LIMITER = Object.freeze({ threshold: -2, knee: 0, ratio: 20, attack: 0.001, release: 0.12 });
+export const MASTER_OUT_GAIN = (() => {
+  const { threshold, ratio } = MASTER_LIMITER, makeupDb = -0.6 * (threshold + -threshold / ratio);
+  return Math.pow(10, (-makeupDb + 0.4) / 20);
+})();
 // 공용(UI·효과·타격)은 시작 때, 영웅 세트는 그 영웅이 처음 소리를 낼 때 불러온다(모바일 메모리: 영웅당 약 22초 분량).
 const SFX_FILES = [...UI_SOUND_NAMES, ...FX_SOUND_FILES, ...HIT_SOUND_FILES];
 const HIT_BUS_PREFIX = SFX_LIBRARY + 'hit/';
@@ -31,6 +49,16 @@ function softClipCurve() {
   for (let i = 0; i < size; i++) {
     const x = (i / (size - 1)) * 2 - 1, a = Math.abs(x);
     curve[i] = Math.sign(x) * (a <= 0.8 ? a : 0.8 + 0.2 * Math.tanh((a - 0.8) / 0.2));
+  }
+  return curve;
+}
+
+/** 마스터 마지막 안전 클립: |x| 0.7 까지 그대로, 그 위는 약 0.87(-1.2dBFS)에 부드럽게 붙는다. 리미터가 놓친 순간 정점만 받는다. */
+export function masterClipCurve(size = 2049) {
+  const curve = new Float32Array(size), knee = 0.7, room = 0.19;
+  for (let i = 0; i < size; i++) {
+    const x = (i / (size - 1)) * 2 - 1, a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a <= knee ? a : knee + room * Math.tanh((a - knee) / room));
   }
   return curve;
 }
@@ -59,7 +87,7 @@ export class AudioSys {
     if (typeof AC !== 'function') { this.unavailable = true; return false; }
     try { this.ctx = new AC({ latencyHint: 'interactive' }); }
     catch { this.unavailable = true; return false; }
-    this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
+    this.master = this.ctx.createGain(); this._connectMasterOut();
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.9; this.sfxGain.connect(this.master);
     this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55;
     this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain);
@@ -73,25 +101,45 @@ export class AudioSys {
     let out = this.master;
     try {
       const sum = this.ctx.createGain(), shaper = this.ctx.createWaveShaper();
+      // 두 버스의 압축기 자동 메이크업(약 +7dB, +5dB)과 hit 버스 이득이 겹쳐 몹몰이·보스전에서 소프트 클립이 계속 포화됐다
+      // (2026-10-22 실제 녹음: 보스전 30초 내내 0dBFS, RMS -10dBFS). 합친 뒤 헤드룸을 두고 소프트 클립은 드문 정점만 받는다.
+      sum.gain.value = SFX_SUM_GAIN;
       shaper.curve = softClipCurve(); sum.connect(shaper); shaper.connect(this.master); out = sum;
       this.hitGain = this.ctx.createGain(); this.hitGain.gain.value = this.mix.sfx * HIT_BUS_GAIN;
       const hitComp = this.ctx.createDynamicsCompressor();
       hitComp.threshold.value = -12; hitComp.knee.value = 6; hitComp.ratio.value = 4; hitComp.attack.value = 0.003; hitComp.release.value = 0.1;
-      this.hitGain.connect(hitComp); hitComp.connect(sum);
+      // 타격 버스 덕킹: 궁극기·보스 등장 순간 몹 타격 더미를 잠깐 낮춰 큰 소리가 앞에 서게 한다(믹스 버스 사이드체인 흉내).
+      this.hitDuckGain = this.ctx.createGain(); this.hitGain.connect(this.hitDuckGain); this.hitDuckGain.connect(hitComp); hitComp.connect(sum);
     } catch { this.hitGain = null; /* 구형 호스트는 기존 버스만 쓴다 */ }
     comp.connect(out);
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
     await Promise.all(SFX_FILES.map((n) => this._loadSfx(n)));
+    // 사건 효과음은 기다리지 않는다. 로비 장면 준비와 겹쳐 응답이 늦어도(소프트웨어 렌더 실측 9초) 넉넉히 기다린다.
+    for (const n of EVENT_SOUND_FILES) this._loadSfx(n, EVENT_LOAD_TIMEOUT_MS);
+    // 라운드로빈 파생 변형도 기다리지 않는다. 오기 전에는 원본 변형만 돈다.
+    for (const n of FX_DERIVED_FILES) this._loadSfx(n, EVENT_LOAD_TIMEOUT_MS);
     return true;
   }
-  async _loadSfx(n) {
+  async _loadSfx(n, timeoutMs = 8000) {
     if (this.buffers[n]) return this.buffers[n];
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
-    try { const ab = await (await fetch(sfxUrl(n), { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
-    catch (e) { console.warn('sfx fail', n); }
-    finally { clearTimeout(timeout); }
-    return this.buffers[n] || null;
+    if (this._sfxLoads?.has(n)) return this._sfxLoads.get(n);
+    const pending = (async () => {
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try { const ab = await (await fetch(sfxUrl(n), { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
+      catch (e) { console.warn('sfx fail', n); }
+      finally { clearTimeout(timeout); }
+      return this.buffers[n] || null;
+    })();
+    (this._sfxLoads ||= new Map()).set(n, pending);
+    pending.finally(() => this._sfxLoads.delete(n));
+    return pending;
+  }
+  /** 사건 효과음: 준비됐으면 true. 없으면 지금은 대체음을 쓰고 뒤에서 다시 불러온다(첫 시도가 로비 로딩과 겹쳐 시간 초과될 수 있다). */
+  _eventReady(name) {
+    if (this.buffers[name]) return true;
+    if (this.ctx) this._loadSfx(name, EVENT_LOAD_TIMEOUT_MS);
+    return false;
   }
   /** 영웅 효과음 세트(휘두름·마무리·타격·궁극기·스킬 8)를 한 번만 불러온다. 아직 없으면 그 순간은 공용 효과로 대신한다. */
   preloadHero(heroId) {
@@ -113,11 +161,57 @@ export class AudioSys {
   }
   /** 예전 합성음 자리에 Mirelo 효과 샘플을 낸다. 샘플이 준비됐으면 true(호출한 합성음은 건너뛴다). */
   _fx(family, { vol = 0.5, rate = 1, min = 0.04, priority = 2 } = {}) {
-    const count = FX_VARIANTS[family] || 0; if (!count || !this.ctx) return false;
-    const name = `${SFX_LIBRARY}fx/${family}_${this._rotate(this._variantLast, 'fx:' + family, count)}`;
+    const count = fxVariantCount(family); if (!count || !this.ctx) return false;
+    let name = fxVariantName(family, this._rotate(this._variantLast, 'fx:' + family, count));
+    // 파생 변형이 아직 안 왔으면 원본 첫 변형으로 낸다(합성음으로 떨어지지 않는다).
+    if (!this.buffers[name]) name = fxVariantName(family, 0);
     if (!this.buffers[name]) return false;
     this.play(name, { vol: Math.min(1, vol * 1.4), rate, vary: 0.05, min, priority });
     return true;
+  }
+  /** master → 리미터 → 출력 이득 → destination. 구형 호스트에서 압축기를 못 만들면 직접 연결한다. */
+  _connectMasterOut() {
+    try {
+      const lim = this.ctx.createDynamicsCompressor(), out = this.ctx.createGain();
+      for (const k of ['threshold', 'knee', 'ratio', 'attack', 'release']) lim[k].value = MASTER_LIMITER[k];
+      out.gain.value = MASTER_OUT_GAIN;
+      const clip = this.ctx.createWaveShaper(); clip.curve = masterClipCurve();
+      this.master.connect(lim); lim.connect(out); out.connect(clip); clip.connect(this.ctx.destination);
+      this.masterLimiter = lim;
+    } catch { this.master.connect(this.ctx.destination); }
+  }
+  /** 곡별 음량 보정과 루프: 끝 페이드·여운 전 loopEnd 에서 BGM_CROSSFADE 초 동안 loopStart 부터 새 재생을 겹친다. */
+  _armMusicLoop(track, name, fade) {
+    const trim = bgmTrimGain(name), loop = BGM_LOOPS[name];
+    track.name = name; track.trim = trim;
+    if (trim !== 1) {
+      const g = track.gain.gain, t = this.now();
+      g.cancelScheduledValues(t); g.setValueAtTime(0, t); g.linearRampToValueAtTime(track.volume * trim, t + fade);
+    }
+    if (!loop) return;
+    track.el.loop = false;
+    const handoff = () => {
+      if (track.looped || this.music !== track) return;
+      const el = track.el;
+      if (!el.ended && el.currentTime < loop.loopEnd - BGM_CROSSFADE) return;
+      track.looped = true;
+      this._loopMusic(track, loop, el.ended ? 0.05 : BGM_CROSSFADE);
+    };
+    track.el.ontimeupdate = handoff; track.el.onended = handoff;
+  }
+  _loopMusic(track, loop, xfade) {
+    const base = track.el.currentSrc || track.el.src;
+    const el = new Audio(loop.loopStart > 0 ? `${base.split('#')[0]}#t=${loop.loopStart}` : base.split('#')[0]);
+    el.crossOrigin = 'anonymous'; el.preload = 'auto';
+    const src = this.ctx.createMediaElementSource(el), g = this.ctx.createGain(), t = this.now();
+    g.gain.value = 0; src.connect(g); g.connect(this.musicGain);
+    el.play().catch(() => {});
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(track.volume * track.trim, t + xfade);
+    const old = track.gain.gain; old.cancelScheduledValues(t); old.setValueAtTime(old.value, t); old.linearRampToValueAtTime(0, t + xfade);
+    track.timer = setTimeout(() => this._disposeMusic(track), xfade * 1000 + 150);
+    const next = { el, gain: g, src, volume: track.volume };
+    this.music = next; this._musicTracks.add(next);
+    this._armMusicLoop(next, track.name, xfade);
   }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
   // 저장된 믹스·전투 duck·SFX·음성에 영향 없이 소유한 음악 음소거만 해제한다.
@@ -433,14 +527,50 @@ export class AudioSys {
     const g = this.ctx.createGain(); this._env(g, t, 0.002, 0.65, vol); n.connect(f); f.connect(g); g.connect(this.sfxGain); n.start(t); n.stop(t + 0.7);
     this.thump({ vol: vol * 0.8, freq: 55, dur: 0.4 }); this.dark({ vol: vol * 0.5, base: 140, dur: 0.7 });
   }
-  /** 아이템 획득 (희귀도별) */
+  /** 아이템 획득 (희귀도별). 희귀 이상은 전용 샘플, 전설은 BGM 을 잠깐 낮춰 들리게 한다. 샘플이 없으면 예전 합성음. */
   loot(rarity = 'N') {
     if (!this.enabled || !this.ctx) return;
+    const spec = lootSound(rarity);
+    if (this._eventReady(spec.sound)) {
+      this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0.03, min: 0.12, priority: rarity === 'L' || rarity === 'SSR' ? 5 : 4 });
+      if (spec.duck) { this.duck(spec.duck, 1.6, { hold: 0.35, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.45, delay: 0.12, min: 0.5, priority: 4 }); }
+      return;
+    }
     if (rarity === 'L' || rarity === 'SSR') { this.holy({ vol: 0.5, base: 659, dur: 1.1 }); this.play('jingle_legend', { vol: 0.6 }); this.vibe([30, 30, 90]); }
     else if (rarity === 'U') { this.holy({ vol: 0.35, base: 587, dur: 0.8 }); this.magic({ vol: 0.3, base: 440, notes: [0, 3, 7, 10], step: 0.05, type: 'triangle' }); }
     else if (rarity === 'E' || rarity === 'SR') { this.magic({ vol: 0.38, base: 587, notes: [0, 4, 7, 12], step: 0.05 }); this.ting({ vol: 0.3, freq: 2200 }); }
     else if (rarity === 'S' || rarity === 'R') { this.magic({ vol: 0.3, base: 523, notes: [0, 7], step: 0.05 }); }
     else this.play('ui_drop', { vol: 0.4 });
+  }
+  /** 보스 등장: 등급별 스팅어 + BGM 덕킹(새 보스곡이 페이드인하는 동안 스팅어가 앞에 선다). stage 로 등급을 고른다. */
+  bossIntro(stage = null) {
+    const spec = BOSS_INTRO[bossIntroKind(stage)] || BOSS_INTRO.boss;
+    if (!this.enabled || !this.ctx || !this.mix.sfx) return null;
+    if (!this._eventReady(spec.sound)) { this.waveHorn({ vol: 0.5, boss: true }); return null; }
+    this.duck(spec.duck, spec.dur, { hold: spec.dur * 0.35, smooth: true, attack: 0.05 });
+    this.duckHits(HIT_DUCK.bossIntro);
+    this.vibe([30, 30, 70]);
+    return this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0, min: 1, priority: 5 });
+  }
+  /** 가챠 충전(연출 시작). */
+  gachaCharge() {
+    if (!this.enabled || !this.ctx) return;
+    if (this._eventReady(EVENT_SOUNDS.gachaCharge)) this.play(EVENT_SOUNDS.gachaCharge, { vol: 0.7, vary: 0, min: 0.3, priority: 4 });
+    else this.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
+  }
+  /** 가챠 최고 등급 공개 섬광: SSR 은 전설 징글 + 저역 충격 + BGM 덕킹, SR 은 크리스털 차임, R 은 종. */
+  gachaReveal(best = 'R') {
+    if (!this.enabled || !this.ctx) return;
+    if (best === 'SSR') { this.duck(0.35, 2.2, { hold: 0.6, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.9, min: 0.3, priority: 5 }); this.boom({ vol: 0.55, dur: 0.8, low: 48 }); return; }
+    if (best === 'SR' && this._eventReady(EVENT_SOUNDS.gachaRevealSr)) { this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.85, vary: 0, min: 0.2, priority: 4 }); this.play('ui_bong', { vol: 0.45, priority: 4 }); return; }
+    this.play('ui_bong', { vol: 0.9 });
+  }
+  /** 가챠 카드 한 장 뒤집기(등급별). */
+  gachaCard(rar = 'R') {
+    if (!this.enabled || !this.ctx) return;
+    if (rar === 'SSR') { this.play('jingle_legend', { vol: 0.9, min: 0.15, priority: 5 }); this.thump({ vol: 0.6, freq: 55, dur: 0.4 }); }
+    else if (rar === 'SR') { if (this._eventReady(EVENT_SOUNDS.gachaRevealSr)) this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.6, rate: 1.06, min: 0.05, priority: 4 }); else this.play('ui_glass', { vol: 0.7, rate: 1.2 }); }
+    else this.play('card_place', { vol: 0.5, min: 0.03 });
   }
   /** 코인/재화 픽업 (피치 상승 콤보) */
   coinPick(idx = 0) { this.pick('coin', 2, { vol: 0.26, rate: 1.15 + Math.min(12, idx) * 0.05, vary: 0.05, min: 0.015 }); }
@@ -516,6 +646,16 @@ export class AudioSys {
   /** 궁극기 BGM 덕킹: 빠르게 눌렀다가(attack) 잠깐 유지(hold)하고 부드러운 S 곡선으로 돌아온다(recover). */
   ultimateDuck({ amount = 0.12, hold = 0.9, recover = 1.6 } = {}) {
     this.duck(amount, hold + recover + 0.06, { hold, smooth: true, attack: 0.06 });
+    this.duckHits(HIT_DUCK.ultimate);
+  }
+  /** 타격 버스(몹 타격·처치·콤보)만 잠깐 낮춘다. 진행 중인 더 깊고 긴 덕킹은 약한 새 요청이 덮지 않는다. */
+  duckHits({ amount = 0.6, hold = 0.4, recover = 0.8, attack = 0.03 } = {}) {
+    if (!this.hitDuckGain || !this.ctx) return;
+    const t = this.now(), g = this.hitDuckGain.gain, end = t + attack + hold + recover;
+    if (this._hitDuck && this._hitDuck.end > t && this._hitDuck.amount <= amount && this._hitDuck.end >= end) return;
+    this._hitDuck = { amount, end };
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(amount, t + attack); g.setValueAtTime(amount, t + attack + hold); g.linearRampToValueAtTime(1, end);
   }
 
   /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */
@@ -556,6 +696,8 @@ export class AudioSys {
   enemyTelegraph({ kind = 'melee', boss = false, urgent = false } = {}) {
     if (this.enabled && this.ctx) {
       const fam = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:') ? 'tele_magic' : kind === 'slam' || kind === 'crusher' ? 'tele_slam' : 'tele_melee';
+      // 보스의 큰 기술(내려찍기·탄막·부채꼴)은 짧은 저역 경보를 얹는다. 3초에 한 번까지라 패턴마다 울리지 않는다.
+      if (boss && BOSS_WARNING_KINDS.has(kind) && this._eventReady(EVENT_SOUNDS.bossWarning)) this.play(EVENT_SOUNDS.bossWarning, { vol: 0.55, vary: 0.02, min: 3, priority: 4 });
       if (this._fx(fam, { vol: boss ? 0.42 : 0.24, rate: boss ? 0.85 : 1, priority: boss ? 4 : 2 })) { this.vibe(urgent || boss ? [10, 14, 24] : 7); return; }
       if (kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:')) this.charge({ vol: boss ? 0.34 : 0.18, dur: boss ? 0.58 : 0.36 });
       else if (kind === 'slam' || kind === 'crusher') this.thump({ vol: boss ? 0.34 : 0.18, freq: boss ? 54 : 76, dur: 0.24 });
@@ -583,7 +725,7 @@ export class AudioSys {
 
   // ---------- BGM ----------
   _disposeMusic(track) {
-    clearTimeout(track.timer); track.el.pause(); track.src.disconnect(); track.gain.disconnect();
+    clearTimeout(track.timer); track.el.ontimeupdate = null; track.el.onended = null; track.el.pause(); track.src.disconnect(); track.gain.disconnect();
     this._musicTracks.delete(track);
   }
   playMusic(name, { fade = 1.2, volume = 0.55 } = {}) {
@@ -604,6 +746,7 @@ export class AudioSys {
     g.gain.linearRampToValueAtTime(volume, this.now() + fade);
     this.music = { el, gain: g, src, volume };
     this._musicTracks.add(this.music);
+    this._armMusicLoop(this.music, name, fade);
   }
   /** BGM 덕킹. options.hold: 최저 구간 유지 시간(초), smooth: 복귀를 S 곡선으로, attack: 내려가는 시간(기본 0.1초). */
   duck(amount = 0.25, dur = 1.5, { hold = 0, smooth = false, attack = 0.1 } = {}) {

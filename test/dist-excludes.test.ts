@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { bgmUrl, musicForScene } from '../src/data/music.js';
+import { MUSIC_TRACKS, bgmUrl, musicForScene } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
 
 // tools/optimize/dist-excludes.json 은 빌드 산출물에서만 뺄 미사용 자산 목록이다. 누군가 나중에 이 자산을 코드에서 참조하면 이 테스트가 실패한다.
@@ -53,7 +53,8 @@ test('개정 기록 JSON 은 src 코드에서 import 되지 않거나(v1~v3, axi
 // 채널별 BGM: 각 채널 산출물에는 그 채널의 bgmUrl 이 가리키는 파일만 남아야 한다(없는 파일 요청도, 쓰이지 않는 사본도 없다).
 const bgmDir = join(root, 'public/bgm');
 const allBgm = walk(bgmDir).map(file => file.slice(join(root, 'public').length + 1));
-const musicNames = ['bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', ...new Set(CHAPTERS.map(chapter => musicForScene({ stage: stageDef(chapter.id, 1) })))];
+// MUSIC_TRACKS 는 musicForScene 이 돌려줄 수 있는 모든 곡이다(중간 보스곡 expansion/flow-combat 포함). 손으로 쓴 목록만 보면 새 곡을 빼먹는다.
+const musicNames = [...new Set(['bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', ...CHAPTERS.map(chapter => musicForScene({ stage: stageDef(chapter.id, 1) })), ...MUSIC_TRACKS])];
 const excludedBy = (channel: string) => {
   const globs = manifest.channelExcludes[channel] || [];
   return (file: string) => manifest.entries.some(entry => entry.path === file) || globs.some(entry => { const [dir, ext] = entry.glob.split('/*'); return file.startsWith(dir + '/') && file.endsWith(ext) && !file.slice(dir.length + 1).includes('/'); });

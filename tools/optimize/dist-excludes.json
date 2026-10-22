@@ -23,10 +23,6 @@
       "reason": "로비곡은 regions/lobby. 옛 로비곡."
     },
     {
-      "path": "bgm/expansion/flow-combat.mp3",
-      "reason": "어디에서도 이름이 나오지 않는 확장 전투곡 초안."
-    },
-    {
       "path": "models/heroes-next/ranger-library-t1-v1.glb",
       "reason": "궁수 library 개정 v1~v3 는 기록 JSON(테스트 전용)만 가리킨다. 게임은 ranger-library-t1-v4 만 쓴다(RANGER_LIBRARY_REVISION_ID)."
     },

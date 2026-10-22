@@ -395,14 +395,14 @@ export class Meta {
     // 연출 계획은 이미 정해진 결과를 어떻게 보여 줄지만 정한다(결과·확률은 그대로).
     const plan = revealPlan(results), best = plan.best, beamColor = plan.tone.color;
     stage.style.setProperty('--c', beamColor); R.dataset.best = best;
-    audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
+    audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.gachaCharge();
     this._revealTimers = [];
     const later = (fn, ms) => { const t = setTimeout(fn, ms); this._revealTimers.push(t); };
     // 충전: 최고 등급 색의 빛무리가 커지며 기대감을 만든다
     const charge = document.createElement('div'); charge.className = 'charge'; stage.appendChild(charge);
     // 광선 연출: 최고 등급이 높을수록 빔이 많고 길게 이어진다 (SSR이면 금색 빔 + 진동)
     later(() => { for (let i = 0; i < plan.tone.beams; i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - (plan.tone.beams - 1) / 2) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 400);
-    later(() => { charge.remove(); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.play(best === 'SSR' ? 'jingle_legend' : 'ui_bong', { vol: 0.9 }); }, plan.tone.charge);
+    later(() => { charge.remove(); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.gachaReveal(best); }, plan.tone.charge);
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
@@ -412,7 +412,7 @@ export class Meta {
       cards.appendChild(c);
       const step = plan.cards[i];
       if (step.hintAt !== null) later(() => c.classList.add('hint'), step.hintAt);
-      later(() => { c.classList.remove('hint'); c.classList.add('flip'); if (r.rar === 'SSR') { audio.play('jingle_legend', { vol: 0.9 }); audio.vibe([30, 30, 100]); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); setTimeout(() => f.remove(), 800); } else if (r.rar === 'SR') { audio.play('ui_glass', { vol: 0.7, rate: 1.2 }); } else audio.play('card_place', { vol: 0.5 }); }, step.at);
+      later(() => { c.classList.remove('hint'); c.classList.add('flip'); if (r.rar === 'SSR') { audio.gachaCard('SSR'); audio.vibe([30, 30, 100]); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); setTimeout(() => f.remove(), 800); } else audio.gachaCard(r.rar); }, step.at);
     });
     later(() => this.revealDone(), plan.doneAt + 300);
     this._revealResults = results;
