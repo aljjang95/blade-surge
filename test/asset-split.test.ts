@@ -47,12 +47,10 @@ test('모든 규칙은 이유가 있고, remote 규칙은 묶음 이름이 있�
 
 // 번들이 만드는 해시 이름(assets/<이름>-<해시>.glb)은 public 에 없으니 asset-library 목록으로 분류를 확인한다.
 const hashed = (id: string) => `assets/${id}-Ab12Cd34.glb`;
-// 1지역 편성에 없는 몬스터(2지역부터)는 remote 다.
-const LATE_MONSTERS = new Set(['demon_lord', 'treant', 'fire_phoenix']);
-test('번들 해시 이름 GLB: 1단계 영웅·1지역 몬스터는 core, 2·3단계 몸체·아바타·2지역 이후 몬스터는 remote', () => {
+test('번들 해시 이름 GLB: 1단계 영웅·몬스터는 core, 2·3단계 몸체와 아바타는 remote', () => {
   for (const asset of manifest.assets as { id: string; role?: string; armorTier?: number; avatar?: boolean }[]) {
     const verdict = classify(hashed(asset.id), split)!;
-    const expected = asset.avatar || LATE_MONSTERS.has(asset.id) ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) >= 2 ? 'remote' : 'core';
+    const expected = asset.avatar ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) >= 2 ? 'remote' : 'core';
     expect(verdict.class, asset.id).toBe(expected);
   }
 });
@@ -75,8 +73,13 @@ test('낡은 remote 규칙이 없다: 모든 remote 규칙이 public 파일 또�
   }
 });
 
+// 소환 화면 곡(1.7MB mp3)은 화면이 열릴 때 느긋하게 받는 remote 다(음악은 지연돼도 화면·입력은 막지 않는다).
+test('소환 곡은 bgm-extra remote 로 분류된다', () => {
+  expect(classify(bgmUrl('bgm_gacha', 'googleplay').slice(1), split)).toMatchObject({ class: 'remote', group: 'bgm-extra' });
+});
+
 test('첫 지역·부팅에 필요한 파일은 core 다(곡, 조우 일러스트, 키아트, 글꼴, 1단계 영웅, 마을 곡)', () => {
-  const tracks = new Set<string>(['bgm_gacha', 'regions/lobby']);
+  const tracks = new Set<string>(['regions/lobby']);
   for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(1, st);
     tracks.add(musicForScene({ stage })); tracks.add(musicForScene({ stage, boss: true }));
