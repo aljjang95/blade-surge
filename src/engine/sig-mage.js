@@ -12,7 +12,7 @@ import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
  */
 export const MAGE_COLORS = Object.freeze({
   fire: 0xff5a1a, fireHot: 0xffa030, bolt: 0x5aa8ff, boltHot: 0xa8dcff, frost: 0x2a9cff, frostHot: 0x6ccaff,
-  arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starGold: 0xffc85a, prism: 0x7fe0ff,
+  arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starLine: 0x6a7cff, starGold: 0xffc85a, prism: 0x7fe0ff,
   // 지면 서리 고리는 가산이라 원색이면 바닥이 하얗게 바랜다. 같은 색상을 낮춘 진한 하늘색으로 그린다.
   frostMid: 0x1f7fd0,
 });
@@ -67,7 +67,7 @@ function fireBlast(impact, c, size, { delay = 0, lite = false } = {}) {
 export function mageBolt(game, from, to, step = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
   const before = impact.spawned, lite = !!game.fx.lite;
-  zigzag(impact, from, to, lite ? 4 : 6, 1, C.bolt, { width: .15, fade: .3 });
+  zigzag(impact, from, to, lite ? 4 : 6, 1, C.bolt, { width: .2, fade: .32 });
   if (!lite) zigzag(impact, from, to, 4, 1.6, C.boltHot, { width: .06, fade: .2 });
   impact._emit(IMPACT_KIND.star, to.x, to.y, to.z, step < 2 ? 1.3 : 1, C.bolt, .14, { angle: .4 + step, grow: .5 });
   impact._emit(IMPACT_KIND.ring, to.x, to.y, to.z, 1.2, C.boltHot, .2, { grow: 1 });
@@ -173,7 +173,7 @@ export const SIGNATURES = {
     }
     for (let k = 0; k < N; k++) {
       const j = (k + 3) % N; _d.copy(_stars[j]).sub(_stars[k]);
-      impact.beam(_stars[k], _d, _d.length(), C.star, { speed: 70, width: .09, delay: k * .025, fade: .45 });
+      impact.beam(_stars[k], _d, _d.length(), C.starLine, { speed: 70, width: .13, delay: k * .025, fade: .45 });
     }
     impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 2.6, C.star, .2, { angle: .3, grow: .4, delay: T });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
