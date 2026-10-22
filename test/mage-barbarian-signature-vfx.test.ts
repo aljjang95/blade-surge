@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ImpactVfx, IMPACT_KIND, IMPACT_FRAME_BUDGET, MARK_STYLE } from '../src/engine/impact-vfx.js';
 import { SKILL_SIGNATURES } from '../src/engine/skill-signatures.js';
 import { HERO_SKILLS } from '../src/engine/combat-sound-library.js';
-import { SIGNATURES as MAGE, mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce } from '../src/engine/sig-mage.js';
+import { SIGNATURES as MAGE, mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../src/engine/sig-mage.js';
 import { SIGNATURES as BARB, barbWhirlTick, barbRushEnd } from '../src/engine/sig-barbarian.js';
 
 const camera = () => { const c = new THREE.PerspectiveCamera(); c.position.set(6, 12, 10); c.lookAt(0, 0, 0); c.updateMatrixWorld(true); return c; };
@@ -83,7 +83,7 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(36);
   expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(22);
   expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(24);
-  expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(5);
+  expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(8);
   v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;
   expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(16);
@@ -131,4 +131,39 @@ test('궁극기 예비 표식(메테오·지옥의 도끼): 합본에 있고, �
     expect(l.spawned).toBeLessThan(v.spawned);
     v.dispose(); l.dispose();
   }
+});
+
+test('h1b 대마도사: 눈보라 틱 소용돌이 팔·프리즘 궤적·굴절 표식은 바닥 모양으로 남고 칸 상한을 지킨다', () => {
+  const v = make(), g = gameOf(v);
+  const n = mageFrostTick(g, new THREE.Vector3(), 3, 6.8);
+  const frost = slots(v);
+  // 세 갈래 × 세 마디 소용돌이(지면 광선) + 얼음 가시(광선)
+  expect(frost.filter((s) => s.kind === IMPACT_KIND.beam).length).toBeGreaterThanOrEqual(9 + 6);
+  expect(n).toBeLessThanOrEqual(24);
+  v.update(0);
+  const before = v.spawned;
+  expect(magePrismTrail(g, new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(0, 1.3, .5))).toBe(2);
+  expect(magePrismTrail(gameOf(make(), true), new THREE.Vector3(0, 1.3, 0), new THREE.Vector3(0, 1.3, .5))).toBe(1);
+  expect(magePrismTrail(g, new THREE.Vector3(), new THREE.Vector3())).toBe(0);
+  v.update(0);
+  magePrismBounce(g, new THREE.Vector3(0, 1.2, 4), new THREE.Vector3(1, 0, 0), 2);
+  const bounce = slots(v).slice(before + 2);
+  expect(bounce.some((s) => s.kind === IMPACT_KIND.mark && s.style === MARK_STYLE.compass)).toBe(true);
+  expect(bounce.filter((s) => s.kind === IMPACT_KIND.beam).length).toBe(5);
+  v.dispose();
+});
+
+test('h1b 대마도사 평타 마무리: 넓은 옅은 원판 대신 바닥 작은 진한 표식 + 수평 비전 가시', () => {
+  const v = make();
+  const pos = new THREE.Vector3(0, 1.1, 4);
+  const n = v.combo(pos, new THREE.Vector3(0, 0, 1), { hero: 'mage', step: 4, steps: 5, finisher: true });
+  expect(n).toBeLessThanOrEqual(14);
+  const all = slots(v), marks = all.filter((s) => s.kind === IMPACT_KIND.mark);
+  expect(marks.length).toBe(1);
+  expect(marks[0].size).toBeLessThan(2.4); // 예전 2 × 1.77 = 3.5m
+  // 표식은 타격 높이(1.1m)가 아니라 바닥에 눕는다.
+  const mi = all.findIndex((s) => s.kind === IMPACT_KIND.mark);
+  expect(v.ring.a.aOrigin[mi * 3 + 1]).toBeLessThan(.1);
+  expect(all.filter((s) => s.kind === IMPACT_KIND.beam).length).toBe(6);
+  v.dispose();
 });

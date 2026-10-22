@@ -12,6 +12,8 @@ import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
+// 눈보라 눈송이: 옅은 하늘색(0x5cbcff) 큰 입자는 화면 위쪽에 흰 거품으로 보였다(h1b). 진한 청으로, 매 프레임 새 색을 만들지 않는다.
+const _blizzardFlake = new THREE.Color(0x2a8cff);
 const _judgeSky = new THREE.Vector3(), _judgeDir = new THREE.Vector3(), _chainFrom = new THREE.Vector3(), _chainDir = new THREE.Vector3();
 /** 검성 준비 진: castCircle(밝기 1 금빛 룬)은 모든 검성 스킬 발밑을 같은 큰 금 원으로 만들었다. 밝기 .45 진한 주황 금으로 작게. */
 const knightRune = (game, pos, r, life) => game.fx.groundTex?.(pos, 'circle_gold', 0xffa018, { r0: r * .4, r1: r, life, spin: 1.6, y: .07, fadeIn: .2, hold: .35, gain: .45 });
@@ -414,13 +416,14 @@ export const SKILLS = {
   // ================= 대마도사 (원소 · 광역 몹몰이) =================
   fireball: {
     dur: 0.6,
-    start(game, p) { game.fx.castCircle(p.pos, 0xff7a20, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.62, life: 0.42 }); },
+    // 시전 원·발사 섬광·탄 후광의 밝은 주황(0xff7a20·0xff9a40)이 블룸에서 크림 번짐이 됐다(h1b): 진홍 쪽 주황으로 낮추고 발사 섬광은 작게.
+    start(game, p) { game.fx.castCircle(p.pos, 0xe8401a, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.5, life: 0.42 }); },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3()); const sp = fwd(p, 1); sp.y = 1.4;
       const split = hasTownSkillVariant(p, 'fireball', 'split');
-      game.spawnProjectile({ pos: sp, dir: f, speed: SKILL_PROJECTILES.fire.speed, radius: SKILL_PROJECTILES.fire.radius, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: SKILL_PROJECTILES.fire.life, trail: 0xff7a20, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
+      game.spawnProjectile({ pos: sp, dir: f, speed: SKILL_PROJECTILES.fire.speed, radius: SKILL_PROJECTILES.fire.radius, dmg: c.dmg, color: 0xff4a12, size: 0.9, owner: p, kb: 5, kind: 'magic', life: SKILL_PROJECTILES.fire.life, trail: 0xff4a12, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
       if (split) for (const angle of [-.22, .22]) game.spawnProjectile({ pos: sp.clone(), dir: f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle), speed: 15, radius: .55, dmg: c.dmg * .35, color: 0xffb040, size: .45, owner: p, kb: 3, kind: 'magic', life: .8, trail: 0xffa040 });
-      game.fx.flash(sp, 0xff9a40, { size: 2.4 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
+      game.fx.flash(sp, 0xff4a12, { size: 1.3, life: 0.1 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
     },
   },
   chain: {
@@ -453,15 +456,15 @@ export const SKILLS = {
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
       const wide = hasTownSkillVariant(p, 'blizzard', 'wide');
       gatherEnemies(game, p.pos, wide ? 10.5 : 8.5, 9);
-      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, new THREE.Color(0x5cbcff), 0.35, 0.5, { grav: 20, shrink: 0.5 }); }
+      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, _blizzardFlake, 0.24, 0.5, { grav: 20, shrink: 0.5 }); }
       c.data.tick -= dt;
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
         game.fx.shockTex(p.pos, 0x1f6fd0, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.4, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
-        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45, color: 0x2a9cff });
-        game.fx.burst(p.pos.clone().setY(0.3), 0x4aaeff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
+        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 3, life: 0.45, color: 0x1f6fe8 });
+        game.fx.burst(p.pos.clone().setY(0.3), 0x2a84ff, { n: 20, speed: 8, size: 0.3, up: 0.6, spread: 0.6 });
         mageFrostTick(game, p.pos, i, wide ? 8.6 : 6.8); // 냉기 학파: 서리 가시 고리·얼음 가시
         audio.ice({ vol: 0.45, dur: 0.5 }); audio.whoosh({ vol: 0.28, pitch: 1.5, dur: 0.4 }); game.renderer.shake(0.15);
       }
@@ -765,7 +768,7 @@ export const SKILLS = {
       const state = { pos: fwd(p, 1.2).setY(1.3), dir: p.forward(new THREE.Vector3()), bounces: 0, hit: new Set(), acc: 0 };
       const MAXB = 12, SPEED = 30;
       const prev = new THREE.Vector3();
-      const lance = game.fx.orb(0x9fd8ff, 0.55); lance.position.copy(state.pos);
+      const lance = game.fx.orb(0x2fa8ff, 0.7);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 작은 구는 흰 점으로 짧게만 보였다(h1b) lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
 
@@ -785,9 +788,9 @@ export const SKILLS = {
           state.hit.add(e); state.bounces++;
           const mul = 1 + state.bounces * 0.22;
           game.damageEnemy(e, c.dmg * mul, { kind: 'magic', kb: 2.2, source: p, dirx: state.dir.x, dirz: state.dir.z, quietStop: state.bounces > 2 });
-          game.fx.flash(e.pos.clone().setY(1.2), 0x3a9cff, { size: 1.8, life: 0.16 });
-          game.fx.burst(e.pos.clone().setY(1.1), 0xbfeaff, { n: 12, speed: 8, size: 0.3 });
-          game.fx.shockTex(e.pos, 0x9fd8ff, { r1: 2.4, life: 0.25 });
+          game.fx.flash(e.pos.clone().setY(1.2), 0x3a9cff, { size: 1.8, life: 0.1 });
+          game.fx.burst(e.pos.clone().setY(1.1), 0x4a9cff, { n: 12, speed: 8, size: 0.3 });
+          game.fx.shockTex(e.pos, 0x2f7cff, { r1: 2.4, life: 0.25 });
           audio.clang({ vol: 0.3, freq: 1400 + state.bounces * 180, dur: 0.2 });
           // 다음 적을 향해 굴절
           let best = null, bd = 15;
@@ -809,20 +812,20 @@ export const SKILLS = {
           if (!bx && !bz) state.dir.negate();                       // 오목한 구석: 되돌아 나온다
           state.pos.addScaledVector(state.dir, step * 1.2);          // 벽에서 떼어 놓기
           if (!game.world.walkable(state.pos.x, state.pos.z)) state.pos.copy(p.pos).setY(1.3);   // 그래도 벽 안이면 시전자에게 회수
-          game.fx.flash(state.pos, 0x8fd0ff, { size: 1.6, life: 0.16 });
-          game.fx.shockTex(_v.copy(state.pos).setY(0), 0x9fd8ff, { r1: 2, life: 0.22 });
+          game.fx.flash(state.pos, 0x3a9cff, { size: 1.6, life: 0.1 });
+          game.fx.shockTex(_v.copy(state.pos).setY(0), 0x2f7cff, { r1: 2, life: 0.22 });
           audio.play('ui_pluck', { vol: 0.3, rate: 1.6 });
         }
         if (state.bounces >= MAXB) {
           game.hitRadius(state.pos, 4.5, c.dmg * 2.4, { kb: 8, kind: 'magic', up: true, source: p, dirFrom: state.pos });
-          game.fx.explosion(state.pos, { size: 7, color: 0xbfeaff, life: 0.5 });
-          game.fx.shockTex(state.pos.clone().setY(0), 0x9fd8ff, { r1: 6, life: 0.5 });
-          game.fx.burst(state.pos.clone(), 0x9fdcff, { n: 36, speed: 13, size: 0.4 });
+          game.fx.explosion(state.pos, { size: 7, color: 0x4a8cff, life: 0.5 });
+          game.fx.shockTex(state.pos.clone().setY(0), 0x2f7cff, { r1: 6, life: 0.5 });
+          game.fx.burst(state.pos.clone(), 0x5a8cff, { n: 36, speed: 13, size: 0.4 });
           game.renderer.shake(0.6); audio.boom({ vol: 0.7, dur: 0.5, low: 90 }); audio.vibe([40, 20, 60]);
           state.done = true; lance.visible = false;
         }
       }, disposeLance);
-      game.renderer.flashScreen(0.2, 0xbfeaff);
+      game.renderer.flashScreen(0.2, 0x6aa8ff);
     },
   },
 

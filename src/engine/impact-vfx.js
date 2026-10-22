@@ -31,7 +31,7 @@ const CRIT_COLOR = 0xffd23a, CRIT_DEEP = 0xffa81e, KILL_COLOR = 0xffe2a0;
 export const HERO_COMBO = Object.freeze({
   knight: Object.freeze({ shape: 'arc', color: 0xffc23a, hot: 0xffe27a, base: 1.55, grow: .5 }),
   ranger: Object.freeze({ shape: 'arrow', color: 0x3fe0a0, hot: 0x9fffd8, base: .7, grow: .45 }),
-  mage: Object.freeze({ shape: 'orb', color: 0x3f86ff, hot: 0x7fb8ff, base: .6, grow: .5 }),
+  mage: Object.freeze({ shape: 'orb', color: 0x3f86ff, hot: 0x6aa4ff, deep: 0x2a4ce8, base: .6, grow: .5 }),
   rogue: Object.freeze({ shape: 'cross', color: 0xb466ff, hot: 0xe2b8ff, deep: 0x8a3cff, base: 1.2, grow: .45 }),
   barbarian: Object.freeze({ shape: 'smash', color: 0xff5a1e, hot: 0xff9a3a, base: 1.1, grow: .55 }),
 });
@@ -488,9 +488,18 @@ export class ImpactVfx {
       this._emit(IMPACT_KIND.ring, x, y, z, 1.25 * g, C.color, .2 + .05 * s, { grow: 1 });
       if (s > .45 && !lite) this._emit(IMPACT_KIND.ring, x, y, z, .8 * g, C.hot, .18, { grow: 1, delay: .04 });
       if (finisher) {
-        this._emit(IMPACT_KIND.star, x, y, z, 2.2 * g, C.color, .16, { angle: .785, grow: .5 });
-        this._emit(IMPACT_KIND.ring, x, y, z, 2.6 * g, C.color, .3, { grow: 1, delay: .05 });
-        if (!lite) this.mark(pos, C.color, { radius: 2 * g, life: .45, style: MARK_STYLE.compass, angle: this.rng.next() * 6.28 });
+        // 마무리: 넓은 옅은 청 나침 원판(반경 3.5m)이 화면 아래를 덮었다(h1b). 진한 남청 작은 표식 + 겹고리 + 수평으로 뻗는
+        // 여섯 갈래 비전 가시(별 모양 실루엣)로 바꾼다.
+        this._emit(IMPACT_KIND.star, x, y, z, 1.6 * g, C.color, .14, { angle: .785, grow: .5 });
+        this._emit(IMPACT_KIND.ring, x, y, z, 2.2 * g, C.deep, .3, { grow: 1, delay: .05 });
+        if (!lite) {
+          _pos.set(pos.x, .02, pos.z);
+          this.mark(_pos, C.deep, { radius: 1.3 * g, life: .45, style: MARK_STYLE.compass, angle: this.rng.next() * 6.28 });
+          for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * 6.2831853 + .26; _dir.set(Math.cos(a), 0, Math.sin(a)); _ray.set(x, y, z).addScaledVector(_dir, .5);
+            this.beam(_ray, _dir, 1.7 * g, i % 2 ? C.deep : C.color, { speed: 22, tail: 1, width: .1, delay: .02 });
+          }
+        }
       }
     } else if (C.shape === 'cross') {
       // 암살자: 보라 교차 베기 — 두 자국이 한 박자 차로 X 를 긋고, 단계가 오르면 세 번째 가로 자국.

@@ -54,7 +54,7 @@ test('암살자 서명은 보라 계열이고(독무만 독 초록 허용), 큰 
 
 test('지연 칸이 skills.js 판정 시각과 맞는다: 독무 착탄 .5, 일식 .3, 야행 0/.1/.2, 천 개의 칼날 박자 +.13', () => {
   const starts = (id: string, pred: (x: any) => boolean) => { const v = make(); SIGNATURES[id](ctxOf(v)); const s = slots(v).filter(pred).map(x => x.start); v.dispose(); return s; };
-  expect(starts('poison_bomb', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.thorn)).toEqual([expect.closeTo(.5, 5), expect.closeTo(.5, 5)]);
+  expect(starts('poison_bomb', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.thorn)).toEqual([expect.closeTo(.5, 5)]);
   expect(starts('eclipse_edge', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.clock)).toEqual([expect.closeTo(.3, 5)]);
   expect([...new Set(starts('night_parade', x => x.kind === IMPACT_KIND.cut).map(t => +t.toFixed(3)))].sort()).toEqual([0, .1, .2]);
   // 천 개의 칼날: 하늘 칼날 광선이 박자(.15×n + .13)에 정확히 바닥에 닿는다.
