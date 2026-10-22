@@ -34,8 +34,15 @@
     // MMO 계정(/api/v1): 기본 비활성. SESSION_HMAC 시크릿과 D1 마이그레이션(worker/v1/migrations)은 코디네이터가 적용한다.
     "V1_ENABLED": "false",
     "V1_SERVER_AUTHORITY_PERCENT": "0",
+    // BM(/api/v1/iap): 기본 비활성. Play 서비스 계정은 아래 Secrets Store 바인딩 PLAY_SA_JSON(apex-shared-apis의 APEX_CLOUD_PLAY_SA_JSON).
+    // RTDN은 Pub/Sub push 구독의 OIDC audience·푸시 서비스 계정 고유 ID(sub)를 코디네이터가 설정한 뒤에만 받는다(docs/BM_DESIGN.md 9장).
+    "IAP_ENABLED": "false",
+    "IAP_ALLOW_TEST": "false",
+    "RTDN_AUDIENCE": "",
+    "RTDN_PUSH_SUBJECT": "",
     "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
   },
+  "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" }],
   "observability": { "enabled": true },
   "triggers": { "crons": ["17 * * * *"] },
   "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28", "migrations_dir": "worker/v1/migrations" }],
