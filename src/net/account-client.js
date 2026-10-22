@@ -43,6 +43,12 @@ export class AccountClient {
   shadowSnapshot(cid, save, clientHash) { return this.request('POST', '/shadow/snapshot', { cid, save, clientHash }); }
   startRun(body) { return this.request('POST', '/runs/start', body); }
   settleRun(runId, facts) { return this.request('POST', `/runs/${runId}/settle`, facts); }
+  // BM: 인앱 결제(서버가 검증·지급의 유일한 근거). 구매 토큰은 반환 경로로만 흐르고 기록하지 않는다.
+  iapCatalog() { return this.request('GET', '/iap/catalog'); }
+  iapIntent(productId) { return this.request('POST', '/iap/intent', { productId }); }
+  iapVerify(productId, purchaseToken) { return this.request('POST', '/iap/verify', { productId, purchaseToken }); }
+  iapState() { return this.request('GET', '/iap/state'); }
+  funnel(events) { return this.request('POST', '/funnel', { events }); }
   /** 서버 시계 기준 현재 시각(표시용 오프셋만 보정한다). */
   serverNow() { return Date.now() + this.serverOffset; }
 }

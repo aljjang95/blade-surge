@@ -14,6 +14,9 @@ export const SKUS = [
     desc: 'SSR 확정 소환권 1 · 보석 1,000 · 골드 50,000', rewards: { gems: 1000, gold: 50000, ssrTicket: 1 } },
   { id: 'monthly', tab: 'hot', kind: 'cash', name: '월정액 카드', price: 5900, priceLabel: '₩5,900', icon: '/img/icon_gem.webp', badge: 'BEST',
     desc: '즉시 보석 1,200 + 30일간 매일 보석 100 (총 4,200)', rewards: { gems: 1200, monthly: 30 } },
+  // 가격 문구는 Play가 돌려준 값으로 덮어쓴다(priceLabel 없음). 카탈로그 밖·비활성이면 상점에 나오지 않는다.
+  { id: 'remove_ads', tab: 'hot', kind: 'cash', name: '광고 제거', price: 4900, icon: '/img/icon_protect.webp',
+    desc: '전면 광고를 영구히 끕니다 (계정 단위, 기기를 바꿔도 복원)', rewards: {} },
   { id: 'growth', tab: 'pack', kind: 'cash', name: '성장 패키지', price: 12000, priceLabel: '₩12,000', icon: '/img/icon_chest_epic.webp', badge: '인기',
     desc: '보석 2,400 · 소환권 30 · 골드 200,000 · 초월석 5 (초월 성장)', rewards: { gems: 2400, tickets: 30, gold: 200000, transcendStones: 5 } },
   { id: 'boss_pack', tab: 'pack', kind: 'cash', name: '해골 군주 토벌 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_chest_legend.webp', badge: '한정', limited: true, hours: 72,

@@ -15,11 +15,12 @@ export function setupStoreAccess(app) {
       const notice = box.querySelector('#store-notice'), buy = box.querySelector('#store-buy'), restore = box.querySelector('#store-restore'),
         ad = box.querySelector('#store-ad'), privacy = box.querySelector('#store-privacy'), cancel = box.querySelector('#m-cancel');
       const visible = () => notice.isConnected && box.querySelector('#store-notice') === notice && app.ui.el.modal.classList.contains('show');
+      const adsRemoved = () => app.eco?.s?.adsRemoved === true;
       let priceReady = false;
       const render = () => {
         if (!visible()) return;
         // 스토어가 켜지 않은 기능의 버튼은 비활성이 아니라 숨긴다(광고 제거 구매·복원은 결제가 켜졌을 때만, 광고 보기는 광고가 켜졌을 때만).
-        buy.hidden = restore.hidden = !controller.capabilities?.billing; ad.hidden = !controller.capabilities?.ads;
+        buy.hidden = restore.hidden = !controller.capabilities?.billing; ad.hidden = !controller.capabilities?.ads || adsRemoved();
         box.querySelector('#store-note').hidden = !controller.capabilities?.billing;
         buy.disabled = !controller.active() || controller.busy || !controller.capabilities?.billing || !priceReady;
         restore.disabled = !controller.active() || controller.busy || !controller.capabilities?.billing;
@@ -47,7 +48,8 @@ export function setupStoreAccess(app) {
         if (visible()) { render(); notice.textContent = result.ok ? '처리를 마쳤습니다. 구매 권한은 서버에서 확인합니다.' : '처리를 완료하지 못했습니다. 스토어 상태를 확인한 뒤 다시 시도해 주세요.'; }
       };
       buy.onclick = () => run(() => controller.purchase()); restore.onclick = () => run(() => controller.restore());
-      ad.onclick = () => run(() => controller.showAd()); privacy.onclick = () => run(() => controller.privacyOptions()); cancel.onclick = close;
+      // 광고 제거 권한(서버 검증)이 있으면 광고를 띄우지 않고 바로 완료 처리한다.
+      ad.onclick = () => run(() => adsRemoved() ? Promise.resolve({ ok: true }) : controller.showAd()); privacy.onclick = () => run(() => controller.privacyOptions()); cancel.onclick = close;
       const refresh = async () => {
         const generation = controller.generation; priceReady = false; render();
         await controller.init();
