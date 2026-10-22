@@ -1,11 +1,12 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MUSIC_TRACKS, bgmUrl, musicForScene } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
 
 // tools/optimize/dist-excludes.json 은 빌드 산출물에서만 뺄 미사용 자산 목록이다. 누군가 나중에 이 자산을 코드에서 참조하면 이 테스트가 실패한다.
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 const manifest = JSON.parse(readFileSync(join(root, 'tools/optimize/dist-excludes.json'), 'utf8')) as { schema: string; entries: { path: string; reason: string }[]; channelExcludes: Record<string, { glob: string; reason: string }[]> };
 
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => (entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]));
