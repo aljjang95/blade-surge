@@ -54,9 +54,15 @@ test('암살자 서명은 보라 계열이고(독무만 독 초록 허용), 큰 
 
 test('지연 칸이 skills.js 판정 시각과 맞는다: 독무 착탄 .5, 일식 .3, 야행 0/.1/.2, 천 개의 칼날 박자 +.13', () => {
   const starts = (id: string, pred: (x: any) => boolean) => { const v = make(); SIGNATURES[id](ctxOf(v)); const s = slots(v).filter(pred).map(x => x.start); v.dispose(); return s; };
-  expect(starts('poison_bomb', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.thorn)).toEqual([expect.closeTo(.5, 5)]);
+  expect(starts('poison_bomb', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.thorn)).toEqual([expect.closeTo(.5, 5), expect.closeTo(.5, 5)]);
   expect(starts('eclipse_edge', x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.clock)).toEqual([expect.closeTo(.3, 5)]);
   expect([...new Set(starts('night_parade', x => x.kind === IMPACT_KIND.cut).map(t => +t.toFixed(3)))].sort()).toEqual([0, .1, .2]);
+  // 독무: 독 기둥(위로 솟는 광선)은 착탄(.5초) 뒤에만 피어오르고, 바깥 웅덩이 테는 적 무리(반경 4.2)보다 넓다.
+  { const v = make(); SIGNATURES.poison_bomb(ctxOf(v)); const A = v.ring.a; let cols = 0;
+    for (let i = 0; i < v.ring.high; i++) if (A.aShape[i * 4] === IMPACT_KIND.beam && A.aVel[i * 3 + 1] > 0 && Math.abs(A.aVel[i * 3]) < 1e-6 && Math.abs(A.aVel[i * 3 + 2]) < 1e-6) { cols++; expect(A.aLife[i * 2]).toBeGreaterThanOrEqual(.5); }
+    expect(cols).toBe(8);
+    expect(Math.max(...slots(v).filter(x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.thorn).map(x => x.size))).toBeGreaterThan(5);
+    v.dispose(); }
   // 천 개의 칼날: 하늘 칼날 광선이 박자(.15×n + .13)에 정확히 바닥에 닿는다.
   const v = make(); SIGNATURES.thousand(ctxOf(v));
   const A = v.ring.a; let n = 0;
