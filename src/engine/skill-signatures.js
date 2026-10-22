@@ -49,12 +49,14 @@ const RANGER = {
   ranger_pierce(ctx) {
     const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 27;
     _b.copy(player.pos).setY(.07);
-    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .4, speed: SPEED, life: .7 });
-    if (!lite) for (const side of [-.55, .55]) rail(impact, _b, f, .8, 12.2, 1.9, JADE_HOT, { width: .06, speed: SPEED, life: .6, side });
+    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .7, speed: SPEED, life: .7 });
+    if (!lite) for (const side of [-.7, .7]) rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .12, speed: SPEED, life: .6, side });
     _d.set(-f.z, 0, f.x);
     for (let d = 1.5; d < 12; d += 2) {
-      _e.copy(_b).addScaledVector(f, d).addScaledVector(_d, -.75);
-      impact.beam(_e, _d, 1.5, JADE_HOT, { width: .07, fade: .55, delay: d / SPEED });
+      // 침목은 가운데에서 양쪽으로 그어 끝이 밝다(광선은 머리 쪽이 밝다).
+      _e.copy(_b).addScaledVector(f, d);
+      impact.beam(_e, _d, 1.1, JADE, { width: .16, fade: .55, delay: d / SPEED });
+      _d.negate(); impact.beam(_e, _d, 1.1, JADE, { width: .16, fade: .55, delay: d / SPEED }); _d.negate();
     }
     impact.beam(o, f, 16, JADE, { speed: SPEED, tail: 9, width: .22 });
     impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, JADE_HOT, .1, { angle: yawOf(f) * .2, grow: .5 });
