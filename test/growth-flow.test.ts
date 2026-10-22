@@ -21,7 +21,9 @@ describe('성장 흐름 계약', () => {
     expect(skuFlowRole(sku('gold2'))?.role).toBe('gold');
     expect(skuFlowRole(sku('stone1'))?.role).toBe('gear');
     expect(skuFlowRole(sku('en1'))?.role).toBe('energy');
-    for (const s of SKUS) expect(skuFlowRole(s)).not.toBeNull();
+    // 보상이 없는 권한 상품(광고 제거)은 성장 용도 표시가 없다.
+    for (const s of SKUS.filter((x: any) => Object.keys(x.rewards || {}).length || x.gems)) expect(skuFlowRole(s)).not.toBeNull();
+    expect(skuFlowRole(sku('remove_ads'))).toBeNull();
   });
   test('부족 재료마다 구할 곳', () => {
     const cost = { ...GRADE_UP_COST.SSR };

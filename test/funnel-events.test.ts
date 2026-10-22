@@ -14,8 +14,8 @@ function memStorage(initial: Record<string, string> = {}) {
 }
 const fixedClock = (start = 1_800_000_000_000) => { let t = start; return { now: () => t, advance: (ms: number) => { t += ms; } }; };
 
-test('exposes exactly the funnel events and no purchase/pass/ad success events', () => {
-  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'paysheet_open', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
+test('exposes exactly the funnel events; purchase success only as purchase_verified (server-verified) and no pass/ad success events', () => {
+  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'paysheet_open', 'purchase_verified', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
   for (const name of ['purchase_success', 'purchase_complete', 'pass_purchase', 'ad_reward', 'ad_complete', 'grant']) {
     expect(validateFunnelEvent(name, {})).toEqual({ ok: false, reason: 'unknown_event' });
   }

@@ -34,6 +34,15 @@ export const ECONOMY_PACE = {
       "withDays": 24,
       "days": 2
     },
+    "remove_ads": {
+      "key": "remove_ads",
+      "target": "마법사 SR→SSR",
+      "hero": "mage",
+      "grade": "SSR",
+      "freeDays": 26,
+      "withDays": 26,
+      "days": 0
+    },
     "growth": {
       "key": "growth",
       "target": "마법사 SR→SSR",
