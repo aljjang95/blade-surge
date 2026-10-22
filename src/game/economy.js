@@ -13,11 +13,21 @@ import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { createSeededRng } from '../shared/rng.js';
+import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
 
 const KEY = 'bladesurge_save_v1';
+const IAP_APPLIED_MAX = 300;
+// 서버가 준 opId만 받는다(길이·문자 제한). 이 밖의 값은 무시한다.
+const validOpId = (v) => typeof v === 'string' && v.length >= 1 && v.length <= 200;
+/** 서버 보상 객체에서 지급 가능한 키·양의 정수만 남긴다. */
+function iapRewards(raw) {
+  const out = {};
+  if (raw && typeof raw === 'object') for (const k of IAP_REWARD_KEYS) { const n = raw[k]; if (Number.isSafeInteger(n) && n > 0 && n <= 100000000) out[k] = n; }
+  return out;
+}
 // 분해: 판매 골드의 절반과 강화석(에픽은 상급)을 돌려준다. 유니크 이상은 일괄 분해 대상에서 보호한다.
 export function salvageRewards(inst) {
   const rarity = ITEM_BY_ID[inst?.id]?.rarity;
@@ -127,6 +137,7 @@ export class Economy {
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       towns: freshTownState(),
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
+      iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false }, limitedStart: nowOf(this),
@@ -152,7 +163,11 @@ export class Economy {
   }
   /** 구 세이브 보정 — 각성 슬롯이 늘어나면 스킬 레벨 배열도 늘려 준다 */
   migrate(s) {
-    return normalizeSave(s, this.fresh());
+    const out = normalizeSave(s, this.fresh());
+    // 결제 적용 기록: 문자열 opId만, 중복 제거, 최근 300개.
+    out.iapApplied = [...new Set((Array.isArray(out.iapApplied) ? out.iapApplied : []).filter(validOpId))].slice(-IAP_APPLIED_MAX);
+    out.adsRemoved = out.adsRemoved === true;
+    return out;
   }
   save() {
     try {
@@ -579,7 +594,44 @@ export class Economy {
   sku(id) { return SKUS.find((x) => x.id === id); }
   limitedLeft(sku) { if (!sku.limited) return 0; const end = this.s.limitedStart + sku.hours * 3600000; return Math.max(0, end - nowOf(this)); }
   /** 현금 결제는 실제 스토어 SDK와 영수증 검증이 연결되기 전까지 상태를 바꾸거나 보상을 주지 않는다 (PRD §3.3). */
-  paymentAvailable() { return false; }
+  paymentAvailable() { return this.billing?.available?.() === true; }
+  /** 결제 서비스 주입(src/platform/billing-service.js). 주입 전·비활성이면 기존 그림자 모드 그대로다. */
+  setBilling(service) { this.billing = service || null; }
+  /**
+   * 서버가 검증한 결제 상태를 세이브에 반영한다. 서버 응답만이 지급·권한의 근거이며 같은 opId는 한 번만 적용한다.
+   * @param {{ grants?: Array<{ opId: string, productId?: string, rewards?: Record<string, number> }>, reversals?: Array<{ opId: string, rewards?: Record<string, number> }>, entitlements?: { adsRemoved?: boolean, monthlyUntil?: number, passPremium?: boolean } }} state
+   * @returns {Array<{ k: string, n: number }> | null} 이번에 새로 지급한 보상(저장 실패면 null, 이때 상태는 롤백)
+   */
+  applyIapState(state) {
+    const s = this.s, before = structuredClone(s), applied = new Set(s.iapApplied || []), got = [];
+    let changed = false;
+    s.iapApplied = [...(s.iapApplied || [])];
+    for (const g of Array.isArray(state?.grants) ? state.grants : []) {
+      if (!validOpId(g?.opId) || applied.has(g.opId)) continue;
+      applied.add(g.opId); s.iapApplied.push(g.opId); changed = true;
+      const rewards = iapRewards(g.rewards);
+      if (Object.keys(rewards).length) got.push(...this.addRewards(rewards, { silent: true, applyVip: false }));
+      const product = typeof g.productId === 'string' && Object.hasOwn(IAP_BY_ID, g.productId) ? IAP_BY_ID[g.productId] : null;
+      if (product?.once && product.shopSku && !s.purchases.includes(product.shopSku)) s.purchases.push(product.shopSku);
+    }
+    for (const r of Array.isArray(state?.reversals) ? state.reversals : []) {
+      if (!validOpId(r?.opId) || applied.has(r.opId)) continue;
+      applied.add(r.opId); s.iapApplied.push(r.opId); changed = true;
+      for (const [k, n] of Object.entries(iapRewards(r.rewards))) { const f = IAP_REWARD_FIELD[k]; if (f) s[f] = Math.max(0, (s[f] || 0) - n); }
+    }
+    const e = state?.entitlements;
+    if (e && typeof e === 'object') {
+      const monthly = Number.isFinite(e.monthlyUntil) ? Math.max(0, Math.floor(e.monthlyUntil)) : s.monthlyUntil;
+      if (monthly !== s.monthlyUntil) { s.monthlyUntil = monthly; changed = true; }
+      if (typeof e.passPremium === 'boolean' && e.passPremium !== s.pass.premium) { s.pass.premium = e.passPremium; changed = true; }
+      if (typeof e.adsRemoved === 'boolean' && e.adsRemoved !== s.adsRemoved) { s.adsRemoved = e.adsRemoved; changed = true; }
+    }
+    if (!changed) return got;
+    s.iapApplied = s.iapApplied.slice(-IAP_APPLIED_MAX);
+    if (!this.save()) { this.s = before; return null; }
+    for (const f of this.listeners) f(this.s);
+    return got;
+  }
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
     if (sku.kind === 'gem') {
@@ -591,6 +643,8 @@ export class Economy {
       return { ok: true, got };
     }
     if (!this.paymentAvailable()) return { ok: false, reason: 'payment-unavailable' };
+    // 결제가 연결돼도 현금 상품은 서버 검증(billing.buy → applyIapState)으로만 지급한다. 여기서 직접 주지 않는다.
+    if (this.billing) return { ok: false, reason: 'use-billing' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
     // cash (목업): 첫 결제 2배 보너스
     s.purchases.push(id); s.spentKRW += sku.price;
@@ -629,6 +683,7 @@ export class Economy {
   buyPass() {
     if (this.s.pass.premium) return { ok: false, reason: 'owned' };
     if (!this.paymentAvailable()) return { ok: false, reason: 'payment-unavailable' };
+    if (this.billing) return { ok: false, reason: 'use-billing' };
     this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); return { ok: true };
   }
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
