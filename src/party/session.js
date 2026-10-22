@@ -79,7 +79,7 @@ export class PartySession {
     this.playerId = null; this.party = null; this.name = sanitizePartyName(this.name);
     const url = new URL(apiUrl(`/api/party/${code}`), location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
-    const avatar = this.app.eco.equippedAvatar(this.heroId); if (avatar) url.searchParams.set('avatar', avatar);
+    const avatar = this.app.eco.displayAvatar(this.heroId); if (avatar) url.searchParams.set('avatar', avatar);
     url.searchParams.set('visuals', '1'); url.searchParams.set('avatars', '1'); url.searchParams.set('heroHits', '1');
     if (ticket) url.searchParams.set('ticket', ticket);
     const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage);

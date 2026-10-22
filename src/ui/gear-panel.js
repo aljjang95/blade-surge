@@ -65,7 +65,14 @@ export function renderOwnedHero(meta, id, det) {
     return '<button type="button" class="equip-slot has hs-slot rar-' + it.rarity + '" data-slot="' + slot + '" data-uid="' + inst.uid + '" aria-label="' + SLOT_NAME[slot] + ': ' + esc(it.name) + ' +' + inst.enh + ', 비교와 강화 열기" title="' + esc(it.name) + '">' + iconImg(it, '', id) + '<span class="plus">+' + inst.enh + '</span><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
   }).join('');
   const avatar = AVATARS.find((entry) => entry.heroId === id), avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
-  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><button type="button" class="btn btn-ghost btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '" ' + (avatarReady ? '' : 'disabled') + '>' + (avatarReady ? (avatarOwned ? (avatarEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') : '준비 중') + '</button></section>' : '';
+  const gearShown = avatarEquipped && !eco.displayAvatar(id);
+  // 아바타 줄: 미보유는 시착(미리보기)·구매, 보유는 시착·착용, 착용 중은 장비 외형 표시 토글·해제. 시착은 저장을 바꾸지 않는다.
+  const avatarButtons = !avatar ? '' : !avatarReady ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-action" disabled>준비 중</button>'
+    : (avatarEquipped
+      ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-gear" data-avatar-gear role="switch" aria-checked="' + gearShown + '" title="아바타를 입은 채로 장비 외형을 보여 줍니다">장비 외형 ' + (gearShown ? '켬' : '끔') + '</button>'
+      : '<button type="button" class="btn btn-ghost btn-sm hero-avatar-try" data-avatar-try aria-pressed="false">미리보기</button>')
+      + '<button type="button" class="btn ' + (avatarOwned ? 'btn-ghost' : 'btn-gold') + ' btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '">' + (avatarOwned ? (avatarEquipped ? '해제' : '착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') + '</button>';
+  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타' + (avatarEquipped ? ' · 착용 중' : avatarOwned ? ' · 보유' : '') + '</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><span class="hero-avatar-buttons">' + avatarButtons + '</span></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
     '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small class="hs-grade" data-grade="' + heroGrade(def, h) + '" style="color:' + RC[heroGrade(def, h)] + '">' + heroGrade(def, h) + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
@@ -83,6 +90,18 @@ export function renderOwnedHero(meta, id, det) {
       const bought = eco.buyAvatar(avatar.id); if (!bought.ok) { meta.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
     }
     if (!eco.equipAvatar(id, equippedNow ? null : avatar.id).ok) return;
+    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    meta.renderHeroes();
+  };
+  const tryButton = det.querySelector('[data-avatar-try]');
+  if (tryButton && avatar) tryButton.onclick = () => {
+    const on = tryButton.getAttribute('aria-pressed') !== 'true';
+    tryButton.setAttribute('aria-pressed', String(on)); tryButton.textContent = on ? '미리보기 끝' : '미리보기';
+    meta.app.wardrobe?.show(id, on ? { previewAvatarId: avatar.id, previewLabel: '미리보기' } : {});
+  };
+  const gearButton = det.querySelector('[data-avatar-gear]');
+  if (gearButton) gearButton.onclick = () => {
+    if (!eco.setShowGear(id, !eco.s.avatars.showGear?.[id]).ok) return;
     if (eco.s.selected === id) meta.app.showcaseHero(id);
     meta.renderHeroes();
   };

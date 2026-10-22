@@ -136,7 +136,7 @@ export class Economy {
       schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
-      selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {} },
+      selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       towns: freshTownState(),
@@ -718,9 +718,19 @@ export class Economy {
     if (id === null) { delete this.s.avatars.equipped[heroId]; this.emit(); return { ok: true }; }
     const avatar = AVATAR_BY_ID[id];
     if (!avatar || avatar.heroId !== heroId || !this.s.avatars.owned.includes(id)) return { ok: false, reason: 'avatar' };
-    this.s.avatars.equipped[heroId] = id; this.emit(); return { ok: true };
+    // 새로 입을 때는 아바타가 보이게 장비 외형 표시를 끈다(켠 채 해제·재착용해 '착용 중'인데 안 보이는 혼동 방지).
+    this.s.avatars.equipped[heroId] = id; if (this.s.avatars.showGear) delete this.s.avatars.showGear[heroId]; this.emit(); return { ok: true };
   }
   equippedAvatar(heroId = this.s.selected) { const id = this.s.avatars?.equipped?.[heroId]; return AVATAR_BY_ID[id]?.heroId === heroId ? id : null; }
+  /** 장비 외형 표시를 켠 영웅은 아바타를 입은 채로 장비 외형을 보여 준다. 화면·전투·파티 표시는 이 값을 쓴다. */
+  displayAvatar(heroId = this.s.selected) { return this.s.avatars?.showGear?.[heroId] ? null : this.equippedAvatar(heroId); }
+  /** @param {string} heroId @param {boolean} on */
+  setShowGear(heroId, on) {
+    if (!Object.hasOwn(HEROES, heroId)) return { ok: false, reason: 'hero' };
+    const map = this.s.avatars.showGear || (this.s.avatars.showGear = {});
+    if (on) map[heroId] = true; else delete map[heroId];
+    this.emit(); return { ok: true };
+  }
   claimMonthly() { const s = this.s; if (s.monthlyUntil < nowOf(this)) return false; const day = Math.floor(nowOf(this) / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }

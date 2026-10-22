@@ -341,7 +341,7 @@ class App {
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
-    const look = applyLook(root, def, this.eco.heroEquipInsts(id), { avatarId: this.eco.equippedAvatar(id) });   // 로비 쇼케이스도 장착 장비대로
+    const look = applyLook(root, def, this.eco.heroEquipInsts(id), { avatarId: this.eco.displayAvatar(id) });   // 로비 쇼케이스도 장착 장비대로
     const a = mixer.clipAction(clips['Idle']); a.play();
     // 감소된 움직임에서도 교정된 정지 자세를 첫 프레임부터 적용한다.
     mixer.update(0);

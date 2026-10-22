@@ -19,7 +19,7 @@ export function heroPortraitSnapshot(app, id) {
     const inst = source[slot];
     return [slot, inst ? { ...inst } : null];
   }));
-  const avatarId = app.eco?.equippedAvatar?.(id) || null;
+  const avatarId = (app.eco?.displayAvatar || app.eco?.equippedAvatar)?.call(app.eco, id) || null;
   const tier = heroAppearanceTier(equipment, ITEM_BY_ID);
   const body = libraryAssetForAvatar(avatarId) || libraryAssets().filter(asset =>
     asset.role === 'hero' && !asset.avatar && asset.heroId === id && (asset.armorTier || 1) <= tier
