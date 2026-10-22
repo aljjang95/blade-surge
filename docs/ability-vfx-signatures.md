@@ -78,3 +78,13 @@ position, kills or victory state. The generated report and PNGs live under
   눈보라 가시·소용돌이는 `BEAM_STYLE.ice`(옅은 하늘색 심·진한 청 가장자리·끝이 가는 결정), 프리즘은 삼각 윤곽+분광 다섯 갈래
   `BEAM_STYLE.prism`(옅은 청 코어·섬광 제거). 궁수 관통 `screenReach` 는 끝점 표식이 844x390 화면 안에 들도록 표시 거리만 .5m 단위로
   줄인다(최소 5m, 투사체 사거리·판정 불변).
+
+### h1c 이후 남은 것 (2026-10-22, PR #234 머지 시점)
+
+- 파티 손님 부채꼴 경고: 수신(protocol.js·combat-effects `kind: 'sector'`, width = 반각)은 #234 로 배포된다. 다음 릴리스에서
+  `src/game/enemies.js` 의 `PARTY_SECTOR_WARNINGS` 를 `true` 로 켜 보스 기본 공격을 손님 화면에도 부채꼴로 보낸다(지금은 원판).
+- 영혼비: 판정 원 6개가 겹치면 각 원의 경계·어두운 띠가 겹쳐 복잡해 보인다(8.0). 합집합 외곽선(한 메시에 원 6개 거리장) 후보.
+- 대마도사 공통 타격 코어(`HERO_IMPACT_PALETTE.mage.core` 0xe6f6ff)가 적 몸 위에 작은 흰빛을 남긴다(프리즘 첫 반사 등 모든 대마도사 타격).
+- 실기기(S26·Tab S7+) GPU 프레임·체감과 블룸이 켜진 화면(적응 품질 단계 0~1)에서의 보스 예고·차지 광구는 미확인(측정은 swiftshader 단계 2).
+- 보스가 화면 위쪽 HUD(보스 체력바) 근처에 서면 차지 광구가 일부 가려진다.
+- 보스 예고 점수표의 1-5 부채꼴 탄막 타격 프레임 백화는 .0024~.0036 사이에서 흔들린다(three 객체 id 의 Math.random 소비로 발사구 흰 연기 모양이 달라짐, `--pre` 진단).
