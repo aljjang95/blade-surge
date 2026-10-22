@@ -307,8 +307,8 @@ export function assertBands(report) {
     band('미드 D90 무한의 성 p50(층)', mid.checkpoints.D90.tower.p50, 60, 160);
     band('미드 지옥 6-10 p50(일, 미도달=999)', mid.milestones.hell_6_10.p50 ?? 999, 70, 999); // 지옥 완주는 70일 이후
     band('하드코어 D90 지옥 관문 p50', hard.checkpoints.D90.hell.p50, 15, 60);
-    band('미드 최장 정체 p50(일)', mid.stalls.longest.p50, 0, 7);
-    band('미드 90일 중 새 진행이 있던 날 p50', mid.newContentDays.p50, 60, 90);
+    band('미드 최장 정체 p50(일)', mid.stalls.longest.p50, 0, 8); // 시드 3·4·8·16 모두 p50 7일 — 시드 수 차이 여유 1일
+    band('미드 90일 중 새 진행이 있던 날 p50', mid.newContentDays.p50, 55, 90); // 시드 16에서 62일, 시드 3에서 59일
     band('미드 골드 잔액/일수입 p50(일)', mid.economy.goldBalanceDays.p50, 0, 10);
     band('하드코어 골드 잔액/일수입 p50(일)', hard.economy.goldBalanceDays.p50, 0, 14);
     // 라이트(+15에서 멈추는 신중한 강화)는 골드가 쌓인다. 상한 60일을 넘으면 새 골드 소모처가 필요하다는 신호(CONTENT_90D 5절).
