@@ -18,6 +18,7 @@ import { heroAppearanceTier } from '../data/hero-library.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
+import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
@@ -611,7 +612,8 @@ export class Battle {
     if (!this.stage.party && !e.packFollower) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
-    this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
+    // 처치 불꽃은 조종 영웅의 타격 색(흰 라벤더 0xe0e0ff 는 처치마다 흰 퍼프로 읽혔다). 개수·속도·난수 사용은 그대로다.
+    this.fx.burst(e.pos.clone().setY(1), HERO_IMPACT_PALETTE[this.player?.def?.id]?.accent ?? 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
     this.fx.deathShatter?.(e, { reduced: !!this.app?.reducedMotion?.matches });
     if (big) { this.fx.explosion(e.pos, { size: e.isBoss ? 7 : 4, color: e.isBoss ? 0xff8080 : 0xffd080 }); this.renderer.shake(0.4); }
     else {

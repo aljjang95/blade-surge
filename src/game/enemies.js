@@ -15,6 +15,7 @@ import { monsterRosterEntry } from '../data/monster-roster.js';
 import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
 import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
+const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
 const _impactPoint = new THREE.Vector3();
@@ -565,7 +566,8 @@ export class Enemy extends Actor {
       audio.whoosh({ vol: .5, pitch: .5, dur: .5 });
     }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
-    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
+    // 부채꼴 탄막 예고: 정체성 색(초록 탄)과 위험 적색을 반씩 섞어 바닥 위에서 '맞으면 아프다'로 읽힌다(보스 고유기 예고와 같은 규칙). 도형·시간 불변.
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
     else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
     else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
     else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
