@@ -8,7 +8,7 @@ import { pickLootRarity } from '../data/loot-tables.js';
  * DropSystem.onKill과 같은 순서로 난수를 소비한다.
  * @param {any} table lootTable(ch, rank, difficulty)
  * @param {() => number} rng
- * @param {{ baseGold: number, scale: number, summoned?: boolean, goldPerKill?: number, ledger?: boolean }} opts
+ * @param {{ baseGold: number, scale: number, summoned?: boolean, goldPerKill?: number, ledger?: boolean, rank?: string }} opts
  * @returns {Array<{ kind: string, n?: number, amount?: number, count?: number, id?: string, rarity?: string, slot?: string, pick?: number }>}
  */
 export function rollKillLoot(table, rng, { baseGold, scale, summoned = false, goldPerKill = 0, ledger = true, rank = table.rank }) {

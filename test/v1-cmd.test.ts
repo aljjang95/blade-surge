@@ -57,7 +57,7 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
     const h = await v1Harness();
     const a = await h.session();
     for (const [op, args] of [['addRewards', [{ gems: 1e9 }]], ['purchase', ['gems_1']], ['pull', [10]], ['__proto__', []], ['claimMail', ['1']], ['claimMail', [1, 2]], ['equip', ['knight', -1]]] as const) {
-      const r = await h.cmd(a.token, op, args as unknown[]);
+      const r = await h.cmd(a.token, op, args as unknown as unknown[]);
       expect(r.status).toBe(400);
       expect(r.body.error).toBe('op');
     }
