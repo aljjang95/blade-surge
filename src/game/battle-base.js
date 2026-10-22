@@ -883,7 +883,8 @@ export class Battle {
     if (!beat) return null;
     if (beat.stop > 0) this.timeCtl.hitstop(beat.stop);
     if (beat.slowmo) this.timeCtl.slowmo(beat.slowmo.scale, beat.slowmo.sec, beat.slowmo.ease);
-    if (beat.kick > 0) this.renderer?.kick?.(beat.kick);
+    // 카메라 펀치는 저장된 '화면 흔들림' 설정을 따른다(PRD: 카메라 킥은 설정에서 끌 수 있음).
+    if (beat.kick > 0 && this.app?.screenShakeOn?.() !== false) this.renderer?.kick?.(beat.kick);
     return beat;
   }
 
