@@ -41,13 +41,16 @@ export function enemyPalette(enemy, base, accent) {
 export class InstanceRing {
   constructor(scene, geometry, material, capacity, attributes, renderOrder) {
     this.capacity = capacity; this.cursor = 0; this.high = 0; this.lastExpiry = NEVER; this.lo = capacity; this.hi = -1;
+    // 아직 GPU 에 안 올라간 누적 구간. 렌더를 건너뛴 sim 프레임(frameGovernor·고정 스텝 QA)에 쓴 칸도 다음 업로드에 함께 올린다.
+    this.uLo = capacity; this.uHi = -1;
+    const uploaded = () => { this.uLo = this.capacity; this.uHi = -1; };
     this.expiry = new Float32Array(capacity).fill(NEVER);
     /** @type {Record<string, Float32Array>} */
     this.a = {}; this.defs = attributes;
     for (const name in attributes) {
       const size = attributes[name];
       this.a[name] = new Float32Array(capacity * size);
-      geometry.setAttribute(name, new THREE.InstancedBufferAttribute(this.a[name], size).setUsage(THREE.DynamicDrawUsage));
+      geometry.setAttribute(name, new THREE.InstancedBufferAttribute(this.a[name], size).setUsage(THREE.DynamicDrawUsage).onUpload(uploaded));
     }
     this.geometry = geometry; this.material = material;
     this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
@@ -65,13 +68,14 @@ export class InstanceRing {
     if (i < this.lo) this.lo = i; if (i > this.hi) this.hi = i;
     return i;
   }
-  /** 이번 프레임에 쓴 칸 구간만 GPU 로 올린다. */
+  /** 마지막 업로드 이후 쓴 칸 구간만 GPU 로 올린다(업로드 전 여러 번 불려도 구간을 합친다). */
   flush() {
     if (this.hi < 0) return;
-    const n = this.hi - this.lo + 1;
+    if (this.lo < this.uLo) this.uLo = this.lo; if (this.hi > this.uHi) this.uHi = this.hi;
+    const lo = this.uLo, n = this.uHi - lo + 1;
     for (const name in this.defs) {
       const attribute = this.geometry.attributes[name], size = this.defs[name];
-      attribute.clearUpdateRanges(); attribute.addUpdateRange(this.lo * size, n * size); attribute.needsUpdate = true;
+      attribute.clearUpdateRanges(); attribute.addUpdateRange(lo * size, n * size); attribute.needsUpdate = true;
     }
     this.lo = this.capacity; this.hi = -1;
   }

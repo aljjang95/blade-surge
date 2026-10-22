@@ -114,8 +114,8 @@ try {
         if (c.kind === 'crit') p.stats.crit = 1;
         window.app.input.press('attack'); return true;
       }, { c });
-      // 시점: 스킬은 castAt 기준 +.05/+.25/+.6초, 평타 계열은 누른 뒤 .18/.4/.7초(연타는 그 사이 계속 누른다).
-      const times = c.kind === 'skill' ? [c.castAt + .05, c.castAt + .25, c.castAt + .6] : c.kind === 'combo' ? [.9, 1.3, 1.7] : [.18, .4, .7];
+      // 시점: 스킬은 castAt 기준 +.05/+.25/+.6/+1.05초(지연 판정 절정 포함), 평타 계열은 누른 뒤 .18/.4/.7/1초(연타는 그 사이 계속 누른다).
+      const times = c.kind === 'skill' ? [c.castAt + .05, c.castAt + .25, c.castAt + .6, c.castAt + 1.05] : c.kind === 'combo' ? [.9, 1.3, 1.7, 2.1] : [.18, .4, .7, 1];
       let frame = 0; const shots = [];
       for (const t of times) {
         const target = Math.round(t * 60);
@@ -140,10 +140,10 @@ try {
       await page.evaluate(() => window.__unseed());
     }
     report.heroes[hero] = { touch, enemy: def.type, rows };
-    // 몽타주: 행=케이스, 열=3시점, 절반 크기.
+    // 몽타주: 행=케이스, 열=4시점, 절반 크기.
     const W = VIEW.width / 2, H = VIEW.height / 2, composites = [];
     for (const [ri, row] of rows.entries()) for (const [ci, s] of row.shots.entries()) composites.push({ input: await sharp(path.join(out, s.file)).resize(W, H).toBuffer(), left: ci * W, top: ri * H });
-    await sharp({ create: { width: W * 3, height: H * rows.length, channels: 3, background: '#000' } }).composite(composites).png().toFile(path.join(out, `${hero}-montage.png`));
+    await sharp({ create: { width: W * 4, height: H * rows.length, channels: 3, background: '#000' } }).composite(composites).png().toFile(path.join(out, `${hero}-montage.png`));
     await page.evaluate(() => { window.app.testPause = false; window.__pool = []; window.app.toLobby?.(); });
     await page.waitForTimeout(800);
     console.error(hero, '완료', rows.length);
