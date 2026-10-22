@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { Actor } from '../src/game/actor.js';
+import { Actor, HIT_FLASH } from '../src/game/actor.js';
 import { PartySession } from '../src/party/session.js';
 
 function fixture(reduced = false) {
@@ -60,4 +60,15 @@ test('파티 복제 액터와 로컬 액터는 같은 피격 신호를 사용하
     expect(remote.actor.hp).toBe(73);
   }
   local.dispose(); remote.dispose();
+});
+
+test('무거운 타격 배율(최대 1.6)도 피격 발광은 상한 안이라 흰 몸이 블룸 구름으로 번지지 않는다', () => {
+  const f = fixture(), m = f.actor.mats[0];
+  for (const gain of [1, 1.3, 1.6, 9]) {
+    f.actor.flash(0xffffff, .2, gain); f.actor.update(0);
+    expect(m.emissive.r).toBeLessThanOrEqual(HIT_FLASH.max + 1e-9);
+    expect(m.emissive.r).toBeGreaterThanOrEqual(HIT_FLASH.peak - 1e-9);
+    f.actor.update(.3);
+  }
+  f.dispose();
 });

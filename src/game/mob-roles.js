@@ -22,7 +22,7 @@ export class MobRole {
     this.impact=new THREE.Vector3();
     this.geometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
     this.material=new THREE.ShaderMaterial({vertexShader:hazardVertexShader,fragmentShader:hazardFragmentShader,transparent:true,depthWrite:false,side:THREE.DoubleSide,
-      uniforms:{color:{value:new THREE.Color(this.def.color)},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0}}});
+      uniforms:{color:{value:new THREE.Color(this.def.color)},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0},progress:{value:0}}});
     this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.name=`mob-${this.key}-warning`;this.mesh.visible=false;this.mesh.renderOrder=4;enemy.game.scene.add(this.mesh);
   }
   available(distance){
@@ -122,7 +122,7 @@ export class MobRole {
       }
     }
     const recovery=t>=p.strikeAt+travel;
-    this.mesh.visible=!recovery||t<p.strikeAt+travel+.2;this.material.uniforms.opacity.value=recovery?Math.max(0,.8-(t-p.strikeAt-travel)*4):.78;
+    this.mesh.visible=!recovery||t<p.strikeAt+travel+.2;this.material.uniforms.opacity.value=recovery?Math.max(0,.8-(t-p.strikeAt-travel)*4):.78;this.material.uniforms.progress.value=Math.min(1,Math.max(0,t/Math.max(p.strikeAt,1e-3)));
     if(recovery){e.vel.set(0,0,0);if(!p.recovering&&this.key==='charger')e.play(e.A('idleCombat'),{fade:.08});p.recovering=true;}
     if(t>=p.endAt){this.clear();e.state='chase';e.atkCd=d.cooldown;e.telegraph=0;e.play(e.A('idleCombat'),{fade:.12});}
     return true;

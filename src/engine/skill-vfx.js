@@ -17,45 +17,50 @@ export const skillVfxKey = (name) => 'sv2-' + name;
 
 const R = (rune, tex, place, mode, color, size, extra = {}) => Object.freeze({ rune, tex: 'skill-' + tex, place, mode, color, size, ...extra });
 const GOLD = 'skill-rune-circle-gold', VIOLET = 'skill-rune-circle-violet';
+/** 원화별 지면 밝기. 얼음·성광 원화는 중심이 거의 흰색이라 10m 넘게 깔면 블룸과 함께 화면을 하얗게 덮었다(대마도사 눈보라·별감옥). */
+export const SKILL_GROUND_GAIN = Object.freeze({ 'skill-ice-burst': .42, 'skill-holy-wave': .6, 'skill-chain-lightning': .8, [GOLD]: .78, [VIOLET]: .85 });
+const groundGain = (name) => SKILL_GROUND_GAIN[name] ?? 1;
 
-/** 40개 스킬 ID → 레시피. place: self(시전자) / front(전방 dist) / aim(조준점, 없으면 전방). mode: flash(빌보드) / ground(지면). */
+/** 40개 스킬 ID → 레시피. place: self(시전자) / front(전방 dist) / aim(조준점). mode: flash(빌보드) / ground(지면).
+ * aim 은 실제 스킬 판정과 같은 자리에 그린다: 조준점 → seek[사거리, 반경]의 최다 밀집 적(skills.js densest) → 전방 dist(0 이면 시전자).
+ * 예전에는 조준점이 없을 때 전방 8~9m 에 그려 판정 위치와 연출이 어긋났다. */
 export const SKILL_VFX = Object.freeze({
   // 검성
   holy_slash: R(GOLD, 'holy-wave', 'front', 'flash', 0xffd060, 5, { dist: 3 }),
-  shield_bash: R(GOLD, 'lava-crack', 'aim', 'ground', 0xffe0a0, 6, { dist: 1.5 }),
+  shield_bash: R(GOLD, 'holy-wave', 'aim', 'ground', 0xffe0a0, 6, { dist: 1.2 }),
   judgment: R(GOLD, 'holy-wave', 'self', 'flash', 0xfff3b0, 6),
   dragon_slash: R(GOLD, 'holy-wave', 'front', 'flash', 0xffd060, 10, { dist: 4 }),
   chain_bind: R(GOLD, 'chain-lightning', 'self', 'flash', 0xfff0b0, 6),
   sanctuary: R(GOLD, 'holy-wave', 'self', 'ground', 0xffe9a0, 8),
   sunbreaker: R(GOLD, 'holy-wave', 'front', 'flash', 0xffc040, 9, { dist: 4 }),
-  heavenfall: R(GOLD, 'holy-wave', 'aim', 'flash', 0xfff0a0, 11, { dist: 8 }),
+  heavenfall: R(GOLD, 'holy-wave', 'aim', 'flash', 0xfff0a0, 11, { dist: 0, seek: [15, 5] }),
   // 광전사
   whirlwind: R(GOLD, 'lava-crack', 'self', 'ground', 0xff7a4a, 5),
   quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),
   berserk: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff3030, 6),
-  hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 8 }),
+  hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 4, seek: [13, 4] }),
   bull_rush: R(GOLD, 'lava-crack', 'front', 'ground', 0xff6a30, 6, { dist: 5 }),
   magma_zone: R(GOLD, 'lava-crack', 'self', 'ground', 0xff5a20, 8),
   bloodquake: R(VIOLET, 'lava-crack', 'self', 'ground', 0xd02020, 9),
-  cataclysm: R(GOLD, 'meteor', 'aim', 'flash', 0xff5a3c, 12, { dist: 6 }),
+  cataclysm: R(GOLD, 'meteor', 'aim', 'flash', 0xff5a3c, 12, { dist: 2 }),
   // 대마도사
   fireball: R(GOLD, 'meteor', 'front', 'flash', 0xff7228, 4, { dist: 3 }),
   chain: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x70b8ff, 6),
   blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x72dfff, 7),
-  meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 9 }),
+  meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'flash', 0x9fd8ff, 5, { dist: 4 }),
   chrono_seal: R(VIOLET, 'ice-burst', 'self', 'ground', 0xc0d8ff, 9),
-  star_prison: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x74c8ff, 9, { dist: 8 }),
-  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0xccecff, 12, { dist: 9 }),
+  star_prison: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x74c8ff, 9, { dist: 5, seek: [16, 5] }),
+  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0xccecff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자
   shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb26bff, 5, { dist: 3, ghost: true }),
-  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x70e060, 6, { dist: 6 }),
+  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x70e060, 6, { dist: 5, seek: [13, 3.5] }),
   flurry: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xd0a0ff, 4, { dist: 2, ghost: true }),
   thousand: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xd0a0ff, 11, { ghost: true }),
   shadow_mark: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xb26bff, 7),
   void_step: R(VIOLET, 'shadow-slash', 'self', 'flash', 0x8a4aff, 7, { ghost: true }),
-  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0xb26bff, 8, { dist: 6, ghost: true }),
-  eclipse_edge: R(VIOLET, 'shadow-slash', 'aim', 'flash', 0xb26bff, 11, { dist: 8, ghost: true }),
+  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0xb26bff, 8, { dist: 3, seek: [13, 4], ghost: true }),
+  eclipse_edge: R(VIOLET, 'shadow-slash', 'aim', 'flash', 0xb26bff, 11, { dist: 5, seek: [16, 5], ghost: true }),
   // 레인저
   ranger_pierce: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 5, { dist: 4 }),
   ranger_volley: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 6, { dist: 4 }),
@@ -64,7 +69,7 @@ export const SKILL_VFX = Object.freeze({
   ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x9fffd8, 5, { dist: 4 }),
   ranger_binding: R(GOLD, 'wind-arrow-trail', 'front', 'ground', 0x63e08a, 6, { dist: 4 }),
   gale_hunt: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 8, { dist: 5 }),
-  skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x7feac0, 12, { dist: 9 }),
+  skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x7feac0, 12, { dist: 7, seek: [18, 6] }),
 });
 
 // 궁극기(인덱스 3)와 고위 각성(6·7)만 전장 장악 링 + 카메라 펀치 1회를 쓴다.
@@ -91,6 +96,7 @@ export function loadSkillVfxTextures() {
 loadSkillVfxTextures();
 
 const _at = new THREE.Vector3(), _p = new THREE.Vector3(), _f = new THREE.Vector3();
+let _seek = null;
 const LAYER_CAP = 60, LAYER_CAP_LITE = 28;
 // 표시 전용 난수. 전투·드랍의 Math.random 진행을 바꾸지 않는다.
 let seed = 0x2f6e2b1;
@@ -98,9 +104,12 @@ const vfxRandom = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; 
 
 /**
  * 스킬 시전 순간의 장악 레이어. 판정·피해·타이밍은 건드리지 않는다.
+ * @param {any} game @param {string} skillId @param {any} player
+ * @param {{data?: {aimPoint?: THREE.Vector3}}|null} [ctx]
+ * @param {((game: any, player: any, range: number, radius: number) => THREE.Vector3|null)|null} [seek] 조준점이 없을 때 판정과 같은 밀집 적 탐색
  * @returns {boolean} 레시피를 실행했는지
  */
-export function castSkillVfx(game, skillId, player, ctx = null) {
+export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
   const r = SKILL_VFX[skillId], fx = game?.fx;
   if (!r || !fx || typeof fx.groundTex !== 'function' || typeof fx.texFlash !== 'function' || !player?.pos) return false;
   const nativeRandom = Math.random;
@@ -115,19 +124,22 @@ export function castSkillVfx(game, skillId, player, ctx = null) {
     const aim = ctx?.data?.aimPoint;
     if (r.place === 'self') _at.copy(player.pos);
     else if (r.place === 'aim' && aim) _at.copy(aim);
-    else _at.copy(player.pos).addScaledVector(_f, r.dist || 3);
+    else if (r.place === 'aim' && r.seek && typeof seek === 'function' && Array.isArray(game.enemies) && typeof player.distTo === 'function' && (_seek = seek(game, player, r.seek[0], r.seek[1]))) _at.copy(_seek);
+    else _at.copy(player.pos).addScaledVector(_f, r.dist ?? 3);
     _at.y = player.pos.y;
     const size = r.size * scale, color = r.color;
     // 1) 바닥 룬 서클
     const runeR = (1.8 + size * 0.28) * (r.place === 'self' ? 1 : 0.9);
-    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3 });
+    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) });
     // 2) 스킬 텍스처
-    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1 });
+    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) });
     else fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1 });
     if (!reduced && !crowded) {
       // 3) 노출 곱 섬광: 100ms 이하, 화면 전체가 아니라 월드 한 점
       _p.copy(_at); _p.y += 1;
       fx.flash?.(_p, color, { size: 1.4 * scale, life: 0.08 });
+      // 착탄 중심의 또렷한 임팩트 프레임(코어·별빛·고리, 인스턴스 층 1드로우). 넓은 텍스처 연출 위에 '어디서 터졌는지'를 찍는다.
+      fx.impact?.burst?.(_p, color, { size: Math.min(3.2, (1 + size * 0.14) * scale) });
       // 4) 먼지와 잔상
       if (!lite) {
         _p.copy(_at); _p.y += 0.3;
@@ -136,11 +148,12 @@ export function castSkillVfx(game, skillId, player, ctx = null) {
       }
     }
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
-    if (major && !crowded) {
+    // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
+    if (major && !crowded && !(r.mode === 'ground' && size >= 10)) {
       const wide = 10;
-      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3 });
-      if (!reduced) game.renderer?.shake?.(0.9);
+      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3, gain: groundGain(r.rune) * .8 });
     }
+    if (major && !crowded && !reduced) game.renderer?.shake?.(0.9);
     return true;
   } finally {
     Math.random = nativeRandom;

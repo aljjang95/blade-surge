@@ -20,6 +20,15 @@ export function decorativeBurstGain(size) {
   return Number.isFinite(size) ? 1 - Math.max(0, Math.min(1, (size - 4) / 8)) * .3 : 1;
 }
 
+// 장식 노출 누적이 크면 블룸을 줄인다(자동 노출). 실측(2026-10-22, 844x390): 일반 타격 0~30, 궁극기 300~900.
+// 블룸이 백화의 주 증폭기였다(용참 90f 백화 28% → 블룸 0.4 에서 15%). 타격 손맛은 SOFT 아래라 그대로다.
+export const BLOOM_ADAPT = Object.freeze({ soft: 60, full: 420, minScale: .45, release: 1.2 });
+/** 노출 누적값 → 블룸 감쇠 부하(0~1). */
+export function bloomLoadFor(exposure) {
+  if (!(exposure > BLOOM_ADAPT.soft)) return 0;
+  return Math.min(1, (exposure - BLOOM_ADAPT.soft) / (BLOOM_ADAPT.full - BLOOM_ADAPT.soft));
+}
+
 export function boundedFeedbackGain(gain) {
   return Number.isFinite(gain) ? Math.max(.2, Math.min(1, gain)) : 1;
 }

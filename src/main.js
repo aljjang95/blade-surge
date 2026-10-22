@@ -98,6 +98,7 @@ class App {
     this.fx.focus.bindBloom(this.renderer.bloom);
     this.renderer.heroEffectFocus = this.fx.focus;
     this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
+    this.renderer.bloomLoad = () => this.fx.bloomLoad();
     this.renderer.playerSilhouetteTarget = () => this.mode === 'battle' && !this.stageStarting && !this.contextLost
       && this.battle?.active ? this.battle.player : null;
     startup.stage = 'input';
