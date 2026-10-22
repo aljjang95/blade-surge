@@ -61,6 +61,9 @@ test('아바타 구매·착용은 보석과 소유 상태를 검사하고 저장
   expect(eco.equippedAvatar('knight')).toBe('avatar_knight_sakura');
   eco.setShowGear('knight', false);
   expect(eco.displayAvatar('knight')).toBe('avatar_knight_sakura');
+  eco.setShowGear('knight', true);
+  eco.equipAvatar('knight', 'avatar_knight_sakura');
+  expect(eco.displayAvatar('knight')).toBe('avatar_knight_sakura');
   expect(eco.equipAvatar('knight', null)).toEqual({ ok: true });
   expect(eco.equippedAvatar('knight')).toBeNull();
   eco.s.gems = 0;

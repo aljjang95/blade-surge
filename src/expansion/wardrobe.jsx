@@ -123,9 +123,8 @@ function useViewGestures(hostRef, yaw, zoom, setYaw, setZoom) {
     const up = e => {
       pointers.delete(e.pointerId);
       host.releasePointerCapture?.(e.pointerId);
+      // 남은 손가락은 move 마다 마지막 위치를 기준으로 하므로 핀치가 끝나도 갑자기 돌지 않는다.
       pinch = 0;
-      // 핀치 후 남은 손가락으로 갑자기 돌아가지 않게 기준점을 새로 잡는다.
-      for (const [id, pt] of pointers) pointers.set(id, pt);
     };
     const wheel = e => { e.preventDefault(); setZoom(clampWardrobeZoom(live.current.zoom * Math.exp(-e.deltaY * .0015))); };
     host.addEventListener('pointerdown', down); host.addEventListener('pointermove', move);

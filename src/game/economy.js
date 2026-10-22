@@ -718,7 +718,8 @@ export class Economy {
     if (id === null) { delete this.s.avatars.equipped[heroId]; this.emit(); return { ok: true }; }
     const avatar = AVATAR_BY_ID[id];
     if (!avatar || avatar.heroId !== heroId || !this.s.avatars.owned.includes(id)) return { ok: false, reason: 'avatar' };
-    this.s.avatars.equipped[heroId] = id; this.emit(); return { ok: true };
+    // 새로 입을 때는 아바타가 보이게 장비 외형 표시를 끈다(켠 채 해제·재착용해 '착용 중'인데 안 보이는 혼동 방지).
+    this.s.avatars.equipped[heroId] = id; if (this.s.avatars.showGear) delete this.s.avatars.showGear[heroId]; this.emit(); return { ok: true };
   }
   equippedAvatar(heroId = this.s.selected) { const id = this.s.avatars?.equipped?.[heroId]; return AVATAR_BY_ID[id]?.heroId === heroId ? id : null; }
   /** 장비 외형 표시를 켠 영웅은 아바타를 입은 채로 장비 외형을 보여 준다. 화면·전투·파티 표시는 이 값을 쓴다. */
