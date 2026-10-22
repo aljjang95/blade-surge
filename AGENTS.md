@@ -13,7 +13,7 @@
 
 ## 배포와 자격증명
 
-`tools/deploy.mjs`가 유일한 공개 배포 컨트롤러다. `tools/release-config.json`, D1 `apex-rsi`의 `DEPLOY-blade-surge` 소유 잠금, 정확한 HEAD·artifact·rollback·영수증 검사를 보존한다. 설치된 vault 자식 주입의 `apex-vault run cloudflare -- bun run deploy` 기존 PC Wrangler OAuth의 명시 `--auth=wrangler` 경로, 또는 Claude 클라우드 세션의 `apex cf -- node tools/deploy.mjs` 경로만 따른다. [인증 계약](docs/deployment-auth.md)과 [PC bridge](docs/pc-bridge.md)를 읽는다.
+`tools/deploy.mjs`가 유일한 공개 배포 컨트롤러다. `tools/release-config.json`, D1 `apex-rsi`의 `DEPLOY-blade-surge` 소유 잠금, 정확한 HEAD·artifact·rollback·영수증 검사를 보존한다. 설치된 vault 자식 주입의 `apex-vault run cloudflare -- bun run deploy` 기존 PC Wrangler OAuth의 명시 `--auth=wrangler` 경로, 또는 Claude 클라우드 세션의 `NODE_USE_ENV_PROXY=1 node ~/.cache/apex/src/claude/cloud/bin/cf-asset-split.mjs -- node tools/deploy.mjs` 경로만 따른다. [인증 계약](docs/deployment-auth.md)과 [PC bridge](docs/pc-bridge.md)를 읽는다.
 
 원격 결과가 불명확하면 잠금을 유지하고 같은 HEAD·선택 인증 경로의 `--reconcile`로 버전·배포·소유 태그를 확인한다. 잠금 탈취, raw Wrangler 우회, 자동 인증 fallback은 지원하지 않는다. PC profile·DPAPI·키를 cloud로 추출하지 않는다. 현행 Git 인증과 create-only branch/PR 전송을 사용한다.
 
