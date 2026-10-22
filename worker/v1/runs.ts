@@ -98,7 +98,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   const next = docOf(eco);
   const state = check.verdict === 'rejected' ? 'rejected' : 'settled';
   const receipt = { receiptId: runId, verdict: check.verdict, issues: check.issues, win: !!facts.win && check.verdict !== 'rejected',
-    got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, exp: outcome.exp, combatExp: outcome.combatExp,
+    got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, stars: outcome.stars ?? null, fullClear: outcome.fullClear ?? false, exp: outcome.exp, combatExp: outcome.combatExp,
     rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION };
   const writes: GuardedWrite[] = [
     { sql: `UPDATE run_tickets SET state = ?, settled_at = ?, verdict = ?, result = ? WHERE run_id = ? AND state = 'open' AND ${REV_GUARD}`,

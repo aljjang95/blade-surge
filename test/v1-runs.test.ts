@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { v1Harness } from './helpers/v1-harness';
 import { stageDef } from '../src/data/stages.js';
 import { applyDifficulty, DIFFICULTIES } from '../src/game/difficulty.js';
-import { killDrops, plausibilityFor, rollRunLoot, stageRankValues } from '../src/shared/settlement.js';
+import { killDrops, plausibilityFor, referenceRooms, rollRunLoot, serverRating, stageRankValues } from '../src/shared/settlement.js';
 import { rollKillLoot } from '../src/shared/loot-roll.js';
 import { lootTable } from '../src/data/loot-tables.js';
 import { seededStream } from '../src/shared/rng.js';
@@ -122,6 +122,37 @@ describe('MMO P1-E 런 티켓·정산', () => {
     const again = await h.send('POST', '/runs/start', body, a.token);
     expect(again.body.runId).toBe(first.body.runId);
     expect((await h.send('GET', '/me', undefined, a.token)).body.doc.energy).toBe(100 - STAGE.energy);
+  });
+
+  test('별·풀클리어는 서버가 계산한다: 위조 {stars:3, fullClear:true}는 보상을 못 받는다', async () => {
+    const forgedFacts = legit({ stars: 3, fullClear: true, roomsCleared: 1, hpLost: 2800 });
+    const honestFacts = legit({ roomsCleared: referenceRooms(STAGE), hpLost: 0 });
+    delete (forgedFacts as any).stars; delete (honestFacts as any).stars;
+    const run = async (extra: Record<string, unknown>, base: Record<string, unknown>) => {
+      const { h, a, start, settle, gold } = await ready();
+      const before = await gold();
+      const t = await start();
+      h.advance(LIMITS.minClearMs + 40000);
+      const r = await settle(t.runId, { ...base, ...extra });
+      expect(r.status).toBe(200);
+      const after = await gold();
+      return { r, stars: after.progress.stars['1-1'], goldGain: after.gold - before.gold, items: after.inventory.length - before.inventory.length };
+    };
+    const honest = await run({}, honestFacts);
+    // 위조: 클라이언트가 3별·풀클리어를 주장하지만 방 1개·피해 과다 → 서버 계산은 1별·풀클리어 없음.
+    const forged = await run({ stars: 3, fullClear: true }, forgedFacts);
+    expect(forged.r.body.stars).toBe(1);
+    expect(forged.r.body.fullClear).toBe(false);
+    expect(forged.stars).toBe(1);
+    expect(honest.r.body.stars).toBe(3);
+    expect(honest.r.body.fullClear).toBe(true);
+    // 풀클리어 보너스(골드 +40%, 장비 1개)는 위조 쪽에 없다.
+    expect(forged.r.body.got.find((g: any) => g.k === 'gold')?.n ?? 0).toBeLessThan(honest.r.body.got.find((g: any) => g.k === 'gold')?.n ?? 0);
+    expect(forged.items).toBeLessThan(honest.items);
+    // 순수 함수 경계: 부활이 있으면 1별, stars·fullClear 필드는 계산에 영향이 없다.
+    expect(serverRating(STAGE, { win: true, roomsCleared: referenceRooms(STAGE), hpLost: 0, revives: 1, stars: 3, fullClear: true } as any, 1000).stars).toBe(1);
+    expect(serverRating(STAGE, { win: true, roomsCleared: 0, hpLost: 0, stars: 3, fullClear: true } as any, 1000)).toMatchObject({ stars: 2, fullClear: false });
+    expect(serverRating(STAGE, { win: true, roomsCleared: 0, hpLost: 900, stars: 3, fullClear: true } as any, 1000)).toMatchObject({ stars: 1, fullClear: false });
   });
 
   test('패배 정산은 처치 경험치만 남고 재화·진행은 없다', async () => {

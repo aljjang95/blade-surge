@@ -97,7 +97,7 @@ function hookRuns(app, state) {
     const receipt = completeStage(stage, stars, opts), run = battle.v1Run;
     if (state.authority === 'server' && run && stage?.code === run.contentId) {
       battle.v1Run = null;
-      void settle(run, facts(true, { stars: Math.max(1, Math.min(3, stars | 0)), fullClear: !!opts.fullClear }));
+      void settle(run, facts(true, { hpLost: Math.max(0, battle.result?.hpLost | 0), revives: Math.max(0, battle.revived | 0) }));
     } else if (state.authority === 'shadow') state.queue?.snapshot();
     return receipt;
   };

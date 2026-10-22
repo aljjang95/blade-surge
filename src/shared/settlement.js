@@ -70,6 +70,23 @@ export function plausibilityFor(stage) {
   };
 }
 
+/**
+ * 서버가 계산하는 별·풀클리어. facts.stars·fullClear는 호환을 위해 형식만 검사하고 값은 절대 쓰지 않는다.
+ * 클라이언트 전투(battle-base.victory)와 같은 문턱을 쓰되, 서버가 아는 사실만으로 보수적으로 판단한다:
+ *  - 체력 비율 = 1 - hpLost / maxHp (hpLost는 승리 시점의 잃은 체력, 부활이 있으면 별은 1개)
+ *  - 탐색 비율 = roomsCleared / 기준 방 수. 방 배치는 클라이언트가 만들어 서버가 총 방 수를 모르므로, 개연성 표의
+ *    스테이지별 최대 방 수(관측 최대 + 4)에서 4를 뺀 값을 기준으로 삼는다.
+ * 기준을 못 채우면 1별·fullClear=false다. 위조 {stars:3, fullClear:true}는 이 계산을 지나야 보상이 된다.
+ */
+export function referenceRooms(stage) { return Math.max(1, plausibilityFor(stage).maxRooms - 4); }
+export function serverRating(stage, facts, maxHp) {
+  const rooms = Math.max(0, facts.roomsCleared ?? 0), ref = referenceRooms(stage);
+  const explored = Math.min(1, rooms / ref), hpRatio = 1 - Math.min(1, Math.max(0, facts.hpLost ?? 0) / Math.max(1, maxHp));
+  const stars = (facts.revives ?? 0) > 0 ? 1 : (hpRatio > 0.6 && explored > 0.8) ? 3 : (hpRatio > 0.3 || explored > 0.6) ? 2 : 1;
+  const fullClear = !!facts.win && rooms >= Math.ceil(ref * 0.9);
+  return { stars, fullClear, hpRatio, explored };
+}
+
 const finiteInt = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
 
 /** 정산 입력 형식 검사. 음수·NaN·소수·알 수 없는 필드는 여기서 걸린다. */
@@ -173,10 +190,11 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
       for (const [id, n] of Object.entries(loot.materials)) ledger.materials[id] = half(n);
     }
     const items = loot.items.map((item) => grantLootItem(eco, item));
-    const receipt = eco.completeStage(stage, facts.stars ?? 3, {
+    const rating = serverRating(stage, facts, heroCombatProfile(eco, heroId)?.maxHp ?? 1);
+    const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),
-      fieldFragments: half(loot.fragments), fieldLoot: items, fullClear: !!facts.fullClear,
+      fieldFragments: half(loot.fragments), fieldLoot: items, fullClear: rating.fullClear,
     });
-    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true };
+    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear };
   } finally { eco.rng = previousRng; }
 }
