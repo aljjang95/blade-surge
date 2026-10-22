@@ -40,6 +40,7 @@ import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
+import { setupAccount } from './net/account.js';
 import './ui/mobile-combat.css';
 import './ui/progression.css';
 import './ui/illustrated.css';
@@ -231,6 +232,8 @@ class App {
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
+    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
+    await setupAccount(this).catch(() => null);
     setupCommunity(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.

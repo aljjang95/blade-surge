@@ -1,10 +1,10 @@
 // Capacitor 앱 WebView(Android 기본 https://localhost, iOS capacitor://localhost)용 최소 CORS.
-// 파티·커뮤니티·동행 대화 API만 대상이고, 허용 목록 밖 출처에는 아무 헤더도 붙이지 않는다.
+// 파티·커뮤니티·동행 대화·MMO 계정(v1) API만 대상이고, 허용 목록 밖 출처에는 아무 헤더도 붙이지 않는다.
 // 클라이언트는 쿠키가 아니라 Authorization 헤더·티켓을 쓰므로 Allow-Credentials는 내보내지 않는다.
 export const NATIVE_ORIGINS: readonly string[] = ['https://localhost', 'capacitor://localhost'];
 const METHODS = ['GET', 'POST', 'DELETE'];
 const REQUEST_HEADERS = ['accept', 'authorization', 'content-type'];
-const NATIVE_ROUTE = /^\/api\/(?:party|social|companion)(?:\/|$)/;
+const NATIVE_ROUTE = /^\/api\/(?:party|social|companion|v1)(?:\/|$)/;
 
 /** CORS 대상 경로이며 요청 Origin이 허용 목록에 있으면 그 origin, 아니면 null. */
 export function nativeOrigin(request: Request, pathname: string): string | null {
