@@ -178,7 +178,7 @@ const RANGER = {
       _a.set(_b.x - 1.4, FALL, _b.z - .8); _d.copy(_b).sub(_a); const len = _d.length();
       const start = Math.max(0, hitT - len / SPEED);
       if (!lite) impact.beam(_a, _d, len, DEEP, { speed: SPEED, tail: 9, width: .36, delay: start });
-      impact.beam(_a, _d, len, JADE_HOT, { speed: SPEED, tail: 7, width: .12, delay: start });
+      impact.beam(_a, _d, len, JADE, { speed: SPEED, tail: 7, width: .12, delay: start });
       impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 2.6, JADE, .3, { grow: 1, delay: hitT });
       impact._emit(IMPACT_KIND.star, _b.x, .5, _b.z, 1.5, JADE_HOT, .1, { angle: .3, grow: .5, delay: hitT });
       if (!lite) impact._emit(IMPACT_KIND.mark, _b.x, .06, _b.z, 2.6, JADE, .45, { stretch: MARK_STYLE.thorn, delay: hitT });

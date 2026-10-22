@@ -123,7 +123,7 @@ export const SIGNATURES = {
   // 짙은 보라 시계판 큰 테 + 자홍 가시 안쪽 테(바닥) + 바깥으로 뻗는 코로나 줄기 + 가운데 X 자 칼날. 화면을 가로지르는 큰 빌보드 고리는 쓰지 않는다.
   eclipse_edge(ctx) {
     const { impact, at, lite } = ctx; const HIT = .3;
-    impact.mark(at, VIOLET, { radius: 7.5, life: HIT + .1, style: MARK_STYLE.thorn, angle: .3 });
+    impact.mark(at, DEEP, { radius: 7.5, life: HIT + .1, style: MARK_STYLE.thorn, angle: .3 });
     impact.mark(at, NIGHT, { radius: 8.2, life: .9, style: MARK_STYLE.clock, delay: HIT });
     impact.mark(at, MAGENTA, { radius: 5.6, life: .7, style: MARK_STYLE.thorn, angle: 1.2, delay: HIT + .05 });
     impact._emit(IMPACT_KIND.ring, at.x, 1, at.z, 3.4, MAGENTA, .4, { grow: 1, delay: HIT });
