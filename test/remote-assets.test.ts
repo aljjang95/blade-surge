@@ -215,11 +215,11 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
     await new Promise(resolve => setTimeout(resolve, 10));
     return asked;
   };
-  expect(await run({ type: 'cellular' }, 8)).toEqual(['region-2']);                 // 셀룰러: X-8 에서 다음 지역만
-  expect(await run({ type: 'cellular' }, 3)).toEqual([]);                           // 아직 X-8 전이면 아무것도
-  expect((await run({ type: 'wifi' }, 3))[0]).toBe('region-2');                     // 와이파이: 한가할 때 다음 지역부터 순서대로
+  expect(await run({ type: 'cellular' }, 8)).toEqual(['early-music', 'region-2']);   // 셀룰러: 첫 보스 곡 묶음 + X-8 에서 다음 지역만
+  expect(await run({ type: 'cellular' }, 3)).toEqual(['early-music']);               // 아직 X-8 전이면 첫 보스 곡만
+  expect((await run({ type: 'wifi' }, 3)).slice(0, 2)).toEqual(['early-music', 'region-2']);   // 와이파이: 한가할 때 다음 지역부터 순서대로
   expect((await run({ type: 'wifi' }, 3)).length).toBeGreaterThan(3);
-  expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);
+  expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);   // 데이터 절약 모드는 첫 보스 곡도 받지 않는다
 });
 
 test('assetUrl({ prefetch: false }) 는 호스트 주소만 돌려주고 보관용 내려받기를 시작하지 않는다(BGM 이중 다운로드 방지)', async () => {
@@ -234,7 +234,7 @@ test('사전 내려받기: 실패한 묶음은 쉬었다가(30초, 60초, …) �
   let clock = 0, asked = 0;
   const fake = { enabled: true, groupCached: () => false, prefetchGroup: async () => { asked += 1; return { requested: 1, failed: ['x'] }; } };
   const prefetcher = createPrefetcher(fake as any, { nav: { connection: { type: 'cellular' } } as any, idle: fn => { void fn(); }, now: () => clock });
-  const lobby = async () => { prefetcher.onLobby({ unlocked: 8 }); await new Promise(resolve => setTimeout(resolve, 5)); };
+  const lobby = async () => { prefetcher.onLobby({ unlocked: 3 }); await new Promise(resolve => setTimeout(resolve, 5)); };
   await lobby(); expect(asked).toBe(1);
   await lobby(); expect(asked).toBe(1);          // 쉬는 중
   clock = 31000; await lobby(); expect(asked).toBe(2);

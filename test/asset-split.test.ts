@@ -85,8 +85,12 @@ test('첫 지역·부팅에 필요한 파일은 core 다(곡, 조우 일러스�
     tracks.add(musicForScene({ stage })); tracks.add(musicForScene({ stage, boss: true }));
   }
   tracks.add(townMusic(1));
+  // 보스·중간 보스 곡은 APK 밖이지만 첫 로비에서 곧바로 받는 묶음(early-music)이라 첫 보스(1-3) 전에 도착한다.
+  const early = new Set(['regions/boss', 'expansion/flow-combat']);
   for (const channel of ['googleplay', 'onestore', 'web']) for (const track of tracks) {
-    expect(classify(bgmUrl(track, channel).slice(1), split)?.class, `${channel}:${track}`).toBe('core');
+    const verdict = classify(bgmUrl(track, channel).slice(1), split);
+    if (early.has(track)) expect(verdict).toMatchObject({ class: 'remote', group: 'early-music' });
+    else expect(verdict?.class, `${channel}:${track}`).toBe('core');
   }
   for (const id of ['garden_captain', 'garden_warden', 'garden_midboss', 'garden_finalboss']) expect(classify((ENCOUNTER_ART as Record<string, string>)[id].slice(1), split)?.class, id).toBe('core');
   for (const file of ['img/ui-crafted/keyart/dungeon-garden-keyart.webp', 'img/expansion/glass_garden.webp', 'img/expansion/guild_map.webp', 'img/expansion/thumb/glass_garden.webp',

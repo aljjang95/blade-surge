@@ -104,10 +104,6 @@
       {
         "path": "bgm/regions/garden.ogg",
         "reason": "위와 같음(1지역 곡은 APK 안에 있다)."
-      },
-      {
-        "path": "bgm/regions/boss.ogg",
-        "reason": "위와 같음(보스 곡은 APK 안에 있다)."
       }
     ],
     "apps-in-toss": [

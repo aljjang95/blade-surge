@@ -12,8 +12,8 @@
     { "class": "remote", "group": "arena", "glob": "bgm/regions/arena.*", "reason": "아레나 곡" },
     { "class": "core", "glob": "bgm/regions/lobby.*", "reason": "1지역 마을 곡(로비)" },
     { "class": "core", "glob": "bgm/regions/garden.*", "reason": "1지역 전투 곡" },
-    { "class": "core", "glob": "bgm/regions/boss.*", "reason": "1지역 보스·수문장 곡" },
-    { "class": "core", "glob": "bgm/expansion/**", "reason": "중간 보스 곡(1-5)" },
+    { "class": "remote", "group": "early-music", "glob": "bgm/regions/boss.*", "reason": "1지역 보스·수문장 곡(1-3부터). 첫 로비에서 곧바로 받아 둔다(remote-prefetch EARLY_GROUP)" },
+    { "class": "remote", "group": "early-music", "glob": "bgm/expansion/**", "reason": "중간 보스 곡(1-5). 첫 로비에서 곧바로 받아 둔다" },
     { "class": "remote", "group": "bgm-extra", "glob": "bgm/**", "reason": "위에 없는 새 BGM 은 기본이 remote(콘텐츠가 늘어도 APK 가 커지지 않는다)" },
 
     { "class": "core", "glob": "img/encounters/garden_*.webp", "reason": "1지역 조우 일러스트" },
