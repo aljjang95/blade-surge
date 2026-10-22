@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { CombatVfx } from './combat-vfx.js';
-import { ImpactVfx, HERO_IMPACT_PALETTE } from './impact-vfx.js';
+import { ImpactVfx, HERO_IMPACT_PALETTE, IMPACT_KIND } from './impact-vfx.js';
 import { spawnSanctum } from './sanctum-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
@@ -38,9 +38,11 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   // colour alone made steel/nature impacts read as the same spell in a busy
   // party fight, so every school now has a unique silhouette pair.
   steel: Object.freeze({ ground: 'circle_gold', flash: 'slash', secondary: 'holy_burst', color: 0xffd060, accent: 0xffffff, radius: 2.8, burst: 14, light: 0.9 }),
-  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xff7228, accent: 0xffd060, radius: 3.6, burst: 20, light: 1.2, pillar: true }),
+  // 화염: 크림 강조색(0xffd060)·밝은 주황 폭발 원화가 가산으로 겹쳐 흰 코어가 됐다. 진홍 쪽 주황과 불씨 주황으로 낮춘다.
+  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xff5418, accent: 0xff8a26, radius: 3.6, burst: 20, light: 1.2, pillar: true, flashGain: .72 }),
   // 냉기 강조색은 흰빛(0xdff8ff) 대신 진한 하늘색: 눈보라·절대영도에서 얼음 원화와 겹쳐 화면이 하얗게 덮였다.
-  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x5fcfff, accent: 0x8fd8ff, radius: 3.4, burst: 16, light: 1.0, groundColor: 0x1f86ff, groundScale: .8 }),
+  // 서리: 옅은 하늘색(0x5fcfff) 기운이 지면·고리에 흰빛으로 번졌다. 진한 청 결정색으로.
+  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x2f8cff, accent: 0x62b4ff, radius: 3.4, burst: 16, light: 1.0, groundColor: 0x1466f0, groundScale: .8, flashGain: .7 }),
   arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', secondary: 'lightning', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0, groundColor: 0x3a5cff, groundScale: .8 }),
   nature: Object.freeze({ ground: 'circle_gold', flash: 'phoenix', secondary: 'dust', color: 0x63e08a, accent: 0xd7ff9d, radius: 3.3, burst: 18, light: 0.85 }),
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
@@ -653,7 +655,7 @@ export class FX {
     this.ring(anchor, _sigRing, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
     const flashSize = spec.radius * (heavy ? 1.45 : 1.05) * k;
     this.texFlash(anchor.clone().setY(anchor.y + 0.6), spec.flash, spec.color, {
-      size: flashSize, gain: decorativeBurstGain(flashSize) * (profile === 'frost' ? .7 : 1),
+      size: flashSize, gain: decorativeBurstGain(flashSize) * (spec.flashGain ?? 1),
       life: Math.min(t, heavy ? 0.7 : 0.42),
       spin: profile === 'void' ? 1.35 : profile === 'arcane' ? 0.7 : 0.35,
       grow: heavy ? 1.6 : 1.2,
@@ -679,8 +681,27 @@ export class FX {
       spread: profile === 'void' ? 0.72 : 1,
     });
     if (spec.pillar && !this.lite) this.firePillar(anchor, { height: 4.2 * k, width: 1.05 * k, life: Math.min(t, 0.65), color: spec.color });
+    if (profile === 'fire') this._fireImpact(anchor, k, heavy);
     this.light(anchor, spec.color, (heavy ? 10 : 5) * spec.light * k, (heavy ? 12 : 7) * k, Math.min(t, 0.45));
     return spec;
+  }
+  /** 화염 착탄 임팩트 층(인스턴스, 난수는 VfxRng): 진홍 폭발 고리 두 겹 + 방사형 불씨 파편 + 솟는 짧은 불꽃. Math.random·fx.items 를 건드리지 않는다. */
+  _fireImpact(pos, k = 1, heavy = false) {
+    const I = this.impact; if (!I) return 0;
+    const before = I.spawned, rng = I.rng, y = (pos.y || 0) + .5;
+    I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 3.4 * k, 0xd8261a, .34, { grow: 1 });
+    I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 2.2 * k, 0xff6a1e, .26, { grow: 1, delay: .04 });
+    if (this.lite) return I.spawned - before;
+    for (let i = 0, n = heavy ? 10 : 7; i < n; i++) {
+      const a = (i / n) * 6.2831853 + rng.next() * .5, sp = (7 + rng.next() * 5) * k;
+      I._emit(IMPACT_KIND.shard, pos.x, y, pos.z, .26 * k, i % 2 ? 0xff8a26 : 0xe8341c, .42 + rng.next() * .14,
+        { vx: Math.cos(a) * sp, vy: 3 + rng.next() * 4, vz: Math.sin(a) * sp, angle: rng.next() * 6.2831853, stretch: 1.8, grow: .8, gravity: 14 });
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * 6.2831853 + rng.next(), r = (.5 + rng.next() * .8) * k;
+      I._emit(IMPACT_KIND.flame, pos.x + Math.cos(a) * r, .4, pos.z + Math.sin(a) * r, .5 * k, i % 2 ? 0xff8a26 : 0xff4a14, .5 + rng.next() * .15, { vy: 2, grow: .5, gravity: -6, delay: .03 * i });
+    }
+    return I.spawned - before;
   }
   dust(pos, { n = 10, color = 0x8a7a6a, size = 1.4, life = 0.9, speed = 2.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);

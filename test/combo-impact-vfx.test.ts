@@ -72,3 +72,13 @@ test('보스 고유기 예고 셰이더는 같은 uniform 으로 미터 두께 �
   expect(bossSignatureFragmentShader).toContain('uniform float shape, safeRadius, opacity, fired, progress;');
   for (const token of ['band', 'urgent', 'pulse', 'front', 'danger']) expect(bossSignatureFragmentShader).toContain(token);
 });
+
+test('화염 착탄 임팩트는 진홍 고리·불씨 파편·불꽃을 Math.random 없이 내고 낮은 화질은 고리만', async () => {
+  const { FX } = await import('../src/engine/fx.js');
+  const run = (lite: boolean) => { const fx: any = Object.create(FX.prototype); fx.impact = make(); Object.defineProperty(fx, 'lite', { value: lite }); const random = Math.random; let calls = 0; Math.random = () => { calls++; return random(); };
+    try { const n = fx._fireImpact(new THREE.Vector3(0, 0, 0), 1, true); const k = kinds(fx.impact); fx.impact.dispose(); return { n, k, calls }; } finally { Math.random = random; } };
+  const full = run(false), lite = run(true);
+  expect(full.calls).toBe(0);
+  expect(full.k).toContain(IMPACT_KIND.ring); expect(full.k).toContain(IMPACT_KIND.shard); expect(full.k).toContain(IMPACT_KIND.flame);
+  expect(lite.n).toBe(2); expect(full.n).toBeLessThanOrEqual(16);
+});
