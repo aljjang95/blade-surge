@@ -24,7 +24,7 @@ test('enabled 상품만 요청에 들어가고 보석 팩은 제외된다', () =
 });
 
 test('일회성은 PATCH + 활성화, 구독은 POST + basePlan 활성화이고 KRW 가격이 카탈로그와 같다', () => {
-  const reqs = buildRequests();
+  const reqs: any[] = buildRequests();
   for (const p of sellable) {
     if (p.type === 'subscription') {
       const create = reqs.find((r: any) => r.method === 'POST' && r.path === '/subscriptions' && r.query.productId === p.id);
