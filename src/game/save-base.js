@@ -99,7 +99,9 @@ export function normalizeSave(raw, fresh) {
     const avatar = AVATAR_BY_ID[avatarId];
     if (Object.hasOwn(HEROES, heroId) && avatar && ownedAvatars.includes(avatarId) && avatar.heroId === heroId) equippedAvatars[heroId] = avatarId;
   }
-  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars };
+  const showGear = {};
+  for (const [heroId, on] of Object.entries(record(raw.avatars?.showGear) ? raw.avatars.showGear : {})) if (Object.hasOwn(HEROES, heroId) && on === true) showGear[heroId] = true;
+  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear };
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));

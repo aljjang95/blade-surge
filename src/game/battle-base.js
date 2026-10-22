@@ -138,7 +138,7 @@ export class Battle {
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
-    const avatar = stage.party ? avatarId : this.app.eco.equippedAvatar(heroId);
+    const avatar = stage.party ? avatarId : this.app.eco.displayAvatar(heroId);
     const equip = stage.party ? {} : this.app.eco.heroEquipInsts(heroId);
     await preloadHeroBody(heroId, heroAppearanceTier(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
