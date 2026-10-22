@@ -5,7 +5,7 @@ import {
   comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
 } from './combat-sound-library.js';
 import { bgmUrl } from '../data/music.js';
-import { assetUrl } from '../platform/remote-assets.js';
+import { assetUrl, ensureAssets } from '../platform/remote-assets.js';
 
 // Web Audio: Mirelo SFX 샘플(public/sfx/mirelo-v1) + 샘플이 없을 때만 쓰는 합성 폴백 + BGM 크로스페이드 + 햅틱
 // 오디오 타이머/음소거가 전투와 보상의 Math.random 순서를 바꾸지 않는다.
@@ -741,7 +741,11 @@ export class AudioSys {
     for (const track of [...this._musicTracks]) if (track !== old) this._disposeMusic(track);
     if (old) { const g = old.gain; g.gain.cancelScheduledValues(this.now()); g.gain.setValueAtTime(g.gain.value, this.now()); g.gain.linearRampToValueAtTime(0, this.now() + fade); old.timer = setTimeout(() => this._disposeMusic(old), fade * 1000 + 100); }
     if (!name) { this.music = null; return; }
-    const el = new Audio(assetUrl(bgmUrl(name))); el.loop = true; el.crossOrigin = 'anonymous'; el.preload = 'auto';
+    // 보관본이 없는 remote 곡은 호스트에서 바로 스트리밍하고(별도 내려받기를 시작하지 않는다), 재생이 가능해진 뒤에 보관을 시작한다
+    // (파일 URL 이 해시 고정이라 보관용 요청은 HTTP 캐시에서 나가 같은 바이트를 두 번 받지 않는다).
+    const url = bgmUrl(name);
+    const el = new Audio(assetUrl(url, { prefetch: false })); el.loop = true; el.crossOrigin = 'anonymous'; el.preload = 'auto';
+    el.addEventListener?.('canplaythrough', () => { void ensureAssets([url], { priority: 'low' }).catch(() => {}); }, { once: true });
     const src = this.ctx.createMediaElementSource(el); const g = this.ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(this.musicGain);
     el.play().catch(() => {});
     g.gain.linearRampToValueAtTime(volume, this.now() + fade);

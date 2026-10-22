@@ -8,14 +8,16 @@ export const HIDE_DELAY_MS = 900;
 const mb = (bytes) => (bytes / 1e6).toFixed(1);
 
 /** @param {{subscribe(listener: (state: any) => void): () => void}} assets */
-export function mountRemoteIndicator(assets, doc = globalThis.document) {
+export function mountRemoteIndicator(assets, doc = globalThis.document, inBattle = () => !!doc?.defaultView?.app?.battle?.active) {
   if (!doc?.body) return () => {};
   const root = doc.createElement('div');
   root.className = 'remote-dl'; root.hidden = true; root.setAttribute('role', 'status'); root.setAttribute('aria-live', 'polite');
   root.innerHTML = '<span class="remote-dl-bar"><i></i></span><span class="remote-dl-text"></span>';
   doc.body.append(root);
   const fill = root.querySelector('i'), text = root.querySelector('.remote-dl-text');
-  let showTimer = 0, hideTimer = 0, visible = false, last = null;
+  let showTimer = 0, hideTimer = 0, pollTimer = 0, visible = false, last = null;
+  // 전투 중에는 위쪽 중앙의 WAVE 표시와 겹칠 수 있으므로 띠를 숨긴다(내려받기는 계속되고 전투가 끝나면 다시 보인다).
+  const syncBattle = () => { let hide = false; try { hide = !!inBattle(); } catch { hide = false; } root.classList.toggle('remote-dl-battle', hide); };
   const render = () => {
     if (!last) return;
     const total = last.doneBytes + last.pendingBytes, ratio = total ? last.doneBytes / total : 1;
@@ -23,14 +25,15 @@ export function mountRemoteIndicator(assets, doc = globalThis.document) {
     text.textContent = last.active ? `추가 자료 받는 중 · ${mb(last.pendingBytes)}MB` : '추가 자료 준비됨';
   };
   const unsubscribe = assets.subscribe((state) => {
-    last = state; render();
+    last = state; render(); syncBattle();
     if (state.active) {
+      if (!pollTimer) pollTimer = setInterval(syncBattle, 600);
       clearTimeout(hideTimer); hideTimer = 0;
       if (!visible && !showTimer) showTimer = setTimeout(() => { showTimer = 0; visible = true; root.hidden = false; root.classList.add('on'); }, SHOW_DELAY_MS);
     } else {
-      clearTimeout(showTimer); showTimer = 0;
+      clearTimeout(showTimer); showTimer = 0; clearInterval(pollTimer); pollTimer = 0;
       if (visible && !hideTimer) hideTimer = setTimeout(() => { hideTimer = 0; visible = false; root.classList.remove('on'); root.hidden = true; }, HIDE_DELAY_MS);
     }
   });
-  return () => { unsubscribe(); clearTimeout(showTimer); clearTimeout(hideTimer); root.remove(); };
+  return () => { unsubscribe(); clearTimeout(showTimer); clearTimeout(hideTimer); clearInterval(pollTimer); root.remove(); };
 }

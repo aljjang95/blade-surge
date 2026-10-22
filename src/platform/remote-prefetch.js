@@ -31,13 +31,15 @@ export function nextRegionGroup(progress) {
  * @param {ReturnType<import('./remote-assets.js').createRemoteAssets>} assets
  * @param {{nav?: Navigator, idle?: (fn: () => void) => void}} [options]
  */
-export function createPrefetcher(assets, { nav = globalThis.navigator, idle = (fn) => (globalThis.requestIdleCallback ? globalThis.requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500)) } = {}) {
+export function createPrefetcher(assets, { nav = globalThis.navigator, idle = (fn) => (globalThis.requestIdleCallback ? globalThis.requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500)), now = () => Date.now() } = {}) {
   let running = false;
   const started = new Set();
+  const backoff = new Map();   // 묶음 -> { until, step } 실패한 묶음은 30초에서 시작해 두 배씩(최대 10분) 쉬었다가 다시 받는다(로비에 들어올 때마다 재시도하지 않게)
   const run = async (group) => {
-    if (!assets.enabled || assets.groupCached(group) || started.has(group)) return;
+    if (!assets.enabled || assets.groupCached(group) || started.has(group) || (backoff.get(group)?.until || 0) > now()) return;
     started.add(group);
-    try { const result = await assets.prefetchGroup(group); if (result.failed.length) started.delete(group); } catch { started.delete(group); }
+    const fail = () => { started.delete(group); const step = Math.min(600000, (backoff.get(group)?.step || 15000) * 2); backoff.set(group, { until: now() + step, step }); };
+    try { const result = await assets.prefetchGroup(group); if (result.failed.length) fail(); else backoff.delete(group); } catch { fail(); }
   };
   return {
     /** 로비에 들어올 때마다 부른다. 진행도 변화(X-8 도달)와 와이파이 한가함을 함께 본다. */

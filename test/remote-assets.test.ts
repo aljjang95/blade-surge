@@ -221,3 +221,23 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
   expect((await run({ type: 'wifi' }, 3)).length).toBeGreaterThan(3);
   expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);
 });
+
+test('assetUrl({ prefetch: false }) 는 호스트 주소만 돌려주고 보관용 내려받기를 시작하지 않는다(BGM 이중 다운로드 방지)', async () => {
+  const { assets, calls } = setup();
+  await assets.init();
+  expect(assets.assetUrl('/bgm/regions/forge.ogg', { prefetch: false })).toBe(`${HOST}/bgm/regions/forge.ogg?v=${sha16(bodies['bgm/regions/forge.ogg'])}`);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  expect(calls).toEqual([]);
+});
+
+test('사전 내려받기: 실패한 묶음은 쉬었다가(30초, 60초, …) 다시 받고 그 사이 로비 재진입은 두드리지 않는다', async () => {
+  let clock = 0, asked = 0;
+  const fake = { enabled: true, groupCached: () => false, prefetchGroup: async () => { asked += 1; return { requested: 1, failed: ['x'] }; } };
+  const prefetcher = createPrefetcher(fake as any, { nav: { connection: { type: 'cellular' } } as any, idle: fn => { void fn(); }, now: () => clock });
+  const lobby = async () => { prefetcher.onLobby({ unlocked: 8 }); await new Promise(resolve => setTimeout(resolve, 5)); };
+  await lobby(); expect(asked).toBe(1);
+  await lobby(); expect(asked).toBe(1);          // 쉬는 중
+  clock = 31000; await lobby(); expect(asked).toBe(2);
+  clock = 31000 + 59000; await lobby(); expect(asked).toBe(2);   // 두 번째 실패 뒤 60초 쉼
+  clock = 31000 + 61000; await lobby(); expect(asked).toBe(3);
+});

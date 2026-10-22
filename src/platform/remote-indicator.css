@@ -2,6 +2,7 @@
 .remote-dl { position: fixed; z-index: 90; top: env(safe-area-inset-top, 0px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
   pointer-events: none; opacity: 0; transition: opacity .25s ease; max-width: 60vw; }
 .remote-dl.on { opacity: .92; }
+.remote-dl.remote-dl-battle { display: none; }
 .remote-dl-bar { display: block; width: min(46vw, 220px); height: 3px; border-radius: 0 0 3px 3px; background: rgba(8, 14, 24, .55); overflow: hidden; }
 .remote-dl-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #6fe3d6, #f2c45c); transform-origin: left center; transform: scaleX(.04); transition: transform .3s ease; }
 .remote-dl-text { font: 600 10px/1.2 system-ui, sans-serif; color: #dff6f0; background: rgba(8, 14, 24, .62); padding: 1px 7px 2px; border-radius: 0 0 8px 8px; white-space: nowrap; letter-spacing: .02em; }

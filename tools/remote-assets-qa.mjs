@@ -214,14 +214,9 @@ try {
   void c.page.evaluate(() => window.__remoteAssets.prefetchGroup('region-5')).catch(() => {});
   await c.page.waitForTimeout(1600);
   await c.shot('12-indicator-battle');
-  const dockBattle = await c.page.evaluate(() => {
-    const n = document.querySelector('.remote-dl'); if (!n || n.hidden) return null; const r = n.getBoundingClientRect();
-    // 화면 전체를 덮는 층(vignette 등)과 자식을 가진 컨테이너(hud-top·hud-center)는 상자만 겹칠 뿐 보이는 요소가 아니므로 제외하고 잎 요소만 본다.
-    const hud = [...document.querySelectorAll('#hud *')].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).visibility !== 'hidden' && b.width < innerWidth * 0.6 && !e.children.length && b.bottom > r.top && b.top < r.bottom && b.right > r.left && b.left < r.right && !e.contains(n) && !n.contains(e); })
-      .map((e) => (e.id || e.className || e.tagName).toString().slice(0, 40));
-    return { y: Math.round(r.y), h: Math.round(r.height), w: Math.round(r.width), overlaps: hud.slice(0, 6) };
-  });
-  check('전투 중에도 표시는 위쪽 가장자리 띠이고 HUD 와 겹치지 않는다', !!dockBattle && dockBattle.y <= 2 && dockBattle.h <= 30 && dockBattle.overlaps.length === 0, dockBattle);
+  // 전투 중에는 위쪽 중앙 WAVE 표시와 겹치지 않게 띠를 숨긴다(내려받기는 계속된다).
+  const dockBattle = await c.page.evaluate(() => { const n = document.querySelector('.remote-dl'); return n ? { display: getComputedStyle(n).display, battleClass: n.classList.contains('remote-dl-battle'), downloading: window.__remoteAssets.progress.pendingFiles } : null; });
+  check('전투 중에는 내려받기 띠가 숨고(HUD 와 겹치지 않음) 내려받기는 계속된다', !!dockBattle && dockBattle.display === 'none' && dockBattle.battleClass && dockBattle.downloading > 0, dockBattle);
   log.hostDelay = 0;
   report.errors.push(...a.errors, ...c.errors);
 } catch (error) {

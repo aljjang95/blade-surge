@@ -256,7 +256,7 @@ export function createRemoteAssets(options = {}) {
 
 /** 앱 전체가 쓰는 하나의 인스턴스. */
 export const remoteAssets = createRemoteAssets();
-export const assetUrl = (input) => remoteAssets.assetUrl(input);
+export const assetUrl = (input, options) => remoteAssets.assetUrl(input, options);
 export const ensureAssets = (inputs, options) => remoteAssets.ensure(inputs, options);
 export const readRemoteBuffer = (input) => remoteAssets.readBuffer(input);
 export const isRemoteAsset = (input) => remoteAssets.isRemote(input);
