@@ -867,7 +867,7 @@ export class FX {
     const g = new THREE.Group();
     // 탄 심은 순백 대신 탄 색을 45% 밝힌 색: 하얀 구가 후광과 겹쳐 대마도사 평타·처치마다 흰 거품으로 보였다.
     const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 12, 10), this._keep(new THREE.MeshBasicMaterial({ color: new THREE.Color(color).lerp(_orbWhite, .45) })));
-    const halo = new THREE.Sprite(this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }))); halo.scale.setScalar(size * 4);
+    const halo = new THREE.Sprite(this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }))); halo.scale.setScalar(Math.min(size * 4, 2.6));   // 큰 탄(화염구 .9)의 3.6m 가산 후광은 블룸과 겹쳐 크림색 덩어리였다
     g.add(core, halo); g.userData.halo = halo; g.userData.core = core; return g;
   }
   // ---------- 그을음 데칼 ----------
