@@ -351,10 +351,10 @@ export class ImpactVfx {
   /** 치명타 공통 신호(영웅과 무관): 짧고 날카로운 금빛 십자(.14초) → 진한 금 충격 고리 → 네 갈래 금 파편 눈금이 .4초 남는다.
    *  크게 번지는 별빛 대신 가는 십자와 고리로 읽게 해 백화를 늘리지 않고, 판정 뒤 .2~.4초 화면에도 '치명'이 남는다. */
   _crit(at, dir, angle, T) {
-    // 십자와 눈금은 적 머리 위(+.55m)에 띄운다. 위에서 내려다보는 카메라에서 영웅 바로 앞 적의 타격점은 영웅 몸과 겹쳐
-    // 영웅 초점 마스크(.45배)에 눌려 보이지 않았다. 고리는 접촉점에 남는다.
-    const x = at.x, y = at.y + .55, z = at.z;
-    this._emit(IMPACT_KIND.star, x, y, z, T.core * 2.7, CRIT_COLOR, .14, { angle: 0, grow: .55 });
+    // 십자는 적 상체(+.15m)에 둔다. 머리 위로 올리면 대상 이름표(DOM)에 가렸다. 눈금은 화면 상하좌우로 멀리(약 .7m) 밀려나
+    // 영웅 바로 앞 적을 칠 때 영웅 초점 마스크(.45배)·이름표 밖에서 읽힌다. 고리는 접촉점에 남는다.
+    const x = at.x, y = at.y + .15, z = at.z;
+    this._emit(IMPACT_KIND.star, x, y, z, T.core * 3, CRIT_COLOR, .14, { angle: 0, grow: .55 });
     this._emit(IMPACT_KIND.ring, x, at.y, z, T.ring * 1.35, CRIT_DEEP, .3, { grow: 1 });
     if (this.lite) { this._streaks(at, dir, 2, T.speed * 1.15, T.streakLife, CRIT_COLOR, { spread: 1.6, size: .28 }); return; }
     // 십자 네 끝에 금 파편 눈금: 화면 기준 상하좌우로 짧게 밀려나며 .42초 머문다(잔광).
@@ -362,8 +362,8 @@ export class ImpactVfx {
     for (let i = 0; i < 4; i++) {
       const a = i * 1.5707963, c = Math.cos(a), sn = Math.sin(a);
       // 화면 x축(e0..2)·y축(e4..6)으로 펼친다. 카메라가 없으면 월드 XZ.
-      const vx = e ? (e[0] * c + e[4] * sn) * 2.2 : c * 2.2, vy = e ? (e[1] * c + e[5] * sn) * 2.2 : sn * 2.2, vz = e ? (e[2] * c + e[6] * sn) * 2.2 : 0;
-      this._emit(IMPACT_KIND.shard, x, y, z, .3, CRIT_COLOR, .42, { vx, vy, vz, angle: a, stretch: 1.5, grow: .6, delay: .03 });
+      const vx = e ? (e[0] * c + e[4] * sn) * 5 : c * 5, vy = e ? (e[1] * c + e[5] * sn) * 5 : sn * 5, vz = e ? (e[2] * c + e[6] * sn) * 5 : 0;
+      this._emit(IMPACT_KIND.shard, x, y, z, .34, CRIT_COLOR, .42, { vx, vy, vz, angle: a, stretch: 1.6, grow: .6, delay: .03 });
     }
     this._streaks(at, dir, 3, T.speed * 1.15, T.streakLife * 1.1, CRIT_COLOR, { spread: 1.6, size: .28 });
   }
