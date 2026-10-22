@@ -147,12 +147,12 @@ export function magePrismBounce(game, pos, dir, n = 0) {
   impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.2 + Math.min(n, 12) * .08, C.prismDeep, .22, { grow: 1 });
   impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.8, C.arcane, .26, { grow: 1, delay: .04 });
   _q.set(pos.x, 0, pos.z);
-  impact.mark(_q, C.prismDeep, { radius: 1.4 + Math.min(n, 12) * .05, life: .55, style: MARK_STYLE.compass, angle: n * .6 });
+  impact.mark(_q, C.arcane, { radius: 1.4 + Math.min(n, 12) * .05, life: .55, style: MARK_STYLE.compass, angle: n * .6 });
   if (!game.fx.lite && dir) {
     const base = Math.atan2(dir.z, dir.x);
     for (let j = 0; j < PRISM_SPECTRUM.length; j++) {
       const a = base + (j - 2) * .22; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(pos, _d, 4.6, PRISM_SPECTRUM[j], { speed: 32, tail: 2.6, width: .2 });
+      impact.beam(pos, _d, 4.6, PRISM_SPECTRUM[j], { speed: 32, tail: 2.6, width: .2, style: BEAM_STYLE.prism });
     }
   }
   return impact.spawned - before;
@@ -163,8 +163,9 @@ export function magePrismBounce(game, pos, dir, n = 0) {
 export function magePrismTrail(game, from, to) {
   const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
   _d.copy(to).sub(from); const l = _d.length(); if (!(l > .01)) return 0;
-  let used = impact.beam(from, _d, l, C.prismDeep, { width: .46, fade: .7 }) ? 1 : 0;
-  if (!game.fx.lite && impact.beam(from, _d, l, C.arcane, { width: .14, fade: .5 })) used++;
+  // 분광 선(흰 심 없음): 흰 심 굵은 궤적은 창 둘레에 옅은 하늘색 띠를 남겼다(h1c).
+  let used = impact.beam(from, _d, l, C.prismDeep, { width: .3, fade: .7, style: BEAM_STYLE.prism }) ? 1 : 0;
+  if (!game.fx.lite && impact.beam(from, _d, l, C.arcane, { width: .1, fade: .5, style: BEAM_STYLE.prism })) used++;
   return used;
 }
 
@@ -243,13 +244,19 @@ export const SIGNATURES = {
   arc_reflect(ctx) {
     const { impact, player, f, lite } = ctx;
     _a.copy(player.pos).addScaledVector(f, 1.2).setY(1.3);
-    // 프리즘 광선은 심이 흰색 쪽으로 섞이니 진한 빛깔만 쓰고, 손끝은 별빛 대신 두 겹 고리.
-    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.4, C.prismDeep, .22, { grow: 1 });
-    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2.2, C.arcane, .28, { grow: 1, delay: .04 });
-    const base = Math.atan2(f.z, f.x);
+    // 손끝 프리즘 결정(h1c): 시전 순간 손끝 두 겹 고리·임팩트 코어가 옅은 청색 큰 원으로 보였다. 대신 꼭짓점이 앞을 향한
+    // 날카로운 삼각 프리즘 윤곽(분광 선 세 변)을 세우고, 앞 꼭짓점에서 스펙트럼 다섯 갈래가 갈라져 나간다.
+    const base = Math.atan2(f.z, f.x), R = .8;
+    for (let k = 0; k < 3; k++) {
+      const a0 = base + (k / 3) * TAU, a1 = base + ((k + 1) / 3) * TAU;
+      _p0.set(_a.x + Math.cos(a0) * R, _a.y, _a.z + Math.sin(a0) * R);
+      _d.set(Math.cos(a1) * R - Math.cos(a0) * R, 0, Math.sin(a1) * R - Math.sin(a0) * R);
+      impact.beam(_p0, _d, _d.length(), k ? C.prismDeep : C.arcane, { speed: 24, width: .07, fade: .45, delay: k * .03, style: BEAM_STYLE.prism });
+    }
+    _p1.set(_a.x + Math.cos(base) * R, _a.y, _a.z + Math.sin(base) * R);
     for (let j = 0; j < (lite ? 3 : PRISM_SPECTRUM.length); j++) {
       const jj = lite ? j * 2 : j, a = base + (jj - 2) * .09; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(_a, _d, 10, PRISM_SPECTRUM[jj], { speed: 30, tail: 5, width: .22 });
+      impact.beam(_p1, _d, 10, PRISM_SPECTRUM[jj], { speed: 30, tail: 5, width: .16, delay: .06, style: BEAM_STYLE.prism });
     }
     // 바닥: 발밑 청록 조준 원 + 앞으로 펼쳐지는 보라 빛 부채(굴절이 시작되는 방향).
     impact.mark(player.pos, C.prismDeep, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });

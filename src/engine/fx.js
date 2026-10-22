@@ -41,7 +41,11 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   // 화염: 크림 강조색(0xffd060)·밝은 주황 폭발 원화가 가산으로 겹쳐 흰 코어가 됐다. 진홍 쪽 주황과 불씨 주황으로 낮춘다.
   // 화염구 착탄·발사 순간 폭발 원화(주황·노랑 심)와 불사조 잔상이 블룸에서 크림 번짐이 됐다(h1b): 본색은 진홍 쪽, 강조는 진한 주황,
   // 원화 밝기를 낮추고 또렷한 모양은 _fireImpact 의 나침 폭발 표식·불꽃 혀가 맡는다.
-  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xf0401a, accent: 0xff641a, radius: 3.6, burst: 20, light: 1.2, pillar: true, flashGain: .5, groundGain: .8, secondaryGain: .6 }),
+  // 화염구 착탄 '덩어리'(h1c): 넓은 고리 텍스처(4.2m)·마법진 채움(3.6m)·폭발 원화(5.2m)가 겹쳐 지름 4m 넘는 주황 번짐 한 덩이로 읽혔다
+  // (점수표 진단: 세 호출을 끄면 번짐이 사라진다). 셋을 작고 옅게(ringScale·groundScale·flashScale) 줄이고, 또렷한 중심은
+  // _fireImpact 의 작은 진한 코어, 가장자리는 나침 표식·고리·불똥·불꽃 혀가 맡는다. 판정 반경(4.2m)과 무관한 표시 값이다.
+  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xf0401a, accent: 0xff641a, radius: 3.6, burst: 20, light: 1.2, pillar: true, flashGain: .5, groundGain: .4, secondaryGain: .6,
+    groundScale: .72, ringScale: .62, ringWidth: .32, flashScale: .45, secondaryScale: .5, burstSize: .6, lightDist: .55 }),
   // 냉기 강조색은 흰빛(0xdff8ff) 대신 진한 하늘색: 눈보라·절대영도에서 얼음 원화와 겹쳐 화면이 하얗게 덮였다.
   // 서리: 옅은 하늘색(0x5fcfff) 기운이 지면·고리에 흰빛으로 번졌다. 진한 청 결정색으로.
   // 눈보라 발밑 옅은 하늘색 기운(h1b): 얼음 원화 섬광·충격파 잔상·지면 문양이 발밑에 겹쳐 흰 안개가 됐다. 강조색을 진한 청으로,
@@ -659,8 +663,9 @@ export class FX {
     });
     // 고리 띠 두께는 반지름에 비례해 6m 넘는 무거운 서명에서 흰 도넛이 됐다(눈보라·시간 봉인). 흰 강조색 대신 학파 색을 낮춰 쓴다.
     _sigRing.set(spec.color).multiplyScalar(heavy ? .5 : .75);
-    this.ring(anchor, _sigRing, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
-    const flashSize = spec.radius * (heavy ? 1.45 : 1.05) * k;
+    const ringK = k * (spec.ringScale ?? 1);
+    this.ring(anchor, _sigRing, { r0: spec.radius * 0.22 * ringK, r1: spec.radius * 1.16 * ringK, life: Math.min(t, 0.56), width: spec.ringWidth ?? (heavy ? 0.72 : 0.48) });
+    const flashSize = spec.radius * (heavy ? 1.45 : 1.05) * k * (spec.flashScale ?? 1);
     this.texFlash(anchor.clone().setY(anchor.y + 0.6), spec.flash, spec.color, {
       size: flashSize, gain: decorativeBurstGain(flashSize) * (spec.flashGain ?? 1),
       life: Math.min(t, heavy ? 0.7 : 0.42),
@@ -672,7 +677,7 @@ export class FX {
     // without allocating a new effect system. It remains enabled on lite
     // devices so the spell silhouette does not collapse to a coloured ring.
     this.texFlash(anchor.clone().setY(anchor.y + 0.32), spec.secondary, spec.accent, {
-      size: spec.radius * (heavy ? 0.9 : 0.62) * k,
+      size: spec.radius * (heavy ? 0.9 : 0.62) * k * (spec.secondaryScale ?? 1),
       life: Math.min(t, heavy ? 0.56 : 0.3),
       spin: profile === 'void' ? -1.1 : profile === 'arcane' ? 0.95 : -0.45,
       grow: heavy ? 1.25 : 0.9,
@@ -683,7 +688,7 @@ export class FX {
     this.burst(anchor.clone().setY(anchor.y + 0.55), spec.accent, {
       n: Math.round(spec.burst * (heavy ? 1.35 : 1)),
       speed: (heavy ? 13 : 8) * k,
-      size: (heavy ? 0.42 : 0.28) * k,
+      size: (heavy ? 0.42 : 0.28) * k * (spec.burstSize ?? 1),
       life: Math.min(t, heavy ? 0.72 : 0.42),
       up: heavy ? 1.1 : 0.55,
       grav: profile === 'frost' ? 5 : 13,
@@ -691,13 +696,16 @@ export class FX {
     });
     if (spec.pillar && !this.lite) this.firePillar(anchor, { height: 4.2 * k, width: 1.05 * k, life: Math.min(t, 0.65), color: spec.color });
     if (profile === 'fire') this._fireImpact(anchor, k, heavy);
-    this.light(anchor, spec.color, (heavy ? 10 : 5) * spec.light * k, (heavy ? 12 : 7) * k, Math.min(t, 0.45));
+    this.light(anchor, spec.color, (heavy ? 10 : 5) * spec.light * k, (heavy ? 12 : 7) * k * (spec.lightDist ?? 1), Math.min(t, 0.45));
     return spec;
   }
   /** 화염 착탄 임팩트 층(인스턴스, 난수는 VfxRng): 진홍 폭발 고리 두 겹 + 방사형 불씨 파편 + 솟는 짧은 불꽃. Math.random·fx.items 를 건드리지 않는다. */
   _fireImpact(pos, k = 1, heavy = false) {
     const I = this.impact; if (!I) return 0;
     const before = I.spawned, rng = I.rng, y = (pos.y || 0) + .5;
+    // 착탄 중심: 작고 진한 코어(지름 ≈ 1.1m, 진홍-주황 테·작은 달아오른 심) — 넓은 번짐 대신 '어디서 터졌는지'를 한 점으로 찍는다(h1c).
+    I._emit(IMPACT_KIND.core, pos.x, y + .2, pos.z, .55 * k, 0xff3a0e, .18, { grow: .5 });
+    I._emit(IMPACT_KIND.star, pos.x, y + .2, pos.z, 1.1 * k, 0xe8341c, .16, { angle: rng.next() * 6.2831853, grow: .5 });
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 3.4 * k, 0xd8261a, .34, { grow: 1 });
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 2.2 * k, 0xff6a1e, .26, { grow: 1, delay: .04 });
     // 바닥 나침 폭발 표식(진홍): 크림 원화 번짐 대신 '폭발이 터진 자리'를 모양으로 남긴다(h1b 화염구·운석 착탄).
