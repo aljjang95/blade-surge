@@ -17,7 +17,7 @@ const gameOf = (v: ImpactVfx, lite = false, reduced = false) => ({ fx: { impact:
 
 for (const hero of ['mage', 'barbarian'] as const) {
   test(`${hero} 스킬 8개 모두 서명이 있고, 예외 없이 프레임 예산 안에서 서로 다른 모양을 낸다`, () => {
-    const ids: string[] = HERO_SKILLS[hero];
+    const ids: readonly string[] = HERO_SKILLS[hero];
     const own = hero === 'mage' ? MAGE : BARB;
     const shapes = ids.map((id) => {
       expect(typeof own[id]).toBe('function');
