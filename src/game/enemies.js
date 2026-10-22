@@ -356,7 +356,7 @@ export class Enemy extends Actor {
     // 보스·정예는 기존 대형 처치 연출이 있으므로 제외한다. 일반 몹만 튀어 오르며 처치 섬광을 남긴다.
     this.killFlair = !!flair && !this.isBoss && !this.isElite;
     // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
-    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0, 0.26); }
+    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(_warnColor.set(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0).multiplyScalar(.55).getHex(), 0.26); }   // .55 배: 몸 전체 발광이 덩어리로 보이지 않게
     this.game.onEnemyDeath(this);
   }
   update(dt) {

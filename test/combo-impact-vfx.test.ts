@@ -47,10 +47,10 @@ test('연계 층은 Math.random 을 쓰지 않고, 동작 줄이기·모르는 �
   v.dispose();
 });
 
-test('치명타는 판정 뒤 .3초에도 금빛 잔광(파편 눈금)이 남고, 크림 코어 대신 금색 코어를 쓴다', () => {
+test('치명타는 바깥 금빛 광선 6줄·사선 참격·발밑 금빛 십자를 내고 판정 뒤 .3초에도 남으며, 크림 코어 대신 금색 코어를 쓴다', () => {
   const v = make(); const n = v.hit(at, dir, { hero: 'mage', kind: 'magic', tier: 'light', crit: true });
   const k = kinds(v, 0, n);
-  expect(k.filter(x => x === IMPACT_KIND.shard).length).toBe(4);
+  expect(k.filter(x => x === IMPACT_KIND.beam).length).toBe(6); expect(k).toContain(IMPACT_KIND.mark); expect(k).toContain(IMPACT_KIND.cut);
   v.update(.3); expect(v.live()).toBeGreaterThan(0);
   const gold = new THREE.Color(0xffd23a); expect(v.ring.a.aColor[0]).toBeCloseTo(gold.r, 4); expect(v.ring.a.aColor[2]).toBeCloseTo(gold.b, 4);
   v.dispose();

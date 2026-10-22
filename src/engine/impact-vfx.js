@@ -239,7 +239,7 @@ const FRAG = `
   }`;
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-const _c = new THREE.Color(), _view = new THREE.Vector3(), _dir = new THREE.Vector3(), _pos = new THREE.Vector3();
+const _c = new THREE.Color(), _ray = new THREE.Vector3(), _view = new THREE.Vector3(), _dir = new THREE.Vector3(), _pos = new THREE.Vector3();
 
 /** 타격 임팩트 층. FX 가 소유하며 FX.update(dt) 로 시계가 흐른다. */
 export class ImpactVfx {
@@ -352,19 +352,21 @@ export class ImpactVfx {
   /** 치명타 공통 신호(영웅과 무관): 짧고 날카로운 금빛 십자(.14초) → 진한 금 충격 고리 → 네 갈래 금 파편 눈금이 .4초 남는다.
    *  크게 번지는 별빛 대신 가는 십자와 고리로 읽게 해 백화를 늘리지 않고, 판정 뒤 .2~.4초 화면에도 '치명'이 남는다. */
   _crit(at, dir, angle, T) {
-    // 십자는 적 상체(+.15m)에 둔다. 머리 위로 올리면 대상 이름표(DOM)에 가렸다. 눈금은 화면 상하좌우로 멀리(약 .7m) 밀려나
-    // 영웅 바로 앞 적을 칠 때 영웅 초점 마스크(.45배)·이름표 밖에서 읽힌다. 고리는 접촉점에 남는다.
+    // 치명 신호는 이름표·영웅 머리 위 겹침 밖으로 뻗는다: 대상보다 넓은 사선 금빛 참격 한 줄, 바깥으로 멀리 달리는 금빛 광선,
+    // 대상 발밑 금빛 지면 십자(조준 원). 중앙의 십자 섬광은 짧게(.12초)만.
     const x = at.x, y = at.y + .15, z = at.z;
-    this._emit(IMPACT_KIND.star, x, y, z, T.core * 3, CRIT_COLOR, .14, { angle: 0, grow: .55 });
+    this._emit(IMPACT_KIND.star, x, y, z, T.core * 2.4, CRIT_COLOR, .12, { angle: 0, grow: .55 });
+    this._emit(IMPACT_KIND.cut, x, y, z, 3.8, CRIT_COLOR, .24, { angle: -.62, stretch: 1.7, grow: .95 });
     this._emit(IMPACT_KIND.ring, x, at.y, z, T.ring * 1.35, CRIT_DEEP, .4, { grow: 1 });
+    _pos.set(x, .02, z); this.mark(_pos, CRIT_COLOR, { radius: 1.7, life: .55, style: MARK_STYLE.reticle, angle: .785 });
     if (this.lite) { this._streaks(at, dir, 2, T.speed * 1.15, T.streakLife, CRIT_COLOR, { spread: 1.6, size: .28 }); return; }
-    // 십자 네 끝에 금 파편 눈금: 화면 기준 상하좌우로 짧게 밀려나며 .42초 머문다(잔광).
+    // 바깥 광선 6줄: 화면 기준 방향(카메라 x·y 축)으로 .7m 밖에서 시작해 2.4m 를 빠르게 달린다.
     const e = this.camera?.matrixWorld?.elements;
-    for (let i = 0; i < 4; i++) {
-      const a = i * 1.5707963, c = Math.cos(a), sn = Math.sin(a);
-      // 화면 x축(e0..2)·y축(e4..6)으로 펼친다. 카메라가 없으면 월드 XZ.
-      const vx = e ? (e[0] * c + e[4] * sn) * 5 : c * 5, vy = e ? (e[1] * c + e[5] * sn) * 5 : sn * 5, vz = e ? (e[2] * c + e[6] * sn) * 5 : 0;
-      this._emit(IMPACT_KIND.shard, x, y, z, .42, CRIT_COLOR, .52, { vx, vy, vz, angle: a, stretch: 1.7, grow: .6, delay: .03 });
+    for (let i = 0; i < 6; i++) {
+      const a = i * 1.0471976 + .26, c = Math.cos(a), sn = Math.sin(a);
+      if (e) _dir.set(e[0] * c + e[4] * sn, e[1] * c + e[5] * sn, e[2] * c + e[6] * sn); else _dir.set(c, sn, 0);
+      _ray.set(x, y, z).addScaledVector(_dir, .7);
+      this.beam(_ray, _dir, 2.4, CRIT_COLOR, { speed: 26, tail: 1.1, width: .07, delay: .02 });
     }
     this._streaks(at, dir, 3, T.speed * 1.15, T.streakLife * 1.1, CRIT_COLOR, { spread: 1.6, size: .28 });
   }
@@ -401,8 +403,8 @@ export class ImpactVfx {
     // 방사형 파편: 진행 방향으로 늘어난 마름모가 튀었다 떨어진다(영웅색 / 처치 금색 번갈아).
     const n = this.lite ? 4 : boss ? 10 : elite ? 8 : 7;
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * 6.2831853 + this.rng.next() * .5, sp = 7 + this.rng.next() * 5 * k, vy = 3 + this.rng.next() * 4;
-      this._emit(IMPACT_KIND.shard, x, y, z, .22 * k, i % 3 === 0 ? KILL_COLOR : P.accent, .34 + this.rng.next() * .12,
+      const a = (i / n) * 6.2831853 + this.rng.next() * .5, sp = 11 + this.rng.next() * 6 * k, vy = 3 + this.rng.next() * 4;
+      this._emit(IMPACT_KIND.shard, x, y, z, .26 * k, i % 3 === 0 ? KILL_COLOR : P.accent, .44 + this.rng.next() * .12,
         { vx: Math.cos(a) * sp, vy, vz: Math.sin(a) * sp, angle: this.rng.next() * 6.2831853, stretch: 1.7, grow: .8, gravity: 16 });
     }
     // 영혼 불꽃: 쓰러진 자리에서 영웅색 작은 불꽃이 천천히 올라 .6초 남는다(판정 뒤 화면에서도 '처치'가 읽힌다).
@@ -412,6 +414,8 @@ export class ImpactVfx {
       this._emit(IMPACT_KIND.flame, x + Math.cos(a) * r, y + .25, z + Math.sin(a) * r, (i ? .32 : .42) * k, i ? (HERO_COMBO[hero]?.hot ?? P.accent) : P.accent, .58 + this.rng.next() * .14,
         { vy: 1.5, grow: .5, gravity: -4.5, delay: .04 + i * .05 });
     }
+    // 발밑 영웅색 지면 표식(이름표·영웅 머리 위 겹침 밖에서 읽히는 '쓰러졌다' 신호). 암살자·궁수는 자기 표식(_heroKill)을 쓴다.
+    if (hero !== 'rogue' && hero !== 'ranger') { _pos.set(pos.x, .02, pos.z); this.mark(_pos, P.accent, { radius: 1.5 * k, life: .6, style: hero === 'mage' ? MARK_STYLE.clock : MARK_STYLE.compass, angle: this.rng.next() * 6.28 }); }
     if (!this.lite) this._heroKill(hero, pos, P, k);
     return this.spawned - before;
   }
@@ -430,9 +434,9 @@ export class ImpactVfx {
       // 하얀 P.core 큰 고리(3.2m)는 처치마다 흰 구름으로 보였다. 비전 청 겹고리로 작게.
       this._emit(IMPACT_KIND.ring, pos.x, pos.y + 1, pos.z, 2.6 * k, P.accent, .28, { grow: 1, delay: .05 });
     } else if (hero === 'rogue') {
-      this.mark(pos, P.accent, { radius: 1.2 * k, life: .45, style: MARK_STYLE.thorn, angle: this.rng.next() * 6.28 });
+      this.mark(pos, P.accent, { radius: 1.5 * k, life: .6, style: MARK_STYLE.thorn, angle: this.rng.next() * 6.28 });
     } else if (hero === 'ranger') {
-      this.mark(pos, P.accent, { radius: .95 * k, life: .35, style: MARK_STYLE.reticle });
+      this.mark(pos, P.accent, { radius: 1.35 * k, life: .55, style: MARK_STYLE.reticle });
     }
   }
   /**
