@@ -54,13 +54,13 @@ export const SKILL_VFX = Object.freeze({
   star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5] }),
   absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자: 질주·야행·궁극기만 그림자 참격 원화를 쓰고, 나머지는 모양을 나눈다(독무 = 원화 없이 조준 룬, 표식 = 보라 룬 지면,
-  // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·표식·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
+  // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
   // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다.
   shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0x9a4cff, 5, { dist: 3, ghost: true }),
   poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true }),
   flurry: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb070ff, 4, { dist: 2, ghost: true }),
   thousand: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xa060ff, 11, { ghost: true }),
-  shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a4aff, 7, { gain: .8, noRune: true }),
+  shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a4aff, 7, { gain: .8 }),
   void_step: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x7a3cff, 6, { ghost: true }),
   night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true }),
   eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, gain: .8 }),
