@@ -15,6 +15,7 @@ import { monsterRosterEntry } from '../data/monster-roster.js';
 import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
 import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
+import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
@@ -354,7 +355,8 @@ export class Enemy extends Actor {
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
     // 보스·정예는 기존 대형 처치 연출이 있으므로 제외한다. 일반 몹만 튀어 오르며 처치 섬광을 남긴다.
     this.killFlair = !!flair && !this.isBoss && !this.isElite;
-    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(0xffe9a0, 0.26); }
+    // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
+    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0, 0.26); }
     this.game.onEnemyDeath(this);
   }
   update(dt) {
