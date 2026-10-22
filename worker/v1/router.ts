@@ -34,8 +34,9 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     if (env.V1_ENABLED !== 'true') return json({ error: 'unavailable' }, 503);
     if (path.length > 120 || url.search.length > 256) return json({ error: 'too-long' }, 414);
     const origin = request.headers.get('origin');
-    // 모든 v1 요청은 상태를 다루므로 허용 origin이 반드시 있어야 한다(네이티브 앱은 index.ts가 정식 origin으로 바꾼다).
-    if (!allowedOrigin(url.origin, env) || origin === null || !allowedOrigin(origin, env)
+    // 상태를 바꾸는 요청은 허용 origin이 반드시 있어야 한다(네이티브 앱은 index.ts가 정식 origin으로 바꾼다).
+    // 브라우저는 같은 출처 GET에 Origin을 붙이지 않는다. GET은 Bearer 토큰(쿠키 아님)만 받으므로 Origin 없이 허용한다.
+    if (!allowedOrigin(url.origin, env) || (origin === null ? request.method !== 'GET' : !allowedOrigin(origin, env))
       || request.headers.get('sec-fetch-site') === 'cross-site') return json({ error: 'origin' }, 403);
     const db = env.COMMERCE_DB as D1Database | undefined;
     if (!db || !await schemaReady(db)) return json({ error: 'unavailable' }, 503);

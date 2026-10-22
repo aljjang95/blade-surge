@@ -8,7 +8,7 @@ import { AccountClient, newCid } from './account-client.js';
 import { CommandQueue } from './command-queue.js';
 import { importLocalSave } from './import.js';
 import { deviceKey, installId } from './secure-storage.js';
-import { parityHash } from '../shared/state-hash.js';
+import { mergeServerOwned, parityHash } from '../shared/state-hash.js';
 import { showReceipt } from '../ui/account.js';
 
 const mark = (state) => { try { document.documentElement.dataset.v1 = `${state.status}:${state.authority}`; } catch {} };
@@ -25,7 +25,8 @@ export async function setupAccount(app, { fetchImpl } = {}) {
 
 function adoptNow(app, state, doc) {
   const eco = app.eco;
-  const apply = () => { eco.s = eco.migrate(doc); eco.emit(); };
+  // 서버가 소유한 필드만 덮어쓴다(설정·튜토리얼·원정 등 P1 밖 로컬 필드는 유지).
+  const apply = () => { eco.s = eco.migrate(mergeServerOwned(eco.s, doc)); eco.emit(); };
   if (state.queue) state.queue.quiet(apply); else apply();
   state.lastAdoptHash = parityHash(eco.s);
 }

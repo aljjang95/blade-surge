@@ -36,3 +36,14 @@ export function paritySubset(state) {
   return out;
 }
 export function parityHash(state) { return hashValue(paritySubset(state)); }
+
+/**
+ * 서버 권위 계정에서 서버 문서가 덮어쓰는 필드(P1 범위). 설정·튜토리얼·원정·마을·여정 등 아직 서버 명령이 없는
+ * 필드는 로컬 값을 유지한다. 그래서 서버 권위 컷오버(V1_SERVER_AUTHORITY_PERCENT)는 해당 시스템이 서버로 옮겨진 뒤에 연다.
+ */
+export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT']);
+export function mergeServerOwned(local, server) {
+  const out = { ...local };
+  for (const key of SERVER_OWNED_KEYS) if (server && server[key] !== undefined) out[key] = server[key];
+  return out;
+}

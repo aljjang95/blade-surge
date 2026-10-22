@@ -14,6 +14,12 @@ describe('MMO P1-B 신원·세션', () => {
   test('origin 없는·다른 origin 요청은 거부', async () => {
     const h = await v1Harness();
     expect((await h.send('POST', '/auth/session', { deviceKey: newDeviceKey() }, undefined, { origin: 'https://evil.example' })).status).toBe(403);
+    const a = await h.session();
+    const { handleV1Request } = await import('../worker/v1/router');
+    const noOriginGet = await handleV1Request(new Request(ORIGIN + '/api/v1/me', { headers: { authorization: 'Bearer ' + a.token } }), h.env, h.deps);
+    expect(noOriginGet.status).toBe(200);
+    const noOriginPost = await handleV1Request(new Request(ORIGIN + '/api/v1/cmd', { method: 'POST', headers: { authorization: 'Bearer ' + a.token, 'content-type': 'application/json' }, body: '{}' }), h.env, h.deps);
+    expect(noOriginPost.status).toBe(403);
   });
 
   test('게스트 생성 → 토큰 → /me, 같은 키는 같은 계정', async () => {
