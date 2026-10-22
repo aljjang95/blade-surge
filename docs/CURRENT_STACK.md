@@ -14,6 +14,8 @@ Worker는 ASSETS·AI·DIALOGUE_BUDGET·PARTIES·SOCIAL 바인딩과 D1 `COMMERCE
 
 `docs/citadel-departure-preparation.md`의 물리 입구 standard/deep 선택·에너지/보상·goal·journal 복귀 계약과 `docs/manual-combo-feedback.md`의 실제 Player 기반 콤보 표시·pause/AUTO/lifecycle·미디어 오류 분류 경계를 이어받는다. 기존 기록의 browser·실기기·공개 배포 한계를 유지하며 과거 검증을 이번 병합 소스의 새 검증으로 재사용하지 않는다.
 
+`docs/CONTENT_90D.md`가 90일 진행 콘텐츠(지옥 난이도·무한의 성·일일/주간 임무·13주 시즌 이벤트)와 `bun run sim:90d` 진행 시뮬레이션 밴드의 정본이다.
+
 ## 실행과 검증
 
 ```sh

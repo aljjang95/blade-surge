@@ -42,9 +42,9 @@ test('전 장·계급·난이도에서 E 이상 확률·재료 수량이 단조 
   expect(lootTable(6, 'normal').gearWeights.N).toBe(10);
 });
 
-test('드랍 보고서 54행은 가치 0·완전 중복이 없으며 후반 재료가 실제 정련 가치로 반영된다', () => {
+test('드랍 보고서 72행(4난이도×6지역×3등급)은 가치 0·완전 중복이 없으며 후반 재료가 실제 정련 가치로 반영된다', () => {
   const report = lootReport();
-  expect(report.rows).toHaveLength(54);
+  expect(report.rows).toHaveLength(72);
   expect(report.zeroValue).toEqual([]); expect(report.duplicates).toEqual([]);
   for (const row of report.rows) {
     expect(row.goldEquivalent).toBeGreaterThan(row.gold);

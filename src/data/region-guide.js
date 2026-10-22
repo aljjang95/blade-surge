@@ -86,7 +86,7 @@ export function nextGuide(progress, heroLevel) {
   const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1;
   const def = stageDef(ch, st);
   const rec = recommendedLevel(ch, st);
-  const difficulty = ['story', 'adept', 'nightmare'].includes(progress?.difficulty) ? progress.difficulty : 'story';
+  const difficulty = ['story', 'adept', 'nightmare', 'hell'].includes(progress?.difficulty) ? progress.difficulty : 'story';
   const level = levelStatus(heroLevel, rec);
   return {
     stage: { ch, st, code: def.code, title: def.title },

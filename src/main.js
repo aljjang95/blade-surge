@@ -412,22 +412,34 @@ class App {
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); this.party.view.message('파티에서 준비를 마치고 함께 출격하세요.'); return false; }
     if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId, depth: stage.expedition.depth, conquestId: stage.expedition.conquestId });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
-    if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
-    // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
+    // 무한의 성: 넘겨받은 층이 지금 도전할 다음 층일 때만, 저장 상태로 다시 만든 정의로 출격한다(에너지 없음).
+    const tower = stage?.tower ? this.eco.nextTowerStage() : null;
+    if (stage?.tower) {
+      if (!tower || tower.tower.floor !== stage.tower.floor || this.account?.authority === 'server') { this.ui.toast('지금 도전할 수 있는 층이 아닙니다.', 'red'); return false; }
+      stage = tower;
+    } else {
+      if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
+      // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
       stage = stageDef(stage.ch, stage.st);
       const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');
       stage = applyDifficulty(stage, difficulty);
+      // 지옥 해금 기록(endgame)은 아직 서버 문서에 없어 서버 정산이 다른 난이도로 계산한다. 서버 이관 전까지 막는다.
+      if (stage.difficultyId === 'hell' && this.account?.authority === 'server') { this.ui.toast('서버 계정의 지옥 난이도 정산을 준비 중입니다.', 'red'); return false; }
+    }
     this.stageStarting = true;
     this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
     try {
-      spent = this.eco.spendEnergy(stage.energy);
-      if (!spent) {
-        audio.play('ui_error');
-        const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
-        if (ok) this.meta.openTab('shop', 'energy');
-        return false;
+      // 무한의 성은 에너지를 쓰지 않으므로 실패 시 되돌릴 것도 없다(spent=false).
+      if (!tower) {
+        spent = this.eco.spendEnergy(stage.energy);
+        if (!spent) {
+          audio.play('ui_error');
+          const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
+          if (ok) this.meta.openTab('shop', 'energy');
+          return false;
+        }
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
@@ -446,6 +458,13 @@ class App {
       console.warn('stage preparation failed', error?.message);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
+  }
+  /** 무한의 성 다음 층. 에너지를 쓰지 않고, 정산은 결과 화면의 completeTowerFloor 가 영수증 한 번으로 한다. */
+  async startTower() {
+    if (this.account?.authority === 'server') { this.ui.toast('서버 계정의 무한의 성 정산을 준비 중입니다.', 'red'); return false; }
+    const summary = this.eco.towerSummary(), stage = this.eco.nextTowerStage();
+    if (!stage) { this.ui.toast(!summary.unlocked ? '무한의 성은 2-10을 클리어하면 열립니다.' : `이번 주 도전 상한 ${summary.cap}층에 도달했습니다. 다음 주에 더 높이 열립니다.`, 'red'); return false; }
+    return this.startStage(stage);
   }
   async startExpedition(kind, id, options = {}) {
     if (this.store?.busy) return false;
