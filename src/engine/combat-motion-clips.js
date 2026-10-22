@@ -52,7 +52,9 @@ export function createCombatMotionClip(base, config) {
 export function installCombatMotionClips(clips, heroId) {
   for (const name of AUTHORED[heroId] || []) {
     const config = corrections[heroId][name] || corrections[heroId][PACK_BASE[name]], base = clips[name];
-    if (!base || !config || authored.has(base)) continue;
+    if (!base || authored.has(base)) continue;
+    // 팩 클립(PACK_BASE 경유)만 원본 보정이 없을 때 건너뛴다. 기존 이름의 보정 누락은 예전처럼 생성 단계에서 실패한다.
+    if (!config && PACK_BASE[name]) continue;
     let variants = cache.get(base);
     if (!variants) { variants = new Map(); cache.set(base, variants); }
     let clip = variants.get(config);
