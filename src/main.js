@@ -49,10 +49,12 @@ import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
 import { applyDifficulty } from './game/difficulty.js';
 import { CITADEL_HUB } from './data/citadel-hub.js';
+import { activeCampaignTownChapter, setActiveCampaignTownChapter } from './data/campaign-towns.js';
 import { preloadCitadelHubAssets } from './game/citadel-hub-scene.js';
 import { HubMovement } from './game/hub-movement.js';
 import { HubControls } from './engine/hub-controls.js';
 import { CitadelHubUI } from './ui/citadel-hub.js';
+import { CampaignTownUI } from './ui/campaign-town-ui.js';
 import { CitadelShop } from './ui/citadel-shop.js';
 import { CitadelCommand } from './ui/citadel-command.js';
 import './ui/citadel-integration.css';
@@ -61,6 +63,8 @@ import './ui/departure-journal.css';
 import './ui/mobile-menu.css';
 import './ui/maple-window.css';
 import './ui/lobby-clarity.css';
+import './ui/campaign-town.css';
+import './ui/campaign-map.css';
 import { MapleUI } from './ui/maple-ui.js';
 import { buildIdentity, classifyStartupFailure, onMediaQueryChange, startupFailureDetails, storageAvailability } from './platform/startup-compat.js';
 const BOOT_TIPS = [
@@ -221,6 +225,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.townChip = new CampaignTownUI(this); this.townChip.sync('home'); this.townChip.announcePending();
     this.mapleUI = new MapleUI(this);
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
@@ -304,10 +309,25 @@ class App {
     releaseBlockedLobbyInput(this);
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
   }
+  /**
+   * 저장된 캠페인 마을 선택을 로비 장면에 반영한다. 마을이 바뀌었고 로비 장면이 이미 있으면 다시 짓는다
+   * (전투에서 돌아올 때는 장면이 비어 있어 showcaseHero 가 새로 짓는다). 바뀌었으면 true.
+   */
+  syncCampaignTown(rebuild = true) {
+    const before = activeCampaignTownChapter();
+    const next = setActiveCampaignTownChapter(this.eco.campaignTownState().current);
+    if (next === before) return false;
+    if (rebuild && this.arena.lobbyHall) {
+      this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub(); this.townUI?.renderPlace();
+      if (this.mode === 'lobby') audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
+    }
+    return true;
+  }
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
     if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    this.syncCampaignTown(false);
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
@@ -359,6 +379,7 @@ class App {
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     this.syncHub();
+    this.townChip?.announcePending();
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }

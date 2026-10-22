@@ -7,6 +7,7 @@ import { normalizeCameraInvert } from '../engine/camera-invert.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
+import { resolveCampaignTown } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
@@ -86,6 +87,9 @@ export function normalizeSave(raw, fresh) {
     if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
   if (!['story', 'adept', 'nightmare'].includes(s.progress.difficulty)) s.progress.difficulty = 'story';
+  // 캠페인 마을: 값이 없는 기존 저장은 이미 해금한 가장 먼 마을을 보여 주고 축하는 다시 하지 않는다.
+  const town = resolveCampaignTown(s.progress, record(raw.campaignTown) ? raw.campaignTown : null);
+  s.campaignTown = { current: town.current, celebrated: town.celebrated };
   for (const key of ['claimedFree', 'claimedPrem']) s.pass[key] = [...new Set(s.pass[key].filter((v) => Number.isInteger(v) && v >= 1 && v <= BATTLE_PASS.maxLevel))];
   s.quests.claimed = s.quests.claimed.filter((id) => ['k30', 'k100', 's3', 's10', 'p10'].includes(id));
   s.purchases = s.purchases.filter((id) => typeof id === 'string');

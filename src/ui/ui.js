@@ -23,6 +23,15 @@ import './skill-feedback.css';
 import { itemIconHtml } from './item-presentation.js';
 
 const $ = (id) => document.getElementById(id);
+
+/** 캠페인 X-5(중간 보스)·X-10(지역 보스) 표식. 그 밖의 전투는 null. */
+export function campaignBossTag(stage) {
+  // 전투가 쓰는 스테이지는 난이도 스냅샷(스프레드 복사)이라 stageDef 의 비열거 표식을 잃는다. ch/st 로 다시 판정하고 원정·아레나는 제외한다.
+  if (!stage || stage.expedition || !Number.isInteger(stage.ch) || stage.encounter?.rank === undefined) return null;
+  if (stage.st === 5 && stage.encounter.rank === 'midboss') return { rank: 'midboss', label: '중간 보스' };
+  if (stage.st === 10 && stage.encounter.rank === 'finalboss') return { rank: 'regionboss', label: '지역 보스' };
+  return null;
+}
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
 export { $, fmt };
 
@@ -492,7 +501,27 @@ export class UI {
     $('hud-stage').textContent = `구역 ${clr}/${tot}${stage?.difficultyName ? ` · ${stage.difficultyName}` : ''}`;
   }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); this.refreshCombatNoticeLayout?.(); }
-  showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
+  showBoss(name, on, portrait) {
+    $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none';
+    // 캠페인 중간 보스(X-5)·지역 보스(X-10)는 체력 막대 이름 앞에 계급 표식을 붙인다.
+    const tag = on ? campaignBossTag(this.app?.battle?.stage) : null;
+    $('bossbar').dataset.rank = tag ? tag.rank : '';
+    if (tag) { const chip = document.createElement('i'); chip.className = 'boss-rank'; chip.textContent = tag.label; $('boss-name').prepend(chip); }
+  }
+  /**
+   * 중간 보스·지역 보스 방에 들어설 때 화면 위쪽 가장자리에 계급 띠를 잠깐 보인다.
+   * 플레이 영역(주인공·앞길·위험물)을 가리지 않도록 상단 가장자리 얇은 띠이며 입력을 받지 않는다.
+   */
+  bossIntro(stage, name) {
+    const tag = campaignBossTag(stage); if (!tag) return false;
+    this.el.hud.querySelector('.boss-intro')?.remove();
+    const node = document.createElement('div');
+    node.className = 'boss-intro'; node.dataset.rank = tag.rank; node.setAttribute('role', 'status');
+    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b><span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`;
+    this.el.hud.append(node);
+    setTimeout(() => node.remove(), 3400);
+    return true;
+  }
   /** 콤보 칩은 영웅 HP 카드(EXP 막대 포함) 바로 아래 가장자리 띠에 둔다. 가로 화면에서만 실제 카드 하단을 읽어 --combo-top 을 정한다. */
   placeComboChip() {
     const combo = this.comboEl, hud = this.el?.hud;
@@ -697,6 +726,8 @@ export class UI {
         if (recorded.ok) r.campaignReward = recorded.rewards;
       }
       this.lastReward = r.reward; const rw = r.reward;
+      // X-10 첫 클리어로 다음 지역이 열렸다면 위쪽 가장자리 띠로 축하한다(한 번만). 마을은 로비로 돌아갈 때 바뀐다.
+      if (rw.regionUnlock && !r.regionCelebrated) { r.regionCelebrated = true; later(() => this.app.townChip?.celebrate(rw.regionUnlock), 1200); }
       if (!rw.saveError && rw.ok !== false && !r.funnelRewardRecorded) {
         this.app.funnel?.track('reward_claim', { source: 'stage' }); r.funnelRewardRecorded = true;
         if (rw.ups) this.app.funnel?.track('hero_level_up', { source: 'stage', level: Math.min(200, Math.max(1, this.eco.hero(b.heroId)?.level || 1)) });

@@ -2,6 +2,7 @@ import './town-ui.css';
 import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
+import { activeCampaignSkin } from '../data/campaign-towns.js';
 import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds } from '../data/citadel-hub.js';
 import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
@@ -131,7 +132,9 @@ export class TownUI {
   renderPlace(root = this.app.hubUI?.root) {
     const place = root?.querySelector('.citadel-hub-place'); if (!place) return;
     this.placeRoot = root;
-    const theme = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold;
+    const base = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold, skin = activeCampaignSkin();
+    // 캠페인 2~6지역 마을이 열려 있으면 그 마을 이름·분위기를 먼저 보이고 서비스 마을(이동석)은 부제로 둔다.
+    const theme = skin ? { subtitle: skin.subtitle + ' · ' + base.name, name: skin.name, mood: skin.mood, accent: skin.accent } : base;
     place.innerHTML = '<small>' + safe(theme.subtitle) + '</small><div class="town-place-row"><strong>' + safe(theme.name) + '</strong>' +
       '<button type="button" class="town-map-chip" aria-haspopup="dialog" aria-label="마을 이동 지도 열기">이동</button></div><span>' + safe(theme.mood) + '</span>';
     place.style.setProperty('--town-accent', theme.accent);
@@ -143,7 +146,7 @@ export class TownUI {
     this.updateBadge(root);
   }
   /** 이동석 앞에서 보이는 한 줄 안내. */
-  placeName() { return (TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold).name + ' 광장'; }
+  placeName() { return (activeCampaignSkin()?.name || (TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold).name) + ' 광장'; }
   waystoneSummary() {
     const towns = this.towns(), next = towns.find(town => !town.unlocked);
     if (!next) return '세 마을이 모두 열렸습니다. 이동석으로 오가세요.';

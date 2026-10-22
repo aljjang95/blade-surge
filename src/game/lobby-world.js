@@ -3,8 +3,10 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
 /** Original, runtime-authored citadel surroundings. Six static batches, no textures,
  * lights, particle emitters or combat navigation changes. */
-/** @param {{ quality?: string, townId?: string | null }} [options] */
-export function buildLobbyWorld({ quality = 'high', townId = null } = {}) {
+/** @param {{ quality?: string, townId?: string | null, skin?: any }} [options] */
+export function buildLobbyWorld({ quality = 'high', townId = null, skin = null } = {}) {
+ // 캠페인 2~6지역 마을(campaign-towns.js)은 서비스 마을과 무관하게 자기 풍경을 쓴다. 1지역은 아래 원형 성채 숲 마을이다.
+ if (skin?.scenery) return buildRegionWorld(skin, { quality });
  // 잿불 항구·별마루 설원은 자기 풍경을 쓰고, 서약의 성채(기본)는 아래 원형을 그대로 만든다.
  if (townId === 'emberport' || townId === 'starcrest') return buildTownWorld(townId, { quality });
  const root=new THREE.Group();root.name='TLL_CitadelWorld';
@@ -325,3 +327,228 @@ function buildStarcrest({ quality }) {
 export function buildTownWorld(townId, { quality = 'high' } = {}) {
   return townId === 'starcrest' ? buildStarcrest({ quality }) : buildEmberport({ quality });
 }
+
+// ---------------------------------------------------------------- 캠페인 지역 마을 풍경 (2~6지역)
+// 지역 던전의 색과 기존 환경 조각(등불·마을 문·나무)만 쓴다. 새 자산·조명·충돌 없이 병합 정적 배치다.
+const seededRandom = (seed) => { let state = seed >>> 0; return () => (state = (state * 1664525 + 1013904223) >>> 0) / 4294967296; };
+const ringPoint = (angle, radius) => [Math.sin(angle) * radius, -Math.cos(angle) * radius];
+
+function regionPoints(count, radius, y0, y1, color, size, seed) {
+  const random = seededRandom(seed), positions = [];
+  for (let i = 0; i < count; i++) {
+    const theta = random() * Math.PI * 2, r = radius * (.35 + random() * .65);
+    positions.push(Math.cos(theta) * r, y0 + random() * (y1 - y0), Math.sin(theta) * r);
+  }
+  const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const points = new THREE.Points(geometry, new THREE.PointsMaterial({ color, size, fog: false, depthWrite: false }));
+  points.name = 'Town_motes'; points.renderOrder = -9; return points;
+}
+
+// 건물 한 채: 몸체·테두리·사각뿔 지붕·불 켜진 창과 문. yaw 만큼 돌려 광장을 바라보게 한다.
+function regionHouse(b, { x, z, w, h, d, wall, roof, trim, glow, door, yaw = 0, roofH = 2.4 }) {
+  const c = Math.cos(yaw), n = Math.sin(yaw), at = (lx, lz) => [x + lx * c + lz * n, z - lx * n + lz * c];
+  b.box(w, h, d, wall, x, h / 2 - .6, z, yaw); b.box(w + .5, .3, d + .5, trim, x, h - .5, z, yaw);
+  b.cone(Math.max(w, d) * .75, roofH, roof, x, h + roofH / 2 - .4, z, 4, Math.PI / 4 + yaw, w / Math.max(w, d), d / Math.max(w, d));
+  for (let i = -1; i <= 1; i += 2) { const [px, pz] = at(i * w * .22, d / 2 + .02); b.box(.55, .75, .05, glow, px, h * .55 - .6, pz, yaw); }
+  const [dx, dz] = at(0, d / 2 + .03); b.box(1.5, 2.2, .06, door, dx, .5, dz, yaw);
+}
+
+function buildRegionWorld(spec, { quality }) {
+  const root = new THREE.Group(); root.name = 'TLL_Region_' + spec.id;
+  const lambert = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true }), basic = (color) => new THREE.MeshBasicMaterial({ color });
+  const low = quality === 'low', meshes = [], ownedGeometry = [], placements = [];
+  const kit = REGION_KITS[spec.scenery];
+  const materials = [...kit.solid.map(lambert), ...kit.glow.map(basic)];
+  const S = Object.fromEntries([...kit.names].map((name, i) => [name, i]));
+  const b = createBatcher(materials);
+  // 광장 아래 받침과 바깥 지면(지역마다 색이 다르다).
+  b.cyl(17.5, .9, S.base, 0, -.85, 0, 44); b.cyl(18.2, .25, S.trim, 0, -.42, 0, 44, 17.9);
+  kit.build({ b, S, low, placements, random: seededRandom(spec.chapter * 7919), root, meshes });
+  b.finish(materials, root, ownedGeometry);
+  const floor = groundDisc(88, spec.ground.y, spec.ground.inner, spec.ground.outer, 'Town_ground'); root.add(floor); meshes.push(floor);
+  const sky = skyDome(spec.sky.horizon, spec.sky.zenith, spec.sky.ground); root.add(sky); meshes.push(sky);
+  for (const extra of kit.sky({ low, random: seededRandom(spec.chapter * 104729), root, meshes })) { root.add(extra); meshes.push(extra); }
+  const environment = buildEnvironmentInstances(placements, { name: 'Region_' + spec.id });
+  if (kit.tint) tintGroup(environment, ...kit.tint); if (environment.userData.batchCount) root.add(environment);
+  const result = finishRoot(root, { batches: materials.length, meshes, environment, ownedMaterials: materials, ownedGeometry, parts: b.parts, townId: spec.id });
+  result.userData.version = 'campaign-region-town-v1'; result.userData.campaignChapter = spec.chapter;
+  return result;
+}
+
+const lanternRow = (placements, radius, scale = .95) => {
+  for (const side of [-1, 1]) for (const z of [-14, -8, -2, 4, 10]) placements.push({ asset: 'lantern', x: side * radius, z, y: -.3, scale, chunk: 'lanterns' });
+};
+
+const REGION_KITS = {
+  // ---- 2지역 불씨 용광로: 현무암 대장간 거리, 용암 수로, 굴뚝과 불똥
+  forge: {
+    names: ['base', 'trim', 'brick', 'roof', 'iron', 'basalt', 'door', 'lava', 'ember', 'window'],
+    solid: [0x3a2b27, 0x6a4a3c, 0x7a3e2c, 0x1e1516, 0x59616c, 0x2a2120, 0x3a251a], glow: [0xff4a12, 0xffc060, 0xffa24a],
+    tint: [0xff8a50, .4],
+    build({ b, S, low, placements, random }) {
+      for (const angle of [.5, 1.7, 3.0, 4.2, 5.4]) { // 광장 바깥으로 흐르는 용암 수로
+        const [x, z] = ringPoint(angle, 34); b.add(new THREE.BoxGeometry(2.6, .14, 34), S.lava, x * .93, -.62, z * .93, 0, angle + Math.PI);
+      }
+      b.cyl(11, .12, S.lava, -30, -.9, -30, 24);
+      // 뒤편 대형 주조소: 굴뚝 셋, 용광로 아가리, 벽돌 몸체
+      b.box(22, 9, 10, S.brick, 0, 3.9, -34); b.box(23, .6, 11, S.basalt, 0, 8.7, -34);
+      for (const x of [-7, 0, 7]) { b.cyl(1.5, 15, S.basalt, x, 9, -37, 10, 1.1); b.cyl(1.6, .7, S.lava, x, 16.8, -37, 10); }
+      b.box(6, 4.5, .2, S.lava, 0, 1.9, -28.9); b.box(7.4, .5, .5, S.iron, 0, 4.4, -28.8); b.box(.6, 5, .5, S.iron, -3.4, 1.9, -28.8); b.box(.6, 5, .5, S.iron, 3.4, 1.9, -28.8);
+      // 대장간 집 열 채
+      const houses = low ? 6 : 10;
+      for (let i = 0; i < houses; i++) {
+        const angle = (i + .5) * Math.PI * 2 / houses + .15, [x, z] = ringPoint(angle, 26 + (i % 3) * 3);
+        if (z < -22 && Math.abs(x) < 16) continue;
+        regionHouse(b, { x, z, w: 5.6 + (i % 2), h: 3.6 + (i % 3) * .5, d: 5, wall: i % 2 ? S.brick : S.basalt, roof: S.roof, trim: S.iron, glow: S.window, door: S.door, yaw: angle + Math.PI });
+        if (i % 3 === 0) { b.cyl(.55, 4.4, S.basalt, x + 1.2, 5.4, z, 8); b.cyl(.6, .3, S.lava, x + 1.2, 7.7, z, 8); }
+      }
+      // 모루와 망치 기념물
+      for (const side of [-1, 1]) { b.box(3.4, 1.1, 1.8, S.iron, side * 19, .0, -9); b.box(2, 1.4, 1.2, S.iron, side * 19, 1.0, -9); b.box(1, .5, 3.2, S.iron, side * 19.4, 1.9, -9, .5 * side); b.box(.35, 3, .35, S.door, side * 19.2, 1.9, -7.4); }
+      for (const side of [-1, 1]) for (const z of [-14, -4, 6]) { b.cyl(.28, 3.2, S.iron, side * 15.4, 1, z, 6); b.cyl(.55, .5, S.lava, side * 15.4, 2.8, z, 7); }
+      lanternRow(placements, 14.8);
+      placements.push({ asset: 'village-gate', x: 0, z: -27, y: -.4, yaw: 0, scale: 1.1, chunk: 'gate' });
+    },
+    sky({ low, random }) {
+      const sun = glowDisc(0xff6a2a, 8, 34, 9, -74, 1), halo = glowDisc(0xff3a14, 22, 33.5, 9, -73.5, .28);
+      return [sun, halo, regionPoints(low ? 120 : 260, 80, 4, 38, 0xff9a3c, 1.1, 91)];
+    },
+  },
+  // ---- 3지역 서리 서고: 보랏빛 눈밭, 층층 도서관, 거꾸로 흐르는 책장
+  archive: {
+    names: ['base', 'trim', 'pale', 'lilac', 'slate', 'wood', 'bookA', 'bookB', 'bookC', 'page', 'crystal'],
+    solid: [0x6f679c, 0xd2cdea, 0xe9e4fa, 0x9c90d6, 0x4a4478, 0x6a5878, 0x7a4ab0, 0x3a6fb0, 0xb04a6a], glow: [0xe6e0ff, 0xa7b8ff],
+    tint: [0xd8d0ff, .55],
+    build({ b, S, low, placements, random }) {
+      // 층층이 쌓인 대서고와 첨탑
+      [[22, 4, 11], [17, 4, 9], [12, 4, 7], [7, 4, 5]].forEach(([w, h, d], i) => { b.box(w, h, d, i % 2 ? S.lilac : S.pale, 0, 1.4 + i * 4, -35); b.box(w + .8, .45, d + .8, S.slate, 0, 3.6 + i * 4, -35); });
+      b.cone(3.4, 13, S.slate, 0, 25, -35, 6); b.cyl(.2, 6, S.crystal, 0, 33, -35, 6);
+      for (let row = 0; row < 4; row++) for (let i = -4; i <= 4; i++) b.box(1.4, 1.9, .12, [S.bookA, S.bookB, S.bookC][(i + row + 9) % 3], i * 2 * (1 - row * .17), 1.9 + row * 4, -29.4 + row * .8 - (row ? .0 : 0));
+      // 둥근 독서탑과 서가 담장
+      for (const [x, z, r, h] of [[-26, -18, 3.4, 12], [26, -18, 3.4, 11], [-30, 2, 2.6, 8], [30, 4, 2.6, 8]]) { b.cyl(r, h, S.lilac, x, h / 2 - .6, z, 12, r * .92); b.cone(r * 1.2, 3.2, S.slate, x, h + 1, z, 12); }
+      const shelves = low ? 5 : 9;
+      for (let i = 0; i < shelves; i++) {
+        const angle = (i + .3) * Math.PI * 2 / shelves, [x, z] = ringPoint(angle, 24 + (i % 2) * 3);
+        if (z < -20 && Math.abs(x) < 14) continue;
+        b.box(7.4, 3.4, 1.2, S.wood, x, 1.1, z, angle + Math.PI / 2); b.box(7.4, .3, 1.5, S.slate, x, 2.9, z, angle + Math.PI / 2);
+        for (let k = -3; k <= 3; k++) { const dx = k * .95 * Math.cos(angle + Math.PI / 2), dz = -k * .95 * Math.sin(angle + Math.PI / 2); b.box(.6, 2.4, .3, [S.bookA, S.bookB, S.bookC][(k + i + 6) % 3], x + dx, 1.2, z + dz, angle + Math.PI / 2); }
+      }
+      // 서리 낀 침엽수와 얼음 기둥
+      for (let i = 0; i < (low ? 8 : 16); i++) { const angle = i * .41 + .2, [x, z] = ringPoint(angle, 36 + (i % 3) * 5); b.cone(2.3, 8 + (i % 4), S.pale, x, 3.4, z, 7); b.cone(1.5, 5, S.lilac, x, 8, z, 7); }
+      // 거꾸로 흐르는 책장: 하늘로 떠오르는 책과 쪽지
+      for (let i = 0; i < (low ? 16 : 30); i++) {
+        const angle = i * .9, [x, z] = ringPoint(angle, 20 + (i % 5) * 4), y = 5 + (i * 7 % 17);
+        b.add(new THREE.BoxGeometry(2.4, 3.2, .08), S.page, x, y, z, i * .31, angle + .5, i * .2);
+        if (i % 3 === 0) b.add(new THREE.BoxGeometry(1.1, .26, .8), [S.bookA, S.bookB, S.bookC][i % 3 + (i % 2)], x + 1, y + 1.6, z, .4, angle, .5);
+      }
+      for (const side of [-1, 1]) for (const z of [-12, -4, 4]) placements.push({ asset: 'lantern', x: side * 16.4, z, y: -.3, scale: .92, chunk: 'lanterns' });
+      placements.push({ asset: 'village-gate', x: 0, z: -27, y: -.4, scale: 1.05, chunk: 'gate' });
+    },
+    sky({ low }) {
+      const moon = glowDisc(0xf0ecff, 4.6, -30, 38, -74, 1), halo = glowDisc(0xb4a8ff, 12, -29.5, 38, -73.5, .22);
+      return [moon, halo, regionPoints(low ? 160 : 340, 84, 6, 70, 0xf2eeff, .9, 77)];
+    },
+  },
+  // ---- 4지역 별잠 등대: 가라앉은 선단, 산호, 떠다니는 푸른 불빛
+  tide: {
+    names: ['base', 'trim', 'deck', 'hull', 'mast', 'sail', 'coral', 'coral2', 'rock', 'beacon', 'jelly'],
+    solid: [0x2b4f58, 0x7ab8b0, 0x5a6a62, 0x2a3c44, 0x5a4a3a, 0x9fd8d0, 0x1fa3a8, 0xd9628a, 0x1e3a44], glow: [0xfff2b0, 0x6fe3d6],
+    tint: [0x5ee0d0, .4],
+    build({ b, S, low, placements, random }) {
+      // 등대: 줄무늬 탑과 빛나는 등롱
+      for (let i = 0; i < 4; i++) b.cyl(2.3 - i * .25, 3.6, i % 2 ? S.coral2 : S.sail, -30, 1.2 + i * 3.6, -26, 12, 2.05 - i * .25);
+      b.cyl(2.4, .3, S.deck, -30, 15.6, -26, 12); b.cyl(1.3, 1.8, S.beacon, -30, 16.7, -26, 10); b.cone(1.9, 1.8, S.hull, -30, 18.5, -26, 10);
+      b.cyl(4, 1.6, S.rock, -30, -.1, -26, 10, 3.2);
+      // 가라앉은 배: 기울어진 선체와 돛대
+      const wreck = (x, z, yaw, tilt, scale) => {
+        b.add(new THREE.BoxGeometry(4 * scale, 2.2 * scale, 11 * scale), S.hull, x, -.2, z, tilt, yaw, tilt * .6);
+        b.add(new THREE.BoxGeometry(3.4 * scale, .3, 10 * scale), S.deck, x, .9 * scale, z, tilt, yaw, tilt * .6);
+        b.add(new THREE.CylinderGeometry(.18 * scale, .24 * scale, 12 * scale, 6), S.mast, x + 1.2, 6 * scale, z, tilt * .5, 0, tilt);
+        b.add(new THREE.BoxGeometry(.08, 6 * scale, 3.4 * scale), S.sail, x + 1.2, 7 * scale, z + 1.2, tilt * .5, yaw, tilt);
+      };
+      wreck(24, -30, .5, .22, 1.1); wreck(-20, 22, -.8, -.18, 1); wreck(34, 10, 1.4, .26, .9); wreck(-38, -6, .2, -.2, 1.2);
+      // 부두 길과 말뚝
+      b.box(4, .3, 20, S.deck, 0, -.55, 28); for (let i = 0; i < 6; i++) for (const side of [-1, 1]) b.cyl(.16, 1.8, S.mast, side * 2.2, -.2, 20 + i * 3.4, 7);
+      // 산호 첨탑과 바위
+      for (let i = 0; i < (low ? 14 : 28); i++) {
+        const angle = i * .57 + .3, [x, z] = ringPoint(angle, 22 + (i * 5 % 9) * 2.2);
+        if (Math.abs(x) < 5.5 && z > 8) continue;
+        const h = 3 + (i * 3 % 6), m = i % 3 ? S.coral : S.coral2;
+        b.cone(1 + (i % 3) * .3, h, m, x, h / 2 - .8, z, 6, angle); if (i % 2) b.cone(.7, h * .7, m, x + 1.1, h * .35 - .8, z + .6, 5, angle + 1);
+      }
+      for (const [x, z, r, h] of [[-52, -30, 7, 9], [50, -38, 8, 11], [-46, 24, 6, 7], [44, 30, 6, 8]]) b.cone(r, h, S.rock, x, h / 2 - 1.4, z, 6, x * .1);
+      // 떠다니는 푸른 해파리 등
+      for (let i = 0; i < (low ? 10 : 22); i++) { const angle = i * 1.7, [x, z] = ringPoint(angle, 14 + (i % 6) * 4); b.ball(.35 + (i % 3) * .12, S.jelly, x, 4 + (i * 5 % 11), z, 1, 1.3, 1); }
+      lanternRow(placements, 14.8);
+      placements.push({ asset: 'village-gate', x: 0, z: -27, y: -.4, yaw: 0, scale: 1.1, chunk: 'gate' });
+    },
+    sky({ low }) {
+      const glow = glowDisc(0x7ff6e6, 9, 28, 30, -74, .9), halo = glowDisc(0x3ac8d8, 24, 27.5, 30, -73.5, .2);
+      return [glow, halo, regionPoints(low ? 140 : 300, 80, 2, 50, 0x8ff6ea, 1, 53)];
+    },
+  },
+  // ---- 5지역 새벽 성문: 다섯 왕좌 기둥, 깨진 금빛 왕관, 새벽을 가르는 빛줄기
+  crown: {
+    names: ['base', 'trim', 'marble', 'dark', 'gold', 'violet', 'stone', 'beam', 'dawn'],
+    solid: [0x3a2c4a, 0x8a7a2a, 0xcfc4d8, 0x2e2240, 0xf2c45c, 0x7a50a0, 0x5a4c6a], glow: [0xffe3a0, 0xffb070],
+    tint: [0xc896e8, .45],
+    build({ b, S, low, placements }) {
+      // 다섯 왕좌 기둥이 반원으로 서고 각각 금빛 빛줄기를 올린다.
+      for (let i = 0; i < 5; i++) {
+        const angle = (i - 2) * .5, [x, z] = ringPoint(angle + Math.PI, -30);
+        b.cyl(2.2, 1, S.stone, x, -.2, z, 10); b.cyl(1.3, 11, S.marble, x, 5.4, z, 10, 1.05); b.cyl(1.9, .6, S.gold, x, 11.2, z, 10);
+        for (let k = 0; k < 6; k++) b.cone(.34, 1.7, S.gold, x + Math.cos(k * 1.047) * 1.3, 12.3, z + Math.sin(k * 1.047) * 1.3, 4);
+        b.cone(.9, 44, S.beam, x, 33, z, 8);
+        b.box(3.4, 1, 2.4, S.violet, x, .3, z + 3.4); b.box(2.6, 2.2, .5, S.gold, x, 1.6, z + 4.5);
+      }
+      // 허공에 걸린 깨진 금빛 왕관
+      b.add(new THREE.TorusGeometry(10, .9, 6, 40, Math.PI * 1.65), S.gold, 0, 30, -46, Math.PI / 2 - .35, 0, .3);
+      for (let k = 0; k < 7; k++) { const a = k * .72 + .4; b.cone(1, 5 + (k % 3), S.gold, Math.cos(a) * 10, 30 + 3.2 + Math.sin(a) * 4.6 * .35, -46 + Math.sin(a) * 3.2, 5); }
+      // 갈라진 타일 광장 바깥 원형 문양과 낮은 성벽
+      for (const r of [20, 26]) { for (let i = 0; i < 40; i++) { const a = i * Math.PI / 20; b.box(2.2, .12, .3, S.gold, Math.sin(a) * r, -.4, -Math.cos(a) * r, a); } }
+      for (let i = 0; i < (low ? 8 : 14); i++) {
+        const angle = (i + .5) * Math.PI * 2 / (low ? 8 : 14), [x, z] = ringPoint(angle, 36 + (i % 2) * 4), h = 5 + (i * 3 % 7);
+        if (z < -26 && Math.abs(x) < 24) continue;
+        b.box(3.4, h, 3.4, S.dark, x, h / 2 - .6, z, angle); b.box(4, .5, 4, S.stone, x, h - .4, z, angle); if (i % 2) b.cone(2.6, 3, S.violet, x, h + 1.2, z, 4, angle + Math.PI / 4);
+      }
+      lanternRow(placements, 14.8);
+      placements.push({ asset: 'village-gate', x: 0, z: -27, y: -.4, yaw: 0, scale: 1.15, chunk: 'gate' });
+    },
+    sky({ low }) {
+      const dawn = glowDisc(0xffb070, 16, -26, 3, -76, 1), halo = glowDisc(0xff8a58, 38, -25.5, 3, -75.5, .22);
+      return [dawn, halo, regionPoints(low ? 160 : 320, 86, 10, 72, 0xffe9c0, .9, 61)];
+    },
+  },
+  // ---- 6지역 함께 잇는 귀환로: 햇살 들판, 둥근 돌다리, 깃발 줄, 따뜻한 집들
+  homeward: {
+    names: ['base', 'trim', 'wallA', 'wallB', 'roofA', 'roofB', 'wood', 'stone', 'green', 'flagA', 'flagB', 'flagC', 'window'],
+    solid: [0x7f8f66, 0xb8b4a0, 0xf1e6cc, 0xd9b98a, 0xc65a3b, 0x4f7fb0, 0x7b5a3c, 0xb8b4a0, 0x4f8a4a], glow: [0xff6b6b, 0x6bb5ff, 0xffd36b, 0xffe9a8],
+    tint: null,
+    build({ b, S, low, placements }) {
+      // 완만한 언덕과 돌다리
+      for (const [x, z, sx, sy, sz] of [[-34, -20, 18, 4.4, 12], [32, -26, 16, 5, 13], [-8, -46, 24, 6, 12], [50, 6, 14, 3.4, 12], [-48, 14, 14, 3.4, 12], [10, 44, 18, 3, 10]]) b.ball(1, S.green, x, -1.6, z, sx, sy, sz);
+      b.add(new THREE.TorusGeometry(9, .7, 6, 24, Math.PI), S.stone, 0, -3, -27, 0, 0, 0); b.box(19, .5, 4.4, S.stone, 0, 6.1, -27); b.box(19, 1.1, .4, S.trim, 0, 6.9, -25); b.box(19, 1.1, .4, S.trim, 0, 6.9, -29);
+      b.box(4.4, .4, 14, S.stone, 0, -.6, -19.5);
+      // 귀환 마을의 따뜻한 집들
+      const houses = low ? 7 : 12;
+      for (let i = 0; i < houses; i++) {
+        const angle = (i + .4) * Math.PI * 2 / houses + .1, [x, z] = ringPoint(angle, 25 + (i % 3) * 2.6);
+        if (z < -18 && Math.abs(x) < 7) continue;
+        regionHouse(b, { x, z, w: 5 + (i % 2), h: 3 + (i % 3) * .5, d: 4.6, wall: i % 2 ? S.wallA : S.wallB, roof: i % 3 ? S.roofA : S.roofB, trim: S.wood, glow: S.window, door: S.wood, yaw: angle + Math.PI, roofH: 2.8 });
+      }
+      // 깃발 줄: 등불 기둥 사이에 색색 깃발
+      for (const side of [-1, 1]) {
+        for (const z of [-14, -8, -2, 4, 10]) b.cyl(.15, 3.6, S.wood, side * 14.8, 1.2, z, 6);
+        for (let z = -14; z < 10; z += 1.2) b.box(.06, .6, .5, [S.flagA, S.flagB, S.flagC][Math.floor((z + 14) / 1.2) % 3], side * 14.8, 2.7 - Math.sin((z + 14) / 24 * Math.PI) * .15, z + .6);
+      }
+      // 낮은 구름
+      for (let i = 0; i < 9; i++) { const angle = i * .75, [x, z] = ringPoint(angle, 60); b.ball(1, S.wallA, x, 30 + (i % 3) * 3, z, 9, 2, 5); }
+      for (let i = 0; i < (low ? 14 : 28); i++) { const angle = i * .43 + .2, r = 36 + (i % 4) * 5, [x, z] = ringPoint(angle, r); placements.push({ asset: i % 3 ? 'broadleaf-tree' : 'evergreen-tree', x, z, y: -.55, yaw: angle, scale: .85 + (i % 4) * .12, chunk: 'trees-' + (i % 4) }); }
+      for (const side of [-1, 1]) for (const z of [-14, -8, -2, 4, 10]) placements.push({ asset: 'lantern', x: side * 13.7, z, y: -.3, scale: .95, chunk: 'lanterns' });
+      placements.push({ asset: 'village-gate', x: 0, z: -34, y: -.4, yaw: 0, scale: 1.1, chunk: 'gate' });
+    },
+    sky() {
+      const sun = glowDisc(0xfff0b8, 6.5, -30, 16, -72, 1), halo = glowDisc(0xffd78a, 24, -29.5, 16, -71.5, .28);
+      return [sun, halo];
+    },
+  },
+};
