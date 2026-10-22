@@ -72,6 +72,7 @@ function progress(def,track,rotation) {
  * waived: 플레이어가 어떻게 해도 못 채우는 통계(예: 무한의 성 이번 주 상한 도달 → 'towerFloors').
  * 그 임무는 목표 달성으로 보고 보상을 받을 수 있다. 호출자가 표시와 수령에 같은 목록을 넘긴다.
  */
+/** @param {any} state @param {string} kind @param {string[]} [waived] */
 function rows(state,kind,waived=[]) {
   const defs=kind==='daily'?DAILY_CONTRACTS:WEEKLY_CONTRACTS,track=state[kind],rotation=DUNGEONS[state.day%3];
   return defs.map(def=>{
@@ -82,6 +83,7 @@ function rows(state,kind,waived=[]) {
   });
 }
 /** Read only: callers refresh state inside their durable transaction before displaying/claiming. */
+/** @param {any} state @param {number} nowMs @param {{waived?:string[]}} [options] */
 export function contractRows(state,nowMs,{waived=[]}={}) {
   const view=normalizeJourney(state);const p=refreshPeriods(view,nowMs);
   return {daily:rows(view,'daily',waived),weekly:rows(view,'weekly',waived),rotationDungeonId:DUNGEONS[view.day%3].id,nextResetAt:p.nextResetAt};
@@ -114,6 +116,7 @@ export function recordJourneyAction(state,{receiptId:id,stat,amount=1,day,week}=
   for(const kind of ['daily','weekly'])if(kind==='daily'?daily:weekly){const counts=state[kind].actions;counts[stat]=Math.min(MAX,integer(counts[stat])+amount);}
   return {ok:true,daily,weekly};
 }
+/** @param {any} state @param {string} kind @param {string} id @param {{waived?:string[]}} [options] */
 export function claimContract(state,kind,id,{waived=[]}={}) {
   if(!['daily','weekly'].includes(kind))return fail('unknown');
   const row=rows(state,kind,waived).find(r=>r.id===id);if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.ready)return fail('incomplete');
