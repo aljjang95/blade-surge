@@ -64,12 +64,12 @@ test('invalid stats, amounts, ids and periods are rejected without mutation',()=
 
 test('daily and weekly boundaries reset action counters and late actions stay in their own period',()=>{
   const s=current(),monday={day:s.day,week:s.week};act(s,'pull:a','pulls',10);claimContract(s,'daily','daily_pulls');
-  refreshPeriods(s,MONDAY+DAY);expect(s.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0});expect(s.daily.claimed).toEqual([]);
+  refreshPeriods(s,MONDAY+DAY);expect(s.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0,towerFloors:0,hardClears:0});expect(s.daily.claimed).toEqual([]);
   expect(s.weekly.actions.pulls).toBe(10);
   // An action paid on Monday but saved on Tuesday counts only toward this week.
   expect(act(s,'pull:late','pulls',10,monday)).toEqual({ok:true,daily:false,weekly:true});
   expect(s.daily.actions.pulls).toBe(0);expect(s.weekly.actions.pulls).toBe(20);
-  refreshPeriods(s,MONDAY+7*DAY);expect(s.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0});
+  refreshPeriods(s,MONDAY+7*DAY);expect(s.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0,towerFloors:0,hardClears:0});
   expect(act(s,'boss:late','bossAttempts',1,monday)).toEqual({ok:true,daily:false,weekly:false});
   expect(s.weekly.actions.bossAttempts).toBe(0);expect(act(s,'pull:a','pulls').ok).toBe(false);
   const before=structuredClone(s);refreshPeriods(s,MONDAY);expect(s).toEqual(before);
@@ -78,12 +78,12 @@ test('daily and weekly boundaries reset action counters and late actions stay in
 test('version 1 saves migrate to zeroed counters and hostile counters are clamped',()=>{
   const v1={version:1,day:5,week:1,daily:{wins:2,targets:{glass_garden:2},claimed:['first_dungeon','daily_pulls']},weekly:{wins:2,targets:{}},receipts:['dungeon:1']};
   const s=normalizeJourney(v1);
-  expect(s.version).toBe(2);expect(s.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0});expect(s.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0});
+  expect(s.version).toBe(2);expect(s.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0,towerFloors:0,hardClears:0});expect(s.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0,towerFloors:0,hardClears:0});
   expect(s.actionReceipts).toEqual([]);expect(s.daily.wins).toBe(2);expect(s.receipts).toEqual(['dungeon:1']);
   expect(s.daily.claimed).toEqual(['first_dungeon','daily_pulls']);
   const hostile=normalizeJourney({daily:{actions:{pulls:Infinity,upgrades:-4,bossAttempts:99999999,__proto__:{pulls:9},gold:5}},weekly:{actions:[1,2]},
     actionReceipts:['ok:1','ok:1','bad space',...Array.from({length:300},(_,i)=>`a:${i}`)]});
-  expect(hostile.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:1000000});expect(hostile.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0});
+  expect(hostile.daily.actions).toEqual({pulls:0,upgrades:0,bossAttempts:1000000,towerFloors:0,hardClears:0});expect(hostile.weekly.actions).toEqual({pulls:0,upgrades:0,bossAttempts:0,towerFloors:0,hardClears:0});
   expect(hostile.actionReceipts).toHaveLength(256);expect(normalizeJourney(hostile)).toEqual(hostile);
   const capped=current();capped.daily.actions.pulls=999990;act(capped,'cap','pulls',100);expect(capped.daily.actions.pulls).toBe(1000000);
 });

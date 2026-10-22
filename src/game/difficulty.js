@@ -1,4 +1,13 @@
 /** 캠페인 난이도 — 같은 던전을 다시 도전할 이유와 보상 선택을 만든다. */
+import { HELL_DIFFICULTY } from '../data/content-90d.js';
+
+// 지옥은 지역 10관문을 모두 악몽(순위 2) 이상으로 클리어해야 열린다. endgame-core 를 불러오면 순환 참조라 저장값만 직접 읽는다.
+const chapterAtNightmare = (save, key) => {
+  const ch = Number(String(key).split('-')[0]), peak = save?.endgame?.peak;
+  if (!Number.isInteger(ch) || !peak || typeof peak !== 'object') return false;
+  for (let st = 1; st <= 10; st++) if (!((peak[`${ch}-${st}`] ?? -1) >= 2)) return false;
+  return true;
+};
 export const DIFFICULTIES = {
   story: {
     id: 'story', name: '스토리', short: 'STORY', tone: 'calm',
@@ -18,9 +27,10 @@ export const DIFFICULTIES = {
     enemyHp: 1.62, enemyAtk: 1.38, enemyDensity: 1.18, rewardMul: 1.78, expMul: 1.65,
     unlock: (save, key) => (save.progress?.stars?.[key] || 0) >= 3,
   },
+  hell: { ...HELL_DIFFICULTY, unlock: chapterAtNightmare },
 };
 
-export const DIFFICULTY_ORDER = ['story', 'adept', 'nightmare'];
+export const DIFFICULTY_ORDER = ['story', 'adept', 'nightmare', 'hell'];
 
 export function difficultyKey(ch, st) { return `${ch}-${st}`; }
 

@@ -4,11 +4,17 @@ import { applyDifficulty, availableDifficulties, resolveDifficulty } from '../sr
 
 test('campaign difficulty unlocks in a readable progression', () => {
   const eco = new Economy();
-  expect(availableDifficulties(eco.s, 1, 1).map((d) => d.unlocked)).toEqual([true, false, false]);
+  expect(availableDifficulties(eco.s, 1, 1).map((d) => d.unlocked)).toEqual([true, false, false, false]);
   eco.s.progress.unlocked = 2;
-  expect(availableDifficulties(eco.s, 1, 1).map((d) => d.unlocked)).toEqual([true, true, false]);
+  expect(availableDifficulties(eco.s, 1, 1).map((d) => d.unlocked)).toEqual([true, true, false, false]);
   eco.s.progress.stars['1-1'] = 3;
   expect(resolveDifficulty(eco.s, 1, 1, 'nightmare').id).toBe('nightmare');
+  // 지옥: 지역 10관문을 모두 악몽 이상으로 클리어해야 그 지역에서 열린다.
+  for (let st = 1; st <= 9; st++) eco.s.endgame.peak[`1-${st}`] = 2;
+  expect(resolveDifficulty(eco.s, 1, 1, 'hell').id).toBe('story'); // 잠긴 요청은 첫 난이도로 돌아간다
+  eco.s.endgame.peak['1-10'] = 2;
+  expect(resolveDifficulty(eco.s, 1, 1, 'hell').id).toBe('hell');
+  expect(resolveDifficulty(eco.s, 2, 1, 'hell').id).not.toBe('hell');
 });
 
 test('locked difficulty requests fall back without mutating the save', () => {

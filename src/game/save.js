@@ -4,6 +4,7 @@ import { normalizeRpg } from './rpg-core.js';
 import { normalizeMasterworks } from './masterworks-core.js';
 import { normalizeJourney } from './journey-core.js';
 import { normalizeArsenal } from './arsenal-core.js';
+import { normalizeEndgame } from './endgame-core.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
 export function normalizeSave(raw, fresh) {
@@ -12,5 +13,6 @@ export function normalizeSave(raw, fresh) {
   save.masterworks = normalizeMasterworks(raw.masterworks);
   save.journey = normalizeJourney(raw.journey);
   save.arsenal = normalizeArsenal(raw.arsenal);
+  save.endgame = normalizeEndgame(raw.endgame);
   return save;
 }

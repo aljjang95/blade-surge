@@ -16,6 +16,7 @@ import { createSeededRng } from '../shared/rng.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
+import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
 
 const KEY = 'bladesurge_save_v1';
 // 분해: 판매 골드의 절반과 강화석(에픽은 상급)을 돌려준다. 유니크 이상은 일괄 분해 대상에서 보호한다.
@@ -118,7 +119,7 @@ export class Economy {
   }
   fresh() {
     return {
-      expedition: normalizeExpedition(), journey: normalizeJourney(), actionSequence: 0,
+      expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), actionSequence: 0,
       schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
@@ -482,7 +483,12 @@ export class Economy {
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
     // 지역 마지막 관문(X-10)을 처음 클리어해 다음 지역이 열리면 로비 마을도 그 지역 마을로 바뀐다(저장됨). 축하는 한 번만 보여 준다.
     const regionUnlock = this.unlockRegionTown(stage, townBefore);
-    const m = double ? 2 : 1; const r = stage.rewards; const loot = [];
+    // 난이도 최고 기록(지옥 해금)과 숙련 이상 승리 임무. 시즌 이벤트는 완료 보상(골드·EXP·강화석)에만 붙는다(서버 정산도 같은 시계).
+    s.endgame = normalizeEndgame(s.endgame);
+    const difficultyId = stage.difficultyId || 'story';
+    recordDifficultyClear(s.endgame, stage.ch, stage.st, difficultyId);
+    if (difficultyId !== 'story') this.recordJourneyAction('hardClears');
+    const m = double ? 2 : 1; const r = applyEventRewards(stage.rewards, activeEvents(nowOf(this)), 'campaign'); const loot = [];
     const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
@@ -515,6 +521,43 @@ export class Economy {
     const rewards = {};
     for (const reward of receipt.got) if (['gold', 'stones', 'stones2', 'stones3', 'fragments'].includes(reward.k)) rewards[reward.k] = (rewards[reward.k] || 0) + reward.n;
     return this.addRewards(rewards, { applyVip: false });
+  }
+  // ---------- 무한의 성 ----------
+  towerSummary() { this.s.endgame = normalizeEndgame(this.s.endgame); return towerSummary(this.s.endgame, this.s.progress, nowOf(this)); }
+  /** 다음 층 전투 정의. 해금 전이거나 시즌 상한에 닿았으면 null. */
+  nextTowerStage() { const t = this.towerSummary(); return t.unlocked && !t.capped ? towerStage(t.next) : null; }
+  /**
+   * 무한의 성 층 돌파 정산. 첫 돌파 보상 + 필드 드랍 + 처치 EXP. 에너지·별·캠페인 진행도는 바꾸지 않는다.
+   * receiptId 로 한 번만 정산한다(재시도·중복 결과 화면 방지).
+   */
+  completeTowerFloor(stage, { receiptId, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
+    const s = this.s; s.endgame = normalizeEndgame(s.endgame);
+    if (!stage?.tower || !towerUnlocked(s.progress)) return { ok: false, error: 'locked' };
+    const record = recordTowerClear(s.endgame, { floor: stage.tower.floor, receiptId, nowMs: nowOf(this) });
+    if (!record.ok) return record;
+    const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || s.selected;
+    const count = (v) => Number.isSafeInteger(v) && v > 0 ? Math.min(v, 100000000) : 0;
+    const r = record.rewards;
+    const got = this.addRewards({ gold: (r.gold || 0) + count(fieldGold), gems: r.gems || 0, stones: (r.stones || 0) + count(fieldStones),
+      stones2: (r.stones2 || 0) + count(fieldStones2), stones3: (r.stones3 || 0) + count(fieldStones3), fragments: count(fieldFragments) + (stage.boss ? 5 : 0),
+      transcendStones: r.transcendStones || 0 }, { silent: true });
+    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId));
+    const prevLv = this.hero(heroId).level, combatExp = ledger?.exp ?? 0;
+    const stageExp = Math.floor(stage.rewards.exp * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));
+    const ups = this.addHeroExp(heroId, stageExp + combatExp, { silent: true });
+    if (ledger) ledger.settled = true;
+    this.recordJourneyAction('towerFloors');
+    const passUps = this.addPassXp(stage.rewards.bp);
+    const saved = this.emit();
+    return { ok: true, floor: record.floor, events: record.events, got, loot: [...fieldLoot], ups, passUps, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId,
+      first: true, saveError: !saved };
+  }
+  claimTowerChest() {
+    const s = this.s; s.endgame = normalizeEndgame(s.endgame);
+    const claim = claimTowerChest(s.endgame, nowOf(this));
+    if (!claim.ok) return claim;
+    const got = this.addRewards(claim.rewards, { silent: true });
+    return { ok: true, got, saveError: !this.emit() };
   }
   sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------
