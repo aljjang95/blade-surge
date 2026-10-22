@@ -5,6 +5,7 @@ import { RARITY_COLOR, ITEM_BY_ID } from '../data/items.js';
 import { createLootVisual } from './loot-visual.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { lootTable, pickLootRarity } from '../data/loot-tables.js';
+import { killDrops, grantLootItem } from '../shared/settlement.js';
 
 const _v = new THREE.Vector3();
 
@@ -155,6 +156,8 @@ export class DropSystem {
     if (enemy.packFollower) return;
     this.fieldLedger();
     const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
+    // 서버 런 티켓(MMO P1)이 있으면 서버가 정산 때 같은 lootSeed로 재생성할 드랍을 그대로 보여 준다.
+    if (Number.isInteger(this.game.v1Run?.lootSeed) && !stage.expedition) { this.onSeededKill(enemy, stage, rank); return; }
     const table = lootTable(stage.ch, rank, stage.difficultyId || stage.campaignDifficulty?.id || 'story');
     const pos = enemy.pos.clone();
     const g = enemy.def.gold || 1;
@@ -184,6 +187,17 @@ export class DropSystem {
       if (inst) this.spawn(pos, 'item', inst, { count: 1, spread: 1.4 });
     }
   }
+  /** 시드 드랍: 계급별 처치 순번으로 서버와 같은 순수 함수를 굴린다. 처치 수는 정산 보고에 쓴다. */
+  onSeededKill(enemy, stage, rank) {
+    const counts = enemy.summoned ? (this.summonedKills ||= { normal: 0, elite: 0, boss: 0 }) : (this.killCounts ||= { normal: 0, elite: 0, boss: 0 });
+    const index = counts[rank]++, pos = enemy.pos.clone(), eco = this.game.app?.eco;
+    for (const d of killDrops(stage, this.game.v1Run.lootSeed, rank, index, { summoned: !!enemy.summoned })) {
+      if (d.kind === 'gold') this.spawn(pos, 'gold', d.amount, { count: d.count, spread: rank === 'boss' ? 2 : 1 });
+      else if (d.kind === 'material') this.spawn(pos, 'material', { id: d.id, n: d.n });
+      else if (d.kind === 'item') { if (!eco) continue; const inst = grantLootItem(eco, d); eco.save(); this.spawn(pos, 'item', { ...inst, rarity: d.rarity }, { count: 1, spread: 1.4 }); }
+      else this.spawn(pos, d.kind, d.n, { count: 1, spread: d.kind === 'frag' ? 1.5 : 1 });
+    }
+  }
   fieldLedger() {
     if (!this._ledger || this._ledger.stage !== this.game.stage) this._ledger = this.game.app?.eco?.beginFieldRewards?.(this.game.stage, this.game.heroId);
     return this._ledger;
@@ -192,5 +206,6 @@ export class DropSystem {
     this.game.app?.eco?.discardFieldRewards?.(this._ledger); this._ledger = null;
     while (this.items.length) this._remove(this.items.length - 1);
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
+    this.killCounts = null; this.summonedKills = null;
   }
 }

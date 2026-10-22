@@ -1,0 +1,200 @@
+{
+  "version": "p1-calibrated-20261022",
+  "note": "MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다.",
+  "dpsPerAtk": 40,
+  "damageSlack": 0.2,
+  "maxRevives": 3,
+  "wallClockSlack": 1.2,
+  "defaults": {
+    "minClearMs": 20000,
+    "kills": {
+      "normal": 441,
+      "elite": 34,
+      "boss": 3
+    },
+    "summonedKills": 120,
+    "maxRooms": 17
+  },
+  "stages": {
+    "1-1:story": {
+      "minClearMs": 79833,
+      "kills": {
+        "normal": 279,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 16,
+      "maxRooms": 15
+    },
+    "1-2:story": {
+      "minClearMs": 83906,
+      "kills": {
+        "normal": 279,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 16,
+      "maxRooms": 15
+    },
+    "1-3:story": {
+      "minClearMs": 109162,
+      "kills": {
+        "normal": 390,
+        "elite": 34,
+        "boss": 2
+      },
+      "summonedKills": 22,
+      "maxRooms": 17
+    },
+    "1-4:story": {
+      "minClearMs": 66607,
+      "kills": {
+        "normal": 231,
+        "elite": 26,
+        "boss": 2
+      },
+      "summonedKills": 16,
+      "maxRooms": 13
+    },
+    "1-5:story": {
+      "minClearMs": 114454,
+      "kills": {
+        "normal": 408,
+        "elite": 34,
+        "boss": 2
+      },
+      "summonedKills": 34,
+      "maxRooms": 17
+    },
+    "1-6:story": {
+      "minClearMs": 76599,
+      "kills": {
+        "normal": 272,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 16,
+      "maxRooms": 14
+    },
+    "1-7:story": {
+      "minClearMs": 84351,
+      "kills": {
+        "normal": 324,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 19,
+      "maxRooms": 15
+    },
+    "1-8:story": {
+      "minClearMs": 91578,
+      "kills": {
+        "normal": 302,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 19,
+      "maxRooms": 14
+    },
+    "1-9:story": {
+      "minClearMs": 116221,
+      "kills": {
+        "normal": 417,
+        "elite": 34,
+        "boss": 2
+      },
+      "summonedKills": 34,
+      "maxRooms": 17
+    },
+    "1-10:story": {
+      "minClearMs": 104489,
+      "kills": {
+        "normal": 339,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 16,
+      "maxRooms": 15
+    },
+    "2-1:story": {
+      "minClearMs": 95400,
+      "kills": {
+        "normal": 333,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 22,
+      "maxRooms": 15
+    },
+    "2-5:story": {
+      "minClearMs": 135557,
+      "kills": {
+        "normal": 348,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 13,
+      "maxRooms": 15
+    },
+    "2-10:story": {
+      "minClearMs": 186681,
+      "kills": {
+        "normal": 359,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 43,
+      "maxRooms": 15
+    },
+    "3-1:story": {
+      "minClearMs": 185669,
+      "kills": {
+        "normal": 323,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 28,
+      "maxRooms": 14
+    },
+    "3-5:story": {
+      "minClearMs": 197598,
+      "kills": {
+        "normal": 326,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 19,
+      "maxRooms": 14
+    },
+    "4-1:story": {
+      "minClearMs": 267735,
+      "kills": {
+        "normal": 437,
+        "elite": 34,
+        "boss": 2
+      },
+      "summonedKills": 61,
+      "maxRooms": 17
+    },
+    "5-1:story": {
+      "minClearMs": 244427,
+      "kills": {
+        "normal": 441,
+        "elite": 34,
+        "boss": 2
+      },
+      "summonedKills": 52,
+      "maxRooms": 17
+    },
+    "6-1:story": {
+      "minClearMs": 244402,
+      "kills": {
+        "normal": 369,
+        "elite": 30,
+        "boss": 2
+      },
+      "summonedKills": 55,
+      "maxRooms": 15
+    }
+  }
+}
