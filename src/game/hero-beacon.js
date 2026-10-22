@@ -1,11 +1,25 @@
 ﻿import * as THREE from 'three';
 
+/** 영웅 불투명 메시의 renderOrder. 바닥 링(990~993)보다 늦게 그려 링의 뒤쪽 호가 몸 위에 겹치지 않게 한다.
+ * 링은 깊이 시험을 하지 않아 벽·기둥 뒤에서도 보이지만(가려짐 지속), 영웅 몸만은 링 위에 칠해진다. */
+export const HERO_OVER_BEACON_ORDER = 994;
+const opaqueMaterial = (material) => !!material && !material.transparent;
+const allOpaque = (material) => Array.isArray(material) ? material.length > 0 && material.every(opaqueMaterial) : opaqueMaterial(material);
+function drawOverBeacon(object) {
+  if (!object.isMesh || (object.renderOrder !== 0 && object.renderOrder !== HERO_OVER_BEACON_ORDER)) return;
+  // 사망 연출처럼 투명으로 바뀐 동안은 원래 순서로 돌려 투명 목록의 VFX 정렬을 바꾸지 않는다.
+  object.renderOrder = allOpaque(object.material) ? HERO_OVER_BEACON_ORDER : 0;
+}
+
 // Readability marker: opaque authored hero, strong ground rings and locator; no body duplicate or occluder bypass.
 export class HeroBeacon {
+  /** @param {THREE.Object3D} root @param {THREE.Object3D | null} [model] 링 아래에 그릴 영웅 모델 */
   constructor(root, model = null) {
     // Keep the authored hero fully opaque. Readability is carried by the locator/rings,
     // never by a translucent duplicate drawn through occluders.
     this.occluded = [];
+    // 몸체 교체·장비 교체로 메시가 바뀌어도 update 가 매 프레임 같은 순서를 다시 맞춘다(할당 없음).
+    this.model = model;
     this.root = new THREE.Group(); this.root.name = 'HeroBeacon'; root.add(this.root);
     const add = (geometry, color, order) => {
       const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
@@ -40,6 +54,9 @@ export class HeroBeacon {
   }
   update(alive, yaw, { state = 'idle', color = 0xb9ffee, reduced = false } = {}) {
     this.root.visible = alive;
+    // 같은 groupOrder 안에서 링(990~993) → 영웅 몸(994) 순서로 그린다. 깊이 시험 없는 링의 먼 쪽 호가
+    // 가슴·검 위로 검은 띠와 흰 선을 긋던 문제를 막는다.
+    this.model?.traverse(drawOverBeacon);
     // Actor already applies yaw and the rig's faceFlip to our parent.
     this.root.rotation.y = yaw - (this.root.parent?.rotation.y || 0);
     const action = state === 'attack' || state === 'skill' || state === 'ult' || state === 'dodge';

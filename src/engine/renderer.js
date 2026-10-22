@@ -14,6 +14,7 @@ import { displaySize, renderPixelRatio, thermalRenderProfile, snapResolutionScal
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
+import { bindCharacterBloom, characterBloomMask } from './character-bloom.js';
 import { setDeviceMaxAnisotropy } from './texture-sampling.js';
 import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
 import { FEEL, cameraKick } from '../game/feel.js';
@@ -226,6 +227,8 @@ export class Renderer {
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), BLOOM_STRENGTH, 0.62, 0.84);
+    // 캐릭터 몸의 조명 반사는 블룸 고역 통과에서 뺀다(발광·VFX 블룸은 그대로). 문턱·세기는 VFX 기준이라 바꾸지 않는다.
+    bindCharacterBloom(this.bloom);
     // 장식 노출 부하(0~1, FX.bloomLoad). 올라갈 때는 즉시, 내려갈 때는 BLOOM_ADAPT.release/초로 풀린다.
     this.bloomLoad = null; this._bloomLoad = 0;
     this.composer.addPass(this.bloom);
@@ -472,7 +475,9 @@ export class Renderer {
     // 로비는 항상 FXAA, 전투는 렌더 해상도가 기기 해상도보다 낮아 모서리가 확대될 때만 켠다. 선명화는 낮음 화질 외 모두 켠다.
     this.lobbyAA.enabled = this.rig.mode === 'lobby' || battleNeedsFxaa(this.pixelRatio, this.nativeRatio, this.quality);
     this.sharpenPass.enabled = this.quality !== 'low';
-    this.composer.render();
+    // 캐릭터 블룸 표식은 이 장면 렌더 동안만 켠다. 같은 재질을 그리는 초상화·미리보기 캔버스의 알파는 건드리지 않는다.
+    characterBloomMask.value = 1;
+    try { this.composer.render(); } finally { characterBloomMask.value = 0; }
     this.programValidator.validate(this.r);
     this.renderCount++;
   }

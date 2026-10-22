@@ -4,10 +4,10 @@ import { dirname } from 'node:path';
 import config from './release-config.json' with { type: 'json' };
 
 // 클라우드 세션은 CLOUDFLARE_API_BASE_URL(키를 붙여 주는 프록시)로만 인증된다. wrangler와 같은 변수를 따르고 https만 받는다.
-// 예외: `apex cf --`가 띄우는 이 기기 안의 중계(http://127.0.0.1:<포트>)는 같은 프록시로 넘기므로 허용한다.
+// 예외: 클라우드 세션의 cf-asset-split 중계(http://127.0.0.1:<포트>)는 같은 프록시로 넘기므로 허용한다.
 export function cloudflareApiBase(env = process.env) {
   const base = env.CLOUDFLARE_API_BASE_URL || 'https://api.cloudflare.com/client/v4';
-  if (!/^(https:\/\/[^\s?#]+|http:\/\/127\.0\.0\.1:\d{1,5}\/[^\s?#]*)$/.test(base)) throw new Error('CLOUDFLARE_API_BASE_URL은 https 주소여야 합니다.');
+  if (!/^(https:\/\/[^\s?#]+|http:\/\/127\.0\.0\.1:\d{1,5}(\/[^\s?#]*)?)$/.test(base)) throw new Error('CLOUDFLARE_API_BASE_URL은 https 주소여야 합니다.');
   return base.replace(/\/+$/, '');
 }
 

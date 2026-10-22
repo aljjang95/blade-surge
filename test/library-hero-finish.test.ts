@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { fitLibrarySocket, normalizeLibrarySkinMaterial, LIBRARY_SKIN_METALNESS_MAX } from '../src/engine/assets.js';
+import { fitLibrarySocket, normalizeLibrarySkinMaterial, prepareModel, LIBRARY_SKIN_METALNESS_MAX } from '../src/engine/assets.js';
 
 // 라이브러리 영웅 외형 보정 — 금속도·반투명과 손 소켓 정렬을 고정한다.
 test('Tripo 몸체 재질은 금속도를 낮추고 불투명으로 그린다(지도는 유지)', () => {
@@ -17,6 +17,25 @@ test('Tripo 몸체 재질은 금속도를 낮추고 불투명으로 그린다(�
   // 실제로 반투명인 재질(opacity<1)은 건드리지 않는다.
   const glass = normalizeLibrarySkinMaterial(new THREE.MeshStandardMaterial({ transparent: true, opacity: .5 }));
   expect(glass.transparent).toBe(true);
+});
+
+test('라이브러리 몬스터·동행 몸체도 영웅과 같은 마감을 받는다(불투명 BLEND → 깊이 쓰기, 납작한 단색 실루엣 방지)', () => {
+  const skinned = (material: THREE.Material) => {
+    const bone = new THREE.Bone(), mesh = new THREE.SkinnedMesh(new THREE.BoxGeometry(), material);
+    mesh.add(bone); mesh.bind(new THREE.Skeleton([bone]));
+    const scene = new THREE.Group(); scene.add(mesh); return { scene, mesh };
+  };
+  // GLTFLoader 가 alphaMode BLEND 를 읽은 상태(skeleton_mage·bone_knight·demon_lord·frost_yeti·goblin_brute)
+  const blend = () => new THREE.MeshPhysicalMaterial({ metalness: 1, transparent: true, opacity: 1, depthWrite: false });
+  const lib = skinned(blend()); lib.scene.userData.libraryAsset = { id: 'skeleton_mage' }; lib.mesh.material.userData.tllAuthored = true;   // 라이브러리 로더가 표시한다
+  prepareModel({ scene: lib.scene, animations: [] } as any);
+  const m = lib.mesh.material as THREE.MeshPhysicalMaterial;
+  expect({ transparent: m.transparent, depthWrite: m.depthWrite, alphaTest: m.alphaTest, metalness: m.metalness })
+    .toEqual({ transparent: false, depthWrite: true, alphaTest: .5, metalness: LIBRARY_SKIN_METALNESS_MAX });
+  // 라이브러리가 아닌 모델은 이 마감을 받지 않는다.
+  const legacy = skinned(blend());
+  prepareModel({ scene: legacy.scene, animations: [] } as any);
+  expect((legacy.mesh.material as THREE.Material).transparent).toBe(true);
 });
 
 test('손 소켓은 손 본 축과 무관하게 KayKit handslot 과 같은 월드 방향·키 비율 위치에 놓인다', () => {
