@@ -117,11 +117,12 @@ export function mageFrostTick(game, pos, i, radius = 6.8) {
 export function magePrismBounce(game, pos, dir, n = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned;
-  impact._emit(IMPACT_KIND.star, pos.x, pos.y, pos.z, 1.3 + Math.min(n, 12) * .06, C.prism, .18, { angle: .2 + n * .5, grow: .5 });
-  impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.5, C.arcaneHot, .22, { grow: 1 });
+  // 맞은 자리 별빛(흰 심)은 적 몸을 하얗게 덮어 빼고, 청록·보라 두 겹 고리로 굴절 지점을 찍는다.
+  impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.2 + Math.min(n, 12) * .08, C.prismDeep, .22, { grow: 1 });
+  impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.8, C.arcane, .26, { grow: 1, delay: .04 });
   if (!game.fx.lite && dir) {
     const base = Math.atan2(dir.z, dir.x);
-    for (const [j, col] of [C.prism, C.arcaneHot, C.bolt].entries()) {
+    for (const [j, col] of [C.prismDeep, C.arcane, C.boltDeep].entries()) {
       const a = base + (j - 1) * .4; _d.set(Math.cos(a), 0, Math.sin(a));
       impact.beam(pos, _d, 3.6, col, { speed: 30, tail: 2, width: .2 });
     }
@@ -174,10 +175,11 @@ export const SIGNATURES = {
   arc_reflect(ctx) {
     const { impact, player, f } = ctx;
     _a.copy(player.pos).addScaledVector(f, 1.2).setY(1.3);
-    impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 1.5, C.prism, .18, { angle: .2, grow: .5 });
-    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2, C.arcaneHot, .26, { grow: 1 });
+    // 프리즘 광선은 심이 흰색 쪽으로 섞이니 진한 세 빛깔(청록·보라·청)로 그리고, 손끝은 별빛 대신 두 겹 고리.
+    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.4, C.prismDeep, .22, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2.2, C.arcane, .28, { grow: 1, delay: .04 });
     const base = Math.atan2(f.z, f.x);
-    for (const [j, col] of [C.prism, C.arcaneHot, C.bolt].entries()) {
+    for (const [j, col] of [C.prismDeep, C.arcane, C.boltDeep].entries()) {
       const a = base + (j - 1) * .12; _d.set(Math.cos(a), 0, Math.sin(a));
       impact.beam(_a, _d, 10, col, { speed: 30, tail: 5, width: .22 });
     }
