@@ -20,6 +20,11 @@ export function textureTintMix(color) {
 // 원화 rgb 를 밝기(채도 없는 결)로 바꾸는 GLSL 조각. uTint 0 이면 원본.
 const TINT_GLSL = 'vec3 bsTint(vec3 c, float k) { float l = dot(c, vec3(.3, .59, .11)); return mix(c, vec3(l * 1.35), k); }\n';
 const preparationOwners = new WeakMap();
+// 플립북 셰이더 원문(모듈 상수: 호출마다 템플릿 문자열을 다시 만들지 않는다).
+const FLIPBOOK_VERT = `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`;
+const FLIPBOOK_FRAG = `uniform sampler2D uTex; uniform float uFrame, uAlpha, uTint; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
+        ${TINT_GLSL}
+        void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(bsTint(t.rgb, uTint) * uColor, lum * uAlpha); }`;
 export const DUST_COLOR = 0x6a5f52, DUST_OPACITY = .34;
 
 /**
@@ -901,10 +906,7 @@ export class FX {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
     const m = this._keep(new THREE.ShaderMaterial({
       uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size)) }, uScale: { value: size }, uAlpha: { value: opacity }, uTint: { value: blending === THREE.AdditiveBlending ? textureTintMix(color) : 0 } },
-      vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
-      fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha, uTint; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
-        ${TINT_GLSL}
-        void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(bsTint(t.rgb, uTint) * uColor, lum * uAlpha); }`,
+      vertexShader: FLIPBOOK_VERT, fragmentShader: FLIPBOOK_FRAG,
       transparent: true, depthWrite: false, blending, side: THREE.DoubleSide,
     }));
     const mesh = new THREE.Mesh(this.plane1, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 12; mesh.frustumCulled = false;
