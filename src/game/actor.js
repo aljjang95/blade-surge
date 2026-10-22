@@ -8,6 +8,9 @@ const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
 // 처치 연출(위로 튀며 회전)의 길이와 결정적 변주. 게임 난수를 소비하지 않는다.
 const LAUNCH_SEC = 0.55;
+// 피격 발광 정점·상한. 예전 .38×무게(최대 1.6 → .6)는 흰 해골 재질을 블룸 임계 위로 올려 적마다 크림색 구름이 됐다.
+// 모양 있는 타격 신호는 impact 층(영웅색 코어·자국·불똥)이 맡고, 몸 발광은 '맞았다'는 짧은 악센트로만 남긴다.
+export const HIT_FLASH = Object.freeze({ peak: .26, max: .32, reduced: .16 });
 // 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
 const TURN_SMOOTH_SEC = 0.045;
 let launchSerial = 0x2f6e2b1;
@@ -200,7 +203,7 @@ export class Actor {
     if (this.flashT > 0) {
       this.flashT = Math.max(0, this.flashT - dt);
       const k = this.flashT / this.flashDuration;
-      const strength = (this.game.app?.reducedMotion?.matches ? .16 : .38 * (this.flashGain || 1)) * k * k;
+      const strength = (this.game.app?.reducedMotion?.matches ? HIT_FLASH.reduced : Math.min(HIT_FLASH.max, HIT_FLASH.peak * (this.flashGain || 1))) * k * k;
       for (const m of this.mats) {
         m.emissive.copy(this.flashColor).multiplyScalar(strength);
         if (this.tintEmissive) m.emissive.add(this.tintEmissive);

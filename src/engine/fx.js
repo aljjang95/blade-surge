@@ -20,6 +20,7 @@ export function textureTintMix(color) {
 // 원화 rgb 를 밝기(채도 없는 결)로 바꾸는 GLSL 조각. uTint 0 이면 원본.
 const TINT_GLSL = 'vec3 bsTint(vec3 c, float k) { float l = dot(c, vec3(.3, .59, .11)); return mix(c, vec3(l * 1.35), k); }\n';
 const preparationOwners = new WeakMap();
+export const DUST_COLOR = 0x6a5f52, DUST_OPACITY = .34;
 
 /**
  * Authored ability signatures keep the silhouette of each school distinct while
@@ -913,7 +914,8 @@ export class FX {
   }
   explosion(pos, { size = 4, color = 0xffffff, life = 0.55, opacity = 1 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, opacity, gain: decorativeBurstGain(size) }); }
   // 먼지는 발밑에 낮게 깔린 옅은 흙빛이다. 예전(높이 0.3×크기, 불투명도 .75)은 처치·강타 순간 적 몸을 베이지 덩어리로 덮었다.
-  dustPuff(pos, { size = 3, life = 0.9, color = 0x8f826f } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.16, blending: THREE.NormalBlending, opacity: 0.42 }); }
+  // 먼지는 흙빛 낮은 구름이다. 밝은 황토(0x8f826f, 불투명 .42)는 처치마다 적 위에 크림색 덩어리로 보였다(군중 처치 6개).
+  dustPuff(pos, { size = 3, life = 0.9, color = DUST_COLOR } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.16, blending: THREE.NormalBlending, opacity: DUST_OPACITY }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   _fireMaterial(tex, color) {
     const make = () => {
