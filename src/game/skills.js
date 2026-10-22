@@ -5,6 +5,8 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
+import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
 
 const _v = new THREE.Vector3();
@@ -318,7 +320,7 @@ export const SKILLS = {
   // ================= 광전사 (불 · 회전 몹몰이) =================
   whirlwind: {
     dur: 1.6, total: 1.6,
-    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff7a4a, { radius: 3.8, life: 1.5 }); },
+    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff4a1a, { radius: 3.8, life: 1.5, demon: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.6; p.vel.set(m.x * spd, 0, m.y * spd);
       gatherEnemies(game, p.pos, 5.5, 12); // 첫 접촉 전에 모으고 연타 중 군집을 유지한다.
@@ -326,8 +328,9 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = .22; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, hasTownSkillVariant(p, 'whirlwind', 'wide') ? 4.8 : 3.8, c.dmg, { kb: 2.5, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 2 === 0 });
-        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff9a5a, { size: 4.4, life: 0.22, tilt: -1.45 });
-        game.fx.burst(p.pos.clone().setY(1), 0xffa060, { n: 5, speed: 6, size: 0.3 });
+        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff5a1e, { size: 4.4, life: 0.22, tilt: -1.45 });
+        game.fx.burst(p.pos.clone().setY(1), 0xff6a20, { n: 5, speed: 6, size: 0.3 });
+        barbWhirlTick(game, p.pos, i); // 광전사: 몸을 감는 불씨 도끼 호(판정 틱과 같은 순간)
         if (i % 3 === 0) game.fx.dustPuff(p.pos, { size: 3, life: 0.5 });
         audio.whoosh({ vol: 0.45, pitch: 0.9 + (i % 4) * 0.06, dur: 0.25 }); game.renderer.shake(0.12);
       }
@@ -414,7 +417,7 @@ export const SKILLS = {
         for (const e of game.enemies) { if (!e.alive || e.spawning || hit.has(e)) continue; const d = Math.hypot(e.pos.x - cur.pos.x, e.pos.z - cur.pos.z); if (d < bd) { bd = d; best = e; } }
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
-        game.fx.boltTex(from, to, 0xa0e0ff, { width: 1.8, life: 0.28 });
+        game.fx.boltTex(from, to, 0x80c8ff, { width: 1.8, life: 0.28 }); mageBolt(game, from, to, step); // 번개 학파: 청백 지그재그
         game.fx.flash(to, 0xc0f0ff, { size: 2.4 }); game.fx.burst(to, 0xa0e0ff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);
         game.damageEnemy(best, c.dmg * (1 - step * 0.05), { kind: 'magic', kb: 1, stun: hasTownSkillVariant(p, 'chain', 'bind') ? .8 : .4, source: p, dirx: to.x - from.x, dirz: to.z - from.z, quietStop: step > 2 });
@@ -427,21 +430,22 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.25, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
       const wide = hasTownSkillVariant(p, 'blizzard', 'wide');
       gatherEnemies(game, p.pos, wide ? 10.5 : 8.5, 9);
-      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, new THREE.Color(0xa0e8ff), 0.35, 0.5, { grav: 20, shrink: 0.5 }); }
+      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, new THREE.Color(0x5cbcff), 0.35, 0.5, { grav: 20, shrink: 0.5 }); }
       c.data.tick -= dt;
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
         game.fx.shockTex(p.pos, 0x4fb4ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
-        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45 });
-        game.fx.burst(p.pos.clone().setY(0.3), 0x9fdcff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
+        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45, color: 0x2a9cff });
+        game.fx.burst(p.pos.clone().setY(0.3), 0x4aaeff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
+        mageFrostTick(game, p.pos, i, wide ? 8.6 : 6.8); // 냉기 학파: 서리 가시 고리·얼음 가시
         audio.ice({ vol: 0.45, dur: 0.5 }); audio.whoosh({ vol: 0.28, pitch: 1.5, dur: 0.4 }); game.renderer.shake(0.15);
       }
     },
@@ -455,6 +459,7 @@ export const SKILLS = {
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
         const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(6, 18, 4)); orb.position.copy(start); game.scene.add(orb);
+        mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
         game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
         game.after(0.4, () => {
@@ -682,8 +687,9 @@ export const SKILLS = {
       p.vel.set(0, 0, 0); p.stopTrail();
       const center = fwd(p, 2.4);
       game.hitRadius(center, 6.2, c.dmg, { kb: 13, kind: 'blunt', up: true, stun: 0.7, source: p, dirFrom: p.pos });
-      game.fx.explosion(center, { size: 9, color: 0xffa060, life: 0.6 });
-      game.fx.shockTex(center, 0xff8a40, { r1: 8, life: 0.5 });
+      game.fx.explosion(center, { size: 9, color: 0xff7a30, life: 0.6 });
+      game.fx.shockTex(center, 0xff5a1e, { r1: 8, life: 0.5 });
+      barbRushEnd(game, center, p.forward(_v)); // 광전사: 앞으로 터지는 용암 균열·분노 고리
       game.fx.scorch(center, { radius: 4, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.6), 0xff8040, { n: 44, speed: 14, size: 0.5, up: 1.4, grav: 18 });
       game.fx.light(center, 0xff8040, 14, 15, 0.5);
@@ -770,6 +776,7 @@ export const SKILLS = {
           for (const o of game.enemies) { if (!o.alive || o.spawning || state.hit.has(o)) continue; const d = Math.hypot(o.pos.x - state.pos.x, o.pos.z - state.pos.z); if (d < bd) { bd = d; best = o; } }
           if (best) state.dir.set(best.pos.x - state.pos.x, 0, best.pos.z - state.pos.z).normalize();
           else state.dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), 2.1 + Math.random());
+          magePrismBounce(game, state.pos, state.dir, state.bounces); // 프리즘: 굴절 별빛·세 갈래 빛
           bounced = true; break;
         }
         // 벽 반사 — 탐침은 실제 스텝 크기로, 반사 뒤엔 벽에서 떼어 놓는다.
@@ -953,11 +960,11 @@ export const SKILLS = {
   sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xff9a20,{r1:4.5,life:.4}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
   heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
-  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.after(.2,()=>{if(game.active)game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});}); } },
-  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});}); } },
-  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x74c8ff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
+  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.fx.shockTex(at,0xc81810,{r1:6.5,life:.4}); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});game.fx.shockTex(at,0xff4a1a,{r1:echo?10:8.5,life:.5});game.fx.scorch(at,{radius:5,life:5});}); } },
+  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
+  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x5a6cff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0xccecff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55});}); } },
+  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x3a9cff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
