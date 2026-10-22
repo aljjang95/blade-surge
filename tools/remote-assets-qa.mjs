@@ -202,7 +202,7 @@ try {
   // ===== D. 내려받는 동안 표시: 호스트를 느리게 만들어 로비·전투에서 가장자리 표시가 플레이 영역을 가리지 않는지 본다 =====
   log.hostOffline = false; log.hostDelay = 9000;
   await c.page.evaluate(() => window.app.toLobby?.());
-  void c.page.evaluate(() => window.__remoteAssets.prefetchGroup('region-4'));
+  void c.page.evaluate(() => window.__remoteAssets.prefetchGroup('region-4')).catch(() => {});
   await c.page.waitForTimeout(1600);
   await c.shot('11-indicator-lobby');
   const dockLobby = await c.page.evaluate(() => { const n = document.querySelector('.remote-dl'); if (!n || n.hidden) return null; const r = n.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), text: n.textContent, pe: getComputedStyle(n).pointerEvents }; });
@@ -210,11 +210,14 @@ try {
   await c.page.evaluate(() => { window.app.eco.s.energy = 100; window.app.startStage(window.__stageDef(1, 1)); });
   await c.page.waitForFunction(() => window.app.battle?.active && !window.app.stageStarting && !!window.app.battle.player, null, { timeout: 240000 });
   await c.page.evaluate(() => { const app = window.app; app.testPause = true; app.battle.player.auto = true; app.ui.closeModal?.(); for (let i = 0; i < 240; i++) app.step(1 / 60, i === 239); });
-  await c.page.waitForTimeout(500);
+  // 전투가 뜨는 사이 낡은 요청이 끝났을 수 있어 전투 화면에서 새 묶음을 내려받게 하고 표시가 뜬 뒤에 잰다.
+  void c.page.evaluate(() => window.__remoteAssets.prefetchGroup('region-5')).catch(() => {});
+  await c.page.waitForTimeout(1600);
   await c.shot('12-indicator-battle');
   const dockBattle = await c.page.evaluate(() => {
     const n = document.querySelector('.remote-dl'); if (!n || n.hidden) return null; const r = n.getBoundingClientRect();
-    const hud = [...document.querySelectorAll('#hud *')].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).visibility !== 'hidden' && b.bottom > r.top && b.top < r.bottom && b.right > r.left && b.left < r.right && !e.contains(n) && !n.contains(e); })
+    // 화면 전체를 덮는 층(vignette 등)과 자식을 가진 컨테이너(hud-top·hud-center)는 상자만 겹칠 뿐 보이는 요소가 아니므로 제외하고 잎 요소만 본다.
+    const hud = [...document.querySelectorAll('#hud *')].filter((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).visibility !== 'hidden' && b.width < innerWidth * 0.6 && !e.children.length && b.bottom > r.top && b.top < r.bottom && b.right > r.left && b.left < r.right && !e.contains(n) && !n.contains(e); })
       .map((e) => (e.id || e.className || e.tagName).toString().slice(0, 40));
     return { y: Math.round(r.y), h: Math.round(r.height), w: Math.round(r.width), overlaps: hud.slice(0, 6) };
   });
