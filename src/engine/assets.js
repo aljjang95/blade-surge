@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { excludeFromBloom } from './character-bloom.js';
 import { installCombatMotionClips } from './combat-motion-clips.js';
 import { registerHeroBodyMotion, prepareHeroBodyMotion, commitHeroBodyMotion, selectedBodyMotionIdentity, disposeHeroBodyMotion } from './hero-body-motion.js';
 import { preloadArmory } from './armory-assets.js';
@@ -570,7 +571,8 @@ function cloneCharacterMaterial(material, authored, oathKnight = false) {
     next.userData.authoredEmissive = next.emissive.clone();
     next.userData.baseEmissive = next.emissive.clone();
   }
-  return next;
+  // 캐릭터 몸은 조명 받은 알베도로 블룸을 만들지 않는다(발광 성분만 번진다). character-bloom.js 참고.
+  return excludeFromBloom(next);
 }
 
 /** Release instance-owned skin textures/materials; preserve shared source geometry. */
