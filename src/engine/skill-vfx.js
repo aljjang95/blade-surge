@@ -49,7 +49,7 @@ export const SKILL_VFX = Object.freeze({
   chain: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x5aa8ff, 4.5, { noRune: true, sig: true, gain: .7 }),
   blizzard: R(VIOLET, 'ice-burst', 'self', 'none', 0x2a9cff, 7, { noRune: true, sig: true }),
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
-  arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'flash', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true, gain: .7 }),
+  arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'none', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a7cff, 9, { noRune: true, sig: true }),
   star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5], noRune: true, sig: true }),
   absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),

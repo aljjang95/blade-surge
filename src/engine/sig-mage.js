@@ -72,12 +72,12 @@ export function mageBolt(game, from, to, step = 0) {
   // 광선 폭(width)은 가장자리까지의 반폭이고 보이는 심은 그 1/5 정도라, 번개는 두껍게 준다.
   zigzag(impact, F, T, lite ? 4 : 6, 1, C.bolt, { width: .55, fade: .36 });
   if (!lite) {
-    zigzag(impact, F, T, 5, 1.4, C.boltHot, { width: .18, fade: .24 });
+    zigzag(impact, F, T, 5, 1.4, C.boltHot, { width: .12, fade: .2 });
     _stars[5].copy(F).lerp(T, .45); _a.copy(T).sub(F); _stars[4].set(-_a.z, 0, _a.x).normalize();
     _stars[3].copy(_stars[5]).addScaledVector(_stars[4], (step % 2 ? 1 : -1) * 1.6); _stars[3].y = Math.max(.2, _stars[5].y - 1.1);
     zigzag(impact, _stars[5], _stars[3], 3, 1.2, C.bolt, { width: .26, fade: .26 });
   }
-  impact._emit(IMPACT_KIND.star, T.x, T.y, T.z, step < 2 ? 1.8 : 1.4, C.bolt, .18, { angle: .4 + step, grow: .5 });
+  impact._emit(IMPACT_KIND.star, T.x, T.y, T.z, step < 2 ? 1.3 : 1.05, C.bolt, .18, { angle: .4 + step, grow: .5 });
   impact._emit(IMPACT_KIND.ring, T.x, T.y, T.z, 1.6, C.boltHot, .24, { grow: 1 });
   if (!lite) impact._streaks(T, null, 4, 9, .22, C.boltHot, { up: 2, spread: 3, size: .16 });
   return impact.spawned - before;
@@ -115,7 +115,7 @@ export function mageFrostTick(game, pos, i, radius = 6.8) {
 export function magePrismBounce(game, pos, dir, n = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned;
-  impact._emit(IMPACT_KIND.star, pos.x, pos.y, pos.z, 1.7 + Math.min(n, 12) * .08, C.prism, .2, { angle: .2 + n * .5, grow: .5 });
+  impact._emit(IMPACT_KIND.star, pos.x, pos.y, pos.z, 1.3 + Math.min(n, 12) * .06, C.prism, .18, { angle: .2 + n * .5, grow: .5 });
   impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.5, C.arcaneHot, .22, { grow: 1 });
   if (!game.fx.lite && dir) {
     const base = Math.atan2(dir.z, dir.x);
@@ -172,7 +172,7 @@ export const SIGNATURES = {
   arc_reflect(ctx) {
     const { impact, player, f } = ctx;
     _a.copy(player.pos).addScaledVector(f, 1.2).setY(1.3);
-    impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 2.2, C.prism, .22, { angle: .2, grow: .5 });
+    impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 1.5, C.prism, .18, { angle: .2, grow: .5 });
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2, C.arcaneHot, .26, { grow: 1 });
     const base = Math.atan2(f.z, f.x);
     for (const [j, col] of [C.prism, C.arcaneHot, C.bolt].entries()) {
