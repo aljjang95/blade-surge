@@ -164,10 +164,10 @@ try {
   const encReq = log.host.filter((r) => /img\/(encounters|ui-crafted\/keyart)\/forge/.test(r.path));
   check('2지역 일러스트·키아트를 정식 호스트에서 받았다', encReq.length >= 1, encReq.slice(0, 3));
   // 소환 화면
-  await b.page.evaluate(() => window.app.meta.openTab('shop', 'gacha')); await b.page.waitForTimeout(1500);
+  await openMenuTab(b, 'gacha'); await b.page.waitForTimeout(1500);
   await b.shot('08-gacha');
-  const gacha = await b.page.evaluate(() => ({ tab: window.app.meta.tab, banner: document.querySelector('#banner-art')?.complete && document.querySelector('#banner-art')?.naturalWidth > 0 }));
-  check('소환 화면이 열리고 배너가 보인다', gacha.tab === 'shop' && gacha.banner, gacha);
+  const gacha = await b.page.evaluate(() => ({ tab: window.app.meta.tab, banner: document.querySelector('#banner-art')?.complete && document.querySelector('#banner-art')?.naturalWidth > 0, bannerSrc: document.querySelector('#banner-art')?.currentSrc }));
+  check('소환 화면이 열리고 배너가 보인다', gacha.tab === 'gacha' && gacha.banner, gacha);
   await b.page.waitForTimeout(1500);
   const bStats = await b.stats();
   report.phases.B = { bootMs: bootB, requests: snapshot(), stats: bStats, hostRequests: log.host.slice(hostBefore).map((r) => r.path + ' ' + r.status).slice(0, 60) };
@@ -192,7 +192,7 @@ try {
   const art2 = await c.page.evaluate(() => [...document.querySelectorAll('#meta img')].filter((i) => /encounters|keyart/.test(i.currentSrc || i.src) || /^blob:/.test(i.currentSrc || i.src))
     .map((i) => ({ src: (i.currentSrc || i.src).slice(0, 60), ok: i.complete && i.naturalWidth > 0, broken: i.complete && i.naturalWidth === 0 })));
   check('오프라인에서도 2지역 일러스트가 보관본으로 보인다(깨진 이미지 없음)', art2.length > 0 && art2.every((x) => !x.broken), art2.filter((x) => x.broken));
-  await c.page.evaluate(() => window.app.meta.openTab('shop', 'gacha')); await c.page.waitForTimeout(1200);
+  await openMenuTab(c, 'gacha'); await c.page.waitForTimeout(1200);
   await c.shot('10-offline-gacha');
   const cStats = await c.stats();
   report.phases.C = { bootMs: bootC, stats: cStats, hostRequestsWhileOffline: log.host.length - hostCountBefore };
