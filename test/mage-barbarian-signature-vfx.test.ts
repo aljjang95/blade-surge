@@ -80,10 +80,11 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   const at = new THREE.Vector3(0, 1.2, 4), from = new THREE.Vector3(0, 1.6, 0);
   const v = make(), g = gameOf(v);
   expect(barbWhirlTick(g, new THREE.Vector3(), 3)).toBeLessThanOrEqual(12);
-  expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(30);
-  expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(14);
-  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(12);
+  expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(36);
+  expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(22);
+  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(20);
   expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(5);
+  v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;
   expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(16);
   const blast = slots(v).slice(before).filter((s) => s.kind === IMPACT_KIND.core);

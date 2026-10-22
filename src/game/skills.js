@@ -382,7 +382,8 @@ export const SKILLS = {
       let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
         game.hitRadius(target, SKILL_AIM_SHAPES.hell_axe.radius, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
-        game.fx.explosion(target, { size: 14, color: 0xffb070, life: 0.8 });
+        game.fx.explosion(target, { size: 14, color: 0xff7a30, life: 0.8 });
+        game.fx.firePillar(target, { height: 12, width: 3.4, life: 0.7, color: 0xff4a1a }); // 광전사: 착탄 불기둥
         game.fx.scorch(target, { radius: 6, life: 8 });
         [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffb050 : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
         game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 70, speed: 16, size: 0.6, up: 1.4, grav: 18 });
@@ -418,7 +419,7 @@ export const SKILLS = {
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
         game.fx.boltTex(from, to, 0x80c8ff, { width: 1.8, life: 0.28 }); mageBolt(game, from, to, step); // 번개 학파: 청백 지그재그
-        game.fx.flash(to, 0xc0f0ff, { size: 2.4 }); game.fx.burst(to, 0xa0e0ff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
+        game.fx.flash(to, 0x6fbcff, { size: 2.4 }); game.fx.burst(to, 0x6fbcff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);
         game.damageEnemy(best, c.dmg * (1 - step * 0.05), { kind: 'magic', kb: 1, stun: hasTownSkillVariant(p, 'chain', 'bind') ? .8 : .4, source: p, dirx: to.x - from.x, dirz: to.z - from.z, quietStop: step > 2 });
         audio.zap({ vol: 0.4, dur: 0.22 }); game.renderer.shake(0.15); if (step < 2) audio.vibe(20);
@@ -430,7 +431,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.25, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .9, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
@@ -758,7 +759,7 @@ export const SKILLS = {
         prev.copy(state.pos);
         state.pos.addScaledVector(state.dir, SPEED * dt);
         lance.position.copy(state.pos);
-        game.fx.boltTex(prev, state.pos, 0xbfeaff, { width: 0.9, life: 0.14 });
+        game.fx.boltTex(prev, state.pos, 0x5fc8ff, { width: 0.9, life: 0.14 });
         // 적 반사
         let bounced = false;
         for (const e of game.enemies) {
@@ -816,7 +817,7 @@ export const SKILLS = {
       const center = p.pos.clone(); const R = 9.5, FREEZE = 3.0;
       const sealed = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < R).slice(0, 24).map((e) => ({ e, hp: e.hp }));
       // 시간 봉인 = 남보라 '시계' 언어: 바닥 시계판(12 눈금 + 봉인 시간 동안 한 바퀴 도는 바늘) + 옅은 룬. 얼음 흰빛과 구분한다.
-      game.fx.groundTex(center, 'circle_demon', 0x7f6cff, { r0: 1, r1: R, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE, gain: .55 });
+      game.fx.groundTex(center, 'circle_demon', 0x5a3ce0, { r0: 1, r1: R * .7, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE, gain: .4 }); // 연보라 돔 대신 진한 보라 작은 진
       game.fx.impact?.mark?.(center, 0xa898ff, { radius: R * .62, life: FREEZE + .3, style: 4 });
       game.fx.shockTex(center, 0x9a8cff, { r1: R + 1.5, life: 0.6 });
       game.renderer.flashScreen(0.2, 0xb8b0ff); game.renderer.aberr = 1.3; game.renderer.shake(0.5);
