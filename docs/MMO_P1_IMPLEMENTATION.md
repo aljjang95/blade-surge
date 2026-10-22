@@ -21,6 +21,8 @@
 - `node tools/v1-proof.mjs`: 실제 workerd + D1 + SocialHub에서 스키마 미적용 503 → 마이그레이션 2회 → 소셜 playerId 입양 → 임포트 → 티켓 → 위조 정산 0 → 정상 정산 → `/me` rev·해시·골드 일치 → 재전송 멱등 → 내부 API 공개 차단.
 - `bun run build && node tools/v1-account-qa.mjs`(Chromium: 이 컨테이너는 `V1_QA_CHROMIUM=/opt/pw-browsers/chromium`): 그림자 패리티 0 불일치, 서버 권위 1-1 AUTO 클리어 → 서버 영수증 표시 → localStorage 삭제 후 새로고침 → 서버에서 복구.
 
+- `bun run build && bun tools/mmo-calibrate.mjs --verify 100`: 권장 레벨 AUTO 캠페인 클리어 102판(1장 전 스테이지 + 2~6장 표본) 모두 승리, T1 판정 102/102 ok. 표는 `--calibrate` 관측값(처치 ×1.5, 엘리트 방 수×2 이상).
+
 이 검증은 로컬·에뮬레이터 증거다. 실제 Cloudflare 운영 D1·Android 실기기·실제 구글 ID 토큰 검증은 포함하지 않는다.
 
 ## 3. 코디네이터 적용 순서 (운영)
