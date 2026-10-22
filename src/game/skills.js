@@ -195,7 +195,7 @@ export const SKILLS = {
       const f = p.forward(new THREE.Vector3()); const spawn = fwd(p, 1); spawn.y = 1.2;
       // 성검 참격: 금빛 바깥 날 + 밝은 금 안쪽 날(흰 날은 블룸과 겹쳐 크림 덩어리가 됐다) + 작은 금빛 성광.
       game.fx.slashSprite(spawn, f, 0xffc23a, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
-      game.fx.slashSprite(spawn, f, 0xffe7a0, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
+      game.fx.slashSprite(spawn, f, 0xffcf4a, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
       // 성광 원화(holyBurst)는 칼날 앞에 크림 덩어리를 남겼다. 수평 빛 칼날은 sig-knight 의 긴 광선이 맡는다.
       game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
@@ -261,7 +261,7 @@ export const SKILLS = {
     dur: 1.2, total: 2.1,
     start(game, p, c) {
       // 기 모으기: 큰 금빛 마법진(6m) 대신 작은 진 + 진한 주황 금 기둥(폭 1.6m).
-      game.fx.castCircle(p.pos, 0xff9a18, { radius: 3.2, life: 1.2 });
+      game.fx.castCircle(p.pos, 0xff9a18, { radius: 2.4, life: 1.2 });
       game.fx.firePillar(p.pos, { height: 10, width: 1.6, life: 1.0, color: 0xff9a18 });
       game.fx.embers(p.pos, 0xffcf5a, { n: 30, radius: 1.5, life: 1.2, rise: 5 });
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
@@ -289,7 +289,7 @@ export const SKILLS = {
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
         const sp = p.pos.clone().addScaledVector(d, 1.5).setY(1.3);
-        game.fx.slashSprite(sp, d, i === 0 ? 0xffe7a0 : 0xffb830, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
+        game.fx.slashSprite(sp, d, i === 0 ? 0xffc23a : 0xff9a18, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
         game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 1.5, dmg: c.dmg * 0.35, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
       }
       const hitC = fwd(p, 3.5);
