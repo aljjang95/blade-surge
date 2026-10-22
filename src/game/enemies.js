@@ -505,7 +505,7 @@ export class Enemy extends Actor {
           if (this.def.ranged && !this.special && !this.def.pattern) this.faceDir(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
           this.telegraph = this.hitAt * this.attackDur - this.stateT;
         }
-        if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
+        if (this.special === 'dash') { this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT); this.dashWarning?.setProgress(this.stateT / (this.attackDur * .45)); }
         if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
       }
       if (t >= 1) { this.signatures?.clear(); this.clearDashWarning(); this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
@@ -556,6 +556,11 @@ export class Enemy extends Actor {
     this.playTimed(anim, dur, { fade: 0.08, phase: this.rigName === 'library' ? 'monster' : undefined, hitAt: this.hitAt, impactAt: this.libraryAsset?.impacts?.[clipKey] ?? this.hitAt });
     this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
+    // 보스(중간·최종 포함) 일반 패턴: 고유기와 같은 바닥 셰이더 예고(boss) + 가슴 높이 차지 빛. 판정 도형·경고 시간은 그대로다.
+    // 바닥 위험색은 돌진 통로와 같은 적색(셰이더의 붉은 색 분기: 짙은 진홍 채움·노란 열기 테)으로 통일하고, 정체성 색은 차지 빛·탄막·영혼비가 맡는다.
+    const boss = this.isBoss, identity = boss ? this.def.projColor ?? 0xff5040 : 0xff3030, danger = 0xff3030, calm = !!g.app?.reducedMotion?.matches;
+    // 돌진은 판정(.85)이 아니라 출발(.45) 순간이 예고의 끝이다: 차지 빛도 출발에 맞춰 접힌다.
+    if (boss) g.fx.bossCharge?.(this.pos, this.special === 'soulrain' ? 0x80ff90 : identity, { life: this.special === 'dash' ? dur * .45 : this.telegraph, scale: this.def.scale, reduced: calm, summon: this.special === 'summon' });
     if (this.special === 'dash') {
       const p = this.player, dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
       const dd = Math.hypot(dx, dz) || 1, travel = Math.min(9, dd + 1.5);
@@ -563,19 +568,20 @@ export class Enemy extends Actor {
         length: travel + 6.4, width: 6.4, angle: Math.atan2(dz, dx), safeRadius: 0 };
       // 고유기 보스는 기존 경고 슬롯 하나를 빌려 최대 6개 메시 계약을 유지한다.
       this.dashWarning ||= new EnemyDashWarning(g.scene, this.signatures?.slots[0].mesh);
-      this.dashWarning.show(this.partyDashWarning);
+      this.dashWarning.show(this.partyDashWarning, { calm });
       this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4));
       this.faceDir(dx, dz); this.telegraph = dur * .45;
       audio.whoosh({ vol: .5, pitch: .5, dur: .5 });
     }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
     // 부채꼴 탄막 예고: 정체성 색(초록 탄)과 위험 적색을 반씩 섞어 바닥 위에서 '맞으면 아프다'로 읽힌다(보스 고유기 예고와 같은 규칙). 도형·시간 불변.
-    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
-    else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
-    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
-    else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
-    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
-    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 1 });
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, boss ? danger : _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, boss, calm, life: dur * this.hitAt, thickness: .6 });
+    else if (this.special === 'spin') g.fx.ring(this.pos, danger, { r0: 4.2, r1: 4.8, telegraph: true, boss, calm, life: dur * this.hitAt, y: 0.06, width: 1 });
+    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), danger, { r0: 3.6, r1: 4.2, telegraph: true, boss, calm, life: dur * this.hitAt, y: 0.06 });
+    // 소환진은 피해 범위가 아니므로 위험 적색 대신 보스 정체성 색으로 그린다(일반 적 소환은 기존 적색).
+    else if (this.special === 'summon') { g.fx.castCircle(this.pos, boss ? identity : 0xff3030, { radius: 4, telegraph: true, life: dur, demon: !boss }); }
+    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, boss ? danger : 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, boss, calm, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
+    else g.fx.slashArc(this.pos, this.yaw, danger, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, boss, calm, life: dur * this.hitAt, tilt: 0, thickness: 1 });
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   playerHit(target, damage, options, point = target.pos) {
@@ -652,9 +658,12 @@ export class Enemy extends Actor {
 }
 
 /** Presentation-only shapes. No damage, RNG or simulation timer advances here. */
+/** 손님 화면 부채꼴 경고 송신(수신 지원 배포 뒤 다음 릴리스에서 true). */
+export const PARTY_SECTOR_WARNINGS = false;
 export function enemyPartyWarnings(enemy) {
   if (!enemy.alive || enemy.spawning || !enemy.partyId) return [];
-  const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:0xff6040};
+  // 보스 공격은 id 에 ':boss' 를 붙여 파티 손님 화면도 호스트와 같은 보스 예고 셰이더·적색으로 그린다.
+  const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}${enemy.isBoss ? ':boss' : ''}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:enemy.isBoss ? 0xff3030 : 0xff6040};
   const burrowWarning = enemy.burrow?.partyWarning(enemy.partyId);
   if (burrowWarning) return [burrowWarning];
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0 && enemy.fuse < .7) return [{...base,id:`${enemy.partyId}:fuse`,radius:3.4,duration:.7,remaining:.7-enemy.fuse}];
@@ -663,7 +672,7 @@ export function enemyPartyWarnings(enemy) {
   if (!remaining) return [];
   Object.assign(base,{duration,remaining});
   const forward = {x:Math.sin(enemy.yaw),z:Math.cos(enemy.yaw)};
-  if (enemy.special === 'soulrain') return (enemy.rainPts || []).map((pt,i)=>({...base,id:`${base.id}:${i}`,x:pt.x,z:pt.z,radius:2.2,color:0x80ff90}));
+  if (enemy.special === 'soulrain') return (enemy.rainPts || []).map((pt,i)=>({...base,id:`${base.id}:${i}`,x:pt.x,z:pt.z,radius:2.2,color:enemy.isBoss ? 0xff3030 : 0x80ff90}));
   if (enemy.special === 'summon') return [];
   if (enemy.special === 'slam') return [{...base,x:base.x+forward.x*2,z:base.z+forward.z*2,radius:4.2}];
   if (enemy.special === 'spin') return [{...base,radius:4.8}];
@@ -672,5 +681,8 @@ export function enemyPartyWarnings(enemy) {
     const angles = enemy.special === 'fan' ? [-.56,-.28,0,.28,.56] : [0];
     return angles.map((a,i)=>{const yaw=enemy.yaw+a;return {...base,id:`${base.id}:${i}`,kind:'lane',x:base.x+Math.sin(yaw)*7,z:base.z+Math.cos(yaw)*7,width:1.5,length:14,angle:Math.PI/2-yaw};});
   }
+  // 보스 기본 공격은 손님 화면에도 판정과 같은 부채꼴(kind 'sector', width = 반각 1.1 rad)로 보낸다.
+  // 이전 버전 손님은 'sector' 를 모르는 상태를 통째로 거부하므로, 수신 지원이 배포된 다음 릴리스에서 PARTY_SECTOR_WARNINGS 를 켠다.
+  if (enemy.isBoss && PARTY_SECTOR_WARNINGS) return [{...base,kind:'sector',radius:enemy.def.range+.6,width:1.1,angle:Math.PI/2-enemy.yaw}];
   return [{...base,radius:enemy.def.range+.6}];
 }

@@ -1,5 +1,7 @@
 // 영웅별 VFX 점수표 계측(h1b). 실제 개발 서버·실제 부팅 탭·실제 공격/스킬 버튼 터치 1회 + API 시전 고정 프레임.
-// 사용: node tools/hero-vfx-scorecard.mjs --out <폴더> [--heroes knight,ranger] [--only holy_slash,combo] [--tag before]
+// 사용: node tools/hero-vfx-scorecard.mjs --out <폴더> [--heroes knight,ranger] [--only holy_slash,combo] [--tag before] [--tier 0..4]
+// --tier: 측정 직전(app.testPause 로 실시간 루프가 멈춘 뒤) 적응 품질 단계(frameGovernor·renderer.thermalTier)를 고정한다.
+//         단계 2 이상은 블룸 패스(밉 5단 흐림·합성 ≈ 드로우콜 13)를 끈다. 지정하지 않으면 그때 단계를 그대로 기록만 한다.
 // 산출(커밋 금지): <out>/<tag>/<hero>-<case>-<ms>.png, <out>/<tag>/<hero>-montage.png, <out>/<tag>/metrics.json
 // 주입: 영웅 레벨 50·스킬 습득·쿨다운/MP/궁극기 게이지·적 배치·적 고정·Math.random 시드·app.testPause(1/60초 고정 스텝).
 // 지표: bright = 휘도 ≥ 220 픽셀 비율, white = 세 채널 모두 ≥ 235(백화), changed = 시전 직전 프레임 대비 바뀐 픽셀 비율,
@@ -10,6 +12,7 @@ import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { metrics } from './vfx-metrics.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const root = path.resolve(import.meta.dirname, '..');
@@ -19,31 +22,6 @@ const heroes = (arg('heroes') || 'knight,ranger,mage,rogue,barbarian').split(','
 const only = arg('only') ? new Set(arg('only').split(',')) : null;
 const VIEW = { width: 844, height: 390 };
 await fs.mkdir(out, { recursive: true });
-
-async function metrics(png, basePng) {
-  const a = await sharp(png).raw().toBuffer({ resolveWithObject: true });
-  const b = basePng ? await sharp(basePng).raw().toBuffer() : null;
-  const { data, info } = a, ch = info.channels, n = info.width * info.height;
-  let bright = 0, white = 0, changed = 0, satSum = 0; const hues = new Array(12).fill(0);
-  for (let i = 0, p = 0; p < n; p++, i += ch) {
-    const r = data[i], g = data[i + 1], bl = data[i + 2];
-    const luma = .2126 * r + .7152 * g + .0722 * bl;
-    if (luma >= 220) bright++;
-    if (r >= 235 && g >= 235 && bl >= 235) white++;
-    if (b && Math.abs(r - b[i]) + Math.abs(g - b[i + 1]) + Math.abs(bl - b[i + 2]) > 60) {
-      changed++;
-      const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl), s = mx ? (mx - mn) / mx : 0; satSum += s;
-      if (s >= .35 && mx > 60) {
-        let h; const d = mx - mn;
-        if (mx === r) h = ((g - bl) / d) % 6; else if (mx === g) h = (bl - r) / d + 2; else h = (r - g) / d + 4;
-        hues[Math.floor((((h * 60) + 360) % 360) / 30)]++;
-      }
-    }
-  }
-  const top = hues.map((v, i) => [i * 30, v]).sort((x, y) => y[1] - x[1]).slice(0, 2).filter(x => x[1] > 0).map(x => x[0]);
-  const r4 = v => +(v / n).toFixed(4);
-  return { bright: r4(bright), white: r4(white), changed: r4(changed), sat: changed ? +(satSum / changed).toFixed(3) : 0, hue: top };
-}
 
 const server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } });
 await server.listen();
@@ -104,6 +82,7 @@ try {
       window.__step = n => { for (let i = 0; i < n; i++) app.step(1 / 60, i === n - 1); };
       return { skills: p.def.skills.map(s => ({ id: s.id, ult: !!s.ult, castAt: s.castAt || .4 })), type };
     });
+    if (arg('tier') !== '') await page.evaluate(t => { const g = window.__perfGovernor; if (g) g.tier = t; window.app.renderer.setThermalTier(t); }, +arg('tier'));
     const cases = [{ id: 'combo', kind: 'combo' }, { id: 'crit', kind: 'crit' }, { id: 'kill', kind: 'kill' }, ...def.skills.map((s, i) => ({ id: s.id, kind: 'skill', index: i, castAt: s.castAt, ult: s.ult }))]
       .filter(c => !only || only.has(c.id));
     const rows = [];
@@ -136,7 +115,7 @@ try {
         const png = await page.screenshot();
         const file = `${hero}-${c.id}-${Math.round(t * 1000)}.png`;
         await fs.writeFile(path.join(out, file), png);
-        const live = await page.evaluate(() => { const r = window.app.renderer; const f = window.app.fx; return { particles: f.sparks.n + f.glow.n + f.smoke.n, fxItems: f.items.length, exposure: +(window.app.fx._exposure || 0).toFixed(1), bloom: +(r.bloom?.strength ?? 0).toFixed(3), impactSpawned: f.impact?.spawned ?? null, impactLive: f.impact?.live?.() ?? null }; });
+        const live = await page.evaluate(() => { const r = window.app.renderer; const f = window.app.fx; return { particles: f.sparks.n + f.glow.n + f.smoke.n, fxItems: f.items.length, exposure: +(window.app.fx._exposure || 0).toFixed(1), bloom: +(r.bloom?.strength ?? 0).toFixed(3), impactSpawned: f.impact?.spawned ?? null, impactLive: f.impact?.live?.() ?? null, thermalTier: r.thermalTier, governorTier: window.__perfGovernor?.tier ?? null, bloomOn: !!r.bloom?.enabled, quality: r.quality, fxQuality: f.quality ?? null, resolutionScale: r.resolutionScale }; });
         shots.push({ t: +t.toFixed(2), file, calls, ...(await metrics(png, basePng)), ...live });
       }
       const peak = shots.reduce((m, s) => Math.max(m, s.bright), 0), peakWhite = shots.reduce((m, s) => Math.max(m, s.white), 0);

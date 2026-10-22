@@ -23,7 +23,8 @@ const coord = v => obj(v) && num(v.x) && num(v.z);
 const actor = v => coord(v) && str(v.id) && num(v.yaw, -100, 100)
   && num(v.hp, 0, 1e9) && num(v.maxHp, 1, 1e9) && v.hp <= v.maxHp
   && str(v.state, 40) && (v.anim === null || str(v.anim, 80));
-const warning = v => obj(v) && str(v.id, 96) && ['disk', 'ring', 'lane'].includes(v.kind)
+// 'sector'(보스 기본 공격 부채꼴, width = 반각)는 수신만 먼저 받는다. 송신은 enemies.js PARTY_SECTOR_WARNINGS.
+const warning = v => obj(v) && str(v.id, 96) && ['disk', 'ring', 'lane', 'sector'].includes(v.kind)
   && num(v.x, -2000, 2000) && num(v.z, -2000, 2000)
   && ['radius', 'width', 'length', 'safeRadius'].every(k => num(v[k], 0, 80))
   && num(v.angle, -100, 100) && num(v.remaining, 0, 20) && num(v.duration, 0.01, 20)

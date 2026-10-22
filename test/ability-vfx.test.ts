@@ -38,9 +38,11 @@ test('abilitySignature clamps scale/lifetime, composes bounded cues and preserve
   const ground = calls[0][1][3];
   const flash = calls[2][1][3];
   const burst = calls[4][1][2];
-  expect(ground.r1).toBeCloseTo(8.64);
+  // 화염 착탄 덩어리 제거(h1c): 마법진 채움·고리·폭발 원화는 groundScale .72·ringScale .62·flashScale .45 로 작게 그린다.
+  expect(ground.r1).toBeCloseTo(3.6 * 2.4 * .72);
   expect(ground.life).toBe(2.2);
-  expect(flash.size).toBeCloseTo(12.528);
+  expect(calls[1][1][2].r1).toBeCloseTo(3.6 * 1.16 * 2.4 * .62);
+  expect(flash.size).toBeCloseTo(12.528 * .45);
   expect(burst.n).toBe(27);
   expect(burst.life).toBeCloseTo(0.72);
 });
