@@ -1,0 +1,188 @@
+{
+ "library": "derived-v1",
+ "generator": "tools/audio/fx-variants.py (Mirelo 원본의 피치·EQ·꼬리 파생, 새 생성 아님)",
+ "license": "owner-generated (derived from mirelo-v1 Runware/Mirelo API output)",
+ "sampleRate": 44100,
+ "channels": 1,
+ "codec": "mp3 96k",
+ "createdAt": "2026-10-22",
+ "humanListening": "pending",
+ "replaceWhen": "docs/audio/mirelo-variant-brief-h2.md 의 Mirelo 변형이 도착하면",
+ "assets": [
+  {
+   "id": "fx/thump_1",
+   "path": "/sfx/derived-v1/fx/thump_1.mp3",
+   "sha256": "a1dca3922859ad0470192d657defb3392d319659eff97878a094916c325878e2",
+   "bytes": 10991,
+   "durationSec": 0.8608,
+   "decodedPeak": 0.4939,
+   "decodedRms": 0.0639,
+   "onsetMs": 1.02,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/thump_0.mp3",
+    "sha256": "de71328daba81e66512f44a9cb5f4d77ae4d1b73dd2238204f23e35e5ba08c34",
+    "taskUUID": "266beff7-f988-4bec-ab9b-11f27df9f166"
+   },
+   "process": {
+    "pitch": 0.87,
+    "lowShelfDb": 3.0,
+    "highShelfDb": -4.0,
+    "tail": 1.0
+   },
+   "bodyDb": -22.1,
+   "sourceBodyDb": -21.68,
+   "spectralDistanceDb": 4.76,
+   "runtimeJitterDistanceDb": 0.69
+  },
+  {
+   "id": "fx/thump_2",
+   "path": "/sfx/derived-v1/fx/thump_2.mp3",
+   "sha256": "aae7cb79f9ffe12c85d82d4187cd34b882d2e0898c3a73c0b4d02a60ba598508",
+   "bytes": 8797,
+   "durationSec": 0.6629,
+   "decodedPeak": 0.8054,
+   "decodedRms": 0.048,
+   "onsetMs": 0.98,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/thump_0.mp3",
+    "sha256": "de71328daba81e66512f44a9cb5f4d77ae4d1b73dd2238204f23e35e5ba08c34",
+    "taskUUID": "266beff7-f988-4bec-ab9b-11f27df9f166"
+   },
+   "process": {
+    "pitch": 1.13,
+    "lowShelfDb": -1.5,
+    "highShelfDb": 2.5,
+    "tail": 0.6
+   },
+   "bodyDb": -22.28,
+   "sourceBodyDb": -21.68,
+   "spectralDistanceDb": 2.77,
+   "runtimeJitterDistanceDb": 0.69
+  },
+  {
+   "id": "fx/ting_1",
+   "path": "/sfx/derived-v1/fx/ting_1.mp3",
+   "sha256": "569650d82ae93642778767a884bde5153853c871e8a957c1df731a698bb01798",
+   "bytes": 8483,
+   "durationSec": 0.6293,
+   "decodedPeak": 0.8667,
+   "decodedRms": 0.1015,
+   "onsetMs": 0.73,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/ting_0.mp3",
+    "sha256": "8eea95933afee8249ab177df12fa4e5dbed9a93528522703a29f2132ddd5289b",
+    "taskUUID": "519c5e52-7939-490e-9069-315259186bea"
+   },
+   "process": {
+    "pitch": 1.19,
+    "lowShelfDb": 0.0,
+    "highShelfDb": 1.0,
+    "tail": 0.8
+   },
+   "bodyDb": -17.2,
+   "sourceBodyDb": -16.16,
+   "spectralDistanceDb": 1.73,
+   "runtimeJitterDistanceDb": 0.58
+  },
+  {
+   "id": "fx/ting_2",
+   "path": "/sfx/derived-v1/fx/ting_2.mp3",
+   "sha256": "317ac17b7038616674239909d26d83bf32b956df3023e04ff1b9db82cba796d1",
+   "bytes": 10991,
+   "durationSec": 0.8415,
+   "decodedPeak": 0.644,
+   "decodedRms": 0.1148,
+   "onsetMs": 0.98,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/ting_0.mp3",
+    "sha256": "8eea95933afee8249ab177df12fa4e5dbed9a93528522703a29f2132ddd5289b",
+    "taskUUID": "519c5e52-7939-490e-9069-315259186bea"
+   },
+   "process": {
+    "pitch": 0.89,
+    "lowShelfDb": 0.0,
+    "highShelfDb": -3.0,
+    "tail": 1.0
+   },
+   "bodyDb": -16.58,
+   "sourceBodyDb": -16.16,
+   "spectralDistanceDb": 2.27,
+   "runtimeJitterDistanceDb": 0.58
+  },
+  {
+   "id": "fx/charge_1",
+   "path": "/sfx/derived-v1/fx/charge_1.mp3",
+   "sha256": "bf8d7a6768aef6271eda72c24f42cfb473340fbc250a9ef17479b994dd9da3b2",
+   "bytes": 13812,
+   "durationSec": 1.0825,
+   "decodedPeak": 0.7085,
+   "decodedRms": 0.168,
+   "onsetMs": 0.91,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/charge_0.mp3",
+    "sha256": "34249ee2031218a2ac056ca54ac6d17d5ae76b159c7b3ad9c3a44c9ef6deec28",
+    "taskUUID": "0430c74b-a2c2-45d3-a156-da297569b090"
+   },
+   "process": {
+    "pitch": 0.94,
+    "lowShelfDb": 2.0,
+    "highShelfDb": -1.5,
+    "tail": 1.0
+   },
+   "bodyDb": -12.27,
+   "sourceBodyDb": -11.86,
+   "spectralDistanceDb": 2.5,
+   "runtimeJitterDistanceDb": 0.79
+  },
+  {
+   "id": "fx/tele_melee_1",
+   "path": "/sfx/derived-v1/fx/tele_melee_1.mp3",
+   "sha256": "565bbf2c45a71496a02f347b878c739d00ea5da3c3debdf6af250dc1e4462640",
+   "bytes": 11618,
+   "durationSec": 0.9085,
+   "decodedPeak": 0.8128,
+   "decodedRms": 0.0785,
+   "onsetMs": 1.0,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/tele_melee_0.mp3",
+    "sha256": "c4427d5abc2a51babe6b93a8d46cff8dac72b37da4387224d3bb6d93e27141ed",
+    "taskUUID": "01454ce3-d3c6-474a-b9b3-1b22e7f185e9"
+   },
+   "process": {
+    "pitch": 1.07,
+    "lowShelfDb": -1.0,
+    "highShelfDb": 2.0,
+    "tail": 0.85
+   },
+   "bodyDb": -15.76,
+   "sourceBodyDb": -15.07,
+   "spectralDistanceDb": 2.62,
+   "runtimeJitterDistanceDb": 1.4
+  },
+  {
+   "id": "fx/tele_magic_1",
+   "path": "/sfx/derived-v1/fx/tele_magic_1.mp3",
+   "sha256": "5e4dce07245f7ca66d64d0595624da75aea355ee5aa41f171b25396a7f276974",
+   "bytes": 6916,
+   "durationSec": 0.5188,
+   "decodedPeak": 0.807,
+   "decodedRms": 0.1532,
+   "onsetMs": 0.5,
+   "derivedFrom": {
+    "path": "/sfx/mirelo-v1/fx/tele_magic_0.mp3",
+    "sha256": "83e84672f10773512019efc41cac0a9149320231ae695998878538c37f24e387",
+    "taskUUID": "79dde6fb-7e85-450d-9777-1efc4f6b82e9"
+   },
+   "process": {
+    "pitch": 0.93,
+    "lowShelfDb": 1.5,
+    "highShelfDb": -2.0,
+    "tail": 1.0
+   },
+   "bodyDb": -11.33,
+   "sourceBodyDb": -10.94,
+   "spectralDistanceDb": 4.55,
+   "runtimeJitterDistanceDb": 0.99
+  }
+ ]
+}

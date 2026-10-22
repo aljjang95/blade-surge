@@ -143,9 +143,10 @@ test('모바일 mid 기본 부하와 단계별 완화를 제한하고 데스크�
   expect(thermalRenderProfile('mid', true, 2).bloomEnabled).toBe(false);
   expect(thermalRenderProfile('low', true, 0).bloomEnabled).toBe(false);
   const size = { width: 747, height: 298, dpr: 3.75, quality: 'mid', touch: true };
-  expect(renderPixelRatio(size)).toBe(1.5);
-  expect(renderPixelRatio({ ...size, thermalTier: 2 })).toBe(1.5);
-  expect(renderPixelRatio({ ...size, thermalTier: 3 })).toBeCloseTo(1.2, 8);
+  // 동적 해상도 도입 뒤 mid 출발점은 DPR 상한 2·예산 1.6M 이다(이전 1.5·1.0M). 3단계는 그 값의 80%.
+  expect(renderPixelRatio(size)).toBe(2);
+  expect(renderPixelRatio({ ...size, thermalTier: 2 })).toBe(2);
+  expect(renderPixelRatio({ ...size, thermalTier: 3 })).toBeCloseTo(1.6, 8);
   // 기본값이 1 아래인 고해상도 태블릿도 3단계에서 실제로 줄어들고, 0.6 아래로는 내려가지 않는다.
   expect(renderPixelRatio({ ...size, dpr: 1, thermalTier: 4 })).toBeCloseTo(0.8, 8);
   const tablet = { width: 1493, height: 766, dpr: 1.875, quality: 'mid', touch: true };
@@ -199,7 +200,7 @@ test('실제 App.loop는 120Hz에서 60회만 step하고 testPause·렌더 중�
   const doc = { hidden: false, querySelector: () => null };
   const loop = appMethod('loop', { canRenderFrame, document: doc, requestAnimationFrame: () => {}, performance: { now: () => 0 } });
   const app: any = { frameGovernor: new FrameGovernor(), mode: 'battle', meta: { tab: 'home' },
-    renderer: { renderCount: 0, setThermalTier() {} }, steps: 0, elapsed: 0,
+    renderer: { renderCount: 0, setThermalTier() {}, setResolutionScale() {} }, steps: 0, elapsed: 0,
     step(dt: number, render: boolean) { this.steps++; this.elapsed += dt; if (render) this.renderer.renderCount++; } };
   app.frameGovernor.reset(0);
   for (let i = 1; i <= 120; i++) loop.call(app, i * 1000 / 120);

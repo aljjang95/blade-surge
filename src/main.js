@@ -50,10 +50,12 @@ import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
 import { applyDifficulty } from './game/difficulty.js';
 import { CITADEL_HUB } from './data/citadel-hub.js';
+import { activeCampaignTownChapter, setActiveCampaignTownChapter } from './data/campaign-towns.js';
 import { preloadCitadelHubAssets } from './game/citadel-hub-scene.js';
 import { HubMovement } from './game/hub-movement.js';
 import { HubControls } from './engine/hub-controls.js';
 import { CitadelHubUI } from './ui/citadel-hub.js';
+import { CampaignTownUI } from './ui/campaign-town-ui.js';
 import { CitadelShop } from './ui/citadel-shop.js';
 import { CitadelCommand } from './ui/citadel-command.js';
 import './ui/citadel-integration.css';
@@ -62,6 +64,8 @@ import './ui/departure-journal.css';
 import './ui/mobile-menu.css';
 import './ui/maple-window.css';
 import './ui/lobby-clarity.css';
+import './ui/campaign-town.css';
+import './ui/campaign-map.css';
 import { MapleUI } from './ui/maple-ui.js';
 import { buildIdentity, classifyStartupFailure, onMediaQueryChange, startupFailureDetails, storageAvailability } from './platform/startup-compat.js';
 const BOOT_TIPS = [
@@ -95,6 +99,7 @@ class App {
     this.fx.focus.bindBloom(this.renderer.bloom);
     this.renderer.heroEffectFocus = this.fx.focus;
     this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
+    this.renderer.bloomLoad = () => this.fx.bloomLoad();
     this.renderer.playerSilhouetteTarget = () => this.mode === 'battle' && !this.stageStarting && !this.contextLost
       && this.battle?.active ? this.battle.player : null;
     startup.stage = 'input';
@@ -222,6 +227,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.townChip = new CampaignTownUI(this); this.townChip.sync('home'); this.townChip.announcePending();
     this.mapleUI = new MapleUI(this);
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
@@ -246,7 +252,7 @@ class App {
     if (!this.frameGovernor) {
       let storage = null;
       try { storage = window.localStorage; } catch { /* 차단된 저장소에서는 세션 안에서만 조절한다. */ }
-      this.frameGovernor = new FrameGovernor({ storage });
+      this.frameGovernor = new FrameGovernor({ storage, scaleStorage: storage });
       this.frameGovernor.reset(performance.now());
       window.__perfGovernor = this.frameGovernor;
       const resetGovernor = () => this.frameGovernor.suspend(performance.now());
@@ -255,6 +261,7 @@ class App {
       window.addEventListener('pageshow', resetGovernor);
     }
     this.renderer.setThermalTier(this.frameGovernor.tier);
+    this.renderer.setResolutionScale(this.frameGovernor.resolutionScale);
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
     const q = resolveQuality(st.quality, { cores: navigator.hardwareConcurrency || 4, memory: navigator.deviceMemory || 4,
@@ -306,10 +313,25 @@ class App {
     releaseBlockedLobbyInput(this);
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
   }
+  /**
+   * 저장된 캠페인 마을 선택을 로비 장면에 반영한다. 마을이 바뀌었고 로비 장면이 이미 있으면 다시 짓는다
+   * (전투에서 돌아올 때는 장면이 비어 있어 showcaseHero 가 새로 짓는다). 바뀌었으면 true.
+   */
+  syncCampaignTown(rebuild = true) {
+    const before = activeCampaignTownChapter();
+    const next = setActiveCampaignTownChapter(this.eco.campaignTownState().current);
+    if (next === before) return false;
+    if (rebuild && this.arena.lobbyHall) {
+      this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub(); this.townUI?.renderPlace();
+      if (this.mode === 'lobby') audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
+    }
+    return true;
+  }
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
     if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    this.syncCampaignTown(false);
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
@@ -361,6 +383,7 @@ class App {
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     this.syncHub();
+    this.townChip?.announcePending();
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
@@ -469,6 +492,7 @@ class App {
     if (!realDt) return;
     this.last = t;
     this.renderer.setThermalTier(governor.tier);
+    this.renderer.setResolutionScale(governor.resolutionScale);
     const count = this.renderer.renderCount, started = performance.now();
     // 기존 장시간 정지의 dt 상한은 유지하며, 평소 간격 제어 시간은 시뮬레이션에 모두 넘긴다.
     this.step(Math.min(0.05, realDt), render);

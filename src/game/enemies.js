@@ -12,6 +12,8 @@ import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
 import { EnemyDashWarning } from './enemy-dash-warning.js';
 import { hazardContains } from './region-hazards.js';
 import { monsterRosterEntry } from '../data/monster-roster.js';
+import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
+import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
 
 const _v = new THREE.Vector3();
@@ -269,6 +271,11 @@ export class Enemy extends Actor {
     ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
+  /** 걷기·달리기 클립의 재생 배율(보폭 표에 있으면). 표 조회만 하고 할당하지 않는다. */
+  locoTempo(clip, speed) {
+    const stride = MONSTER_STRIDE[this.def.model]?.[clip];
+    return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
+  }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
@@ -314,7 +321,7 @@ export class Enemy extends Actor {
     if (staggerOK && !warrior && !guarded && this.state !== 'dead') {
       // 일반 몹은 수동 기본 공격의 접촉에서 공격을 끊는다. 보스/엘리트의
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
-      if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A(kb >= 4 || crit || finisher ? 'hitHeavy' : 'hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
+      if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; const react = enemyHitReact(kb, crit, finisher); this.stagger = react.stagger; this.play(this.A(react.key), { once: true, fade: 0.04, speed: react.speed }); this.telegraph = 0; this.attackDone = false; }
     }
     // 채널이 다음 프레임 재몰이해 강타 관성을 지우지 못하게 제어 소유 시간을 둔다.
     if (kb >= 6 || up) this.gatherBlockT = Math.max(this.gatherBlockT || 0, .35, this.stun,
@@ -332,7 +339,16 @@ export class Enemy extends Actor {
     this.signatures?.clear();
     this.mobRole?.clear();
     this.burrow?.dispose();
+    // 사망 변주: 시체는 공격자를 향해 돌아선 뒤 넘어져 맞은 방향으로 쓰러지고, 처치 등급마다 쓰러지는 박자가 다르다(난수 없음).
+    const style = deathStyle({ dirx, dirz, kb, crit: !!flair?.crit, finisher: !!flair?.finisher, elite: this.isElite, boss: this.isBoss });
+    if (style.faceYaw !== null) {
+      // 판정 방향은 즉시 바꾸고, 보이는 몸은 렌더 피벗에서 짧게 따라 돌아 한 프레임에 홱 돌지 않게 한다(Actor.updateCombatPose).
+      const turn = this.yaw - style.faceYaw;
+      this._deathTurn = Math.atan2(Math.sin(turn), Math.cos(turn)); this.yaw = style.faceYaw;
+    }
+    const before = this.action;
     this.die(); this.state = 'dead'; this.telegraph = 0;
+    if (this.action && this.action !== before) this.action.timeScale = style.speed;   // 사망 클립이 실제로 재생될 때만
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
     // 보스·정예는 기존 대형 처치 연출이 있으므로 제외한다. 일반 몹만 튀어 오르며 처치 섬광을 남긴다.
@@ -440,7 +456,9 @@ export class Enemy extends Actor {
         if (idlePursuit(this, this.game, sx, sz, _route)) {
           this.faceDir(_route.x, _route.z);
           const walk = this.def.spd < 4 ? this.A('walk') : this.A('run');
-          if (this.actionName !== walk) this.play(walk, { fade: 0.15 });
+          const tempo = this.locoTempo(walk, Math.hypot(this.vel.x, this.vel.z));
+          if (this.actionName !== walk) this.play(walk, { fade: 0.15, speed: tempo ?? 1 });
+          else if (tempo !== null && this.action) this.action.timeScale = tempo;
         } else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.2 });
         return;
       }
@@ -456,7 +474,10 @@ export class Enemy extends Actor {
         this.backT = Math.max(0, (this.backT || 0) - dt * .5);
         const spd = this.def.spd * spdMul * _route.pace; this.vel.set(_route.x * spd + sx, 0, _route.z * spd + sz);
         const run = this.def.spd < 4 ? this.A('walk') : this.A('run');
-        if (this.actionName !== run) this.play(run, { fade: 0.15, speed: spdMul * (this.def.spd > 5 ? 1.2 : 1) });
+        // 다리 있는 몬스터는 실제 이동 속도에 재생 배율을 맞춰 디딤발 미끄러짐을 줄인다(보폭 표에 없는 모델은 기존 배율).
+        const tempo = this.locoTempo(run, spd);
+        if (this.actionName !== run) this.play(run, { fade: 0.15, speed: tempo ?? spdMul * (this.def.spd > 5 ? 1.2 : 1) });
+        else if (tempo !== null && this.action) this.action.timeScale = tempo;
       } else if (this.def.ranged && d < range * 0.45 && (this.backT = (this.backT || 0) + dt) < RANGED_RETREAT_SEC) {
         const spd = this.def.spd * 0.8; this.vel.set(-dx / d * spd + sx, 0, -dz / d * spd + sz); if (this.actionName !== this.A('back')) this.play(this.A('back'), { fade: 0.15 });
       } else {

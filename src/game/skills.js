@@ -952,7 +952,7 @@ for (const id of Object.keys(SKILL_VFX)) {
   if (!impl || impl.vfxWrapped) continue;
   const cast = impl.cast;
   impl.cast = function (game, p, c) {
-    try { castSkillVfx(game, id, p, c); } catch (error) { console.warn('skill vfx', id, error); }
+    try { castSkillVfx(game, id, p, c, densest); } catch (error) { console.warn('skill vfx', id, error); }
     return cast?.call(this, game, p, c);
   };
   impl.vfxWrapped = true;

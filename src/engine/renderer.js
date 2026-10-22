@@ -10,11 +10,17 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { displaySize, renderPixelRatio, thermalRenderProfile } from '../platform/mobile-display.js';
+import { displaySize, renderPixelRatio, thermalRenderProfile, snapResolutionScale, sharpenStrength, battleNeedsFxaa } from '../platform/mobile-display.js';
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
+import { setDeviceMaxAnisotropy } from './texture-sampling.js';
 import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
+import { FEEL, cameraKick } from '../game/feel.js';
+import { BLOOM_ADAPT } from './combat-feedback.js';
+
+// 기본 블룸 세기. 큰 장식이 겹치면 BLOOM_ADAPT.minScale 배까지 낮춘다.
+export const BLOOM_STRENGTH = 0.62;
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -95,6 +101,35 @@ const FinalShader = {
     }`,
 };
 
+// 대비 적응형 선명화(AMD FidelityFX CAS 방식). 이웃 4칸의 최소·최대로 "여유 있는 곳"만 강하게 키우므로
+// 이미 대비가 큰 윤곽선에는 후광이 생기지 않는다. 톤매핑·sRGB 변환이 끝난 화면(OutputPass 뒤)에 적용한다.
+const SharpenShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTexel: { value: new THREE.Vector2(1, 1) },   // 렌더 해상도 기준 1픽셀의 UV 크기
+    uSharp: { value: 0.5 },                       // 0(약함)~1(강함)
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec2 uTexel; uniform float uSharp;
+    varying vec2 vUv;
+    void main(){
+      vec3 e = texture2D(tDiffuse, vUv).rgb;
+      vec3 b = texture2D(tDiffuse, vUv + vec2(0.0, -uTexel.y)).rgb;
+      vec3 d = texture2D(tDiffuse, vUv + vec2(-uTexel.x, 0.0)).rgb;
+      vec3 f = texture2D(tDiffuse, vUv + vec2(uTexel.x, 0.0)).rgb;
+      vec3 h = texture2D(tDiffuse, vUv + vec2(0.0, uTexel.y)).rgb;
+      vec3 mn = min(min(min(d, e), min(f, b)), h);
+      vec3 mx = max(max(max(d, e), max(f, b)), h);
+      // 신호 한계까지 남은 거리 / 최대값 → 채널별 적응 가중치.
+      vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, vec3(1e-4)), 0.0, 1.0));
+      float peak = -1.0 / mix(8.0, 5.0, clamp(uSharp, 0.0, 1.0));
+      vec3 w = amp * peak;
+      vec3 col = (b * w + d * w + f * w + h * w + e) / (1.0 + 4.0 * w);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }`,
+};
+
 const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
 /** 세로 선택 로비에서 바라보는 점을 낮추는 양(월드 단위). 390x844 기본 시점에서 영웅 발 y 560→434px, 머리 315→183px. */
 export const LOBBY_PORTRAIT_LOOK_DROP = 1;
@@ -127,6 +162,7 @@ const LOBBY_GRADE = gradeFor('lobby');
 const GRADE_CHANNELS = Object.freeze(['cool', 'warm', 'lift', 'region']);
 const _rimDir = new THREE.Vector3();
 const _tintTarget = new THREE.Color();
+const _kickDir = new THREE.Vector3();
 
 /** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
 export const CAMERA_PRESETS = {
@@ -154,6 +190,7 @@ export class Renderer {
     r.debug.checkShaderErrors = import.meta.env?.DEV !== false;
     this.programValidator = new ShaderProgramValidator();
     this.isWebGL2 = r.capabilities.isWebGL2;
+    setDeviceMaxAnisotropy(r.capabilities.getMaxAnisotropy());
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 1.12;
@@ -165,7 +202,7 @@ export class Renderer {
     this.rebuildEnvironment();
     this.scene = new THREE.Scene();
     this.touch = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-    this.thermalTier = 0; this.renderCount = 0;
+    this.thermalTier = 0; this.renderCount = 0; this.resolutionScale = 1; this.nativeRatio = 1;
     this._shadowSizes = new WeakMap();
     this._syncShadow = object => this._applyShadowSize(object);
     // 아레나가 교체하는 태양광에도 첫 렌더 전에 같은 해상도 정책을 적용한다.
@@ -188,20 +225,25 @@ export class Renderer {
     this.composer.setPixelRatio(this.pixelRatio);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.62, 0.84);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), BLOOM_STRENGTH, 0.62, 0.84);
+    // 장식 노출 부하(0~1, FX.bloomLoad). 올라갈 때는 즉시, 내려갈 때는 BLOOM_ADAPT.release/초로 풀린다.
+    this.bloomLoad = null; this._bloomLoad = 0;
     this.composer.addPass(this.bloom);
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
     this.composer.addPass(new OutputPass());
     this.lobbyAA = new ShaderPass(FXAAShader); this.lobbyAA.enabled = false;
     this.composer.addPass(this.lobbyAA);
+    // 선명화는 항상 마지막(FXAA 뒤)이다. 낮음 화질에서는 끈다.
+    this.sharpenPass = new ShaderPass(SharpenShader); this.sharpenPass.enabled = false;
+    this.composer.addPass(this.sharpenPass);
     this.u = this.finalPass.uniforms;
     this.playerSilhouette = new PlayerSilhouette(this.u, this.finalPass);
     // 림라이트: 그림자 없는 약한 방향광 하나. 구성이 고정이라 셰이더가 다시 컴파일되지 않는다.
     this.rimLight = new THREE.DirectionalLight(0xb4d6ff, RIM_INTENSITY);
     this.scene.add(this.rimLight, this.rimLight.target);
     this._gradeKey = 'default'; this._grade = gradeFor('default'); this._gradeTarget = gradeFor('default');
-    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0; this.speedAccent = 0;
+    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0; this.speedAccent = 0; this.kickT = -1; this.kickAmt = 0; this.kickOffset = 0;
     // 카메라는 사용자 시점·지역 구도만 따른다. 동작 줄이기 선호는 후처리 왜곡을 끈다.
     this.postFxEnabled = true;
 
@@ -233,6 +275,13 @@ export class Renderer {
     this.scene.traverse(this._syncShadow);
     if (wasReduced !== (tier >= 3)) this.resize(true);
   }
+  /** 동적 해상도 배율(0.7~1.0, 0.1 단계). 단계가 바뀔 때만 렌더 타깃을 다시 잡는다. */
+  setResolutionScale(scale) {
+    const next = snapResolutionScale(scale);
+    if (next === this.resolutionScale) return;
+    this.resolutionScale = next;
+    this.resize(true);
+  }
   _applyShadowSize(object) {
     const shadow = object.shadow;
     if (!object.castShadow || !shadow) return;
@@ -257,7 +306,8 @@ export class Renderer {
   resize(force = false) {
     const { width: w, height: h } = displaySize(window);
     const pr = renderPixelRatio({ width: w, height: h, dpr: window.devicePixelRatio, quality: this.quality,
-      touch: this.touch, thermalTier: this.thermalTier });
+      touch: this.touch, thermalTier: this.thermalTier, resolutionScale: this.resolutionScale });
+    this.nativeRatio = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
     document.documentElement.style.setProperty('--app-height', h + 'px');
     if (!force && this._width === w && this._height === h && this.r.getPixelRatio() === pr) return;
     this._width = w; this._height = h;
@@ -267,6 +317,8 @@ export class Renderer {
     this.composer.setSize(w, h);
     this.playerSilhouette.resize(w, h, pr);
     this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
+    this.sharpenPass.uniforms.uTexel.value.copy(this.lobbyAA.uniforms.resolution.value);
+    this.sharpenPass.uniforms.uSharp.value = sharpenStrength(pr, this.nativeRatio);
     if (this.rig?.mode === 'battle' && this.battleMinimumAspect > 0) {
       const look = this.rig.target.clone().add(this.rig.lookOffset);
       const fitted = refitBattleCameraPosition(this.rig.pos, look, this.camera.aspect, w / h, this.battleMinimumAspect);
@@ -318,6 +370,15 @@ export class Renderer {
   shake() {}
   /** 화면 전체 FOV 줌 펄스도 쓰지 않는다(공격마다 화면이 확대·축소되지 않는다). */
   punch() {}
+  /** 궁극기 발동·보스 처치 같은 한 번의 큰 박자만 쓰는 방향성 카메라 펀치(m). 평타·스킬 명중에는 부르지 않는다.
+   * 렌더 카메라만 시선 방향으로 밀었다가 FEEL.camera 곡선대로 정확히 0 으로 되돌린다. rig·사용자 드래그/핀치 시점은 건드리지 않는다.
+   * 동작 줄이기 판정은 호출자(전투)가 한다. 진행 중 펀치보다 약한 새 펀치는 무시한다. */
+  kick(amount = 0) {
+    const a = Math.min(FEEL.camera.kickMax, Number.isFinite(amount) ? amount : 0);
+    if (!(a > 0)) return;
+    if (this.kickT >= 0 && cameraKick(this.kickT, this.kickAmt) >= a) return;
+    this.kickT = 0; this.kickAmt = a;
+  }
   /** 마지막 적 슬로우 가장자리 속도선 세기(0~1). 동작 줄이기·로비·낮은 화질에서는 update 가 0 으로 막는다. */
   setSpeedAccent(level = 0) { this.speedAccent = Number.isFinite(level) ? Math.max(0, Math.min(1, level)) : 0; }
   flashScreen(strength = 1, color = 0xffffff) {
@@ -331,6 +392,7 @@ export class Renderer {
     const rig = this.rig, cam = this.camera;
     let desired;
     if (rig.mode === 'lobby') {
+      this.kickT = -1; this.kickOffset = 0;   // 전투 펀치는 로비로 넘어오지 않는다
       const walking = this.lobbyNavigation;
       const portrait = this._width < this._height;
       // The walking plaza needs a clear view of the route ahead and nearby entrances.
@@ -364,6 +426,14 @@ export class Renderer {
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);
+      // 방향성 펀치: 시선 방향으로만 밀어 구도 중심(영웅)은 그대로다. 일시정지 중에는 진행하지 않는다.
+      this.kickOffset = 0;
+      if (this.kickT >= 0) {
+        if (!paused) this.kickT += realDt;
+        const off = cameraKick(this.kickT, this.kickAmt);
+        if (off > 0) { cam.position.addScaledVector(_kickDir.subVectors(look, cam.position).normalize(), off); this.kickOffset = off; }
+        else if (this.kickT > FEEL.camera.kickIn) this.kickT = -1;
+      }
     }
     // Arena supplies actual hero coordinates before this final camera update.
     this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');
@@ -373,6 +443,7 @@ export class Renderer {
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
     this.radial = Math.max(0, this.radial - realDt * 1.2);
     this.u.uFlash.value = this.flash;
+    this._updateBloomLoad(realDt);
     // 색수차·방사형 블러는 궁극기·마무리타·보스 처치처럼 skills/battle 이 직접 올린 값만 쓰고, 상한을 둔다.
     // 로비·동작 줄이기에서는 공격 실루엣을 지키기 위해 끄고, 8탭 방사형 블러는 낮음 화질에서도 끈다(색수차는 3탭이라 유지).
     const post = this.postFxEnabled && rig.mode !== 'lobby';
@@ -384,6 +455,13 @@ export class Renderer {
     if (this.u.uSpeedClock) this.u.uSpeedClock.value = this.speedClock;
     this._updateGrade(realDt, rig.mode === 'lobby'); this._updateRim();
   }
+  /** 궁극기처럼 큰 가산 장식이 겹친 순간에만 블룸 세기를 낮춰 화면 백화를 막는다. 일반 타격은 원래 세기다. */
+  _updateBloomLoad(realDt) {
+    const target = Math.max(0, Math.min(1, Number(this.bloomLoad?.()) || 0));
+    const dt = Number.isFinite(realDt) && realDt > 0 ? realDt : 0;
+    this._bloomLoad = Math.max(target, (this._bloomLoad || 0) - dt * BLOOM_ADAPT.release);
+    if (this.bloom) this.bloom.strength = BLOOM_STRENGTH * (1 - (1 - BLOOM_ADAPT.minScale) * this._bloomLoad);
+  }
   render() {
     this.playerSilhouette.render(this.r, this.camera, this.playerSilhouetteTarget?.());
     // Bind the live actor after camera movement; a new battle never inherits an old mask.
@@ -391,7 +469,10 @@ export class Renderer {
       this.heroEffectFocus.setTarget(this.heroEffectTarget?.());
       this.heroEffectFocus.update(this.r, this.camera);
     }
-    this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
+    // 로비는 항상 FXAA, 전투는 렌더 해상도가 기기 해상도보다 낮아 모서리가 확대될 때만 켠다. 선명화는 낮음 화질 외 모두 켠다.
+    this.lobbyAA.enabled = this.rig.mode === 'lobby' || battleNeedsFxaa(this.pixelRatio, this.nativeRatio, this.quality);
+    this.sharpenPass.enabled = this.quality !== 'low';
+    this.composer.render();
     this.programValidator.validate(this.r);
     this.renderCount++;
   }

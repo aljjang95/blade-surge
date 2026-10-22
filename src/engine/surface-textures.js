@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { characterAnisotropy } from './texture-sampling.js';
 
 // Shared immutable GUI-authored surface maps. Instances own materials, not maps.
 /** @type {Record<string, THREE.Texture>} */
@@ -19,7 +20,7 @@ export function preloadSurfaceTextures() {
     const texture = await loader.loadAsync(`/img/materials-crafted/${name}.webp`);
     texture.name = `GUI_${name}`;
     texture.wrapS = texture.wrapT = name === 'oath-sanctum' ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
-    texture.anisotropy = 4;
+    texture.anisotropy = characterAnisotropy();   // 영웅 직물·금속 무늬: 비스듬히 봐도 선명하게(min(8, 기기 최대))
     texture.colorSpace = ['sanctum-stone', 'oath-sanctum'].includes(name) ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     SURFACE_TEXTURES[name] = texture;
   });

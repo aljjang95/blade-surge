@@ -9,7 +9,7 @@ export class EnemyDashWarning {
       new THREE.ShaderMaterial({ vertexShader: hazardVertexShader, fragmentShader: hazardFragmentShader,
         transparent: true, depthWrite: false, side: THREE.DoubleSide,
         uniforms: { color: { value: new THREE.Color(0xff3030) }, size: { value: new THREE.Vector2() },
-          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .8 }, fired: { value: 0 } } }));
+          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .8 }, fired: { value: 0 }, progress: { value: 0 } } }));
     if (this.owned) { this.mesh.name = 'EnemyDashWarning'; this.mesh.renderOrder = 4; scene.add(this.mesh); }
     this.mesh.visible = false;
   }

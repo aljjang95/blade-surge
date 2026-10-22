@@ -1,5 +1,6 @@
 import { MeshBasicMaterial, MeshLambertMaterial, FrontSide } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 const ASSET='/models/sanctuary-v2/sanctuary-v2.glb';
 let template=null, pending=null;
 /** Optional visual enhancement. A bounded failure never prevents playing. */
@@ -10,7 +11,7 @@ export function preloadOathHall(fetcher=globalThis.fetch) {
    const response=await fetcher(ASSET,{signal:AbortSignal.timeout(4500)});
    if(!response.ok)throw Error('hall asset unavailable');
    const bytes=await response.arrayBuffer();if(bytes.byteLength>4000000)throw Error('hall exceeds budget');
-   const gltf=await new GLTFLoader().parseAsync(bytes,'');
+   const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes,'');
    template=gltf.scene;return true;
   }catch{return false;}
  })();return pending;
