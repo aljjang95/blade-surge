@@ -107,7 +107,7 @@ export const HERO_PACK_ALIASES = Object.freeze({
   barbarian: Object.freeze({ ...PACK_HITS, Death_A: 'death_fwd', Death_B: 'death_back',
     '2H_Melee_Attack_Stab': 'stab_ip', '2H_Melee_Attack_Spinning': 'spin_ip', '2H_Melee_Attack_Spin': 'spin_whirl', Jump_Full_Short: 'jump_attack_ip' }),
   mage: Object.freeze({ ...PACK_HITS, Death_A: 'death_fwd', Death_B: 'death_back' }),
-  rogue: Object.freeze({ ...PACK_HITS, Death_B: 'death_back' }),
+  rogue: Object.freeze({ ...PACK_HITS }),
   ranger: Object.freeze({ ...PACK_HITS }),
 });
 
