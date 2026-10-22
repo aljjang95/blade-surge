@@ -122,7 +122,9 @@ export const hazardFragmentShader = `
     // 남은 시간 채움: 진행 앞쪽에 밝은 선, 마지막 15%는 경계가 하얗게 달아올라 '지금 피하라'를 알린다.
     float fill=1.-step(progress,along), front=exp(-pow((along-progress)/.04,2.))*step(.01,progress)*(1.-fired);
     float urgent=smoothstep(.85,1.,progress)*(1.-fired);
-    vec3 c=mix(color,vec3(1.,.95,.85),clamp(front*.6+edge*urgent*.55,0.,1.));
+    // 경계선은 정체성 색(종 금빛·지역색)과 무관하게 위험 적색 쪽으로 반쯤 섞는다. 금빛 보스 예고가 검성 금빛 마법진과 같은 말로 읽히지 않게 한다.
+    vec3 rim=mix(color,vec3(1.,.28,.16),.5*edge);
+    vec3 c=mix(rim,vec3(1.,.95,.85),clamp(front*.6+edge*urgent*.55,0.,1.));
     gl_FragColor=vec4(c,opacity*(.18+edge*(.62+urgent*.3)+stripe*.12+fill*.2+front*.45+fired*.15));
   }`;
 

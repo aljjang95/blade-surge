@@ -51,4 +51,6 @@ test('예고가 아닌 고리와 근접 참격 예고: 일반 고리는 예전�
 test('보스·지역 위험 셰이더는 남은 시간 progress 로 채움과 임박 경고를 그린다', () => {
   expect(hazardFragmentShader).toContain('uniform float shape, safeRadius, opacity, fired, progress;');
   expect(hazardFragmentShader).toContain('urgent');
+  // 위험 경계는 정체성 색과 무관하게 적색 쪽으로 섞는다(영웅 금빛 마법진과 구분).
+  expect(hazardFragmentShader).toContain('vec3 rim=mix(color,vec3(1.,.28,.16),.5*edge);');
 });
