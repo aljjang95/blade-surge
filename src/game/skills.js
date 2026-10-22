@@ -5,6 +5,7 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
 const _judgeSky = new THREE.Vector3(), _judgeDir = new THREE.Vector3();
@@ -41,6 +42,11 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
       size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.ranger.life, visual: 'arrow', ...options });
   }
   audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
+}
+/** 암살자 그림자 파동: 노란 shockwave 원화에 보라를 곱하면 갈색이 돼서, 보라 소용돌이 원화(singularity)를 지면에 눕힌다.
+ *  shockTex 와 같은 드로우콜 1·같은 밝기 감쇠(decorativeBurstGain)·Math.random 미사용. */
+function shadowWave(game, pos, r1, life) {
+  game.fx.groundTex(pos, 'singularity', 0xc890ff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
 }
 /** 적이 가장 밀집한 지점 (몹몰이 조준 보정) */
 function densest(game, p, range = 11, radius = 3.5) {
@@ -468,10 +474,10 @@ export const SKILLS = {
     },
     update(game, p, c, dt) {
       c.data.g += dt; if (c.data.g > 0.035) { c.data.g = 0; game.fx.ghost(p.model, 0x6a2cff, { life: 0.35, opacity: 0.7 }); game.fx.embers(p.pos, 0xb26bff, { n: 3, radius: 0.5, life: 0.5 }); }
-      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
+      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
       if (c.t > 0.42) p.vel.multiplyScalar(Math.pow(0.001, dt));
     },
-    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 4.5, life: 0.3, tilt: -1.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 4, life: 0.3 }); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
+    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 4.5, life: 0.3, tilt: -1.4 }); shadowWave(game, p.pos, 4, 0.3); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
   },
   poison_bomb: {
     dur: 0.8, total: 0.8,
@@ -508,10 +514,10 @@ export const SKILLS = {
         c.data.tick = 0.115; const i = c.data.n++;
         const anims = ['Dualwield_Melee_Attack_Stab', 'Dualwield_Melee_Attack_Slice', 'Dualwield_Melee_Attack_Chop']; p.playTimed(anims[i % 3], 0.24, { fade: 0.03 });
         game.hitArea(p, p.pos, p.yaw, 3.4, 150, c.dmg, { kb: 0.6, kind: 'slash', source: p, quietStop: true });
-        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
+        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
         if (i % 2 === 0) game.fx.ghost(p.model, i % 4 ? 0x6a2cff : 0xb26bff, { life: 0.25, opacity: 0.5 });
         audio.whoosh({ vol: 0.32, pitch: 1.3 + i * 0.07, dur: 0.12 });
-        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); game.renderer.shake(0.5); }
+        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); shadowWave(game, p.pos, 5, 0.4); game.renderer.shake(0.5); }
       }
     },
     end(game, p, c) {
@@ -526,13 +532,13 @@ export const SKILLS = {
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
-        if (wave++ >= 8) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 15, life: 0.8 }); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
+        if (wave++ >= 8) { shadowWave(game, p.pos, 15, 0.8); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
         game.vacuum(p.pos, 8, 5);
         const ts = targets(game, p, 3, 8); const pts = ts.length ? ts.map((e) => e.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5))) : [fwd(p, 3 + Math.random() * 3)];
         for (const pt of pts) {
           const dir = new THREE.Vector3(0.15, -1, 0.1).normalize(); const sp = pt.clone().add(new THREE.Vector3(-1.2, 8, -0.8));
-          game.fx.slashSprite(sp, dir, 0xd0a0ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
-          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
+          game.fx.slashSprite(sp, dir, 0x7030ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
+          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); shadowWave(game, pt, 2.4, 0.28); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
         }
         audio.whoosh({ vol: 0.28, pitch: 1.6, dur: 0.15 });
         game.after(0.15, tick);
@@ -840,7 +846,7 @@ export const SKILLS = {
     start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7 }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
     cast(game, p, c) {
       const ts = targets(game, p, 8, 13);
-      if (!ts.length) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); return; }
+      if (!ts.length) { shadowWave(game, p.pos, 5, 0.4); return; }
       for (const e of ts) { game.fx.castCircle(e.pos, 0xb26bff, { radius: 1.5, life: 1.5, demon: true }); game.fx.embers(e.pos, 0xd0a0ff, { n: 8, radius: 0.8, life: 0.9, rise: 2 }); }
       audio.whoosh({ vol: 0.5, pitch: 0.8, dur: 0.4 });
       // 분신 3체가 표식을 차례로 친다
@@ -849,7 +855,7 @@ export const SKILLS = {
         const side = (i % 3) - 1;
         const at = e.pos.clone().add(new THREE.Vector3(Math.cos(i * 2.1) * 1.6, 0, Math.sin(i * 2.1) * 1.6));
         game.fx.ghost(p.model, 0xb26bff, { life: 0.32, opacity: 0.55, at });
-        game.fx.slashSprite(e.pos.clone().setY(1.1), new THREE.Vector3(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), 0xd0a0ff, { size: 3.4, life: 0.2, tilt: side * 1.2 });
+        game.fx.slashSprite(e.pos.clone().setY(1.1), new THREE.Vector3(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), 0x7030ff, { size: 3.4, life: 0.2, tilt: side * 1.2 });
         game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 1.2, source: p, dirx: e.pos.x - at.x, dirz: e.pos.z - at.z, quietStop: i > 1 });
         game.fx.flash(e.pos.clone().setY(1.2), 0xb27aff, { size: 1.6, life: 0.16 });
         audio.hit('slash', { heavy: i % 3 === 0 }); if (i < 3) audio.vibe(15);
@@ -874,7 +880,7 @@ export const SKILLS = {
           hitWithin(game, p, hub, 5.5, reach, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
           game.fx.texFlash(hub, 'singularity', 0xb26bff, { size: 9, life: 0.5, spin: 0.6, grow: 1.5, y: 0.6 });
           game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
-          game.fx.shockTex(hub, 0xb26bff, { r1: 6.5, life: 0.5 });
+          shadowWave(game, hub, 6.5, 0.5);
           game.fx.burst(hub.clone().setY(0.8), 0xd0a0ff, { n: 40, speed: 12, size: 0.42 });
           game.renderer.shake(0.7); game.renderer.punch(0.9); game.renderer.flashScreen(0.3, 0xd0a0ff);
           audio.boom({ vol: 0.8, dur: 0.6, low: 70 }); audio.dark({ vol: 0.4, base: 120, dur: 0.6 }); audio.vibe([60, 30, 80]);
@@ -890,7 +896,7 @@ export const SKILLS = {
       c.data.n = 0; c.data.tick = 0; c.data.last = null; c.data.origin = p.pos.clone();
       p.invuln = 2.1; p.startTrail(); p.beacon?.setFocus(true, 0xd0a0ff);
       game.fx.texFlash(p.pos, 'singularity', 0x8a4aff, { size: 8, life: 0.5, spin: 0.8, grow: 1.4, y: 0.5 });
-      game.fx.shockTex(p.pos, 0x8a4aff, { r1: 5, life: 0.4 });
+      shadowWave(game, p.pos, 5, 0.4);
       game.renderer.aberr = 0.55; game.renderer.radial = 0.22; game.renderer.desat = 0.12;
       audio.dark({ vol: 0.6, base: 70, dur: 1.4 }); audio.suck({ vol: 0.4, dur: 1.2 }); audio.vibe([60, 30, 30]);
     },
@@ -914,7 +920,7 @@ export const SKILLS = {
       p.pos.set(at.x, 0, at.z); p.face(e.pos.x, e.pos.z);
       p.playTimed(c.data.n % 2 ? 'Dualwield_Melee_Attack_Slice' : 'Dualwield_Melee_Attack_Stab', 0.2, { fade: 0.03 });   // dur(0.5) 로 한 번 재생하면 나머지 1.5초는 마지막 프레임에서 멈춰 있다
       game.fx.boltTex(from.clone().setY(1), p.pos.clone().setY(1), 0xb26bff, { width: 1.6, life: 0.18 });
-      game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.6, life: 0.18, tilt: (c.data.n % 2 ? 0.8 : -1.5), flip: c.data.n % 2 === 1 });
+      game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.6, life: 0.18, tilt: (c.data.n % 2 ? 0.8 : -1.5), flip: c.data.n % 2 === 1 });
       game.fx.flash(p.pos.clone().setY(1), 0x8a4aff, { size: 2.4, life: 0.15 });
       onlyWithin(game, o, VOID_STEP_REACH, () => game.hitArea(p, p.pos, p.yaw, 3.6, 200, c.dmg, { kb: 1.4, kind: 'slash', source: p, quietStop: c.data.n % 3 !== 0 }));
       audio.whoosh({ vol: 0.35, pitch: 1.2 + c.data.n * 0.06, dur: 0.14 });
@@ -928,7 +934,7 @@ export const SKILLS = {
       onlyWithin(game, c.data.origin || at, VOID_STEP_REACH, () => game.hitRadius(at, 7.5, c.dmg * 3.2, { kb: 12, kind: 'slash', up: true, finisher: true, skillCast:c, source: p, dirFrom: at }));
       game.fx.texFlash(at, 'singularity', 0xb26bff, { size: 12, life: 0.6, spin: 1.2, grow: 1.6, y: 1 });
       game.fx.explosion(at, { size: 10, color: 0xd0a0ff, life: 0.6 });
-      game.fx.shockTex(at, 0x8a4aff, { r1: 9, life: 0.6 });
+      shadowWave(game, at, 9, 0.6);
       game.fx.burst(at.clone().setY(1), 0xd0a0ff, { n: 60, speed: 15, size: 0.5, up: 0.9 });
       game.fx.light(at, 0xb26bff, 16, 18, 0.6);
       game.renderer.shake(1); game.renderer.punch(1.4); game.renderer.flashScreen(0.4, 0xd0a0ff); game.timeCtl.slowmo(0.35, 0.5);

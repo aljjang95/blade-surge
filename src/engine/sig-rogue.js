@@ -27,7 +27,7 @@ export const SIGNATURES = {
     const ang = cutAngle(impact, f);
     for (let i = 1, n = lite ? 3 : 6; i <= n; i++) {
       const d = i * (LEN / (n + 1)); _b.copy(player.pos).addScaledVector(f, d).setY(.9);
-      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 1.7, i % 2 ? VIOLET : MAGENTA, .32, { angle: ang + (i % 2 ? .9 : -.9), stretch: 1.1, grow: .9, delay: d / SPEED });
+      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.3, i % 2 ? VIOLET : MAGENTA, .34, { angle: ang + (i % 2 ? .9 : -.9), stretch: 1.1, grow: .9, delay: d / SPEED });
     }
     _b.copy(player.pos).addScaledVector(f, LEN * .95);
     impact._emit(IMPACT_KIND.ring, _b.x, .6, _b.z, 3, DEEP, .34, { grow: 1, delay: LEN / SPEED });
@@ -53,7 +53,7 @@ export const SIGNATURES = {
     for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
       const side = (i % 2 ? 1 : -1), off = (i % 4) * .3;
       _b.copy(player.pos).addScaledVector(f, 1.6 + off).setY(.7 + (i % 3) * .3);
-      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.1, i % 2 ? MAGENTA : VIOLET, .2, { angle: ang + side * 1.1, stretch: 1.15, grow: .9, delay: Math.max(0, (i * (8 / n) + 2) * .115 - .28) });
+      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.8, i % 2 ? MAGENTA : VIOLET, .22, { angle: ang + side * 1.1, stretch: 1.15, grow: .9, delay: Math.max(0, (i * (8 / n) + 2) * .115 - .28) });
     }
     _b.copy(player.pos).addScaledVector(f, 1.8).setY(1);
     for (const s of [-1, 1]) impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 3.2, s > 0 ? MAGENTA : VIOLET, .3, { angle: ang + s * .8, stretch: 1.2, grow: .9, delay: .75 + (s > 0 ? .035 : 0) });
