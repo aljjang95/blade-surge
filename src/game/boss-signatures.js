@@ -116,7 +116,7 @@ export class BossSignatures {
     this.geometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
     this.slots=Array.from({length:BOSS_SIGNATURE_CAPACITY},()=>{
       const material=new THREE.ShaderMaterial({vertexShader:hazardVertexShader,fragmentShader:bossSignatureFragmentShader,transparent:true,depthWrite:false,side:THREE.DoubleSide,
-        uniforms:{color:{value:new THREE.Color()},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0},progress:{value:0},arc:{value:0}}});
+        uniforms:{color:{value:new THREE.Color()},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0},progress:{value:0},arc:{value:0},calm:{value:0}}});
       const mesh=new THREE.Mesh(this.geometry,material);mesh.visible=false;mesh.renderOrder=3;this.group.add(mesh);
       return {mesh,event:/** @type {SignatureEvent|null} */(null),hit:false};
     });
@@ -141,7 +141,7 @@ export class BossSignatures {
       const s=this.slots[i],h=this.plan.events[i],m=s.mesh,u=m.material.uniforms;s.event=h;s.hit=false;
       const width=h.type==='lane'?h.length:h.radius*2,height=h.type==='lane'?h.width:h.radius*2;
       m.position.set(h.x,.14,h.z);m.rotation.y=-h.angle;m.scale.set(width,1,height);
-      u.size.value.set(width,height);u.color.value.setHex(this.plan.color);u.shape.value=h.type==='disk'?0:h.type==='ring'?1:2;u.safeRadius.value=h.safeRadius;u.fired.value=0;u.opacity.value=.8;u.progress.value=0;
+      u.size.value.set(width,height);u.color.value.setHex(this.plan.color);u.shape.value=h.type==='disk'?0:h.type==='ring'?1:2;u.safeRadius.value=h.safeRadius;u.fired.value=0;u.opacity.value=.8;u.progress.value=0;u.calm.value=g.app?.reducedMotion?.matches?1:0;
       m.visible=h.warnAt===0;
     }
     g.ui.toast(`${this.plan.name} · ${this.plan.cue}`,'red',{replaceUrgent:true});

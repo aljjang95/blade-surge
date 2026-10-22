@@ -11,12 +11,13 @@ export class EnemyDashWarning {
       new THREE.ShaderMaterial({ vertexShader: hazardVertexShader, fragmentShader: bossSignatureFragmentShader,
         transparent: true, depthWrite: false, side: THREE.DoubleSide,
         uniforms: { color: { value: new THREE.Color(0xff3030) }, size: { value: new THREE.Vector2() },
-          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .8 }, fired: { value: 0 }, progress: { value: 0 }, arc: { value: 0 } } }));
+          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .8 }, fired: { value: 0 }, progress: { value: 0 }, arc: { value: 0 }, calm: { value: 0 } } }));
     if (this.owned) { this.mesh.name = 'EnemyDashWarning'; this.mesh.renderOrder = 4; scene.add(this.mesh); }
     this.mesh.visible = false;
   }
-  show(shape) {
+  show(shape, { calm = false } = {}) {
     const mesh = this.mesh, u = mesh.material.uniforms;
+    if (u.calm) u.calm.value = calm ? 1 : 0;
     mesh.position.set(shape.x, .14, shape.z); mesh.rotation.y = -shape.angle; mesh.scale.set(shape.length, 1, shape.width);
     u.size.value.set(shape.length, shape.width); u.color.value.setHex(0xff3030);
     u.shape.value = 2; u.safeRadius.value = 0; u.fired.value = 0; u.opacity.value = .65; u.progress.value = 0;

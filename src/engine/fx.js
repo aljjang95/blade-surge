@@ -477,6 +477,8 @@ export class FX {
     }
     const warm = new THREE.Scene();
     for (const material of Object.values(this._mats)) warm.add(material.isSpriteMaterial ? new THREE.Sprite(material) : new THREE.Mesh(this.plane1, material));
+    // 보스 예고 바닥 셰이더(ShaderMaterial)는 _mats 밖이라 따로 준비한다: 첫 보스 예고의 셰이더 컴파일 끊김 방지.
+    if (this._bossWarnMat) warm.add(new THREE.Mesh(this.plane1, this._bossWarnMat));
     for (const gltf of Object.values(models)) {
       warm.add(gltf.scene.clone(true));
       // Ghostly/dead actors switch to transparent materials. Keep those programs
@@ -793,9 +795,9 @@ export class FX {
     return s;
   }
   // ---------- 지면 충격파 링 ----------
-  ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1, telegraph = false, boss = false } = {}) {
+  ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1, telegraph = false, boss = false, calm = false } = {}) {
     // 보스 예고 고리: 판정 원(반경 r1)을 고유기와 같은 바닥 셰이더 원판으로 그린다.
-    if (telegraph && boss && !vertical) return this.bossWarn(pos, color, { shape: 'disk', radius: r1, life });
+    if (telegraph && boss && !vertical) return this.bossWarn(pos, color, { shape: 'disk', radius: r1, life, calm });
     // 평면 링은 양면을 한 번에 그린다. 준비 단계에도 같은 패스 설정을 전달한다.
     const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph });
     if (!telegraph && !vertical) vividDecalColor(color, m.color);
@@ -810,8 +812,8 @@ export class FX {
     this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
   }
   // ---------- 참격 아크 (지면 평행, 캐릭터 전방) ----------
-  slashArc(pos, yaw, color, { radius = 2.4, arc = 140, life = 0.22, height = 1.1, tilt = 0, flip = false, thickness = 0.55, telegraph = false, boss = false } = {}) {
-    if (telegraph && boss) return this.bossWarn(pos, color, { shape: 'sector', radius, arc: THREE.MathUtils.degToRad(arc) / 2, yaw, life });
+  slashArc(pos, yaw, color, { radius = 2.4, arc = 140, life = 0.22, height = 1.1, tilt = 0, flip = false, thickness = 0.55, telegraph = false, boss = false, calm = false } = {}) {
+    if (telegraph && boss) return this.bossWarn(pos, color, { shape: 'sector', radius, arc: THREE.MathUtils.degToRad(arc) / 2, yaw, life, calm });
     const a = THREE.MathUtils.degToRad(arc);
     const geo = new THREE.RingGeometry(radius * (1 - thickness), radius, 24, 1, -a / 2, a);
     // uv: u 를 각도 방향으로
@@ -842,18 +844,18 @@ export class FX {
    * 일반 블렌딩이라 블룸·노출 예산에 들어가지 않고, 화면 전체 섬광·흔들림이 없다. 재질은 한 원본을 복제해 셰이더 프로그램을 공유한다.
    * @param {{x:number,z:number}} pos
    * @param {number} color
-   * @param {{shape?: 'disk'|'ring'|'lane'|'sector', radius?: number, arc?: number, yaw?: number, angle?: number, length?: number, width?: number, life?: number, y?: number}} [options]
+   * @param {{shape?: 'disk'|'ring'|'lane'|'sector', radius?: number, arc?: number, yaw?: number, angle?: number, length?: number, width?: number, life?: number, y?: number, calm?: boolean}} [options]
    *   arc = 부채꼴 반각(라디안), yaw = 적 정면 각(정면 = (sin yaw, cos yaw)), angle = 통로 방향 atan2(dz, dx).
    */
-  bossWarn(pos, color, { shape = 'disk', radius = 3, arc = Math.PI / 3, yaw = 0, angle = 0, length = 4, width = 2, life = 1, y = .13 } = {}) {
+  bossWarn(pos, color, { shape = 'disk', radius = 3, arc = Math.PI / 3, yaw = 0, angle = 0, length = 4, width = 2, life = 1, y = .13, calm = false } = {}) {
     const base = this._bossWarnMat ||= new THREE.ShaderMaterial({ vertexShader: bossWarnVertexShader, fragmentShader: bossSignatureFragmentShader,
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: { color: { value: new THREE.Color() }, size: { value: new THREE.Vector2() }, shape: { value: 0 }, safeRadius: { value: 0 },
-        opacity: { value: .65 }, fired: { value: 0 }, progress: { value: 0 }, arc: { value: 1 } } });
+        opacity: { value: .65 }, fired: { value: 0 }, progress: { value: 0 }, arc: { value: 1 }, calm: { value: 0 } } });
     const geo = this._bossWarnGeo ||= new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const m = base.clone(), u = m.uniforms, lane = shape === 'lane';
     const w = lane ? length : radius * 2, h = lane ? width : radius * 2;
-    u.color.value.set(color); u.size.value.set(w, h); u.arc.value = arc;
+    u.color.value.set(color); u.size.value.set(w, h); u.arc.value = arc; u.calm.value = calm ? 1 : 0;
     u.shape.value = shape === 'disk' ? 0 : shape === 'ring' ? 1 : lane ? 2 : 3;
     const mesh = new THREE.Mesh(geo, m); mesh.name = 'BossWarn'; mesh.renderOrder = 3;
     mesh.position.set(pos.x, y, pos.z); mesh.scale.set(w, 1, h);
@@ -868,7 +870,7 @@ export class FX {
   }
   /**
    * 보스 차지 빛(h1c): 예고 동안 보스 가슴 높이에 정체성 색 광구가 차오르고, 둘레에서 빛 조각이 모여든다.
-   * 광구는 작은 가산 스프라이트(최대 지름 ≈ 1.1×scale m, 색 상한 .7)라 화면 백화가 없다. 동작 줄이기는 모이는 조각·맥동을 생략한다.
+   * 광구는 작은 가산 스프라이트(최대 지름 ≈ 1.1×scale m, 색 상한 .9)라 화면 백화가 없다. 동작 줄이기는 모이는 조각·맥동을 생략한다.
    * @param {{x:number,y:number,z:number}} pos 보스 발 위치
    * @param {number} color
    * @param {{life?: number, scale?: number, reduced?: boolean}} [options]
@@ -876,12 +878,15 @@ export class FX {
   bossCharge(pos, color, { life = 1, scale = 2, reduced = false, summon = false } = {}) {
     const warn = Math.max(.1, life), s = Math.max(1, Math.min(3, scale)), cy = pos.y + .8 * s;
     const c = new THREE.Color(color).lerp(_bossDanger, .35);
-    // 몸 안에 묻히지 않게 깊이 검사 없이 보스 몸 위에 그린다(임팩트 층과 같은 규칙).
-    const m = this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color: c, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, opacity: 0 }), { telegraph: true });
+    // 깊이 검사를 켠 채 보스 몸 앞(카메라 쪽 .45×scale m)에 띄운다: 보스 몸에 묻히지 않으면서 보스와 카메라 사이에 선 영웅 실루엣은 덮지 않는다.
+    const m = this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color: c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }), { telegraph: true });
     const sprite = new THREE.Sprite(m); sprite.position.set(pos.x, cy, pos.z); sprite.renderOrder = 13;
-    const peak = c.clone();
+    const peak = c.clone(), bx = pos.x, bz = pos.z, lift = .45 * s;
     this.add(sprite, warn + .12, (_k, t) => {
-      const k = Math.min(1, t / warn), pulse = reduced || k < .85 ? 0 : .5 + .5 * Math.sin((k - .85) / .15 * Math.PI * 3);
+      const cam = this.camera?.position;
+      if (cam) { const dx = cam.x - bx, dy = cam.y - cy, dz = cam.z - bz, l = Math.hypot(dx, dy, dz) || 1; sprite.position.set(bx + dx / l * lift, cy + dy / l * lift, bz + dz / l * lift); }
+      // 마지막 15% 는 한 번 부풀었다 가라앉는다(깜빡임 없음). 동작 줄이기는 생략한다.
+      const k = Math.min(1, t / warn), pulse = reduced || k < .85 ? 0 : Math.sin((k - .85) / .15 * Math.PI);
       const size = (.35 + .55 * k * k + .12 * pulse) * s;
       sprite.scale.set(size, size, 1);
       // 타격 순간(.12초)은 광구가 접혀 사라진다: 터지는 섬광 대신 판정 도형의 '터짐' 잔상이 신호다.
@@ -1238,7 +1243,8 @@ export class FX {
     for (const pool of [this.sparks, this.glow, this.smoke]) { this.scene.remove(pool.mesh); pool.geo.dispose(); pool.mat.dispose(); }
     this.vfx?.dispose(); this.impact?.dispose();
     for (const slot of this.impactLights.slots) this.scene.remove(slot.light);
-    this.plane1.dispose(); this.plane2.dispose(); this._disk?.dispose();
+    this.plane1.dispose(); this.plane2.dispose(); this._disk?.dispose(); this._bossWarnGeo?.dispose(); this._bossWarnMat?.dispose();
+    this._bossWarnGeo = this._bossWarnMat = null;
     for (const material of new Set([...Object.values(this._mats), ...this._transparentMats.values(), ...this._depthMats.values()])) material.dispose();
     this._mats = {}; this._transparentMats.clear(); this._depthMats.clear();
     // Asset and particle textures belong to the shared asset cache.
