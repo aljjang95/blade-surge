@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
-import { rigOf, RIGS } from '../data/rigs.js';
+import { rigOf, RIGS, libraryClipKey } from '../data/rigs.js';
 import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
@@ -347,7 +347,8 @@ export class Enemy extends Actor {
       this._deathTurn = Math.atan2(Math.sin(turn), Math.cos(turn)); this.yaw = style.faceYaw;
     }
     const before = this.action;
-    this.die(); this.state = 'dead'; this.telegraph = 0;
+    // 애니메이션 팩의 두 번째 사망(deathAlt)은 무리 번호 홀짝으로 번갈아 고른다(난수 없음, 군중이 한 방향으로만 쓰러지지 않게).
+    this.die(this.clips?.deathAlt && (this.packId & 1) ? 'deathAlt' : null); this.state = 'dead'; this.telegraph = 0;
     if (this.action && this.action !== before) this.action.timeScale = style.speed;   // 사망 클립이 실제로 재생될 때만
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
@@ -541,13 +542,13 @@ export class Enemy extends Actor {
       const plan=this.signatures.start(this.special);this.attackDur=plan.duration;this.hitAt=plan.lastStrike/plan.duration;
       this.telegraph=plan.lastStrike;this.dashV=null;
       this._monsterAttackPose = this.rigName === 'library' ? { duration: plan.lastStrike, hitAt: this.hitAt, profile: this.libraryAsset?.profile || 'soldier', heightM: this.libraryAsset?.heightM || 1, boss: this.isBoss, elite: this.isElite } : null;
-      this.playTimed(anim,plan.lastStrike,{fade:.1,phase:this.rigName === 'library' ? 'monster' : undefined,hitAt:this.hitAt,impactAt:this.libraryAsset?.impacts?.[Object.entries(this.libraryAsset.clips || {}).find(([, clip]) => clip === anim)?.[0]] ?? this.hitAt});return;
+      this.playTimed(anim,plan.lastStrike,{fade:.1,phase:this.rigName === 'library' ? 'monster' : undefined,hitAt:this.hitAt,impactAt:this.libraryAsset?.impacts?.[libraryClipKey(this.libraryAsset, anim)] ?? this.hitAt});return;
     }
     if (this.isElite && !this.isBoss && Math.random() < 0.3) { anim = this.A('attackHeavy'); this.special = 'spin'; }
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
     this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
     this.telegraph = dur * this.hitAt;
-    const clipKey = Object.entries(this.libraryAsset?.clips || {}).find(([, clip]) => clip === anim)?.[0];
+    const clipKey = libraryClipKey(this.libraryAsset, anim);
     this._monsterAttackPose = this.rigName === 'library' ? { duration: dur, hitAt: this.hitAt, profile: this.libraryAsset?.profile || 'soldier', heightM: this.libraryAsset?.heightM || 1, boss: this.isBoss, elite: this.isElite } : null;
     this.playTimed(anim, dur, { fade: 0.08, phase: this.rigName === 'library' ? 'monster' : undefined, hitAt: this.hitAt, impactAt: this.libraryAsset?.impacts?.[clipKey] ?? this.hitAt });
     this.announceSkill();

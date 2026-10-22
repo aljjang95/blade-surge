@@ -29,6 +29,16 @@ test('라이브러리 몬스터: 강타 피격 클립이 있으면 그것, 없�
   expect(withoutRandom(() => rich.A('hitHeavy')).value).toBe('hitHeavy');
 });
 
+test('넉백 피격: 팩 hitKnockback 이 있으면 그것, 없으면 hitHeavy → hit(난수 없음)', () => {
+  const pack = actor('library', ['idle', 'hit', 'hitHeavy', 'hitKnockback', 'death'], true);
+  expect(withoutRandom(() => pack.A('hitKnockback')).value).toBe('hitKnockback');
+  const rich = actor('library', ['idle', 'hit', 'hitHeavy', 'death'], true);
+  const r = withoutRandom(() => rich.A('hitKnockback'));
+  expect(r.value).toBe('hitHeavy'); expect(r.calls).toBe(0);
+  expect(withoutRandom(() => actor('library', ['idle', 'hit', 'death'], true).A('hitKnockback')).value).toBe('hit');
+  expect(withoutRandom(() => actor('kaykit', ['Idle', 'Idle_Combat', 'Hit_A', 'Hit_B']).A('hitKnockback')).value).toBe('Hit_B');
+});
+
 test('KayKit 스켈레톤: 강타 피격은 Hit_B, 일반 피격 후보는 그대로', () => {
   const a = actor('kaykit', ['Idle', 'Idle_Combat', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B']);
   const r = withoutRandom(() => a.A('hitHeavy'));

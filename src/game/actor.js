@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
-import { RIGS } from '../data/rigs.js';
+import { RIGS, libraryPackRig } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
 import { knockbackDecay } from './feel.js';
 
@@ -40,6 +40,7 @@ export class Actor {
     this.libraryRoster = roster || gltf.scene.userData.libraryRoster || null;
     const { root, mixer, clips } = spawnCharacter(gltf);
     this.model = root; this.mixer = mixer; this.clips = clips;
+    if (rig === 'library') this.rig = libraryPackRig(this.rig, clips);
     this.root = new THREE.Group();
     // Render-only pivot: preserve authored bones, sockets, scale and collision root.
     this.motionRoot = new THREE.Group(); this.root.add(this.motionRoot); this.motionRoot.add(root); root.scale.multiplyScalar(scale);
@@ -79,7 +80,7 @@ export class Actor {
       attackJump: ['attackHeavy', 'attack'], cast: ['attack'], raise: ['cast', 'attack'],
       summon: ['roar', 'cast', 'attack'], spawn: ['roar', 'idle'], run: ['walk'],
       // 강타 피격 클립이 없는 자산은 일반 피격으로(예전에는 idle 로 떨어져 강타를 맞아도 서 있었다).
-      hitHeavy: ['hit'],
+      hitHeavy: ['hit'], hitKnockback: ['hitHeavy', 'hit'],
     }[key] || [];
     // 폴백은 난수 없이 리그 후보 중 첫 실제 클립, 없으면 논리 이름 그대로의 클립을 쓴다.
     for (const fallback of chain) {
@@ -269,11 +270,13 @@ export class Actor {
       if (this.deathT > 2.4) this.dead = true;
     }
   }
-  die() {
+  /** @param {string|null} [variant] 호출자가 고른 사망 클립(예: 애니메이션 팩의 deathAlt). 없거나 로드되지 않았으면 기존 규칙. */
+  die(variant = null) {
     if (!this.alive) return; this.alive = false; this.deathT = 0; this.vel.set(0, 0, 0);
     // 리그별 사망 클립(KayKit Death_A/B, Tripo 라이브러리 death)을 논리 키로 고른다. 난수 소비는 1회로 동일하다.
     const deathClip = this.rig?.death === 'death' || (Array.isArray(this.rig?.death) && this.rig.death[0] === 'death') ? 'death' : null;
-    this.play(deathClip && this.clips?.[deathClip] ? deathClip : (Math.random() < 0.5 ? 'Death_A' : 'Death_B'), { once: true, clamp: true, fade: 0.08 });
+    const chosen = variant && this.clips?.[variant] ? variant : deathClip && this.clips?.[deathClip] ? deathClip : null;
+    this.play(chosen || (Math.random() < 0.5 ? 'Death_A' : 'Death_B'), { once: true, clamp: true, fade: 0.08 });
     for (const m of this.mats) { m.transparent = true; }
   }
   dispose() {
