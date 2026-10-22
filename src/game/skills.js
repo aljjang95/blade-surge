@@ -328,7 +328,7 @@ export const SKILLS = {
       const center = c.data.gatherCenter || fwd(p, 1.5);
       game.hitRadius(center, SKILL_AIM_SHAPES.quake.radius, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
-      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffffff : 0xff9a4a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
+      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffc060 : 0xff7a2a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
       game.fx.explosion(center, { size: 8, color: 0xff9a50, life: 0.6 });
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 40, speed: 12, size: 0.5, up: 1.5, grav: 20 });
@@ -367,7 +367,7 @@ export const SKILLS = {
         game.hitRadius(target, SKILL_AIM_SHAPES.hell_axe.radius, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
         game.fx.explosion(target, { size: 14, color: 0xffb070, life: 0.8 });
         game.fx.scorch(target, { radius: 6, life: 8 });
-        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffffff : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
+        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffb050 : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
         game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 70, speed: 16, size: 0.6, up: 1.4, grav: 18 });
         game.fx.dustPuff(target, { size: 10, life: 1.4 }); game.fx.embers(target, 0xff6020, { n: 60, radius: 5, life: 2.2, rise: 4 });
         game.fx.light(target, 0xff6020, 20, 22, 1);
@@ -532,12 +532,12 @@ export const SKILLS = {
         for (const pt of pts) {
           const dir = new THREE.Vector3(0.15, -1, 0.1).normalize(); const sp = pt.clone().add(new THREE.Vector3(-1.2, 8, -0.8));
           game.fx.slashSprite(sp, dir, 0xd0a0ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
-          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.flash(pt.clone().setY(0.6), 0xe0c0ff, { size: 2.2, life: 0.15 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
+          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
         }
         audio.whoosh({ vol: 0.28, pitch: 1.6, dur: 0.15 });
         game.after(0.15, tick);
       }; tick();
-      game.renderer.flashScreen(0.4, 0xd0a0ff); game.renderer.aberr = 1;
+      game.renderer.flashScreen(0.22, 0xb27aff); game.renderer.aberr = 1;
     },
   },
   // ================================================================
@@ -567,7 +567,7 @@ export const SKILLS = {
         game.damageEnemy(e, c.dmg * 0.45, { kind: 'magic', kb: 0, source: p, quietStop: i > 1 });
         audio.clang({ vol: 0.28, freq: 1700 + i * 130, dur: 0.22 });
       }));
-      game.renderer.flashScreen(0.26, 0xfff0c0); game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
+      game.renderer.flashScreen(0.14, 0xffe0a0); game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
       // 결박 유지 — 사슬이 1.4초간 계속 조인다
       let n = 12;
       const hold = () => {
@@ -580,13 +580,13 @@ export const SKILLS = {
       game.after(1.75, () => {
         if (!game.active) return;
         const center = p.pos.clone();
-        for (const e of c.data.bound) if (e.alive) game.fx.boltTex(center.clone().setY(1.4), e.pos.clone().setY(1), 0xffffff, { width: 3.2, life: 0.2 });
+        for (const e of c.data.bound) if (e.alive) game.fx.boltTex(center.clone().setY(1.4), e.pos.clone().setY(1), 0xffd060, { width: 2.4, life: 0.2 });
         game.hitRadius(center, 7.5, c.dmg, { kb: 10, kind: 'magic', up: true, source: p, dirFrom: center });
         game.fx.shockTex(center, 0xffe08a, { r1: 9.5, life: 0.55 });
         game.fx.holyBurst(center, { size: 9, life: 0.45 });
-        game.fx.burst(center.clone().setY(0.8), 0xfff0c0, { n: 46, speed: 13, size: 0.45, up: 1.1 });
+        game.fx.burst(center.clone().setY(0.8), 0xffd27a, { n: 46, speed: 13, size: 0.45, up: 1.1 });
         game.fx.light(center, 0xffd060, 15, 16, 0.5);
-        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.35, 0xfff0c0);
+        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.18, 0xffe0a0);
         audio.boom({ vol: 0.9, dur: 0.7, low: 60 }); audio.holy({ vol: 0.4, base: 660, dur: 0.8 }); audio.vibe([60, 30, 90]);
       });
     },
@@ -747,7 +747,7 @@ export const SKILLS = {
           state.hit.add(e); state.bounces++;
           const mul = 1 + state.bounces * 0.22;
           game.damageEnemy(e, c.dmg * mul, { kind: 'magic', kb: 2.2, source: p, dirx: state.dir.x, dirz: state.dir.z, quietStop: state.bounces > 2 });
-          game.fx.flash(e.pos.clone().setY(1.2), 0xdff4ff, { size: 2.6, life: 0.18 });
+          game.fx.flash(e.pos.clone().setY(1.2), 0x8fd0ff, { size: 1.8, life: 0.16 });
           game.fx.burst(e.pos.clone().setY(1.1), 0xbfeaff, { n: 12, speed: 8, size: 0.3 });
           game.fx.shockTex(e.pos, 0x9fd8ff, { r1: 2.4, life: 0.25 });
           audio.clang({ vol: 0.3, freq: 1400 + state.bounces * 180, dur: 0.2 });
@@ -770,7 +770,7 @@ export const SKILLS = {
           if (!bx && !bz) state.dir.negate();                       // 오목한 구석: 되돌아 나온다
           state.pos.addScaledVector(state.dir, step * 1.2);          // 벽에서 떼어 놓기
           if (!game.world.walkable(state.pos.x, state.pos.z)) state.pos.copy(p.pos).setY(1.3);   // 그래도 벽 안이면 시전자에게 회수
-          game.fx.flash(state.pos, 0xdff4ff, { size: 2.2, life: 0.16 });
+          game.fx.flash(state.pos, 0x8fd0ff, { size: 1.6, life: 0.16 });
           game.fx.shockTex(_v.copy(state.pos).setY(0), 0x9fd8ff, { r1: 2, life: 0.22 });
           audio.play('ui_pluck', { vol: 0.3, rate: 1.6 });
         }
@@ -778,7 +778,7 @@ export const SKILLS = {
           game.hitRadius(state.pos, 4.5, c.dmg * 2.4, { kb: 8, kind: 'magic', up: true, source: p, dirFrom: state.pos });
           game.fx.explosion(state.pos, { size: 7, color: 0xbfeaff, life: 0.5 });
           game.fx.shockTex(state.pos.clone().setY(0), 0x9fd8ff, { r1: 6, life: 0.5 });
-          game.fx.burst(state.pos.clone(), 0xdff4ff, { n: 36, speed: 13, size: 0.4 });
+          game.fx.burst(state.pos.clone(), 0x9fdcff, { n: 36, speed: 13, size: 0.4 });
           game.renderer.shake(0.6); audio.boom({ vol: 0.7, dur: 0.5, low: 90 }); audio.vibe([40, 20, 60]);
           state.done = true; lance.visible = false;
         }
@@ -851,7 +851,7 @@ export const SKILLS = {
         game.fx.ghost(p.model, 0xb26bff, { life: 0.32, opacity: 0.55, at });
         game.fx.slashSprite(e.pos.clone().setY(1.1), new THREE.Vector3(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), 0xd0a0ff, { size: 3.4, life: 0.2, tilt: side * 1.2 });
         game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 1.2, source: p, dirx: e.pos.x - at.x, dirz: e.pos.z - at.z, quietStop: i > 1 });
-        game.fx.flash(e.pos.clone().setY(1.2), 0xe0c0ff, { size: 2.2, life: 0.16 });
+        game.fx.flash(e.pos.clone().setY(1.2), 0xb27aff, { size: 1.6, life: 0.16 });
         audio.hit('slash', { heavy: i % 3 === 0 }); if (i < 3) audio.vibe(15);
         game.renderer.shake(0.18);
       }));
