@@ -468,6 +468,9 @@ export function prepareModel(gltf, contract = null) {
     // 저작 모델(contract)도 포함해 모든 캐릭터 텍스처에 밉맵 + 이방성 8(기기 최대치 이하)을 건다.
     for (const material of materialsOf(o)) tuneCharacterTextures(material);
     if (contract) return;
+    // 라이브러리 몬스터·동행(Tripo 몸체)도 영웅과 같은 몸 재질 마감을 거친다. 원본의 불투명 BLEND 는 GLTFLoader 가
+    // depthWrite=false 로 읽어 한 메시 안의 삼각형 순서대로 덮이므로, 후드 안쪽이 얼굴·장식 위에 칠해져 납작한 단색 실루엣이 된다.
+    if (o.isSkinnedMesh && gltf.scene.userData.libraryAsset) for (const material of materialsOf(o)) normalizeLibrarySkinMaterial(material);
     for (const material of materialsOf(o)) {
       if (material.map) material.map.colorSpace = THREE.SRGBColorSpace;
       if (!material.userData.tllAuthored) { material.roughness = 0.85; material.metalness = 0; }
