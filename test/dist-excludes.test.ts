@@ -4,10 +4,11 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MUSIC_TRACKS, bgmUrl, musicForScene } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
+import { classify, loadSplit } from '../tools/optimize/asset-split.mjs';
 
 // tools/optimize/dist-excludes.json 은 빌드 산출물에서만 뺄 미사용 자산 목록이다. 누군가 나중에 이 자산을 코드에서 참조하면 이 테스트가 실패한다.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const manifest = JSON.parse(readFileSync(join(root, 'tools/optimize/dist-excludes.json'), 'utf8')) as { schema: string; entries: { path: string; reason: string }[]; channelExcludes: Record<string, { glob: string; reason: string }[]> };
+const manifest = JSON.parse(readFileSync(join(root, 'tools/optimize/dist-excludes.json'), 'utf8')) as { schema: string; entries: { path: string; reason: string }[]; channelExcludes: Record<string, { glob?: string; path?: string; reason: string }[]> };
 
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => (entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]));
 const sources = [...walk(join(root, 'src')), join(root, 'index.html'), join(root, 'public/sw.js'), join(root, 'public/manifest.webmanifest'),
@@ -58,10 +59,16 @@ const allBgm = walk(bgmDir).map(file => file.slice(join(root, 'public').length +
 const musicNames = [...new Set(['bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', ...CHAPTERS.map(chapter => musicForScene({ stage: stageDef(chapter.id, 1) })), ...MUSIC_TRACKS])];
 const excludedBy = (channel: string) => {
   const globs = manifest.channelExcludes[channel] || [];
-  return (file: string) => manifest.entries.some(entry => entry.path === file) || globs.some(entry => { const [dir, ext] = entry.glob.split('/*'); return file.startsWith(dir + '/') && file.endsWith(ext) && !file.slice(dir.length + 1).includes('/'); });
+  return (file: string) => manifest.entries.some(entry => entry.path === file) || globs.some((entry: { glob?: string; path?: string }) => {
+    if (entry.path) return entry.path === file;
+    const [dir, ext] = entry.glob!.split('/*'); return file.startsWith(dir + '/') && file.endsWith(ext) && !file.slice(dir.length + 1).includes('/');
+  });
 };
+const split = await loadSplit();
 test.each(['web', 'apps-in-toss', 'googleplay', 'onestore'])('%s 채널 산출물의 BGM 은 bgmUrl 이 가리키는 파일과 정확히 같다', (channel) => {
   const used = new Set(musicNames.map(name => bgmUrl(name, channel).slice(1)));
+  // 정식 웹 호스트는 Android 스트리밍 채널이 받아 가는 remote 곡의 Opus(.ogg)도 내보낸다(APK 에 싣는 core 곡의 .ogg 는 웹에 필요 없다).
+  if (channel === 'web') for (const name of musicNames) { const ogg = bgmUrl(name, 'googleplay').slice(1); if (ogg.endsWith('.ogg') && classify(ogg, split)?.class === 'remote') used.add(ogg); }
   const shipped = allBgm.filter(file => !excludedBy(channel)(file));
   expect(shipped.sort()).toEqual([...used].sort());
   for (const file of used) expect(existsSync(join(root, 'public', file)), file).toBe(true);
