@@ -2,14 +2,14 @@ import { expect, test } from 'bun:test';
 import { SEASON, TOWER, EVENT_WEEKS, EVENT_EFFECT_KINDS, HELL_DIFFICULTY } from '../src/data/content-90d.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER, applyDifficulty } from '../src/game/difficulty.js';
 import {
-  normalizeEndgame, seasonAt, activeEvents, eventCalendar, applyEventRewards, recordDifficultyClear, chapterClearedAt,
+  normalizeEndgame, migrateEndgame, towerWeekId, seasonAt, activeEvents, eventCalendar, applyEventRewards, recordDifficultyClear, chapterClearedAt,
   towerCap, towerFloorSource, towerScale, towerStage, towerFirstClearRewards, recordTowerClear, towerChest, claimTowerChest, towerSummary,
 } from '../src/game/endgame-core.js';
 import { Economy } from '../src/game/economy.js';
 import { stageDef } from '../src/data/stages.js';
 import { lootTable } from '../src/data/loot-tables.js';
 import { normalizeSave } from '../src/game/save.js';
-import { contractRows } from '../src/game/journey-core.js';
+import { contractRows, claimContract } from '../src/game/journey-core.js';
 
 const DAY = 86400000, WEEK = 7 * DAY;
 const at = (week: number, day = 0, hour = 12) => SEASON.startMs + week * WEEK + day * DAY + hour * 3600000;
@@ -181,4 +181,56 @@ test('Economy: 캠페인 완료는 난이도 기록·하드 임무를 남기고 
   expect(contractRows(muster.s.journey, at(0, 1)).daily.find((c: any) => c.id === 'daily_hard')?.cur).toBe(1);
   const view = towerSummary(muster.s.endgame, muster.s.progress, at(0, 1));
   expect(view).toMatchObject({ unlocked: false, best: 0, next: 1, source: '1-1' });
+});
+
+test('시계를 되돌려도 주간 보급을 다시 받을 수 없고 시즌 전 주차는 1주차와 다르다', () => {
+  expect(towerWeekId(SEASON.startMs - 1)).toBe(1);
+  expect(towerWeekId(at(0))).toBe(2);
+  expect(towerWeekId(at(3))).toBe(5);
+  const s = normalizeEndgame(null);
+  recordTowerClear(s, { floor: 1, receiptId: 't:1', nowMs: at(2) });
+  expect(claimTowerChest(s, at(2)).ok).toBe(true);
+  // 기기 시계를 1주 되돌림: 주차는 뒤로 가지 않고 수령 완료로 남는다
+  expect(towerChest(s, at(1)).claimed).toBe(true);
+  expect(claimTowerChest(s, at(1))).toEqual({ ok: false, error: 'claimed' });
+  recordTowerClear(s, { floor: 2, receiptId: 't:2', nowMs: at(1) });
+  expect(s.tower.week).toBe(towerWeekId(at(2)));
+  expect(claimTowerChest(s, at(1))).toEqual({ ok: false, error: 'claimed' });
+  expect(claimTowerChest(s, SEASON.startMs - 1)).toEqual({ ok: false, error: 'claimed' });
+  // 다음 주(실제로 앞으로)에는 다시 돌파하면 받는다
+  recordTowerClear(s, { floor: 3, receiptId: 't:3', nowMs: at(3) });
+  expect(claimTowerChest(s, at(3)).ok).toBe(true);
+  // 시즌 전 수령은 1주차 수령을 막지 않는다
+  const p = normalizeEndgame(null);
+  recordTowerClear(p, { floor: 1, receiptId: 'p:1', nowMs: SEASON.startMs - DAY });
+  expect(claimTowerChest(p, SEASON.startMs - DAY).ok).toBe(true);
+  recordTowerClear(p, { floor: 2, receiptId: 'p:2', nowMs: at(0) });
+  expect(claimTowerChest(p, at(0)).ok).toBe(true);
+  expect(towerChest(p, at(0)).nextResetAt).toBe(at(1, 0, 0));
+});
+
+test('탑 상한에 닿은 주에는 탑 임무가 달성으로 처리되고 같은 목록으로만 수령된다', () => {
+  const journey = ecoAt(at(0)).s.journey;
+  const plain = contractRows(journey, at(0)).daily.find((c: any) => c.id === 'daily_tower');
+  expect(plain).toMatchObject({ cur: 0, ready: false });
+  const waived = contractRows(journey, at(0), { waived: ['towerFloors'] });
+  expect(waived.daily.find((c: any) => c.id === 'daily_tower')).toMatchObject({ cur: 1, ready: true, waived: true });
+  expect(waived.weekly.find((c: any) => c.id === 'weekly_tower')).toMatchObject({ cur: 5, ready: true });
+  expect(waived.daily.find((c: any) => c.id === 'daily_hard')).toMatchObject({ cur: 0, ready: false });
+  expect(claimContract(journey, 'daily', 'daily_tower')).toMatchObject({ ok: false });
+  expect(claimContract(journey, 'daily', 'daily_tower', { waived: ['towerFloors'] })).toMatchObject({ ok: true });
+});
+
+test('엔드게임 이전 저장은 별점과 최근 전투 기록의 난이도 승리를 이월한다', () => {
+  const history = Array.from({ length: 10 }, (_, i) => ({ runId: i + 1, floor: i + 1, outcome: 'victory', boonIds: [],
+    details: { route: { kind: 'campaign', id: `1-${i + 1}`, difficultyId: 'nightmare' }, control: 'auto' } }));
+  history.push({ runId: 99, floor: 11, outcome: 'defeat', boonIds: [], details: { route: { kind: 'campaign', id: '2-1', difficultyId: 'nightmare' }, control: 'auto' } });
+  const raw = { progress: { unlocked: 12, stars: { '1-1': 3, '2-1': 1 }, difficulty: 'story' }, masterworks: { history } };
+  const save: any = normalizeSave(raw, ecoAt(at(0)).fresh());
+  expect(save.endgame.peak['1-1']).toBe(2);
+  expect(save.endgame.peak['2-1']).toBe(0);   // 패배는 이월하지 않는다
+  expect(chapterClearedAt(save.endgame, 1, 'nightmare')).toBe(true);
+  expect(migrateEndgame({})).toEqual(normalizeEndgame(null));
+  // 이미 엔드게임이 있는 저장은 다시 이월하지 않는다
+  expect(normalizeSave({ ...raw, endgame: { peak: {} } }, ecoAt(at(0)).fresh()).endgame.peak).toEqual({});
 });

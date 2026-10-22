@@ -36,7 +36,7 @@ export const TOWER = frozen({
   capPerWeek: 15,               // 주차마다 상한 +15층
   capMax: 300,
   minutesPerFloor: 3.5,
-  firstClear: frozen({ gold: 300, goldGrowth: 1.035, stones: 2, stones2Every: 5, stones3Every: 10, gemsEvery: 10, gems: 50, transcendEvery: 25 }),
+  firstClear: frozen({ gold: 300, goldGrowth: 1.02, stones: 2, stones2Every: 5, stones3Every: 10, gemsEvery: 10, gems: 50, transcendEvery: 25 }),
   // 주간 보급: 이번 주에 한 층 이상 돌파했으면 최고 층 구간에 맞춰 한 번 받는다.
   weeklyChest: frozen([
     frozen({ floor: 1, gold: 3000, stones: 10, stones2: 0, stones3: 0, gems: 0 }),

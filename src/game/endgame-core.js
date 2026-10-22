@@ -26,11 +26,26 @@ export function normalizeEndgame(raw) {
   const best = integer(t.best, 0, MAX_FLOOR, 0);
   return {
     version: VERSION, peak,
-    // week·chestWeek 는 시즌 절대 주차 + 1 (0 = 기록 없음). 음수 표식은 저장 정규화를 두 번 거치면 바뀌어 쓰지 않는다.
+    // week·chestWeek 는 towerWeekId(0 = 기록 없음). 음수 표식은 저장 정규화를 두 번 거치면 바뀌어 쓰지 않는다.
     tower: { best, week: integer(t.week, 0, MAX_FLOOR, 0), weekCleared: integer(t.weekCleared, 0, MAX_FLOOR, 0),
       chestWeek: integer(t.chestWeek, 0, MAX_FLOOR, 0) },
     receipts: [...new Set((Array.isArray(r.receipts) ? r.receipts : []).filter(receiptId))].slice(-128),
   };
+}
+
+/**
+ * 엔드게임 도입 전 저장의 이월. 별점이 있는 관문은 스토리 클리어, 숙련(masterworks) 최근 전투 기록(최대 20판)의
+ * 캠페인 승리는 그 난이도 클리어로 남긴다. 옛 저장은 난이도별 클리어를 따로 기록하지 않았으므로 기록 밖의 악몽 클리어는
+ * 복원할 수 없다(그 관문은 다시 악몽으로 깨야 지옥이 열린다).
+ */
+export function migrateEndgame(save) {
+  const state = normalizeEndgame(null), stars = object(save?.progress?.stars) ? save.progress.stars : {};
+  for (const [key, n] of Object.entries(stars)) { const m = STAGE_KEY.exec(key); if (m && n > 0) recordDifficultyClear(state, +m[1], +m[2], 'story'); }
+  for (const h of Array.isArray(save?.masterworks?.history) ? save.masterworks.history : []) {
+    const route = h?.details?.route, m = STAGE_KEY.exec(route?.id || '');
+    if (h?.outcome === 'victory' && route?.kind === 'campaign' && m) recordDifficultyClear(state, +m[1], +m[2], route.difficultyId || 'story');
+  }
+  return state;
 }
 
 // ---------- 시즌 ----------
@@ -142,11 +157,16 @@ export function towerStage(floor) {
   });
 }
 
-/** 이번 주 기준으로 주간 기록을 맞춘다(새 주면 이번 주 돌파 수 0). */
+/** 주차 식별자: 0 = 기록 없음, 1 = 시즌 시작 전, 2 이상 = 시즌 절대 주차 + 2. */
+export const towerWeekId = (nowMs) => { const at = seasonAt(nowMs); return at.preseason ? 1 : at.absoluteWeek + 2; };
+/**
+ * 이번 주 기준으로 주간 기록을 맞춘다(새 주면 이번 주 돌파 수 0). 주차는 앞으로만 간다:
+ * 기기 시계를 되돌려도 이미 지난 주로 돌아가지 않아 주간 보급을 다시 받을 수 없다. 돌려주는 값은 기록된 주차다.
+ */
 export function refreshTowerWeek(state, nowMs) {
-  const week = seasonAt(nowMs).absoluteWeek + 1;
-  if (state.tower.week !== week) { state.tower.week = week; state.tower.weekCleared = 0; }
-  return week;
+  const week = towerWeekId(nowMs);
+  if (week > state.tower.week) { state.tower.week = week; state.tower.weekCleared = 0; }
+  return state.tower.week;
 }
 
 /**
@@ -169,9 +189,9 @@ export function recordTowerClear(state, { floor, receiptId: id, nowMs }) {
 export function towerChest(state, nowMs) {
   const view = normalizeEndgame(state), week = refreshTowerWeek(view, nowMs);
   const tier = [...TOWER.weeklyChest].reverse().find((row) => view.tower.best >= row.floor) || null;
-  const claimed = view.tower.chestWeek === week;
+  const claimed = view.tower.chestWeek >= week;
   return { week, tier, claimed, ready: !!tier && !claimed && view.tower.weekCleared > 0, weekCleared: view.tower.weekCleared,
-    nextResetAt: seasonAt(nowMs).nextWeekMs };
+    nextResetAt: SEASON.startMs + Math.max(0, week - 1) * WEEK_MS }; // 기록된 주차의 다음 월요일 05:00 (시즌 전이면 시즌 시작)
 }
 export function claimTowerChest(state, nowMs) {
   const chest = towerChest(state, nowMs);

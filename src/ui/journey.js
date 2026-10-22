@@ -17,7 +17,7 @@ const illustration=id=>{const e=node('img','journey-illustration');e.src=`/img/u
 const detail=(text,label='자세히')=>{const e=node('details','journey-details');e.append(node('summary','',label),node('p','',text));return e;};
 const resourceArt={gold:'gold',stones:'material-stone',stones2:'material-guard-stone',stones3:'material-essence',gems:'gems',transcendStones:'material-essence',xp:'hero-xp',glass_leaf:'material-leaf',ember_core:'material-ember',star_dust:'material-stardust',hp_tonic:'potion-health',overdrive:'potion-power',aegis:'potion-guard'};
 function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','stones2','stones3','gems','transcendStones','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',stones2:'상급 강화석',stones3:'전설 강화석',gems:'보석',transcendStones:'초월석',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
-const errors={claimed:'이미 받은 보상입니다.',incomplete:'목표를 먼저 완료해 주세요.',prerequisite:'앞 단계 보상을 먼저 받아 주세요.',unknown:'선택을 다시 확인해 주세요.'};
+const errors={server:'서버 계정에서는 아직 받을 수 없습니다.',claimed:'이미 받은 보상입니다.',incomplete:'목표를 먼저 완료해 주세요.',prerequisite:'앞 단계 보상을 먼저 받아 주세요.',unknown:'선택을 다시 확인해 주세요.'};
 const tabs=[['journey','성장 여정'],['contracts','오늘의 의뢰'],['tower','무한의 성'],['target','목표 장비'],['supply','빠른 보급']];
 
 export class JourneyView {
@@ -137,13 +137,16 @@ export class JourneyView {
     const card=node('article','journey-card tower-card');
     card.append(illustration('nav-arena'),node('small','journey-eyebrow',t.unlocked?`이번 주 상한 ${t.cap}층`:'2-10 클리어 후 개방'),node('h3','',`${t.next}층 · ${t.boss==='final'?'지역 최종 보스':t.boss==='mid'?'중간 보스':'관문 대장'} (${t.source} 무대)`),
       node('p','',`권장 전투력 ${fmt(t.recPower)} · 첫 돌파 보상은 층이 오를수록 커지고 10층마다 보석, 25층마다 초월석.`));
-    const go=button(!t.unlocked?'잠김':t.capped?'이번 주 상한 도달':`${t.next}층 도전`,()=>this.launchTower(),'launch-tower');go.disabled=this.blocked||!t.unlocked||t.capped;card.append(go);
+    const server=this.app.account?.authority==='server';
+    const go=button(!t.unlocked?'잠김':t.capped?'이번 주 상한 도달':`${t.next}층 도전`,()=>this.launchTower(),'launch-tower');go.disabled=this.blocked||server||!t.unlocked||t.capped;card.append(go);
+    if(server)card.append(node('p','journey-muted','서버 계정의 무한의 성 정산을 준비 중입니다.'));
+    if(t.capped)card.append(node('p','journey-muted','이번 주 상한에 닿아 오늘·이번 주의 탑 의뢰는 달성으로 처리됩니다.'));
     if(t.capped)card.append(node('p','journey-muted',`다음 상한 개방: ${when(t.chest.nextResetAt)}`));
     this.content.append(card);
     const c=t.chest,chest=node('article','journey-card');
     chest.append(illustration('treasure-chest'),node('small','journey-eyebrow',`주간 보급 · 이번 주 돌파 ${c.weekCleared}층`),node('h3','',c.tier?`${c.tier.floor}층 이상 보급 상자`:'1층을 돌파하면 열립니다'));
     if(c.tier){const {floor,...rewards}=c.tier;chest.append(rewardIcons(rewards));}
-    const claim=button(c.claimed?'이번 주 수령 완료':c.ready?'보급 받기':'이번 주 1층 이상 돌파 필요',()=>this.act(()=>this.app.eco.claimTowerChest(),'주간 보급을 받았습니다.'),'claim-tower-chest');claim.disabled=this.blocked||!c.ready;chest.append(claim);
+    const claim=button(c.claimed?'이번 주 수령 완료':c.ready?'보급 받기':'이번 주 1층 이상 돌파 필요',()=>this.act(()=>this.app.eco.claimTowerChest(),'주간 보급을 받았습니다.'),'claim-tower-chest');claim.disabled=this.blocked||server||!c.ready;chest.append(claim);
     this.content.append(chest);
     this.content.append(node('h3','journey-section','시즌 이벤트'));
     const list=node('div','journey-grid');

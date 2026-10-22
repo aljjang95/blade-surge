@@ -34,6 +34,9 @@ export function freshHeroState(id) {
 }
 // 규칙 시계·난수: 주입값이 없거나 프로토타입 메서드를 일반 객체로 빌려 쓸 때도 호출 시점의 Date.now/Math.random으로 돌아간다.
 const nowOf = (eco) => (typeof eco?.now === 'function' ? eco.now() : Date.now());
+// 엔드게임(무한의 성 상한·주간 보급·시즌 이벤트) 시계. 계정 서버에 연결되면 net/account.js 가 서버 시각을 꽂아
+// 기기 시계를 앞당겨도 상한·보급이 먼저 열리지 않는다. 오프라인 로컬은 기기 시계(되돌림은 endgame-core 가 막는다).
+const endgameNow = (eco) => (typeof eco?.trustedClock === 'function' ? eco.trustedClock() : nowOf(eco));
 const rngOf = (eco) => (typeof eco?.rng === 'function' ? eco.rng : Math.random);
 const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = rng() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
@@ -488,7 +491,7 @@ export class Economy {
     const difficultyId = stage.difficultyId || 'story';
     recordDifficultyClear(s.endgame, stage.ch, stage.st, difficultyId);
     if (difficultyId !== 'story') this.recordJourneyAction('hardClears');
-    const m = double ? 2 : 1; const r = applyEventRewards(stage.rewards, activeEvents(nowOf(this)), 'campaign'); const loot = [];
+    const m = double ? 2 : 1; const r = applyEventRewards(stage.rewards, activeEvents(endgameNow(this)), 'campaign'); const loot = [];
     const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
@@ -523,7 +526,7 @@ export class Economy {
     return this.addRewards(rewards, { applyVip: false });
   }
   // ---------- 무한의 성 ----------
-  towerSummary() { this.s.endgame = normalizeEndgame(this.s.endgame); return towerSummary(this.s.endgame, this.s.progress, nowOf(this)); }
+  towerSummary() { this.s.endgame = normalizeEndgame(this.s.endgame); return towerSummary(this.s.endgame, this.s.progress, endgameNow(this)); }
   /** 다음 층 전투 정의. 해금 전이거나 시즌 상한에 닿았으면 null. */
   nextTowerStage() { const t = this.towerSummary(); return t.unlocked && !t.capped ? towerStage(t.next) : null; }
   /**
@@ -533,7 +536,7 @@ export class Economy {
   completeTowerFloor(stage, { receiptId = '', fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
     const s = this.s; s.endgame = normalizeEndgame(s.endgame);
     if (!stage?.tower || !towerUnlocked(s.progress)) return { ok: false, error: 'locked' };
-    const record = recordTowerClear(s.endgame, { floor: stage.tower.floor, receiptId, nowMs: nowOf(this) });
+    const record = recordTowerClear(s.endgame, { floor: stage.tower.floor, receiptId, nowMs: endgameNow(this) });
     if (!record.ok) return record;
     const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || s.selected;
     const count = (v) => Number.isSafeInteger(v) && v > 0 ? Math.min(v, 100000000) : 0;
@@ -554,7 +557,7 @@ export class Economy {
   }
   claimTowerChest() {
     const s = this.s; s.endgame = normalizeEndgame(s.endgame);
-    const claim = claimTowerChest(s.endgame, nowOf(this));
+    const claim = claimTowerChest(s.endgame, endgameNow(this));
     if (!claim.ok) return claim;
     const got = this.addRewards(claim.rewards, { silent: true });
     return { ok: true, got, saveError: !this.emit() };
