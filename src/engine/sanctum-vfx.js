@@ -2,10 +2,10 @@ import * as THREE from 'three';
 
 // 검성 성역(7초) 전용 연출: 경계 원(지면 1장) + 빛기둥 N개(병합 지오메트리 1장) = 드로우콜 2.
 // 예전에는 금빛 마법진 2장 + 불기둥 8개(교차 2장씩 16) + 화면 섬광으로 시전 순간 화면 전체가 금빛으로 번졌다.
-// 기둥은 가늘고(폭 .55m) 가로로 부드럽게 사그라들며, 하나씩 차례로 솟는다. 경계는 얇은 선 + 회전 눈금으로 '여기까지'를 읽게 한다.
-// 가산 밝기는 낮게(기둥 정점 .5, 경계 .75) 두어 블룸 임계를 크게 넘지 않는다. 프레임마다 하는 일은 유니폼 갱신뿐이다.
+// 기둥은 가늘고(폭 .7m) 가로로 부드럽게 사그라들며, 하나씩 차례로 솟는다. 경계는 얇은 선 + 회전 눈금으로 '여기까지'를 읽게 한다.
+// 가산 밝기는 낮게(기둥 정점 .85×가로 감쇠, 경계 .75) 두어 블룸 임계를 크게 넘지 않는다. 프레임마다 하는 일은 유니폼 갱신뿐이다.
 
-export const SANCTUM = Object.freeze({ pillars: 8, pillarWidth: .55, pillarHeight: 5.2, rise: .34, stagger: .07, fadeIn: .3, fadeOut: 1, pillarPeak: .5, edgePeak: .75 });
+export const SANCTUM = Object.freeze({ pillars: 8, pillarWidth: .7, pillarHeight: 5.2, rise: .34, stagger: .07, fadeIn: .3, fadeOut: 1, pillarPeak: .85, edgePeak: .75 });
 
 const PILLAR_VERT = `
   attribute vec2 aPillar; uniform float uRadius, uTime, uWidth, uHeight, uRise, uStagger;
@@ -83,7 +83,7 @@ export function spawnSanctum(fx, center, { radius = 8, life = 7, color = 0xffc84
   const col = new THREE.Color(color);
   const common = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide };
   const pillarMat = fx._keep(new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: col.clone() }, uAlpha: alpha, uTime: t, uPeak: { value: S.pillarPeak * gain }, uRadius: { value: radius }, uWidth: { value: S.pillarWidth }, uHeight: { value: S.pillarHeight }, uRise: { value: S.rise }, uStagger: { value: S.stagger } },
+    uniforms: { uColor: { value: col.clone() }, uAlpha: alpha, uTime: t, uPeak: { value: S.pillarPeak * Math.max(.8, gain) }, uRadius: { value: radius }, uWidth: { value: S.pillarWidth }, uHeight: { value: S.pillarHeight }, uRise: { value: S.rise }, uStagger: { value: S.stagger } },
     vertexShader: PILLAR_VERT, fragmentShader: PILLAR_FRAG, ...common,
   }));
   const zoneMat = fx._keep(new THREE.ShaderMaterial({

@@ -7,6 +7,7 @@ import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 
 const _v = new THREE.Vector3();
+const _judgeSky = new THREE.Vector3(), _judgeDir = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
 /** game.hitRadius와 같되 영웅에서 limit m 안의 적만 친다(표시 범위 밖 폭발 피해를 막는 스킬용). */
 function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
@@ -191,9 +192,10 @@ export const SKILLS = {
       const variant = knightSlashVariantForBattle(game, p);
       if (variant === 'pierce') return applyKnightSlashVariant(game, p, c, variant);
       const f = p.forward(new THREE.Vector3()); const spawn = fwd(p, 1); spawn.y = 1.2;
-      game.fx.slashSprite(spawn, f, 0xfff0a0, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
-      game.fx.slashSprite(spawn, f, 0xffffff, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
-      game.fx.holyBurst(spawn, { size: 4, life: 0.3 }); game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
+      // 성검 참격: 금빛 바깥 날 + 밝은 금 안쪽 날(흰 날은 블룸과 겹쳐 크림 덩어리가 됐다) + 작은 금빛 성광.
+      game.fx.slashSprite(spawn, f, 0xffc23a, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
+      game.fx.slashSprite(spawn, f, 0xffe7a0, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
+      game.fx.holyBurst(spawn, { size: 2.6, life: 0.3, color: 0xffb02a }); game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
       game.renderer.shake(0.25); audio.vibe(30);
       game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: SKILL_PROJECTILES.holy.speed, radius: SKILL_PROJECTILES.holy.radius, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.holy.life, visual: null });
@@ -238,15 +240,17 @@ export const SKILLS = {
         game.after(delay, () => {
           // Keep all eight hits/particle cues; only the first four get the
           // two-plane pillar so a dense Judgment stays within the render budget.
-          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
+          // 심판의 빛기둥: 크림(0xfff0c0) 대신 금빛 결, 폭 1.4m. 착지점에는 하늘에서 내리꽂는 얇은 광선과 금빛 고리.
+          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 1.4, life: 0.5, color: 0xffc040 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          if (i < 5) game.fx.holyBurst(pt, { size: 3.5, life: 0.35 });
-          game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
+          if (i < 5) game.fx.holyBurst(pt, { size: 2.4, life: 0.3, color: 0xffb02a });
+          game.fx.impact?.beam?.(_judgeSky.set(pt.x - .6, 12, pt.z - .4), _judgeDir.set(.6, -12, .4), 12, 0xffe08a, { speed: 80, tail: 5, width: .12 });
+          game.fx.burst(pt.clone().setY(0.6), 0xffd27a, { n: 12, speed: 7, size: 0.35, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });
       });
-      game.renderer.flashScreen(0.35, 0xfff0c0);
+      game.renderer.flashScreen(0.18, 0xffe0a0);
     },
   },
   dragon_slash: {
@@ -280,15 +284,19 @@ export const SKILLS = {
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
         const sp = p.pos.clone().addScaledVector(d, 1.5).setY(1.3);
-        game.fx.slashSprite(sp, d, i === 0 ? 0xffffff : 0xffe080, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
+        game.fx.slashSprite(sp, d, i === 0 ? 0xffe7a0 : 0xffb830, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
         game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 1.5, dmg: c.dmg * 0.35, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
       }
       const hitC = fwd(p, 3.5);
-      game.fx.explosion(hitC, { size: 11, color: 0xffe0a0, life: 0.7 });
-      game.fx.shockTex(hitC, 0xffd060, { r1: 14, life: 0.7 }); game.fx.holyBurst(hitC, { size: 12, life: 0.5 });
-      game.fx.dustPuff(hitC, { size: 8 }); game.fx.burst(hitC.setY(1), 0xffe080, { n: 50, speed: 14, size: 0.5, up: 0.8 });
+      // 용참 착탄: 크림 폭발(11m)·성광(12m)·화면 섬광 .45 는 화면을 하얗게 덮었다. 진한 금 폭발(6m) + 바닥 충격 2겹 + 금빛 임팩트 + 부채꼴 불똥으로 '앞으로 베어 낸' 방향을 남긴다.
+      game.fx.explosion(hitC, { size: 6, color: 0xffa020, life: 0.6 });
+      game.fx.shockTex(hitC, 0xffc040, { r1: 14, life: 0.7 }); game.after(.1, () => { if (game.active) game.fx.shockTex(hitC, 0xff9a20, { r1: 8, life: 0.5 }); });
+      game.fx.holyBurst(hitC, { size: 6, life: 0.45, color: 0xffb02a });
+      game.fx.impact?.burst?.(hitC.clone().setY(1), 0xffc23a, { size: 3 });
+      game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
+      game.fx.dustPuff(hitC, { size: 8 }); game.fx.burst(hitC.setY(1), 0xffd27a, { n: 30, speed: 14, size: 0.45, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
-      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xfff0c0); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
+      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.22, 0xffe0a0); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 1 }); audio.holy({ vol: 0.45, base: 523, dur: 1.1 }); audio.vibe([80, 40, 120]);
     },
   },
@@ -416,10 +424,10 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
-        game.fx.shockTex(p.pos, 0xc0f0ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
+        game.fx.shockTex(p.pos, 0x4fb4ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
         game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45 });
-        game.fx.burst(p.pos.clone().setY(0.3), 0xd0f4ff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
+        game.fx.burst(p.pos.clone().setY(0.3), 0x9fdcff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
         audio.ice({ vol: 0.45, dur: 0.5 }); audio.whoosh({ vol: 0.28, pitch: 1.5, dur: 0.4 }); game.renderer.shake(0.15);
       }
     },
@@ -782,19 +790,21 @@ export const SKILLS = {
   // ── 대마도사 Lv.20 : 시간 정지 + 각인 (멈춘 동안 준 피해가 해제 순간 터진다) ──
   chrono_seal: {
     dur: 1.0,
-    start(game, p) { game.fx.castCircle(p.pos, 0xc0d8ff, { radius: 8, life: 1.0 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 0.85, heavy: true }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0x8a7cff, { radius: 8, life: 1.0 }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 1.1, life: 0.7 }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
     cast(game, p, c) {
       const center = p.pos.clone(); const R = 9.5, FREEZE = 3.0;
       const sealed = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < R).slice(0, 24).map((e) => ({ e, hp: e.hp }));
-      game.fx.groundTex(center, 'circle_demon', 0xc0d8ff, { r0: 1, r1: R, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE });
-      game.fx.shockTex(center, 0xdfe8ff, { r1: R + 1.5, life: 0.6 });
-      game.renderer.flashScreen(0.5, 0xdfe8ff); game.renderer.aberr = 1.3; game.renderer.shake(0.5);
+      // 시간 봉인 = 남보라 '시계' 언어: 바닥 시계판(12 눈금 + 봉인 시간 동안 한 바퀴 도는 바늘) + 옅은 룬. 얼음 흰빛과 구분한다.
+      game.fx.groundTex(center, 'circle_demon', 0x7f6cff, { r0: 1, r1: R, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE, gain: .55 });
+      game.fx.impact?.mark?.(center, 0xa898ff, { radius: R * .62, life: FREEZE + .3, style: 4 });
+      game.fx.shockTex(center, 0x9a8cff, { r1: R + 1.5, life: 0.6 });
+      game.renderer.flashScreen(0.2, 0xb8b0ff); game.renderer.aberr = 1.3; game.renderer.shake(0.5);
       game.timeCtl.slowmo(0.25, 0.5);
       audio.ice({ vol: 0.6, dur: 0.9 }); audio.dark({ vol: 0.35, base: 90, dur: 1.2 }); audio.vibe([80, 40, 40]);
       for (const s of sealed) {
         s.e.stun = Math.max(s.e.stun, FREEZE * (s.e.isBoss ? 0.4 : 1));
-        game.fx.iceBurst(s.e.pos, { size: 3, life: 0.4 });
-        game.fx.castCircle(s.e.pos, 0xc0d8ff, { radius: 1.4, life: FREEZE });
+        game.fx.iceBurst(s.e.pos, { size: 2.2, life: 0.4, color: 0x9a8cff });
+        game.fx.impact?.mark?.(s.e.pos, 0xa898ff, { radius: 1.1, life: FREEZE, style: 4 });
       }
       game.ui.toast(`시간 봉인 — ${sealed.length}명 정지`, 'gold');
       // 정지 유지 (넉백까지 얼린다)
@@ -802,22 +812,22 @@ export const SKILLS = {
       const hold = () => {
         if (n-- <= 0 || !game.active) return;
         for (const s of sealed) { if (!s.e.alive) continue; s.e.kb.set(0, 0, 0); s.e.vel.set(0, 0, 0); s.e.stun = Math.max(s.e.stun, 0.3); }
-        if (n % 6 === 0) for (const s of sealed) if (s.e.alive) game.fx.embers(s.e.pos, 0xc0d8ff, { n: 2, radius: 0.6, life: 0.6, rise: 1.2 });
+        if (n % 6 === 0) for (const s of sealed) if (s.e.alive) game.fx.embers(s.e.pos, 0xa898ff, { n: 2, radius: 0.6, life: 0.6, rise: 1.2 });
         game.after(0.1, hold);
       }; hold();
       // 해제 — 각인된 피해가 터진다
       game.after(FREEZE, () => {
         if (!game.active) return;
-        game.renderer.flashScreen(0.45, 0xdfe8ff); game.fx.abilitySignature?.(center, 'frost', { scale: 1.8, life: 0.62, heavy: true }); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
+        game.renderer.flashScreen(0.22, 0xb8b0ff); game.fx.abilitySignature?.(center, 'arcane', { scale: 1.4, life: 0.6, heavy: true }); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
         audio.boom({ vol: 1, dur: 0.9, low: 55 }); audio.shatter({ vol: 0.7 }); audio.vibe([90, 40, 120]);
         sealed.forEach((s, i) => game.after(i * 0.05, () => {
           const taken = Math.max(0, s.hp - (s.e.alive ? s.e.hp : 0));
           const at = s.e.pos.clone();
-          game.fx.explosion(at, { size: 6, color: 0xdfe8ff, life: 0.5 });
-          game.fx.iceBurst(at, { size: 5, life: 0.45 });
-          game.fx.burst(at.clone().setY(0.8), 0xc0d8ff, { n: 22, speed: 11, size: 0.4 });
+          game.fx.explosion(at, { size: 4.2, color: 0x8a7cff, life: 0.5 });
+          game.fx.impact?.burst?.(at.clone().setY(1), 0xa898ff, { size: 1.6 });
+          game.fx.burst(at.clone().setY(0.8), 0xa898ff, { n: 22, speed: 11, size: 0.4 });
           game.hitRadius(at, 3.8, c.dmg + taken * 0.75, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: at, quietStop: i > 1 });
-          if (i < 3) game.fx.light(at, 0xc0d8ff, 12, 12, 0.4);
+          if (i < 3) game.fx.light(at, 0x9a8cff, 12, 12, 0.4);
           audio.ice({ vol: 0.35, dur: 0.4 }); game.renderer.shake(0.25);
         }));
       });

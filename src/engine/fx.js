@@ -39,7 +39,8 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   // party fight, so every school now has a unique silhouette pair.
   steel: Object.freeze({ ground: 'circle_gold', flash: 'slash', secondary: 'holy_burst', color: 0xffd060, accent: 0xffffff, radius: 2.8, burst: 14, light: 0.9 }),
   fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xff7228, accent: 0xffd060, radius: 3.6, burst: 20, light: 1.2, pillar: true }),
-  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x72dfff, accent: 0xdff8ff, radius: 3.4, burst: 16, light: 1.0 }),
+  // 냉기 강조색은 흰빛(0xdff8ff) 대신 진한 하늘색: 눈보라·절대영도에서 얼음 원화와 겹쳐 화면이 하얗게 덮였다.
+  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x5fcfff, accent: 0x8fd8ff, radius: 3.4, burst: 16, light: 1.0 }),
   arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', secondary: 'lightning', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0 }),
   nature: Object.freeze({ ground: 'circle_gold', flash: 'phoenix', secondary: 'dust', color: 0x63e08a, accent: 0xd7ff9d, radius: 3.3, burst: 18, light: 0.85 }),
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
@@ -978,7 +979,8 @@ export class FX {
     return mesh;
   }
   /** 얼음 결정 폭발 */
-  iceBurst(pos, { size = 3, life = 0.5 } = {}) { this.texFlash(pos, 'ice', 0xc0f0ff, { size, life, spin: 0.5, grow: 1.0, y: 0.6 }); }
+  // 얼음 결정 원화는 중심이 거의 흰색이라 진한 하늘색으로 칠한다(옅은 0xc0f0ff 는 가산으로 흰 덩어리가 됐다).
+  iceBurst(pos, { size = 3, life = 0.5, color = 0x6cc8ff } = {}) { this.texFlash(pos, 'ice', color, { size, life, spin: 0.5, grow: 1.0, y: 0.6, gain: .8 }); }
   holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
   /** @param {THREE.Vector3} pos
    * @param {THREE.ColorRepresentation} [color]

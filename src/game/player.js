@@ -19,6 +19,7 @@ import { createCombatPose } from '../engine/combat-pose.js';
 import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
+const _glintAt = new THREE.Vector3();
 // 궁수 전투 시점(카메라 고도 약 36°)에서 모자 챙·앞머리가 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기, 2026-10-20 재지적).
 // 클립이 머리 뼈를 쓴 직후 고개를 뒤로 젖혀 얼굴을 카메라 쪽으로 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
 // 머리 뼈 로컬 축: 앞 +x, 위 +y, 귀 +z. 피치(고개 젖힘)는 z 축 회전이다. 예전 값은 앞 축(x) 12°로 옆으로 기울이는 롤이라 눈이 드러나지 않았다.
@@ -343,6 +344,9 @@ export class Player extends Actor {
     if (c.finisher) audio.bark(V + 'fin', { n: 2, vol: 0.95, min: 0.6 });
     else if (c.move || Math.random() < 0.45) audio.bark(V + 'atk', { n: 4, vol: 0.75, min: 0.35 });
     if (!this.def.ranged) this.startTrail();
+    // 예비 광채: 타격 직전(.07초 앞) 무기 끝에 영웅색 별빛 한 점. 인스턴스 층이라 메시·재질을 만들지 않는다.
+    _glintAt.copy(this.pos).addScaledVector(f, this.def.ranged ? .9 : .7).setY(this.def.weapon === 'staff' ? 1.9 : 1.5);
+    this.game.fx.impact?.glint?.(_glintAt, this.def.color, { size: c.finisher ? 1.25 : .75, delay: Math.max(0, c.hitAt * dur - .07) });
   }
   startTrail() {
     if (this.trail) this.trail.stop();
@@ -407,7 +411,8 @@ export class Player extends Actor {
       this.game.vacuum(this.pos.clone(), c.range + 2, gravity ? 14 : 9);
       const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'magic', finisher: true, counter: counterFinisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
-      this.game.fx.holyBurst(this.pos, { size: c.range * 2.4, life: 0.45, color: this.def.accent }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
+      // 마무리 노바: 옅은 강조색(accent, 크림·흰빛 계열) 대신 영웅 본색으로, 크기 2.4→1.8배(영웅·적을 하얗게 덮지 않게).
+      this.game.fx.holyBurst(this.pos, { size: c.range * 1.8, life: 0.45, color: this.def.color }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
       if (!hits) audio.whoosh({ vol: 0.15, pitch: 1.8, dur: 0.12 });
       return;
@@ -416,7 +421,7 @@ export class Player extends Actor {
       const cpos = this.pos.clone().addScaledVector(f, 0.8);
       const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'blunt', finisher: true, counter: counterFinisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
-      this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 4, color: this.def.accent, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
+      this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 3.2, color: this.def.color, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
       this.game.renderer.shake(0.7); this.game.renderer.punch(0.5); audio.boom({ vol: 0.7, dur: 0.5, low: 55 }); audio.vibe(30);
       if (hits && this.game.hasProc('storm_chain')) this.game.stormChain(cpos, this.atk * 0.6);
       return;
@@ -451,7 +456,8 @@ export class Player extends Actor {
         if (!['knight','barbarian'].includes(this.def.id) || gravity) this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
         if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 군중 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
         this.game.fx.shockTex(this.pos.clone().addScaledVector(f, 1.2), this.def.color, { r1: 4.2, life: 0.35 });
-        this.game.fx.explosion(this.pos.clone().addScaledVector(f, 1.6), { size: 3.2, color: this.def.accent, life: 0.35 });
+        // 마무리 폭발은 영웅 본색(검성 금·광전사 주홍·암살자 보라)으로: 옅은 강조색은 적 위에 크림 구름으로 보였다.
+        this.game.fx.explosion(this.pos.clone().addScaledVector(f, 1.6), { size: 2.6, color: this.def.color, life: 0.35 });
         this.game.renderer.shake(0.35); this.game.fx.dustPuff(this.pos.clone().addScaledVector(f, 1.5), { size: 2.4, life: 0.5 });
       }
       if (!hits) audio.whoosh({ vol: 0.15, pitch: 1.8, dur: 0.12 });

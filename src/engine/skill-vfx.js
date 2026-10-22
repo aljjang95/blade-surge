@@ -50,9 +50,9 @@ export const SKILL_VFX = Object.freeze({
   blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x72dfff, 7),
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'flash', 0x9fd8ff, 5, { dist: 4 }),
-  chrono_seal: R(VIOLET, 'ice-burst', 'self', 'ground', 0xc0d8ff, 9),
+  chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a7cff, 9, { gain: .6 }),
   star_prison: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x74c8ff, 9, { dist: 5, seek: [16, 5] }),
-  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0xccecff, 12, { dist: 6, seek: [17, 6] }),
+  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x7fd0ff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자
   shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb26bff, 5, { dist: 3, ghost: true }),
   poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x70e060, 6, { dist: 5, seek: [13, 3.5] }),

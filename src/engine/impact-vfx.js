@@ -10,9 +10,9 @@ import { InstanceRing, VfxRng } from './combat-vfx.js';
 export const IMPACT_KIND = Object.freeze({ core: 0, streak: 1, star: 2, ring: 3, cut: 4, beam: 5, mark: 6 });
 // 5 광선: 시작점에서 aVel(월드 벡터) 끝까지 aMotion.x(m/s) 속도로 머리가 나아가고 aShape.w(m) 뒤에서 꼬리가 따라온다.
 //   화살 비행 궤적과 같은 속도로 그어져 '관통 일직선'을 읽게 한다. aShape.z = 모양(0 직선, 1 덩굴 물결, 2 쌍나선 바람).
-// 6 지면 표식: 월드 XZ 평면에 눕는 표식. aShape.z = 회전, aShape.w = 모양(0 조준 원, 1 부채꼴, 2 가시 고리, 3 나침 고리).
+// 6 지면 표식: 월드 XZ 평면에 눕는 표식. aShape.z = 회전, aShape.w = 모양(0 조준 원, 1 부채꼴, 2 가시 고리, 3 나침 고리, 4 시계판).
 export const BEAM_STYLE = Object.freeze({ line: 0, vine: 1, gale: 2 });
-export const MARK_STYLE = Object.freeze({ reticle: 0, fan: 1, thorn: 2, compass: 3 });
+export const MARK_STYLE = Object.freeze({ reticle: 0, fan: 1, thorn: 2, compass: 3, clock: 4 });
 
 /** 영웅별 타격 색 언어: core = 달아오른 중심, accent = 불똥·고리·자국. 기본 공격·스킬 모두 같은 색 계열을 쓴다. */
 export const HERO_IMPACT_PALETTE = Object.freeze({
@@ -46,9 +46,12 @@ export const ARROW_STREAKS = Object.freeze({
   bind: Object.freeze({ tail: 8, width: .1, color: 0x63e08a, glow: .22, style: 1, muzzle: .55 }),
   gale: Object.freeze({ tail: 7, width: .09, color: 0x3fe0a0, glow: .24, style: 2, muzzle: .5 }),
 });
-export const IMPACT_CAPACITY = 384;
+export const IMPACT_CAPACITY = 512;
 /** 한 프레임에 새로 낼 수 있는 칸 상한(군중 동시 타격에도 업로드·채움 비용이 일정하다). */
 export const IMPACT_FRAME_BUDGET = 72;
+/** 같은 자리 겹침 억제: STACK_SEC 초 안에 STACK_DIST m 안쪽을 다시 치면 코어·자국을 다시 그리지 않고 불똥만 낸다.
+ *  관통 화살 7발·회전베기 연타가 한 적에 코어를 3~4겹 쌓아 하얀 덩어리가 되던 것을 막는다. 고정 길이 배열이라 할당이 없다. */
+export const IMPACT_STACK = Object.freeze({ slots: 24, sec: .07, dist: .9 });
 
 const VERT = `
   attribute vec3 aOrigin; attribute vec3 aVel; attribute vec4 aShape; attribute vec3 aColor; attribute vec2 aLife; attribute vec2 aMotion;
@@ -140,8 +143,8 @@ const FRAG = `
         a = (ring + dash * 0.7 + tick * 0.9 + dot0) * fade;
       } else if (vStyle < 1.5) {
         // 부채꼴: +x 방향 ±0.42rad 안쪽, 가장자리 두 선과 바깥 호가 또렷하고 안은 옅다
-        float half = 0.42, inA = 1.0 - smoothstep(half - 0.02, half, abs(ang));
-        float edgeL = exp(-pow((abs(ang) - half) * r / 0.03, 2.0)) * step(r, 0.98);
+        float hw = 0.42, inA = 1.0 - smoothstep(hw - 0.02, hw, abs(ang));
+        float edgeL = exp(-pow((abs(ang) - hw) * r / 0.03, 2.0)) * step(r, 0.98);
         float arc = exp(-pow((r - 0.95) / 0.03, 2.0)) * inA;
         float sweep = smoothstep(0.0, 1.0, k * 3.0);
         a = ((inA * 0.12 * step(r, 0.95) + arc) * step(r, sweep + 0.02) + edgeL * 0.8) * fade;
@@ -150,6 +153,17 @@ const FRAG = `
         float ring = exp(-pow((r - 0.8) / 0.04, 2.0));
         float sp = pow(abs(cos(ang * 5.0 + 0.3)), 30.0) * step(0.45, r) * step(r, 0.8) * (1.0 - (0.8 - r) / 0.35 * 0.6);
         a = (ring + sp) * fade;
+      } else if (vStyle > 3.5) {
+        // 시계판: 원 + 12 눈금 + 수명 동안 한 바퀴 도는 바늘과 그 뒤로 옅어지는 부채꼴 잔광(시간 봉인)
+        float ring = exp(-pow((r - 0.92) / 0.025, 2.0));
+        float ticks = pow(abs(cos(ang * 6.0)), 90.0) * step(0.78, r) * step(r, 0.9);
+        float hand = 1.5708 - k * 6.2832;
+        vec2 hd = vec2(cos(hand), sin(hand));
+        float along = dot(uv, hd), perp = abs(uv.x * hd.y - uv.y * hd.x);
+        float needle = (1.0 - smoothstep(0.012, 0.03, perp)) * step(0.0, along) * step(along, 0.86);
+        float behind = mod(hand - ang + 6.2832 * 4.0, 6.2832);
+        float wake = exp(-behind * 2.2) * step(r, 0.9) * 0.22;
+        a = (ring + ticks + needle + wake) * fade;
       } else {
         // 나침 고리: 큰 원 + 일곱 갈래 눈금(폭풍 일곱 화살)
         float ring = exp(-pow((r - 0.9) / 0.03, 2.0)) + exp(-pow((r - 0.62) / 0.02, 2.0)) * 0.5;
@@ -199,7 +213,7 @@ const FRAG = `
   }`;
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-const _c = new THREE.Color(), _view = new THREE.Vector3(), _dir = new THREE.Vector3();
+const _c = new THREE.Color(), _view = new THREE.Vector3(), _dir = new THREE.Vector3(), _pos = new THREE.Vector3();
 
 /** 타격 임팩트 층. FX 가 소유하며 FX.update(dt) 로 시계가 흐른다. */
 export class ImpactVfx {
@@ -207,6 +221,7 @@ export class ImpactVfx {
   constructor(scene, { focus = null, camera = null, seed = 0x1a9c7e55 } = {}) {
     this.enabled = true; this.lite = false; this.clock = 0; this.seed = seed >>> 0; this.rng = new VfxRng(this.seed);
     this.camera = camera; this.budget = IMPACT_FRAME_BUDGET; this.spawned = 0;
+    this.recent = new Float32Array(IMPACT_STACK.slots * 4).fill(-1e9); this.recentAt = 0;
     this.uTime = { value: 0 };
     const material = new THREE.ShaderMaterial({
       uniforms: { uTime: this.uTime }, vertexShader: VERT, fragmentShader: FRAG,
@@ -247,6 +262,18 @@ export class ImpactVfx {
     this.spawned++;
     return true;
   }
+  /** 최근 같은 자리(시간·거리) 타격이면 true. 아니면 이 자리를 기록하고 false. */
+  _stacked(pos) {
+    const R = this.recent, n = IMPACT_STACK.slots, d2 = IMPACT_STACK.dist * IMPACT_STACK.dist;
+    for (let i = 0; i < n; i++) {
+      const j = i * 4; if (this.clock - R[j + 3] > IMPACT_STACK.sec) continue;
+      const dx = R[j] - pos.x, dy = R[j + 1] - pos.y, dz = R[j + 2] - pos.z;
+      if (dx * dx + dy * dy + dz * dz < d2) return true;
+    }
+    const j = this.recentAt * 4; this.recentAt = (this.recentAt + 1) % n;
+    R[j] = pos.x; R[j + 1] = pos.y; R[j + 2] = pos.z; R[j + 3] = this.clock;
+    return false;
+  }
   /** 화면 기준 날 각도(라디안). 카메라가 없으면 대각선. */
   _screenAngle(dir) {
     const e = this.camera?.matrixWorld?.elements;
@@ -278,6 +305,10 @@ export class ImpactVfx {
     _view.copy(pos);
     if (this.camera) { _dir.setFromMatrixPosition(this.camera.matrixWorld).sub(pos); const l = _dir.length(); if (l > 1e-3) _view.addScaledVector(_dir, .35 / l); }
     const x = _view.x, y = _view.y, z = _view.z;
+    if (!crit && !reduced && this._stacked(pos)) {
+      this._streaks(_view, dir, this.lite ? 1 : 2, T.speed, T.streakLife, P.accent, { spread: .75, size: .22 });
+      return this.spawned - before;
+    }
     // 코어는 영웅 강조색 번짐 + 셰이더의 하얀 심이다. 크림색 코어는 군중을 한꺼번에 칠 때 적마다 크림 덩어리로 겹쳐 보였다.
     if (reduced) { this._emit(IMPACT_KIND.core, x, y, z, T.core * .7, P.accent, .08, { grow: 1 }); return this.spawned - before; }
     this._emit(IMPACT_KIND.core, x, y, z, T.core, crit ? CRIT_HOT : P.accent, T.coreLife, { grow: .45 });
@@ -293,7 +324,28 @@ export class ImpactVfx {
       if (!this.lite) this._emit(IMPACT_KIND.ring, x, y, z, T.ring * 1.5, CRIT_COLOR, .24, { grow: 1 });
       this._streaks(_view, dir, this.lite ? 2 : 4, T.speed * 1.15, T.streakLife * 1.1, CRIT_COLOR, { spread: 1.6, size: .3 });
     }
+    if (!this.lite) this._heroHit(hero, _view, dir, angle, T, P, heavy);
     return this.spawned - before;
+  }
+  /** 영웅별 타격 결(같은 코어·자국 위에 한 겹): 검성 금빛 X 광채, 광전사 솟는 불씨, 암살자 엇갈린 잔상 자국, 대마도사 원소 고리, 궁수 관통 선. */
+  _heroHit(hero, at, dir, angle, T, P, heavy) {
+    const x = at.x, y = at.y, z = at.z;
+    if (hero === 'knight') {
+      if (heavy) this._emit(IMPACT_KIND.star, x, y, z, T.core * 1.9, P.accent, .13, { angle: .785, grow: .5 });
+    } else if (hero === 'barbarian') {
+      for (let i = 0, n = heavy ? 4 : 2; i < n; i++) {
+        const a = this.rng.next() * 6.2831853, sp = 1.2 + this.rng.next() * 1.8;
+        this._emit(IMPACT_KIND.streak, x, y - .2, z, .15, i % 2 ? 0xff9a3a : P.accent, .45 + this.rng.next() * .25,
+          { vx: Math.cos(a) * sp, vy: 3.5 + this.rng.next() * 2.5, vz: Math.sin(a) * sp, stretch: .5, grow: 1, gravity: -2 });
+      }
+    } else if (hero === 'rogue') {
+      // 엇갈린 두 번째 자국이 한 박자(.035초) 늦게 그어져 X 자 잔상을 남긴다.
+      this._emit(IMPACT_KIND.cut, x, y + .04, z, T.cut * .85, 0xe2b8ff, .16, { angle: angle + 1.25, stretch: 1.2, grow: .92, delay: .035 });
+    } else if (hero === 'mage') {
+      this._emit(IMPACT_KIND.ring, x, y, z, T.ring * .8, P.accent, .16, { grow: 1 });
+    } else if (hero === 'ranger' && dir) {
+      _dir.set(dir.x, 0, dir.z); if (_dir.lengthSq() > 1e-6) { _dir.normalize(); _pos.copy(at).addScaledVector(_dir, -1.1); this.beam(_pos, _dir, 2.4, P.accent, { width: .05, fade: .12 }); }
+    }
   }
   /** 처치 확정: 따뜻한 큰 섬광 + 고리 + 위로 튀는 불똥. elite/boss 는 더 크다. */
   kill(pos, { elite = false, boss = false, hero = '', reduced = false } = {}) {
@@ -310,7 +362,32 @@ export class ImpactVfx {
       this._emit(IMPACT_KIND.streak, x, y, z, .24 * k, i % 2 ? KILL_COLOR : P.accent, .26 + this.rng.next() * .12,
         { vx: Math.cos(a) * sp, vy: 3 + this.rng.next() * 4, vz: Math.sin(a) * sp, stretch: .9, grow: 1, gravity: 18 });
     }
+    if (!this.lite) this._heroKill(hero, pos, P, k);
     return this.spawned - before;
+  }
+  /** 영웅별 처치 결: 검성 하늘로 오르는 금빛 광선, 광전사 솟는 불씨 무리, 대마도사 겹고리, 암살자 바닥 그림자 가시 문양, 궁수 조여드는 조준 원. */
+  _heroKill(hero, pos, P, k) {
+    if (hero === 'knight') {
+      _pos.set(pos.x, .1, pos.z); _dir.set(0, 1, 0);
+      this.beam(_pos, _dir, 3.6 * k, P.accent, { speed: 22, tail: 2.2, width: .12 });
+    } else if (hero === 'barbarian') {
+      for (let i = 0; i < 5; i++) {
+        const a = this.rng.next() * 6.2831853, r = this.rng.next() * .6;
+        this._emit(IMPACT_KIND.streak, pos.x + Math.cos(a) * r, pos.y + .4, pos.z + Math.sin(a) * r, .17, i % 2 ? 0xff9a3a : P.accent, .6 + this.rng.next() * .3,
+          { vx: Math.cos(a) * 1.2, vy: 4 + this.rng.next() * 3, vz: Math.sin(a) * 1.2, stretch: .5, grow: 1, gravity: -2 });
+      }
+    } else if (hero === 'mage') {
+      this._emit(IMPACT_KIND.ring, pos.x, pos.y + 1, pos.z, 3.2 * k, P.core, .3, { grow: 1, delay: .05 });
+    } else if (hero === 'rogue') {
+      this.mark(pos, P.accent, { radius: 1.2 * k, life: .45, style: MARK_STYLE.thorn, angle: this.rng.next() * 6.28 });
+    } else if (hero === 'ranger') {
+      this.mark(pos, P.accent, { radius: .95 * k, life: .35, style: MARK_STYLE.reticle });
+    }
+  }
+  /** 공격 예비 동작의 짧은 광채(무기 끝 별빛). delay 초 뒤(타격 직전)에 켜진다. */
+  glint(pos, color, { size = .8, delay = 0, life = .12 } = {}) {
+    if (!this.enabled || this.lite || !pos) return false;
+    return this._emit(IMPACT_KIND.star, pos.x, pos.y, pos.z, size, color, life, { angle: .3, grow: .3, delay });
   }
   /** 스킬 착탄 한 점의 짧은 '임팩트 프레임'(코어 + 고리 + 별빛). 텍스처 연출 위에 얹어 중심을 또렷하게 만든다. */
   burst(pos, color, { size = 2, reduced = false } = {}) {
@@ -371,6 +448,6 @@ export class ImpactVfx {
   }
   /** 살아 있는 칸 수(점검·테스트용). */
   live() { return this.ring.live(this.clock); }
-  clear() { this.ring.clear(); this.clock = 0; this.uTime.value = 0; this.rng = new VfxRng(this.seed); this.budget = IMPACT_FRAME_BUDGET; }
+  clear() { this.recent.fill(-1e9); this.recentAt = 0; this.ring.clear(); this.clock = 0; this.uTime.value = 0; this.rng = new VfxRng(this.seed); this.budget = IMPACT_FRAME_BUDGET; }
   dispose() { this.ring.dispose(); }
 }
