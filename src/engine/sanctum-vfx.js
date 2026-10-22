@@ -53,10 +53,11 @@ const ZONE_FRAG = `
     gl_FragColor = vec4(mix(uColor, vec3(1.0), edge * 0.1), a);
   }`;
 
-let pillarGeometry = null, pillarCount = 0;
+/** 기둥 수별 지오메트리 캐시. 적응 품질이 lite(4)↔정상(8)을 오가도 새로 만들지 않고, 살아 있는 성역이 쓰는 옛 지오메트리를 버리지 않는다. */
+const pillarGeometries = new Map();
 /** n 개의 기둥 사각형(가로 -.5~.5, 세로 0~1)을 한 지오메트리로 묶는다. aPillar = (각도, 솟는 순서). 모든 성역이 공유한다. */
 export function sanctumPillarGeometry(n = SANCTUM.pillars) {
-  if (pillarGeometry && pillarCount === n) return pillarGeometry;
+  const cached = pillarGeometries.get(n); if (cached) return cached;
   const pos = new Float32Array(n * 4 * 3), pil = new Float32Array(n * 4 * 2), idx = [];
   // 솟는 순서는 한 칸씩 건너뛰며 돈다(0,3,6,1,4,7,2,5): 원을 따라 빛이 번져 가는 박자.
   for (let i = 0; i < n; i++) {
@@ -70,7 +71,7 @@ export function sanctumPillarGeometry(n = SANCTUM.pillars) {
   g.setAttribute('aPillar', new THREE.BufferAttribute(pil, 2));
   g.setIndex(idx);
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 3, 0), 30);
-  pillarGeometry = g; pillarCount = n;
+  pillarGeometries.set(n, g);
   return g;
 }
 

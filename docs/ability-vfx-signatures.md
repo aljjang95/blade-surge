@@ -29,7 +29,7 @@ position, kills or victory state. The generated report and PNGs live under
 
 ## 임팩트 프레임·예고·노출 예산 (2026-10-22, h1-vfx 레인)
 
-- `src/engine/impact-vfx.js`: 타격·치명타·처치·스킬 착탄 중심을 인스턴스 메시 한 장(드로우콜 1, 384칸, 프레임당 72칸)에
+- `src/engine/impact-vfx.js`: 타격·치명타·처치·스킬 착탄 중심을 인스턴스 메시 한 장(드로우콜 1, 2048칸, 프레임당 72칸 — 군중 2배 실측 생성 속도에서도 한 바퀴가 최장 수명 2.2초보다 길다)에
   셰이더 도형 5종(코어 섬광·불똥 줄기·별빛·충격 고리·베기 자국)으로 그린다. 시계는 `FX.update` 의 sim dt라
   히트스톱 동안 임팩트가 정지 화면으로 남는다. 난수는 `VfxRng`만 써 전투 난수 순서를 바꾸지 않는다.
 - 영웅 타격 색 언어(`HERO_IMPACT_PALETTE`): 검성 금, 광전사 불씨 주황, 대마도사 비전 청, 암살자 보라, 레인저 비취.
@@ -45,7 +45,7 @@ position, kills or victory state. The generated report and PNGs live under
 - 백화 방지 3종(2026-10-22 후속): `TEX_FLASH_MAX_DIAMETER`(10m) — 서 있는 텍스처 섬광의 최종 지름 상한. `BLOOM_ADAPT`
   (`combat-feedback.js`) — 장식 노출 누적 60 초과부터 420 까지 블룸 세기를 0.62 → 0.28 로 낮추고 초당 1.2 로 복귀(일반 타격 0~30 은 영향 없음).
   `vividDecalColor` — 밝기 0.7 넘는 파스텔 지면층(성역·시간 봉인·눈보라)은 같은 색상의 진한 색(밝기 0.6~0.72, 채도 ≥ 0.82)으로 그린다. 예고는 제외.
-- 적 피격 발광은 `HIT_FLASH`(정점 .26, 상한 .32)로 묶고 처치·스킬 먼지는 흙빛(`DUST_COLOR`, 불투명 .34)이다.
+- 적 피격 발광은 `HIT_FLASH`(정점 .22, 상한 .26, 동작 줄이기 .16)로 묶고 처치·스킬 먼지는 흙빛(`DUST_COLOR`, 불투명 .34)이다.
 - 보스·지역 위험 예고 경계선은 정체성 색과 위험 적색을 반씩 섞는다(금빛 종 예고 ≠ 검성 금빛 마법진).
 
 ## h1b 하이엔드 VFX (2026-10-22)

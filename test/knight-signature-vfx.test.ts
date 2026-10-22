@@ -85,3 +85,12 @@ test('궁극기 용살검이 가장 장대하다: 수직 참격 + 부채 균열 
   expect(s.length).toBe(Math.max(...counts));
   v.dispose();
 });
+
+test('성역 기둥 지오메트리는 기둥 수별로 캐시돼 lite↔정상 전환에도 새로 만들거나 버리지 않는다', async () => {
+  const { sanctumPillarGeometry } = await import('../src/engine/sanctum-vfx.js');
+  const a8 = sanctumPillarGeometry(8), a4 = sanctumPillarGeometry(4);
+  expect(sanctumPillarGeometry(8)).toBe(a8);
+  expect(sanctumPillarGeometry(4)).toBe(a4);
+  expect(a4).not.toBe(a8);
+  expect(a4.getIndex()!.count).toBe(4 * 6);
+});
