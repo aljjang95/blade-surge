@@ -7,7 +7,7 @@
 import { V1Error } from './db';
 import type { Ctx } from './auth';
 import { sha256Hex } from './token';
-import { billingReason, processPurchase, productFor, reverseToken, tokenHash, type IapEnv } from './iap';
+import { billingReason, confirmAndApplyVoided, processPurchase, productFor, reconcileReason, type IapEnv } from './iap';
 import { IAP_PACKAGE } from '../../src/shared/iap-catalog.js';
 
 const LIMIT = 16384;
@@ -37,9 +37,10 @@ async function readBody(request: Request): Promise<Obj> {
 /** Pub/Sub 메시지 하나를 처리하고 결과 코드를 돌려준다. */
 export async function handleRtdn(c: Ctx): Promise<{ status: number; outcome: string }> {
   if (!await authorized(c)) return { status: 401, outcome: 'unauthorized' };
-  const reason = await billingReason(c);
-  // 결제가 닫혀 있으면 받기만 하고 버린다(재전송 폭주 방지). 놓친 환불은 크론 voidedpurchases 대사가 다시 잡는다.
-  if (reason) return { status: 200, outcome: 'ignored:' + reason };
+  // 처리할 수 없으면 503으로 재전송을 받는다(Pub/Sub이 최대 7일 재시도). 버리지 않는다.
+  // 환불은 판매 중단(IAP_ENABLED=false) 중에도 반영하고, 구매 알림은 판매가 열려 있을 때만 처리한다.
+  const reconcile = await reconcileReason(c);
+  if (reconcile) return { status: 503, outcome: 'retry:' + reconcile };
   const body = await readBody(c.request);
   const message = obj(body.message);
   if (typeof message.messageId !== 'string' || typeof message.data !== 'string' || message.data.length > LIMIT) return { status: 200, outcome: 'malformed' };
@@ -55,13 +56,15 @@ export async function handleRtdn(c: Ctx): Promise<{ status: number; outcome: str
       kind = 'voided';
       const v = obj(data.voidedPurchaseNotification);
       if (typeof v.purchaseToken === 'string' && v.purchaseToken.length <= 4096) {
-        const hash = await tokenHash(v.purchaseToken);
-        const row = await c.db.prepare('SELECT account_id FROM iap_purchases WHERE token_hash = ?').bind(hash).first<{ account_id: string }>();
-        outcome = row ? `reversed:${await reverseToken(c, row.account_id, hash, 'rtdn-voided')}` : 'unknown-token';
+        // 알림 본문만으로 역분개하지 않는다. Play voidedpurchases에서 같은 토큰(·주문)을 확인한 뒤에만 되돌린다.
+        outcome = await confirmAndApplyVoided(c, v.purchaseToken, typeof v.orderId === 'string' ? v.orderId : null);
+        if (outcome === 'void-unconfirmed') return { status: 503, outcome };
       }
     } else if (data.oneTimeProductNotification || data.subscriptionNotification) {
       const n = obj(data.oneTimeProductNotification ?? data.subscriptionNotification);
       kind = data.oneTimeProductNotification ? 'product' : 'subscription';
+      const reason = await billingReason(c);
+      if (reason) return { status: 503, outcome: 'retry:' + reason };
       const product = productFor(n.sku ?? n.subscriptionId);
       if (!product || typeof n.purchaseToken !== 'string' || n.purchaseToken.length > 4096) outcome = 'unknown-product';
       else outcome = (await processPurchase(c, product, n.purchaseToken, {})).state;

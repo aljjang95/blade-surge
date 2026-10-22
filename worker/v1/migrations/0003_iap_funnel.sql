@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS iap_purchases (
   account_id TEXT NOT NULL,
   product_id TEXT NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('consumable','non_consumable','subscription')),
-  state TEXT NOT NULL CHECK (state IN ('pending','granted','refunded','expired')),
+  state TEXT NOT NULL CHECK (state IN ('pending','granted','refunded','expired','declined')),
   order_hash TEXT,
   linked_token_hash TEXT,
   expires_at INTEGER,
@@ -38,6 +38,13 @@ CREATE TABLE IF NOT EXISTS iap_grants (
   price_krw INTEGER NOT NULL,
   granted_at INTEGER NOT NULL,
   reversed_at INTEGER,
+  -- 구독 지급의 결제 주기 주문(sha256). 환불은 이 주문의 지급만 되돌린다.
+  order_hash TEXT,
+  -- 계정당 1회 상품의 결박 키('<account>:<product>'). 동시 결제 2건도 하나만 지급된다. 역분개하면 NULL로 풀어 재구매를 허용한다.
+  once_key TEXT UNIQUE,
+  -- 이 지급에서 상환한 기존 부채(JSON). 이 지급이 환불되면 부채로 되돌린다.
+  repaid TEXT,
+  -- 역분개 때 0 아래로 내리지 못한 부족분(JSON, 기록용). 미상환 잔액 정본은 iap_debt.
   debt TEXT
 );
 CREATE INDEX IF NOT EXISTS iap_grants_acct ON iap_grants(account_id, granted_at);
@@ -52,6 +59,27 @@ CREATE TABLE IF NOT EXISTS iap_entitlements (
   expires_at INTEGER,
   revoked_at INTEGER,
   PRIMARY KEY (account_id, ent_key, token_hash)
+);
+
+-- 환불로 생긴 미상환 부채(재화별 잔액). 이후 서버 지급(결제·서버 정산)에서 먼저 상환한다.
+CREATE TABLE IF NOT EXISTS iap_debt (
+  account_id TEXT NOT NULL,
+  reward_key TEXT NOT NULL,
+  amount INTEGER NOT NULL CHECK (amount >= 0),
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (account_id, reward_key)
+);
+
+-- 운영 커서(환불 대사 마지막 성공 시각 등).
+CREATE TABLE IF NOT EXISTS iap_meta (
+  key TEXT PRIMARY KEY,
+  value INTEGER NOT NULL
+);
+
+-- 지급 배치 가드: 같은 배치에서 토큰이 이미 환불 상태면 이 표에 x=0을 넣으려다 CHECK 위반으로 배치 전체가 롤백된다
+-- (환불과 지급이 경합해도 환불된 구매에 보상이 붙지 않게 하는 원자 검사). 행은 절대 남지 않는다.
+CREATE TABLE IF NOT EXISTS iap_refund_guard (
+  x INTEGER NOT NULL CONSTRAINT iap_refund_guard CHECK (x = 1)
 );
 
 -- RTDN(Pub/Sub push) 멱등: messageId 해시. 본문은 신뢰하지 않고 Play 재조회의 계기로만 쓴다.

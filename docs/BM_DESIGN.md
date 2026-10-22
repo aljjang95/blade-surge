@@ -69,7 +69,7 @@
 
 1. 지급 단위 id(`grant_id` = `wallet_ledger.op_id`): 일회 상품 `iap:<sha256(play:token)>`, 구독 `iap:<token_hash>:<sha256(order:latestSuccessfulOrderId) 앞 24자>`. 같은 id는 D1 기본키·`wallet_ledger` 제약으로 두 번 들어가지 않는다(동시 요청 테스트로 확인).
 2. 보상은 카탈로그 `grant`만. 클라이언트가 보낸 가격·보상·기간은 받지 않는다(알 수 없는 필드 400). 보상 키는 허용 목록(`gems, gold, ssrTicket, tickets, stones, transcendStones`) 밖이면 서버 오류로 닫는다. 골드는 VIP 배율 없이 지급한다.
-3. 스타터 팩 계정당 1회는 **의도(intent) 단계에서** 막는다. 두 기기에서 동시에 결제해 2건이 성사되면 두 번째도 지급한다(돈을 받고 안 주는 것보다 안전, 감사 대상).
+3. 스타터 팩 계정당 1회는 의도(intent) 단계와 **검증 단계 둘 다에서** 강제한다. 다른 토큰으로 두 번째 구매가 성사되면(두 기기 동시 결제 등) 지급도 ack/consume도 하지 않고 `declined`로 기록한다 → Play가 3일 안에 자동 환불한다. 동시 검증 경합은 `iap_grants.once_key` UNIQUE가 한 건만 통과시킨다. 첫 구매가 환불되면 결박이 풀려 다시 살 수 있다.
 4. 월정액: 성공 주문마다 1회 즉시 보석, 권한 만료 = Play `expiryTime`. 해지 예약(CANCELED)은 만료까지 유지, 유예(IN_GRACE_PERIOD)는 권한 유지·새 지급 없음, 보류(ON_HOLD)·일시정지·만료는 권한 종료. 업그레이드·재구독의 `linkedPurchaseToken` 권한은 새 토큰이 대신한다. 매일 100은 기존 `claimMonthly` 명령이 서버 권한(`monthlyUntil`)을 얹어 실행한다.
 5. 시즌 패스: 권한 종료 = 시즌 종료 시각(서버 시계). 이미 달성한 단계의 프리미엄 보상도 받을 수 있다(기존 `claimPass`).
 6. 테스트 구매(`testPurchaseContext`)는 `IAP_ALLOW_TEST=true`(내부 테스트 트랙)일 때만 지급, 매출·결제율 집계에서 제외(`price_krw=0`, `first_purchase` 미기록).
@@ -78,20 +78,25 @@
 
 | 사건 | 감지 | 처리 |
 |---|---|---|
-| 일회 상품 환불·차지백 | RTDN `voidedPurchaseNotification`, 시간당 `voidedpurchases`(최근 3일), verify 때 `CANCELLED` | 토큰의 미역분개 지급을 모두 되돌린다: 재화는 **0 아래로 내리지 않고** 모자란 만큼 `iap_grants.debt`에 부채로 기록, 권한 `revoked_at`, 구매 `refunded`(이후 재지급 없음) |
-| 구독 환불 | 위와 같음 | 그 토큰의 주기 지급 전부 역분개 + 월정액 권한 철회 |
+| 일회 상품 환불·차지백 | RTDN `voidedPurchaseNotification`(Play `voidedpurchases`에서 같은 토큰을 확인한 뒤에만), 시간당 `voidedpurchases` 대사, verify 때 `CANCELLED` | 토큰의 미역분개 지급을 모두 되돌린다: 재화는 **0 아래로 내리지 않고** 모자란 만큼 `iap_debt` 잔액에 더함, 권한 `revoked_at`, 구매 `refunded`(이후 재지급 없음, 환불·지급 경합은 배치 가드가 원자적으로 막음) |
+| 구독 한 주기 환불 | 위와 같음(주문 id 포함) | **그 주문(order_hash)의 지급만** 역분개하고, 권한은 Play `subscriptionsv2` 재조회 결과로 다시 맞춘다(아직 활성이면 유지, 조회 실패 시 지금 종료). 토큰 전체를 refunded로 고정하지 않는다 |
 | 구독 해지 | `subscriptionsv2` CANCELED | 만료까지 유지, 갱신 없음 |
 | 환불 남용 | 90일 안 역분개 2건 이상 | `sanctions.payout_hold` 30일 + `audit_flags` → 새 결제 시작(intent) 403 |
 | 청약철회·미사용 환불 요청 | 고객 문의 | Play 콘솔에서 환불(대표님/운영자). 환불되면 위 자동 경로가 역분개 |
 
-클라이언트는 `/iap/state`의 `reversals`(opId `void:<grant_id>`)를 1회만 반영해 같은 양을 차감한다(하한 0). **부채 상환·부채 중 유료 소비 차단은 서버 권위 컷오버와 함께 한다**(그림자 모드에서는 로컬이 정본이라 서버가 소비를 막을 수 없다) — 남은 것 10장.
+클라이언트는 `/iap/state`의 `reversals`(opId `void:<grant_id>`)를 1회만 반영해 같은 양을 차감한다(하한 0).
+
+**부채 상환**: 미상환 잔액(`iap_debt`, `/iap/state`의 `debt`)은 이후 서버 지급에서 먼저 상계한다 — ① 다음 결제 지급(클라이언트에는 순 지급량만 내려가고 상환분은 `iap_grants.repaid`에 기록) ② 서버 권위 정산(`/runs/settle`, 영수증 `debtRepaid`). 상환에 쓴 지급이 다시 환불되면 그만큼 부채가 되살아난다. 그림자 모드의 로컬 획득분은 로컬이 정본이라 서버가 상계할 수 없다 → 부채 중 소비 차단은 서버 권위 컷오버와 함께(10장).
+
+**환불 대사 커서**: 시간당 크론은 D1 `iap_meta.voided_reconciled_until`(마지막 성공 시각)에서 1시간 겹쳐 읽고, 처음이거나 오래 멈췄으면 최대 30일(voidedpurchases 보관 한도) 전부터 읽는다. 항목별 실패는 격리하고 실패가 하나라도 있으면 커서를 전진시키지 않는다. 판매를 끈 동안(`IAP_ENABLED=false`)에도 스키마·자격 증명만 있으면 대사는 돈다.
 
 ## 6. RTDN
 
 - 엔드포인트 `POST https://blade.tllhouse.com/api/v1/iap/rtdn`(Origin 검사 예외, Pub/Sub이 호출).
 - 인증: Pub/Sub push 구독의 OIDC 토큰. `aud = RTDN_AUDIENCE`(위 URL), `sub = RTDN_PUSH_SUBJECT`(푸시용 서비스 계정 고유 ID), 서명은 구글 JWKS. 토큰은 만료 전 재사용될 수 있어 발급 후 1시간까지 받는다. 설정이 비면 503(재전송)으로 닫힌다.
 - 본문은 계기일 뿐: 토큰으로 Play를 다시 조회해 3장 경로로 처리한다. `messageId` 해시로 멱등. 다른 패키지·모르는 상품·계정 미결박은 200으로 기록하고 끝, 일시 오류는 503으로 재전송을 받는다.
-- 결제가 꺼져 있으면(`IAP_ENABLED=false`) 200으로 받고 버린다(놓친 환불은 크론이 다시 잡는다).
+- 처리할 수 없으면 버리지 않고 503으로 재전송을 받는다(Pub/Sub 최대 7일 재시도): 스키마·자격 증명이 없을 때, 판매를 끈 동안의 구매 알림, `voidedpurchases`에서 아직 확인되지 않은 환불 알림. 환불 알림은 판매를 꺼도 처리한다.
+- 인증 전 전체 요청 한도 분당 600회(위조 요청 폭주 차단).
 
 ## 7. 결제 퍼널(D11)
 
@@ -112,13 +117,15 @@
 | 환불 후 재화 유지 | RTDN·크론·verify 3경로 역분개, 환불 토큰 재지급 금지, 남용 보류 | `voidedpurchases 대사…` |
 | 테스트 구매로 무료 획득 | `IAP_ALLOW_TEST` 기본 false | `라이선스 테스트 구매…` |
 | 자격 증명 유출 | 서비스 계정은 Secrets Store 바인딩(`PLAY_SA_JSON`)에서만 읽고, 토큰·제공자 오류 원문을 응답·로그에 싣지 않음. 토큰 원문 DB 미저장 | `오류 매핑…(원문 미노출)` |
-| 결제 남용·API 비용 | `/iap/intent·verify` 계정당 10분 30회 | — |
+| 결제 남용·API 비용 | `/iap/intent·verify` 계정당 10분 30회, `/iap/catalog·state` 분당 60회, RTDN 분당 600회 | — |
+| 계정당 1회 상품 중복 지급 | 검증 단계 재확인 + once_key UNIQUE, 초과분은 ack 안 함 → Play 자동 환불 | `스타터 팩 두 번째 구매…` |
+| 환불·지급 경합 | 지급 배치 안의 환불 가드(CHECK 위반으로 배치 전체 롤백) | — |
 | 그림자 스냅샷이 유료 재화를 깎음/패스 중복 수령 | 정화 상한에 서버 지급분 가산, 유효 패스의 수령 기록 보존 | `그림자 스냅샷 정화와 유료 재화` |
 
 ## 9. 운영 적용 순서(코디네이터·대표님)
 
 1. D1 `blade-surge-commerce-production`에 `worker/v1/migrations/0003_iap_funnel.sql` 적용(스키마 v3). 0003 미적용이면 결제만 `iap-schema-missing`으로 닫히고 v1 나머지는 그대로 동작.
-2. 배포에 Secrets Store 바인딩 `PLAY_SA_JSON` → `apex-shared-apis/APEX_CLOUD_PLAY_SA_JSON`이 포함된다(wrangler.jsonc). 같은 서비스 계정으로 2026-10-22 읽기 프로브: `voidedpurchases` 200, 가짜 토큰 `productsv2`/`subscriptionsv2` 400(권한 있음, 토큰 무효) — 재무 데이터 권한 확인.
+2. 배포에 Secrets Store 바인딩 `PLAY_SA_JSON` → `apex-shared-apis/APEX_CLOUD_PLAY_SA_JSON`이 포함된다(wrangler.jsonc). 2026-10-22 Cloudflare API(읽기, 이름만)로 스토어 `apex-shared-apis`(id `3d9b8481…`)에 이 시크릿이 `active`·scope `workers`로 있음을 확인했다 — 바인딩이 배포를 깨지 않는다. 이 시크릿은 apex 프록시와 같은 공용 서비스 계정이므로 **블레이드 전용 서비스 계정(이 앱 재무 권한만) 분리는 후속**이다. 같은 서비스 계정으로 2026-10-22 읽기 프로브: `voidedpurchases` 200, 가짜 토큰 `productsv2`/`subscriptionsv2` 400(권한 있음, 토큰 무효) — 재무 데이터 권한 확인.
 3. **대표님 확인 후** Play 콘솔 상품 등록: `NODE_USE_ENV_PROXY=1 node tools/play-iap-register.mjs`(dry-run으로 본문 확인) → `--apply --i-have-owner-approval`. 2026-10-22 현재 Play 등록 상품 0개(`oneTimeProducts`·`subscriptions` 204).
 4. 내부 테스트 트랙에 이 브랜치 AAB 업로드, 라이선스 테스터로 `IAP_ENABLED=true`·`IAP_ALLOW_TEST=true` 검증(구매→지급→환불→역분개).
 5. RTDN: GCP Pub/Sub 토픽 + push 구독(엔드포인트 6장, OIDC 서비스 계정) → Play 콘솔 수익 창출 설정에 토픽 등록 → `RTDN_AUDIENCE`·`RTDN_PUSH_SUBJECT` 설정 → 콘솔 "테스트 알림"으로 `test` 기록 확인.
@@ -130,4 +137,6 @@
 - 새 Java 메서드는 이 컨테이너에 Android SDK가 없어 컴파일 검증 전이다(AAB 빌드 경로 `docs/CLOUD_AAB_BUILD.md`에서 확인).
 - 유료/무료 보석 분리(`gems_paid`)·무료 먼저 소비·부채 상환·부채 중 소비 차단 → 보석 팩 판매 게이트. 서버 권위 컷오버와 함께.
 - 스타터 팩 72시간 노출 창·외형 상품·VIP는 다음 덩어리(MMO 마을과 함께).
+- 매출 집계 `price_krw`는 카탈로그 후보가(KRW)다. 실결제 금액·통화는 Play 주문 API(orders) 연동 뒤 교체한다(테스트 구매는 0).
+- 블레이드 전용 Play 서비스 계정 분리(현재 apex 공용 `APEX_CLOUD_PLAY_SA_JSON`).
 - 원스토어·앱인토스 채널은 기존 `/api/store`(광고 제거) 그대로. 다상품 결제는 Google Play만.

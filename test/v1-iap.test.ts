@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { v1Harness, T0 } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PlayApi, ProductPurchase, SubscriptionPurchase, VoidedPurchase } from '../worker/v1/play';
-import { reconcileVoided } from '../worker/v1/iap';
+import { debtRepayment, reconcileVoided } from '../worker/v1/iap';
 import { funnelReport } from '../worker/v1/funnel';
 import { sanitizeLegacySave } from '../src/shared/legacy-sanitize.js';
 import { EconomyCore } from '../src/game/economy-core.js';
@@ -255,16 +255,18 @@ describe('BM 환불·취소 역분개', () => {
     const doc = JSON.parse(row.doc); doc.gems = 300;
     h.db.sqlite.query('UPDATE account_docs SET doc = ? WHERE account_id = ?').run(JSON.stringify(doc), a.accountId);
     play.state.voided = [{ purchaseToken: TOK('r1'), orderId: 'GPA.r1', voidedTimeMillis: h.now(), kind: 'product' }];
-    expect(await reconcileVoided(ctxOf(h), h.now() - DAY)).toEqual({ seen: 1, reversed: 1 });
+    expect(await reconcileVoided(ctxOf(h), h.now() - DAY)).toMatchObject({ seen: 1, reversed: 1, failed: 0 });
     const after = await me(a.token);
     expect(after.doc.gems).toBe(0);
     const grant = h.db.sqlite.query('SELECT reversed_at, debt FROM iap_grants').get() as { reversed_at: number; debt: string };
     expect(grant.reversed_at).toBe(h.now());
     expect(JSON.parse(grant.debt)).toEqual({ gems: 700 });
     // 재대사는 무해
-    expect(await reconcileVoided(ctxOf(h), h.now() - DAY)).toEqual({ seen: 1, reversed: 0 });
+    expect(await reconcileVoided(ctxOf(h), h.now() - DAY)).toMatchObject({ seen: 1, reversed: 0, failed: 0 });
     // 역분개 기록이 상태 API로 내려간다(클라이언트가 같은 차감을 1회 반영)
-    expect((await h.send('GET', '/iap/state', undefined, a.token)).body.reversals).toHaveLength(1);
+    const st = (await h.send('GET', '/iap/state', undefined, a.token)).body;
+    expect(st.reversals).toHaveLength(1);
+    expect(st.debt).toEqual({ gems: 700 });
     // 두 번째 환불(광고 제거) → 권한 철회 + 90일 2회 → 지급 보류, 새 결제 시작 차단
     await intent(a.token, 'remove_ads_v1');
     play.product(TOK('r2'), 'remove_ads_v1', it.obfuscatedAccountId);
@@ -312,7 +314,14 @@ describe('BM RTDN(Pub/Sub push)', () => {
     expect((await push(h, { ...note, packageName: 'com.other' }, 'msg-2')).body.outcome).toBe('wrong-package');
     expect((await push(h, { ...note, oneTimeProductNotification: { purchaseToken: TOK('rt'), sku: 'gem_hack' } }, 'msg-3')).body.outcome).toBe('unknown-product');
     // 환불 알림 → 역분개
-    const voided = await push(h, { packageName: 'com.theluxurylord.bladesurge', voidedPurchaseNotification: { purchaseToken: TOK('rt'), orderId: 'GPA.x', productType: 2 } }, 'msg-4');
+    // 환불 알림만으로는 되돌리지 않는다: Play voidedpurchases에 없으면 503(재전송)
+    const voidNote = { packageName: 'com.theluxurylord.bladesurge', voidedPurchaseNotification: { purchaseToken: TOK('rt'), orderId: 'GPA.x', productType: 2 } };
+    const early = await push(h, voidNote, 'msg-4');
+    expect(early.status).toBe(503);
+    expect(early.body.outcome).toBe('void-unconfirmed');
+    expect((await me(a.token)).doc.gems).toBe(gems + 1000);
+    play.state.voided = [{ purchaseToken: TOK('rt'), orderId: 'GPA.x', voidedTimeMillis: h.now(), kind: 'product' }];
+    const voided = await push(h, voidNote, 'msg-4');
     expect(voided.body.outcome).toBe('reversed:1');
     expect((await me(a.token)).doc.gems).toBe(gems);
   });
@@ -372,5 +381,131 @@ describe('BM 그림자 스냅샷 정화와 유료 재화', () => {
 
   test('카탈로그 보상 키는 지급 허용 목록 안에 있다', () => {
     for (const p of IAP_PRODUCTS) for (const r of [p.grant.rewards, p.grant.perPeriod]) for (const k of Object.keys(r ?? {})) expect(['gems', 'gold', 'ssrTicket', 'tickets', 'stones', 'transcendStones']).toContain(k);
+  });
+});
+
+describe('BM 리뷰 보완(P2): 1회 상품·부채 상환·구독 주기 환불·대사 커서·RTDN 재전송', () => {
+  test('스타터 팩 두 번째 구매(다른 토큰)는 지급·consume 없이 declined, 동시 2건도 1건만 지급', async () => {
+    const { h, play, a, intent, verify, me } = await setup();
+    const it = (await intent(a.token, 'starter_pack_v1')).body;
+    play.product(TOK('o1'), 'starter_pack_v1', it.obfuscatedAccountId);
+    play.product(TOK('o2'), 'starter_pack_v1', it.obfuscatedAccountId);
+    const gems = (await me(a.token)).doc.gems;
+    const both = await Promise.all([verify(a.token, 'starter_pack_v1', TOK('o1')), verify(a.token, 'starter_pack_v1', TOK('o2'))]);
+    expect(both.map((r) => r.body.state).sort()).toEqual(['declined', 'granted']);
+    expect((await me(a.token)).doc.gems).toBe(gems + 1000);
+    expect(play.calls.consume).toHaveLength(1);
+    // 첫 구매가 환불되면 1회 결박이 풀려 다시 살 수 있다.
+    const grantedTok = both[0].body.state === 'granted' ? TOK('o1') : TOK('o2');
+    play.state.voided = [{ purchaseToken: grantedTok, orderId: null, voidedTimeMillis: h.now(), kind: 'product' }];
+    await reconcileVoided(ctxOf(h));
+    expect((await intent(a.token, 'starter_pack_v1')).status).toBe(200);
+  });
+
+  test('환불 부채는 다음 결제 지급에서 먼저 상환되고, 클라이언트에는 순 지급량이 내려간다', async () => {
+    const { h, play, a, intent, verify, me } = await setup();
+    const it = (await intent(a.token, 'starter_pack_v1')).body;
+    play.product(TOK('d1'), 'starter_pack_v1', it.obfuscatedAccountId);
+    await verify(a.token, 'starter_pack_v1', TOK('d1'));
+    const row = h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(a.accountId) as { doc: string };
+    const doc = JSON.parse(row.doc); doc.gems = 0;
+    h.db.sqlite.query('UPDATE account_docs SET doc = ? WHERE account_id = ?').run(JSON.stringify(doc), a.accountId);
+    play.state.voided = [{ purchaseToken: TOK('d1'), orderId: null, voidedTimeMillis: h.now(), kind: 'product' }];
+    await reconcileVoided(ctxOf(h));
+    expect((await h.send('GET', '/iap/state', undefined, a.token)).body.debt).toEqual({ gems: 1000 });
+    // 월정액 첫 결제(보석 1,200) → 부채 1,000 상환 후 순 200
+    await intent(a.token, 'monthly_card_v1');
+    play.sub(TOK('d2'), it.obfuscatedAccountId);
+    const r = await verify(a.token, 'monthly_card_v1', TOK('d2'));
+    expect(r.body.state).toBe('granted');
+    expect(r.body.grants.find((g: any) => g.productId === 'monthly_card_v1').rewards).toEqual({ gems: 200 });
+    expect(r.body.debt).toEqual({});
+    expect((await me(a.token)).doc.gems).toBe(200);
+    // 상환에 쓴 지급이 환불되면 부채가 되살아난다.
+    play.state.voided = [{ purchaseToken: TOK('d2'), orderId: 'GPA.1111-0000', voidedTimeMillis: h.now(), kind: 'subscription' }];
+    play.subs.get(TOK('d2'))!.state = 'SUBSCRIPTION_STATE_EXPIRED';
+    await reconcileVoided(ctxOf(h));
+    expect((await h.send('GET', '/iap/state', undefined, a.token)).body.debt).toEqual({ gems: 1000 });
+    expect((await me(a.token)).doc.gems).toBe(0);
+  });
+
+  test('구독 한 주기 환불은 그 주문의 지급만 되돌리고, Play가 아직 활성이면 권한은 유지된다', async () => {
+    const { h, play, a, intent, verify, me } = await setup();
+    const it = (await intent(a.token, 'monthly_card_v1')).body;
+    play.sub(TOK('so'), it.obfuscatedAccountId);
+    const gems = (await me(a.token)).doc.gems;
+    await verify(a.token, 'monthly_card_v1', TOK('so'));
+    h.advance(30 * DAY);
+    const s2 = await h.session(a.deviceKey);
+    Object.assign(play.subs.get(TOK('so'))!, { latestOrderId: 'GPA.1111-0000..0', expiryTime: T0 + 60 * DAY });
+    await verify(s2.token, 'monthly_card_v1', TOK('so'));
+    expect((await me(s2.token)).doc.gems).toBe(gems + 2400);
+    // 첫 주기 주문만 환불, 구독은 여전히 활성
+    play.state.voided = [{ purchaseToken: TOK('so'), orderId: 'GPA.1111-0000', voidedTimeMillis: h.now(), kind: 'subscription' }];
+    expect(await reconcileVoided(ctxOf(h))).toMatchObject({ reversed: 1, failed: 0 });
+    expect((await me(s2.token)).doc.gems).toBe(gems + 1200);
+    const st = (await h.send('GET', '/iap/state', undefined, s2.token)).body;
+    expect(st.entitlements.monthlyUntil).toBe(T0 + 60 * DAY);
+    expect(h.db.sqlite.query('SELECT state FROM iap_purchases WHERE product_id = ?').get('monthly_card_v1')).toEqual({ state: 'granted' });
+  });
+
+  test('대사 커서: 마지막 성공 시각부터(최대 30일), 항목별 실패는 격리하고 실패가 있으면 커서를 멈춘다; 판매 중단 중에도 대사는 돈다', async () => {
+    const { h, play, a, intent, verify } = await setup();
+    const it = (await intent(a.token, 'remove_ads_v1')).body;
+    play.product(TOK('c1'), 'remove_ads_v1', it.obfuscatedAccountId);
+    await verify(a.token, 'remove_ads_v1', TOK('c1'));
+    const since: number[] = [];
+    play.api.voided = async (s) => { since.push(s); return play.state.voided; };
+    const first = await reconcileVoided(ctxOf(h));
+    expect(first.since).toBe(h.now() - 30 * DAY);
+    h.advance(3600000);
+    await reconcileVoided(ctxOf(h));
+    expect(since[1]).toBe(h.now() - 3600000 - 3600000);
+    // 한 건이 실패해도 다른 건은 처리, 커서는 전진하지 않음
+    const cursorBefore = (h.db.sqlite.query("SELECT value FROM iap_meta WHERE key = 'voided_reconciled_until'").get() as { value: number }).value;
+    const orig = play.api.productPurchase;
+    play.state.voided = [{ purchaseToken: TOK('c1'), orderId: null, voidedTimeMillis: h.now(), kind: 'product' }, { purchaseToken: TOK('unknown'), orderId: null, voidedTimeMillis: h.now(), kind: 'product' }];
+    // 알 수 없는 토큰은 실패가 아니라 무시(0), c1은 역분개
+    h.advance(1000);
+    // 판매를 꺼도(IAP_ENABLED=false) 대사는 돈다
+    (h.env as any).IAP_ENABLED = 'false';
+    const r = await reconcileVoided(ctxOf(h));
+    expect(r).toMatchObject({ seen: 2, reversed: 1, failed: 0 });
+    // 실패 주입: DB 조회가 던지게 만든다
+    play.state.voided = [{ purchaseToken: TOK('boom'), orderId: null, voidedTimeMillis: h.now(), kind: 'product' }];
+    const realPrepare = h.db.prepare.bind(h.db);
+    (h.db as any).prepare = (sql: string) => { if (sql.startsWith('SELECT account_id, kind FROM iap_purchases')) throw new Error('db down'); return realPrepare(sql); };
+    h.advance(1000);
+    const bad = await reconcileVoided(ctxOf(h));
+    (h.db as any).prepare = realPrepare;
+    expect(bad.failed).toBe(1);
+    const cursorAfter = (h.db.sqlite.query("SELECT value FROM iap_meta WHERE key = 'voided_reconciled_until'").get() as { value: number }).value;
+    expect(cursorAfter).toBeGreaterThan(cursorBefore);
+    expect(cursorAfter).toBe(h.now() - 1000);
+    void orig;
+  });
+
+  test('판매 중단(IAP_ENABLED=false) 중 RTDN 구매 알림은 버리지 않고 503으로 재전송을 받는다', async () => {
+    const { h, play, a, intent } = await setup({ RTDN_AUDIENCE: 'https://blade.example/api/v1/iap/rtdn', RTDN_PUSH_SUBJECT: '1234567890' });
+    h.google.set('pubsub-jwt-valid-0000000000', '1234567890');
+    const it = (await intent(a.token, 'starter_pack_v1')).body;
+    play.product(TOK('off'), 'starter_pack_v1', it.obfuscatedAccountId);
+    (h.env as any).IAP_ENABLED = 'false';
+    const r = await h.send('POST', '/iap/rtdn', { message: { data: btoa(JSON.stringify({ packageName: 'com.theluxurylord.bladesurge', oneTimeProductNotification: { purchaseToken: TOK('off'), sku: 'starter_pack_v1' } })), messageId: 'off-1' } }, undefined, { authorization: 'Bearer pubsub-jwt-valid-0000000000', origin: '' });
+    expect(r.status).toBe(503);
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM iap_rtdn').get()).toEqual({ n: 0 });
+  });
+});
+
+describe('BM 부채 상환 도우미(서버 정산 공용)', () => {
+  test('보유분 안에서만 상환하고, 같은 배치용 쓰기를 돌려준다', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    h.db.sqlite.query("INSERT INTO iap_debt(account_id, reward_key, amount, updated_at) VALUES (?, 'gems', 500, 1), (?, 'gold', 100, 1)").run(a.accountId, a.accountId);
+    const state: Record<string, number> = { gems: 300, gold: 1000 };
+    const r = await debtRepayment(h.db, a.accountId, state, h.now());
+    expect(r.repaid).toEqual({ gems: 300, gold: 100 });
+    expect(state).toEqual({ gems: 0, gold: 900 });
+    expect(r.writes).toHaveLength(2);
   });
 });

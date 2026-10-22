@@ -162,12 +162,14 @@ async function route(request: Request, env: Env): Promise<Response> {
   finally { if (timer) clearTimeout(timer); }
 }
 
-/** 시간당 환불 대사: Play voidedpurchases(최근 3일)를 읽어 아는 구매만 역분개한다. RTDN을 놓쳐도 최종 안전망이다. */
+/** 시간당 환불 대사: Play voidedpurchases를 읽어 아는 구매만 역분개한다. RTDN을 놓쳐도 최종 안전망이다. */
 export async function reconcileIap(env: Env, now = Date.now()): Promise<void> {
   const v1 = env as unknown as V1Env;
   const db = v1.COMMERCE_DB as D1Database | undefined;
-  if (v1.V1_ENABLED !== 'true' || v1.IAP_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
-  await reconcileVoided({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') }, now - 3 * 86400000);
+  // 판매(IAP_ENABLED)를 멈춰도 환불 대사는 계속한다. 커서는 D1 iap_meta(마지막 성공 시각, 최대 30일 창).
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const r = await reconcileVoided({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') });
+  if (r.failed) console.warn('iap reconcile partial', r.failed);
 }
 
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {

@@ -43,7 +43,9 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       if (request.method !== 'POST') return json({ error: 'method' }, 405);
       const rtdnDb = env.COMMERCE_DB as D1Database | undefined;
       if (!rtdnDb || !await schemaReady(rtdnDb)) return json({ error: 'unavailable' }, 503);
-      const r = await handleRtdn({ env, db: rtdnDb, deps, now: deps.now(), request });
+      const rc: Ctx = { env, db: rtdnDb, deps, now: deps.now(), request };
+      await rateLimit(rc, 'rtdn', 'global');
+      const r = await handleRtdn(rc);
       return json({ outcome: r.outcome }, r.status);
     }
     const origin = request.headers.get('origin');
@@ -59,8 +61,11 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     if (method === 'POST' && path === '/auth/session') { await rateLimit(c, 'session', await ipKey(request)); return json(await createSession(c, await readJson(request))); }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
     if (method === 'GET' && path === '/me') return json(await getMe(c, await requireSession(c), v1Flags(env)));
-    if (method === 'GET' && path === '/iap/catalog') return json(await catalog(c, await requireSession(c)));
-    if (method === 'GET' && path === '/iap/state') return json(await iapState(c, await requireSession(c)));
+    if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
+      const auth = await requireSession(c);
+      await rateLimit(c, 'iapRead', auth.account.account_id);
+      return json(path === '/iap/catalog' ? await catalog(c, auth) : await iapState(c, auth));
+    }
     if (method === 'POST') {
       const auth = await requireSession(c);
       if (path === '/auth/link') return json(await link(c, auth, await readJson(request)));

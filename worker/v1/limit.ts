@@ -16,6 +16,8 @@ export const LIMITS = {
   runStart: [30, MINUTE],          // 계정: /runs/start
   iap: [30, 10 * MINUTE],          // 계정: /iap/intent·/iap/verify (Play API 호출 예산)
   funnel: [30, MINUTE],            // 계정: /funnel
+  iapRead: [60, MINUTE],           // 계정: /iap/catalog·/iap/state
+  rtdn: [600, MINUTE],             // 전체: /iap/rtdn (인증 전, 위조 요청 폭주 차단)
 } as const satisfies Record<string, readonly [number, number]>;
 export type LimitName = keyof typeof LIMITS;
 
