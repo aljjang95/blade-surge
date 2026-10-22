@@ -62,7 +62,8 @@ test('지연 칸은 skills.js 판정 시각과 맞는다: 태양파쇄 2타 .18,
   expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
   expect(starts('sunbreaker', IMPACT_KIND.mark)).toContainEqual(expect.closeTo(.18, 5));
   expect(starts('heavenfall', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.28, 5));
-  expect(starts('chain_bind', IMPACT_KIND.mark)).toContainEqual(expect.closeTo(1.75, 5));
+  expect(starts('chain_bind', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(1.75, 5));
+  expect(starts('chain_bind', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(1.75, 5));
   // 신벌 낙하 기둥: 하늘(14m)에서 110m/s 로 떨어져 정확히 .28초에 바닥에 닿도록 출발한다.
   const v = make(); SIGNATURES.heavenfall(ctxOf(v));
   const beams = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.beam);

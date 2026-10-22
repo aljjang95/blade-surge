@@ -19,9 +19,9 @@ const GOLD = KNIGHT_SIG_COLOR.gold, AMBER = KNIGHT_SIG_COLOR.amber, HOT = KNIGHT
 /** 판정 시각(skills.js game.after 지연)과 맞춘 서명 박자. 테스트가 이 값으로 delay 칸을 검사한다. */
 export const KNIGHT_SIG_TIMING = Object.freeze({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
 /** 서명 한 번이 쓰는 칸 상한(IMPACT_FRAME_BUDGET 72 안에서 레시피 몫을 남긴다). */
-export const KNIGHT_SIG_MAX_SLOTS = 44;
+export const KNIGHT_SIG_MAX_SLOTS = 48;
 
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3(), _p = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const yawOf = (f) => Math.atan2(f.z, f.x);
 /** f 를 y 축으로 ang 만큼 돌린 수평 방향을 out 에 담는다. */
@@ -39,6 +39,20 @@ function cracks(impact, o, f, n, spread, len, color, { delay = 0, width = .06, s
   }
 }
 
+/** 바닥에 눕는 얇은 다각형 선(정지 광선 n 개). 큰 반경도 선 굵기가 일정해, 반경에 비례해 굵어지는 표식(mark) 대신 넓은 경계에 쓴다.
+ *  step = 꼭짓점 건너뛰기(1 = 원, 3 = 팔각 별). */
+function groundPoly(impact, c, R, n, color, { life = .6, delay = 0, width = .05, step = 1, phase = 0, y = .07 } = {}) {
+  for (let i = 0; i < n; i++) {
+    const a0 = phase + (i / n) * Math.PI * 2, a1 = phase + ((i + step) / n) * Math.PI * 2;
+    _p.set(c.x + Math.cos(a0) * R, y, c.z + Math.sin(a0) * R);
+    _d.set(c.x + Math.cos(a1) * R - _p.x, 0, c.z + Math.sin(a1) * R - _p.z);
+    impact.beam(_p, _d, _d.length(), color, { width, fade: life, delay });
+  }
+}
+
+/** 화면에서 수평(f 에 수직)으로 누운 초승달 칼날. */
+function bladeAngle(impact, f) { return impact._screenAngle(_d.set(-f.z, 0, f.x)); }
+
 Object.assign(SIGNATURES, {
   // 성검 일섬: 가슴 높이로 길게 그어지는 수평 빛 칼날 두 줄(위·아래 결) + 칼끝 별빛.
   holy_slash(ctx) {
@@ -48,6 +62,12 @@ Object.assign(SIGNATURES, {
     _b.copy(_a).setY(1.4); impact.beam(_b, f, 11, HOT, { speed: 64, tail: 6, width: .06, delay: .02 });
     if (!lite) { _b.setY(.9); impact.beam(_b, f, 10, AMBER, { speed: 56, tail: 5, width: .07, delay: .03 }); }
     impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 1.1, HOT, .12, { angle: yawOf(f) * .2, grow: .5 });
+    // 앞으로 날아가는 넓은 초승달 칼날 셋(투사체 속도 약 22m/s 박자): '긴 수평 빛 칼날'이 한눈에 읽힌다.
+    const ang = bladeAngle(impact, f);
+    for (let i = 0; i < 3; i++) {
+      _b.copy(player.pos).addScaledVector(f, 1.6 + i * 2.2).setY(1.15);
+      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 3.4 - i * .3, i ? AMBER : GOLD, .2, { angle: ang, stretch: 1.6, grow: .9, delay: i * .1 });
+    }
   },
   // 철벽 강타: 방패 충격 고리 두 겹(접촉·여진) + 사방 지면 균열 + 발밑 가시 고리(금속 테).
   shield_bash(ctx) {
@@ -76,6 +96,9 @@ Object.assign(SIGNATURES, {
       _b.set(hit.x + f.z * s * .9, 8 * scale, hit.z - f.x * s * .9);
       impact.beam(_b, _d, 8 * scale, GOLD, { speed: 120, width: .12, fade: .26, delay: .03 });
     }
+    // 화면 세로로 선 거대 초승달 참격(궁극기 전용 크기 7m): 수직 광선과 함께 '하늘에서 내리벤' 실루엣.
+    impact._emit(IMPACT_KIND.cut, hit.x, 2.2, hit.z, 7 * scale, AMBER, .3, { angle: Math.PI / 2 + .18, stretch: 1.25, grow: .9 });
+    impact._emit(IMPACT_KIND.cut, hit.x, 2.2, hit.z, 5.4 * scale, GOLD, .26, { angle: Math.PI / 2 - .12, stretch: 1.2, grow: .9, delay: .05 });
     // 착지 별빛·고리(진한 금, 흰 코어 대신)
     impact._emit(IMPACT_KIND.star, hit.x, .6, hit.z, 1.8 * scale, AMBER, .14, { angle: .3, grow: .4, delay: .06 });
     impact._emit(IMPACT_KIND.ring, hit.x, .4, hit.z, 3 * scale, AMBER, .3, { grow: 1, delay: .06 });
@@ -88,10 +111,10 @@ Object.assign(SIGNATURES, {
   },
   // 결박: 시전자 둘레 사슬 가시 고리(묶는 경계) + 사슬 파열 순간(1.75초) 바깥으로 퍼지는 고리.
   chain_bind(ctx) {
-    const { impact, player, f } = ctx; const T = KNIGHT_SIG_TIMING.chainBurst;
-    impact.mark(player.pos, WIDE_GOLD, { radius: 7.5, life: T, style: MARK_STYLE.thorn, angle: yawOf(f) });
+    const { impact, player, f, lite } = ctx; const T = KNIGHT_SIG_TIMING.chainBurst;
+    groundPoly(impact, player.pos, 7.5, lite ? 10 : 18, GOLD, { life: T, width: .045, phase: yawOf(f) });
     impact.mark(player.pos, AMBER, { radius: 3.4, life: .8, style: MARK_STYLE.thorn, angle: yawOf(f) + .3 });
-    impact.mark(player.pos, WIDE, { radius: 7.5, life: .5, style: MARK_STYLE.reticle, delay: T });
+    if (!lite) groundPoly(impact, player.pos, 5.2, 9, AMBER, { life: .45, delay: T, width: .06, step: 4 });
     impact._emit(IMPACT_KIND.ring, player.pos.x, .5, player.pos.z, 3, GOLD, .3, { grow: 1, delay: T });
     impact._emit(IMPACT_KIND.star, player.pos.x, 1.2, player.pos.z, 1.6, AMBER, .12, { angle: .3, grow: .4, delay: T });
   },
@@ -99,6 +122,8 @@ Object.assign(SIGNATURES, {
   sanctuary(ctx) {
     const { impact, player, f, lite } = ctx; const R = 8;
     impact.mark(player.pos, AMBER, { radius: 2.6, life: 1.4, style: MARK_STYLE.compass, angle: yawOf(f) });
+    // 성역 문양: 경계 안쪽 반경 4.4m 의 얇은 팔각 별(홀리웨이브 원화가 빠진 자리를 선 문양으로 채운다).
+    groundPoly(impact, player.pos, 4.4, 8, WIDE_GOLD, { life: 1.6, width: .05, step: 3, phase: yawOf(f), delay: .05 });
     const n = lite ? 2 : 4;
     for (let i = 0; i < n; i++) {
       const ang = yawOf(f) + (i / n) * Math.PI * 2;
@@ -115,7 +140,12 @@ Object.assign(SIGNATURES, {
       _a.copy(player.pos).addScaledVector(f, d).setY(1.3);
       impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.5 + i * .2, AMBER, .18, { grow: .7, delay: dl });
       impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 1.1 + i * .12, GOLD, .12, { angle: .4 + i * .3, grow: .5, delay: dl });
+      // 원반이 지나간 바닥에 돌아가는 작은 태양 얼굴(나침 표식).
+      _a.setY(0); impact.mark(_a, AMBER, { radius: 1.3 + i * .12, life: .3, style: MARK_STYLE.compass, angle: i * .7, delay: dl });
     }
+    // 굴러간 자취: 바닥을 따라 앞으로 나아가는 넓은 주황 금 띠.
+    _a.copy(player.pos).addScaledVector(f, .6).setY(.08);
+    impact.beam(_a, f, 5, AMBER, { speed: 4 / T2, tail: 2.6, width: .3 });
     const at = _b.copy(player.pos).addScaledVector(f, 4);
     impact._emit(IMPACT_KIND.ring, at.x, 1.2, at.z, 3 * scale, AMBER, .3, { grow: 1, delay: T2 });
     impact._emit(IMPACT_KIND.star, at.x, 1.3, at.z, 2 * scale, GOLD, .14, { angle: .2, grow: .4, delay: T2 });
