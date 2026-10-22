@@ -15,6 +15,7 @@ const STAGE_KEY = /^(\d+)-(\d+)$/;
 /** 저장 안의 엔드게임 상태. 잘못된 값은 버리고 기존 저장은 빈 상태로 시작한다. */
 export function normalizeEndgame(raw) {
   const r = object(raw) ? raw : {}, t = object(r.tower) ? r.tower : {};
+  /** @type {Record<string, number>} */
   const peak = {};
   for (const [key, rank] of Object.entries(object(r.peak) ? r.peak : {})) {
     const m = STAGE_KEY.exec(key);

@@ -98,7 +98,7 @@ test('무한의 성 층은 지역을 돌고 5층·10층이 중간·최종 보스
   const s = towerStage(25);
   expect(s.code).toBe('T25'); expect(s.tower).toEqual({ floor: 25, sourceCode: '3-5' });
   expect(s.scale).toBeCloseTo(towerScale(25)); expect(s.energy).toBe(0);
-  expect(s.boss).toBe(true); expect(s.midboss).toBe(true); expect(s.unlocksChapter).toBe(null);
+  expect(s.boss).toBe(true); expect((s as any).midboss).toBe(true); expect((s as any).unlocksChapter).toBe(null);
   expect(s.dungeon).toBe(stageDef(3, 5).dungeon);
   expect(s.idx).toBe(stageDef(3, 5).idx);  // 방 구성은 원본 관문 그대로
   expect(stageDef(3, 5).scale).not.toBe(s.scale); // 원본 정의는 바뀌지 않는다

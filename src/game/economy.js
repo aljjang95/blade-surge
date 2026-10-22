@@ -530,7 +530,7 @@ export class Economy {
    * 무한의 성 층 돌파 정산. 첫 돌파 보상 + 필드 드랍 + 처치 EXP. 에너지·별·캠페인 진행도는 바꾸지 않는다.
    * receiptId 로 한 번만 정산한다(재시도·중복 결과 화면 방지).
    */
-  completeTowerFloor(stage, { receiptId, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
+  completeTowerFloor(stage, { receiptId = '', fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
     const s = this.s; s.endgame = normalizeEndgame(s.endgame);
     if (!stage?.tower || !towerUnlocked(s.progress)) return { ok: false, error: 'locked' };
     const record = recordTowerClear(s.endgame, { floor: stage.tower.floor, receiptId, nowMs: nowOf(this) });

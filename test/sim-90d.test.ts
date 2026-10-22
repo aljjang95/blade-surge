@@ -18,7 +18,7 @@ test('요구 전투력 모델은 관문·난이도·탑 층이 오를수록 커�
 test('3 페르소나 90일 진행이 DoD 밴드 안에 든다(시드 3)', () => {
   const report = run90d({ days: 90, seeds: 3 });
   expect(assertBands(report)).toEqual([]);
-  const mid = report.summary.mid;
+  const mid = (report.summary as any).mid;
   // 미드: 스토리 1주 안, 90일에도 지옥·탑에 남은 진행이 있다
   expect(mid.milestones.story_6_10.p50).toBeLessThanOrEqual(10);
   expect(mid.checkpoints.D90.tower.p50).toBeLessThan(210);

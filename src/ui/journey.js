@@ -6,6 +6,8 @@ import { weeklyFrontier, frontierSnapshot } from '../data/seasonal-content.js';
 import { audio } from '../engine/audio.js';
 import './journey.css';
 import { itemVisual } from './item-presentation.js';
+import { eventCalendar } from '../game/endgame-core.js';
+import { TOWER } from '../data/content-90d.js';
 
 const node=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const button=(text,fn,key,cls='journey-action')=>{const e=node('button',cls,text);e.type='button';e.dataset.control=key;e.addEventListener('click',fn);return e;};
@@ -13,10 +15,10 @@ const fmt=v=>Math.round(v||0).toLocaleString('ko-KR');
 const name=id=>MATERIALS.find(m=>m.id===id)?.name||CONSUMABLES.find(c=>c.id===id)?.name||id;
 const illustration=id=>{const e=node('img','journey-illustration');e.src=`/img/ui-crafted/${id}.webp`;e.alt='';e.loading='lazy';return e;};
 const detail=(text,label='자세히')=>{const e=node('details','journey-details');e.append(node('summary','',label),node('p','',text));return e;};
-const resourceArt={gold:'gold',stones:'material-stone',xp:'hero-xp',glass_leaf:'material-leaf',ember_core:'material-ember',star_dust:'material-stardust',hp_tonic:'potion-health',overdrive:'potion-power',aegis:'potion-guard'};
-function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
+const resourceArt={gold:'gold',stones:'material-stone',stones2:'material-guard-stone',stones3:'material-essence',gems:'gems',transcendStones:'material-essence',xp:'hero-xp',glass_leaf:'material-leaf',ember_core:'material-ember',star_dust:'material-stardust',hp_tonic:'potion-health',overdrive:'potion-power',aegis:'potion-guard'};
+function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','stones2','stones3','gems','transcendStones','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',stones2:'상급 강화석',stones3:'전설 강화석',gems:'보석',transcendStones:'초월석',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
 const errors={claimed:'이미 받은 보상입니다.',incomplete:'목표를 먼저 완료해 주세요.',prerequisite:'앞 단계 보상을 먼저 받아 주세요.',unknown:'선택을 다시 확인해 주세요.'};
-const tabs=[['journey','성장 여정'],['contracts','오늘의 의뢰'],['target','목표 장비'],['supply','빠른 보급']];
+const tabs=[['journey','성장 여정'],['contracts','오늘의 의뢰'],['tower','무한의 성'],['target','목표 장비'],['supply','빠른 보급']];
 
 export class JourneyView {
   constructor(app) {
@@ -25,7 +27,7 @@ export class JourneyView {
     const header=node('header','journey-header'),title=node('div');title.append(node('small','journey-eyebrow','한 걸음이 다음 모험을 바꾼다'));
     const h=node('h2','','성장 여정');h.id='journey-title';title.append(h);header.append(title,button('닫기',()=>this.close(),'close','journey-close'));
     this.nav=node('nav','journey-tabs');this.nav.setAttribute('aria-label','성장 여정 메뉴');
-    for(const [id,label] of tabs){const b=button('',()=>{this.tab=id;this.render();},`tab-${id}`);b.append(illustration({journey:'nav-journey',contracts:'nav-quests',target:'nav-forge',supply:'sweep-ticket'}[id]),node('span','',label));this.nav.append(b);}
+    for(const [id,label] of tabs){const b=button('',()=>{this.tab=id;this.render();},`tab-${id}`);b.append(illustration({journey:'nav-journey',contracts:'nav-quests',tower:'nav-arena',target:'nav-forge',supply:'sweep-ticket'}[id]),node('span','',label));this.nav.append(b);}
     this.notice=node('p','journey-notice');this.notice.setAttribute('role','status');this.content=node('div','journey-content');
     this.dialog.append(header,this.nav,this.notice,this.content);document.body.append(this.dialog);
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();this.close();});
@@ -86,7 +88,7 @@ export class JourneyView {
     const snap=this.app.journey.snapshot(),next=snap.steps.find(s=>!s.claimed);
     this.strip.textContent=next?`${next.ready?'보상 받기':'다음 목표'} · ${next.name}`:'성장 여정 완주 · 오늘의 의뢰 확인';
     this.nextTab=next?'journey':'contracts';
-    const signature=JSON.stringify([snap,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(weeklyFrontier())]);
+    const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(weeklyFrontier())]);
     if(this.dialog.open&&(force||signature!==this.signature))this.render(snap);
     this.signature=signature;
   }
@@ -94,11 +96,11 @@ export class JourneyView {
     const same=this.renderedTab===this.tab,scroll=same?this.content.scrollTop:0,focus=same&&this.content.contains(document.activeElement)?document.activeElement.dataset.control:null;
     this.renderedTab=this.tab;this.content.replaceChildren();
     [...this.nav.children].forEach((e,i)=>e.setAttribute('aria-pressed',String(tabs[i][0]===this.tab)));
-    if(this.tab==='journey')this.renderSteps(snap);else if(this.tab==='contracts')this.renderContracts(snap);else if(this.tab==='target')this.renderTarget(snap);else this.renderSupply(snap);
+    if(this.tab==='journey')this.renderSteps(snap);else if(this.tab==='contracts')this.renderContracts(snap);else if(this.tab==='tower')this.renderTower();else if(this.tab==='target')this.renderTarget(snap);else this.renderSupply(snap);
     if(focus)[...this.content.querySelectorAll('[data-control]')].find(e=>e.dataset.control===focus)?.focus({preventScroll:true});
     this.content.scrollTop=scroll;
   }
-  banner(title,text,art='guild_map') {const e=node('section','journey-banner');e.style.backgroundImage=`linear-gradient(90deg,#102124ef,#10212460),url('/img/expansion/${art}.webp')`;e.append(illustration({journey:'nav-journey',contracts:'nav-quests',target:'nav-forge',supply:'nav-dungeon'}[this.tab]||'nav-journey'),node('h3','',title),detail(text,'안내'));this.content.append(e);}
+  banner(title,text,art='guild_map') {const e=node('section','journey-banner');e.style.backgroundImage=`linear-gradient(90deg,#102124ef,#10212460),url('/img/expansion/${art}.webp')`;e.append(illustration({journey:'nav-journey',contracts:'nav-quests',tower:'nav-arena',target:'nav-forge',supply:'nav-dungeon'}[this.tab]||'nav-journey'),node('h3','',title),detail(text,'안내'));this.content.append(e);}
   renderSteps(snap) {
     const done=snap.steps.filter(s=>s.claimed).length;this.banner(`성장 여정 ${done} / 6`,'서약부터 숙련까지, 실제 플레이로 한 단계씩 완성하세요. 완료한 단계의 보상은 순서대로 받습니다.');
     const list=node('div','journey-grid');
@@ -123,6 +125,31 @@ export class JourneyView {
       for(const row of c[kind]){const card=node('article','journey-card'),progress=node('progress');progress.max=row.target;progress.value=Math.min(row.cur,row.target);progress.setAttribute('aria-label',row.name);
         card.append(illustration(kind==='daily'?'quest-daily':'quest-weekly'),node('h3','',row.name),node('p','',`${row.description}${row.dungeonId?' · '+d.name:''}`),progress,node('p','',`${fmt(Math.min(row.cur,row.target))} / ${row.target}`),rewardIcons(row.rewards));
         const claim=button(row.claimed?'수령 완료':row.ready?'보상 받기':'진행 중',()=>this.act(()=>{const r=this.app.journey.claim(kind,row.id);if(r.ok)this.app.funnel?.track('reward_claim',{source:'journey'});return r;}),`claim-${kind}-${row.id}`);claim.disabled=this.blocked||!row.ready;card.append(claim);list.append(card);}this.content.append(list);}
+  }
+  async launchTower() {
+    if(this.blockNotice())return false;
+    this.close();if(this.app.expeditionUI?.result){this.app.expeditionUI.result=null;this.app.toLobby();}else if(this.app.mode==='battle')this.app.toLobby();
+    return this.app.startTower();
+  }
+  renderTower() {
+    const t=this.app.eco.towerSummary(),when=v=>new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(v);
+    this.banner(`${TOWER.name} · 최고 ${t.best}층`,`에너지 없이 다음 층 하나에 도전합니다. 10층마다 지역이 바뀌고 5층은 중간 보스, 10층은 지역 최종 보스입니다. 도전 상한은 매주 월요일 05:00에 ${TOWER.capPerWeek}층씩 열립니다.`,'arena');
+    const card=node('article','journey-card tower-card');
+    card.append(illustration('nav-arena'),node('small','journey-eyebrow',t.unlocked?`이번 주 상한 ${t.cap}층`:'2-10 클리어 후 개방'),node('h3','',`${t.next}층 · ${t.boss==='final'?'지역 최종 보스':t.boss==='mid'?'중간 보스':'관문 대장'} (${t.source} 무대)`),
+      node('p','',`권장 전투력 ${fmt(t.recPower)} · 첫 돌파 보상은 층이 오를수록 커지고 10층마다 보석, 25층마다 초월석.`));
+    const go=button(!t.unlocked?'잠김':t.capped?'이번 주 상한 도달':`${t.next}층 도전`,()=>this.launchTower(),'launch-tower');go.disabled=this.blocked||!t.unlocked||t.capped;card.append(go);
+    if(t.capped)card.append(node('p','journey-muted',`다음 상한 개방: ${when(t.chest.nextResetAt)}`));
+    this.content.append(card);
+    const c=t.chest,chest=node('article','journey-card');
+    chest.append(illustration('treasure-chest'),node('small','journey-eyebrow',`주간 보급 · 이번 주 돌파 ${c.weekCleared}층`),node('h3','',c.tier?`${c.tier.floor}층 이상 보급 상자`:'1층을 돌파하면 열립니다'));
+    if(c.tier){const {floor,...rewards}=c.tier;chest.append(rewardIcons(rewards));}
+    const claim=button(c.claimed?'이번 주 수령 완료':c.ready?'보급 받기':'이번 주 1층 이상 돌파 필요',()=>this.act(()=>this.app.eco.claimTowerChest(),'주간 보급을 받았습니다.'),'claim-tower-chest');claim.disabled=this.blocked||!c.ready;chest.append(claim);
+    this.content.append(chest);
+    this.content.append(node('h3','journey-section','시즌 이벤트'));
+    const list=node('div','journey-grid');
+    for(const e of eventCalendar(Date.now(),3)){const ev=node('article',`journey-card ${e.active?'is-active':''}`);
+      ev.append(illustration('calendar'),node('small','journey-eyebrow',`${e.current?'이번 주':when(e.startsAt)+' 시작'} · ${e.days==='weekend'?'주말(토·일)':'일주일'}${e.active?' · 진행 중':''}`),node('h3','',e.name),node('p','',e.tagline));list.append(ev);}
+    this.content.append(list);
   }
   renderTarget(snap) {
     this.banner('목표 장비','목표를 정하면 필요한 재료와 다음 던전이 보입니다. 같은 장비를 보유했다면 새로 만들지 않고 장착할 수 있습니다.','star_archive');
