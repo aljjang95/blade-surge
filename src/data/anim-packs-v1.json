@@ -4,7 +4,7 @@
  "blender": "Blender 5.2.2 LTS",
  "scripts": {
   "tools/blender/anim_lib.py": "564c9437e95a7f509783e670b3e68ed50df623614a81de6903d861e98c1e9dbc",
-  "tools/blender/author_anim_packs.py": "42fc90d564114500458a5423903cd7b43c888eff65800cf9dd1b2afa79ba84f2"
+  "tools/blender/author_anim_packs.py": "1c1a663ecd9f1e183c3faa70babfe74e92d6565ffdb40cc4a43ec64fa1e532da"
  },
  "rule": "원본 GLB(메시·스킨·재질·텍스처)는 그대로 두고 새 클립만 뼈대와 함께 팩으로 낸다. 런타임은 원본을 읽은 뒤 팩 클립을 덧붙인다.",
  "packs": [
@@ -545,8 +545,8 @@
   {
    "asset": "slime",
    "path": "/models/anim-packs/slime.glb",
-   "sha256": "1d4c5bf95dea1dbd1c6a89522d7ff759ef1d1da3f0f5b23a5f9ad19d5cc4f409",
-   "bytes": 9196,
+   "sha256": "7a43965c6e98803a3d8e83c209029b5336ee43f5980ba1e7669522bb431bc26a",
+   "bytes": 14572,
    "source": {
     "path": "asset-library/normalized/slime.glb",
     "sha256": "146caab3664dce246f993bfef7aced5890f47b6c491e898d97111c9164b734c1"
@@ -554,6 +554,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.299,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 3,
+     "baseEndToIdleDeg": 3,
+     "frames": 16,
+     "baseSeamDeg": 0.1,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.046,
+     "rootRangeM": 0.124,
+     "minSkinZ": -0.0651
+    },
     "deathAlt": {
      "turnDeg": 100,
      "speed": 0.9,
@@ -576,8 +593,8 @@
   {
    "asset": "ember_drake",
    "path": "/models/anim-packs/ember_drake.glb",
-   "sha256": "1d4317edcf9704611aca0526e22b31a03003d28a0dcb6728a0f0d3fb617c8eed",
-   "bytes": 19936,
+   "sha256": "ebf700a2f238eadf1b6a3b3fd1a93aafb38b2385b1aa2473785fa40981348b45",
+   "bytes": 30464,
    "source": {
     "path": "asset-library/normalized/ember_drake.glb",
     "sha256": "593154acd87d2142aab0938f4f3910390982e294928fe9b7dd7a1452e5d3dc55"
@@ -585,6 +602,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.698,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 9.6,
+     "baseEndToIdleDeg": 9.6,
+     "frames": 16,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.287,
+     "rootRangeM": 0.381,
+     "minSkinZ": 0
+    },
     "deathAlt": {
      "turnDeg": -100,
      "speed": 0.9,
@@ -607,8 +641,8 @@
   {
    "asset": "void_wisp",
    "path": "/models/anim-packs/void_wisp.glb",
-   "sha256": "eba66aec058499d4e82ca0931fa3622febafc5b25296888e9a272e79db39fd7d",
-   "bytes": 10200,
+   "sha256": "5bb42363c1c373f6b61ffbeb715ca177f7f7c8c9ec9c7bb0d1825da77e8a427d",
+   "bytes": 15576,
    "source": {
     "path": "asset-library/normalized/void_wisp.glb",
     "sha256": "d9e36bce918fb316c72332ac2e44211bcc1605808a5aabebc934ec543c198a5a"
@@ -616,6 +650,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.591,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 2.9,
+     "baseEndToIdleDeg": 2.9,
+     "frames": 16,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.247,
+     "rootRangeM": 0.338,
+     "minSkinZ": -0.0208
+    },
     "deathAlt": {
      "turnDeg": 100,
      "speed": 0.9,
@@ -638,8 +689,8 @@
   {
    "asset": "fire_phoenix",
    "path": "/models/anim-packs/fire_phoenix.glb",
-   "sha256": "8fcba10b35b67d3522df6835e4c65ec19b615a8cca531992b797392e2820602b",
-   "bytes": 15036,
+   "sha256": "3db09bc4568c66468853752fd257710e180e1ca6e82d94031d35a4c209d9d4de",
+   "bytes": 22992,
    "source": {
     "path": "asset-library/normalized/fire_phoenix.glb",
     "sha256": "c83c8bbba32c3aeb1ddbd506b6ba42e736f156423540e718d057ad5fe7e781c5"
@@ -647,6 +698,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.674,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 8,
+     "baseEndToIdleDeg": 8,
+     "frames": 16,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.26,
+     "rootRangeM": 0.356,
+     "minSkinZ": -0.0475
+    },
     "deathAlt": {
      "turnDeg": -100,
      "speed": 0.9,
@@ -669,8 +737,8 @@
   {
    "asset": "star_owl",
    "path": "/models/anim-packs/star_owl.glb",
-   "sha256": "34add11fff0e10a5e0ec3f67111623342bd89a8284206739f31452d0d905b139",
-   "bytes": 10124,
+   "sha256": "651a45f9ac7d0352f87c0d52dd86d615db003094c050dae433b052c6d2fa2d41",
+   "bytes": 15500,
    "source": {
     "path": "asset-library/normalized/star_owl.glb",
     "sha256": "d8694b3a6d3a2375cd7b31a3d80680ee8210a295a9ed49fc93289a7e23f62c0d"
@@ -678,6 +746,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.498,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 2.9,
+     "baseEndToIdleDeg": 2.9,
+     "frames": 16,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.224,
+     "rootRangeM": 0.311,
+     "minSkinZ": 0
+    },
     "deathAlt": {
      "turnDeg": 100,
      "speed": 0.9,
@@ -700,8 +785,8 @@
   {
    "asset": "bone_knight",
    "path": "/models/anim-packs/bone_knight.glb",
-   "sha256": "bb27f72140fa4f94c2a73f0aa44b0585aaa01268db8980aa5c0d110d790ce3d6",
-   "bytes": 735176,
+   "sha256": "507f320aca40a61496381827c11832e7cb6d8356ac6995f236ce4f82a6d7ba81",
+   "bytes": 821344,
    "source": {
     "path": "asset-library/normalized/bone_knight.glb",
     "sha256": "b366e0640829cddbe1731426bdbe68bd3c6e1a0ebca60604d5eb32158e354de1"
@@ -709,6 +794,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 2.5,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 112.8,
+     "baseEndToIdleDeg": 112.8,
+     "frames": 16,
+     "baseSeamDeg": 0.6,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.022,
+     "rootRangeM": 0.145,
+     "minSkinZ": 0.0323
+    },
     "attack2Seam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -782,8 +884,8 @@
   {
    "asset": "skeleton_mage",
    "path": "/models/anim-packs/skeleton_mage.glb",
-   "sha256": "5179461fce96c580b723f256ada54d0761cc081ffc5426e12a74b4a5a1dcf2e6",
-   "bytes": 600188,
+   "sha256": "9a9d4482c750d701f9522744e50adefee3c58e15f79df2e30ccaa9c4fc111571",
+   "bytes": 685036,
    "source": {
     "path": "asset-library/normalized/skeleton_mage.glb",
     "sha256": "e5e084ee796ab3ae281f6301ce3fc6033170870eeb274178166b43b990cb1919"
@@ -791,6 +893,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 2.466,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 71.3,
+     "baseEndToIdleDeg": 71.1,
+     "frames": 16,
+     "baseSeamDeg": 0.6,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.024,
+     "rootRangeM": 0.157,
+     "minSkinZ": 0.0508
+    },
     "attack2Seam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -846,8 +965,8 @@
   {
    "asset": "goblin_brute",
    "path": "/models/anim-packs/goblin_brute.glb",
-   "sha256": "4addc4e5f3be2df3af437dd3fc16745801515f19924ebed0391e1ae0a58ab001",
-   "bytes": 607416,
+   "sha256": "247b751c6958e9b66c1145bb8ad2bdebc6aba8526bf28770f37d02120aed7ff7",
+   "bytes": 783592,
    "source": {
     "path": "asset-library/normalized/goblin_brute.glb",
     "sha256": "27e29f2c44bbe27f313b1e475458c10f921226fb0bd89295c64c029f2edf540b"
@@ -855,6 +974,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 2.0833,
+     "holdS": 0.1,
+     "restHeightM": 2.286,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 42.6,
+     "baseEndToIdleDeg": 42.6,
+     "frames": 51,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.156,
+     "rootRangeM": 0.237,
+     "minSkinZ": 0.0491
+    },
     "attackSpinSeam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -910,8 +1046,8 @@
   {
    "asset": "frost_yeti",
    "path": "/models/anim-packs/frost_yeti.glb",
-   "sha256": "727aba8180175a2af82b9e1dbb123db10e6ece18353fcd1638368b625e3e981f",
-   "bytes": 607908,
+   "sha256": "3e4d0d5110ad10178a657f0d97f154e44b48405af3bfd030e94ebfc88d2485d8",
+   "bytes": 784084,
    "source": {
     "path": "asset-library/normalized/frost_yeti.glb",
     "sha256": "ca0dcee08a616e1b2ee6c1fb43e9e195d7442c78fb7d20d2f812c1ce9c933be4"
@@ -919,6 +1055,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 2.0833,
+     "holdS": 0.1,
+     "restHeightM": 2.157,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 42.6,
+     "baseEndToIdleDeg": 42.6,
+     "frames": 51,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.092,
+     "rootRangeM": 0.139,
+     "minSkinZ": 0
+    },
     "attackSpinSeam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -974,8 +1127,8 @@
   {
    "asset": "demon_lord",
    "path": "/models/anim-packs/demon_lord.glb",
-   "sha256": "5e75bf4b2e58918edb5c4b360421dc1473180830cff24ba3efb46cf00a098ea1",
-   "bytes": 607800,
+   "sha256": "02d7dc5255a1bf9980dba37791373eed530c49952a53f2a6b75c044524372bcc",
+   "bytes": 783976,
    "source": {
     "path": "asset-library/normalized/demon_lord.glb",
     "sha256": "b9936e6fd15b69b7dccb2ade8d06b23e00417c4b387ebb01f4afb5421118b29e"
@@ -983,6 +1136,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 2.0833,
+     "holdS": 0.1,
+     "restHeightM": 2.4,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 42.6,
+     "baseEndToIdleDeg": 42.6,
+     "frames": 51,
+     "baseSeamDeg": 0.1,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.158,
+     "rootRangeM": 0.24,
+     "minSkinZ": 0.0167
+    },
     "attackSpinSeam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -1038,8 +1208,8 @@
   {
    "asset": "goblin_raider",
    "path": "/models/anim-packs/goblin_raider.glb",
-   "sha256": "0e34513267fe9623aa14b7f39b9d508d351022a5c219126e19169cc7626e31cd",
-   "bytes": 278844,
+   "sha256": "fcb6958d852d1a262fc834635c63cc4be82c4ebca1779b9c64fda7c5288a4721",
+   "bytes": 311548,
    "source": {
     "path": "asset-library/normalized/goblin_raider.glb",
     "sha256": "936daf826e00a9f27ecb323e6b5bc9df884299eeabdc095bfec17b1ccf6c365e"
@@ -1047,6 +1217,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 1.883,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 64.3,
+     "baseEndToIdleDeg": 64.3,
+     "frames": 16,
+     "baseSeamDeg": 0.6,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.015,
+     "rootRangeM": 0.101,
+     "minSkinZ": 0
+    },
     "attack2Seam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -1120,8 +1307,8 @@
   {
    "asset": "shadow_soldier",
    "path": "/models/anim-packs/shadow_soldier.glb",
-   "sha256": "e319d37b0557dcd0416af17a1423f25547025400cd82f4be8b303a6980115c1a",
-   "bytes": 279080,
+   "sha256": "0f55e9c1e6581939cfe36cc6b0ef92938cd58296125e7e7c6659f3ec3ee30d34",
+   "bytes": 311784,
    "source": {
     "path": "asset-library/normalized/shadow_soldier.glb",
     "sha256": "89db07c21e452512a5276bb356a637ead94f503421dd0121b29b985a3e2b2e87"
@@ -1129,6 +1316,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 2.3,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 64.3,
+     "baseEndToIdleDeg": 64.3,
+     "frames": 16,
+     "baseSeamDeg": 0.6,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.018,
+     "rootRangeM": 0.122,
+     "minSkinZ": 0.0214
+    },
     "attack2Seam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -1202,8 +1406,8 @@
   {
    "asset": "goblin_chief",
    "path": "/models/anim-packs/goblin_chief.glb",
-   "sha256": "f4a168dfde0c7badf0eb1514ac9da9e0cadf9a1a7b2cd1fc21f501fa1ec097cc",
-   "bytes": 234204,
+   "sha256": "b438e8ee8137fa756016a4c009f615939228e96dc39003bc750dd2976a907cfc",
+   "bytes": 302112,
    "source": {
     "path": "asset-library/normalized/goblin_chief.glb",
     "sha256": "1907e1bb7833ae24c73b1969ebf52e70999e812188952228596bd97ad3da97f3"
@@ -1211,6 +1415,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 2.0833,
+     "holdS": 0.1,
+     "restHeightM": 2.5,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 42.6,
+     "baseEndToIdleDeg": 42.6,
+     "frames": 51,
+     "baseSeamDeg": 0.1,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.129,
+     "rootRangeM": 0.196,
+     "minSkinZ": 0
+    },
     "attackSpinSeam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -1266,8 +1487,8 @@
   {
    "asset": "mushroom_shaman",
    "path": "/models/anim-packs/mushroom_shaman.glb",
-   "sha256": "b47ce13081d7f531548e652a2d742885ffc3e2ca4267222a94f20123eeb21bcd",
-   "bytes": 475748,
+   "sha256": "6ab0ee5f719a905560a232d5e6dd357a4433c56c078e1b191129003a6c9227fc",
+   "bytes": 560596,
    "source": {
     "path": "asset-library/normalized/mushroom_shaman.glb",
     "sha256": "38a4fdda2899c0060e8a0d9e9469eecd995a7eff0e6ae5eeb0542b129d9a6fad"
@@ -1275,6 +1496,23 @@
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.625,
+     "holdS": 0.1,
+     "restHeightM": 2,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 105.2,
+     "baseEndToIdleDeg": 105.2,
+     "frames": 16,
+     "baseSeamDeg": 0.6,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.013,
+     "rootRangeM": 0.087,
+     "minSkinZ": 0.0251
+    },
     "attack2Seam": {
      "lock": 0,
      "seamStart": 0.7,
@@ -1315,8 +1553,8 @@
   {
    "asset": "treant",
    "path": "/models/anim-packs/treant.glb",
-   "sha256": "1f18d440cc187f14b56f4d2486a15e6c229b88970a782f4b0ea5cd12f4717452",
-   "bytes": 23488,
+   "sha256": "58121aca3efc47387d931e2ac5bbcb5f4aca3cd414f0556d646059d502e35c29",
+   "bytes": 34348,
    "source": {
     "path": "asset-library/normalized/treant.glb",
     "sha256": "47704aa29fc75a1c7285481f46d9bc8f2497abff4adbe96d647a8eb0a42dd447"
@@ -1324,6 +1562,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.6667,
+     "holdS": 0.1,
+     "restHeightM": 2.8,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 4,
+     "baseEndToIdleDeg": 4,
+     "frames": 17,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.054,
+     "rootRangeM": 0.239,
+     "minSkinZ": -0.0163
+    },
     "deathAlt": {
      "turnDeg": 100,
      "speed": 0.9,
@@ -1346,8 +1601,8 @@
   {
    "asset": "frost_golem",
    "path": "/models/anim-packs/frost_golem.glb",
-   "sha256": "82c7d9ecdd444b335db6b1d51eb9a5265d3d4dd10739748e1bad901b058ea3a3",
-   "bytes": 23576,
+   "sha256": "34f827b985c67a6f3eff304c85346e666b0915b6820409addbb3c492b5502e61",
+   "bytes": 34440,
    "source": {
     "path": "asset-library/normalized/frost_golem.glb",
     "sha256": "34489b14282619fc36497316fb2e3709dab5e2aa836c720ace8758338b205a59"
@@ -1355,6 +1610,23 @@
    "humanoid": false,
    "hipsBone": "root",
    "clips": {
+    "hitKnockback": {
+     "duration": 0.6667,
+     "holdS": 0.1,
+     "restHeightM": 2.4,
+     "base": "hit",
+     "kind": "hit-knockback",
+     "endToIdleDeg": 4,
+     "baseEndToIdleDeg": 4,
+     "frames": 17,
+     "baseSeamDeg": 0,
+     "seamDeg": 0,
+     "baseRootDriftM": 0,
+     "rootDriftM": 0,
+     "baseRootRangeM": 0.04,
+     "rootRangeM": 0.201,
+     "minSkinZ": 0
+    },
     "deathAlt": {
      "turnDeg": -100,
      "speed": 0.9,

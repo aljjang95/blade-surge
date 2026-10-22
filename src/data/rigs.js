@@ -7,7 +7,8 @@ export const RIGS = {
   library: {
     idle: 'idle', idleCombat: 'idle', walk: 'walk', run: 'run', back: 'walk',
     // hitHeavy: 강타·치명타·마무리 피격 전용(선택 클립). 없으면 Actor.A 가 hit 으로 폴백한다(난수 소비 없음).
-    hit: ['hit'], hitHeavy: 'hitHeavy', death: ['death'], spawn: 'spawn', dodge: 'run',
+    // hitKnockback: 크게 밀려나는 타격(kb≥6) 전용 넉백 클립(애니메이션 팩, 선택). 없으면 hitHeavy → hit 으로 폴백한다.
+    hit: ['hit'], hitHeavy: 'hitHeavy', hitKnockback: 'hitKnockback', death: ['death'], spawn: 'spawn', dodge: 'run',
     attack: ['attack', 'attack2'], attack2: 'attack2', attackHeavy: ['attackHeavy', 'attack'],
     attackSpin: ['attackSpin', 'attackHeavy', 'attack'], attackJump: ['attackJump', 'attackHeavy', 'attack'],
     cast: ['cast', 'attack'], summon: ['summon', 'roar', 'cast', 'attack'], raise: ['raise', 'cast', 'attack'], dash: 'run',

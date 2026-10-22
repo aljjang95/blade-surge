@@ -269,6 +269,64 @@ def spawn_rise(ctx, name='spawn', dur=1.25):
   ctx.add(name, times, out, 'roar', 'spawn-rise', {'duration': dur})
 
 
+def rest_height(ctx):
+  """휴식 자세 스키닝 메시 최고점(m). 비인간형 몬스터 넉백 거리 기준."""
+  rest = {b: (Vector(), L.Quaternion(), Vector((1, 1, 1))) for b in ctx.rig.bones}
+  L.apply_pose(ctx.arm, rest)
+  dg = L.bpy.context.evaluated_depsgraph_get()
+  high = 0.0
+  for obj in L.bpy.data.objects:
+    if obj.type != 'MESH' or obj.parent is None: continue
+    ev = obj.evaluated_get(dg)
+    mesh = ev.to_mesh()
+    high = max([high] + [(ev.matrix_world @ v.co).z for i, v in enumerate(mesh.vertices) if i % 5 == 0])
+    ev.to_mesh_clear()
+  return max(0.1, high)
+
+
+def monster_hit_knockback(ctx, name='hitKnockback'):
+  """몬스터 넉백 피격(원본 hitHeavy 는 앞으로 움츠리는 강타 반응이라 그대로 두고, 크게 밀려나는 타격 전용으로 더한다): 첫 0.12초에 몸이 뒤로 젖혀지며 밀린 뒤 원본 피격 움츠림으로 회복하고 시작 자세로 돌아온다.
+  인간형은 골반이 뒤·아래로 밀리고 윗몸이 젖혀진다(발 고정). 비인간형은 뿌리 뼈들을 바닥 원점 기준으로 뒤로 기울이고 민다."""
+  base = 'hit'
+  src = L.duration(ctx.acts[base])
+  # 충격 박자는 클립 길이와 무관하게 초 단위로 둔다(원본 피격이 2초 넘는 대형 몬스터도 0.12초에 젖혀진다).
+  hold = 0.1
+  dur = max(0.62, src + hold)
+  times = L.grid(dur)
+  frames = L.sample(ctx.arm, ctx.acts[base], [max(0.0, min(src, t - hold)) for t in times])
+  hh, h = ctx.hh, rest_height(ctx)
+  roots = [b for b in ctx.rig.bones if ctx.rig.parent[b] is None]
+  out = []
+  for f, t in zip(frames, times):
+    snap, rec = L.bell(t, 0.0, 0.12, 0.42), L.bell(t, 0.16, 0.3, 0.58)
+    g = L.copy_basis(f)
+    if ctx.humanoid:
+      cap = ctx.legs.capture(g)
+      L.translate_world(ctx.rig, g, ctx.hips, (-FWD) * (0.16 * hh * snap) + UP * (-0.08 * hh * snap))
+      L.rotate_world(ctx.rig, g, ctx.hips, PITCH, D(-6) * snap)
+      ctx.spine_rot(g, PITCH, D(-30) * snap + D(5) * rec)
+      L.rotate_world(ctx.rig, g, ctx.head, PITCH, D(-14) * snap + D(4) * rec)
+      L.rotate_world(ctx.rig, g, ctx.arm_l, LEAN, D(-16) * snap)
+      L.rotate_world(ctx.rig, g, ctx.arm_r, LEAN, D(16) * snap)
+      out.append(plant(ctx, g, cap))
+    else:
+      ang = D(-16) * snap + D(4) * rec
+      q = L.Quaternion(PITCH, ang)
+      for root in roots:
+        pose = ctx.rig.pose(g)
+        p = ctx.rig.head_world(pose, root)
+        L.rotate_world(ctx.rig, g, root, PITCH, ang, pose)
+        L.translate_world(ctx.rig, g, root, (q @ p - p) + (-FWD) * (0.08 * h * snap))
+      # 기울임으로 뒤쪽 가장자리가 원본 피격보다 바닥 아래로 내려가면 그만큼 뿌리를 올린다(원본보다 낮아지지 않게).
+      lift = L.mesh_min_z(ctx.arm, ctx.rig, f) - L.mesh_min_z(ctx.arm, ctx.rig, g)
+      if lift > 1e-5:
+        for root in roots: L.translate_world(ctx.rig, g, root, UP * lift)
+      out.append(g)
+  if ctx.humanoid: out, _ = L.ground_fix(ctx.arm, ctx.rig, out, times, ctx.hips)
+  out = L.seam_blend(out, times, out[0], 0.85)
+  ctx.add(name, times, out, base, 'hit-knockback', {'duration': round(dur, 4), 'holdS': hold, 'restHeightM': round(h, 3)})
+
+
 # ---------------------------------------------------------------- 자산별 레시피
 HERO_HITS = [('hit_heavy', hit_heavy), ('hit_left', lambda c: hit_side(c, 1, 'hit_left')), ('hit_right', lambda c: hit_side(c, -1, 'hit_right'))]
 HERO_DEATHS = [('death_fwd', death_forward), ('death_back', death_back)]
@@ -302,7 +360,7 @@ MONSTERS = ['slime', 'ember_drake', 'void_wisp', 'fire_phoenix', 'star_owl', 'bo
 
 
 def monster_recipe(asset):
-  steps = []
+  steps = [('hitKnockback', monster_hit_knockback)]
   for clip in MONSTER_SEAMS.get(asset, []):
     target = 'idle' if clip == 'spawn' else 'first'
     steps.append((clip + 'Seam', (lambda c, clip=clip, target=target: inplace_seam(c, clip, clip + 'Seam', lock=0.0, seam_start=0.7, target=target))))

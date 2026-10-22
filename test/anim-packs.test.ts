@@ -162,12 +162,17 @@ test('몬스터: 팩이 붙은 라이브러리 몬스터는 이음새 보정 클
   expect(libraryPackRig(RIGS.library, { attack: {}, hit: {} })).toBe(RIGS.library);   // 팩 없으면 같은 객체
 });
 
-test('모든 몬스터 팩 자산이 실제 로드에서 deathAlt 를 얻고, 인간형 8종은 등장 클립을 얻는다', async () => {
+test('모든 몬스터 팩 자산이 실제 로드에서 deathAlt·hitKnockback 을 얻고, 인간형 8종은 등장 클립을 얻는다', async () => {
   for (const pack of REG.packs.filter((p: any) => !p.asset.startsWith('hero_'))) {
     const gltf = await loadModel(pack.asset);
     const names = new Set(gltf.animations.map((c: any) => c.name));
     for (const name of Object.keys(pack.clips)) expect(names.has(name), `${pack.asset}/${name}`).toBe(true);
     expect(names.has('deathAlt')).toBe(true);
+    // 넉백 피격: 원본 hitHeavy(앞으로 움츠림)는 그대로 두고 따로 더한다. 시작·끝이 같은 자세, 골반은 제자리로 돌아오고 원본 피격보다 크게 밀린다.
+    expect(names.has('hitHeavy'), pack.asset).toBe(true);
+    const kb = pack.clips.hitKnockback;
+    expect(kb?.kind, pack.asset).toBe('hit-knockback');
+    expect(kb.seamDeg).toBeLessThan(1); expect(kb.rootDriftM).toBeLessThan(.01); expect(kb.rootRangeM).toBeGreaterThan(kb.baseRootRangeM);
   }
   const humanoids = REG.packs.filter((p: any) => p.clips.spawn).map((p: any) => p.asset).sort();
   expect(humanoids).toEqual(['bone_knight', 'demon_lord', 'frost_yeti', 'goblin_brute', 'goblin_chief', 'goblin_raider', 'shadow_soldier', 'skeleton_mage']);

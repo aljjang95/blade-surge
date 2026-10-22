@@ -37,8 +37,9 @@ test('적 피격 반응: 경타는 빠른 움찔, 강타·치명타·마무리�
   const R = FEEL.react;
   const light = enemyHitReact(2, false, false);
   expect(light.key).toBe('hit'); expect(light.speed).toBe(R.lightSpeed); expect(light.stagger).toBeCloseTo(.22 + .06, 9);
+  expect(enemyHitReact(5, false, false).key).toBe('hitHeavy');
   const a = enemyHitReact(7, false, false);
-  expect(a.key).toBe('hitHeavy'); expect(a.speed).toBe(R.heavySpeed); expect(a.stagger).toBeCloseTo(.22 + .21 + R.heavyHold, 9);
+  expect(a.key).toBe('hitKnockback');   // kb ≥ knockKb 는 넉백 클립(없으면 hitHeavy → hit 폴백) expect(a.speed).toBe(R.heavySpeed); expect(a.stagger).toBeCloseTo(.22 + .21 + R.heavyHold, 9);
   expect(enemyHitReact(1, true, false).key).toBe('hitHeavy');
   expect(enemyHitReact(1, false, true).key).toBe('hitHeavy');
   expect(enemyHitReact(100).stagger).toBeCloseTo(R.base + R.kbCap + R.heavyHold, 9);

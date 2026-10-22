@@ -80,7 +80,7 @@ export class Actor {
       attackJump: ['attackHeavy', 'attack'], cast: ['attack'], raise: ['cast', 'attack'],
       summon: ['roar', 'cast', 'attack'], spawn: ['roar', 'idle'], run: ['walk'],
       // 강타 피격 클립이 없는 자산은 일반 피격으로(예전에는 idle 로 떨어져 강타를 맞아도 서 있었다).
-      hitHeavy: ['hit'],
+      hitHeavy: ['hit'], hitKnockback: ['hitHeavy', 'hit'],
     }[key] || [];
     // 폴백은 난수 없이 리그 후보 중 첫 실제 클립, 없으면 논리 이름 그대로의 클립을 쓴다.
     for (const fallback of chain) {
