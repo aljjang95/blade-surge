@@ -214,3 +214,18 @@ test('FX.update: 전투 일시정지 동안에는 전투 VFX 시계가 흐르지
   expect(main).toContain('this.fx.update(dt, !!this.battle.paused)');
   expect(main).toContain('this.renderer.update(dt, realDt, !!this.battle.paused)');
 });
+
+test('렌더를 건너뛴 sim 프레임에 쓴 칸도 다음 업로드 구간에 남는다(업로드 뒤에만 구간을 비운다)', () => {
+  const v = make(), ring = v.shards, name = Object.keys(ring.defs)[0], size = ring.defs[name];
+  const attribute: any = ring.geometry.attributes[name];
+  ring.claim(10); ring.flush();
+  ring.cursor = 40; ring.claim(10); ring.flush();
+  expect(attribute.updateRanges.length).toBe(1);
+  expect(attribute.updateRanges[0].start).toBe(0);
+  expect(attribute.updateRanges[0].count).toBe(41 * size);
+  attribute.onUploadCallback();
+  ring.cursor = 7; ring.claim(10); ring.flush();
+  expect(attribute.updateRanges[0].start).toBe(7 * size);
+  expect(attribute.updateRanges[0].count).toBe(size);
+  v.dispose?.();
+});
