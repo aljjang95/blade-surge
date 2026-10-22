@@ -13,6 +13,7 @@ function drawOverBeacon(object) {
 
 // Readability marker: opaque authored hero, strong ground rings and locator; no body duplicate or occluder bypass.
 export class HeroBeacon {
+  /** @param {THREE.Object3D} root @param {THREE.Object3D | null} [model] 링 아래에 그릴 영웅 모델 */
   constructor(root, model = null) {
     // Keep the authored hero fully opaque. Readability is carried by the locator/rings,
     // never by a translucent duplicate drawn through occluders.
