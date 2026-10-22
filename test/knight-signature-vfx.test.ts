@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { ImpactVfx, IMPACT_KIND, MARK_STYLE, IMPACT_FRAME_BUDGET } from '../src/engine/impact-vfx.js';
-import { SIGNATURES, KNIGHT_SIG_TIMING, KNIGHT_SIG_MAX_SLOTS, KNIGHT_SIG_COLOR } from '../src/engine/sig-knight.js';
+import { ImpactVfx, IMPACT_KIND, IMPACT_FRAME_BUDGET } from '../src/engine/impact-vfx.js';
+import { SIGNATURES, KNIGHT_SIG_TIMING, KNIGHT_SIG_MAX_SLOTS, KNIGHT_SIG_COLOR, KNIGHT_MARK_MAX_RADIUS } from '../src/engine/sig-knight.js';
 import { SKILL_VFX } from '../src/engine/skill-vfx.js';
 import { HERO_SKILLS } from '../src/engine/combat-sound-library.js';
 
@@ -42,16 +42,14 @@ test('서명은 예외 없이 칸 상한 안에서 그리고, 스킬마다 모�
   expect(new Set(shapes).size).toBe(HERO_SKILLS.knight.length);
 });
 
-test('화면을 가로지르는 큰 빌보드 고리를 쓰지 않는다(지름 3.5m 이하), 넓은 바닥 표식은 어두운 금', () => {
+test('화면을 가로지르는 큰 빌보드 고리(지름 3.5m 초과)·굵은 바퀴가 되는 큰 지면 표식(반경 2m 초과)을 쓰지 않는다', () => {
   const wide = new THREE.Color(KNIGHT_SIG_COLOR.wide), wideGold = new THREE.Color(KNIGHT_SIG_COLOR.wideGold);
+  void wide; void wideGold;
   for (const id of HERO_SKILLS.knight) {
     const v = make(); SIGNATURES[id](ctxOf(v));
     for (const s of slots(v)) {
       if (s.kind === IMPACT_KIND.ring) expect(s.size).toBeLessThanOrEqual(3.5);
-      if (s.kind === IMPACT_KIND.mark && s.size > 4) {
-        const ok = [wide, wideGold].some(c => Math.abs(c.r - s.color[0]) < 1e-3 && Math.abs(c.g - s.color[1]) < 1e-3 && Math.abs(c.b - s.color[2]) < 1e-3);
-        expect(ok).toBe(true);
-      }
+      if (s.kind === IMPACT_KIND.mark) expect(s.size).toBeLessThanOrEqual(KNIGHT_MARK_MAX_RADIUS);
     }
     v.dispose();
   }
@@ -60,12 +58,14 @@ test('화면을 가로지르는 큰 빌보드 고리를 쓰지 않는다(지름 
 test('지연 칸은 skills.js 판정 시각과 맞는다: 태양파쇄 2타 .18, 신벌 .28 착탄, 결박 파열 1.75', () => {
   const starts = (id: string, kind: number) => { const v = make(); SIGNATURES[id](ctxOf(v)); const s = slots(v).filter(x => x.kind === kind).map(x => x.start); v.dispose(); return s; };
   expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
-  expect(starts('sunbreaker', IMPACT_KIND.mark)).toContainEqual(expect.closeTo(.18, 5));
+  expect(starts('sunbreaker', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(.18, 5));
+  expect(starts('sunbreaker', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.18, 5));
   expect(starts('heavenfall', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.28, 5));
-  expect(starts('chain_bind', IMPACT_KIND.mark)).toContainEqual(expect.closeTo(1.75, 5));
-  // 신벌 낙하 기둥: 하늘(14m)에서 110m/s 로 떨어져 정확히 .28초에 바닥에 닿도록 출발한다.
+  expect(starts('chain_bind', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(1.75, 5));
+  expect(starts('chain_bind', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(1.75, 5));
+  // 신벌 낙하 기둥: 하늘(14m)에서 110m/s 로 떨어져 정확히 .28초에 바닥에 닿도록 출발한다(세로 광선만).
   const v = make(); SIGNATURES.heavenfall(ctxOf(v));
-  const beams = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.beam);
+  const beams = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.beam && v.ring.a.aVel[i * 3 + 1] < -5);
   expect(beams.length).toBeGreaterThanOrEqual(4);
   for (const i of beams) {
     const len = Math.hypot(v.ring.a.aVel[i * 3], v.ring.a.aVel[i * 3 + 1], v.ring.a.aVel[i * 3 + 2]);
@@ -80,7 +80,7 @@ test('궁극기 용살검이 가장 장대하다: 수직 참격 + 부채 균열 
   const s = slots(v);
   const vertical = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.beam && v.ring.a.aVel[i * 3 + 1] < -5);
   expect(vertical.length).toBeGreaterThanOrEqual(3);
-  expect(s.some(x => x.kind === IMPACT_KIND.mark && x.style === MARK_STYLE.fan)).toBe(true);
+  expect(s.filter(x => x.kind === IMPACT_KIND.cut).length).toBeGreaterThanOrEqual(2);
   const counts = HERO_SKILLS.knight.map((id: string) => { const w = make(); SIGNATURES[id](ctxOf(w)); const n = w.ring.high; w.dispose(); return n; });
   expect(s.length).toBe(Math.max(...counts));
   v.dispose();
