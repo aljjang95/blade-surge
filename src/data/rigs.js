@@ -57,6 +57,31 @@ export const RIGS = {
   },
 };
 
+/**
+ * 애니메이션 팩(h4-anim)의 이음새 보정 클립(<원본>Seam)이 로드된 라이브러리 몬스터는 같은 논리 키를 그 클립으로 바꿔 끼운다.
+ * 후보 수·순서가 그대로라 Actor.A 의 난수 소비가 같다. 바꿀 게 없으면 원래 리그 객체를 그대로 돌려준다.
+ */
+export function libraryPackRig(rig, clips) {
+  let out = rig;
+  const swap = (name) => (typeof name === 'string' && clips?.[name + 'Seam'] ? name + 'Seam' : name);
+  for (const [key, value] of Object.entries(rig)) {
+    if (typeof value !== 'string' && !Array.isArray(value)) continue;
+    const next = Array.isArray(value) ? value.map(swap) : swap(value);
+    const changed = Array.isArray(value) ? next.some((name, i) => name !== value[i]) : next !== value;
+    if (!changed) continue;
+    if (out === rig) out = { ...rig };
+    out[key] = next;
+  }
+  return out;
+}
+
+/** 재생 중인 라이브러리 클립 이름 → 자산 manifest 의 논리 키(이음새 보정 클립은 원본 키). 타격 프레임(impacts) 조회용. */
+export function libraryClipKey(asset, clipName) {
+  if (!asset?.clips || typeof clipName !== 'string') return undefined;
+  const name = clipName.endsWith('Seam') ? clipName.slice(0, -4) : clipName;
+  return Object.entries(asset.clips).find(([, clip]) => clip === name)?.[0];
+}
+
 // All 26 shipped Quaternius GLBs face +Z in idle/run/attack, like KayKit.
 // Actor and party replicas must not add a second 180-degree facing correction.
 /** 모델 파일명 → 리그 추론 */

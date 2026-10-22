@@ -60,7 +60,7 @@ export function resolveSharedHeroClips(cache, heroId, asset, animations) {
 }
 
 const BASE_ALIASES = Object.freeze({
-  Idle: 'idle', Running_A: 'run', Dodge_Forward: 'dodge', Hit_A: 'hit', Hit_B: 'hit', Death_A: 'death', Death_B: 'death',
+  Idle: 'idle', Running_A: 'run', Dodge_Forward: 'dodge', Hit_A: 'hit', Hit_B: 'hit', Hit_L: 'hit', Hit_R: 'hit', Death_A: 'death', Death_B: 'death',
   Cheer: 'cheer', Interact: 'interact', Spellcasting: 'cast_raise',
 });
 
@@ -95,6 +95,20 @@ const FALLBACKS = Object.freeze({
   block: ['block', 'chop', 'slash_h', 'hit', 'idle'], cast_shoot: ['cast_shoot', 'cast_long', 'cast_raise', 'idle'],
   cast_long: ['cast_long', 'cast_shoot', 'cast_raise', 'idle'], cast_raise: ['cast_raise', 'cast_long', 'cast_shoot', 'idle'],
   throw: ['throw', 'cast_shoot', 'slash_h', 'idle'], bow_shoot: ['bow_shoot', 'cast_shoot', 'slash_h', 'idle'],
+});
+
+// 애니메이션 팩(h4-anim, src/data/anim-packs-v1.json) 클립으로 바꿔 끼우는 원본 별칭. 팩 클립이 실제로 로드됐을 때만 쓴다.
+// Hit_A=가벼운 움츠림(원본), Hit_B=강타 넉백, Hit_L/Hit_R=왼쪽/오른쪽에서 맞음, Death_A=앞으로 무너짐(제자리), Death_B=뒤로 쓰러짐.
+// 도적·궁수의 사망·회피·찌르기는 몸체별 저작 보정(hero-body-motion)과 활 접지 계약이 원본 클립에 묶여 있어 바꾸지 않는다.
+const PACK_HITS = Object.freeze({ Hit_B: 'hit_heavy', Hit_L: 'hit_left', Hit_R: 'hit_right' });
+export const HERO_PACK_ALIASES = Object.freeze({
+  knight: Object.freeze({ ...PACK_HITS, Death_A: 'death_fwd', Death_B: 'death_back',
+    '1H_Melee_Attack_Slice_Diagonal': 'slash_d_ip', '1H_Melee_Attack_Stab': 'stab_ip', '2H_Melee_Attack_Chop': 'chop_heavy' }),
+  barbarian: Object.freeze({ ...PACK_HITS, Death_A: 'death_fwd', Death_B: 'death_back',
+    '2H_Melee_Attack_Stab': 'stab_ip', '2H_Melee_Attack_Spinning': 'spin_ip', '2H_Melee_Attack_Spin': 'spin_whirl', Jump_Full_Short: 'jump_attack_ip' }),
+  mage: Object.freeze({ ...PACK_HITS, Death_A: 'death_fwd', Death_B: 'death_back' }),
+  rogue: Object.freeze({ ...PACK_HITS, Death_B: 'death_back' }),
+  ranger: Object.freeze({ ...PACK_HITS }),
 });
 
 const unique = (values) => [...new Set(values)];
@@ -161,11 +175,16 @@ export function heroHandBones(scene) {
   return { r: right.name, l: left.name };
 }
 
-/** clipAsset: 클립을 실제로 가진 단계(공유 클립의 원본). 손 소켓 그룹은 호출 전에 만들어져 있어야 한다. */
-export function heroModelContract(asset, scene, clipAsset = asset) {
+/** clipAsset: 클립을 실제로 가진 단계(공유 클립의 원본). 손 소켓 그룹은 호출 전에 만들어져 있어야 한다.
+ * animations: 실제 로드된 클립(팩 클립 포함). 주면 팩 클립이 있는 별칭을 팩 클립으로 잇는다. */
+export function heroModelContract(asset, scene, clipAsset = asset, animations = null) {
   if (asset?.role !== 'hero' || !asset.heroId || !HEROES[asset.heroId]) throw new Error('invalid hero asset contract');
-  const aliases = {};
-  for (const source of requiredSourceAliases(asset.heroId)) aliases[source] = actualClip(clipAsset, logicalClipForAnimation(source));
+  const aliases = {}, pack = HERO_PACK_ALIASES[asset.heroId] || {};
+  const loaded = animations ? new Set(animations.map((clip) => clip.name)) : null;
+  for (const source of requiredSourceAliases(asset.heroId)) {
+    const packed = pack[source];
+    aliases[source] = packed && loaded?.has(packed) ? packed : actualClip(clipAsset, logicalClipForAnimation(source));
+  }
   return { materials: 'authored', role: 'hero', heroId: asset.heroId, scale: 1, aliases, sockets: { ...LIBRARY_SOCKET_NAMES }, handBones: heroHandBones(scene) };
 }
 

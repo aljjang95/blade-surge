@@ -4,7 +4,9 @@ import corrections from '../data/combat-pose-v1.json';
 // 빠른 근접 동작은 원본 회전 트랙의 복제본에 연속 저작 곡선을 120~240Hz로 굽는다.
 // 공유 원본·골반·판정 시각은 보존하고 믹서가 교차 페이드를 소유한다.
 // 현재 미사용 Interact도 즉시 전환 감사에서 안전하도록 같은 경로를 쓴다.
-const AUTHORED = Object.freeze({ knight: ['interact', 'slash_h', 'spin'], barbarian: ['spin'], ranger: ['interact'] });
+const AUTHORED = Object.freeze({ knight: ['interact', 'slash_h', 'spin'], barbarian: ['spin', 'spin_ip', 'spin_whirl'], ranger: ['interact'] });
+// 애니메이션 팩의 제자리 회전 클립은 같은 타이밍의 원본 회전 보정을 그대로 받는다.
+const PACK_BASE = Object.freeze({ spin_ip: 'spin', spin_whirl: 'spin' });
 const authored = new WeakSet();
 const cache = new WeakMap();
 export const isAuthoredCombatClip = clip => authored.has(clip);
@@ -49,8 +51,8 @@ export function createCombatMotionClip(base, config) {
 /** 공유 GLB·트랙을 바꾸지 않고 인스턴스 별칭만 같은 복제 클립으로 연결한다. */
 export function installCombatMotionClips(clips, heroId) {
   for (const name of AUTHORED[heroId] || []) {
-    const config = corrections[heroId][name], base = clips[name];
-    if (!base || authored.has(base)) continue;
+    const config = corrections[heroId][name] || corrections[heroId][PACK_BASE[name]], base = clips[name];
+    if (!base || !config || authored.has(base)) continue;
     let variants = cache.get(base);
     if (!variants) { variants = new Map(); cache.set(base, variants); }
     let clip = variants.get(config);
