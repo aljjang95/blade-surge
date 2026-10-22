@@ -31,9 +31,14 @@
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
     "SOCIAL_ADMIN_IDS": "",
     "SOCIAL_DEV_ORIGINS": "false",
+    // MMO 계정(/api/v1): 기본 비활성. SESSION_HMAC 시크릿과 D1 마이그레이션(worker/v1/migrations)은 코디네이터가 적용한다.
+    "V1_ENABLED": "false",
+    "V1_SERVER_AUTHORITY_PERCENT": "0",
     "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
   },
   "observability": { "enabled": true },
   "triggers": { "crons": ["17 * * * *"] },
-  "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28" }]
+  "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28", "migrations_dir": "worker/v1/migrations" }],
+  // 서버 규칙이 공유하는 클라이언트 모듈 그래프의 CSS import는 Worker에서 쓰지 않는 문자열로 둔다.
+  "rules": [{ "type": "Text", "globs": ["**/*.css"], "fallthrough": true }]
 }

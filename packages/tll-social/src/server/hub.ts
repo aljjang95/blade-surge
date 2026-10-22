@@ -73,6 +73,15 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
     async fetch(request: Request): Promise<Response> {
       const url = new URL(request.url);
       if (url.pathname === '/ws') return this.upgrade(url.searchParams.get('ticket'));
+      // Worker 내부 호출 전용. 공개 라우터는 /internal 경로를 막고 이 헤더를 절대 전달하지 않는다.
+      if (url.pathname.startsWith('/internal/')) {
+        if (request.headers.get('x-social-internal') !== '1' || request.method !== 'POST' || url.pathname !== '/internal/account') return json({ error: 'not-found' }, 404);
+        try { return json(this.core.internalAccount((JSON.parse(await request.text()) as { keyHash?: unknown })?.keyHash)); }
+        catch (error) {
+          if (error instanceof SocialError) return json({ error: error.code }, error.status);
+          return json({ error: 'json' }, 400);
+        }
+      }
       let body: unknown;
       const raw = request.method === 'GET' ? '' : await request.text();
       if (raw) { try { body = JSON.parse(raw); } catch { return json({ error: 'json' }, 400); } }
