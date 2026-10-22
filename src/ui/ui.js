@@ -112,7 +112,10 @@ export class UI {
       this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용');
     });
     $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
-    $('btn-result-retry').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.startStage(this.app.battle.stage); });
+    $('btn-result-retry').addEventListener('click', () => {
+      if (!canPrepareGrowth(this.app, this.resultData)) return;
+      if (this.app.battle.stage?.tower) this.app.startTower(); else this.app.startStage(this.app.battle.stage);
+    });
     $('btn-result-auto-retry').addEventListener('click', async () => {
       const stage = this.app.battle.stage;
       if (!canPrepareGrowth(this.app, this.resultData) || this.resultData.win || stage?.code !== '1-1' || stage.difficultyId !== 'story') return;
@@ -717,7 +720,32 @@ export class UI {
     if (showAutoRetry) autoRetry.querySelector('small').textContent = `에너지 -${b.stage.energy} · 이후 출격에도 AUTO`;
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     $('result-exp-txt').textContent = ''; $('result-bp-txt').textContent = '';
-    if (win) {
+    const tower = b.stage.tower;
+    if (tower) {
+      // 무한의 성: 다시 = 같은 층(패배) 또는 다음 층(승리). 에너지 없음, 2배·다음 관문 버튼은 쓰지 않는다.
+      $('btn-result-retry').textContent = win ? `${tower.floor + 1}층 도전` : `${tower.floor}층 다시`;
+      $('btn-result-next').style.display = 'none'; $('btn-result-double').style.display = 'none';
+    }
+    if (win && tower) {
+      r.receiptId ||= `tower:${tower.floor}:${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`;
+      r.reward ||= eco.completeTowerFloor(b.stage, { receiptId: r.receiptId, fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });
+      const rw = r.reward;
+      // 정산 거절(중복·순서·상한)은 보상 없이 결과만 닫을 수 있게 둔다. 원정 기록은 무한의 성에 해당하지 않는다.
+      if (rw.ok === false) { r.reward = { ok: true, rejected: rw.error, saveError: false, got: [], loot: [], ups: 0, exp: 0 }; this.toast('이 층은 이미 정산했거나 도전할 수 없는 층입니다.', 'red'); }
+      r.expeditionRecorded = true;
+      this.lastReward = r.reward;
+      this.refreshResultGrowth(r);
+      stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; }, 400 + i * 300); });
+      markFresh((r.reward.loot || []).map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
+      lootDetails.querySelector('summary').textContent = `무한의 성 ${tower.floor}층 첫 돌파 보상`;
+      lootDetails.open = true;
+      for (const g of r.reward.got || []) {
+        const [nm, ic] = REWARD_LABEL[g.k] || [g.k, ''], d = document.createElement('div');
+        d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(g.n)}</span><div class="nm">${nm}</div>`; loot.appendChild(d);
+      }
+      if (!r.reward.rejected) later(() => this.toast(`무한의 성 ${tower.floor}층 돌파!${r.reward.events?.length ? ` · ${r.reward.events[0].name}` : ''}`, 'gold'), 600);
+      later(() => { const h = eco.hero(b.heroId); $('result-exp').style.width = Math.min(100, h.exp / Math.max(1, levelExp(h.level)) * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${r.reward.exp || 0}`; }, 900);
+    } else if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot, fullClear: !!r.fullClear });
       r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
       if (r.reward.ok !== false && !r.reward.saveError && this.app.expedition && !r.expeditionRecorded) {

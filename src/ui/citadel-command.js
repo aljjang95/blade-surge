@@ -138,6 +138,8 @@ export class CitadelCommand {
     const supply = entry('citadel-command-supply', '보급 상점', (button) => app.citadelShop.open(button));
     return [
       entry('menu-fields', '야외 필드', () => app.expeditionUI.open('dungeons', { depth: 'fields' })),
+      // 무한의 성·주간 보급·시즌 이벤트는 성장 여정 창의 탭이다(로비 위 모달, 전투 화면을 가리지 않는다).
+      entry('menu-tower', '무한의 성', () => app.journeyView?.open('tower')),
       supply,
       entry('menu-forge', '제작 공방', () => app.expeditionUI.open('forge')),
       entry('menu-town-quests', '마을 의뢰', (button) => app.townUI?.openContent('quests', button)),

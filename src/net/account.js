@@ -42,6 +42,8 @@ async function connect(app, state, install) {
   try { await client.session(); }
   catch (error) { state.status = error?.status === 503 ? 'disabled' : 'offline'; mark(state); return; }
   state.authority = client.account.authority; state.accountId = client.account.accountId;
+  // 무한의 성 상한·주간 보급·시즌 이벤트는 연결된 동안 서버 시각을 쓴다(기기 시계 앞당김 방지).
+  eco.trustedClock = () => client.serverNow();
   let me = await client.me();
   if (!me.legacy && eco.hasStoredSave) {
     state.import = await importLocalSave(client, install, eco).catch((error) => ({ error: error?.message }));
@@ -67,7 +69,8 @@ function hookRuns(app, state) {
   const start = battle.start.bind(battle);
   battle.start = async (stage, heroId, ...rest) => {
     battle.v1Run = null;
-    const eligible = state.authority === 'server' && stage?.code && !stage.expedition && !stage.party && !stage.riftId;
+    // 무한의 성(stage.tower)은 아직 서버 런 종류가 없어 서버 권위 정산에서 제외한다(app.startTower 가 server 모드 진입을 막는다).
+    const eligible = state.authority === 'server' && stage?.code && !stage.expedition && !stage.party && !stage.riftId && !stage.tower;
     let ticket = null;
     if (eligible) {
       const request = client.startRun({ kind: 'campaign', contentId: stage.code, difficulty: stage.difficultyId || 'story', heroId, cid: newCid() }).catch((error) => { state.lastError = error?.message; return null; });
@@ -99,6 +102,20 @@ function hookRuns(app, state) {
       battle.v1Run = null;
       void settle(run, facts(true, { hpLost: Math.max(0, battle.result?.hpLost | 0), revives: Math.max(0, battle.revived | 0) }));
     } else if (state.authority === 'shadow') state.queue?.snapshot();
+    return receipt;
+  };
+  // 주간 보급은 아직 서버 명령이 없다: 서버 권위 계정에서는 막고(문서가 덮어써 이중 지급·유실 방지), 그림자 모드는 스냅샷을 보낸다.
+  const claimTowerChest = eco.claimTowerChest.bind(eco);
+  eco.claimTowerChest = () => {
+    if (state.authority === 'server') return { ok: false, error: 'server' };
+    const receipt = claimTowerChest();
+    if (state.authority === 'shadow' && receipt.ok) state.queue?.snapshot();
+    return receipt;
+  };
+  const completeTowerFloor = eco.completeTowerFloor.bind(eco);
+  eco.completeTowerFloor = (stage, opts = {}) => {
+    const receipt = completeTowerFloor(stage, opts);
+    if (state.authority === 'shadow') state.queue?.snapshot();
     return receipt;
   };
   const defeat = battle.defeat.bind(battle);

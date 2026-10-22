@@ -12,7 +12,7 @@ export class JourneyService {
     refreshPeriods(this.state.journey, Date.now()); return this.state.journey;
   }
   get s() { return this.ensure(); }
-  snapshot() { const s = this.s; return { steps: journeySteps(this.app.eco.s), contracts: contractRows(s, Date.now()), target: this.target(), autoBattle: s.autoBattle }; }
+  snapshot() { const s = this.s; return { steps: journeySteps(this.app.eco.s), contracts: contractRows(s, Date.now(), this.waivers()), target: this.target(), autoBattle: s.autoBattle }; }
   transact(fn, duringBattle = false) {
     if (this.app.stageStarting || (!duringBattle && (this.app.battle?.active || this.app.expeditionUI?.result?.saveError))) return { ok: false, error: '전투와 전리품 정산을 마친 뒤 이용해 주세요.' };
     return this.app.expedition.transact(() => fn(this.s));
@@ -25,7 +25,9 @@ export class JourneyService {
     return result;
   }
   claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
-  claim(kind, id) { return this.transact(s => this.grant(claimContract(s, kind, id))); }
+  /** 무한의 성이 이번 주 상한에 닿았으면 탑 임무는 채울 방법이 없으므로 달성으로 본다. */
+  waivers() { const t = this.app.eco.towerSummary?.(); return { waived: t?.unlocked && t.capped ? ['towerFloors'] : [] }; }
+  claim(kind, id) { const waivers = this.waivers(); return this.transact(s => this.grant(claimContract(s, kind, id, waivers))); }
   track(id) { return this.transact(s => setTargetRecipe(s, id)); }
   setAuto(value) { return this.transact(s => { s.autoBattle = !!value; return { ok: true }; }, true); }
   target() {

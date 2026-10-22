@@ -68,19 +68,25 @@ function progress(def,track,rotation) {
   // Unknown stats never borrow another counter's progress.
   return JOURNEY_ACTION_STATS.includes(def.stat)?integer(track.actions?.[def.stat]):0;
 }
-function rows(state,kind) {
+/**
+ * waived: 플레이어가 어떻게 해도 못 채우는 통계(예: 무한의 성 이번 주 상한 도달 → 'towerFloors').
+ * 그 임무는 목표 달성으로 보고 보상을 받을 수 있다. 호출자가 표시와 수령에 같은 목록을 넘긴다.
+ */
+/** @param {any} state @param {string} kind @param {string[]} [waived] */
+function rows(state,kind,waived=[]) {
   const defs=kind==='daily'?DAILY_CONTRACTS:WEEKLY_CONTRACTS,track=state[kind],rotation=DUNGEONS[state.day%3];
   return defs.map(def=>{
-    const cur=progress(def,track,rotation);
+    const waive=waived.includes(def.stat),cur=waive?Math.max(def.target,progress(def,track,rotation)):progress(def,track,rotation);
     const claimed=track.claimed.includes(def.id),rewards=structuredClone(def.rewards);
     if(def.rotationMaterials)rewards.materials=Object.fromEntries(Object.keys(rotation.rewards.materials).map(key=>[key,def.rotationMaterials]));
-    return {...def,cur,complete:cur>=def.target,claimed,ready:cur>=def.target&&!claimed,rewards,...(def.stat==='rotation'?{dungeonId:rotation.id}:{})};
+    return {...def,cur,complete:cur>=def.target,claimed,ready:cur>=def.target&&!claimed,rewards,...(waive?{waived:true}:{}),...(def.stat==='rotation'?{dungeonId:rotation.id}:{})};
   });
 }
 /** Read only: callers refresh state inside their durable transaction before displaying/claiming. */
-export function contractRows(state,nowMs) {
+/** @param {any} state @param {number} nowMs @param {{waived?:string[]}} [options] */
+export function contractRows(state,nowMs,{waived=[]}={}) {
   const view=normalizeJourney(state);const p=refreshPeriods(view,nowMs);
-  return {daily:rows(view,'daily'),weekly:rows(view,'weekly'),rotationDungeonId:DUNGEONS[view.day%3].id,nextResetAt:p.nextResetAt};
+  return {daily:rows(view,'daily',waived),weekly:rows(view,'weekly',waived),rotationDungeonId:DUNGEONS[view.day%3].id,nextResetAt:p.nextResetAt};
 }
 export function recordJourneyWin(state,{receiptId:id,dungeonId,day,week}={}) {
   if(!receiptId(id)||!DUNGEONS.some(d=>d.id===dungeonId)||!validPeriod(day,week))return fail('invalid');
@@ -110,9 +116,10 @@ export function recordJourneyAction(state,{receiptId:id,stat,amount=1,day,week}=
   for(const kind of ['daily','weekly'])if(kind==='daily'?daily:weekly){const counts=state[kind].actions;counts[stat]=Math.min(MAX,integer(counts[stat])+amount);}
   return {ok:true,daily,weekly};
 }
-export function claimContract(state,kind,id) {
+/** @param {any} state @param {string} kind @param {string} id @param {{waived?:string[]}} [options] */
+export function claimContract(state,kind,id,{waived=[]}={}) {
   if(!['daily','weekly'].includes(kind))return fail('unknown');
-  const row=rows(state,kind).find(r=>r.id===id);if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.ready)return fail('incomplete');
+  const row=rows(state,kind,waived).find(r=>r.id===id);if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.ready)return fail('incomplete');
   state[kind].claimed.push(id);return {ok:true,rewards:row.rewards};
 }
 export function setTargetRecipe(state,id) {if(id!==null&&!validRecipe(id))return fail('unknown');state.targetRecipeId=id;return {ok:true};}
