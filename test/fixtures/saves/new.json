@@ -1,0 +1,441 @@
+{
+ "expedition": {
+  "version": 1,
+  "level": 1,
+  "xp": 0,
+  "rating": 0,
+  "materials": {
+   "glass_leaf": 0,
+   "ember_core": 0,
+   "star_dust": 0
+  },
+  "consumables": {
+   "hp_tonic": 3,
+   "overdrive": 1,
+   "aegis": 1
+  },
+  "stats": {
+   "welcome": 1,
+   "campaignWins": 0,
+   "dungeonWins": 0,
+   "arenaWins": 0,
+   "crafts": 0,
+   "consumed": 0,
+   "glass_garden": 0,
+   "ember_vault": 0,
+   "star_archive": 0,
+   "bellfall_crypt": 0,
+   "cinder_tide_lock": 0,
+   "nightglass_observatory": 0,
+   "eclipse_hydra_vault": 0,
+   "ashforge_catacomb": 0,
+   "astral_leviathan_spire": 0,
+   "verdigris_sanctum": 0,
+   "sable_mirage_basin": 0,
+   "comet_bastion": 0,
+   "rootbound_grotto": 0,
+   "hollowbell_arboretum": 0,
+   "slagwater_foundry": 0,
+   "emberwake_drydock": 0,
+   "aurora_icewell": 0,
+   "crownfall_glacier": 0,
+   "glacier_tide_basin": 0,
+   "sunbrass_quarry": 0,
+   "windmeadow": 0,
+   "sunbreak_coast": 0,
+   "skywind_pass": 0,
+   "dawnward_city": 0
+  },
+  "depthWins": {
+   "glass_garden": 0,
+   "ember_vault": 0,
+   "star_archive": 0,
+   "bellfall_crypt": 0,
+   "cinder_tide_lock": 0,
+   "nightglass_observatory": 0,
+   "eclipse_hydra_vault": 0,
+   "ashforge_catacomb": 0,
+   "astral_leviathan_spire": 0,
+   "verdigris_sanctum": 0,
+   "sable_mirage_basin": 0,
+   "comet_bastion": 0,
+   "glacier_tide_basin": 0,
+   "sunbrass_quarry": 0
+  },
+  "conquests": [],
+  "claimed": [],
+  "unlockedJobs": [],
+  "selectedJob": null,
+  "seq": 0,
+  "campaignReceipts": [],
+  "pending": null
+ },
+ "journey": {
+  "version": 2,
+  "day": 0,
+  "week": 0,
+  "daily": {
+   "wins": 0,
+   "targets": {
+    "glass_garden": 0,
+    "ember_vault": 0,
+    "star_archive": 0,
+    "bellfall_crypt": 0,
+    "cinder_tide_lock": 0,
+    "nightglass_observatory": 0,
+    "eclipse_hydra_vault": 0,
+    "ashforge_catacomb": 0,
+    "astral_leviathan_spire": 0,
+    "verdigris_sanctum": 0,
+    "sable_mirage_basin": 0,
+    "comet_bastion": 0,
+    "rootbound_grotto": 0,
+    "hollowbell_arboretum": 0,
+    "slagwater_foundry": 0,
+    "emberwake_drydock": 0,
+    "aurora_icewell": 0,
+    "crownfall_glacier": 0,
+    "glacier_tide_basin": 0,
+    "sunbrass_quarry": 0,
+    "windmeadow": 0,
+    "sunbreak_coast": 0,
+    "skywind_pass": 0,
+    "dawnward_city": 0
+   },
+   "actions": {
+    "pulls": 0,
+    "upgrades": 0,
+    "bossAttempts": 0
+   },
+   "claimed": []
+  },
+  "weekly": {
+   "wins": 0,
+   "targets": {
+    "glass_garden": 0,
+    "ember_vault": 0,
+    "star_archive": 0,
+    "bellfall_crypt": 0,
+    "cinder_tide_lock": 0,
+    "nightglass_observatory": 0,
+    "eclipse_hydra_vault": 0,
+    "ashforge_catacomb": 0,
+    "astral_leviathan_spire": 0,
+    "verdigris_sanctum": 0,
+    "sable_mirage_basin": 0,
+    "comet_bastion": 0,
+    "rootbound_grotto": 0,
+    "hollowbell_arboretum": 0,
+    "slagwater_foundry": 0,
+    "emberwake_drydock": 0,
+    "aurora_icewell": 0,
+    "crownfall_glacier": 0,
+    "glacier_tide_basin": 0,
+    "sunbrass_quarry": 0,
+    "windmeadow": 0,
+    "sunbreak_coast": 0,
+    "skywind_pass": 0,
+    "dawnward_city": 0
+   },
+   "actions": {
+    "pulls": 0,
+    "upgrades": 0,
+    "bossAttempts": 0
+   },
+   "claimed": []
+  },
+  "claimedSteps": [],
+  "targetRecipeId": null,
+  "receipts": [],
+  "actionReceipts": [],
+  "autoBattle": false
+ },
+ "actionSequence": 0,
+ "schemaVersion": 1,
+ "created": 1792454400000,
+ "name": "보스",
+ "gold": 12000,
+ "gems": 1500,
+ "energy": 100,
+ "energyT": 1792454400000,
+ "tickets": 5,
+ "ssrTickets": 0,
+ "sweep": 3,
+ "stones": 12,
+ "stones2": 0,
+ "stones3": 0,
+ "fragments": 0,
+ "protect": 1,
+ "bless": 1,
+ "transcendStones": 0,
+ "skillResets": 1,
+ "heroes": {
+  "knight": {
+   "level": 1,
+   "exp": 0,
+   "star": 1,
+   "shards": 0,
+   "grade": "SSR",
+   "skills": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "spBonus": 0,
+   "skillLoadout": [
+    4,
+    5
+   ],
+   "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "boots": null
+   }
+  },
+  "barbarian": {
+   "level": 1,
+   "exp": 0,
+   "star": 1,
+   "shards": 0,
+   "grade": "SSR",
+   "skills": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "spBonus": 0,
+   "skillLoadout": [
+    4,
+    5
+   ],
+   "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "boots": null
+   }
+  },
+  "mage": {
+   "level": 1,
+   "exp": 0,
+   "star": 1,
+   "shards": 0,
+   "grade": "SR",
+   "skills": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "spBonus": 0,
+   "skillLoadout": [
+    4,
+    5
+   ],
+   "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "boots": null
+   }
+  },
+  "rogue": {
+   "level": 1,
+   "exp": 0,
+   "star": 1,
+   "shards": 0,
+   "grade": "SR",
+   "skills": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "spBonus": 0,
+   "skillLoadout": [
+    4,
+    5
+   ],
+   "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "boots": null
+   }
+  },
+  "ranger": {
+   "level": 1,
+   "exp": 0,
+   "star": 1,
+   "shards": 0,
+   "grade": "SR",
+   "skills": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "spBonus": 0,
+   "skillLoadout": [
+    4,
+    5
+   ],
+   "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "boots": null
+   }
+  }
+ },
+ "selected": "knight",
+ "inventory": [],
+ "invSeq": 1,
+ "avatars": {
+  "owned": [],
+  "equipped": {}
+ },
+ "progress": {
+  "unlocked": 1,
+  "stars": {},
+  "difficulty": "story"
+ },
+ "towns": {
+  "version": 2,
+  "currentTownId": "oathhold",
+  "unlockedTownIds": [
+   "oathhold"
+  ],
+  "purchased": [],
+  "learned": {},
+  "fields": {
+   "oathhold": {
+    "visited": 0,
+    "gathered": 0,
+    "elite": 0,
+    "treasure": 0,
+    "event": 0
+   },
+   "emberport": {
+    "visited": 0,
+    "gathered": 0,
+    "elite": 0,
+    "treasure": 0,
+    "event": 0
+   },
+   "starcrest": {
+    "visited": 0,
+    "gathered": 0,
+    "elite": 0,
+    "treasure": 0,
+    "event": 0
+   }
+  },
+  "requests": {
+   "day": "",
+   "active": [],
+   "completed": [],
+   "progress": {}
+  },
+  "blacksmith": {
+   "crafted": [],
+   "enhancements": {}
+  },
+  "story": {
+   "oathhold": {
+    "stage": 0,
+    "progress": {}
+   },
+   "emberport": {
+    "stage": 0,
+    "progress": {}
+   },
+   "starcrest": {
+    "stage": 0,
+    "progress": {}
+   }
+  }
+ },
+ "pity": 0,
+ "gacha": {
+  "pity": 0
+ },
+ "totalPulls": 0,
+ "firstPurchaseUsed": {},
+ "purchases": [],
+ "spentKRW": 0,
+ "vip": 0,
+ "vipUntil": 0,
+ "monthlyUntil": 0,
+ "monthlyClaimed": 0,
+ "pass": {
+  "xp": 0,
+  "premium": false,
+  "claimedFree": [],
+  "claimedPrem": []
+ },
+ "daily": {
+  "day": 0,
+  "last": 0
+ },
+ "mail": [
+  {
+   "id": 1,
+   "title": "환영합니다, 보스님!",
+   "body": "사전등록 보상이 도착했습니다.",
+   "rewards": {
+    "gems": 500,
+    "tickets": 3
+   },
+   "read": false
+  }
+ ],
+ "quests": {
+  "kills": 0,
+  "stages": 0,
+  "pulls": 0,
+  "claimed": []
+ },
+ "guide": {
+  "seen": false
+ },
+ "tutorial": {
+  "completed": false
+ },
+ "settings": {
+  "sfx": true,
+  "music": true,
+  "haptics": true,
+  "voice": true,
+  "quality": "auto",
+  "camera": "auto",
+  "screenShake": null,
+  "autoTarget": true,
+  "cameraInvertX": false,
+  "cameraInvertY": false
+ },
+ "limitedStart": 1792454400000
+}

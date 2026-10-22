@@ -4,6 +4,7 @@ import { asSameOrigin, nativeOrigin, preflight, withCors } from './native-cors';
 import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store';
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
+import { handleV1Request, V1_PREFIX, type V1Env } from './v1/router';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
 export const SocialHub = createSocialHub(SOCIAL_CONFIG);
@@ -113,6 +114,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
 async function route(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname.startsWith(V1_PREFIX + '/')) return handleV1Request(request, env as unknown as V1Env);
   if (url.pathname.startsWith('/api/store/')) return handleStoreRequest(request, env);
   if (url.pathname === '/api/party' || url.pathname.startsWith('/api/party/')) {
     if (!env.PARTIES) return json({ error:'unavailable' },503);
