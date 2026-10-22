@@ -14,7 +14,7 @@ export const MAGE_COLORS = Object.freeze({
   fire: 0xff5a1a, fireHot: 0xffa030, fireDeep: 0xd8261a, bolt: 0x5aa8ff, boltHot: 0xa8dcff, frost: 0x2a9cff, frostHot: 0x6ccaff,
   arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starLine: 0x6a7cff, starGold: 0xffc85a, prism: 0x7fe0ff,
   // 지면 서리 고리는 가산이라 원색이면 바닥이 하얗게 바랜다. 같은 색상을 낮춘 진한 하늘색으로 그린다.
-  frostMid: 0x1f7fd0,
+  frostMid: 0x1f7fd0, frostDeep: 0x1650c8,
   // 번개 광선은 심이 흰색 쪽으로 섞이고 가산이라, 원색 청을 쓰면 굵게 했을 때 흰 선이 된다. 진한 청으로 그려 청백을 유지한다.
   boltDeep: 0x2a6cff, boltCore: 0x4a90ff, prismDeep: 0x2a90d0,
 });
@@ -97,14 +97,14 @@ export function mageMeteorFall(game, start, pt, fall = .4) {
 }
 
 /** 바닥 서리 소용돌이 팔: arms 갈래가 r0 → r1 로 감기며 뻗는 짧은 지면 광선. 눈보라의 '회오리' 실루엣(흰 원판 대신 진한 청 선). */
-function frostSpiral(impact, c, arms, segs, r0, r1, phase, { width = .22, fade = .45, delay = 0 } = {}) {
+function frostSpiral(impact, c, arms, segs, r0, r1, phase, { width = .4, fade = .45, delay = 0 } = {}) {
   for (let j = 0; j < arms; j++) {
     for (let k = 0; k < segs; k++) {
       const t0 = k / segs, t1 = (k + 1) / segs, base = phase + (j / arms) * TAU;
       const a0 = base + t0 * 1.7, a1 = base + t1 * 1.7, q0 = r0 + (r1 - r0) * t0, q1 = r0 + (r1 - r0) * t1;
       _p0.set(c.x + Math.cos(a0) * q0, .08, c.z + Math.sin(a0) * q0);
       _d.set(c.x + Math.cos(a1) * q1 - _p0.x, 0, c.z + Math.sin(a1) * q1 - _p0.z);
-      impact.beam(_p0, _d, _d.length(), k % 2 ? C.frost : C.frostMid, { width: width * (1.25 - t0 * .5), fade, delay: delay + k * .03 });
+      impact.beam(_p0, _d, _d.length(), k % 2 ? C.frostMid : C.frostDeep, { width: width * (1.25 - t0 * .5), fade, delay: delay + k * .03 });
     }
   }
 }
@@ -113,12 +113,12 @@ function frostSpiral(impact, c, arms, segs, r0, r1, phase, { width = .22, fade =
 export function mageFrostTick(game, pos, i, radius = 6.8) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned, lite = !!game.fx.lite;
-  // 큰 가시 고리는 옅은 흰 바퀴로 읽혀 몸 둘레 3m 서리 고리만 두고, 판정 반경은 소용돌이 팔·얼음 가시가 채운다.
-  impact.mark(pos, C.frostMid, { radius: 3, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
+  // 큰 가시 고리는 옅은 흰 바퀴로 읽혀(3m 도 발밑 옅은 하늘색 띠였다) 몸 둘레 2.4m 진한 청 서리 고리만 두고, 판정 반경은 소용돌이 팔·얼음 가시가 채운다.
+  impact.mark(pos, C.frostDeep, { radius: 2.4, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
   // 틱마다 .55rad 씩 돌아가는 세 갈래 소용돌이(폭풍이 도는 방향이 판정 박자마다 읽힌다).
   frostSpiral(impact, pos, lite ? 2 : 3, 3, 1.6, radius - .4, i * .55);
   // 얼음 가시: 옅은 frostHot(흰 심 광선) 대신 진한 하늘색 두 톤.
-  iceSpikes(impact, pos, lite ? 3 : 6, 1.5, radius - .3, i % 2 ? C.frost : C.frostMid, { phase: i * .9, width: .3, h: 1.7 });
+  iceSpikes(impact, pos, lite ? 3 : 6, 1.5, radius - .3, i % 2 ? C.frostMid : C.frostDeep, { phase: i * .9, width: .2, h: 1.7 });
   // 얼음 결정 반짝임: 판정 반경 안 두 점에 진한 하늘색 작은 별(결정면).
   for (let k = 0; k < (lite ? 1 : 2); k++) {
     const a = i * 1.3 + k * 3.14, r = 2.6 + ((i + k) % 3) * 1.2;
@@ -226,10 +226,10 @@ export const SIGNATURES = {
   // 빙결 폭풍: 판정 반경(6.8m) 서리 가시 고리가 폭풍 내내 남고 바깥 둘레에 얼음 가시 벽이 솟는다. 틱마다는 mageFrostTick.
   blizzard(ctx) {
     const { impact, player, lite } = ctx;
-    impact.mark(player.pos, C.frostMid, { radius: 3.4, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
-    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frostMid, { h: 2, width: .3, fade: 1.6 });
+    impact.mark(player.pos, C.frostDeep, { radius: 2.6, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
+    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frostDeep, { h: 2, width: .18, fade: 1.6 });
     // 시전 순간 바깥에서 몸 쪽으로 감기는 네 갈래 소용돌이(폭풍이 모이는 예비 동작). 틱 소용돌이는 mageFrostTick.
-    if (!lite) frostSpiral(impact, player.pos, 4, 3, 1.2, 6.4, .2, { width: .26, fade: .6 });
+    if (!lite) frostSpiral(impact, player.pos, 4, 3, 1.2, 6.4, .2, { width: .6, fade: .6 });
   },
   // 메테오 스톰(궁극기): 낙하 구역(7.8m)에 주황 나침 표식과 열기 고리가 먼저 깔린다. 한 발마다의 궤적·폭발은 mageMeteorFall.
   meteor(ctx) {

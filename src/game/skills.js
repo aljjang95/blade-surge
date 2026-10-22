@@ -768,7 +768,7 @@ export const SKILLS = {
       const state = { pos: fwd(p, 1.2).setY(1.3), dir: p.forward(new THREE.Vector3()), bounces: 0, hit: new Set(), acc: 0 };
       const MAXB = 12, SPEED = 30;
       const prev = new THREE.Vector3();
-      const lance = game.fx.orb(0x2fa8ff, 0.7);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 작은 구는 흰 점으로 짧게만 보였다(h1b) lance.position.copy(state.pos);
+      const lance = game.fx.orb(0x2f8cff, 0.5);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다 lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
 
@@ -778,7 +778,7 @@ export const SKILLS = {
         prev.copy(state.pos);
         state.pos.addScaledVector(state.dir, SPEED * dt);
         lance.position.copy(state.pos);
-        game.fx.boltTex(prev, state.pos, 0x5fc8ff, { width: 0.9, life: 0.14 });
+        game.fx.boltTex(prev, state.pos, 0x2f8cff, { width: 0.9, life: 0.14 });
         magePrismTrail(game, prev, state.pos); // 프리즘 창 궤적(인스턴스 층)
         // 적 반사
         let bounced = false;
