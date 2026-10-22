@@ -1,6 +1,7 @@
 // MMO P1-E: 런 티켓 발급·정산 (docs/MMO_DESIGN.md 3.4.2). T0 서버 발급 티켓·시계 + T1 개연성.
 // 보상 실행 런은 티켓이 필수이며 정산은 티켓당 1회, 유효 2시간이다.
 import { casCommit, ledgerReceipt, REV_GUARD, type GuardedWrite } from './db';
+import { debtRepayment } from './iap';
 import { CID, fail, isId, onlyKeys } from './http';
 import type { Authed, Ctx } from './auth';
 import { loadAccountDoc } from './cmd';
@@ -98,12 +99,16 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
   const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed }, facts, check.verdict);
+  // 결제 환불로 생긴 미상환 부채는 서버 정산 획득분에서 먼저 갚는다(같은 배치, 영수증에 상환량 표시).
+  const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
   const next = docOf(eco);
   const state = check.verdict === 'rejected' ? 'rejected' : 'settled';
   const receipt = { receiptId: runId, verdict: check.verdict, issues: check.issues, win: !!facts.win && check.verdict !== 'rejected',
     got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, stars: outcome.stars ?? null, fullClear: outcome.fullClear ?? false, exp: outcome.exp, combatExp: outcome.combatExp,
-    rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION };
+    rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION,
+    ...(Object.keys(debt.repaid).length ? { debtRepaid: debt.repaid } : {}) };
   const writes: GuardedWrite[] = [
+    ...debt.writes,
     { sql: `UPDATE run_tickets SET state = ?, settled_at = ?, verdict = ?, result = ? WHERE run_id = ? AND state = 'open' AND ${REV_GUARD}`,
       values: [state, c.now, check.verdict, JSON.stringify(receipt), runId] },
   ];

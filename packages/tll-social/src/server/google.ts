@@ -60,7 +60,8 @@ export function createGoogleVerifier(options: VerifierOptions = {}) {
     return cache?.keys.get(kid);
   }
 
-  async function verify(token: string, clientIds: string[]): Promise<{ sub: string }> {
+  // maxIatAgeMs: 발급 후 허용 경과(기본 10분). Pub/Sub push OIDC 토큰은 만료(1시간) 전까지 재사용될 수 있어 호출자가 넓힌다.
+  async function verify(token: string, clientIds: string[], maxIatAgeMs = 600000): Promise<{ sub: string }> {
     if (typeof token !== 'string' || token.length > 4096) throw new SocialError('bad-token', 401);
     const parts = token.split('.');
     if (parts.length !== 3) throw new SocialError('bad-token', 401);
@@ -75,7 +76,7 @@ export function createGoogleVerifier(options: VerifierOptions = {}) {
     if (!ISSUERS.has(claims.iss)) throw new SocialError('bad-token', 401);
     if (typeof claims.aud !== 'string' || !clientIds.includes(claims.aud)) throw new SocialError('bad-token', 401);
     if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= t) throw new SocialError('token-expired', 401);
-    if (!Number.isFinite(claims.iat) || claims.iat * 1000 > t + 60000 || claims.iat * 1000 < t - 600000) throw new SocialError('token-expired', 401);
+    if (!Number.isFinite(claims.iat) || claims.iat * 1000 > t + 60000 || claims.iat * 1000 < t - maxIatAgeMs) throw new SocialError('token-expired', 401);
     if (typeof claims.sub !== 'string' || !/^[A-Za-z0-9_-]{1,255}$/.test(claims.sub)) throw new SocialError('bad-token', 401);
     return { sub: claims.sub };
   }

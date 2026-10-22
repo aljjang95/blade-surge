@@ -5,6 +5,7 @@ import { links, type Authed, type Ctx } from './auth';
 import { docOf, loadEconomy } from './state';
 import { validateOp } from '../../src/shared/v1-ops.js';
 import { parityHash } from '../../src/shared/state-hash.js';
+import { overlayEntitlements } from './iap';
 
 const HASH = /^[0-9a-z]{22}$/;
 
@@ -33,6 +34,8 @@ export async function runCommand(c: Ctx, auth: Authed, body: Record<string, unkn
   if (replay) return { ...(replay.receipt as object), replayed: true };
   const doc = await loadAccountDoc(c.db, accountId);
   if (body.baseRev !== undefined && body.baseRev !== doc.rev) fail(409, 'stale', { rev: doc.rev });
+  // 결제 권한(월정액·시즌 패스)은 문서가 아니라 서버 권한 표가 정본이다. 명령 직전에 얹는다.
+  await overlayEntitlements(c.db, accountId, doc.state, c.now);
   const eco = loadEconomy(doc.state, { now: c.now });
   const result = def.run(eco, ...(body.args as unknown[]));
   if (!def.ok(result)) fail(422, 'rejected', { op: body.op, reason: (result as { reason?: unknown })?.reason ?? eco.lastTrainingError ?? null, rev: doc.rev });
@@ -55,6 +58,7 @@ export async function getMe(c: Ctx, auth: Authed, flags: Record<string, boolean>
   const accountId = auth.account.account_id;
   const doc = await loadAccountDoc(c.db, accountId);
   // 조회는 쓰기 없이 서버 시계로 에너지만 계산해 보여 준다.
+  await overlayEntitlements(c.db, accountId, doc.state, c.now);
   const eco = loadEconomy(doc.state, { now: c.now });
   const legacy = await c.db.prepare('SELECT status, uploaded_at FROM legacy_saves WHERE account_id = ?').bind(accountId).first<{ status: string; uploaded_at: number }>();
   return {

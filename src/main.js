@@ -42,6 +42,8 @@ import { ArsenalView } from './ui/arsenal.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
 import { setupAccount } from './net/account.js';
+import { setupBilling } from './platform/billing-service.js';
+import { setupFunnelUpload } from './net/funnel-upload.js';
 import './ui/mobile-combat.css';
 import './ui/progression.css';
 import './ui/illustrated.css';
@@ -237,6 +239,7 @@ class App {
     this.experienceView = new ExperienceView(this);
     // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
     await setupAccount(this).catch(() => null);
+    setupBilling(this); setupFunnelUpload(this); // 서버 검증 결제·가입 퍼널 업로드(v1이 닫혀 있으면 아무 것도 바뀌지 않는다)
     setupCommunity(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
@@ -388,6 +391,7 @@ class App {
     this.syncHub();
     this.townChip?.announcePending();
     prefetcher.onLobby(this.eco.s.progress);
+    void this.billing?.sync(); // 로비 진입: Play에 남은 구매를 서버가 다시 검증
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }

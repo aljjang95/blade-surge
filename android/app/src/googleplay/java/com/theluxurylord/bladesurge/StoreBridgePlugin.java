@@ -271,6 +271,10 @@ public class StoreBridgePlugin extends Plugin {
   }
 
   private void onPurchaseUpdate(BillingResult billingResult, List<Purchase> purchases) {
+    if (catalogPurchase) {
+      onCatalogPurchaseUpdate(billingResult, purchases);
+      return;
+    }
     if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
       completeBilling(billingFailure(billingResult));
       return;
@@ -314,6 +318,326 @@ public class StoreBridgePlugin extends Plugin {
             }));
       });
     });
+  }
+
+  // ---- 카탈로그 결제 (서버가 검증·acknowledge·consume·지급을 모두 한다) ----
+  private static final String CATALOG_SUBS_BASE_PLAN = "monthly";
+  private static final int CATALOG_MAX_PRODUCTS = 20;
+  private static final int CATALOG_MAX_OWNED = 40;
+  private static final java.util.Map<String, String> CATALOG_TYPES = new java.util.HashMap<>();
+
+  static {
+    CATALOG_TYPES.put("remove_ads_v1", "inapp");
+    CATALOG_TYPES.put("starter_pack_v1", "inapp");
+    CATALOG_TYPES.put("season_pass_s1", "inapp");
+    CATALOG_TYPES.put("monthly_card_v1", "subs");
+  }
+
+  private interface DetailsHandler {
+    void accept(List<ProductDetails> details);
+  }
+
+  private interface PurchasesHandler {
+    void accept(List<Purchase> purchases);
+  }
+
+  private static String catalogBillingType(String type) {
+    if ("inapp".equals(type)) return BillingClient.ProductType.INAPP;
+    if ("subs".equals(type)) return BillingClient.ProductType.SUBS;
+    return null;
+  }
+
+  private QueryProductDetailsParams queryParams(List<String> ids, String billingType) {
+    List<QueryProductDetailsParams.Product> products = new ArrayList<>();
+    for (String id : ids) {
+      products.add(QueryProductDetailsParams.Product.newBuilder().setProductId(id)
+          .setProductType(billingType).build());
+    }
+    return QueryProductDetailsParams.newBuilder().setProductList(products).build();
+  }
+
+  // 허용 목록과 타입이 맞는 항목만 통과시킨다. 실패하면 call을 해결하고 null을 반환한다.
+  private List<String[]> catalogItems(PluginCall call) {
+    JSArray input = call.getArray("products");
+    if (input == null || input.length() == 0 || input.length() > CATALOG_MAX_PRODUCTS) {
+      call.resolve(error("INVALID_PRODUCT_IDS"));
+      return null;
+    }
+    Set<String> unique = new HashSet<>();
+    List<String[]> items = new ArrayList<>();
+    for (int i = 0; i < input.length(); i++) {
+      Object value = input.opt(i);
+      if (!(value instanceof org.json.JSONObject)) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return null;
+      }
+      org.json.JSONObject entry = (org.json.JSONObject) value;
+      Object id = entry.opt("productId");
+      Object type = entry.opt("type");
+      if (!(id instanceof String) || !(type instanceof String) || !validProductId((String) id)) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return null;
+      }
+      String expected = CATALOG_TYPES.get((String) id);
+      if (expected == null || !expected.equals(type)) {
+        call.resolve(error("PRODUCT_NOT_ALLOWED"));
+        return null;
+      }
+      if (unique.add((String) id)) items.add(new String[] {(String) id, (String) type});
+    }
+    return items;
+  }
+
+  // basePlanId가 같고 offerId가 없는 기본 요금제만 쓴다. 모호하면(중복) 거부한다.
+  private ProductDetails.SubscriptionOfferDetails baseSubscriptionOffer(ProductDetails details) {
+    List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
+    if (offers == null) return null;
+    ProductDetails.SubscriptionOfferDetails chosen = null;
+    for (ProductDetails.SubscriptionOfferDetails offer : offers) {
+      if (!CATALOG_SUBS_BASE_PLAN.equals(offer.getBasePlanId()) || offer.getOfferId() != null) continue;
+      if (chosen != null) return null;
+      chosen = offer;
+    }
+    if (chosen == null || chosen.getOfferToken() == null || chosen.getOfferToken().isEmpty()) return null;
+    List<ProductDetails.PricingPhase> phases = chosen.getPricingPhases().getPricingPhaseList();
+    return phases == null || phases.isEmpty() ? null : chosen;
+  }
+
+  private void queryDetailsStep(PluginCall call, int epoch, List<String> ids, String billingType,
+      DetailsHandler next) {
+    if (ids.isEmpty()) {
+      next.accept(Collections.<ProductDetails>emptyList());
+      return;
+    }
+    billingClient.queryProductDetailsAsync(queryParams(ids, billingType),
+        (billingResult, queryResult) -> callback(call, () -> {
+          if (!ownsBilling(call, epoch)) return;
+          if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+            completeBilling(billingFailure(billingResult));
+            return;
+          }
+          next.accept(queryResult.getProductDetailsList());
+        }));
+  }
+
+  private void queryPurchasesStep(PluginCall call, int epoch, String billingType, PurchasesHandler next) {
+    billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(billingType).build(),
+        (billingResult, purchases) -> callback(call, () -> {
+          if (!ownsBilling(call, epoch)) return;
+          if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+            completeBilling(billingFailure(billingResult));
+            return;
+          }
+          next.accept(purchases == null ? Collections.<Purchase>emptyList() : purchases);
+        }));
+  }
+
+  @PluginMethod
+  public void listCatalog(PluginCall call) {
+    run(call, () -> {
+      List<String[]> items = catalogItems(call);
+      if (items == null || !beginBilling(call)) return;
+      List<String> inappIds = new ArrayList<>();
+      List<String> subsIds = new ArrayList<>();
+      for (String[] item : items) {
+        if ("inapp".equals(item[1])) inappIds.add(item[0]);
+        else subsIds.add(item[0]);
+      }
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        JSArray products = new JSArray();
+        Set<String> found = new HashSet<>();
+        queryDetailsStep(call, epoch, inappIds, BillingClient.ProductType.INAPP, inappDetails -> {
+          for (ProductDetails details : inappDetails) {
+            if (!inappIds.contains(details.getProductId())
+                || !BillingClient.ProductType.INAPP.equals(details.getProductType())) continue;
+            ProductDetails.OneTimePurchaseOfferDetails offer = permanentOffer(details);
+            if (offer == null || !found.add(details.getProductId())) continue;
+            products.put(new JSObject().put("productId", details.getProductId()).put("type", "inapp")
+                .put("title", details.getTitle()).put("description", details.getDescription())
+                .put("formattedPrice", offer.getFormattedPrice())
+                .put("priceAmountMicros", Long.toString(offer.getPriceAmountMicros()))
+                .put("currencyCode", offer.getPriceCurrencyCode()));
+          }
+          queryDetailsStep(call, epoch, subsIds, BillingClient.ProductType.SUBS, subsDetails -> {
+            for (ProductDetails details : subsDetails) {
+              if (!subsIds.contains(details.getProductId())
+                  || !BillingClient.ProductType.SUBS.equals(details.getProductType())) continue;
+              ProductDetails.SubscriptionOfferDetails offer = baseSubscriptionOffer(details);
+              if (offer == null || !found.add(details.getProductId())) continue;
+              ProductDetails.PricingPhase phase = offer.getPricingPhases().getPricingPhaseList().get(0);
+              products.put(new JSObject().put("productId", details.getProductId()).put("type", "subs")
+                  .put("title", details.getTitle()).put("description", details.getDescription())
+                  .put("formattedPrice", phase.getFormattedPrice())
+                  .put("priceAmountMicros", Long.toString(phase.getPriceAmountMicros()))
+                  .put("currencyCode", phase.getPriceCurrencyCode())
+                  .put("basePlanId", offer.getBasePlanId()));
+            }
+            JSArray unavailable = new JSArray();
+            for (String[] item : items) {
+              if (!found.contains(item[0])) unavailable.put(item[0]);
+            }
+            completeBilling(result(unavailable.length() == 0 ? "products" : "partial")
+                .put("products", products).put("unavailableProductIds", unavailable));
+          });
+        });
+      });
+    });
+  }
+
+  @PluginMethod
+  public void purchaseCatalog(PluginCall call) {
+    run(call, () -> {
+      String id = call.getString("productId");
+      String type = call.getString("type");
+      String account = call.getString("obfuscatedAccountId");
+      String basePlanId = call.getString("basePlanId");
+      if (id == null || !validProductId(id) || type == null) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return;
+      }
+      String expected = CATALOG_TYPES.get(id);
+      if (expected == null || !expected.equals(type)) {
+        call.resolve(error("PRODUCT_NOT_ALLOWED"));
+        return;
+      }
+      if ("subs".equals(type) && basePlanId != null && !CATALOG_SUBS_BASE_PLAN.equals(basePlanId)) {
+        call.resolve(error("PRODUCT_NOT_ALLOWED"));
+        return;
+      }
+      if (account == null || !account.matches("[A-Za-z0-9_-]{1,64}")) {
+        call.resolve(error("INVALID_OBFUSCATED_ACCOUNT_ID"));
+        return;
+      }
+      if (!beginReceiptOperation(call)) return;
+      catalogPurchase = true;
+      catalogPurchaseProductId = id;
+      catalogPurchaseType = type;
+      String billingType = catalogBillingType(type);
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        queryDetailsStep(call, epoch, Collections.singletonList(id), billingType, details -> {
+          ProductDetails product = null;
+          for (ProductDetails candidate : details) {
+            if (id.equals(candidate.getProductId()) && billingType.equals(candidate.getProductType())) {
+              product = candidate;
+              break;
+            }
+          }
+          if (product == null) {
+            completeBilling(error("PRODUCT_UNAVAILABLE"));
+            return;
+          }
+          BillingFlowParams.ProductDetailsParams.Builder item =
+              BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(product);
+          if ("subs".equals(type)) {
+            ProductDetails.SubscriptionOfferDetails offer = baseSubscriptionOffer(product);
+            if (offer == null) {
+              completeBilling(error("BASE_PLAN_UNAVAILABLE_OR_AMBIGUOUS"));
+              return;
+            }
+            item.setOfferToken(offer.getOfferToken());
+          } else {
+            ProductDetails.OneTimePurchaseOfferDetails offer = permanentOffer(product);
+            if (offer == null) {
+              completeBilling(error("PERMANENT_OFFER_UNAVAILABLE_OR_AMBIGUOUS"));
+              return;
+            }
+            String offerToken = offer.getOfferToken();
+            if (offerToken != null && !offerToken.isEmpty()) item.setOfferToken(offerToken);
+          }
+          if (!foregroundActivity()) {
+            completeBilling(error("ACTIVITY_NOT_FOREGROUND"));
+            return;
+          }
+          BillingFlowParams params = BillingFlowParams.newBuilder()
+              .setProductDetailsParamsList(Collections.singletonList(item.build()))
+              .setObfuscatedAccountId(account).build();
+          purchaseLaunched = true;
+          armBillingTimeout(PURCHASE_TIMEOUT_MS);
+          BillingResult launched = billingClient.launchBillingFlow(getActivity(), params);
+          if (ownsBilling(call, epoch) && launched.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+            completeBilling(billingFailure(launched));
+          }
+        });
+      });
+    });
+  }
+
+  private boolean allowedCatalogReceipt(Purchase purchase, String productId) {
+    return purchase != null && getContext().getPackageName().equals(purchase.getPackageName())
+        && purchase.getProducts().size() == 1 && purchase.getProducts().contains(productId)
+        && purchase.getQuantity() == 1;
+  }
+
+  // 토큰은 응답으로만 전달한다. 로그/이벤트/저장소에 복사하지 않는다. 지급·acknowledge·consume은 서버 몫이다.
+  private JSObject catalogReceipt(Purchase purchase, String productId, String type) {
+    if (!receiptTransportSafe()) return error("SENSITIVE_BRIDGE_LOGGING_ENABLED");
+    String token = purchase.getPurchaseToken();
+    if (token == null || token.isEmpty()) return error("PURCHASE_TOKEN_MISSING");
+    int state = purchase.getPurchaseState();
+    String status = state == Purchase.PurchaseState.PURCHASED ? "purchased"
+        : state == Purchase.PurchaseState.PENDING ? "pending" : null;
+    if (status == null) return error("UNKNOWN_PURCHASE_STATE");
+    JSObject data = result(status).put("productId", productId).put("type", type)
+        .put("purchaseToken", token).put("acknowledged", purchase.isAcknowledged())
+        .put("requiresServerVerification", true).put("acknowledgement", "server");
+    String orderId = purchase.getOrderId();
+    if (orderId != null && !orderId.isEmpty()) data.put("orderId", orderId);
+    return data;
+  }
+
+  private void onCatalogPurchaseUpdate(BillingResult billingResult, List<Purchase> purchases) {
+    if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+      completeBilling(billingFailure(billingResult));
+      return;
+    }
+    String productId = catalogPurchaseProductId;
+    if (purchases == null || purchases.size() != 1 || productId == null
+        || !allowedCatalogReceipt(purchases.get(0), productId)) {
+      completeBilling(error("PURCHASE_CALLBACK_MISMATCH").put("recovery", "queryOwned"));
+      return;
+    }
+    Purchase purchase = purchases.get(0);
+    if (purchase.getAccountIdentifiers() == null
+        || !billingCall.getString("obfuscatedAccountId").equals(
+            purchase.getAccountIdentifiers().getObfuscatedAccountId())) {
+      completeBilling(error("PURCHASE_ACCOUNT_MISMATCH").put("recovery", "queryOwned"));
+      return;
+    }
+    completeBilling(catalogReceipt(purchase, productId, catalogPurchaseType));
+  }
+
+  @PluginMethod
+  public void queryOwned(PluginCall call) {
+    run(call, () -> {
+      if (!beginReceiptOperation(call)) return;
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        JSArray owned = new JSArray();
+        queryPurchasesStep(call, epoch, BillingClient.ProductType.INAPP, inapp -> {
+          collectOwned(owned, inapp, "inapp");
+          queryPurchasesStep(call, epoch, BillingClient.ProductType.SUBS, subs -> {
+            collectOwned(owned, subs, "subs");
+            completeBilling(result("owned").put("purchases", owned).put("requiresServerVerification", true));
+          });
+        });
+      });
+    });
+  }
+
+  private void collectOwned(JSArray out, List<Purchase> purchases, String type) {
+    for (Purchase purchase : purchases) {
+      if (out.length() >= CATALOG_MAX_OWNED) return;
+      if (purchase.getProducts().size() != 1) continue;
+      String productId = purchase.getProducts().get(0);
+      if (!type.equals(CATALOG_TYPES.get(productId)) || !allowedCatalogReceipt(purchase, productId)) continue;
+      JSObject receipt = catalogReceipt(purchase, productId, type);
+      String status = receipt.optString("status");
+      if (!"purchased".equals(status) && !"pending".equals(status)) continue;
+      receipt.put("productIds", new JSArray(purchase.getProducts()));
+      out.put(receipt);
+    }
   }
 
   private static final long AUTH_TIMEOUT_MS = 120000;
@@ -495,6 +819,10 @@ public class StoreBridgePlugin extends Plugin {
   private Runnable billingTimeout;
   private int billingEpoch;
   private boolean purchaseLaunched;
+  // 현재 billing 호출이 catalog 구매인지와 그 대상. beginBilling에서 초기화한다.
+  private boolean catalogPurchase;
+  private String catalogPurchaseProductId;
+  private String catalogPurchaseType;
   private PluginCall consentCall;
   private PluginCall adLoadCall;
   private PluginCall adShowCall;
@@ -641,6 +969,9 @@ public class StoreBridgePlugin extends Plugin {
     }
     billingCall = call;
     purchaseLaunched = false;
+    catalogPurchase = false;
+    catalogPurchaseProductId = null;
+    catalogPurchaseType = null;
     armBillingTimeout(QUERY_TIMEOUT_MS);
     return true;
   }
@@ -665,6 +996,9 @@ public class StoreBridgePlugin extends Plugin {
     PluginCall owner = billingCall;
     billingCall = null;
     purchaseLaunched = false;
+    catalogPurchase = false;
+    catalogPurchaseProductId = null;
+    catalogPurchaseType = null;
     if (billingTimeout != null) main.removeCallbacks(billingTimeout);
     billingTimeout = null;
     // 호출마다 연결을 닫아 이전 구매 콜백이 새 호출을 완료하지 못하게 한다.
@@ -733,7 +1067,9 @@ public class StoreBridgePlugin extends Plugin {
           .put("requiresServerVerification", true).put("acknowledgement", "server")
           .put("consumable", false).put("rewardedAds", false).put("missingConfiguration", missing)
           .put("methods", new JSArray(java.util.Arrays.asList("getCapabilities", "authenticate", "listProducts", "purchase",
-              "restorePurchases", "requestAdConsent", "loadInterstitial", "showInterstitial"))));
+              "restorePurchases", "requestAdConsent", "loadInterstitial", "showInterstitial",
+              "listCatalog", "purchaseCatalog", "queryOwned"))).put("catalogBilling", true)
+          .put("subscriptions", true));
     });
   }
 
