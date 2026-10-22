@@ -30,10 +30,12 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number }} opts 서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다)
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number } }} opts
+ *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
+ *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {} }) {
   let eco;
   try { eco = EconomyCore.fromState(raw, { now: () => now, rng: () => 0.5 }); }
   catch { return { ok: false, reason: 'corrupt', report: { clamped: {}, severe: false } }; }
@@ -49,7 +51,8 @@ export function sanitizeLegacySave(raw, { now, createdAt }) {
     if (value > cap * 100) severe = true;
     return cap;
   };
-  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * days);
+  const paid = (key) => (Number.isSafeInteger(allowance[key]) && allowance[key] > 0 ? allowance[key] : 0);
+  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * days + paid(key));
   for (const id of Object.keys(HEROES)) {
     const h = s.heroes[id];
     if (h) h.shards = clamp(`heroes.${id}.shards`, Number(h.shards) || 0, ONE_TIME.heroShards + DAILY_MAX.heroShards * days);
@@ -64,12 +67,15 @@ export function sanitizeLegacySave(raw, { now, createdAt }) {
     clamped.inventory = { from: s.inventory.length, to: keep.length };
     s.inventory = keep.sort((a, b) => a.uid - b.uid);
   }
-  // 결제 기록·기간제 권한은 가져오지 않는다(현금 상품이 없었다. remove_ads_v1은 스토어 원장이 정본).
-  const paid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };
-  Object.assign(s, { purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0, firstPurchaseUsed: {} });
-  s.pass = { ...s.pass, premium: false, claimedPrem: [] };
+  // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
+  // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).
+  const droppedPaid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };
+  const keepMonthly = Number(entitled.monthlyUntil) > now ? s.monthlyClaimed : 0;
+  Object.assign(s, { purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: Number(entitled.monthlyUntil) > now ? entitled.monthlyUntil : 0, monthlyClaimed: keepMonthly, firstPurchaseUsed: {} });
+  const claimedPrem = entitled.passPremium && Array.isArray(s.pass.claimedPrem) ? s.pass.claimedPrem.filter((lv) => Number.isSafeInteger(lv) && lv >= 1 && lv <= 1000) : [];
+  s.pass = { ...s.pass, premium: !!entitled.passPremium, claimedPrem };
   s.energy = Math.min(Number(s.energy) || 0, fresh.energy + 200);
   s.energyT = now;
   s.created = from;
-  return { ok: true, state: s, report: { clamped, severe, days, created: from, droppedPaid: paid, schemaVersion: s.schemaVersion } };
+  return { ok: true, state: s, report: { clamped, severe, days, created: from, droppedPaid, schemaVersion: s.schemaVersion } };
 }

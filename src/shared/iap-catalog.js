@@ -47,9 +47,9 @@ export const IAP_PRODUCTS = Object.freeze([
 export const IAP_BY_ID = Object.freeze(Object.fromEntries(IAP_PRODUCTS.map((p) => [p.id, p])));
 export const IAP_BY_SHOP_SKU = Object.freeze(Object.fromEntries(IAP_PRODUCTS.filter((p) => p.shopSku).map((p) => [p.shopSku, p])));
 
-/** 지급 가능한 보상 키(Economy.addRewards와 같은 이름). 이 밖의 키는 카탈로그 검사에서 실패한다. */
+/** 지급 가능한 보상 키(Economy.addRewards와 같은 이름). 이 밖의 키는 카탈로그 검사에서 실패한다. @type {readonly string[]} */
 export const IAP_REWARD_KEYS = Object.freeze(['gems', 'gold', 'ssrTicket', 'tickets', 'stones', 'transcendStones']);
-/** 보상 키 → 세이브 필드(정화 상한 가산용). */
+/** 보상 키 → 세이브 필드(정화 상한 가산용). @type {Readonly<Record<string, string>>} */
 export const IAP_REWARD_FIELD = Object.freeze({ gems: 'gems', gold: 'gold', ssrTicket: 'ssrTickets', tickets: 'tickets', stones: 'stones', transcendStones: 'transcendStones' });
 
 /** 판매 가능한(enabled) 상품만. */

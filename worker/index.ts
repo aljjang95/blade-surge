@@ -4,7 +4,9 @@ import { asSameOrigin, nativeOrigin, preflight, withCors } from './native-cors';
 import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store';
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
-import { handleV1Request, V1_PREFIX, type V1Env } from './v1/router';
+import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router';
+import { reconcileVoided } from './v1/iap';
+import { schemaReady, type D1Database } from './v1/db';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
 export const SocialHub = createSocialHub(SOCIAL_CONFIG);
@@ -160,7 +162,16 @@ async function route(request: Request, env: Env): Promise<Response> {
   finally { if (timer) clearTimeout(timer); }
 }
 
+/** 시간당 환불 대사: Play voidedpurchases(최근 3일)를 읽어 아는 구매만 역분개한다. RTDN을 놓쳐도 최종 안전망이다. */
+export async function reconcileIap(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || v1.IAP_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  await reconcileVoided({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') }, now - 3 * 86400000);
+}
+
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
   // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
   await cleanupStoreMetadata(env);
+  try { await reconcileIap(env); } catch (error) { console.warn('iap reconcile failed', error instanceof Error ? error.name : 'unknown'); }
 } };
