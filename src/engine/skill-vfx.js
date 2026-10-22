@@ -27,13 +27,13 @@ const groundGain = (name) => SKILL_GROUND_GAIN[name] ?? 1;
  * 예전에는 조준점이 없을 때 전방 8~9m 에 그려 판정 위치와 연출이 어긋났다. */
 export const SKILL_VFX = Object.freeze({
   // 검성: 홀리웨이브 원화(크림 덩어리)·큰 금빛 지면 텍스처 대신 발밑 작은 룬만 두고, 모양은 sig-knight.js 의 광선·고리·표식이 맡는다.
-  holy_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .7 }),
-  shield_bash: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 3, { dist: 1.2, sig: true, gain: .7 }),
+  holy_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { noRune: true, sig: true, gain: .7 }),
+  shield_bash: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 3, { noRune: true, dist: 1.2, sig: true, gain: .7 }),
   judgment: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 3, { sig: true, gain: .7 }),
-  dragon_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 5, { sig: true, gain: .15 }),
-  chain_bind: R(GOLD, 'chain-lightning', 'self', 'none', 0xffb21e, 3, { sig: true, gain: .7 }),
+  dragon_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 5, { noRune: true, sig: true, gain: .15 }),
+  chain_bind: R(GOLD, 'chain-lightning', 'self', 'none', 0xffb21e, 3, { noRune: true, sig: true, gain: .7 }),
   sanctuary: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .5 }),
-  sunbreaker: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 4, { sig: true, gain: .15 }),
+  sunbreaker: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 4, { noRune: true, sig: true, gain: .15 }),
   heavenfall: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 5, { dist: 0, seek: [15, 5], sig: true, gain: .15 }),
   // 광전사
   whirlwind: R(GOLD, 'lava-crack', 'self', 'ground', 0xff7a4a, 5),
@@ -129,9 +129,9 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     else _at.copy(player.pos).addScaledVector(_f, r.dist ?? 3);
     _at.y = player.pos.y;
     const size = r.size * scale, color = r.color, g = r.gain ?? 1;
-    // 1) 바닥 룬 서클
+    // 1) 바닥 룬 서클(noRune: 서명이 자기 발밑 문양을 그리는 물리 스킬은 공용 금빛 룬을 깔지 않아 실루엣이 겹치지 않는다)
     const runeR = (1.8 + size * 0.28) * (r.place === 'self' ? 1 : 0.9);
-    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) * g });
+    if (!r.noRune) fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) * g });
     // 2) 스킬 텍스처
     if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) * g });
     else if (r.mode === 'flash') fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1, gain: g });
@@ -154,7 +154,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     if (!reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
-    if (major && !crowded && !(r.mode === 'ground' && size >= 10)) {
+    if (major && !crowded && !r.noRune && !(r.mode === 'ground' && size >= 10)) {
       const wide = 10;
       fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3, gain: groundGain(r.rune) * .8 * g });
     }
