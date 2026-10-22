@@ -67,7 +67,8 @@ export async function optimizeDist(outDir, { log = console.log, cacheDir = path.
   report.channel = channel;
   const targets = manifest.entries.map(entry => ({ ...entry, paths: [entry.path] }));
   for (const entry of manifest.channelExcludes?.[channel] || []) {
-    // 채널별 제외는 `폴더/*.확장자` 형태만 지원한다.
+    // 채널별 제외는 파일 하나(path) 또는 `폴더/*.확장자`(glob) 형태만 지원한다.
+    if (entry.path) { targets.push({ path: entry.path, reason: entry.reason, paths: [entry.path] }); continue; }
     const match = /^([^*]+)\/\*(\.[A-Za-z0-9]+)$/.exec(entry.glob);
     if (!match) throw new Error(`지원하지 않는 glob: ${entry.glob}`);
     const dir = path.resolve(outDir, match[1]);

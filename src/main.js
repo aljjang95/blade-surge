@@ -13,6 +13,7 @@ import { mobileScreen } from './platform/landscape-screen.js';
 import { resolveQuality } from './platform/mobile-display.js';
 import { isNativeApp, setupNativeApp } from './platform/native-app.js';
 import { STORE_CHANNEL } from './platform/store-channel.js';
+import { setupRemoteAssets, prefetcher } from './platform/remote-boot.js';
 import { setupStoreAccess } from './ui/store-access.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
@@ -40,6 +41,7 @@ import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
+import { setupAccount } from './net/account.js';
 import './ui/mobile-combat.css';
 import './ui/progression.css';
 import './ui/illustrated.css';
@@ -176,6 +178,8 @@ class App {
   }
   async boot() {
     startup.stage = 'assets';
+    // 스토어 네이티브 채널: APK 에서 뺀 자산(remote)을 정식 호스트·보관본에서 받도록 해석기를 먼저 설치한다. 웹 채널은 아무 일도 하지 않는다.
+    await setupRemoteAssets();
     const citadelReady = preloadCitadelHubAssets({ quality: this.renderer.quality });
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
@@ -231,6 +235,8 @@ class App {
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
+    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
+    await setupAccount(this).catch(() => null);
     setupCommunity(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
@@ -381,6 +387,7 @@ class App {
     this.meta.openTab('home'); this.meta.refreshTop();
     this.syncHub();
     this.townChip?.announcePending();
+    prefetcher.onLobby(this.eco.s.progress);
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }

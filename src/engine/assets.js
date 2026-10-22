@@ -11,6 +11,7 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
 import { assembleHeroIdentity } from './hero-identity.js';
+import { isRemoteAsset, readRemoteBuffer } from '../platform/remote-assets.js';
 import { tuneCharacterTextures } from './texture-sampling.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
@@ -26,7 +27,16 @@ export const RANGER_BOW_GRIP = 'RangerBowGrip_L';
 export const RANGER_DRAW_NOCK = 'RangerDrawNock_R';
 
 const cache = new Map();
-const libraryLoader = createDefaultLibraryLoader((path) => loader.loadAsync(path), (gltf) => prepareModel(gltf));
+/**
+ * 라이브러리 GLB 한 개를 읽는다. 스토어 네이티브 채널에서 APK 밖(remote)인 파일은 보관본 또는 정식 호스트에서 바이트를 받아 파싱한다
+ * (실패하면 RemoteAssetError → 라이브러리 로더가 기존 폴백을 쓰고, 다음 요청에서 다시 시도한다). 그 밖의 경로는 평소대로 URL 로더다.
+ */
+async function loadLibraryGltf(path) {
+  if (!isRemoteAsset(path)) return loader.loadAsync(path);
+  const buffer = await readRemoteBuffer(path);
+  return loader.parseAsync(buffer, path.slice(0, path.lastIndexOf('/') + 1));
+}
+const libraryLoader = createDefaultLibraryLoader(loadLibraryGltf, (gltf) => prepareModel(gltf));
 /** @typedef {{materials: string, role: string, heroId?: string, scale: number, aliases: Record<string, string>, sockets?: Record<string, string>}} ModelContract */
 
 export function requiredModelAliases(role, heroId) {
@@ -179,7 +189,7 @@ async function prepareLibraryHero(gltf, asset) {
   });
   await forgeHeroWeapons(gltf, hero.model);
   if (heroId === 'ranger') rigRangerBowString(gltf.scene);
-  prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset));
+  prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset, gltf.animations));
   heroBodies.set(asset.id, gltf);
   return gltf;
 }

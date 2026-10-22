@@ -235,7 +235,8 @@ export class SocialCore {
     }
     this.limit('profile:' + c.req.ipHash, 5, HOUR);
     const no = (this.one('SELECT COALESCE(MAX(no), 0) AS n FROM players').n as number) + 1;
-    const id = 'p_' + this.d.randomHex(12);
+    // MMO 계정이 이 기기 키로 먼저 예약한 id가 있으면 그 id로 프로필을 만든다.
+    const id = this.reservedId(c.keyHash) ?? 'p_' + this.d.randomHex(12);
     this.run('INSERT INTO players(id, name, tag, no, hero, created_at, created_ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', id, name, this.freeTag(name), no, hero, now, c.req.ipHash);
     this.run('INSERT INTO player_keys(key_hash, player_id, created_at, last_seen) VALUES (?, ?, ?, ?)', c.keyHash, id, now, now);
     if (no <= this.config.founders.maxNo) {
@@ -417,6 +418,34 @@ export class SocialCore {
     this.run('DELETE FROM ws_tickets WHERE player_id = ? AND ticket NOT IN (SELECT ticket FROM ws_tickets WHERE player_id = ? ORDER BY rowid DESC LIMIT 5)', me.id, me.id);
     return { ticket, expiresAt };
   }
+  // ── MMO 계정 입양(Worker→DO 내부 전용, 외부 라우팅 불가) ──────────────
+  private ensureReservations(): void {
+    this.run('CREATE TABLE IF NOT EXISTS reserved_ids (key_hash TEXT PRIMARY KEY, player_id TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL)');
+  }
+  /**
+   * 기기 키 해시의 기존 playerId를 입양한다. 소셜 프로필이 없으면 프로필(이름·창립 번호)은 만들지 않고
+   * 같은 키로 나중에 프로필을 만들 때 쓸 id만 예약한다. 그래서 친구·칭호·창립 번호가 계정 id와 같은 id에 붙는다.
+   */
+  internalAccount(keyHash: unknown): { playerId: string; adopted: boolean; banned: boolean } {
+    if (typeof keyHash !== 'string' || !/^[a-f0-9]{64}$/.test(keyHash)) throw new SocialError('bad-key', 400);
+    return this.tx(() => {
+      const existing = this.one('SELECT p.id, p.banned FROM player_keys k JOIN players p ON p.id = k.player_id WHERE k.key_hash = ?', keyHash);
+      if (existing) return { playerId: existing.id as string, adopted: true, banned: !!existing.banned };
+      this.ensureReservations();
+      const reserved = this.one('SELECT player_id FROM reserved_ids WHERE key_hash = ?', keyHash);
+      if (reserved) return { playerId: reserved.player_id as string, adopted: false, banned: false };
+      let id = 'p_' + this.d.randomHex(12);
+      while (this.player(id) || this.one('SELECT 1 AS x FROM reserved_ids WHERE player_id = ?', id)) id = 'p_' + this.d.randomHex(12);
+      this.run('INSERT INTO reserved_ids(key_hash, player_id, created_at) VALUES (?, ?, ?)', keyHash, id, this.d.now());
+      return { playerId: id, adopted: false, banned: false };
+    });
+  }
+  private reservedId(keyHash: string): string | null {
+    if (!this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) return null;
+    const row = this.one('SELECT player_id FROM reserved_ids WHERE key_hash = ?', keyHash);
+    return row && !this.player(row.player_id) ? row.player_id as string : null;
+  }
+
   /** 1회용 티켓을 소비하고 발급 당시 신원과 기기 키를 돌려준다. */
   consumeTicket(ticket: unknown): { playerId: string; keyHash: string } {
     if (typeof ticket !== 'string' || !WS_TICKET.test(ticket)) throw new SocialError('ticket', 401);

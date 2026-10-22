@@ -37,7 +37,8 @@ export const FEEL = Object.freeze({
   }),
   // 적 피격 반응. 경타는 예전처럼 빠르게(1.8배) 움찔하고, 강타·치명타·마무리는 강타 클립을 조금 느리게 끝까지 보여 무게를 읽게 한다.
   // 경직 = base + kb × perKb(상한 kbCap) + 강타 heavyHold. 접촉 반응 시작은 같은 프레임이다.
-  react: Object.freeze({ lightSpeed: 1.8, heavySpeed: 1.4, base: .22, perKb: .03, kbCap: .4, heavyHold: .1 }),
+  // kb ≥ knockKb 는 뒤로 젖혀지며 밀려나는 넉백 클립(hitKnockback, 없으면 hitHeavy → hit 폴백).
+  react: Object.freeze({ lightSpeed: 1.8, heavySpeed: 1.4, base: .22, perKb: .03, kbCap: .4, heavyHold: .1, knockKb: 6 }),
   // 사망 변주(결정적, 난수 없음). 시체는 맞은 방향을 등지도록 돌아 넘어지고(맞은 쪽으로 쓰러지지 않게), 처치 등급마다 쓰러지는 박자가 다르다.
   death: Object.freeze({ snap: 1.3, normal: 1, heavy: .82 }),
   // 연출 박자(궁극기·보스 처치). 슬로우는 끝 ease 초 동안 1 로 부드럽게 복귀한다(예전엔 뚝 끊겼다).
@@ -171,7 +172,7 @@ const _react = { key: 'hit', speed: 1, stagger: 0 };
  * 군중 타격에서 매 접촉 호출되므로 반환 객체(out, 기본은 모듈 하나)를 재사용한다. 바로 읽고 보관하지 않는다. */
 export function enemyHitReact(kb = 0, crit = false, finisher = false, out = _react) {
   const R = FEEL.react, k = Math.max(0, num(kb)), heavy = k >= 4 || !!crit || !!finisher;
-  out.key = heavy ? 'hitHeavy' : 'hit'; out.speed = heavy ? R.heavySpeed : R.lightSpeed;
+  out.key = k >= R.knockKb ? 'hitKnockback' : heavy ? 'hitHeavy' : 'hit'; out.speed = heavy ? R.heavySpeed : R.lightSpeed;
   out.stagger = R.base + Math.min(R.kbCap, k * R.perKb) + (heavy ? R.heavyHold : 0);
   return out;
 }

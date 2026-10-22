@@ -635,10 +635,25 @@ export class Player extends Actor {
       // 회피와 같은 실행 경계: 타격 전에는 반복하고 마무리 타격을 실행했으면 첫 타로 돌아간다.
       if (this.state === 'attack' && this.current) { this.comboResume = { idx: this.hitDone ? (this.comboIdx + 1) % this.def.combo.length : this.comboIdx, t: 1.2 }; }
       this.attackBufferYaw = null; this.comboQueuedYaw = null;
-      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: FEEL.blend.hurt, speed: 1.6 });
+      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(this.heavyHurtClip(dirx, dirz, Math.random()), { once: true, fade: FEEL.blend.hurt, speed: 1.6 });
     }
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
+  }
+  /**
+   * 강타 피격 클립. 공격자 쪽(밀린 방향의 반대)으로 고른다: 옆(±60% 이상)은 Hit_L/Hit_R, 정면은 넉백 Hit_B, 등 뒤는 앞으로 움츠리는 Hit_A.
+   * 애니메이션 팩 클립이 없는 모델(기존 KayKit 폴백)은 예전처럼 r 로 Hit_A/Hit_B 를 고른다. 난수는 호출자가 늘 한 번 소비한다.
+   */
+  heavyHurtClip(dirx, dirz, r) {
+    const l = Math.hypot(dirx, dirz), c = this.clips;
+    if (l > 1e-6 && c?.Hit_L && c.Hit_R && c.Hit_B && c.Hit_L !== c.Hit_A && c.Hit_R !== c.Hit_A) {
+      const ax = -dirx / l, az = -dirz / l, s = Math.sin(this.yaw), k = Math.cos(this.yaw);
+      const side = ax * k - az * s, front = ax * s + az * k;   // 왼쪽 = (cos yaw, -sin yaw), 정면 = (sin yaw, cos yaw)
+      if (side > .6) return 'Hit_L';
+      if (side < -.6) return 'Hit_R';
+      return front >= 0 ? 'Hit_B' : 'Hit_A';
+    }
+    return r < 0.5 ? 'Hit_A' : 'Hit_B';
   }
   die() { this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
 

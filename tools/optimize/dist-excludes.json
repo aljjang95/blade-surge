@@ -1,6 +1,6 @@
 {
   "schema": "blade-surge.dist-excludes.v1",
-  "note": "빌드 산출물(dist, 스토어 채널 web)에서만 뺀다. public/ 의 원본 파일과 해시 계약은 그대로 둔다. entries 는 모든 채널에서, channelExcludes 는 그 채널 빌드에서만 뺀다. test/dist-excludes.test.ts 가 src·index.html·sw.js 어디에서도 참조되지 않음과 채널별 BGM 파일이 bgmUrl 과 정확히 맞는지 검사한다.",
+  "note": "빌드 산출물(dist, 스토어 채널 web)에서만 뺀다. public/ 의 원본 파일과 해시 계약은 그대로 둔다. entries 는 모든 채널에서, channelExcludes 는 그 채널 빌드에서만 뺀다. test/dist-excludes.test.ts 가 src·index.html·sw.js 어디에서도 참조되지 않음과 채널별 BGM 파일이 bgmUrl 과 정확히 맞는지 검사한다. 웹(정식 호스트)은 Android 스토어 채널이 스트리밍으로 받는 remote 곡의 Opus(.ogg)를 계속 내보낸다(tools/optimize/asset-split.json).",
   "entries": [
     {
       "path": "bgm/bgm_battle.mp3",
@@ -98,8 +98,12 @@
   "channelExcludes": {
     "web": [
       {
-        "glob": "bgm/regions/*.ogg",
-        "reason": "Opus(.ogg) 지역곡은 Android 스토어 빌드 전용이다. 웹은 iOS 사파리(18.4 미만은 Ogg Opus 미지원)를 위해 원본 mp3 를 쓴다(music.js bgmUrl)."
+        "path": "bgm/regions/lobby.ogg",
+        "reason": "Opus(.ogg)는 Android 스토어 빌드용이다. 이 세 곡은 APK 에 들어가므로 웹 호스트가 내줄 필요가 없다. 웹은 iOS 사파리(18.4 미만은 Ogg Opus 미지원)를 위해 원본 mp3 를 쓴다(music.js bgmUrl)."
+      },
+      {
+        "path": "bgm/regions/garden.ogg",
+        "reason": "위와 같음(1지역 곡은 APK 안에 있다)."
       }
     ],
     "apps-in-toss": [

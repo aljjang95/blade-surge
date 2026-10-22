@@ -703,7 +703,7 @@ export class Battle {
     const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
     const optionalCleared = optional.filter((r) => r.cleared).length;
     const fullClear = optional.length > 0 && optionalCleared === optional.length;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null, mapTactics: this.mapTactics?.finish() || null };
+    this.result = { win: true, stars, hpLost: Math.max(0, Math.round(this.player.maxHp - this.player.hp)), revives: this.revived | 0, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null, mapTactics: this.mapTactics?.finish() || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
