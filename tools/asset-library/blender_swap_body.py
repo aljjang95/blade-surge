@@ -4,7 +4,7 @@
 #   blender -b -P tools/asset-library/blender_swap_body.py -- --base <v4.glb> --body <rigged.glb|fbx> --output <v5.glb> --report <r.json>
 import bpy, json, math, sys
 from pathlib import Path
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 from mathutils.kdtree import KDTree
 
 def args():
@@ -29,6 +29,50 @@ def bone(arm, suffix):
 def world(arm, suffix): return arm.matrix_world @ bone(arm, suffix).head_local
 
 def norm(name): return name.replace(':', '')
+
+CHAIN = ('Spine', 'Neck', 'Head', 'ForeArm', 'Hand', 'Leg', 'Foot', 'Toe')
+
+def fit_pose(arm1, arm2, meshes, align, by_norm):
+    # 새 Tripo 리그는 A포즈·다른 비율로 나온다. base 골격(T포즈 rest)의 관절 위치·방향에 맞게 새 리그를 포즈로 굽혀
+    # 메시에 적용한 뒤 묶는다. 뼈 방향은 최소 회전으로, 길이는 다음 관절까지 거리 비율로 뼈 축 방향만 늘이거나 줄인다.
+    M = (align @ arm2.matrix_world).inverted() @ arm1.matrix_world
+    b1 = {n: arm1.data.bones[by_norm[norm(n)]] for n in (b.name for b in arm2.data.bones) if norm(n) in by_norm}
+    def child_of(bone, pool):
+        kids = [c for c in bone.children if c.name in pool]
+        for key in CHAIN:
+            for c in kids:
+                if key in norm(c.name): return c
+        return kids[0] if kids else None
+    for b in arm2.data.bones: b.inherit_scale = 'NONE'
+    arm2.data.pose_position = 'POSE'
+    order = sorted(arm2.data.bones, key=lambda b: len(b.parent_recursive))
+    Y = Vector((0, 1, 0))
+    for b2 in order:
+        t = b1.get(b2.name)
+        if t is None: continue
+        head = M @ t.head_local
+        c2 = child_of(b2, b1)
+        if c2 is not None:
+            c1 = arm1.data.bones[by_norm[norm(c2.name)]]
+            own = c2.head_local - b2.head_local; want = M @ c1.head_local - head
+        else:
+            own = b2.matrix_local.to_3x3() @ Y; want = M.to_3x3() @ (t.matrix_local.to_3x3() @ Y)
+        if own.length < 1e-6 or want.length < 1e-6: continue
+        # 머리는 얼굴 형태를 지키려고 길이를 바꾸지 않는다(관절 위치만 맞춘다).
+        ratio = want.length / own.length if c2 is not None and not norm(b2.name).endswith(('Head', 'HeadTop_End')) else 1.0
+        rest = b2.matrix_local.to_3x3()
+        rot = own.normalized().rotation_difference(want.normalized()).to_matrix() @ rest
+        arm2.pose.bones[b2.name].matrix = Matrix.Translation(head) @ rot.to_4x4() @ Matrix.Diagonal((1, ratio, 1, 1))
+        bpy.context.view_layer.update()
+    err = max(((arm2.matrix_world @ arm2.pose.bones[n].head) - (align.inverted() @ arm1.matrix_world @ t.head_local)).length
+              for n, t in b1.items()) * align.to_scale()[0]
+    for mesh in meshes:
+        mod = next((m for m in mesh.modifiers if m.type == 'ARMATURE'), None)
+        if mod is None: continue
+        for o in bpy.context.selected_objects: o.select_set(False)
+        bpy.context.view_layer.objects.active = mesh; mesh.select_set(True)
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    return {'maxJointError': err, 'matchedBones': len(b1)}
 
 def main():
     a = args()
@@ -59,6 +103,7 @@ def main():
             if norm(cur) in by_norm: return by_norm[norm(cur)]
             cur = parent2.get(cur)
         return None
+    fit = fit_pose(arm1, arm2, meshes, align, by_norm) if a.get('fitPose', '1') == '1' else None
     merged = dropped = filled = 0
     for mesh in meshes:
         mw = mesh.matrix_world.copy()
@@ -103,7 +148,7 @@ def main():
     tris = sum(sum(len(p.vertices) - 2 for p in m.data.polygons) for m in meshes)
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_yup=True, export_animations=False, export_apply=False, export_cameras=False, export_lights=False,
         export_image_format='WEBP', export_image_quality=82)
-    Path(a['report']).write_text(json.dumps({'ok': True, 'scale': s, 'yawDeg': math.degrees(turn), 'mergedGroups': merged,
+    Path(a['report']).write_text(json.dumps({'ok': True, 'fit': fit, 'scale': s, 'yawDeg': math.degrees(turn), 'mergedGroups': merged,
         'droppedGroups': dropped, 'filledVertices': filled, 'bones': len(arm1.data.bones), 'triangles': tris,
         'actions': sorted(x.name for x in bpy.data.actions)}, ensure_ascii=False), encoding='utf-8')
 

@@ -177,7 +177,9 @@ function compact() {
 }
 const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
-j.asset.extras = { ...(j.asset.extras || {}), bodySwap: { baseSha256: base.sha256, bodySha256: body.sha256, ibmDrift, ...(extraJson ? JSON.parse(extraJson) : {}) } };
+// 몸 재질이 바뀌었으므로 base 의 재질 마감 기록은 지운다(finish-library-materials.mjs 로 다시 마감).
+const { materialFinish: _staleFinish, ...baseExtras } = j.asset.extras || {};
+j.asset.extras = { ...baseExtras, bodySwap: { baseSha256: base.sha256, bodySha256: body.sha256, ibmDrift, ...(extraJson ? JSON.parse(extraJson) : {}) } };
 
 const jsonBytes = Buffer.from(JSON.stringify(j)), jsonPad = Buffer.alloc((4 - (jsonBytes.length % 4)) % 4, 0x20);
 const header = Buffer.alloc(12); header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4);
