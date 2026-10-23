@@ -1,0 +1,39 @@
+{
+  "taskIds": {
+    "generate": "5d525bfd-457f-44bf-940a-fddd1e876e83",
+    "retopo": "5d525bfd-457f-44bf-940a-fddd1e876e83",
+    "rig": "5d525bfd-457f-44bf-940a-fddd1e876e83"
+  },
+  "model": "H3.1 (최고 품질, HD+PBR, 8K 텍스처 켬)",
+  "credits_before": 13970,
+  "credits_after": 13860,
+  "files": [
+    {
+      "name": "ranger_t1_v5.preview.jpg",
+      "bytes": 118251,
+      "sha256": "97aebfc2831491fbe7861d75e14ecde3ea8c550dfb7d7eb33ccf54631bc5c2b9"
+    },
+    {
+      "name": "ranger_t1_v5.retopo.glb",
+      "bytes": 8841236,
+      "sha256": "ef3a56ffde81de9ffac6b631310fa299498f8eda847603afe4ee5568f1037a25"
+    },
+    {
+      "name": "ranger_t1_v5.rigged.fbx",
+      "bytes": 551756,
+      "sha256": "7e621b5645d88a7db936178c085fbab9ea6d21b7ee149a8bd0d1214f8fa6997a"
+    },
+    {
+      "name": "ranger_t1_v5.rigged.glb",
+      "bytes": 9100220,
+      "sha256": "897754bab577b4ea121f33e5060fede90a78d12ee6654ea5cbdf2523fc129ab6"
+    },
+    {
+      "name": "ranger_t1_v5.tripo.glb",
+      "bytes": 64737948,
+      "sha256": "613e6be4f09a3e1a1b93dee5f0d7316bc6cdb8c7bea4843de0aa23c0b7f37850"
+    }
+  ],
+  "eyesClear": true,
+  "notes": "Studio는 한 프로젝트 ID 아래 단계별 작업(generate 55, retopo 35, rig 20 크레딧)을 진행하므로 taskIds는 프로젝트 URL ID로 대체(개별 task id는 UI에 미노출). 리토폴 삼각형 목표 11000 → 실제 10573면/버텍스 15047. 리그 Humanoid+Mixamo 프리셋, 본 이름 mixamorig:*, 조인트 65. rigged.fbx는 Tripo 내보내기 zip의 FBX(텍스처는 out\\rigged_fbx_zip\\x). 재생성 없이 1회로 합격. preview는 jpg(PNG 아님)."
+}
