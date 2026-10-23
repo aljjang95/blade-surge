@@ -46,7 +46,7 @@
     { "class": "remote", "group": "heroes-t2", "glob": "assets/hero_*_t2-*.glb", "reason": "영웅 2단계 갑옷 몸체(번들 해시 이름)" },
     { "class": "remote", "group": "heroes-t3", "glob": "assets/hero_*_t3-*.glb", "reason": "영웅 3단계 갑옷 몸체(번들 해시 이름)" },
     { "class": "remote", "group": "avatars", "glob": "assets/avatar_*-*.glb", "reason": "아바타 몸체(번들 해시 이름)" },
-    { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{ranger,rogue}-t2-body-fit-v1.glb", "reason": "궁수·도적 2단계 몸체" },
+    { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{ranger-t2-body-fit-v2,rogue-t2-body-fit-v1}.glb", "reason": "궁수·도적 2단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "heroes-t3", "glob": "models/heroes-next/{ranger-t3-body-fit-v2,rogue-t3-body-fit-v1}.glb", "reason": "궁수·도적 3단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow}-body-fit-v1.glb", "reason": "여우·까마귀 아바타 몸체" },
 
