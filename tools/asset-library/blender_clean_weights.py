@@ -87,9 +87,9 @@ def smooth_weights(mesh, idx, rounds):
         tot = out.sum()
         if tot <= 1e-6: continue
         out /= tot
-        for gi in range(G):
-            mesh.vertex_groups[gi].remove([i])
-            if out[gi] > 1e-4: mesh.vertex_groups[gi].add([i], float(out[gi]), 'REPLACE')
+        # 정점이 실제로 속한 관절만 지운다(속하지 않은 그룹 remove 는 Blender 판에 따라 오류).
+        for g in list(me.vertices[i].groups): mesh.vertex_groups[g.group].remove([i])
+        for gi in np.nonzero(out > 1e-4)[0]: mesh.vertex_groups[int(gi)].add([i], float(out[gi]), 'REPLACE')
     return len(idx)
 
 def main():

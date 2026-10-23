@@ -67,7 +67,7 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
   const libraryAsset = !contract && allowLibrary && !heroId
     ? libraryLoader.assetFor(requestedAsset || name) || (roster ? libraryLoader.assetFor(fallbackAsset) : null)
     : null;
-  if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
+  if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, { tier: libraryAsset.armorTier || 1, theme: libraryAsset.armorTheme || null });
   const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
   if (libraryAsset) {
