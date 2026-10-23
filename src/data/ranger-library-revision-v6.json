@@ -48,7 +48,7 @@
       "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
     },
     "weightClean": {
-      "script": "tools/asset-library/blender_clean_weights.py",
+      "script": "tools/asset-library/blender_clean_weights.v6.py",
       "scriptSha256": "334f1cb314be092542d3853c52bd5f98d6dfcf2c3bace9cb450e4915e7eb812a",
       "blender": "5.2.2 LTS",
       "report": {
@@ -65,7 +65,7 @@
       "glbVertices": 15059
     },
     "rebind": {
-      "tool": "tools/art/rebind-library-body.mjs",
+      "tool": "tools/art/rebind-library-body.v6.mjs",
       "toolSha256": "01dfed759f0bed6ce1c7d6dba337e7a9a8ff192645e18934f600a8da35fbdccf",
       "outputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
       "rule": "base 의 골격 노드 TRS·스킨 관절 순서·클립 바이트는 그대로. 몸 정점은 닮음 변환만, 역바인드 = 회전만 바꾼 base 골격 자세 F 의 관절 세계 행렬의 역. 활 소켓은 손 관절 차이만큼 손 로컬에서 이동.",
@@ -84,8 +84,8 @@
       "socketNote": "활 소켓은 v4 위치 그대로(--sockets=none). 손 관절 차이만큼 옮기는 draw 모드는 실측(combat-mesh-qa)에서 활 아래 림이 다리에 10–11cm 들어가 더 나빴다(none 7.2–8.0, v4 6.1)."
     },
     "commands": [
-      "blender -b -P tools/asset-library/blender_clean_weights.py -- --input <ranger_t1_v5.rigged.glb> --output <clean.glb> --report <clean.json>",
-      "node tools/art/rebind-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <clean.glb> <v6-raw.glb> --lift=0.012 --sockets=none",
+      "blender -b -P tools/asset-library/blender_clean_weights.v6.py -- --input <ranger_t1_v5.rigged.glb> --output <clean.glb> --report <clean.json>",
+      "node tools/art/rebind-library-body.v6.mjs public/models/heroes-next/ranger-library-t1-v4.glb <clean.glb> <v6-raw.glb> --lift=0.012 --sockets=none",
       "node tools/art/finish-library-materials.mjs <v6-raw.glb> public/models/heroes-next/ranger-library-t1-v6.glb ranger-library-v6"
     ]
   },
@@ -195,8 +195,8 @@
   },
   "tool": {
     "blender": "5.2.2",
-    "weightClean": "tools/asset-library/blender_clean_weights.py",
-    "rebind": "tools/art/rebind-library-body.mjs",
+    "weightClean": "tools/asset-library/blender_clean_weights.v6.py",
+    "rebind": "tools/art/rebind-library-body.v6.mjs",
     "finisher": "tools/art/finish-library-materials.mjs",
     "signature": "tools/art/library-motion-signature.mjs"
   },
