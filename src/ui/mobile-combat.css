@@ -54,10 +54,13 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
 #battle-camera-pad small { margin-top:3px; color:#b5c9ba; font-size:9px; }
 #battle-camera-pad:active { cursor:grabbing; background:#234538ed; }
 #battle-camera-pad:focus-visible,.battle-camera-buttons button:focus-visible { outline:2px solid var(--gold); }
-.battle-camera-buttons { display:flex; gap:3px; margin-top:3px; }
+.battle-camera-buttons { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.battle-camera-buttons .battle-camera-auto { flex:1 0 100%; min-height:30px; font-size:11px; font-weight:700; letter-spacing:.02em; }
+.battle-camera-auto[data-state="on"] { color:#10221b; background:#d9c27a; border-color:#f3e2a5; }
+.battle-camera-auto[data-state="hold"] { color:#f1edcf; background:#3c4f36e6; border-color:#d9c27a88; }
 .battle-camera-buttons button { flex:1; min-height:36px; padding:0; background:#142621cf; border:1px solid #c8d8bd44; border-radius:7px; font-size:12px; }
 @media(orientation:portrait) { #battle-camera-controls { top:auto; bottom:calc(230px + var(--sab)); width:110px; } }
-@media(orientation:landscape) and (max-height:550px) { #battle-camera-controls { top:37%; width:116px; } #battle-camera-pad { min-height:44px; } .battle-camera-buttons button { min-height:32px; } }
+@media(orientation:landscape) and (max-height:550px) { #battle-camera-controls { top:37%; width:116px; } #battle-camera-pad { min-height:38px; } .battle-camera-buttons button { min-height:30px; } .battle-camera-buttons .battle-camera-auto { min-height:26px; } }
 /* Explicit columns stop long floor/target labels from borrowing menu or HP space. */
 /* Six skills occupy two rows; movement, consumables and dodge each keep their own touch space. */
 @media (orientation:portrait) and (max-width:620px), (orientation:landscape) and (max-height:550px) {

@@ -2,6 +2,7 @@ import './camera-gestures.css';
 import { Vector3 } from 'three';
 import { WorldTouchGesture } from './world-gesture.js';
 import { cameraPitchSign, cameraYawSign } from './camera-invert.js';
+import { BattleAutoCamera } from './battle-camera-auto.js';
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
 
 /** 화면에서 끈 방향을 영웅이 서 있는 바닥 평면의 월드 방향으로 바꾼다(원근 단축 보정). 결과를 out.x/out.z에 쓰고 성공 여부를 돌려준다. */
@@ -58,6 +59,11 @@ export class CameraControls {
     this.touch = new WorldTouchGesture();
     this.touchBase = this.value;
     app.renderer.battleCamera = this.value;
+    this.auto = new BattleAutoCamera();
+    this.autoButton = document.getElementById('battle-camera-auto');
+    this.autoBase = { yaw: 0, pitch: 0, zoom: 100 };
+    this.autoCtx = { player: null, enemies: null, boss: null, base: this.autoBase, current: null, bearing: 0, walkable: null, camera: null, calm: 0 };
+    this.autoButton?.addEventListener('click', () => this.toggleAuto());
     // Battle pause, death, modal and stage transitions already clear gameplay input.
     // End capture at that same boundary, even if no pointer event arrives while paused.
     app.input.onClear?.(() => this.finish());
@@ -81,6 +87,7 @@ export class CameraControls {
         return;
       }
       if (!this.active || this.drag || (!onPad && (event.button !== 2 || event.target.closest?.(ui)))) return;
+      this.auto.interrupt();
       if (onPad && event.button !== 0 && event.button !== 2) return;
       const surface = onPad ? this.pad : event.target;
       const value = this.currentValue();
@@ -174,8 +181,41 @@ export class CameraControls {
   }
   // 지역 시점이 바뀐 뒤에도 새 조작은 현재 화면의 값을 기준으로 시작한다.
   currentValue() { return normalizeBattleCamera(this.app.renderer.battleCamera || this.value); }
-  set(value) { this.value = normalizeBattleCamera(value); this.app.renderer.battleCamera = this.value; }
-  reset() { this.finish(); this.set({}); }
+  /** 사용자 조작 경로. AUTO 는 그 즉시 멈췄다가 무입력 뒤 복귀한다. */
+  set(value) { this.value = normalizeBattleCamera(value); this.app.renderer.battleCamera = this.value; this.auto.interrupt(); }
+  reset() { this.finish(); this.set({}); this.auto.resume(); }
+  get autoOn() { return this.settings?.cameraAuto !== false; }
+  toggleAuto() {
+    const settings = this.settings; if (!settings) return;
+    settings.cameraAuto = !this.autoOn;
+    if (settings.cameraAuto) this.auto.resume();
+    this.syncAuto(); this.app.eco?.save?.();
+  }
+  /** 버튼 표시는 상태가 바뀔 때만 DOM 에 쓴다. */
+  syncAuto() {
+    const button = this.autoButton; if (!button) return;
+    const on = this.autoOn, state = on ? (this.auto.holding ? 'hold' : 'on') : 'off';
+    if (button.dataset.state === state) return;
+    button.dataset.state = state;
+    button.setAttribute('aria-pressed', String(on));
+    button.textContent = on ? (state === 'hold' ? 'AUTO 대기' : 'AUTO 켬') : 'AUTO 끔';
+  }
+  /** 전투 갱신마다 부른다(실시간 dt). 손가락이 닿아 있으면 기다리고, 아니면 상황 목표로 스프링을 옮긴다. */
+  updateAuto(realDt, battle) {
+    if (!this.autoOn || !this.active || !battle?.player) { this.syncAuto(); return; }
+    if (this.drag || this.touch.first) this.auto.interrupt();
+    const renderer = this.app.renderer, rig = renderer.rig, env = rig.environmentCamera, base = this.autoBase, ctx = this.autoCtx;
+    base.yaw = Number.isFinite(env?.yaw) ? env.yaw : 0; base.pitch = Number.isFinite(env?.pitch) ? env.pitch : 0; base.zoom = Number.isFinite(env?.zoom) ? env.zoom : 100;
+    // battleCameraOffset 과 같은 방위 기준(지역 비대칭 구도 포함).
+    ctx.bearing = Math.atan2(rig.offset.x + rig.side + (rig.environmentSide || 0), rig.offset.z);
+    ctx.player = battle.player; ctx.enemies = battle.enemies; ctx.boss = battle.boss; ctx.camera = renderer.camera;
+    ctx.walkable = battle.world ? (this._walkable ??= (x, z) => this._world.walkable(x, z)) : null; this._world = battle.world;
+    let value = renderer.battleCamera;
+    if (!value || value !== this.value) { value = this.value = normalizeBattleCamera(value); renderer.battleCamera = value; }
+    ctx.current = value;
+    this.auto.step(realDt, value, ctx);
+    this.syncAuto();
+  }
   capture(pointer) {
     try { pointer?.surface?.setPointerCapture?.(pointer.id); return !!pointer; } catch { return false; }
   }

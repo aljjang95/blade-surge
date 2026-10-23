@@ -112,6 +112,8 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
+  // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
+  s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });

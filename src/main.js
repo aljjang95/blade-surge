@@ -276,6 +276,7 @@ class App {
     this.renderer.setCameraPreset(st.camera || 'auto');
     this.renderer.postFxEnabled = !this.reducedMotion?.matches;
     this.lobbyCameraControls?.sync();
+    this.cameraControls?.syncAuto();
     this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
