@@ -9,6 +9,7 @@
 // 활 소켓(뼈 자식 노드)은 손 관절 위치 차이만큼 손 로컬에서 옮겨 보이는 손바닥에 남게 한다.
 // --sockets=none(기본): 활 소켓을 base 그대로 둔다. draw: 아래 5) 규칙으로 옮김(궁수 v6 실측에서 활 아래 림이 다리에 더 들어가 쓰지 않음).
 // --lift=<m>: 발바닥 맞춤 뒤 몸을 세계 Y 로 더 올린다(대기 자세 접지 여유. 궁수 v6 는 0.012).
+// --scale=head|fit: 닮음 배율 기준(아래 fitScale 주석).
 // --no-clips: 출력에서 클립을 뺀다(2·3단계 body-fit·정규화본처럼 1단계 클립을 공유하는 메시 전용 파일). 골격 노드·역바인드 규약은 같다.
 // body 관절이 base 골격에 없으면(마법사·야만전사 1단계는 손가락 없는 25·33관절) 그 가중치를 base 에 있는 가장 가까운 조상 관절로 합친다.
 //   node tools/art/rebind-library-body.mjs <base.glb> <body.glb> <출력.glb> [기록 JSON 문자열] [--lift=<m>] [--sockets=none|draw] [--no-clips]
@@ -23,7 +24,7 @@ const FULL_DRAW = 0.41, BOW_HIT_AT = 0.42;
 const argv = process.argv.slice(2), flags = Object.fromEntries(argv.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 const [basePath, bodyPath, outputPath, extraJson] = argv.filter((a) => !a.startsWith('--'));
 const lift = Number(flags.lift || 0), socketMode = flags.sockets || 'none', noClips = 'no-clips' in flags;
-for (const k of Object.keys(flags)) if (!['lift', 'sockets', 'no-clips'].includes(k)) throw new Error('unknown flag --' + k);
+for (const k of Object.keys(flags)) if (!['lift', 'sockets', 'no-clips', 'scale', 'collapse'].includes(k)) throw new Error('unknown flag --' + k);
 if (!['none', 'draw'].includes(socketMode)) throw new Error('--sockets must be none|draw');
 if (!Number.isFinite(lift) || Math.abs(lift) > 0.05) throw new Error('--lift must be within ±0.05 m');
 if (!outputPath) throw new Error('Usage: node tools/art/rebind-library-body.mjs base.glb body.glb output.glb [extras-json]');
@@ -101,7 +102,18 @@ function bindFrame(g, G, bin) {
   if (!frames.every((f) => close(f, frames[0]))) throw new Error('skin is not in its bind pose (joint world × IBM differs per joint)');
   return close(frames[0], G.world(meshNode)) ? { M: G.world(meshNode), source: 'mesh-node' } : { M: frames[0], source: 'skin-bind' };
 }
-const s = P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
+// 배율: 기본(head)은 Hips→Head 길이 비. --scale=fit 은 주요 관절(골반·척추·머리·팔·다리)의 바닥 기준 위치를 최소제곱으로 맞춘다
+// (치비 비율이 달라 다리가 짧은 몸 — 야만전사 2단계 — 에서 Hips→Head 비만 쓰면 골반 관절이 12cm 어긋났다).
+const FIT = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand', 'LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot'];
+function fitScale() {
+  const floor = (P) => { const h = P('Hips'); return new THREE.Vector3(h.x, Math.min(P('LeftFoot').y, P('RightFoot').y), h.z); };
+  const f1 = floor(P1), f2 = floor(P2); let num = 0, den = 0;
+  for (const n of FIT) { if (j1(n) == null || !idx2.has(n)) continue; const a1 = P1(n).sub(f1), a2 = P2(n).sub(f2); num += a1.dot(a2); den += a2.lengthSq(); }
+  return num / den;
+}
+const scaleMode = flags.scale || 'head';
+if (!['head', 'fit'].includes(scaleMode)) throw new Error('--scale must be head|fit');
+const s = scaleMode === 'fit' ? fitScale() : P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
 const yawOf = (P) => { const v = P('LeftArm').sub(P('RightArm')); return Math.atan2(v.x, v.z); };
 const turn = Math.round((yawOf(P1) - yawOf(P2)) / (Math.PI / 2)) * (Math.PI / 2);
 const R = new THREE.Matrix4().makeRotationY(turn), S = new THREE.Matrix4().makeScale(s, s, s);
@@ -150,11 +162,14 @@ const jointGap = {};
 for (const i of joints1) { const name = norm(j.nodes[i].name); if (!idx2.has(name)) continue; jointGap[name] = +(new THREE.Vector3().setFromMatrixPosition(worldF.get(i)).distanceTo(P2a(name))).toFixed(4); }
 
 // ---- 3) 몸 메시 복사(정점·법선은 닮음 변환만) ----
+// --collapse=<정규식>: base 에 있어도 body 관절 이름이 맞으면 조상으로 합친다(야만전사 1단계 검지 관절이 Tripo 손가락과 26cm 어긋나
+// 손가락이 막대처럼 늘어나서 --collapse='Hand(Thumb|Index|Middle|Ring|Pinky)' 로 손에 합침).
+const collapseRe = flags.collapse ? new RegExp('^(' + flags.collapse + ')') : null;
 // base 에 없는 body 관절은 body 골격에서 가장 가까운 조상 중 base 에 있는 관절로 합친다(손가락 → 손).
 const collapsed = {};
 const remap = joints2.map((n) => {
   let i = n;
-  while (i != null && j1(norm(b.nodes[i].name)) == null) i = G2.parent.get(i);
+  while (i != null && (j1(norm(b.nodes[i].name)) == null || collapseRe?.test(norm(b.nodes[i].name)))) i = G2.parent.get(i);
   if (i == null) throw new Error('joint remap failed: ' + b.nodes[n].name);
   if (i !== n) collapsed[norm(b.nodes[n].name)] = norm(b.nodes[i].name);
   return joints1.indexOf(j1(norm(b.nodes[i].name)));
@@ -391,9 +406,9 @@ function compact() {
 const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
 const { materialFinish: _staleFinish, bodySwap: _staleSwap, ...baseExtras } = j.asset.extras || {};
-const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, socketMode, ...(noClips ? { clips: 'none' } : {}),
+const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), ...(scaleMode !== 'head' ? { scaleMode } : {}), liftM: lift, socketMode, ...(noClips ? { clips: 'none' } : {}),
   ...(Object.keys(collapsed).length ? { collapsedJoints: collapsed } : {}), ...(missingJoints.length ? { bodyMissingLeafJoints: missingJoints } : {}), ...(bodyBind.source !== 'mesh-node' ? { bodyBindFrame: bodyBind.source } : {}), yawDeg: Math.round(turn * 180 / Math.PI),
-  maxSwingDeg: +maxSwingDeg.toFixed(2), maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
+  maxSwingDeg: +maxSwingDeg.toFixed(2), hipsHeightM: { base: +P1('Hips').y.toFixed(4), body: +P2a('Hips').y.toFixed(4) }, maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
 j.asset.extras = { ...baseExtras, bodyRebind: rebind };
 
 const jsonBytes = Buffer.from(JSON.stringify(j)), jsonPad = Buffer.alloc((4 - (jsonBytes.length % 4)) % 4, 0x20);
