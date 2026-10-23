@@ -75,6 +75,8 @@ export function validateHigherBodyRevisions(value) {
  */
 export function supersedeHigherBodyRevisions(value, superseding = HIGHER_BODY_SUPERSEDING) {
   requireHigherBody(Array.isArray(value?.revisions) && Array.isArray(superseding));
+  // 같은 이력 기록을 두 개정이 대신하면 뒤의 것이 조용히 무시되므로 거절한다.
+  requireHigherBody(new Set(superseding.map(next => next?.supersedes)).size === superseding.length);
   for (const next of superseding) {
     const previous = value.revisions.filter(revision => revision?.id === next?.supersedes);
     const history = HIGHER_BODY_HISTORY.find(entry => entry.id === next?.supersedes);

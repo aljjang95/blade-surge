@@ -102,20 +102,24 @@ function bindFrame(g, G, bin) {
   if (!frames.every((f) => close(f, frames[0]))) throw new Error('skin is not in its bind pose (joint world × IBM differs per joint)');
   return close(frames[0], G.world(meshNode)) ? { M: G.world(meshNode), source: 'mesh-node' } : { M: frames[0], source: 'skin-bind' };
 }
+const yawOf = (P) => { const v = P('LeftArm').sub(P('RightArm')); return Math.atan2(v.x, v.z); };
+const yawDelta = Math.atan2(Math.sin(yawOf(P1) - yawOf(P2)), Math.cos(yawOf(P1) - yawOf(P2)));
+const turn = Math.round(yawDelta / (Math.PI / 2)) * (Math.PI / 2);
+// 어깨선이 90° 단위에서 15° 넘게 벗어나면 몸 방향을 잘못 맞출 수 있으므로 멈춘다.
+if (Math.abs(yawDelta - turn) > 15 * Math.PI / 180) throw new Error('body shoulder line is not axis-aligned with base (>15°)');
 // 배율: 기본(head)은 Hips→Head 길이 비. --scale=fit 은 주요 관절(골반·척추·머리·팔·다리)의 바닥 기준 위치를 최소제곱으로 맞춘다
 // (치비 비율이 달라 다리가 짧은 몸 — 야만전사 2단계 — 에서 Hips→Head 비만 쓰면 골반 관절이 12cm 어긋났다).
 const FIT = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand', 'LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot'];
 function fitScale() {
   const floor = (P) => { const h = P('Hips'); return new THREE.Vector3(h.x, Math.min(P('LeftFoot').y, P('RightFoot').y), h.z); };
-  const f1 = floor(P1), f2 = floor(P2); let num = 0, den = 0;
-  for (const n of FIT) { if (j1(n) == null || !idx2.has(n)) continue; const a1 = P1(n).sub(f1), a2 = P2(n).sub(f2); num += a1.dot(a2); den += a2.lengthSq(); }
+  const f1 = floor(P1), f2 = floor(P2), rot = new THREE.Matrix4().makeRotationY(turn); let num = 0, den = 0;
+  for (const n of FIT) { if (j1(n) == null || !idx2.has(n)) continue; const a1 = P1(n).sub(f1), a2 = P2(n).sub(f2).applyMatrix4(rot); num += a1.dot(a2); den += a2.lengthSq(); }
   return num / den;
 }
 const scaleMode = flags.scale || 'head';
 if (!['head', 'fit'].includes(scaleMode)) throw new Error('--scale must be head|fit');
 const s = scaleMode === 'fit' ? fitScale() : P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
-const yawOf = (P) => { const v = P('LeftArm').sub(P('RightArm')); return Math.atan2(v.x, v.z); };
-const turn = Math.round((yawOf(P1) - yawOf(P2)) / (Math.PI / 2)) * (Math.PI / 2);
+if (!Number.isFinite(s) || s <= 0) throw new Error('invalid scale: ' + s);
 const R = new THREE.Matrix4().makeRotationY(turn), S = new THREE.Matrix4().makeScale(s, s, s);
 const A = new THREE.Matrix4().multiplyMatrices(R, S);
 const h1 = P1('Hips'), h2 = P2('Hips').applyMatrix4(A);
@@ -294,7 +298,7 @@ j.meshes[0] = {
       if (mergeWeights && (name === 'JOINTS_0' || name === 'WEIGHTS_0')) continue;
       attributes[name] = copyAccessor(acc, name);
     }
-    // 합친 관절이 없으면 가중치 바이트를 그대로 둔다(궁수 v6 재현: 같은 입력이면 같은 바이트).
+    // 합친 관절이 없으면 가중치 바이트를 그대로 둔다(궁수 v6 재현: 같은 입력이면 메시·가중치 BIN 이 같다. 기록 extras 는 도구 개정에 따라 늘 수 있다).
     if (mergeWeights && p.attributes.JOINTS_0 != null) Object.assign(attributes, copySkinWeights(p.attributes.JOINTS_0, p.attributes.WEIGHTS_0));
     const prim = { attributes, mode: p.mode ?? 4 };
     if (p.indices != null) prim.indices = copyAccessor(p.indices, 'INDICES');
