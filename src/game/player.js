@@ -904,6 +904,12 @@ export class Player extends Actor {
 
   // ---------------- 업데이트 ----------------
   update(dt) {
+    this.updateCore(dt);
+    // 시위는 이번 프레임의 타격·발사 판정 뒤에 맞춘다. 먼저 맞추면 발사 프레임에 시위가 이미 놓은 손(머리 뒤 follow-through)을
+    // 한 프레임 따라가 머리 속을 지난다(궁수 v5 기본공격 머리 여유 -13.3cm, skill0 -1.9cm 의 원인).
+    if (this.rangerAim) this.updateBowRig(dt);
+  }
+  updateCore(dt) {
     // 렌더 소유 메시만 변경한다. 드래그 상태는 전투 판정이나 시계에 관여하지 않는다.
     if (this.skillAimView) {
       const aim = this.game.input?.skillAim;
@@ -918,7 +924,6 @@ export class Player extends Actor {
     if (this.headLift && this.alive) {
       const lift = this.headLift; lift.base.copy(lift.bone.quaternion); lift.bone.quaternion.multiply(RANGER_HEAD_LIFT); lift.applied = true;
     }
-    if (this.rangerAim) this.updateBowRig(dt);
     this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
     if (this.attackBufferT === 0) this.attackBufferYaw = null;
