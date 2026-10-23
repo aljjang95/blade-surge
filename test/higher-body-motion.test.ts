@@ -8,10 +8,11 @@ import { loadHeroModel, loadHeroAsset, preloadHeroBody, spawnCharacter, applyLib
 import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.mjs';
 import { higherBodyRevisions, higherBodyRevisionHistory } from '../src/engine/library-assets.js';
 import MOTIONS from '../src/data/higher-body-motion-v1.json';
+import REVISIONS_V1 from '../src/data/higher-body-revisions-v1.json';
 import R2_MOTION from '../src/data/rogue-t2-body-motion-v2.json';
 // 게임이 쓰는 기록(v1 번들 + 3단계 궁수 body-fit-v2). 3단계 궁수 v2 몸은 띠 곡선(ranger-t3-body-motion-v2, test/ranger-t3-body-motion)을 쓰므로
 // 이 번들에는 v1 몸 전용 v1 패킷이 이력으로만 남는다.
-const REVISIONS = higherBodyRevisions();
+const REVISIONS: typeof REVISIONS_V1 = higherBodyRevisions();
 const ACTIVE_MOTIONS = { schema: 'blade-surge.higher-body-motion.v2',
   bodies: [...MOTIONS.bodies.filter(body => body.asset !== 'hero_rogue_t2' && body.asset !== 'hero_ranger_t3'), R2_MOTION] };
 import RANGER from '../src/data/ranger-library-revision-v4.json';
