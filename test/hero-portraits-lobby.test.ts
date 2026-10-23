@@ -32,7 +32,7 @@ test('초상 키는 실제 영웅·장비·아바타·정본 모델을 구분하
   expect(new Set(keys).size).toBe(5);
   const first = heroPortraitSnapshot(app, 'ranger')!;
   expect(first.body.id).toContain('ranger');
-  expect(first.key).toContain('/models/heroes-next/ranger-library-t1-v5.glb');
+  expect(first.key).toContain('/models/heroes-next/ranger-library-t1-v6.glb');
   const armor: any = Object.values(ITEM_BY_ID).find((item: any) => item.slot === 'armor' && item.rarity === 'L');
   gear.armor = { id: armor.id, enh: 3 };
   const equipped = heroPortraitSnapshot(app, 'ranger')!;

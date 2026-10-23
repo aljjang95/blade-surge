@@ -47,7 +47,7 @@ function assertOverlay(base: THREE.AnimationClip, overlay: THREE.AnimationClip) 
   expect(replaced).toBe(1);
 }
 
-// 1단계 v5 몸 전용 덮어쓰기(ranger-t1-body-motion-v1): Hips 위치 트랙 하나만 바뀌고 수평(X/Z)·시작 높이·다른 트랙은 원본 그대로다.
+// 1단계 v6 몸 전용 덮어쓰기(ranger-t1-body-motion-v2): Hips 위치 트랙 하나만 바뀌고 수평(X/Z)·시작 높이·다른 트랙은 원본 그대로다.
 function assertT1Overlay(base: THREE.AnimationClip, overlay: THREE.AnimationClip) {
   expect(overlay).not.toBe(base);
   expect(overlay.name).toBe(base.name); expect(overlay.duration).toBe(base.duration); expect(overlay.tracks.length).toBe(base.tracks.length);
@@ -71,7 +71,7 @@ test('실제 direct 여우만 저작 골반 트랙을 쓰고 공유 궁수 GLB·
     assertOverlay(baseDodge, direct.clips.dodge);
     expect(direct.clips.Dodge_Forward).toBe(direct.clips.dodge);
     expect(second.clips.dodge).toBe(direct.clips.dodge);
-    // 기본 1단계(v5 몸)는 자기 몸 전용 회피·사망 골반 곡선을 쓴다(여우 곡선과 다른 객체).
+    // 기본 1단계(v6 몸)는 자기 몸 전용 회피·사망 골반 곡선을 쓴다(여우 곡선과 다른 객체).
     assertT1Overlay(baseDodge, ordinary.clips.dodge); expect(ordinary.clips.dodge).not.toBe(direct.clips.dodge);
     expect(ordinary.clips.Dodge_Forward).toBe(ordinary.clips.dodge);
     const death = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'death')!;
@@ -99,7 +99,7 @@ test('실제 몸체 swap은 미래 회피 조회만 바꾸고 기존 액션·추
   const base = await loadHeroModel('ranger', 1), before = fingerprint(base.animations);
   await preloadHeroBody('ranger', 1, 'avatar_ranger_fox');
   const instance = spawnCharacter(base), unaffected = spawnCharacter(base);
-  // baseDodge·baseDeath 는 기본 1단계(v5 몸)에 설치된 1단계 전용 곡선이다. 여우 곡선은 GLB 원본 클립에서 만든다.
+  // baseDodge·baseDeath 는 기본 1단계(v6 몸)에 설치된 1단계 전용 곡선이다. 여우 곡선은 GLB 원본 클립에서 만든다.
   const rawDodge = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'dodge')!, rawDeath = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'death')!;
   const baseDeath = instance.clips.death;
   const baseDodge = instance.clips.dodge, custom = new THREE.AnimationClip('RangerBowUpper', .2, []);

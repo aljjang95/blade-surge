@@ -1,7 +1,7 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
-import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v5.json';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v6.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
@@ -15,8 +15,11 @@ export { LIBRARY_SCHEMA, triangleLimit };
 // v5: '애꾸' 얼굴(앞머리가 한쪽 눈을 덮음)을 고치려 Tripo 로 몸을 다시 만들어 v4 골격에 묶고 몸 메시·재질·텍스처만 바꿨다.
 // 골격·역바인드·클립 바이트는 v4 와 같다(clipSource.motionSignature). v4 를 클립 원본으로 기록한 저작 계약(hero-body-motion.js 의 base 비교,
 // 2·3단계·여우 동작 JSON)은 v4 기록을 그대로 쓰고, rangerClipSource() 가 그 원본이 v4 임을 v5 기록에서 확인한다.
-// 게임은 v5 하나만 내려받는다. v1–v4 기록·파일은 그대로 둔다.
-export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v5';
+// v5 는 A→T 로 몸을 굽혀 땋은 머리·망토를 잃어 철회했다(#243).
+// v6: 같은 Tripo 몸을 메시 변형 없이 싣는다(장식 가중치 정리 → v4 골격을 회전만으로 Tripo 뼈 방향에 맞춘 자세에서 역바인드 재계산,
+// tools/art/rebind-library-body.mjs). 골격 노드·클립 바이트는 v4 와 같고 역바인드·활 소켓 위치만 다르다. 클립 원본은 v4 다.
+// 게임은 v6 하나만 내려받는다. v1–v5 기록·파일은 그대로 둔다.
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v6';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
@@ -124,7 +127,7 @@ export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 /**
- * 궁수 1단계 클립의 원본 GLB 기록. 몸만 바꾼 개정(v5)은 동작 서명이 같은 이전 개정(v4)을 클립 원본으로 남기고,
+ * 궁수 1단계 클립의 원본 GLB 기록. 몸만 바꾼 개정(v6)은 클립 바이트가 같은 이전 개정(v4)을 클립 원본으로 남기고,
  * 그렇지 않은 개정은 자기 출력이 곧 클립 원본이다. 경로는 기록일 뿐 게임이 내려받지 않는다.
  * @returns {{revision: string, path: string, sha256: string}}
  */

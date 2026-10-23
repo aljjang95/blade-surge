@@ -6,10 +6,10 @@ import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.m
 import { loadHeroModel, spawnCharacter, disposeCharacter } from '../src/engine/assets.js';
 import { validateRangerT1Motion, createRangerT1BodyMotionClip, prepareHeroBodyMotion, selectedBodyMotionIdentity } from '../src/engine/hero-body-motion.js';
 import { rangerLibraryRevision, rangerClipSource } from '../src/engine/library-assets.js';
-import MOTION from '../src/data/ranger-t1-body-motion-v1.json';
+import MOTION from '../src/data/ranger-t1-body-motion-v2.json';
 import manifest from '../asset-library/manifest.json';
 
-// 궁수 1단계 v5 몸 전용 회피·사망 골반 높이(ranger-t1-body-motion-v1). 클립 바이트는 그대로 두고 런타임 Hips 위치 트랙만 덮는다.
+// 궁수 1단계 v6 몸 전용 회피·사망 골반 높이(ranger-t1-body-motion-v2, 철회된 v5 기록은 v1). 클립 바이트는 그대로 두고 런타임 Hips 위치 트랙만 덮는다.
 // 접지 수치(사망 > -0.01m·끝 |y|<0.03m, 구르기 ±0.03m)는 실제 런타임 경로로 test/ranger-death-contact·ranger-library-model 이 잰다.
 let restore = () => {};
 beforeAll(() => { restore = installRangerRuntimeLoader(); });
@@ -18,7 +18,7 @@ const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const REV = rangerLibraryRevision();
 const T1 = manifest.assets.find((a: any) => a.id === 'hero_ranger_t1')!;
 
-test('기록은 v5 몸·v4 클립 원본·저작 도구 SHA 에 묶이고, 저작 검증 기록이 수용 기준을 통과한다', () => {
+test('기록은 v6 몸·v4 클립 원본·저작 도구 SHA 에 묶이고, 저작 검증 기록이 수용 기준을 통과한다', () => {
   expect(MOTION.revisionId).toBe(REV.id);
   expect(MOTION.body).toEqual({ path: REV.output.path, sha256: REV.output.sha256 });
   expect(sha(readFileSync('public' + MOTION.body.path))).toBe(MOTION.body.sha256);

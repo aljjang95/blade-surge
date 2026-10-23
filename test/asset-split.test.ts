@@ -94,7 +94,7 @@ test('첫 지역·부팅에 필요한 파일은 core 다(곡, 조우 일러스�
   }
   for (const id of ['garden_captain', 'garden_warden', 'garden_midboss', 'garden_finalboss']) expect(classify((ENCOUNTER_ART as Record<string, string>)[id].slice(1), split)?.class, id).toBe('core');
   for (const file of ['img/ui-crafted/keyart/dungeon-garden-keyart.webp', 'img/expansion/glass_garden.webp', 'img/expansion/guild_map.webp', 'img/expansion/thumb/glass_garden.webp',
-    'fonts/blade-sans-kr-400.woff2', 'index.html', 'models/heroes-next/ranger-library-t1-v5.glb', 'models/heroes-next/rogue-library-t1-v2.glb', 'models/sanctuary-v2/sanctuary-v2.glb',
+    'fonts/blade-sans-kr-400.woff2', 'index.html', 'models/heroes-next/ranger-library-t1-v6.glb', 'models/heroes-next/rogue-library-t1-v2.glb', 'models/sanctuary-v2/sanctuary-v2.glb',
     'models/citadel-hub-v1/x.glb', 'sfx/mirelo-v1/x.mp3', 'textures/star-archive/rosette.webp']) expect(classify(file, split)?.class, file).toBe('core');
 });
 

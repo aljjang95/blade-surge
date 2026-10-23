@@ -24,7 +24,7 @@
     },
     {
       "path": "models/heroes-next/ranger-library-t1-v1.glb",
-      "reason": "궁수 library 개정 v1~v4 는 기록 JSON(테스트 전용)만 가리킨다. 게임은 ranger-library-t1-v5 만 쓴다(RANGER_LIBRARY_REVISION_ID)."
+      "reason": "궁수 library 개정 v1~v4 는 기록 JSON(테스트 전용)만 가리킨다. 게임은 ranger-library-t1-v6 만 쓴다(RANGER_LIBRARY_REVISION_ID)."
     },
     {
       "path": "models/heroes-next/ranger-library-t1-v2.glb",
@@ -36,7 +36,11 @@
     },
     {
       "path": "models/heroes-next/ranger-library-t1-v4.glb",
-      "reason": "위와 같음(v4). v5 는 v4 와 골격·클립 바이트가 같은 몸 교체 개정이라 v4 는 클립 원본 기록(v5 clipSource·2·3단계·여우 동작 base)으로만 남는다."
+      "reason": "위와 같음(v4). v6 는 v4 와 골격 노드·클립 바이트가 같은 몸 재결합 개정이라 v4 는 클립 원본 기록(v6 clipSource·2·3단계·여우 동작 base)으로만 남는다."
+    },
+    {
+      "path": "models/heroes-next/ranger-library-t1-v5.glb",
+      "reason": "철회된 v5(땋은 머리·망토 소실, #243 롤백). 기록(v5·1단계 곡선 v1 JSON)만 가리킨다."
     },
     {
       "path": "models/heroes-next/rogue-library-t1-axis-v1.glb",

@@ -469,11 +469,11 @@
   {
    "asset": "hero_ranger_t1",
    "path": "/models/anim-packs/hero_ranger_t1.glb",
-   "sha256": "f3d2dba50ae2f13ef6311eb05cd35e2c07b3778f750bcfcdd105e03b50af3282",
-   "bytes": 273024,
+   "sha256": "a6d83a4cc5f4fa10e700adc20dc2fcf2be64b5b0955de95f9d543a142f6a65d2",
+   "bytes": 272704,
    "source": {
-    "path": "public/models/heroes-next/ranger-library-t1-v5.glb",
-    "sha256": "dddac3fb316f27ca321670af3f5355ea7b71ecd39fff2eca74aa7a930a1e9f59"
+    "path": "public/models/heroes-next/ranger-library-t1-v6.glb",
+    "sha256": "54c7afe5a81252649069d577ec76dc80cd664f3d29c7eeef888e72457f5ca75f"
    },
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",
@@ -491,7 +491,7 @@
      "rootDriftM": 0,
      "baseRootRangeM": 0,
      "rootRangeM": 0.168,
-     "minSkinZ": 0.0115
+     "minSkinZ": 0.0019
     },
     "hit_left": {
      "side": "left",
@@ -507,7 +507,7 @@
      "rootDriftM": 0,
      "baseRootRangeM": 0,
      "rootRangeM": 0.066,
-     "minSkinZ": 0.0089
+     "minSkinZ": 0
     },
     "hit_right": {
      "side": "right",
@@ -523,7 +523,7 @@
      "rootDriftM": 0,
      "baseRootRangeM": 0,
      "rootRangeM": 0.066,
-     "minSkinZ": 0.0089
+     "minSkinZ": 0
     }
    }
   },

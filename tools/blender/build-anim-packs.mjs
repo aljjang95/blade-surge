@@ -14,7 +14,7 @@ const arg = (name, fallback = null) => { const i = process.argv.indexOf('--' + n
 const sha = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const json = (path) => JSON.parse(readFileSync(resolve(ROOT, path), 'utf8'));
 
-const rogue = json('src/data/rogue-library-revision-v2.json'), ranger = json('src/data/ranger-library-revision-v5.json');
+const rogue = json('src/data/rogue-library-revision-v2.json'), ranger = json('src/data/ranger-library-revision-v6.json');
 // 게임이 실제로 읽는 1단계 몸체에서 클립을 뽑는다(도적·궁수는 교정본). 2·3단계·아바타는 1단계 클립을 공유한다.
 const SOURCES = {
   hero_knight_t1: 'asset-library/normalized/hero_knight_t1.glb',

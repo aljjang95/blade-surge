@@ -16,7 +16,7 @@ import { rangerLibraryRevision, rangerClipSource } from '../../src/engine/librar
 export const PROFILE = Object.freeze({
   gridHz: 480, checkFactor: 4, iterations: 4000,
   // 저작 띠(수용 기준보다 안쪽 여유)와 실제 수용 기준(test/ranger-library-model·ranger-death-contact 와 같은 값)
-  dodge: { band: [-.02, .025], accept: [-.03, .03], pinEnd: true },
+  dodge: { band: [-.02, .02], accept: [-.03, .03], pinEnd: true },
   death: { band: [-.006, .025], accept: [-.01, Infinity], endAbs: .03, pinEnd: false },
 });
 const CLIPS = ['dodge', 'death'];

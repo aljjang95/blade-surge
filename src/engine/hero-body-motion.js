@@ -5,7 +5,7 @@ import ROGUE_REVISION from '../data/rogue-library-revision-v2.json';
 import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
 import HIGHER_BODY_MOTION from '../data/higher-body-motion-v1.json';
 import R2_BODY_MOTION_V2 from '../data/rogue-t2-body-motion-v2.json';
-import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v1.json';
+import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v2.json';
 import { rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
 
 const FOX = 'avatar_ranger_fox';
@@ -123,10 +123,11 @@ export function createBodyMotionClip(baseClip, motion = FOX_BODY_MOTION) {
     baseClip.tracks.map(track => track === original ? replacement : track), baseClip.blendMode);
 }
 
-// ---- 궁수 1단계 v5 몸 전용 회피·사망 골반 높이(ranger-t1-body-motion-v1) ----
-// v5 는 v4 와 클립 바이트가 같은 몸 교체 개정이다. 새 몸(머리 부피·발 모양)에 맞춘 Hips 높이만 저작 기록으로 덮는다.
+// ---- 궁수 1단계 v6 몸 전용 회피·사망 골반 높이(ranger-t1-body-motion-v2. 철회된 v5 기록은 v1) ----
+// v6 는 v4 와 골격 노드·클립 바이트가 같은 몸 재결합 개정이다. 새 몸(머리·망토 부피·발 모양)에 맞춘 Hips 높이만 저작 기록으로 덮는다.
+// 상한 0.3m: v6 망토(등 뒤 약 19cm)가 앞구르기 중간에 바닥을 파서 골반을 최대 0.28m 올려야 한다(v5 는 0.12 안).
 // 기록은 480Hz 격자 오프셋(선형)이며 띠 안에서 평활한 곡선이다(tools/art/author-ranger-t1-body-motion.mjs). 런타임은 접지를 계산하지 않고 검사만 한다.
-const RANGER_T1 = 'hero_ranger_t1', T1_LIMIT_METERS = .12;
+const RANGER_T1 = 'hero_ranger_t1', T1_LIMIT_METERS = .3;
 export function validateRangerT1Motion(motion, revision = rangerLibraryRevision()) {
   const source = rangerClipSource(revision);
   requireMotion(motion?.schema === 'blade-surge.ranger-t1-body-motion.v1' && motion.asset === RANGER_T1 && motion.heroId === 'ranger'
@@ -151,7 +152,7 @@ export function validateRangerT1Motion(motion, revision = rangerLibraryRevision(
   return freezeTree(structuredClone(motion));
 }
 
-/** 1단계 v5 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
+/** 1단계 v6 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
 export function createRangerT1BodyMotionClip(baseClip, motion) {
   const entry = motion.clipOverrides.find(item => item.base.clip === baseClip?.name);
   requireMotion(entry && baseClip.duration === entry.base.duration, '1단계 저작 클립 이름·길이 불일치');
@@ -277,7 +278,7 @@ const higherMotionRegistry = createHigherBodyMotionRegistry({schema:'blade-surge
 /** 로더 호출 시 선택한 몸체 revision을 캡처한다. 원본 fallback을 교정본으로 오인하지 않는다. */
 export function selectedBodyMotionIdentity(asset) {
   const revised = revisedLibraryFile(asset);
-  // 1단계 궁수는 라이브러리 개정(v5) 기록이 몸 출처다. 2·3단계·아바타는 상위 몸체 기록을 쓴다.
+  // 1단계 궁수는 라이브러리 개정(v6) 기록이 몸 출처다. 2·3단계·아바타는 상위 몸체 기록을 쓴다.
   const revision = asset.id === RANGER_T1 ? rangerLibraryRevision() : HIGHER_BODY_REVISIONS.revisions.find(item => item.asset === asset.id);
   return Object.freeze({ asset: asset.id, heroId: asset.heroId, revisionId: revised && revision ? revision.id : null,
     path: revised || asset.file, sha256: revised && revision ? revision.output.sha256 : asset.sha256 });
@@ -342,7 +343,7 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
   const state = states.get(root); if (!state) return null;
   const body = state.registry.find(item => item.asset === identity.asset);
   const fox = state.heroId === 'ranger' && identity.asset === FOX;
-  // 1단계 v5 몸: 로더가 고른 개정 id 가 있을 때만 쓰고, 있으면 경로·SHA 가 정확히 같아야 한다(아니면 거절). id 가 없으면 원본 클립.
+  // 1단계 v6 몸: 로더가 고른 개정 id 가 있을 때만 쓰고, 있으면 경로·SHA 가 정확히 같아야 한다(아니면 거절). id 가 없으면 원본 클립.
   const t1 = state.heroId === 'ranger' && identity.asset === RANGER_T1 && identity.revisionId != null;
   if (t1) requireMotion(identity.heroId === 'ranger' && identity.revisionId === rangerT1Motion.revisionId
     && identity.path === rangerT1Motion.body.path && identity.sha256 === rangerT1Motion.body.sha256, '실제 선택 1단계 몸체와 모션 불일치');
