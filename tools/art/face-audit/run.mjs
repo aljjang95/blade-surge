@@ -11,7 +11,7 @@ import sharp from 'sharp';
 import { CHROME, GL_ARGS } from '../../chrome.mjs';
 
 const OUT = process.argv[2] || 'work/qa/face-audit', FILTER = new RegExp(process.argv[3] || '.');
-const PORT = 4411, N = 'asset-library/normalized/', H = 'public/models/heroes-next/', RT = process.env.RANGER_T1 || H + 'ranger-library-t1-v4.glb';
+const PORT = 4411, N = 'asset-library/normalized/', H = 'public/models/heroes-next/', RT = process.env.RANGER_T1 || H + 'ranger-library-t1-v5.glb';
 const ROWS = {
   ranger: [['ranger_t1', RT], ['ranger_t2', H + 'ranger-t2-body-fit-v1.glb', RT], ['ranger_t3', H + 'ranger-t3-body-fit-v1.glb', RT], ['ranger_fox', H + 'ranger-fox-body-fit-v1.glb', RT]],
   knight: [], barbarian: [], mage: [], rogue: [],

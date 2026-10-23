@@ -75,7 +75,9 @@ function copyAccessor(i, joints = false) {
     const out = Buffer.alloc(a.count * 8);
     for (let n = 0; n < a.count; n++) for (let c = 0; c < 4; c++) {
       const value = size === 1 ? body.bin.readUInt8(start + n * stride + c) : body.bin.readUInt16LE(start + n * stride + c * 2);
-      out.writeUInt16LE(remap[value] ?? 0, n * 8 + c * 2);
+      // 범위 밖 관절 인덱스를 조용히 Hips(0)로 바꾸지 않는다.
+      if (remap[value] === undefined) throw new Error('JOINTS_0 index out of body skin range: ' + value);
+      out.writeUInt16LE(remap[value], n * 8 + c * 2);
     }
     a.bufferView = addView({ target: v.target }, out); a.byteOffset = 0; a.componentType = 5123;
   } else a.bufferView = copyView(a.bufferView);
@@ -114,6 +116,7 @@ function copyMaterial(i) {
   if (!matMap.has(i)) { const m = structuredClone(b.materials[i]); remapTextures(m); j.materials.push(m); matMap.set(i, j.materials.length - 1); }
   return matMap.get(i);
 }
+for (const ext of b.extensionsRequired || []) if (!(j.extensionsRequired || []).includes(ext)) throw new Error('body requires extension not in base: ' + ext);
 for (const ext of b.extensionsUsed || []) if (!(j.extensionsUsed ||= []).includes(ext)) j.extensionsUsed.push(ext);
 j.meshes[0] = {
   name: bodyMeshes[0].name || j.meshes[0].name,

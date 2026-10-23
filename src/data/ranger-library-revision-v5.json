@@ -67,7 +67,8 @@
     },
     "packer": {
       "tool": "tools/art/swap-library-body.mjs",
-      "toolSha256": "340f54f7befd728e32260fb0d7594eda8f46467de78621da9ed896c67ff27cab",
+      "toolSha256": "903628882755aeeba45c9d2e9f0ffc95513f005b382d929e37dea43877c8777e",
+      "toolNote": "리뷰 P2 반영(범위 밖 JOINTS_0·body 필수 확장 거절) 뒤 같은 입력으로 다시 돌려 같은 packed(854daf2f…)·출력(dddac3fb…) 바이트 확인",
       "ibmDrift": 0.000392913818359375,
       "rule": "base 의 노드·애니메이션·스킨(역바인드) 바이트는 그대로, 몸 메시(정점·가중치)·재질·텍스처만 body 것으로 바꾼다. 관절 역바인드 차가 0.01 을 넘으면 거절한다"
     },
