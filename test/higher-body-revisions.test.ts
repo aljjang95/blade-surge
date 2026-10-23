@@ -2,9 +2,11 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import manifest from '../asset-library/manifest.json';
-import HIGHER from '../src/data/higher-body-revisions-v1.json';
+import HIGHER_V1 from '../src/data/higher-body-revisions-v1.json';
+import RANGER_T2_V2 from '../src/data/ranger-t2-body-revision-v2.json';
+import RANGER_T3_V2 from '../src/data/ranger-t3-body-revision-v2.json';
 import {
-  higherBodyRevisions, validateHigherBodyRevisions, revisedLibraryFile, resolveAssetSource,
+  higherBodyRevisions, higherBodyRevisionHistory, supersedeHigherBodyRevisions, validateHigherBodyRevisions, revisedLibraryFile, resolveAssetSource,
   rangerLibraryRevision, rogueLibraryRevision, foxBodyRevision,
 } from '../src/engine/library-assets.js';
 
@@ -14,6 +16,9 @@ type Revision = {
   output: { path: string; sha256: string | null };
 };
 type RevisionSet = { schema: string; revisions: Revision[] };
+// 게임이 쓰는 기록 = v1 번들 + 대신 쓰는 개정(2·3단계 궁수 body-fit-v2). v1 JSON 은 이력으로 그대로 둔다.
+const V2 = [RANGER_T2_V2, RANGER_T3_V2];
+const HIGHER = higherBodyRevisions() as RevisionSet;
 const copy = (): RevisionSet => structuredClone(HIGHER);
 const assetFor = (id: string) => {
   const asset = manifest.assets.find(entry => entry.id === id);
@@ -29,7 +34,9 @@ const generated = (revision: Revision): Revision => ({
 
 test('다섯 revision은 정확한 원본 SHA와 개별 출력 경로를 가지며 비활성 초안은 원본을 선택한다', () => {
   const expected = ['hero_ranger_t2', 'hero_ranger_t3', 'hero_rogue_t2', 'hero_rogue_t3', 'avatar_rogue_crow'];
-  expect(higherBodyRevisions()).toBe(HIGHER);
+  expect(HIGHER.schema).toBe(HIGHER_V1.schema);
+  expect(HIGHER.revisions.map(revision => revision.id)).toEqual(HIGHER_V1.revisions.map(revision => /^ranger-t[23]-body-fit-v1$/.test(revision.id) ? revision.id.replace(/v1$/, 'v2') : revision.id));
+  for (const next of V2) expect(HIGHER.revisions.find(revision => revision.asset === next.asset)).toBe(next);
   const revisions = validateHigherBodyRevisions(HIGHER);
   expect(revisions.map((entry: Revision) => entry.asset)).toEqual(expected);
   for (const revision of revisions as Revision[]) {
@@ -98,6 +105,47 @@ test('번들 기록의 누락·중복·알 수 없는 자산과 초안의 가짜
     const invalid = copy(); mutate(invalid);
     expect(() => validateHigherBodyRevisions(invalid)).toThrow();
   }
+});
+
+test.each(V2.map(revision => [revision.id, revision] as const))('%s 는 같은 원본의 v1 기록을 대신하고 출처를 남기며, v1 기록·파일은 이력으로 남고 선택되지 않는다', (_id, RANGER_T3_V2: any) => {
+  const asset = assetFor(RANGER_T3_V2.asset), v1 = HIGHER_V1.revisions.find(revision => revision.asset === RANGER_T3_V2.asset)!;
+  expect(RANGER_T3_V2.supersedes).toBe(v1.id);
+  expect(RANGER_T3_V2.source).toEqual(v1.source);
+  expect(higherBodyRevisionHistory()).toContainEqual(v1);
+  expect(RANGER_T3_V2.output.path).toBe('/models/heroes-next/' + RANGER_T3_V2.id + '.glb');
+  expect(revisedLibraryFile(asset)).toBe(RANGER_T3_V2.output.path);
+  expect(resolveAssetSource(asset)).toBe(RANGER_T3_V2.output.path);
+  expect(digest('public' + RANGER_T3_V2.output.path)).toBe(RANGER_T3_V2.output.sha256);
+  // v1 파일은 지우거나 덮지 않는다. 대신 쓰는 개정이 생긴 v1 기록은 게임이 고르지 않는다.
+  expect(digest('public' + v1.output.path)).toBe(v1.output.sha256);
+  expect(() => revisedLibraryFile(asset, v1)).toThrow();
+  // 출처: Tripo 작업·리그 원본·가중치 정리·재결합 도구와 base(v4) SHA 가 실제 파일과 맞는다.
+  const a = RANGER_T3_V2.authoring;
+  expect(a.tripo.taskId).toBe({ hero_ranger_t2: '5d7b8438-ca1e-4ca0-a642-050c57bd6a0e', hero_ranger_t3: '55002756-663d-4a85-a02e-f91821a96846' }[RANGER_T3_V2.asset as string]);
+  expect(digest(a.tripo.riggedGlb.path)).toBe(a.tripo.riggedGlb.sha256);
+  expect(a.base).toEqual({ path: rangerLibraryRevision().clipSource.path, sha256: rangerLibraryRevision().clipSource.sha256 });
+  expect(digest('public' + a.base.path)).toBe(a.base.sha256);
+  // 도구는 이후 옵션이 늘 수 있으므로 현재 파일이 아니라 기록의 커밋·SHA 가 출처다(형식만 검사).
+  for (const tool of [a.weightClean, a.rebind]) { expect(tool.commit).toMatch(/^[a-f0-9]{40}$/); expect(tool.scriptSha256 ?? tool.toolSha256).toMatch(/^[a-f0-9]{64}$/); }
+  expect(a.rebind.outputSha256).toBe(RANGER_T3_V2.output.sha256);
+  // GLB 안의 재결합 기록이 개정 기록과 같다(base·정리 몸 SHA·들기·소켓·클립 없음).
+  const bytes = readFileSync(new URL('../public' + RANGER_T3_V2.output.path, import.meta.url));
+  const doc = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString());
+  const { jointGapM: _gaps, ...extras } = doc.asset.extras.bodyRebind;
+  expect(extras).toEqual(a.rebind.extras);
+  expect(extras.bodySha256).toBe(a.weightClean.outputSha256);
+  expect(doc.animations).toBeUndefined();
+  // 재질 마감은 v1 과 같은 조건(v1 GLB 에 materialFinish 없음 → v2 도 굽지 않음, 런타임 마감이 담당).
+  const v1Bytes = readFileSync(new URL('../public' + v1.output.path, import.meta.url));
+  expect(JSON.parse(v1Bytes.subarray(20, 20 + v1Bytes.readUInt32LE(12)).toString()).asset.extras?.materialFinish).toBeUndefined();
+  expect(RANGER_T3_V2.materialFinish.applied).toBe(false); expect(doc.asset.extras.materialFinish).toBeUndefined();
+  // 대신 쓰는 개정은 같은 자산·같은 원본의 이력 기록 하나만 가리킬 수 있다.
+  const bad = (patch: (value: any) => void) => { const next = structuredClone(RANGER_T3_V2) as any; patch(next); return () => supersedeHigherBodyRevisions(HIGHER_V1, [next]); };
+  expect(bad(() => {})).not.toThrow();
+  expect(bad(value => { value.supersedes = 'rogue-t2-body-fit-v1'; })).toThrow();
+  expect(bad(value => { value.source.sha256 = 'f'.repeat(64); })).toThrow();
+  expect(bad(value => { value.asset = 'hero_rogue_t2'; })).toThrow();
+  expect(bad(value => { value.id = v1.id; })).toThrow();
 });
 
 test('기존 궁수·도적·여우 선택과 명시적 revision 계약은 그대로다', () => {

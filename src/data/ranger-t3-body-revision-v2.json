@@ -1,0 +1,97 @@
+{
+  "id": "ranger-t3-body-fit-v2",
+  "asset": "hero_ranger_t3",
+  "useInGame": true,
+  "status": "GENERATED",
+  "reason": "v1 몸(higher-contact 교정본)은 앞머리가 눈을 가려 얼굴이 보이지 않았다(2026-10-23 얼굴 점검, art-src/t3-pc/PC_BRIEF.md). v2 는 앞머리를 양옆으로 가른 원화로 Tripo 에서 몸을 다시 만들고, 궁수 1단계 v6 와 같은 방식(장식 가중치 정리 → v4 골격을 회전만으로 Tripo 뼈 방향에 맞춘 자세에서 역바인드 재계산, --no-clips)으로 v4 골격에 싣는다. 클립은 1단계(v4 바이트)를 공유한다.",
+  "supersedes": "ranger-t3-body-fit-v1",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t3.glb",
+    "sha256": "41a3a8cd9310ed8620f5a30cab45df1b20a29cb2055f7d35c1c3caaa12d4ad72"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-t3-body-fit-v2.glb",
+    "sha256": "ed7c09cfaf16541c58d902e40ffee30e24ab2c494c172886a2e3a0ad9bcf89b2"
+  },
+  "authoring": {
+    "kind": "body-rebind",
+    "tripo": {
+      "taskId": "55002756-663d-4a85-a02e-f91821a96846",
+      "concept": "art-src/t3-pc/ranger_t3/concept_a.png (prompt.txt)",
+      "model": "H3.1, 8K 텍스처, 리토폴 11,000 지정(삼각형 10,649)",
+      "rig": "Humanoid + Mixamo 프리셋, mixamorig:* 55관절(손가락 끝 관절 없음)",
+      "credits": 55,
+      "result": "art-src/t3-pc/RESULT.md",
+      "export": {
+        "bytes": 28437632,
+        "sha256": "7ef23e458b5749041cb5ab7b336b536eeb1d8d5e1a95eb392598412cbe208935",
+        "note": "Tripo 내보내기 원본(8K). 공용 라이브러리 TLL-Asset-Foundry/blade_ranger_t3_pc 에 보관"
+      },
+      "riggedGlb": {
+        "path": "art-src/t3-pc/ranger_t3/rigged.glb",
+        "commit": "5dc3e27ab77539e6ccf3db520e6daf14163ac2ef",
+        "bytes": 6681052,
+        "sha256": "28db5b3b553d7aca9fb52fcd9d86085441037395629039ce25b68fa99b8ccc31"
+      }
+    },
+    "base": {
+      "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+      "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+    },
+    "weightClean": {
+      "script": "tools/asset-library/blender_clean_weights.py",
+      "scriptSha256": "6ac056e64c5f5c816f72dcd4861f04af22ba443ecc537909b1bd413cb242200c",
+      "commit": "2a7365281d1d8fd0379fb8909b9d03a74e7ca5ec",
+      "blender": "5.2.3 LTS",
+      "decor": {
+        "hue": "60-160",
+        "sat": 0.25,
+        "val": 0.12
+      },
+      "report": {
+        "ok": true,
+        "headRegion": 4630,
+        "hanging": 809,
+        "braid": 709,
+        "cape": 825,
+        "armStripped": 389,
+        "empty": 34,
+        "decorOnArm": 183,
+        "decorVertices": 4557,
+        "vertices": 15717
+      },
+      "outputSha256": "32462189da13daa39367087bb93756f8d12833cbdc008f1cde55a017b6b37cc6"
+    },
+    "rebind": {
+      "tool": "tools/art/rebind-library-body.mjs",
+      "toolSha256": "a0064b854b389deaf51aa14cfe3906da237249a26f8c6293c099f7d87bfb9c12",
+      "commit": "2a7365281d1d8fd0379fb8909b9d03a74e7ca5ec",
+      "outputSha256": "ed7c09cfaf16541c58d902e40ffee30e24ab2c494c172886a2e3a0ad9bcf89b2",
+      "extras": {
+        "method": "rotation-only-bind-pose",
+        "baseSha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0",
+        "bodySha256": "32462189da13daa39367087bb93756f8d12833cbdc008f1cde55a017b6b37cc6",
+        "scale": 1.952801,
+        "liftM": 0.015,
+        "socketMode": "none",
+        "clips": "none",
+        "yawDeg": 0,
+        "maxSwingDeg": 54.57,
+        "maxJointGapM": 0.0816,
+        "sockets": {}
+      },
+      "rule": "base 의 골격 노드 TRS·스킨 관절 순서는 그대로, 클립은 싣지 않는다(--no-clips, 게임은 1단계 클립을 공유). 몸 정점은 닮음 변환만, 역바인드 = 회전만 바꾼 base 골격 자세의 관절 세계 행렬의 역. Tripo 에 없는 손가락 끝 관절은 조상에 합친다. 활 소켓 노드는 v4 위치 그대로(--sockets 기본 none).",
+      "liftNote": "--lift=0.015: 들기 없이(work/t3/ranger_t3/body.glb, sha256 7389c461…) 실제 런타임 경로에서 대기 스킨 최저 y 가 -0.0116~-0.0082m(발이 바닥에 1cm 묻힘)였다. 0.015 를 올려 대기 0.0032~0.0066m 로 1단계 v6(0.0040~0.0069m, --lift=0.012)와 맞췄다. v1 은 0.0100~0.0121m."
+    },
+    "commands": [
+      "blender -b -P tools/asset-library/blender_clean_weights.py -- --input art-src/t3-pc/ranger_t3/rigged.glb --output work/t3/ranger_t3/clean.glb --report work/t3/ranger_t3/clean.json",
+      "node tools/art/rebind-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb work/t3/ranger_t3/clean.glb work/t3/ranger_t3/body-lift015.glb --no-clips --lift=0.015",
+      "cp work/t3/ranger_t3/body-lift015.glb public/models/heroes-next/ranger-t3-body-fit-v2.glb"
+    ]
+  },
+  "materialFinish": {
+    "applied": false,
+    "reason": "v1(ranger-t3-body-fit-v1.glb)의 asset.extras 에 materialFinish 가 없다(GLB 에 마감을 굽지 않았다). 같은 조건으로 v2 에도 굽지 않는다. 런타임 loadLibraryHero 가 normalizeLibrarySkinMaterial(금속도 0.22 상한, 불투명 BLEND→MASK)을 모든 라이브러리 몸에 건다."
+  },
+  "license": "owner-generated (Tripo subscription) body mesh, Tripo task 55002756-663d-4a85-a02e-f91821a96846; skeleton and shared clips from ranger-library-v4"
+}

@@ -6,11 +6,15 @@ import { createHigherBodyMotionRegistry, createHigherBodyMotionClip, registerHer
   commitHeroBodyMotion, refreshHeroBodyMotion, disposeHeroBodyMotion } from '../src/engine/hero-body-motion.js';
 import { loadHeroModel, loadHeroAsset, preloadHeroBody, spawnCharacter, applyLibraryHeroBody, disposeCharacter } from '../src/engine/assets.js';
 import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.mjs';
-import REVISIONS from '../src/data/higher-body-revisions-v1.json';
+import { higherBodyRevisions, higherBodyRevisionHistory } from '../src/engine/library-assets.js';
 import MOTIONS from '../src/data/higher-body-motion-v1.json';
+import REVISIONS_V1 from '../src/data/higher-body-revisions-v1.json';
 import R2_MOTION from '../src/data/rogue-t2-body-motion-v2.json';
+// 게임이 쓰는 기록(v1 번들 + 2·3단계 궁수 body-fit-v2). 2·3단계 궁수 v2 몸은 띠 곡선(ranger-t{2,3}-body-motion-v2, test/ranger-higher-body-motion)을
+// 쓰므로 이 번들에는 v1 몸 전용 v1 패킷이 이력으로만 남는다.
+const REVISIONS: typeof REVISIONS_V1 = higherBodyRevisions();
 const ACTIVE_MOTIONS = { schema: 'blade-surge.higher-body-motion.v2',
-  bodies: [...MOTIONS.bodies.filter(body => body.asset !== 'hero_rogue_t2'), R2_MOTION] };
+  bodies: [...MOTIONS.bodies.filter(body => !['hero_rogue_t2', 'hero_ranger_t2', 'hero_ranger_t3'].includes(body.asset)), R2_MOTION] };
 import RANGER from '../src/data/ranger-library-revision-v4.json';
 import manifest from '../asset-library/manifest.json';
 
@@ -34,10 +38,11 @@ function fixture(asset = 'hero_ranger_t2', height = .04) {
   const other = new THREE.QuaternionKeyframeTrack('mixamorigHips.quaternion', [0, .5], [0, 0, 0, 1, 0, 0, 0, 1]);
   const clip = new THREE.AnimationClip('dodge', .5, [track, other]);
   const times = Array.from({ length: 61 }, (_, index) => index / 120);
-  const prefix = asset === 'hero_ranger_t2' ? 'ranger-t2' : 'ranger-t3';
+  // 몸 개정 번호와 같은 번호의 저작 패킷(body-fit-vN → body-motion-vN). 3단계 궁수는 v2.
+  const motionRevisionId = revision.id.replace('-body-fit-', '-body-motion-');
   const body = {
     asset, heroId: 'ranger', revisionId: revision.id, body: bodyOutput, base: { ...RANGER.output },
-    motionRevisionId: prefix + '-body-motion-v1', output: { path: '/models/heroes-next/' + prefix + '-body-motion-v1.json', sha256: sha('fixture packet ' + height) },
+    motionRevisionId, output: { path: '/models/heroes-next/' + motionRevisionId + '.json', sha256: sha('fixture packet ' + height) },
     clipOverrides: [{ base: { clip: 'dodge', duration: .5, hipsTrack: track.name, interpolation: 'LINEAR',
       sourceTrackSha256: trackSha(track), times: Array.from(track.times), values: Array.from(track.values) },
     outputTrack: { name: track.name, type: 'vector', interpolation: 'LINEAR', times,
@@ -60,7 +65,7 @@ const identity = (body: ReturnType<typeof fixture>['body']) => ({ asset: body.as
 
 test('빈 신규 모션 번들은 원본을 유지하고 실제 활성 패킷만 등록할 수 있다', () => {
   expect(createHigherBodyMotionRegistry({ schema: MOTIONS.schema, bodies: [] })).toEqual([]);
-  expect(createHigherBodyMotionRegistry(ACTIVE_MOTIONS).length).toBe(5);
+  expect(createHigherBodyMotionRegistry(ACTIVE_MOTIONS).length).toBe(3);
   expect(() => createHigherBodyMotionRegistry(MOTIONS)).toThrow();
   const f = fixture();
   expect(() => createHigherBodyMotionRegistry(f.bundle)).toThrow();
@@ -76,6 +81,8 @@ test('빈 신규 모션 번들은 원본을 유지하고 실제 활성 패킷만
     (body: typeof f.body) => { body.clipOverrides[0].base.clip = 'attack'; },
     (body: typeof f.body) => { body.clipOverrides[0].authoring.maxOffsetMeters = .351; },
     (body: typeof f.body) => { body.clipOverrides[0].validation.supportEndMeters = .021; },
+    (body: typeof f.body) => { body.revisionId = 'ranger-t2-body-fit-v3'; },
+    (body: typeof f.body) => { body.motionRevisionId = 'ranger-t2-body-motion-v1'; body.output.path = '/models/heroes-next/ranger-t2-body-motion-v1.json'; },
   ]) {
     const invalid = structuredClone(f.bundle); mutate(invalid.bodies[0]);
     expect(() => createHigherBodyMotionRegistry(invalid, f.revisions)).toThrow();
@@ -185,6 +192,23 @@ test('실제 swap preflight 거절은 기존 mesh·재질·skeleton·별칭을 �
     expect(instance.root.userData.libraryBodyAssetId).toBe(body); expect(instance.clips).toEqual(clips); expect(disposed).toBe(false);
     for (const entry of before) { expect(entry.mesh.parent).toBe(entry.parent); expect(entry.mesh.skeleton).toBe(entry.skeleton); expect(entry.mesh.material).toBe(entry.material); }
   } finally { disposeCharacter(instance.root, instance.mixer); }
+});
+
+test('2·3단계 궁수 v1 패킷은 v1 몸 이력에만 묶이고 v2 몸 번들에는 등록되지 않는다', () => {
+  const history = higherBodyRevisionHistory();
+  expect(history.map((revision: { id: string }) => revision.id)).toEqual(['ranger-t2-body-fit-v1', 'ranger-t3-body-fit-v1']);
+  for (const prefix of ['ranger-t2', 'ranger-t3']) {
+    const asset = 'hero_' + prefix.replace('-', '_'), old = MOTIONS.bodies.find(body => body.asset === asset)!;
+    const previous = history.find((revision: { asset: string }) => revision.asset === asset)!;
+    expect(old.revisionId).toBe(prefix + '-body-fit-v1'); expect(old.motionRevisionId).toBe(prefix + '-body-motion-v1');
+    expect(old.body).toEqual({ path: previous.output.path, sha256: previous.output.sha256 });
+    // 이력 파일·패킷은 지우거나 덮지 않는다.
+    expect(sha(readFileSync('public' + old.body.path))).toBe(old.body.sha256);
+    expect(sha(readFileSync('public' + old.output.path))).toBe(old.output.sha256);
+    const current = REVISIONS.revisions.find((revision: { asset: string }) => revision.asset === asset)!;
+    expect(current.id).toBe(prefix + '-body-fit-v2'); expect(current.output.sha256).not.toBe(old.body.sha256);
+    expect(() => createHigherBodyMotionRegistry({ ...ACTIVE_MOTIONS, bodies: [...ACTIVE_MOTIONS.bodies, old] })).toThrow();
+  }
 });
 
 test('활성 실제 패킷은 파일 SHA와 원본 decoded Float32 snapshot에 결합한다', async () => {

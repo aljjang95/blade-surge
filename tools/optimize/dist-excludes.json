@@ -43,6 +43,14 @@
       "reason": "철회된 v5(땋은 머리·망토 소실, #243 롤백). 기록(v5·1단계 곡선 v1 JSON)만 가리킨다."
     },
     {
+      "path": "models/heroes-next/ranger-t2-body-fit-v1.glb",
+      "reason": "궁수 2단계 몸은 v2(ranger-t2-body-fit-v2, 앞머리를 가른 Tripo 몸)가 대신한다. v1 은 이력 기록(higher-body-revisions-v1·higher-body-motion-v1)과 v2 개정 기록의 비교 사유에만 남는다."
+    },
+    {
+      "path": "models/heroes-next/ranger-t3-body-fit-v1.glb",
+      "reason": "궁수 3단계 몸은 v2(ranger-t3-body-fit-v2, 앞머리를 가른 Tripo 몸)가 대신한다. v1 은 이력 기록(higher-body-revisions-v1·higher-body-motion-v1)과 v2 개정 기록의 비교 사유에만 남는다."
+    },
+    {
       "path": "models/heroes-next/rogue-library-t1-axis-v1.glb",
       "reason": "도적 1단계는 rogue-library-t1-v2 가 대신 쓰인다. axis-v1 은 기록 JSON(packedPath)과 테스트에만 나온다."
     },

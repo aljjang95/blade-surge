@@ -2,11 +2,15 @@ import * as THREE from 'three';
 import FOX_BODY_MOTION from '../data/fox-body-motion-v1.json';
 import RANGER_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_REVISION from '../data/rogue-library-revision-v2.json';
-import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
 import HIGHER_BODY_MOTION from '../data/higher-body-motion-v1.json';
 import R2_BODY_MOTION_V2 from '../data/rogue-t2-body-motion-v2.json';
 import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v2.json';
-import { rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
+import RANGER_T2_MOTION from '../data/ranger-t2-body-motion-v2.json';
+import RANGER_T3_MOTION from '../data/ranger-t3-body-motion-v2.json';
+import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
+
+// 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정, 예: 3단계 궁수 body-fit-v2).
+const HIGHER_BODY_REVISIONS = higherBodyRevisions();
 
 const FOX = 'avatar_ranger_fox';
 const DURATIONS = { dodge: .5, death: 1.25 };
@@ -127,10 +131,21 @@ export function createBodyMotionClip(baseClip, motion = FOX_BODY_MOTION) {
 // v6 는 v4 와 골격 노드·클립 바이트가 같은 몸 재결합 개정이다. 새 몸(머리·망토 부피·발 모양)에 맞춘 Hips 높이만 저작 기록으로 덮는다.
 // 상한 0.3m: v6 망토(등 뒤 약 19cm)가 앞구르기 중간에 바닥을 파서 골반을 최대 0.28m 올려야 한다(v5 는 0.12 안).
 // 기록은 480Hz 격자 오프셋(선형)이며 띠 안에서 평활한 곡선이다(tools/art/author-ranger-t1-body-motion.mjs). 런타임은 접지를 계산하지 않고 검사만 한다.
-const RANGER_T1 = 'hero_ranger_t1', T1_LIMIT_METERS = .3;
+// 같은 방식으로 v4 골격에 재결합한 2·3단계 v2 몸(ranger-t{2,3}-body-fit-v2)도 같은 띠 곡선 계약을 쓴다(ranger-t{2,3}-body-motion-v2,
+// tools/art/author-ranger-higher-body-motion.mjs). 이때 클립 원본은 몸 개정 기록의 재결합 base(v4)다.
+const RANGER_T1 = 'hero_ranger_t1', RANGER_T2 = 'hero_ranger_t2', RANGER_T3 = 'hero_ranger_t3', T1_LIMIT_METERS = .3;
+const RANGER_BAND_PREFIX = Object.freeze({ [RANGER_T2]: 'ranger-t2', [RANGER_T3]: 'ranger-t3' });
+// 골반 오프셋 크기 상한. 1단계는 0.3m, 2·3단계는 기존 상위 몸체 계약과 같은 0.35m(구르기에서 2단계 등 뒤 후드가 바닥을 파 0.34m 까지 올린다).
+// 접지 수용 기준(구르기 ±0.03m, 사망 > -0.01m)은 단계와 무관하게 같다.
+const HIGHER_BAND_LIMIT_METERS = .35;
 export function validateRangerT1Motion(motion, revision = rangerLibraryRevision()) {
-  const source = rangerClipSource(revision);
-  requireMotion(motion?.schema === 'blade-surge.ranger-t1-body-motion.v1' && motion.asset === RANGER_T1 && motion.heroId === 'ranger'
+  const t1 = revision?.asset === RANGER_T1;
+  const source = t1 ? rangerClipSource(revision) : revision?.authoring?.kind === 'body-rebind' ? revision.authoring.base : null;
+  const prefix = RANGER_BAND_PREFIX[revision?.asset];
+  requireMotion(source && (t1 || (prefix && new RegExp('^' + prefix + '-body-fit-v([2-9]|[1-9]\\d+)$').test(revision.id)
+      && motion?.motionRevisionId === revision.id.replace('-body-fit-', '-body-motion-')))
+    && motion?.schema === (t1 ? 'blade-surge.ranger-t1-body-motion.v1' : 'blade-surge.ranger-band-body-motion.v1')
+    && motion.asset === revision.asset && motion.heroId === 'ranger'
     && motion.revisionId === revision.id && motion.body?.path === revision.output.path && motion.body.sha256 === revision.output.sha256
     && motion.base?.path === source.path && motion.base.sha256 === source.sha256
     && motion.base.path === RANGER_REVISION.output.path && motion.base.sha256 === RANGER_REVISION.output.sha256, '1단계 몸·클립 원본 출처 불일치');
@@ -143,7 +158,7 @@ export function validateRangerT1Motion(motion, revision = rangerLibraryRevision(
     requireMotion(typeof profile?.profileId === 'string' && profile.interpolation === 'LINEAR' && profile.gridHz >= 120
       && Number.isFinite(profile.parentWorldYGain) && profile.parentWorldYGain > 0
       && Number.isFinite(profile.minOffsetMeters) && Number.isFinite(profile.maxOffsetMeters)
-      && profile.minOffsetMeters >= -T1_LIMIT_METERS && profile.maxOffsetMeters <= T1_LIMIT_METERS
+      && profile.minOffsetMeters >= -(t1 ? T1_LIMIT_METERS : HIGHER_BAND_LIMIT_METERS) && profile.maxOffsetMeters <= (t1 ? T1_LIMIT_METERS : HIGHER_BAND_LIMIT_METERS)
       && profile.initialOffsetMeters === 0 && (base.clip !== 'dodge' || profile.finalOffsetMeters === 0), '1단계 저작 프로필 불일치');
     requireMotion(validation?.pass === true && validation.densePenetrationMinMeters > validation.acceptance.low
       && (validation.acceptance.high === null || validation.denseFloatMaxMeters < validation.acceptance.high)
@@ -152,7 +167,10 @@ export function validateRangerT1Motion(motion, revision = rangerLibraryRevision(
   return freezeTree(structuredClone(motion));
 }
 
-/** 1단계 v6 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
+/** 같은 띠 곡선 계약(1단계 v6·3단계 v2)의 검사 이름. */
+export const validateRangerBandMotion = validateRangerT1Motion;
+
+/** 1단계 v6(·3단계 v2) 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
 export function createRangerT1BodyMotionClip(baseClip, motion) {
   const entry = motion.clipOverrides.find(item => item.base.clip === baseClip?.name);
   requireMotion(entry && baseClip.duration === entry.base.duration, '1단계 저작 클립 이름·길이 불일치');
@@ -208,11 +226,13 @@ export function createHigherBodyMotionRegistry(bundle, revisions = HIGHER_BODY_R
     const target = HIGHER_TARGETS[body.asset], revision = revisions.revisions.find(item => item.asset === body.asset);
     requireMotion(target && !assets.has(body.asset), '알 수 없거나 중복된 몸체'); assets.add(body.asset);
     const [heroId, prefix] = target, canonical = heroId === 'ranger' ? RANGER_REVISION : ROGUE_REVISION, signedV2=isR2V2(body);
-    requireMotion(body.heroId === heroId && body.revisionId === prefix + '-body-fit-v1'
+    // 몸체 개정 번호 N(body-fit-vN)에 맞는 저작 패킷(body-motion-vN)만 받는다. R2 서명 v2 는 body-fit-v1 위의 별도 개정이다.
+    const fit = /^(.+)-body-fit-v([1-9]\d*)$/.exec(String(body.revisionId));
+    requireMotion(body.heroId === heroId && fit?.[1] === prefix
       && revision?.id === body.revisionId && revision.status === 'GENERATED' && revision.useInGame === true
       && body.body?.path === revision.output.path && body.body.sha256 === revision.output.sha256 && SHA.test(body.body.sha256), '활성 몸체 revision·출력 SHA 불일치');
     requireMotion(body.base?.path === canonical.output.path && body.base.sha256 === canonical.output.sha256, '공유 클립 GLB 출처 불일치');
-    requireMotion(body.motionRevisionId === prefix + (signedV2?'-body-motion-v2':'-body-motion-v1')
+    requireMotion(body.motionRevisionId === prefix + '-body-motion-v' + (signedV2 ? 2 : Number(fit[2]))
       && body.output?.path === '/models/heroes-next/' + body.motionRevisionId + '.json'
       && SHA.test(body.output.sha256) && !paths.has(body.output.path), '저작 패킷 출력 출처 불일치'); paths.add(body.output.path);
     requireMotion(Array.isArray(body.clipOverrides) && body.clipOverrides.length >= 1 && body.clipOverrides.length <= (signedV2?3:2)
@@ -272,8 +292,17 @@ export function createHigherBodyMotionRegistry(bundle, revisions = HIGHER_BODY_R
 }
 
 const rangerT1Motion = validateRangerT1Motion(RANGER_T1_MOTION);
+// 띠 곡선을 쓰는 궁수 몸(자산 → 검사 끝난 기록). 3단계는 게임이 쓰는 몸 개정(v2) 기록에 묶는다.
+const RANGER_BAND_MOTIONS = new Map([
+  [RANGER_T1, rangerT1Motion],
+  [RANGER_T2, validateRangerT1Motion(RANGER_T2_MOTION, HIGHER_BODY_REVISIONS.revisions.find(revision => revision.asset === RANGER_T2))],
+  [RANGER_T3, validateRangerT1Motion(RANGER_T3_MOTION, HIGHER_BODY_REVISIONS.revisions.find(revision => revision.asset === RANGER_T3))],
+]);
+// v1 번들 위에 자산별 새 패킷을 얹는다. 띠 곡선으로 옮긴 자산(3단계 궁수 v2 몸)의 v1 패킷은 이력으로만 남고 등록하지 않는다.
+const HIGHER_MOTION_REPLACEMENTS = [R2_BODY_MOTION_V2];
 const higherMotionRegistry = createHigherBodyMotionRegistry({schema:'blade-surge.higher-body-motion.v2',
-  bodies:[...HIGHER_BODY_MOTION.bodies.filter(body=>body.asset!==R2),R2_BODY_MOTION_V2]});
+  bodies:[...HIGHER_BODY_MOTION.bodies.filter(body=>!HIGHER_MOTION_REPLACEMENTS.some(next=>next.asset===body.asset)
+    && !RANGER_BAND_MOTIONS.has(body.asset)),...HIGHER_MOTION_REPLACEMENTS]});
 
 /** 로더 호출 시 선택한 몸체 revision을 캡처한다. 원본 fallback을 교정본으로 오인하지 않는다. */
 export function selectedBodyMotionIdentity(asset) {
@@ -343,17 +372,19 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
   const state = states.get(root); if (!state) return null;
   const body = state.registry.find(item => item.asset === identity.asset);
   const fox = state.heroId === 'ranger' && identity.asset === FOX;
-  // 1단계 v6 몸: 로더가 고른 개정 id 가 있을 때만 쓰고, 있으면 경로·SHA 가 정확히 같아야 한다(아니면 거절). id 가 없으면 원본 클립.
-  const t1 = state.heroId === 'ranger' && identity.asset === RANGER_T1 && identity.revisionId != null;
-  if (t1) requireMotion(identity.heroId === 'ranger' && identity.revisionId === rangerT1Motion.revisionId
-    && identity.path === rangerT1Motion.body.path && identity.sha256 === rangerT1Motion.body.sha256, '실제 선택 1단계 몸체와 모션 불일치');
+  // 1단계 v6·3단계 v2 몸(띠 곡선): 로더가 고른 개정 id 가 있을 때만 쓰고, 있으면 경로·SHA 가 정확히 같아야 한다(아니면 거절). id 가 없으면 원본 클립.
+  // 등록부(registry)에 같은 자산 패킷이 있으면 그쪽이 우선이다(제품 등록부에는 띠 곡선 자산이 없다).
+  const band = state.heroId === 'ranger' && identity.revisionId != null && !body ? RANGER_BAND_MOTIONS.get(identity.asset) || null : null;
+  const t1 = band !== null;
+  if (t1) requireMotion(identity.heroId === 'ranger' && identity.revisionId === band.revisionId
+    && identity.path === band.body.path && identity.sha256 === band.body.sha256, '실제 선택 1단계 몸체와 모션 불일치');
   if (t1) {
-    requireMotion(rangerT1Motion.clipOverrides.every(entry => state.entries.some(item => item.base.name === entry.base.clip)), '1단계 공유 원본 클립 누락');
+    requireMotion(band.clipOverrides.every(entry => state.entries.some(item => item.base.name === entry.base.clip)), '1단계 공유 원본 클립 누락');
     const parent = root.getObjectByName('mixamorigHips')?.parent;
     requireMotion(parent, '실제 골반 부모 없음'); parent.updateWorldMatrix(true, false);
     const matrix = parent.matrixWorld.elements;
     requireMotion(Math.abs(matrix[1]) < 1e-7 && Math.abs(matrix[9]) < 1e-7 && matrix[5] > 0
-      && rangerT1Motion.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '1단계 골반 부모 world/native 축·배율 불일치');
+      && band.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '1단계 골반 부모 world/native 축·배율 불일치');
   }
   if(identity.asset===R2)requireMotion(isR2V2(body)&&body.authoringMethod===REPAIRED_METHOD,'R2 reviewed repaired v2 required; no legacy fallback');
   if (body) requireMotion(body.heroId === state.heroId && identity.heroId === state.heroId && identity.revisionId === body.revisionId
@@ -371,15 +402,15 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     requireMotion(Math.abs(matrix[4])<1e-7&&Math.abs(matrix[6])<1e-7,'signed STAB actual parent localY world axis');
   }
   const changes = state.entries.map(entry => {
-    const active = fox || (t1 && rangerT1Motion.clipOverrides.some(item => item.base.clip === entry.base.name))
+    const active = fox || (t1 && band.clipOverrides.some(item => item.base.clip === entry.base.name))
       || body?.clipOverrides.some(item => item.base.clip === entry.base.name);
     let next = entry.base;
     if (active) {
       let cache = bodyClips.get(entry.base);
       if (!cache) { cache = new Map(); bodyClips.set(entry.base, cache); }
-      const key = fox ? FOX_BODY_MOTION : t1 ? rangerT1Motion : body;
+      const key = fox ? FOX_BODY_MOTION : t1 ? band : body;
       next = cache.get(key);
-      if (!next) { next = fox ? createBodyMotionClip(entry.base) : t1 ? createRangerT1BodyMotionClip(entry.base, rangerT1Motion) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); overlayBases.set(next, entry.base); }
+      if (!next) { next = fox ? createBodyMotionClip(entry.base) : t1 ? createRangerT1BodyMotionClip(entry.base, band) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); overlayBases.set(next, entry.base); }
     }
     return { entry, next };
   });

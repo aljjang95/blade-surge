@@ -8,6 +8,9 @@
 #   3) 그 밖: 팔 뼈 선분보다 몸통 축(Hips→HeadTop)에 더 가깝고, 팔 가중치가 0.5 미만이거나 몸 뒤쪽이면 팔 가중치를 뺀다.
 #   4) 남은 가중치를 다시 정규화한다. 하나도 안 남으면 가장 가까운 몸통 뼈 1.
 #   blender -b -P tools/asset-library/blender_clean_weights.py -- --input <rigged.glb> --output <cleaned.glb> --report <r.json>
+#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12]
+#   장식 색 범위: 기본은 궁수 1단계의 초록(60–160°). 궁수 2단계 붉은 후드는 --decor-hue 60-160,340-25 처럼 여러 구간(도, 360 을 넘는
+#   구간은 340-25 처럼 감아 쓴다)을 준다. 범위에 드는 정점이 몸 앞이면 땋은 머리 규칙, 몸 뒤면 망토 규칙을 받는다.
 import bpy, colorsys, json, sys
 import numpy as np
 from pathlib import Path
@@ -32,8 +35,18 @@ def seg_dist(p, a, b):
     t = intersect_point_line(p, a, b)[1]; t = max(0.0, min(1.0, t))
     return (p - a.lerp(b, t)).length
 
-def vertex_green(mesh):
-    # 정점마다 기본색 텍스처를 UV 로 읽어 초록(색상 60–160°, 채도 0.25 이상, 명도 0.12 이상)인지 돌려준다.
+def hue_ranges(text):
+    out = []
+    for part in text.split(','):
+        lo, hi = (float(x) for x in part.strip().split('-'))
+        if not (0 <= lo <= 360 and 0 <= hi <= 360): raise ValueError('--decor-hue must be degrees 0-360: ' + part)
+        out.append((lo / 360, hi / 360))
+    return out
+
+def in_hue(h, ranges): return any((lo <= h <= hi) if lo <= hi else (h >= lo or h <= hi) for lo, hi in ranges)
+
+def vertex_decor(mesh, ranges, sat, val):
+    # 정점마다 기본색 텍스처를 UV 로 읽어 장식 색(기본: 색상 60–160°, 채도 0.25 이상, 명도 0.12 이상)인지 돌려준다.
     me = mesh.data; uv = me.uv_layers.active.data
     img = None
     for mat in me.materials:
@@ -49,7 +62,7 @@ def vertex_green(mesh):
     for i, a in enumerate(acc):
         if not a[3]: continue
         hh, ss, vv = colorsys.rgb_to_hsv(a[0] / a[3], a[1] / a[3], a[2] / a[3])
-        out[i] = 60 / 360 <= hh <= 160 / 360 and ss >= 0.25 and vv >= 0.12
+        out[i] = bool(in_hue(hh, ranges) and ss >= sat and vv >= val)
     return out
 
 def main():
@@ -64,6 +77,8 @@ def main():
     # 몸 앞쪽: 어깨선과 위 방향의 외적. 발끝이 앞이므로 부호를 발끝으로 맞춘다.
     side = (J['LeftArm'] - J['RightArm']).normalized(); front = side.cross(up).normalized()
     if (J['LeftToeBase'] - J['LeftFoot']).dot(front) < 0: front = -front
+    # Tripo 55관절 프리셋에는 HeadTop_End 가 없다: 목→머리 방향으로 머리 길이만큼 늘려 만든다.
+    if 'HeadTop_End' not in J: J['HeadTop_End'] = J['Head'] + (J['Head'] - J['Neck']).normalized() * (J['Head'] - J['Neck']).length * 1.6
     body = [J[n] for n in ('Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End')]
     arms = []
     for s in ('Left', 'Right'):
@@ -77,8 +92,9 @@ def main():
         full = next((k for k in gi if norm(k) == n), None)
         if full is None: full = mesh.vertex_groups.new(name='mixamorig:' + n).name; gi[full] = mesh.vertex_groups[full].index; names[gi[full]] = full
         return mesh.vertex_groups[full]
-    spine2 = group('Spine2'); stats = {'headRegion': 0, 'hanging': 0, 'braid': 0, 'cape': 0, 'armStripped': 0, 'empty': 0}
-    green = vertex_green(mesh)
+    spine2 = group('Spine2'); stats = {'headRegion': 0, 'hanging': 0, 'braid': 0, 'cape': 0, 'armStripped': 0, 'empty': 0, 'decorOnArm': 0}
+    decor = dict(hue=a.get('decor-hue', '60-160'), sat=float(a.get('decor-sat', 0.25)), val=float(a.get('decor-val', 0.12)))
+    green = vertex_decor(mesh, hue_ranges(decor['hue']), decor['sat'], decor['val'])
     mw = mesh.matrix_world
     for v in mesh.data.vertices:
         w = {names[g.group]: g.weight for g in v.groups if g.weight > 0}
@@ -88,7 +104,12 @@ def main():
         arm_w = sum(x for n, x in w.items() if is_arm(n))
         new = dict(w)
         front_side = (p - J['Spine1']).dot(front)
-        braid = green[v.index] and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
+        d_body = min(seg_dist(p, body[i], body[i + 1]) for i in range(len(body) - 1)) if arm_w > 0 else 0.0
+        d_arm = min(seg_dist(p, s0, s1) for s0, s1 in arms) if arm_w > 0 else 1e9
+        # 장식 색이 넓은 경우(붉은 갑옷 전체 등) 팔 소매·팔 갑옷을 장식으로 오판하지 않게: 팔 선분에 더 가깝고 팔 가중치가 주인 정점은 장식 규칙에서 뺀다.
+        on_arm = arm_w >= 0.5 and d_arm < d_body
+        if green[v.index] and on_arm: stats['decorOnArm'] += 1
+        braid = green[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
         if head_w >= 0.2 or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
@@ -100,12 +121,10 @@ def main():
                 new[spine2.name] = new.get(spine2.name, 0) + k
                 stats['hanging'] += 1
             if braid: stats['braid'] += 1
-        elif green[v.index] and front_side < -0.02:
+        elif green[v.index] and not on_arm and front_side < -0.02:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['cape'] += 1
         elif arm_w > 0:
-            d_body = min(seg_dist(p, body[i], body[i + 1]) for i in range(len(body) - 1))
-            d_arm = min(seg_dist(p, s0, s1) for s0, s1 in arms)
             behind = (p - J['Spine1']).dot(front) < -0.02
             if d_body < d_arm and (arm_w < 0.5 or behind):
                 new = {n: x for n, x in w.items() if not is_arm(n)}
@@ -123,7 +142,7 @@ def main():
             f = 1024 / max(w, h); image.scale(max(1, round(w * f)), max(1, round(h * f))); image.pack()
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_animations=False, export_cameras=False, export_lights=False,
         export_image_format='WEBP', export_image_quality=82, export_yup=True)
-    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
+    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'decor': decor, 'decorVertices': int(sum(green)), 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
 
 try: main()
 except Exception as e:
