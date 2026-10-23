@@ -49,19 +49,25 @@
     },
     "bodyRebind": {
       "script": "tools/asset-library/blender_swap_body.py",
-      "scriptSha256": "56fae014bcb71b3b54565488f5e5cd1187d2f891070e71fa46c385133c49fc04",
+      "scriptSha256": "14b1d413ada00bcbc78914f387802fa9e9e85a84f8329b987ea1c26d53b72b0f",
       "blender": "5.2.2 LTS",
       "host": "Claude 클라우드 세션 Linux Blender 5.2.2(같은 입력으로 다시 돌려 같은 바이트 확인)",
-      "outputSha256": "f6ca76167b782c14e75a542164a4bcecaef283275e5740d9715c2d1c31870123",
+      "outputSha256": "100a2afd5bb9763cc5a3215374520ca0543896501e5349d569961ce419955fb3",
       "report": {
         "maxJointError": 1.5879060556972363e-7,
         "matchedBones": 65,
         "scale": 1.8674364673914614,
         "filledVertices": 42,
-        "triangles": 10653
+        "triangles": 10653,
+        "headRigidVertices": 3727
       },
       "glbTriangles": 10573,
-      "trianglesNote": "report.triangles(10653)는 Blender 가 내보내기 전 몸 객체에서 센 값이고, GLB 인덱스 삼각형은 Tripo 리토폴 면 수와 같은 10573 이다"
+      "trianglesNote": "report.triangles(10653)는 Blender 가 내보내기 전 몸 객체에서 센 값이고, GLB 인덱스 삼각형은 Tripo 리토폴 면 수와 같은 10573 이다",
+      "headRigid": "켜짐(기본): 머리 관절 + 골반→머리 길이 8% 위 정점은 Head·HeadTop_End·Neck·눈 본만 남겨 다시 정규화(없으면 Head 1)",
+      "previousOutputSha256": {
+        "sha256": "f6ca76167b782c14e75a542164a4bcecaef283275e5740d9715c2d1c31870123",
+        "note": "head_rigid 이전 v5 몸(GLB dddac3fb…). 구르기·사망 접지 실패로 교체"
+      }
     },
     "packer": {
       "tool": "tools/art/swap-library-body.mjs",
@@ -69,9 +75,9 @@
       "ibmDrift": 0.000392913818359375,
       "rule": "base 의 노드·애니메이션·스킨(역바인드) 바이트는 그대로, 몸 메시(정점·가중치)·재질·텍스처만 body 것으로 바꾼다. 관절 역바인드 차가 0.01 을 넘으면 거절한다"
     },
-    "packedSha256": "854daf2f62e89ceeb7eb86ed344cb0c08b7e70510773b0b8a84be99ae5fb2d91",
+    "packedSha256": "bd9a70046c4105532431afbb08f493cc6933dcf3fc293e9f737955c10de42a80",
     "commands": [
-      "blender -b -P tools/asset-library/blender_swap_body.py -- --base public/models/heroes-next/ranger-library-t1-v4.glb --body <ranger_t1_v5.rigged.glb> --output <v5-body.glb> --report <v5-body.json>",
+      "blender -b -P tools/asset-library/blender_swap_body.py -- --base public/models/heroes-next/ranger-library-t1-v4.glb --body <ranger_t1_v5.rigged.glb> --output <v5-body.glb> --report <v5-body.json>  (head_rigid 기본 켜짐)",
       "node tools/art/swap-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <v5-body.glb> <v5-swapped.glb>",
       "node tools/art/finish-library-materials.mjs <v5-swapped.glb> public/models/heroes-next/ranger-library-t1-v5.glb ranger-library-v5"
     ],
@@ -80,7 +86,7 @@
   "materialFinish": {
     "tool": "tools/art/finish-library-materials.mjs",
     "recipe": "library-skin-finish-v1",
-    "inputSha256": "854daf2f62e89ceeb7eb86ed344cb0c08b7e70510773b0b8a84be99ae5fb2d91",
+    "inputSha256": "bd9a70046c4105532431afbb08f493cc6933dcf3fc293e9f737955c10de42a80",
     "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
     "materials": [
       {
@@ -94,7 +100,7 @@
   },
   "output": {
     "path": "/models/heroes-next/ranger-library-t1-v5.glb",
-    "sha256": "dddac3fb316f27ca321670af3f5355ea7b71ecd39fff2eca74aa7a930a1e9f59"
+    "sha256": "abc5bfccad6f966b57cda88a83774a8822b5924fbe230c974cd84d867874e10a"
   },
   "sockets": {
     "bowGrip": "RangerBowGrip_L",
@@ -124,18 +130,28 @@
     "method": "test/ranger-death-contact.test.ts 와 같은 실제 loadHeroModel → spawnCharacter 경로. death 1.25초 301 균등 표본 + 모든 키 시간",
     "runtimeBowMinY": 0.0066,
     "bowNote": "활은 골격 소켓에 붙어 몸 메시와 무관하다. v4 와 같은 값",
-    "t1SkinMinY": -0.0241,
+    "t1SkinMinY": -0.1271,
     "t1SkinMinYLimit": -0.01,
-    "t1EndSkinY": -0.0141,
+    "t1EndSkinY": -0.1271,
     "t1EndLimitAbs": 0.03,
     "v4T1SkinMinY": -0.004,
-    "status": "FAIL: 1단계 몸 스킨이 사망 중 바닥 아래 2.4cm(기준 1cm). v4 클립의 골반 높이는 v4 몸 스킨으로 접지를 풀었고 v5 몸은 머리·머리카락 부피와 발바닥 높이가 달라 같은 클립에서 접지가 어긋난다. 갑옷 2·3단계·여우는 몸이 바뀌지 않아 통과",
+    "status": "FAIL(head_rigid 후 더 나빠짐): 사망 최저 -0.127m(끝 자세, Head 1 정점), 기준 -0.01. v4 클립 골반 접지는 정수리에 어깨 가중이 섞인 v4 몸(같은 Tripo 자동 가중 방식)으로 풀렸는데, 머리만 따르게 하면 머리 뼈 회전을 그대로 받아 큰 머리 부피가 더 깊이 파고든다",
     "skinContactOther": {
-      "dodgeMinY": -0.088,
+      "dodgeMinY": -0.23,
+      "dodgeMinFrame": 22,
       "dodgeMaxY": 0.09,
+      "dodgeMaxFrame": 30,
+      "dodgeAtHalf": -0.1618,
       "dodgeLimitAbs": 0.03,
       "standingFeetY": 0.017,
-      "note": "구르기 22–23/48 프레임에 정수리(Head 0.49·LeftShoulder 0.27·LeftArm 0.16 가중) 정점이 바닥 아래 8.8cm, 30/48 프레임에 몸 전체가 9.0cm 뜸(v4 는 전 프레임 0). 서 있는 자세는 발이 1.7cm 뜸(v4 0)"
+      "note": "구르기 22/48 정수리(Head 1) -0.230m, 30/48 몸 전체 +0.090m 뜸(v4 는 위팔이 닿음). 서 있을 때 발 +0.017m. 대기 자세 정수리 높이(머리 뼈 위): v4 0.404 · v5 0.453 · v5b 0.604m"
+    },
+    "previousV5": {
+      "t1SkinMinY": -0.0241,
+      "t1EndSkinY": -0.0141,
+      "dodgeMinY": -0.088,
+      "dodgeMaxY": 0.09,
+      "note": "head_rigid 이전 몸(GLB dddac3fb…)"
     }
   },
   "clips": {
