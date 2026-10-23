@@ -9,7 +9,9 @@
 // 활 소켓(뼈 자식 노드)은 손 관절 위치 차이만큼 손 로컬에서 옮겨 보이는 손바닥에 남게 한다.
 // --sockets=none(기본): 활 소켓을 base 그대로 둔다. draw: 아래 5) 규칙으로 옮김(궁수 v6 실측에서 활 아래 림이 다리에 더 들어가 쓰지 않음).
 // --lift=<m>: 발바닥 맞춤 뒤 몸을 세계 Y 로 더 올린다(대기 자세 접지 여유. 궁수 v6 는 0.012).
-//   node tools/art/rebind-library-body.mjs <base.glb> <body.glb> <출력.glb> [기록 JSON 문자열] [--lift=<m>]
+// --no-clips: 출력에서 클립을 뺀다(2·3단계 body-fit·정규화본처럼 1단계 클립을 공유하는 메시 전용 파일). 골격 노드·역바인드 규약은 같다.
+// body 관절이 base 골격에 없으면(마법사·야만전사 1단계는 손가락 없는 25·33관절) 그 가중치를 base 에 있는 가장 가까운 조상 관절로 합친다.
+//   node tools/art/rebind-library-body.mjs <base.glb> <body.glb> <출력.glb> [기록 JSON 문자열] [--lift=<m>] [--sockets=none|draw] [--no-clips]
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from 'three';
@@ -20,7 +22,8 @@ const FULL_DRAW = 0.41, BOW_HIT_AT = 0.42;
 
 const argv = process.argv.slice(2), flags = Object.fromEntries(argv.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 const [basePath, bodyPath, outputPath, extraJson] = argv.filter((a) => !a.startsWith('--'));
-const lift = Number(flags.lift || 0), socketMode = flags.sockets || 'none';
+const lift = Number(flags.lift || 0), socketMode = flags.sockets || 'none', noClips = 'no-clips' in flags;
+for (const k of Object.keys(flags)) if (!['lift', 'sockets', 'no-clips'].includes(k)) throw new Error('unknown flag --' + k);
 if (!['none', 'draw'].includes(socketMode)) throw new Error('--sockets must be none|draw');
 if (!Number.isFinite(lift) || Math.abs(lift) > 0.05) throw new Error('--lift must be within ±0.05 m');
 if (!outputPath) throw new Error('Usage: node tools/art/rebind-library-body.mjs base.glb body.glb output.glb [extras-json]');
@@ -75,14 +78,24 @@ const j1 = (name) => joints1.find((n) => norm(j.nodes[n].name) === name);
 const P1 = (name) => pos(G1, j1(name)), P2 = (name) => pos(G2, idx2.get(name));
 
 // ---- 1) 닮음 변환 A: body 세계 → base 세계 ----
-function meshMinY(g, G, bin) {
-  const meshNode = g.nodes.findIndex((n) => n.skin != null && n.mesh != null);
-  const W = G.world(meshNode); let min = Infinity;
+function meshMinY(g, bin, M) {
+  const meshNode = g.nodes.findIndex((n) => n.skin != null && n.mesh != null); let min = Infinity;
   for (const p of g.meshes[g.nodes[meshNode].mesh].primitives) {
     const v = floats(g, bin, p.attributes.POSITION), t = new THREE.Vector3();
-    for (let i = 0; i < v.length; i += 3) min = Math.min(min, t.set(v[i], v[i + 1], v[i + 2]).applyMatrix4(W).y);
+    for (let i = 0; i < v.length; i += 3) min = Math.min(min, t.set(v[i], v[i + 1], v[i + 2]).applyMatrix4(M).y);
   }
   return min;
+}
+// glTF 스킨 정점의 바인드 자세 세계 위치는 관절 세계 × 역바인드 × 정점이다(메시 노드 변환은 쓰이지 않는다). Tripo 원본은 이것이
+// 메시 노드 세계와 같지만, 이미 정리된 body-fit·정규화본은 정점이 세계 단위라 메시 노드 배율(0.01 등)을 곱하면 안 된다.
+function bindFrame(g, G, bin) {
+  const meshNode = g.nodes.findIndex((n) => n.skin != null && n.mesh != null), joints = g.skins[0].joints;
+  const acc = g.accessors[g.skins[0].inverseBindMatrices], m = floats(g, bin, g.skins[0].inverseBindMatrices);
+  if (acc.type !== 'MAT4') throw new Error('inverseBindMatrices must be MAT4');
+  const frames = joints.map((n, k) => G.world(n).multiply(new THREE.Matrix4().fromArray(m, k * 16)));
+  const close = (x, y) => x.elements.every((e, k) => Math.abs(e - y.elements[k]) < 1e-4 * Math.max(1, Math.abs(e)));
+  if (!frames.every((f) => close(f, frames[0]))) throw new Error('skin is not in its bind pose (joint world × IBM differs per joint)');
+  return close(frames[0], G.world(meshNode)) ? { M: G.world(meshNode), source: 'mesh-node' } : { M: frames[0], source: 'skin-bind' };
 }
 const s = P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
 const yawOf = (P) => { const v = P('LeftArm').sub(P('RightArm')); return Math.atan2(v.x, v.z); };
@@ -90,7 +103,8 @@ const turn = Math.round((yawOf(P1) - yawOf(P2)) / (Math.PI / 2)) * (Math.PI / 2)
 const R = new THREE.Matrix4().makeRotationY(turn), S = new THREE.Matrix4().makeScale(s, s, s);
 const A = new THREE.Matrix4().multiplyMatrices(R, S);
 const h1 = P1('Hips'), h2 = P2('Hips').applyMatrix4(A);
-const ground = meshMinY(j, G1, base.bin) - (meshMinY(b, G2, body.bin) * s) + lift;
+const baseBind = bindFrame(j, G1, base.bin), bodyBind = bindFrame(b, G2, body.bin);
+const ground = meshMinY(j, base.bin, baseBind.M) - (meshMinY(b, body.bin, bodyBind.M) * s) + lift;
 A.premultiply(new THREE.Matrix4().makeTranslation(h1.x - h2.x, ground, h1.z - h2.z));
 const P2a = (name) => P2(name).applyMatrix4(A);
 
@@ -132,11 +146,19 @@ const jointGap = {};
 for (const i of joints1) { const name = norm(j.nodes[i].name); jointGap[name] = +(new THREE.Vector3().setFromMatrixPosition(worldF.get(i)).distanceTo(P2a(name))).toFixed(4); }
 
 // ---- 3) 몸 메시 복사(정점·법선은 닮음 변환만) ----
-const remap = joints2.map((n) => joints1.indexOf(j1(norm(b.nodes[n].name))));
-if (remap.some((k) => k < 0)) throw new Error('joint remap failed');
+// base 에 없는 body 관절은 body 골격에서 가장 가까운 조상 중 base 에 있는 관절로 합친다(손가락 → 손).
+const collapsed = {};
+const remap = joints2.map((n) => {
+  let i = n;
+  while (i != null && j1(norm(b.nodes[i].name)) == null) i = G2.parent.get(i);
+  if (i == null) throw new Error('joint remap failed: ' + b.nodes[n].name);
+  if (i !== n) collapsed[norm(b.nodes[n].name)] = norm(b.nodes[i].name);
+  return joints1.indexOf(j1(norm(b.nodes[i].name)));
+});
+const mergeWeights = Object.keys(collapsed).length > 0;
 const meshNode2 = b.nodes.findIndex((n) => n.skin != null && n.mesh != null);
 // base 정점은 메시 노드 변환과 무관하게 세계 단위로 저장돼 있다(IBM = inverse(관절 세계), 스킨 정점 = J·IBM·v). 같은 규약으로 싣는다.
-const vertexM = A.clone().multiply(G2.world(meshNode2));
+const vertexM = A.clone().multiply(bodyBind.M);
 const normalM = new THREE.Matrix3().getNormalMatrix(vertexM);
 const chunks = [base.bin], matMap = new Map(), texMap = new Map(), imgMap = new Map(), smpMap = new Map(), viewMap = new Map();
 let binLength = base.bin.length;
@@ -185,6 +207,32 @@ function copyAccessor(i, attr) {
   } else { a.bufferView = copyView(a.bufferView); }
   j.accessors.push(a); return j.accessors.length - 1;
 }
+// JOINTS_0·WEIGHTS_0 을 함께 옮긴다. 합쳐진 관절(같은 base 관절로 가는 body 관절)의 가중치는 더하고, 정점마다 큰 순 4개를 다시 정규화한다.
+function copySkinWeights(jointsIndex, weightsIndex) {
+  const ja = b.accessors[jointsIndex], wa = b.accessors[weightsIndex], jv = b.bufferViews[ja.bufferView], wv = b.bufferViews[wa.bufferView];
+  const jSize = { 5121: 1, 5123: 2 }[ja.componentType], wSize = { 5126: 4, 5121: 1, 5123: 2 }[wa.componentType];
+  if (!jSize || ja.type !== 'VEC4' || !wSize || wa.type !== 'VEC4' || ja.count !== wa.count) throw new Error('unsupported JOINTS_0/WEIGHTS_0 accessor');
+  if (wSize !== 4 && !wa.normalized) throw new Error('integer WEIGHTS_0 must be normalized');
+  const jStride = jv.byteStride || jSize * 4, wStride = wv.byteStride || wSize * 4;
+  const jStart = (jv.byteOffset || 0) + (ja.byteOffset || 0), wStart = (wv.byteOffset || 0) + (wa.byteOffset || 0);
+  const outJ = Buffer.alloc(ja.count * 8), outW = new Float32Array(ja.count * 4);
+  for (let n = 0; n < ja.count; n++) {
+    const acc = new Map();
+    for (let c = 0; c < 4; c++) {
+      const value = jSize === 1 ? body.bin.readUInt8(jStart + n * jStride + c) : body.bin.readUInt16LE(jStart + n * jStride + c * 2);
+      const at = wStart + n * wStride + c * wSize;
+      const w = wSize === 4 ? body.bin.readFloatLE(at) : wSize === 1 ? body.bin.readUInt8(at) / 255 : body.bin.readUInt16LE(at) / 65535;
+      if (w <= 0) continue;
+      if (remap[value] === undefined) throw new Error('JOINTS_0 index out of body skin range: ' + value);
+      acc.set(remap[value], (acc.get(remap[value]) || 0) + w);
+    }
+    const top = [...acc].sort((x, y) => y[1] - x[1]).slice(0, 4), total = top.reduce((t, [, w]) => t + w, 0) || 1;
+    top.forEach(([k, w], c) => { outJ.writeUInt16LE(k, n * 8 + c * 2); outW[n * 4 + c] = w / total; });
+  }
+  const jointsOut = { bufferView: addView(outJ, 34962), componentType: 5123, count: ja.count, type: 'VEC4' };
+  j.accessors.push(jointsOut);
+  return { JOINTS_0: j.accessors.length - 1, WEIGHTS_0: addFloatAccessor([...outW], 'VEC4', 34962, false) };
+}
 function copySampler(i) {
   if (i == null) return undefined;
   if (!smpMap.has(i)) { (j.samplers ||= []).push(structuredClone(b.samplers[i])); smpMap.set(i, j.samplers.length - 1); }
@@ -224,8 +272,11 @@ j.meshes[0] = {
     const attributes = {};
     for (const [name, acc] of Object.entries(p.attributes)) {
       if (/^(JOINTS|WEIGHTS)_[1-9]/.test(name)) throw new Error('only one joint/weight set is supported');
+      if (mergeWeights && (name === 'JOINTS_0' || name === 'WEIGHTS_0')) continue;
       attributes[name] = copyAccessor(acc, name);
     }
+    // 합친 관절이 없으면 가중치 바이트를 그대로 둔다(궁수 v6 재현: 같은 입력이면 같은 바이트).
+    if (mergeWeights && p.attributes.JOINTS_0 != null) Object.assign(attributes, copySkinWeights(p.attributes.JOINTS_0, p.attributes.WEIGHTS_0));
     const prim = { attributes, mode: p.mode ?? 4 };
     if (p.indices != null) prim.indices = copyAccessor(p.indices, 'INDICES');
     if (p.material != null) prim.material = copyMaterial(p.material);
@@ -282,6 +333,8 @@ for (const i of socketNodes) {
   sockets[n.name] = { parent: j.nodes[p].name, shiftLocal: delta.toArray().map((x) => +x.toFixed(4)), shiftM: +(delta.length() * scaleOf(p)).toFixed(4) };
 }
 
+if (noClips) delete j.animations;
+
 // ---- 6) 옛 몸 재질·텍스처·이미지·접근자·뷰 정리 후 BIN 재구성 ----
 pad4();
 const merged = Buffer.concat(chunks, binLength);
@@ -334,7 +387,8 @@ function compact() {
 const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
 const { materialFinish: _staleFinish, bodySwap: _staleSwap, ...baseExtras } = j.asset.extras || {};
-const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, socketMode, yawDeg: Math.round(turn * 180 / Math.PI),
+const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, socketMode, ...(noClips ? { clips: 'none' } : {}),
+  ...(Object.keys(collapsed).length ? { collapsedJoints: collapsed } : {}), ...(bodyBind.source !== 'mesh-node' ? { bodyBindFrame: bodyBind.source } : {}), yawDeg: Math.round(turn * 180 / Math.PI),
   maxSwingDeg: +maxSwingDeg.toFixed(2), maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
 j.asset.extras = { ...baseExtras, bodyRebind: rebind };
 

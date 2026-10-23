@@ -21,6 +21,8 @@ for (const c of ['knight', 'barbarian', 'mage', 'rogue']) {
   for (const t of [1, 2, 3]) ROWS[c].push([`${c}_t${t}`, `${N}hero_${c}_t${t}.glb`, `${N}hero_${c}_t1.glb`]);
   ROWS[c].push([AVATAR[c], `${N}avatar_${AVATAR[c]}.glb`, `${N}hero_${c}_t1.glb`]);
 }
+// 후보 비교: FACE_AUDIT_ROWS='[["id","저장소 상대 GLB","클립 GLB"]]' 를 주면 'extra' 시트로 함께 찍는다(교체 전 새 몸 확인용).
+if (process.env.FACE_AUDIT_ROWS) ROWS.extra = JSON.parse(process.env.FACE_AUDIT_ROWS);
 const VIEWS = [{ name: 'face_front', yaw: 0, fov: 30 }, { name: 'face_34', yaw: 35, fov: 30 }, { name: 'full_front', yaw: 0, fov: 30, full: 1 }, { name: 'combat', yaw: 20, pitch: 55, fov: 30, full: 1 }];
 mkdirSync(OUT + '/shots', { recursive: true });
 const srv = spawn('python3', ['-m', 'http.server', String(PORT)], { stdio: 'ignore' });
