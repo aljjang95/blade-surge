@@ -7,6 +7,7 @@ import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 import HIGHER_BODY_REVISIONS_V1 from '../data/higher-body-revisions-v1.json';
 import RANGER_T2_BODY_REVISION_V2 from '../data/ranger-t2-body-revision-v2.json';
 import RANGER_T3_BODY_REVISION_V2 from '../data/ranger-t3-body-revision-v2.json';
+import T4_BODY_REVISIONS_V1 from '../data/t4-body-revisions-v1.json';
 import ANIM_PACKS from '../data/anim-packs-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
@@ -89,21 +90,69 @@ export function supersedeHigherBodyRevisions(value, superseding = HIGHER_BODY_SU
 
 const HIGHER_BODY_REVISIONS = Object.freeze(supersedeHigherBodyRevisions(HIGHER_BODY_REVISIONS_V1));
 const higherRevisions = validateHigherBodyRevisions(HIGHER_BODY_REVISIONS);
+
+// ---- 등급 몸(S 1.5 · U 2.5)의 heroes-next 교정본 ----
+// 1단계 클립을 교정본(heroes-next)에서 받는 영웅(도적·궁수)은 등급 몸도 정규화본이 아니라 그 1단계 교정본 골격에 재결합한 몸을 쓴다
+// (기사 등 다른 영웅의 S·U 몸은 정규화본 그대로). 다섯 기록 계약(higher-body-revisions-v1)은 바꾸지 않고 별도 기록·목표로 얹는다.
+// 검사는 상위 몸체와 같다(원본 SHA = manifest, 고정 출력 경로, GENERATED 는 실제 SHA). 여기에 더해 재결합 base 가 그 영웅의
+// 현재 1단계 클립 원본(경로·SHA)과 같아야 한다. 도적은 1단계 교정본 출력(v2)이 곧 클립 원본이다. 궁수 1단계 v6 은 몸만 바꾼 개정이라
+// 출력의 역바인드가 바인드 자세가 아니어서(재결합 결과) 재결합 base 로 쓸 수 없고, 골격·클립 바이트가 같은 클립 원본(v4,
+// rangerClipSource)에 재결합한다(궁수 2·3단계 v2 몸과 같은 base).
+const T4_BODY_BASES = Object.freeze({
+  rogue: Object.freeze({ path: ROGUE_LIBRARY_REVISION.output.path, sha256: ROGUE_LIBRARY_REVISION.output.sha256 }),
+  ranger: Object.freeze((({ path, sha256 }) => ({ path, sha256 }))(rangerClipSource(RANGER_LIBRARY_REVISION))),
+});
+const T4_BODY_TARGETS = Object.freeze([
+  Object.freeze({ asset: 'hero_rogue_t1s', id: 'rogue-t1s-body-fit-v1', prefix: '/models/heroes-next/rogue-t1s-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_rogue_t2u', id: 'rogue-t2u-body-fit-v1', prefix: '/models/heroes-next/rogue-t2u-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_ranger_t1s', id: 'ranger-t1s-body-fit-v1', prefix: '/models/heroes-next/ranger-t1s-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_ranger_t2u', id: 'ranger-t2u-body-fit-v1', prefix: '/models/heroes-next/ranger-t2u-body-fit-v1' }),
+]);
+/** 등급 몸 재결합 base(영웅별 1단계 클립 원본 경로·SHA). */
+export const t4BodyBase = (heroId) => T4_BODY_BASES[heroId] || null;
+
+function validateT4BodyRevision(revision, target) {
+  validateHigherBodyRevision(revision, target);
+  const heroId = manifest.assets.find(asset => asset.id === target.asset)?.heroId, base = T4_BODY_BASES[heroId];
+  requireHigherBody(base && revision.authoring?.kind === 'body-rebind'
+    && revision.authoring.base?.path === base.path && revision.authoring.base.sha256 === base.sha256);
+  return revision;
+}
+
+/** 등급 몸 교정 기록이 목표와 일대일인지 번들 로드 시 검사한다. */
+export function validateT4BodyRevisions(value) {
+  requireHigherBody(value?.schema === 'blade-surge.t4-body-revisions.v1'
+    && Array.isArray(value.revisions) && value.revisions.length === T4_BODY_TARGETS.length);
+  requireHigherBody(new Set(value.revisions.map(revision => revision?.id)).size === T4_BODY_TARGETS.length
+    && new Set(value.revisions.map(revision => revision?.asset)).size === T4_BODY_TARGETS.length
+    && new Set(value.revisions.map(revision => revision?.output?.path)).size === T4_BODY_TARGETS.length);
+  return value.revisions.map(revision => {
+    const target = T4_BODY_TARGETS.find(entry => entry.id === revision?.id);
+    requireHigherBody(target);
+    return validateT4BodyRevision(revision, target);
+  });
+}
+
+const T4_BODY_REVISIONS = Object.freeze(T4_BODY_REVISIONS_V1);
+const t4Revisions = validateT4BodyRevisions(T4_BODY_REVISIONS);
 const LIBRARY_REVISIONS = Object.freeze([
   ...HIGHER_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: higherRevisions.find(revision => revision.id === target.id) })),
+  ...T4_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: t4Revisions.find(revision => revision.id === target.id) })),
   Object.freeze({ id: FOX_BODY_REVISION_ID, prefix: '/models/heroes-next/ranger-fox-', revision: FOX_BODY_REVISION }),
   Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
   Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),
 ]);
 let bundledFiles = {};
 try {
-  // 아래 여덟 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
+  // 아래 열두 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
   // 전달 크기를 위해 빌드 산출물에서 뺀다. 원본 파일·해시 계약은 asset-library/normalized 에 그대로 있다(test/library-bundle-exclusions.test.ts 가 검증).
   bundledFiles = import.meta.glob([
     '../../asset-library/normalized/*.glb',
     '!../../asset-library/normalized/hero_ranger_t1.glb', '!../../asset-library/normalized/hero_ranger_t2.glb', '!../../asset-library/normalized/hero_ranger_t3.glb',
     '!../../asset-library/normalized/hero_rogue_t1.glb', '!../../asset-library/normalized/hero_rogue_t2.glb', '!../../asset-library/normalized/hero_rogue_t3.glb',
     '!../../asset-library/normalized/avatar_ranger_fox.glb', '!../../asset-library/normalized/avatar_rogue_crow.glb',
+    '!../../asset-library/normalized/hero_rogue_t1s.glb', '!../../asset-library/normalized/hero_rogue_t2u.glb',
+    '!../../asset-library/normalized/hero_ranger_t1s.glb', '!../../asset-library/normalized/hero_ranger_t2u.glb',
   ], { eager: true, query: '?url', import: 'default' });
 } catch {
   // Bun의 계약 테스트는 Vite URL 변환 없이 공개 경로를 사용한다.
@@ -142,6 +191,8 @@ export function revisedLibraryFile(asset, revision = null) {
   if (!revision || asset.id !== revision.asset) return null;
   const higherTarget = HIGHER_BODY_TARGETS.find(target => target.id === revision.id);
   if (higherTarget) validateHigherBodyRevision(revision, higherTarget);
+  const t4Target = T4_BODY_TARGETS.find(target => target.id === revision.id);
+  if (t4Target) validateT4BodyRevision(revision, t4Target);
   if (!revision.useInGame) return null;
   if (!entry || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
     || !/^[a-f0-9]{64}$/.test(revision.output?.sha256 || '') || !String(revision.output?.path || '').startsWith(entry.prefix)
@@ -155,6 +206,8 @@ export function revisedLibraryFile(asset, revision = null) {
 export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
 /** 대신 쓰는 개정에 밀려난 이력 기록(게임이 고르지 않는다). */
 export const higherBodyRevisionHistory = () => HIGHER_BODY_REVISIONS_V1.revisions.filter(revision => HIGHER_BODY_SUPERSEDING.some(next => next.supersedes === revision.id));
+/** 게임이 쓰는 등급 몸(S·U) 교정 기록. */
+export const t4BodyRevisions = () => T4_BODY_REVISIONS;
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 /**

@@ -13,7 +13,9 @@ import { RARITY_INFO } from '../data/items.js';
  */
 export const GEAR_RIM_STRENGTH = Object.freeze({ N: 0, S: .3, E: .62, U: .78, L: .95 });
 // S(1.5)·U(2.5) 등급 몸은 철판·테마 장식으로 등급을 이미 보여 준다. 몸 전체 윤곽광이 그 색을 덮지 않게 갑옷 윤곽만 줄인다.
-export const GRADE_BODY_RIM_SCALE = .4;
+// 0.4·0.15 에서도 어두운 도적 U 역병 몸이 보라로 덮여 녹색 테마가 안 읽혔다(2026-10-23 전투·로비 촬영, 블룸 포함).
+// 그래서 갑옷 윤곽은 끄고 등급은 몸 장식·발밑 링이 맡는다. 신발·반지 윤곽과 강화 오라는 그대로다.
+export const GRADE_BODY_RIM_SCALE = 0;
 const HOOKED = new WeakSet();
 const FEET_BONES = ['LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'];
 const RING_BONES = ['LeftForeArm', 'LeftHand'];

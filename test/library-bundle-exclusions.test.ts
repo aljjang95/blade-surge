@@ -4,10 +4,14 @@ import manifest from '../asset-library/manifest.json';
 import { libraryAssets, resolveAssetSource, revisedLibraryFile } from '../src/engine/library-assets.js';
 
 // 전달 크기를 위해 빌드 번들에서 뺀 원본들. 교정본이 항상 대신 선택되므로 번들 URL 이 필요 없다는 것을 코드로 증명한다.
-const EXCLUDED = ['hero_ranger_t1', 'hero_ranger_t2', 'hero_ranger_t3', 'hero_rogue_t1', 'hero_rogue_t2', 'hero_rogue_t3', 'avatar_ranger_fox', 'avatar_rogue_crow'];
+const EXCLUDED = ['hero_ranger_t1', 'hero_ranger_t2', 'hero_ranger_t3', 'hero_rogue_t1', 'hero_rogue_t2', 'hero_rogue_t3', 'avatar_ranger_fox', 'avatar_rogue_crow',
+  // 도적 S·U 등급 몸은 heroes-next 교정 몸(t4-body-revisions-v1)이 대신 로드된다.
+  'hero_rogue_t1s', 'hero_rogue_t2u',
+  // 궁수 S·U 등급 몸도 같은 경로(1단계 클립 원본 v4 골격에 재결합).
+  'hero_ranger_t1s', 'hero_ranger_t2u'];
 const source = readFileSync(new URL('../src/engine/library-assets.js', import.meta.url), 'utf8');
 
-test('번들에서 뺀 여덟 원본은 모두 교정본이 선택되어 원본 번들 경로를 쓰지 않는다', () => {
+test('번들에서 뺀 열두 원본은 모두 교정본이 선택되어 원본 번들 경로를 쓰지 않는다', () => {
   for (const id of EXCLUDED) {
     const asset = manifest.assets.find(entry => entry.id === id);
     expect(asset, id).toBeTruthy();

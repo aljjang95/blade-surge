@@ -8,11 +8,18 @@
 #   3) 그 밖: 팔 뼈 선분보다 몸통 축(Hips→HeadTop)에 더 가깝고, 팔 가중치가 0.5 미만이거나 몸 뒤쪽이면 팔 가중치를 뺀다.
 #   4) 남은 가중치를 다시 정규화한다. 하나도 안 남으면 가장 가까운 몸통 뼈 1.
 #   blender -b -P tools/asset-library/blender_clean_weights.py -- --input <rigged.glb> --output <cleaned.glb> --report <r.json>
-#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0]
+#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0] [--merge-bone neutral_bone] [--braid-hue 60-160] [--pauldron 0.5]
 #   장식 색 범위: 기본은 궁수 1단계의 초록(60–160°). 궁수 2단계 붉은 후드는 --decor-hue 60-160,340-25 처럼 여러 구간(도, 360 을 넘는
 #   구간은 340-25 처럼 감아 쓴다)을 준다. 범위에 드는 정점이 몸 앞이면 땋은 머리 규칙, 몸 뒤면 망토 규칙을 받는다.
 #   --smooth-cape N: 망토 규칙을 받은 정점의 가중치를 메시 이웃 평균으로 N 번 고른다(망토 밖 이웃은 고정 기준). 2026-10-23 기사 S등급:
 #   망토 밑단 이웃 정점끼리 다리·골반 가중치가 들쭉날쭉해 달리기에서 밑단이 가시처럼 찢어져 보였다. 기본 0 은 이전과 같은 출력.
+#   --braid-hue 60-160 [--braid-sat 0.25] [--braid-val 0.12]: 땋은 머리 규칙(몸 앞 장식 → 가슴 아래는 Spine2 100%)을 이 색에만 준다. 2026-10-24 궁수 U 불사조:
+#   망토 불꽃(주황)을 장식 범위에 넣자 골반 앞 불꽃 깃털까지 땋은 머리 규칙으로 Spine2 에 굳어, 구르기에서 0.39m 바닥을 팠다.
+#   기본(없음)은 장식 범위 전체로 이전과 같은 출력.
+#   --pauldron 0.5: 어깨(LeftShoulder·RightShoulder)+팔 가중치 합이 0.5 이상인 장식 정점은 땋은 머리·망토 규칙을 받지 않는다. 2026-10-24
+#   궁수 U 불사조: 왼어깨 불꽃 깃털 견갑(어깨 .49·팔 .47)이 망토 규칙으로 어깨·팔을 잃고 Spine2 에 굳어 구르기에서 0.39m 바닥을 팠다.
+#   기본(없음)은 이전과 같은 출력.
+#   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
 import numpy as np
 from pathlib import Path
@@ -92,12 +99,58 @@ def smooth_weights(mesh, idx, rounds):
         for gi in np.nonzero(out > 1e-4)[0]: mesh.vertex_groups[int(gi)].add([i], float(out[gi]), 'REPLACE')
     return len(idx)
 
+def merge_bones(arm, mesh, bone_names):
+    # Tripo 리그가 가끔 덧붙이는 이동값 없는 뿌리 관절(예: 2026-10-23 도적 U 의 neutral_bone, 오른 허벅지 정점 6개가 가중치 1)을 없앤다.
+    # 그 관절에 묶인 정점은 메시 이웃(그 관절에 안 묶인 정점) 가중치 평균을 받고, 이웃이 없으면 가장 가까운 관절 1.
+    # 그 관절이 그대로 남으면 움직이지 않는 뿌리에 붙은 정점이 다리를 따라가지 않아 가시처럼 늘어진다.
+    out = []
+    for bone_name in bone_names:
+        g = mesh.vertex_groups.get(bone_name)
+        if bone_name not in arm.data.bones:
+            out.append({'bone': bone_name, 'found': False}); continue
+        if arm.data.bones[bone_name].children: raise ValueError('--merge-bone: child joints exist under ' + bone_name)
+        moved = {}; fallback = 0; S = set()
+        if g is not None:
+            names = {x.index: x.name for x in mesh.vertex_groups}
+            S = {v.index for v in mesh.data.vertices if any(x.group == g.index and x.weight > 0 for x in v.groups)}
+            nb = {}
+            for e in mesh.data.edges:
+                i, j = e.vertices; nb.setdefault(i, []).append(j); nb.setdefault(j, []).append(i)
+            heads = {b.name: arm.matrix_world @ b.head_local for b in arm.data.bones if b.name != bone_name}
+            for vi in sorted(S):
+                v = mesh.data.vertices[vi]
+                own = {names[x.group]: x.weight for x in v.groups if x.group != g.index and x.weight > 0}
+                ring = [j for j in nb.get(vi, ()) if j not in S]
+                acc = {}
+                for j in ring:
+                    for x in mesh.data.vertices[j].groups:
+                        if x.weight > 0 and x.group != g.index: acc[names[x.group]] = acc.get(names[x.group], 0) + x.weight / len(ring)
+                # 이웃 평균의 자잘한 몫(손이 허벅지 옆이라 묻은 0.004 엄지 등)은 버리고 큰 몫만 남긴다.
+                acc = {n: x for n, x in acc.items() if x >= 0.05}
+                if not acc:
+                    p = mesh.matrix_world @ v.co; acc = {min(heads, key=lambda n: (p - heads[n]).length): 1.0}; fallback += 1
+                share = next(x.weight for x in v.groups if x.group == g.index)
+                new = dict(own)
+                for n, x in acc.items(): new[n] = new.get(n, 0) + share * x
+                tot = sum(new.values())
+                for n in new:
+                    if n not in mesh.vertex_groups: mesh.vertex_groups.new(name=n)
+                    mesh.vertex_groups[n].add([vi], new[n] / tot, 'REPLACE')
+                for n, x in acc.items(): moved[n] = moved.get(n, 0) + 1
+            mesh.vertex_groups.remove(g)
+        bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+        arm.data.edit_bones.remove(arm.data.edit_bones[bone_name]); bpy.ops.object.mode_set(mode='OBJECT')
+        out.append({'bone': bone_name, 'found': True, 'vertices': len(S),
+                    'mergedInto': moved, 'nearestFallback': fallback})
+    return out
+
 def main():
     a = args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=a['input'])
     arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
     mesh = max((o for o in bpy.data.objects if o.type == 'MESH'), key=lambda o: len(o.data.vertices))
+    merged = merge_bones(arm, mesh, [x for x in a.get('merge-bone', '').split(',') if x]) if a.get('merge-bone') else []
     arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
     J = {norm(b.name): arm.matrix_world @ b.head_local for b in arm.data.bones}
     up = (J['Head'] - J['Hips']).normalized()
@@ -123,6 +176,14 @@ def main():
     spine2 = group('Spine2'); stats = {'headRegion': 0, 'hanging': 0, 'braid': 0, 'cape': 0, 'armStripped': 0, 'empty': 0, 'decorOnArm': 0}
     decor = dict(hue=a.get('decor-hue', '60-160'), sat=float(a.get('decor-sat', 0.25)), val=float(a.get('decor-val', 0.12)))
     green = vertex_decor(mesh, hue_ranges(decor['hue']), decor['sat'], decor['val'])
+    # --braid-hue: 땋은 머리 규칙(앞쪽 장식 → Head/Spine2)을 받을 색을 따로 정한다(채도·명도는 --braid-sat 0.25·--braid-val 0.12).
+    # 없으면 장식 범위 전체(이전과 같은 출력).
+    braidMask = green
+    pauldron = float(a['pauldron']) if 'pauldron' in a else None
+    if pauldron is not None: decor['pauldron'] = pauldron
+    if 'braid-hue' in a:
+        decor.update(braidHue=a['braid-hue'], braidSat=float(a.get('braid-sat', 0.25)), braidVal=float(a.get('braid-val', 0.12)))
+        braidMask = vertex_decor(mesh, hue_ranges(decor['braidHue']), decor['braidSat'], decor['braidVal'])
     mw = mesh.matrix_world
     for v in mesh.data.vertices:
         w = {names[g.group]: g.weight for g in v.groups if g.weight > 0}
@@ -136,8 +197,11 @@ def main():
         d_arm = min(seg_dist(p, s0, s1) for s0, s1 in arms) if arm_w > 0 else 1e9
         # 장식 색이 넓은 경우(붉은 갑옷 전체 등) 팔 소매·팔 갑옷을 장식으로 오판하지 않게: 팔 선분에 더 가깝고 팔 가중치가 주인 정점은 장식 규칙에서 뺀다.
         on_arm = arm_w >= 0.5 and d_arm < d_body
+        # --pauldron X: 어깨+팔 가중치 합이 X 이상인 장식(어깨 견갑 깃털 등)은 장식 규칙에서 빼고 팔·어깨를 따라가게 둔다(기본 끔).
+        # --braid-hue 를 함께 주면 땋은 머리 색(머리카락)은 빼고 나머지 장식에만 적용한다(머리카락은 어깨를 따라가면 안 된다).
+        if pauldron is not None and green[v.index] and not (braidMask is not green and braidMask[v.index]) and arm_w + sum(x for n, x in w.items() if is_shoulder(n)) >= pauldron: on_arm = True
         if green[v.index] and on_arm: stats['decorOnArm'] += 1
-        braid = green[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
+        braid = braidMask[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
         if head_w >= 0.2 or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
@@ -182,7 +246,7 @@ def main():
             f = 1024 / max(w, h); image.scale(max(1, round(w * f)), max(1, round(h * f))); image.pack()
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_animations=False, export_cameras=False, export_lights=False,
         export_image_format='WEBP', export_image_quality=82, export_yup=True)
-    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'decor': decor, 'decorVertices': int(sum(green)), 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
+    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'mergedBones': merged, 'decor': decor, 'decorVertices': int(sum(green)), 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
 
 try: main()
 except Exception as e:
