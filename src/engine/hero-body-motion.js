@@ -9,6 +9,8 @@ import RANGER_T2_MOTION from '../data/ranger-t2-body-motion-v2.json';
 import RANGER_T3_MOTION from '../data/ranger-t3-body-motion-v2.json';
 import ROGUE_T1S_MOTION from '../data/rogue-t1s-body-motion-v1.json';
 import ROGUE_T2U_MOTION from '../data/rogue-t2u-body-motion-v1.json';
+import RANGER_T1S_MOTION from '../data/ranger-t1s-body-motion-v1.json';
+import RANGER_T2U_MOTION from '../data/ranger-t2u-body-motion-v1.json';
 import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, t4BodyRevisions, validateHigherBodyRevisions } from './library-assets.js';
 
 // 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정, 예: 3단계 궁수 body-fit-v2).
@@ -178,9 +180,10 @@ export function validateRangerT1Motion(motion, revision = rangerLibraryRevision(
 export const validateRangerBandMotion = validateRangerT1Motion;
 
 // ---- 등급 몸(S 1.5·U 2.5) heroes-next 교정 몸 전용 회피·사망 골반 높이(t4-body-revisions, tools/art/author-tier-body-motion.mjs) ----
-// 궁수 2·3단계 v2 와 같은 띠 곡선 계약·같은 수용 기준·같은 오프셋 상한(0.35m). 클립 원본은 몸 기록의 재결합 base(영웅의 1단계 교정본)다.
+// 궁수 2·3단계 v2 와 같은 띠 곡선 계약·같은 수용 기준·같은 오프셋 상한(0.35m). 클립 원본은 몸 기록의 재결합 base(영웅의 1단계 클립 원본)다.
 // 2026-10-23 도적 S·U: 원본 클립 그대로면 구르기 최저 -0.116/-0.135m, 사망 최저 -0.027/-0.109m(망토·목도리가 바닥을 판다)라 곡선이 필요했다.
-// 궁수 S·U 몸도 같은 경로: 기록 JSON 을 import 해 아래 TIER_BAND_SOURCES 에 넣으면 된다.
+// 궁수 S·U 몸도 같은 경로다(클립 원본 = 재결합 base = 1단계 v6 의 클립 원본 v4). 2026-10-24 궁수 S·U: 원본 클립 그대로면 구르기 최저
+// -0.193/-0.139m, 사망 최저 -0.083/-0.203m.
 export function validateTierBandMotion(motion, revision) {
   const asset = revision?.asset, base = revision?.authoring?.kind === 'body-rebind' ? revision.authoring.base : null;
   const fit = /^(.+)-body-fit-v([1-9]\d*)$/.exec(String(revision?.id));
@@ -323,7 +326,7 @@ const RANGER_BAND_MOTIONS = new Map([
   [RANGER_T3, validateRangerT1Motion(RANGER_T3_MOTION, HIGHER_BODY_REVISIONS.revisions.find(revision => revision.asset === RANGER_T3))],
 ]);
 // 등급 몸 띠 곡선(위 validateTierBandMotion). 상수 검사 도구(SHA·freezeTree)가 정의된 뒤에 만든다.
-const TIER_BAND_SOURCES = [ROGUE_T1S_MOTION, ROGUE_T2U_MOTION];
+const TIER_BAND_SOURCES = [ROGUE_T1S_MOTION, ROGUE_T2U_MOTION, RANGER_T1S_MOTION, RANGER_T2U_MOTION];
 const TIER_BAND_MOTIONS = new Map(TIER_BAND_SOURCES.map(motion => [motion.asset,
   validateTierBandMotion(motion, t4BodyRevisions().revisions.find(revision => revision.asset === motion.asset))]));
 // v1 번들 위에 자산별 새 패킷을 얹는다. 띠 곡선으로 옮긴 자산(3단계 궁수 v2 몸)의 v1 패킷은 이력으로만 남고 등록하지 않는다.

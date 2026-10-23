@@ -5,7 +5,7 @@
 // 2) 띠 band.low ≤ m(t)+o(t) ≤ band.high 안에서 [1,2,1]/4 평활 → 띠로 자르기를 수렴할 때까지 반복한다. 시작(과 회피 끝)은 0 으로 고정.
 // 3) 격자 사이 4배 조밀 검사로 실제 수용 기준(구르기 ±0.03m, 사망 > -0.01m·끝 |y|<0.03m)을 다시 확인하고, 넘으면 실패로 끝낸다.
 // 수평(X/Z)·다른 트랙·다른 클립은 바꾸지 않는다. 먼저 tools/art/measure-body-contact.mjs 로 곡선이 꼭 필요한지 판정한다.
-//   bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u> <출력.json> [보고.json]
+//   bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u> <출력.json> [보고.json] [--band-dodge=lo,hi] [--band-death=lo,hi]
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import * as THREE from 'three';
@@ -29,7 +29,13 @@ function skinMinY(root) {
   return min;
 }
 
-export async function authorTierBodyMotion(ASSET) {
+// bands: { dodge: [lo, hi] } 처럼 저작 띠만 더 좁힌다(수용 기준은 PROFILE 그대로, 띠는 수용 기준 안쪽이어야 한다).
+// 2026-10-24 궁수 U 불사조: 구르기 기본 띠 ±0.02 로는 격자 사이 조밀 검사 최고 +0.0307m 로 수용 기준(+0.03)을 넘었다.
+export async function authorTierBodyMotion(ASSET, bands = {}) {
+  for (const [name, band] of Object.entries(bands)) {
+    const accept = PROFILE[name]?.accept;
+    if (!accept || band.length !== 2 || !(band[0] < band[1]) || band[0] <= accept[0] || band[1] >= accept[1]) throw new Error('띠는 수용 기준 안쪽: ' + name);
+  }
   const asset = manifest.assets.find((a) => a.id === ASSET), rev = t4BodyRevisions().revisions.find((r) => r.asset === ASSET);
   if (!asset || !rev || !rev.useInGame || rev.status !== 'GENERATED') throw new Error(ASSET + ' 등급 몸 교정 기록이 활성 상태가 아님');
   const fit = /^(.+)-body-fit-v([1-9]\d*)$/.exec(rev.id);
@@ -48,7 +54,7 @@ export async function authorTierBodyMotion(ASSET) {
     };
     const overrides = [], report = { gain, clips: {} };
     for (const name of CLIPS) {
-      const rule = PROFILE[name], clip = gltf.animations.find((c) => c.name === name);
+      const rule = bands[name] ? { ...PROFILE[name], band: bands[name] } : PROFILE[name], clip = gltf.animations.find((c) => c.name === name);
       const track = clip.tracks.find((t) => t.name === 'mixamorigHips.position');
       const n = Math.round(clip.duration * PROFILE.gridHz), grid = Array.from({ length: n + 1 }, (_, i) => Math.fround(clip.duration * i / n));
       if (!Array.from(track.times).every((t) => grid.includes(t))) throw new Error('원본 키가 격자에 없음 ' + name);
@@ -101,7 +107,7 @@ export async function authorTierBodyMotion(ASSET) {
         schema: 'blade-surge.tier-band-body-motion.v1', asset: ASSET, heroId: asset.heroId, revisionId: rev.id, motionRevisionId: MOTION_ID,
         body: { path: rev.output.path, sha256: rev.output.sha256 }, base: { path: rev.authoring.base.path, sha256: rev.authoring.base.sha256 },
         tool: { path: 'tools/art/author-tier-body-motion.mjs', sha256: sha(readFileSync(new URL(import.meta.url))),
-          methodFrom: 'tools/art/author-ranger-higher-body-motion.mjs', profile: PROFILE,
+          methodFrom: 'tools/art/author-ranger-higher-body-motion.mjs', profile: PROFILE, ...(Object.keys(bands).length ? { bandOverrides: bands } : {}),
           measurement: '실제 loadHeroAsset(' + ASSET + ') → spawnCharacter 경로의 SkinnedMesh 정점 월드 최저 y(three.js 스키닝, 게임과 같은 계산)' },
         clipOverrides: overrides,
       },
@@ -111,9 +117,10 @@ export async function authorTierBodyMotion(ASSET) {
 }
 
 if (import.meta.main) {
-  const [asset, out, reportPath] = process.argv.slice(2);
-  if (!out) throw new Error('usage: bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u> <out.json> [report.json]');
-  const { motion, report } = await authorTierBodyMotion(asset);
+  const args = process.argv.slice(2), [asset, out, reportPath] = args.filter((a) => !a.startsWith('--'));
+  const bands = Object.fromEntries(args.filter((a) => a.startsWith('--band-')).map((a) => { const [k, v] = a.slice(7).split('='); return [k, v.split(',').map(Number)]; }));
+  if (!out) throw new Error('usage: bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u> <out.json> [report.json] [--band-dodge=-0.02,0.015]');
+  const { motion, report } = await authorTierBodyMotion(asset, bands);
   writeFileSync(out, JSON.stringify(motion, null, 1) + '\n');
   if (reportPath) writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
