@@ -1,0 +1,145 @@
+{
+  "id": "ranger-library-v5",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "대표님 제보 '궁수 얼굴 애꾸'(3/4·전투 시점에서 앞머리 가닥이 오른눈을 덮음)를 고친 채택본. Tripo Studio 에서 두 눈이 보이는 몸을 다시 만들고, 그 리깅 몸을 v4 골격 관절에 포즈로 맞춰 다시 묶은 뒤 몸 메시·재질·텍스처만 바꿨다. 골격 노드·스킨 역바인드·11개 클립·활 소켓은 v4 바이트 그대로다(clipSource.motionSignature)",
+  "supersedes": "ranger-library-v4",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "clipSource": {
+    "revision": "ranger-library-v4",
+    "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+    "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0",
+    "motionSignature": "1a5871eb65c89909805e3bebfa9672e185959509644686875ddf4ee0cbf2c903",
+    "signatureTool": "tools/art/library-motion-signature.mjs",
+    "rule": "v4 를 클립 원본으로 기록한 저작 계약(2·3단계·여우 몸체 동작, sourceTrackSha256)은 이 기록을 그대로 쓴다. output 의 동작 서명이 v4 와 같을 때만 성립한다(test/ranger-library-model.test.ts). 게임은 v5 하나만 내려받고 v4 파일은 기록·테스트 전용이다"
+  },
+  "authoring": {
+    "revision": "ranger-library-v5",
+    "kind": "body-swap",
+    "tripo": {
+      "projectId": "5d525bfd-457f-44bf-940a-fddd1e876e83",
+      "model": "H3.1 (최고 품질, HD+PBR, 8K 텍스처 켬)",
+      "credits": 110,
+      "retopoFaces": 10573,
+      "rig": "Humanoid + Mixamo 프리셋, mixamorig:* 65관절",
+      "resultJson": {
+        "path": "art-src/ranger/tripo-v5/result.json",
+        "branch": "claude/ranger-v5-tripo-raw",
+        "commit": "ab602214e578df24db8c48b4a1e7eb7071a921c9",
+        "sha256": "96b9581871e7be6d9d91cd0e4a9b9de8bf077dd338bd6d932f6b59985b7b6ee2"
+      },
+      "riggedGlb": {
+        "path": "art-src/ranger/tripo-v5/ranger_t1_v5.rigged.glb",
+        "bytes": 9100220,
+        "sha256": "897754bab577b4ea121f33e5060fede90a78d12ee6654ea5cbdf2523fc129ab6"
+      },
+      "note": "원본(64MB tripo.glb 포함)은 머지하지 않는 브랜치 claude/ranger-v5-tripo-raw 에만 있다. 여기에는 경로·SHA 만 남긴다"
+    },
+    "base": {
+      "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+      "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+    },
+    "bodyRebind": {
+      "script": "tools/asset-library/blender_swap_body.py",
+      "scriptSha256": "56fae014bcb71b3b54565488f5e5cd1187d2f891070e71fa46c385133c49fc04",
+      "blender": "5.2.2 LTS",
+      "host": "Claude 클라우드 세션 Linux Blender 5.2.2(같은 입력으로 다시 돌려 같은 바이트 확인)",
+      "outputSha256": "f6ca76167b782c14e75a542164a4bcecaef283275e5740d9715c2d1c31870123",
+      "report": {
+        "maxJointError": 1.5879060556972363e-7,
+        "matchedBones": 65,
+        "scale": 1.8674364673914614,
+        "filledVertices": 42,
+        "triangles": 10653
+      },
+      "glbTriangles": 10573,
+      "trianglesNote": "report.triangles(10653)는 Blender 가 내보내기 전 몸 객체에서 센 값이고, GLB 인덱스 삼각형은 Tripo 리토폴 면 수와 같은 10573 이다"
+    },
+    "packer": {
+      "tool": "tools/art/swap-library-body.mjs",
+      "toolSha256": "340f54f7befd728e32260fb0d7594eda8f46467de78621da9ed896c67ff27cab",
+      "ibmDrift": 0.000392913818359375,
+      "rule": "base 의 노드·애니메이션·스킨(역바인드) 바이트는 그대로, 몸 메시(정점·가중치)·재질·텍스처만 body 것으로 바꾼다. 관절 역바인드 차가 0.01 을 넘으면 거절한다"
+    },
+    "packedSha256": "854daf2f62e89ceeb7eb86ed344cb0c08b7e70510773b0b8a84be99ae5fb2d91",
+    "commands": [
+      "blender -b -P tools/asset-library/blender_swap_body.py -- --base public/models/heroes-next/ranger-library-t1-v4.glb --body <ranger_t1_v5.rigged.glb> --output <v5-body.glb> --report <v5-body.json>",
+      "node tools/art/swap-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <v5-body.glb> <v5-swapped.glb>",
+      "node tools/art/finish-library-materials.mjs <v5-swapped.glb> public/models/heroes-next/ranger-library-t1-v5.glb ranger-library-v5"
+    ],
+    "glbExtrasNote": "GLB asset.extras.rangerLibraryRevision 은 base(v4)에서 이어받은 값으로, 골격·클립 저작 개정을 뜻한다. 몸 개정은 bodySwap·materialFinish.revision(v5)에 있다"
+  },
+  "materialFinish": {
+    "tool": "tools/art/finish-library-materials.mjs",
+    "recipe": "library-skin-finish-v1",
+    "inputSha256": "854daf2f62e89ceeb7eb86ed344cb0c08b7e70510773b0b8a84be99ae5fb2d91",
+    "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
+    "materials": [
+      {
+        "name": "tripo_mat_0fc2838a-cb5e-4da1-90ba-852e569e5011",
+        "changed": [
+          "pbrMetallicRoughness.metallicFactor"
+        ]
+      }
+    ],
+    "preserved": "BIN 청크 전체(메시·스킨·역바인드·텍스처·클립 바이트)와 materials 외 JSON. asset.extras.materialFinish 만 추가"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v5.glb",
+    "sha256": "dddac3fb316f27ca321670af3f5355ea7b71ecd39fff2eca74aa7a930a1e9f59"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "deathContact": null,
+  "clips": {
+    "bow_shoot": 1,
+    "bow_shoot_rapid": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "5.2.2",
+    "bodyRebind": "tools/asset-library/blender_swap_body.py",
+    "packer": "tools/art/swap-library-body.mjs",
+    "finisher": "tools/art/finish-library-materials.mjs",
+    "signature": "tools/art/library-motion-signature.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) body mesh regenerated in Tripo Studio (project 5d525bfd-457f-44bf-940a-fddd1e876e83); skeleton, Mixamo body clips and Blender-authored bow/backstep clips unchanged from ranger-library-v4"
+}
