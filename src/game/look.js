@@ -8,6 +8,7 @@ import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
 import { acquireItemGeometry, createItemMaterial, ITEM_WEAPON_FORMS } from '../engine/item-forge.js';
 import { excludeFromBloom } from '../engine/character-bloom.js';
+import { applyGearAccents, removeGearAccents } from './gear-accents.js';
 const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
@@ -74,6 +75,11 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   // 무기/방패 노드와 병기고의 반지·장화는 외형 계약상 그대로 유지한다.
   applyArmorAppearance(model, def, hasAvatar ? null : (a?.slot === 'armor' ? a : null));
   applyLibraryArmoryAppearance(model, hasAvatar ? { ...equip, armor: null } : equip, def);
+  // 라이브러리 영웅은 방어구·반지·신발을 몸체 표면에 맞춘 등급 표식으로도 보여 준다. 아바타는 몸 전체를 덮어쓰므로 끈다.
+  if (model.userData.authoredContract?.role === 'hero' && !hasAvatar) {
+    const slot = (name) => { const item = equip[name] ? ITEM_BY_ID[equip[name].id] : null; return item?.slot === name ? item : null; };
+    applyGearAccents(model, { armor: slot('armor'), ring: slot('ring'), boots: slot('boots') }, { armor: equip.armor?.enh, ring: equip.ring?.enh, boots: equip.boots?.enh });
+  } else removeGearAccents(model);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {

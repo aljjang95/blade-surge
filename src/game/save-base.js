@@ -99,7 +99,9 @@ export function normalizeSave(raw, fresh) {
     const avatar = AVATAR_BY_ID[avatarId];
     if (Object.hasOwn(HEROES, heroId) && avatar && ownedAvatars.includes(avatarId) && avatar.heroId === heroId) equippedAvatars[heroId] = avatarId;
   }
-  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars };
+  const showGear = {};
+  for (const [heroId, on] of Object.entries(record(raw.avatars?.showGear) ? raw.avatars.showGear : {})) if (Object.hasOwn(HEROES, heroId) && on === true) showGear[heroId] = true;
+  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear };
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
@@ -110,6 +112,8 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
+  // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
+  s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });
