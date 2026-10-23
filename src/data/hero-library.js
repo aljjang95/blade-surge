@@ -28,24 +28,32 @@ export function librarySocketScale(handWorldScale, handRestHeight) {
   return handRestHeight / KAYKIT_HANDSLOT_REST_HEIGHT / handWorldScale;
 }
 
+// 몸체 단계: 1(N), 1.5(S 철판 덧댐), 2(E), 2.5(U 테마), 3(L). 그 단계 몸이 없으면 가까운 아래 단계를 쓴다.
+export const HERO_APPEARANCE_TIERS = Object.freeze([1, 1.5, 2, 2.5, 3]);
+const RARITY_APPEARANCE_TIER = Object.freeze({ N: 1, S: 1.5, E: 2, U: 2.5, L: 3 });
+
 export function armorAppearanceTier(item) {
-  if ([1, 2, 3].includes(item?.appearanceTier)) return item.appearanceTier;
-  if (item?.rarity === 'L') return 3;
-  if (item?.rarity === 'E' || item?.rarity === 'U') return 2;
-  return 1;
+  if (HERO_APPEARANCE_TIERS.includes(item?.appearanceTier)) return item.appearanceTier;
+  return RARITY_APPEARANCE_TIER[item?.rarity] || 1;
 }
 
 /** 장착 인스턴스의 appearanceTier → 아이템 정의 → 등급 순. 갑옷이 없으면 1단계. */
 export function heroAppearanceTier(equip = {}, definitions = {}) {
   const instance = equip?.armor, armor = instance?.id ? definitions[instance.id] : null;
   if (!armor || (armor.slot && armor.slot !== 'armor')) return 1;
-  return [1, 2, 3].includes(instance.appearanceTier) ? instance.appearanceTier : armorAppearanceTier(armor);
+  return HERO_APPEARANCE_TIERS.includes(instance.appearanceTier) ? instance.appearanceTier : armorAppearanceTier(armor);
+}
+
+/** 몸체 선택 요청 { tier, theme }. theme 은 갑옷 세트(storm·frost…)이며 테마 몸(armorTheme)은 같은 세트일 때만 고른다. */
+export function heroAppearance(equip = {}, definitions = {}) {
+  const tier = heroAppearanceTier(equip, definitions), armor = equip?.armor?.id ? definitions[equip.armor.id] : null;
+  return { tier, theme: armor && (!armor.slot || armor.slot === 'armor') ? armor.set || null : null };
 }
 
 /** 요청 단계부터 낮은 단계 순으로 찾고, 모두 없으면 기존 KayKit 모델을 쓴다. */
 export function heroTierCandidates(tier) {
-  const top = Math.min(3, Math.max(1, Math.trunc(tier) || 1));
-  return [...Array.from({ length: top }, (_, index) => top - index), 'legacy'];
+  const top = Math.min(3, Math.max(1, Number(tier) || 1));
+  return [...HERO_APPEARANCE_TIERS.filter((value) => value <= top).reverse(), 'legacy'];
 }
 
 /** tier 간 같은 스켈레톤을 쓰므로 클립이 있는 단계의 AnimationClip 을 영웅 단위로 캐시해 나눠 쓴다. */

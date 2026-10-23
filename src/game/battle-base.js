@@ -14,7 +14,7 @@ import { ExitCue, exitCueTarget } from './exit-cue.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel, preloadHeroBody } from '../engine/assets.js';
-import { heroAppearanceTier } from '../data/hero-library.js';
+import { heroAppearance } from '../data/hero-library.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
@@ -140,7 +140,7 @@ export class Battle {
     const gltf = await loadModel(def.model);
     const avatar = stage.party ? avatarId : this.app.eco.displayAvatar(heroId);
     const equip = stage.party ? {} : this.app.eco.heroEquipInsts(heroId);
-    await preloadHeroBody(heroId, heroAppearanceTier(equip, ITEM_BY_ID), avatar);
+    await preloadHeroBody(heroId, heroAppearance(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
     this.sp.configureSummons?.(equipBonus.summons || []);

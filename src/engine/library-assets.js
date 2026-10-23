@@ -231,7 +231,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
   const cache = new Map();
   return {
     assetFor(name) { return assets.find((asset) => asset.id === name) || null; },
-    assetForHero(heroId, tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
+    assetForHero(heroId, /** @type {HeroBodyRequest} */ tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
     assetForAvatar(avatarId) { return assetForAvatar(value, avatarId); },
     heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
     load(asset, fallback, prepareAsset = prepare) {
@@ -296,7 +296,20 @@ export function heroLibraryAssets(value, heroId) {
     .sort((a, b) => (a.armorTier || 1) - (b.armorTier || 1));
 }
 
-export function selectHeroLibraryAsset(value, heroId, requestedTier = 1) {
-  const assets = heroLibraryAssets(value, heroId), tier = Math.min(3, Math.max(1, requestedTier));
-  return [...assets].reverse().find((asset) => (asset.armorTier || 1) <= tier) || null;
+/** @typedef {number | { tier: number, theme?: string | null }} HeroBodyRequest */
+
+/**
+ * requested 는 단계 숫자 또는 heroAppearance() 의 { tier, theme }. 테마 몸은 세트가 같을 때만 후보가 된다.
+ * @param {any[]} assets @param {HeroBodyRequest} [requested]
+ */
+export function pickHeroLibraryAsset(assets, requested = 1) {
+  const { tier: raw, theme = null } = requested && typeof requested === 'object' ? requested : { tier: requested };
+  const tier = Math.min(3, Math.max(1, Number(raw) || 1));
+  return [...assets].sort((a, b) => (b.armorTier || 1) - (a.armorTier || 1))
+    .find((asset) => (asset.armorTier || 1) <= tier && (!asset.armorTheme || asset.armorTheme === theme)) || null;
+}
+
+/** @param {any} value @param {string} heroId @param {HeroBodyRequest} [requested] */
+export function selectHeroLibraryAsset(value, heroId, requested = 1) {
+  return pickHeroLibraryAsset(heroLibraryAssets(value, heroId), requested);
 }
