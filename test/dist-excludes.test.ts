@@ -20,6 +20,9 @@ const RECORD_ONLY: Record<string, string[]> = {
   'models/heroes-next/ranger-library-t1-v1.glb': ['src/data/ranger-library-revision-v1.json'],
   'models/heroes-next/ranger-library-t1-v2.glb': ['src/data/ranger-library-revision-v2.json'],
   'models/heroes-next/ranger-library-t1-v3.glb': ['src/data/ranger-library-revision-v3.json'],
+  // v4 는 v5 의 클립 원본 기록(clipSource)과 그 클립에 묶인 2·3단계·여우 저작 동작의 base 기록에만 나온다(hero-body-motion.js 는 v4 기록을 import 해 base 경로·SHA 를 비교만 하고 GLB 를 fetch 하지 않음).
+  'models/heroes-next/ranger-library-t1-v4.glb': ['src/data/ranger-library-revision-v4.json', 'src/data/ranger-library-revision-v5.json',
+    'src/data/higher-body-motion-v1.json', 'src/data/fox-body-motion-v1.json'],
   'models/heroes-next/rogue-library-t1-axis-v1.glb': ['src/data/rogue-library-revision-v1.json', 'src/data/rogue-library-revision-v2.json'],
   'models/oathhall-v2': ['src/engine/oathhall-asset.js'],
 };
