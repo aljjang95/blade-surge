@@ -47,6 +47,19 @@ function assertOverlay(base: THREE.AnimationClip, overlay: THREE.AnimationClip) 
   expect(replaced).toBe(1);
 }
 
+// 1단계 v6 몸 전용 덮어쓰기(ranger-t1-body-motion-v2): Hips 위치 트랙 하나만 바뀌고 수평(X/Z)·시작 높이·다른 트랙은 원본 그대로다.
+function assertT1Overlay(base: THREE.AnimationClip, overlay: THREE.AnimationClip) {
+  expect(overlay).not.toBe(base);
+  expect(overlay.name).toBe(base.name); expect(overlay.duration).toBe(base.duration); expect(overlay.tracks.length).toBe(base.tracks.length);
+  let replaced = 0;
+  base.tracks.forEach((track, index) => {
+    if (track.name !== 'mixamorigHips.position') { expect(overlay.tracks[index]).toBe(track); return; }
+    replaced++; const next = overlay.tracks[index];
+    expect(next.values[0]).toBe(track.values[0]); expect(next.values[1]).toBe(track.values[1]); expect(next.values[2]).toBe(track.values[2]);
+  });
+  expect(replaced).toBe(1);
+}
+
 test('실제 direct 여우만 저작 골반 트랙을 쓰고 공유 궁수 GLB·다른 클립 바이트는 그대로다', async () => {
   const base = await loadHeroModel('ranger', 1), before = fingerprint(base.animations);
   const fox = await loadHeroAsset(asset('avatar_ranger_fox'));
@@ -58,13 +71,14 @@ test('실제 direct 여우만 저작 골반 트랙을 쓰고 공유 궁수 GLB·
     assertOverlay(baseDodge, direct.clips.dodge);
     expect(direct.clips.Dodge_Forward).toBe(direct.clips.dodge);
     expect(second.clips.dodge).toBe(direct.clips.dodge);
-    expect(ordinary.clips.dodge).toBe(baseDodge);
-    expect(ordinary.clips.Dodge_Forward).toBe(baseDodge);
-    const death = ordinary.clips.death;
+    // 기본 1단계(v6 몸)는 자기 몸 전용 회피·사망 골반 곡선을 쓴다(여우 곡선과 다른 객체).
+    assertT1Overlay(baseDodge, ordinary.clips.dodge); expect(ordinary.clips.dodge).not.toBe(direct.clips.dodge);
+    expect(ordinary.clips.Dodge_Forward).toBe(ordinary.clips.dodge);
+    const death = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'death')!;
     assertOverlay(death, direct.clips.death);
     expect(direct.clips.Death_A).toBe(direct.clips.death); expect(direct.clips.Death_B).toBe(direct.clips.death);
     expect(second.clips.death).toBe(direct.clips.death);
-    expect(ordinary.clips.Death_A).toBe(death);
+    assertT1Overlay(death, ordinary.clips.death); expect(ordinary.clips.Death_A).toBe(ordinary.clips.death);
     for (const clip of base.animations as THREE.AnimationClip[]) {
       if (['dodge', 'death'].includes(clip.name)) continue;
       // 대표님이 허용한 Interact 회전 저작만 별도 복제한다. 골반과 공유 원본 보호는 유지한다.
@@ -85,6 +99,8 @@ test('실제 몸체 swap은 미래 회피 조회만 바꾸고 기존 액션·추
   const base = await loadHeroModel('ranger', 1), before = fingerprint(base.animations);
   await preloadHeroBody('ranger', 1, 'avatar_ranger_fox');
   const instance = spawnCharacter(base), unaffected = spawnCharacter(base);
+  // baseDodge·baseDeath 는 기본 1단계(v6 몸)에 설치된 1단계 전용 곡선이다. 여우 곡선은 GLB 원본 클립에서 만든다.
+  const rawDodge = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'dodge')!, rawDeath = base.animations.find((clip: THREE.AnimationClip) => clip.name === 'death')!;
   const baseDeath = instance.clips.death;
   const baseDodge = instance.clips.dodge, custom = new THREE.AnimationClip('RangerBowUpper', .2, []);
   instance.clips.RangerBowUpper = custom;
@@ -93,10 +109,11 @@ test('실제 몸체 swap은 미래 회피 조회만 바꾸고 기존 액션·추
   const actionBefore = { time: playing.time, enabled: playing.enabled, paused: playing.paused, weight: playing.getEffectiveWeight(), running: playing.isRunning() };
   try {
     expect(applyLibraryHeroBody(instance.root, asset('avatar_ranger_fox'))).toBe(true);
+    assertT1Overlay(rawDodge, baseDodge); assertT1Overlay(rawDeath, baseDeath);
     const overlay = instance.clips.dodge;
-    assertOverlay(baseDodge, overlay);
+    assertOverlay(rawDodge, overlay);
     expect(instance.clips.Dodge_Forward).toBe(overlay);
-    const deathOverlay = instance.clips.death; assertOverlay(baseDeath, deathOverlay);
+    const deathOverlay = instance.clips.death; assertOverlay(rawDeath, deathOverlay);
     expect(instance.clips.Death_A).toBe(deathOverlay); expect(instance.clips.Death_B).toBe(deathOverlay);
     expect(instance.clips.RangerBowUpper).toBe(custom); expect(instance.clips.PlayerCustomDodge).toBe(baseDodge);
     expect(unaffected.clips.dodge).toBe(baseDodge);

@@ -1,0 +1,209 @@
+{
+  "id": "ranger-library-v6",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "v5(#241)는 Tripo 몸을 A→T 로 굽혀 v4 관절 길이에 맞추는 과정에서 Tripo 자동 가중치(땋은 머리·망토에 섞인 팔·어깨 가중치) 때문에 땋은 머리·망토를 잃고 머리가 늘어났다(대표님 2026-10-23 제보, #243 으로 v4 롤백). v6 는 같은 Tripo 몸을 메시 변형 없이 싣는다: 장식 가중치 정리(blender_clean_weights.py) → v4 골격을 회전만으로 Tripo 뼈 방향에 맞춘 자세에서 역바인드 재계산(rebind-library-body.mjs). 골격 노드·클립 바이트는 v4 와 같다.",
+  "supersedes": "ranger-library-v4",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "clipSource": {
+    "revision": "ranger-library-v4",
+    "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+    "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0",
+    "motionSignature": "1a5871eb65c89909805e3bebfa9672e185959509644686875ddf4ee0cbf2c903",
+    "signatureTool": "tools/art/library-motion-signature.mjs",
+    "rule": "v4 를 클립 원본으로 기록한 저작 계약(2·3단계·여우 몸체 동작, sourceTrackSha256)은 이 기록을 그대로 쓴다. output 의 동작 서명이 v4 와 같을 때만 성립한다(test/ranger-library-model.test.ts). 게임은 v5 하나만 내려받고 v4 파일은 기록·테스트 전용이다"
+  },
+  "authoring": {
+    "revision": "ranger-library-v6",
+    "kind": "body-rebind",
+    "tripo": {
+      "projectId": "5d525bfd-457f-44bf-940a-fddd1e876e83",
+      "model": "H3.1 (최고 품질, HD+PBR, 8K 텍스처 켬)",
+      "credits": 110,
+      "retopoFaces": 10573,
+      "rig": "Humanoid + Mixamo 프리셋, mixamorig:* 65관절",
+      "resultJson": {
+        "path": "art-src/ranger/tripo-v5/result.json",
+        "branch": "claude/ranger-v5-tripo-raw",
+        "commit": "ab602214e578df24db8c48b4a1e7eb7071a921c9",
+        "sha256": "96b9581871e7be6d9d91cd0e4a9b9de8bf077dd338bd6d932f6b59985b7b6ee2"
+      },
+      "riggedGlb": {
+        "path": "art-src/ranger/tripo-v5/ranger_t1_v5.rigged.glb",
+        "bytes": 9100220,
+        "sha256": "897754bab577b4ea121f33e5060fede90a78d12ee6654ea5cbdf2523fc129ab6"
+      },
+      "note": "원본(64MB tripo.glb 포함)은 머지하지 않는 브랜치 claude/ranger-v5-tripo-raw 에만 있다. 여기에는 경로·SHA 만 남긴다"
+    },
+    "base": {
+      "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+      "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+    },
+    "weightClean": {
+      "script": "tools/asset-library/blender_clean_weights.py",
+      "scriptSha256": "334f1cb314be092542d3853c52bd5f98d6dfcf2c3bace9cb450e4915e7eb812a",
+      "blender": "5.2.2 LTS",
+      "report": {
+        "ok": true,
+        "headRegion": 5798,
+        "hanging": 851,
+        "braid": 804,
+        "cape": 1046,
+        "armStripped": 178,
+        "empty": 332,
+        "vertices": 15050
+      },
+      "outputSha256": "d1abe450aa9f8deefe0f00ae100420d3fb6ac64f244847a44d66e28ac3e4301b",
+      "glbVertices": 15059
+    },
+    "rebind": {
+      "tool": "tools/art/rebind-library-body.mjs",
+      "toolSha256": "01dfed759f0bed6ce1c7d6dba337e7a9a8ff192645e18934f600a8da35fbdccf",
+      "outputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
+      "rule": "base 의 골격 노드 TRS·스킨 관절 순서·클립 바이트는 그대로. 몸 정점은 닮음 변환만, 역바인드 = 회전만 바꾼 base 골격 자세 F 의 관절 세계 행렬의 역. 활 소켓은 손 관절 차이만큼 손 로컬에서 이동.",
+      "extras": {
+        "method": "rotation-only-bind-pose",
+        "baseSha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0",
+        "bodySha256": "d1abe450aa9f8deefe0f00ae100420d3fb6ac64f244847a44d66e28ac3e4301b",
+        "scale": 1.867437,
+        "liftM": 0.012,
+        "socketMode": "none",
+        "yawDeg": 0,
+        "maxSwingDeg": 47.07,
+        "maxJointGapM": 0.0967,
+        "sockets": {}
+      },
+      "socketNote": "활 소켓은 v4 위치 그대로(--sockets=none). 손 관절 차이만큼 옮기는 draw 모드는 실측(combat-mesh-qa)에서 활 아래 림이 다리에 10–11cm 들어가 더 나빴다(none 7.2–8.0, v4 6.1)."
+    },
+    "commands": [
+      "blender -b -P tools/asset-library/blender_clean_weights.py -- --input <ranger_t1_v5.rigged.glb> --output <clean.glb> --report <clean.json>",
+      "node tools/art/rebind-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <clean.glb> <v6-raw.glb> --lift=0.012 --sockets=none",
+      "node tools/art/finish-library-materials.mjs <v6-raw.glb> public/models/heroes-next/ranger-library-t1-v6.glb ranger-library-v6"
+    ]
+  },
+  "materialFinish": {
+    "tool": "tools/art/finish-library-materials.mjs",
+    "recipe": "library-skin-finish-v1",
+    "inputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
+    "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
+    "materials": [
+      {
+        "name": "tripo_mat_0fc2838a-cb5e-4da1-90ba-852e569e5011",
+        "changed": [
+          "pbrMetallicRoughness.metallicFactor"
+        ]
+      }
+    ],
+    "preserved": "BIN 청크 전체(메시·스킨·역바인드·텍스처·클립 바이트)와 materials 외 JSON. asset.extras.materialFinish 만 추가"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v6.glb",
+    "sha256": "344b4ce1bd3c2c602fbbc8b90bd4a9d922b3bf632e085e7cf2e9d55bde440d5b"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "deathContact": {
+    "method": "tools/art/author-ranger-t1-body-motion.mjs 4배 조밀 검사(실제 loadHeroModel → spawnCharacter 경로)",
+    "bodyMotion": {
+      "record": "src/data/ranger-t1-body-motion-v2.json",
+      "dodge": {
+        "skinMinY": -0.020634,
+        "skinMaxY": 0.025463,
+        "limitAbs": 0.03,
+        "offsetMaxM": 0.282099,
+        "pass": true
+      },
+      "death": {
+        "skinMinY": -0.006061,
+        "endSkinY": -0.006,
+        "limit": -0.01,
+        "endAbsLimit": 0.03,
+        "pass": true
+      }
+    },
+    "rawClip": {
+      "standingFeetY": 0.007,
+      "dodgeMinY": -0.181,
+      "deathEndY": -0.103,
+      "note": "원본 v4 클립을 덮지 않고 재생한 값(0.25초 간격 표본). 구르기 중간 최저점은 등 뒤 망토(Spine2 가중) 정점이다."
+    },
+    "combatMesh": {
+      "tool": "tools/combat-mesh-qa.mjs",
+      "weaponHeadCm": {
+        "attack1_5": 0,
+        "skill0_3": 0,
+        "cheer": 6.8,
+        "hit": 0.9
+      },
+      "weaponLegCm": {
+        "attack3": 7.4,
+        "attack4": 7.2,
+        "skill3": 8,
+        "hit": 9.8
+      },
+      "v4": {
+        "attack3Leg": 6.1,
+        "hitLeg": 6.1,
+        "cheerHead": 0,
+        "hitTorso": 0
+      },
+      "note": "v6 몸(망토·머리카락 부피)이 v4 보다 커서 피격·환호에서 활이 몸통(8.4cm)·머리카락(6.8cm)에 더 들어간다. 클립은 2·3단계와 공유하므로 이번 개정에서 바꾸지 않았다."
+    }
+  },
+  "clips": {
+    "bow_shoot": 1,
+    "bow_shoot_rapid": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "5.2.2",
+    "weightClean": "tools/asset-library/blender_clean_weights.py",
+    "rebind": "tools/art/rebind-library-body.mjs",
+    "finisher": "tools/art/finish-library-materials.mjs",
+    "signature": "tools/art/library-motion-signature.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) body mesh regenerated in Tripo Studio (project 5d525bfd-457f-44bf-940a-fddd1e876e83); skeleton, Mixamo body clips and Blender-authored bow/backstep clips unchanged from ranger-library-v4",
+  "withdrawn": {
+    "revision": "ranger-library-v5",
+    "path": "/models/heroes-next/ranger-library-t1-v5.glb",
+    "reason": "몸 교체가 땋은 머리·망토를 잃고 얼굴을 늘림(#243 롤백)"
+  }
+}

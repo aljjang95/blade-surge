@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { installRangerRuntimeLoader, stripImages } from '../tools/art/ranger-runtime-loader.mjs';
 import { loadHeroModel, loadHeroAsset, spawnCharacter, poseRangerBowString, applyLibraryHeroBody, disposeCharacter, bowStringTriangles } from '../src/engine/assets.js';
-import { libraryAssetForHero, resolveAssetSource, revisedLibraryFile, rangerLibraryRevision } from '../src/engine/library-assets.js';
+import { libraryAssetForHero, resolveAssetSource, revisedLibraryFile, rangerLibraryRevision, rangerClipSource } from '../src/engine/library-assets.js';
+import { libraryMotionSignature } from '../tools/art/library-motion-signature.mjs';
 import { attackPhase } from '../src/game/combat-motion.js';
 import { HEROES } from '../src/data/heroes.js';
 import { RANGER_HEAD_LIFT } from '../src/game/player.js';
@@ -14,6 +15,8 @@ import { finishLibraryGLB } from '../tools/art/finish-library-materials.mjs';
 import REV_V1 from '../src/data/ranger-library-revision-v1.json';
 import REV_V2 from '../src/data/ranger-library-revision-v2.json';
 import REV_V3 from '../src/data/ranger-library-revision-v3.json';
+import REV_V4 from '../src/data/ranger-library-revision-v4.json';
+import REV_V5 from '../src/data/ranger-library-revision-v5.json';
 
 // 궁수 라이브러리 교정본(ranger-library-v1): 실제 GLB 를 실제 loadHeroModel 경로로 받아 손·활·시위 좌표를 잰다.
 let restore = () => {};
@@ -44,8 +47,8 @@ test('교정본은 원본 SHA 에서 생성된 정확한 파일이며 원본 GLB
   expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === 'hero_ranger_t2') as any, REV)).toBeNull();
 });
 
-test('메시·스킨·역바인드는 원본 바이트 그대로이고 관절 rest 가 같으며 클립·소켓만 바뀐다', () => {
-  const a = glbJson('../asset-library/normalized/hero_ranger_t1.glb'), b = glbJson('../public' + REV.output.path);
+test('v4: 메시·스킨·역바인드는 원본 바이트 그대로이고 관절 rest 가 같으며 클립·소켓만 바뀐다', () => {
+  const a = glbJson('../asset-library/normalized/hero_ranger_t1.glb'), b = glbJson('../public' + REV_V4.output.path);
   expect(b.meshes).toEqual(a.meshes.map((m: any) => ({ ...m, primitives: m.primitives.map((p: any) => ({ ...p, attributes: expect.any(Object), indices: expect.any(Number) })) })));
   // 원본은 금속도 기본(1)·BLEND 였고, 채택본은 마감 규칙 세 필드만 다르다.
   expect(a.materials.every((m: any) => m.alphaMode === 'BLEND' && m.pbrMetallicRoughness.metallicFactor === undefined)).toBe(true);
@@ -56,7 +59,7 @@ test('메시·스킨·역바인드는 원본 바이트 그대로이고 관절 re
   }
   const names = b.animations.map((c: any) => c.name).sort();
   expect(names).toEqual([...Object.keys(asset().clips), 'Dodge_Backward', 'bow_shoot_rapid'].sort());
-  for (const [name, seconds] of Object.entries(REV.clips)) {
+  for (const [name, seconds] of Object.entries(REV_V4.clips)) {
     const clip = b.animations.find((c: any) => c.name === name);
     expect(Math.max(...clip.samplers.map((s: any) => b.accessors[s.input].max[0]))).toBeCloseTo(seconds as number, 3);
   }
@@ -113,27 +116,27 @@ test('v3 의 5.2 재저작 클립은 v2 와 채널·키 시간이 같고 회전 
 // ---- v4: 사망 활 접촉 교정(저작 v3, art-src/ranger/author_ranger_library_v3.py). 실제 접촉 측정은 test/ranger-death-contact.test.ts ----
 test('v4 는 PC Blender 5.2.2 저작 v3 패킹본에 재질 마감만 더한 정확한 파일이고, 출처가 실제 저작 스크립트와 이어진다', () => {
   for (const rev of [REV_V1, REV_V2, REV_V3]) expect(sha('../public' + rev.output.path)).toBe(rev.output.sha256);
-  expect(REV.id).toBe('ranger-library-v4'); expect(REV.supersedes).toBe(REV_V3.id);
-  for (const k of ['asset', 'source', 'axisReference', 'sockets', 'bow', 'license'] as const) expect(REV[k]).toEqual(REV_V3[k]);
-  expect(REV.authoring.script).toBe('art-src/ranger/author_ranger_library_v3.py');
-  expect(sha('../' + REV.authoring.script)).toBe(REV.authoring.scriptSha256);
-  expect(REV.authoring.blender).toMatch(/^5\.2\.2/);
-  expect(REV.materialFinish.inputSha256).toBe(REV.authoring.packedSha256);
-  const bytes = readFileSync(new URL('../public' + REV.output.path, import.meta.url)), { json, binChunk } = glbParts(bytes);
+  expect(REV_V4.id).toBe('ranger-library-v4'); expect(REV_V4.supersedes).toBe(REV_V3.id);
+  for (const k of ['asset', 'source', 'axisReference', 'sockets', 'bow', 'license'] as const) expect(REV_V4[k]).toEqual(REV_V3[k]);
+  expect(REV_V4.authoring.script).toBe('art-src/ranger/author_ranger_library_v3.py');
+  expect(sha('../' + REV_V4.authoring.script)).toBe(REV_V4.authoring.scriptSha256);
+  expect(REV_V4.authoring.blender).toMatch(/^5\.2\.2/);
+  expect(REV_V4.materialFinish.inputSha256).toBe(REV_V4.authoring.packedSha256);
+  const bytes = readFileSync(new URL('../public' + REV_V4.output.path, import.meta.url)), { json, binChunk } = glbParts(bytes);
   // 패커에 준 revision·저작 스크립트 경로와 5.2 내보내기 이름이 그대로 남는다(클라우드 4.3 미리보기는 여기서 걸러진다).
-  expect(REV.authoring.packedAuthoringExtra).toMatch(/^Blender Khronos glTF Blender I\/O v5\.2\.\d+ \/ art-src\/ranger\/author_ranger_library_v3\.py$/);
-  expect(json.asset.extras).toEqual({ rangerLibraryRevision: REV.id, sourceSha256: REV.source.sha256, authoring: REV.authoring.packedAuthoringExtra,
+  expect(REV_V4.authoring.packedAuthoringExtra).toMatch(/^Blender Khronos glTF Blender I\/O v5\.2\.\d+ \/ art-src\/ranger\/author_ranger_library_v3\.py$/);
+  expect(json.asset.extras).toEqual({ rangerLibraryRevision: REV_V4.id, sourceSha256: REV_V4.source.sha256, authoring: REV_V4.authoring.packedAuthoringExtra,
     packer: 'tools/art/pack-ranger-library.mjs',
-    materialFinish: { revision: REV.id, recipe: 'library-skin-finish-v1', tool: 'tools/art/finish-library-materials.mjs', inputSha256: REV.authoring.packedSha256, metallicFactorMax: .22, opaqueBlendAlphaCutoff: .5 } });
+    materialFinish: { revision: REV_V4.id, recipe: 'library-skin-finish-v1', tool: 'tools/art/finish-library-materials.mjs', inputSha256: REV_V4.authoring.packedSha256, metallicFactorMax: .22, opaqueBlendAlphaCutoff: .5 } });
   const raw = structuredClone(json); raw.materials = glbJson('../public' + REV_V2.output.path).materials; delete raw.asset.extras.materialFinish;
   const packed = glbBytes(raw, binChunk);
-  expect(createHash('sha256').update(packed).digest('hex')).toBe(REV.authoring.packedSha256);
-  expect(finishLibraryGLB(packed, REV.id).output.equals(bytes)).toBe(true);
+  expect(createHash('sha256').update(packed).digest('hex')).toBe(REV_V4.authoring.packedSha256);
+  expect(finishLibraryGLB(packed, REV_V4.id).output.equals(bytes)).toBe(true);
 });
 
 test('v4 는 v3 와 메시·스킨·텍스처·재질·노드가 같고, 사망 외 10개 클립은 비트 동일, 사망은 0.75초까지 비트 동일하고 그 뒤 왼팔 회전·골반 높이만 다르다', () => {
   const read = (path: string) => { const b = readFileSync(new URL(path, import.meta.url)), p = glbParts(b); return { j: p.json, bin: p.binChunk.subarray(8) }; };
-  const a = read('../public' + REV_V3.output.path), b = read('../public' + REV.output.path);
+  const a = read('../public' + REV_V3.output.path), b = read('../public' + REV_V4.output.path);
   const view = (g: any, i: number) => { const x = g.j.bufferViews[i]; return g.bin.subarray(x.byteOffset || 0, (x.byteOffset || 0) + x.byteLength); };
   const floats = (g: any, i: number) => { const acc = g.j.accessors[i], raw = view(g, acc.bufferView); return new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength)); };
   const kept = (g: any) => [...g.j.meshes.flatMap((m: any) => m.primitives.flatMap((p: any) => [...Object.values(p.attributes), p.indices])).map((i: any) => g.j.accessors[i].bufferView),
@@ -175,6 +178,79 @@ test('v4 는 v3 와 메시·스킨·텍스처·재질·노드가 같고, 사망 
   }
   // 정착 보정은 왼팔 IK 사슬(위팔·아래팔)과 손 회전만 바꾸고, 골반 이동은 그 결과에 대한 실제 스킨 접지 재계산이다(런타임 몸 본 차 ≤3mm 는 접촉 테스트).
   expect([...changed].sort()).toEqual(['mixamorig:Hips.translation', 'mixamorig:LeftArm.rotation', 'mixamorig:LeftForeArm.rotation', 'mixamorig:LeftHand.rotation']);
+});
+
+// ---- v6: '애꾸' 얼굴 교정(Tripo 재생성 몸, 메시 변형 없는 재결합). 골격 노드·클립은 v4 바이트 그대로, 역바인드·활 소켓·몸 메시만 바뀐다 ----
+// v5(A→T 로 몸을 굽혀 v4 관절에 맞춘 교체)는 땋은 머리·망토를 잃어 철회했다(#243). v5 파일·기록은 이력으로 남는다.
+test('v6 는 v4 를 대신하는 몸 재결합 개정이고, 가중치 정리·재결합 도구·Tripo 원본·base v4 출처가 기록과 이어진다', () => {
+  for (const rev of [REV_V1, REV_V2, REV_V3, REV_V4, REV_V5]) expect(sha('../public' + rev.output.path)).toBe(rev.output.sha256);
+  expect(REV.id).toBe('ranger-library-v6'); expect(REV.supersedes).toBe(REV_V4.id);
+  expect(REV.withdrawn).toMatchObject({ revision: REV_V5.id, path: REV_V5.output.path });
+  for (const k of ['asset', 'source', 'axisReference', 'sockets', 'bow', 'clips'] as const) expect(REV[k]).toEqual(REV_V4[k]);
+  expect(sha('../public' + REV.output.path)).toBe(REV.output.sha256);
+  expect(REV.authoring.base).toEqual(REV_V4.output);
+  expect(REV.authoring.tripo).toEqual(REV_V5.authoring.tripo);
+  expect(sha('../' + REV.authoring.weightClean.script)).toBe(REV.authoring.weightClean.scriptSha256);
+  expect(sha('../' + REV.authoring.rebind.tool)).toBe(REV.authoring.rebind.toolSha256);
+  expect(REV.authoring.weightClean.blender).toMatch(/^5\.2\.2/);
+  expect(REV.materialFinish.inputSha256).toBe(REV.authoring.rebind.outputSha256);
+  const bytes = readFileSync(new URL('../public' + REV.output.path, import.meta.url)), { json, binChunk } = glbParts(bytes);
+  const rebind = json.asset.extras.bodyRebind;
+  expect(rebind).toMatchObject({ method: 'rotation-only-bind-pose', baseSha256: REV_V4.output.sha256, bodySha256: REV.authoring.weightClean.outputSha256 });
+  expect(json.asset.extras.materialFinish).toEqual({ revision: REV.id, recipe: 'library-skin-finish-v1', tool: 'tools/art/finish-library-materials.mjs',
+    inputSha256: REV.authoring.rebind.outputSha256, metallicFactorMax: .22, opaqueBlendAlphaCutoff: .5 });
+  // 마감 전 재결합본을 되살리면 기록된 SHA 와 같고, 같은 마감기로 정확히 같은 바이트가 다시 나온다.
+  const raw = structuredClone(json); delete raw.asset.extras.materialFinish;
+  for (const m of raw.materials) delete m.pbrMetallicRoughness.metallicFactor;
+  const packed = glbBytes(raw, binChunk);
+  expect(createHash('sha256').update(packed).digest('hex')).toBe(REV.authoring.rebind.outputSha256);
+  expect(finishLibraryGLB(packed, REV.id).output.equals(bytes)).toBe(true);
+});
+
+test('v6 는 v4 와 관절 노드·스킨 관절 순서·11개 클립 바이트가 같고, 역바인드·활 소켓 위치·몸 메시만 다르다', () => {
+  const read = (path: string) => { const b = readFileSync(new URL(path, import.meta.url)), p = glbParts(b); return { bytes: b, j: p.json, bin: p.binChunk.subarray(8) }; };
+  const a = read('../public' + REV_V4.output.path), b = read('../public' + REV.output.path);
+  const view = (g: any, i: number) => { const x = g.j.bufferViews[g.j.accessors[i].bufferView]; return g.bin.subarray(x.byteOffset || 0, (x.byteOffset || 0) + x.byteLength); };
+  expect(libraryMotionSignature(a.bytes).signature).toBe(REV.clipSource.motionSignature);
+  const sockets = new Set(['RangerBowGrip_L', 'RangerDrawNock_R']);
+  expect(b.j.nodes.length).toBe(a.j.nodes.length);
+  b.j.nodes.forEach((n: any, i: number) => {
+    const o = a.j.nodes[i]; expect(n.name).toBe(o.name);
+    if (n.mesh != null) return;
+    if (sockets.has(n.name)) { expect({ ...n, translation: 0 }).toEqual({ ...o, translation: 0 }); return; }
+    expect(n).toEqual(o);
+  });
+  expect(b.j.skins.map((s: any) => ({ ...s, inverseBindMatrices: 0 }))).toEqual(a.j.skins.map((s: any) => ({ ...s, inverseBindMatrices: 0 })));
+  expect(view(b, b.j.skins[0].inverseBindMatrices).equals(view(a, a.j.skins[0].inverseBindMatrices))).toBe(false);
+  expect(b.j.animations.map((c: any) => c.name)).toEqual(a.j.animations.map((c: any) => c.name));
+  for (const [k, ca] of a.j.animations.entries()) {
+    const cb = b.j.animations[k]; expect(cb.channels.map((c: any) => c.target)).toEqual(ca.channels.map((c: any) => c.target));
+    ca.samplers.forEach((s: any, i: number) => {
+      const t = cb.samplers[i]; expect(t.interpolation).toBe(s.interpolation);
+      expect(view(b, t.input).equals(view(a, s.input))).toBe(true); expect(view(b, t.output).equals(view(a, s.output))).toBe(true);
+    });
+  }
+  // 활 소켓 이동은 손 크기 안(10cm 미만)이고 기록과 같다.
+  for (const [name, entry] of Object.entries(b.j.asset.extras.bodyRebind.sockets) as [string, any][]) { expect(sockets.has(name)).toBe(true); expect(entry.shiftM).toBeLessThan(.1); }
+  // 다른 것: 몸 메시 하나(Tripo 리토폴 10,573삼각형)·재질 하나·텍스처. 마감은 금속도 상한만.
+  expect(b.j.meshes.length).toBe(1); expect(b.j.materials.length).toBe(1);
+  expect(b.j.materials[0].pbrMetallicRoughness.metallicFactor).toBe(.22);
+  const tris = b.j.meshes[0].primitives.reduce((n: number, p: any) => n + b.j.accessors[p.indices].count / 3, 0);
+  expect(tris).toBe(REV.authoring.tripo.retopoFaces);
+  // 런타임 계약이 받는 클립 원본은 v4 기록 그대로다.
+  expect(rangerClipSource()).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
+  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, revision: 'ranger-library-v3' } } as any)).toThrow('superseded revision');
+  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, motionSignature: undefined } } as any)).toThrow('superseded revision');
+  expect(rangerClipSource(REV_V4 as any)).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
+});
+
+test('v6 몸 메시는 재결합 입력(가중치 정리본)과 정점 수가 같고 키가 v4 와 같은 범위다', () => {
+  const read = (path: string) => { const b = readFileSync(new URL(path, import.meta.url)), p = glbParts(b); return { j: p.json, bin: p.binChunk.subarray(8) }; };
+  const g = read('../public' + REV.output.path), skinPos = (gg: any) => { const p = gg.j.meshes[0].primitives[0], acc = gg.j.accessors[p.attributes.POSITION]; return acc; };
+  const acc = skinPos(g);
+  // 키(발→정수리)는 v4 와 같은 1.8 단위 근처, 정점 수는 재결합 입력(Blender 가중치 정리본 GLB)과 같다.
+  expect(acc.max[1] - acc.min[1]).toBeGreaterThan(1.6); expect(acc.max[1] - acc.min[1]).toBeLessThan(2.0);
+  expect(acc.count).toBe(REV.authoring.weightClean.glbVertices);
 });
 
 async function ranger() {
