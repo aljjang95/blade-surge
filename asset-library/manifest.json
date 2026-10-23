@@ -350,6 +350,31 @@
       "armorTier": 3
     },
     {
+      "id": "hero_mage_t1s",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_mage_t1s.glb",
+      "heightM": 1.8,
+      "triangles": 10574,
+      "bytes": 1696752,
+      "sha256": "ccd9d95ce3dcc5da5207821b65e53007a4da7c3a1d19c7155555d46b21091171",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --smooth-cape 8) + rebind-library-body.mjs --no-clips",
+        "account": "owner subscription",
+        "taskId": "d1a12cf8-1dfc-4b39-90b2-2321315a2f41",
+        "prompt": "[pipeline summary] blade-art#t4 S grade: tier1 mage with silver corset plate, small pauldrons, green brooch: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_mage_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/mage_t1s",
+        "createdAt": "2026-10-23T14:00:00.000Z",
+        "rawSha256": "bb85305b74d09512f76332b40010e477d75ca8d0f71d32eecd42715e4ac14ea7"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "mage",
+      "armorTier": 1.5
+    },
+    {
       "id": "hero_mage_t2",
       "kind": "character",
       "body": "biped",
@@ -375,6 +400,32 @@
       "role": "hero",
       "heroId": "mage",
       "armorTier": 2
+    },
+    {
+      "id": "hero_mage_t2u",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_mage_t2u.glb",
+      "heightM": 1.8,
+      "triangles": 10042,
+      "bytes": 1616668,
+      "sha256": "5f4d625217a4cd30910922df52e761d9b2b2d9baa7b2cad39125ad6897bb9870",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --smooth-cape 8) + rebind-library-body.mjs --no-clips",
+        "account": "owner subscription",
+        "taskId": "21b97002-19e1-4d48-8e6b-0330186ef405",
+        "prompt": "[pipeline summary] blade-art#t4 U grade frost theme: white and ice-blue robe, ice crystal shoulder clusters, snowflake brooch: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_mage_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/mage_t2u",
+        "createdAt": "2026-10-23T14:00:00.000Z",
+        "rawSha256": "3891195a93b8c9b1fc9fb73fdbf0e631a29d1976e892b62292265b3af453ec8d"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "mage",
+      "armorTier": 2.5,
+      "armorTheme": "frost"
     },
     {
       "id": "hero_mage_t3",
