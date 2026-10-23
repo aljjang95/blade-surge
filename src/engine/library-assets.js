@@ -4,7 +4,8 @@ import { monsterRosterEntry } from '../data/monster-roster.js';
 import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v6.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
-import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
+import HIGHER_BODY_REVISIONS_V1 from '../data/higher-body-revisions-v1.json';
+import RANGER_T3_BODY_REVISION_V2 from '../data/ranger-t3-body-revision-v2.json';
 import ANIM_PACKS from '../data/anim-packs-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
@@ -26,11 +27,17 @@ export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
 // 자산별 출력 이름을 코드에서 고정한다. 초안은 원본을 고르고 실제 생성·검증된 기록만 활성화한다.
 const HIGHER_BODY_TARGETS = Object.freeze([
   Object.freeze({ asset: 'hero_ranger_t2', id: 'ranger-t2-body-fit-v1', prefix: '/models/heroes-next/ranger-t2-body-fit-v1' }),
-  Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v1', prefix: '/models/heroes-next/ranger-t3-body-fit-v1' }),
+  // 3단계 궁수는 v2(앞머리를 가른 Tripo 몸 재결합, ranger-t3-body-revision-v2.json)가 v1 을 대신한다. v1 기록·파일은 이력으로 남는다.
+  Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v2', prefix: '/models/heroes-next/ranger-t3-body-fit-v2' }),
   Object.freeze({ asset: 'hero_rogue_t2', id: 'rogue-t2-body-fit-v1', prefix: '/models/heroes-next/rogue-t2-body-fit-v1' }),
   Object.freeze({ asset: 'hero_rogue_t3', id: 'rogue-t3-body-fit-v1', prefix: '/models/heroes-next/rogue-t3-body-fit-v1' }),
   Object.freeze({ asset: 'avatar_rogue_crow', id: 'rogue-crow-body-fit-v1', prefix: '/models/heroes-next/rogue-crow-body-fit-v1' }),
 ]);
+// 대신 쓰는 개정이 가리키는 이전 기록(이력). 이력 기록도 자기 고정 경로 계약을 그대로 지켜야 한다.
+const HIGHER_BODY_HISTORY = Object.freeze([
+  Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v1', prefix: '/models/heroes-next/ranger-t3-body-fit-v1' }),
+]);
+const HIGHER_BODY_SUPERSEDING = Object.freeze([RANGER_T3_BODY_REVISION_V2]);
 const requireHigherBody = (condition) => { if (!condition) throw new Error('Higher body revision requires an exact unique asset/source/public output contract'); };
 
 function validateHigherBodyRevision(revision, target) {
@@ -60,6 +67,23 @@ export function validateHigherBodyRevisions(value) {
   });
 }
 
+/**
+ * v1 번들 기록 위에 대신 쓰는 개정(supersedes)을 얹은 실제 사용 기록을 만든다. 원본 v1 JSON 은 바꾸지 않는다.
+ * 대신 쓰는 개정은 같은 자산·같은 원본 SHA 의 이력 기록 하나를 정확히 가리켜야 하고, 이력 기록은 자기 고정 경로 계약을 지켜야 한다.
+ */
+export function supersedeHigherBodyRevisions(value, superseding = HIGHER_BODY_SUPERSEDING) {
+  requireHigherBody(Array.isArray(value?.revisions) && Array.isArray(superseding));
+  for (const next of superseding) {
+    const previous = value.revisions.filter(revision => revision?.id === next?.supersedes);
+    const history = HIGHER_BODY_HISTORY.find(entry => entry.id === next?.supersedes);
+    requireHigherBody(previous.length === 1 && history && next.id !== previous[0].id && next.asset === previous[0].asset
+      && next.source?.path === previous[0].source?.path && next.source?.sha256 === previous[0].source?.sha256);
+    validateHigherBodyRevision(previous[0], history);
+  }
+  return { ...value, revisions: value.revisions.map(revision => superseding.find(next => next.supersedes === revision?.id) || revision) };
+}
+
+const HIGHER_BODY_REVISIONS = Object.freeze(supersedeHigherBodyRevisions(HIGHER_BODY_REVISIONS_V1));
 const higherRevisions = validateHigherBodyRevisions(HIGHER_BODY_REVISIONS);
 const LIBRARY_REVISIONS = Object.freeze([
   ...HIGHER_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: higherRevisions.find(revision => revision.id === target.id) })),
@@ -123,7 +147,10 @@ export function revisedLibraryFile(asset, revision = null) {
   return revision.output.path;
 }
 
+/** 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정). */
 export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
+/** 대신 쓰는 개정에 밀려난 이력 기록(게임이 고르지 않는다). */
+export const higherBodyRevisionHistory = () => HIGHER_BODY_REVISIONS_V1.revisions.filter(revision => HIGHER_BODY_SUPERSEDING.some(next => next.supersedes === revision.id));
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 /**
