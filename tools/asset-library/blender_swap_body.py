@@ -77,6 +77,7 @@ def fit_pose(arm1, arm2, meshes, align, by_norm):
 HEAD_KEEP = ('Head', 'HeadTop_End', 'Neck', 'LeftEye', 'RightEye')
 
 def head_rigid(mesh, arm):
+    # 2026-10-23 실측: 궁수 v5 에 켜면 사망 -0.127m·구르기 -0.230m 로 끈 상태(-0.024·-0.088)보다 나빠져 기본을 껐다(--headRigid 1 로만 켬).
     # Tripo 자동 가중치는 정수리·앞머리 정점에도 어깨·팔 가중치를 섞어(예: Head .49 / LeftShoulder .27 / LeftArm .16)
     # 구르기·사망에서 머리가 찌그러져 바닥을 판다. 머리 관절보다 위(머리 높이의 8% 여유) 정점은 머리 계열 본만 남기고 다시 정규화하고,
     # 머리 계열 가중치가 하나도 없으면 Head 1 로 둔다. 머리 관절 아래(목·땋은 머리·망토)는 그대로다.
@@ -158,7 +159,7 @@ def main():
                 src = weighted[kd.find(v.co)[1]]
                 for g in src.groups: mesh.vertex_groups[g.group].add([v.index], g.weight, 'REPLACE')
         filled += len(loose)
-        if a.get('headRigid', '1') == '1': rigid += head_rigid(mesh, arm1)
+        if a.get('headRigid', '0') == '1': rigid += head_rigid(mesh, arm1)
         mesh.parent = arm1; mesh.matrix_parent_inverse = arm1.matrix_world.inverted()
         mesh.modifiers.new('Armature', 'ARMATURE').object = arm1
     for o in old: bpy.data.objects.remove(o, do_unlink=True)

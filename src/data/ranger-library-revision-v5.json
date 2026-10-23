@@ -49,7 +49,7 @@
     },
     "bodyRebind": {
       "script": "tools/asset-library/blender_swap_body.py",
-      "scriptSha256": "56fae014bcb71b3b54565488f5e5cd1187d2f891070e71fa46c385133c49fc04",
+      "scriptSha256": "ae1c32401286bdf0165b55683c5871056b9d52fa5f9df2bd08b20bc692d993be",
       "blender": "5.2.2 LTS",
       "host": "Claude 클라우드 세션 Linux Blender 5.2.2(같은 입력으로 다시 돌려 같은 바이트 확인)",
       "outputSha256": "f6ca76167b782c14e75a542164a4bcecaef283275e5740d9715c2d1c31870123",
@@ -58,10 +58,12 @@
         "matchedBones": 65,
         "scale": 1.8674364673914614,
         "filledVertices": 42,
-        "triangles": 10653
+        "triangles": 10653,
+        "headRigidVertices": 0
       },
       "glbTriangles": 10573,
-      "trianglesNote": "report.triangles(10653)는 Blender 가 내보내기 전 몸 객체에서 센 값이고, GLB 인덱스 삼각형은 Tripo 리토폴 면 수와 같은 10573 이다"
+      "trianglesNote": "report.triangles(10653)는 Blender 가 내보내기 전 몸 객체에서 센 값이고, GLB 인덱스 삼각형은 Tripo 리토폴 면 수와 같은 10573 이다",
+      "headRigid": "꺼짐(기본). 같은 스크립트로 다시 돌려 같은 몸 바이트(f6ca…) 확인. 켠 실험(v5b)은 접지가 나빠져 철회"
     },
     "packer": {
       "tool": "tools/art/swap-library-body.mjs",
