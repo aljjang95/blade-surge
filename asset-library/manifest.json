@@ -298,6 +298,31 @@
       "armorTier": 3
     },
     {
+      "id": "hero_barbarian_t1s",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_barbarian_t1s.glb",
+      "heightM": 1.8,
+      "triangles": 11491,
+      "bytes": 1905252,
+      "sha256": "b2e3c437fc86e8a9f57ff7936a4f8bc2cda9cb51b5f75a395f7208bbbc36b434",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit --collapse=(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)",
+        "account": "owner subscription",
+        "taskId": "1679bfe5-7ee8-417a-8e3c-fa1155a2150e",
+        "prompt": "[pipeline summary] blade-art#t4 S grade: tier1 barbarian with riveted iron pauldrons, chest plate, knee plates, green buckle gem: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_barbarian_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/barbarian_t1s",
+        "createdAt": "2026-10-23T14:00:00.000Z",
+        "rawSha256": "99aafcf4cdbf8959f9285dcfd851ffb4dea051a62ec89561003f404fa569c46a"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "barbarian",
+      "armorTier": 1.5
+    },
+    {
       "id": "hero_barbarian_t2",
       "kind": "character",
       "body": "biped",
@@ -323,6 +348,32 @@
       "role": "hero",
       "heroId": "barbarian",
       "armorTier": 2
+    },
+    {
+      "id": "hero_barbarian_t2u",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_barbarian_t2u.glb",
+      "heightM": 1.8,
+      "triangles": 11155,
+      "bytes": 1907400,
+      "sha256": "994fab609df1b8de1622dd7fcc11a9e5b6c630000c5a536e3c839cf67687a3fb",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit --collapse=(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)",
+        "account": "owner subscription",
+        "taskId": "7e9b82cc-0f8f-425e-92b8-1257163ace7f",
+        "prompt": "[pipeline summary] blade-art#t4 U grade gravity theme: black-violet plate, violet ring pauldrons, violet crystal core: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_barbarian_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/barbarian_t2u",
+        "createdAt": "2026-10-23T14:00:00.000Z",
+        "rawSha256": "969fd0fe4358ebab4a2d1c7a36d17d619df46b5ba742dd3f3ffdb00e0eb18c3b"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "barbarian",
+      "armorTier": 2.5,
+      "armorTheme": "gravity"
     },
     {
       "id": "hero_barbarian_t3",
