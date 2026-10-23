@@ -74,6 +74,32 @@ def fit_pose(arm1, arm2, meshes, align, by_norm):
         bpy.ops.object.modifier_apply(modifier=mod.name)
     return {'maxJointError': err, 'matchedBones': len(b1)}
 
+HEAD_KEEP = ('Head', 'HeadTop_End', 'Neck', 'LeftEye', 'RightEye')
+
+def head_rigid(mesh, arm):
+    # Tripo 자동 가중치는 정수리·앞머리 정점에도 어깨·팔 가중치를 섞어(예: Head .49 / LeftShoulder .27 / LeftArm .16)
+    # 구르기·사망에서 머리가 찌그러져 바닥을 판다. 머리 관절보다 위(머리 높이의 8% 여유) 정점은 머리 계열 본만 남기고 다시 정규화하고,
+    # 머리 계열 가중치가 하나도 없으면 Head 1 로 둔다. 머리 관절 아래(목·땋은 머리·망토)는 그대로다.
+    hb = next(b for b in arm.data.bones if norm(b.name).endswith('Head') and not norm(b.name).endswith('TopEnd'))
+    hips = next(b for b in arm.data.bones if norm(b.name).endswith('Hips'))
+    zh = (arm.matrix_world @ hb.head_local).z; span = zh - (arm.matrix_world @ hips.head_local).z
+    cut = zh + span * 0.08
+    keep = {vg.index for vg in mesh.vertex_groups if norm(vg.name).endswith(HEAD_KEEP)}
+    head_vg = mesh.vertex_groups.get(hb.name) or mesh.vertex_groups.new(name=hb.name)
+    changed = 0
+    for v in mesh.data.vertices:
+        if (mesh.matrix_world @ v.co).z < cut: continue
+        own = [(g.group, g.weight) for g in v.groups if g.weight > 0]
+        if all(gi in keep for gi, _ in own): continue
+        kept = [(gi, w) for gi, w in own if gi in keep]
+        total = sum(w for _, w in kept)
+        for gi, _ in own: mesh.vertex_groups[gi].remove([v.index])
+        if total <= 1e-6: head_vg.add([v.index], 1.0, 'REPLACE')
+        else:
+            for gi, w in kept: mesh.vertex_groups[gi].add([v.index], w / total, 'REPLACE')
+        changed += 1
+    return changed
+
 def main():
     a = args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -104,7 +130,7 @@ def main():
             cur = parent2.get(cur)
         return None
     fit = fit_pose(arm1, arm2, meshes, align, by_norm) if a.get('fitPose', '1') == '1' else None
-    merged = dropped = filled = 0
+    merged = dropped = filled = rigid = 0
     for mesh in meshes:
         mw = mesh.matrix_world.copy()
         for mod in list(mesh.modifiers):
@@ -132,6 +158,7 @@ def main():
                 src = weighted[kd.find(v.co)[1]]
                 for g in src.groups: mesh.vertex_groups[g.group].add([v.index], g.weight, 'REPLACE')
         filled += len(loose)
+        if a.get('headRigid', '1') == '1': rigid += head_rigid(mesh, arm1)
         mesh.parent = arm1; mesh.matrix_parent_inverse = arm1.matrix_world.inverted()
         mesh.modifiers.new('Armature', 'ARMATURE').object = arm1
     for o in old: bpy.data.objects.remove(o, do_unlink=True)
@@ -148,7 +175,7 @@ def main():
     tris = sum(sum(len(p.vertices) - 2 for p in m.data.polygons) for m in meshes)
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_yup=True, export_animations=False, export_apply=False, export_cameras=False, export_lights=False,
         export_image_format='WEBP', export_image_quality=82)
-    Path(a['report']).write_text(json.dumps({'ok': True, 'fit': fit, 'scale': s, 'yawDeg': math.degrees(turn), 'mergedGroups': merged,
+    Path(a['report']).write_text(json.dumps({'ok': True, 'fit': fit, 'scale': s, 'yawDeg': math.degrees(turn), 'mergedGroups': merged, 'headRigidVertices': rigid,
         'droppedGroups': dropped, 'filledVertices': filled, 'bones': len(arm1.data.bones), 'triangles': tris,
         'actions': sorted(x.name for x in bpy.data.actions)}, ensure_ascii=False), encoding='utf-8')
 
