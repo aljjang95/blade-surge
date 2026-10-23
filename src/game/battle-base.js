@@ -949,6 +949,8 @@ export class Battle {
     rig.fov = b.fov + framing.extraFov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
     // Anticipation lives in the bounded target; no additional direction-dependent sway.
     rig.side += (0 - rig.side) * framingBlend(realDt, 1.5);
+    // 전투 카메라 AUTO: 손대지 않는 동안 위협·무리·벽에 맞춰 사용자 시점 값을 천천히 옮긴다(흔들림 없음).
+    this.app.cameraControls?.updateAuto?.(realDt, this);
     if (this.world && this.active) {
       const rm = this.world.roomAt(this.player.pos.x, this.player.pos.z);
       if (rm && rm !== this.curRoom) this.enterRoom(rm);
