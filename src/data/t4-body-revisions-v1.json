@@ -47,6 +47,52 @@
           "sha256": "19f7e1492d947c6055cbbd8b51f3ee355c5c72f8ec4ab6296be32fb9d1e1c846"
         }
       }
+    },
+    {
+      "id": "ranger-t1s-body-fit-v1",
+      "asset": "hero_ranger_t1s",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t1s.glb",
+        "sha256": "d3700f92f67a1a2ce0ae97ac6ce059c13eb53c9fff71c9a7f4e1329d3fc89e21"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t1s-body-fit-v1.glb",
+        "sha256": "a1690288fee829f36b05a412497e37967e25f5de5fd3c318510dfaf687c9f40f"
+      },
+      "authoring": {
+        "kind": "body-rebind",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height",
+        "body": "art-src/t4-pc/ranger_t1s/rigged.glb → blender_clean_weights.py --smooth-cape 8",
+        "base": {
+          "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+          "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+        }
+      }
+    },
+    {
+      "id": "ranger-t2u-body-fit-v1",
+      "asset": "hero_ranger_t2u",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t2u.glb",
+        "sha256": "222dbfe98d80051d79b4cdba36a407556f0e3428a36af87810b07290de695519"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t2u-body-fit-v1.glb",
+        "sha256": "2719eb1d096431125496c12c1c6b09c25af7929bae21c0ab9095a7c553107699"
+      },
+      "authoring": {
+        "kind": "body-rebind",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height --lift=0.004",
+        "body": "art-src/t4-pc/ranger_t2u/rigged.glb → blender_clean_weights.py --decor-hue 60-160,355-40 --decor-sat 0.65 --decor-val 0.45 --braid-hue 60-160 --pauldron 0.5 --smooth-cape 8",
+        "base": {
+          "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+          "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+        }
+      }
     }
   ]
 }
