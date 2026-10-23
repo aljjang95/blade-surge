@@ -1,7 +1,7 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
-import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v5.json';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
@@ -11,12 +11,8 @@ export { LIBRARY_SCHEMA, triangleLimit };
 // v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
 // 몸 재질 보정을 GLB 에 고정했다(tools/art/finish-library-materials.mjs).
 // v4: 저작 v3(art-src/ranger/author_ranger_library_v3.py)가 사망 정착의 왼팔 IK 목표만 프레임별 실제 가슴 자세로 다시 풀어
-// 실제 런타임 활이 바닥을 뚫던 결함(v3 사망 1.04초 -0.10m)을 고쳤다. 다른 클립·메시·재질 마감은 v3 와 같다.
-// v5: '애꾸' 얼굴(앞머리가 한쪽 눈을 덮음)을 고치려 Tripo 로 몸을 다시 만들어 v4 골격에 묶고 몸 메시·재질·텍스처만 바꿨다.
-// 골격·역바인드·클립 바이트는 v4 와 같다(clipSource.motionSignature). v4 를 클립 원본으로 기록한 저작 계약(hero-body-motion.js 의 base 비교,
-// 2·3단계·여우 동작 JSON)은 v4 기록을 그대로 쓰고, rangerClipSource() 가 그 원본이 v4 임을 v5 기록에서 확인한다.
-// 게임은 v5 하나만 내려받는다. v1–v4 기록·파일은 그대로 둔다.
-export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v5';
+// 실제 런타임 활이 바닥을 뚫던 결함(v3 사망 1.04초 -0.10m)을 고쳤다. 다른 클립·메시·재질 마감은 v3 와 같다. v1–v3 기록·파일은 그대로 둔다.
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v4';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
@@ -123,20 +119,6 @@ export function revisedLibraryFile(asset, revision = null) {
 export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
-/**
- * 궁수 1단계 클립의 원본 GLB 기록. 몸만 바꾼 개정(v5)은 동작 서명이 같은 이전 개정(v4)을 클립 원본으로 남기고,
- * 그렇지 않은 개정은 자기 출력이 곧 클립 원본이다. 경로는 기록일 뿐 게임이 내려받지 않는다.
- * @returns {{revision: string, path: string, sha256: string}}
- */
-export function rangerClipSource(revision = RANGER_LIBRARY_REVISION) {
-  const source = revision.clipSource;
-  if (!source) return { revision: revision.id, path: revision.output.path, sha256: revision.output.sha256 };
-  if (source.revision !== revision.supersedes || !/^[a-f0-9]{64}$/.test(source.sha256 || '') || !/^[a-f0-9]{64}$/.test(source.motionSignature || '')
-    || !/^\/models\/heroes-next\/ranger-library-t1-v\d+\.glb$/.test(source.path || '') || source.path === revision.output.path) {
-    throw new Error('Ranger clip source must be the superseded revision with a recorded motion signature');
-  }
-  return { revision: source.revision, path: source.path, sha256: source.sha256 };
-}
 export const rogueLibraryRevision = () => ROGUE_LIBRARY_REVISION;
 
 export function validateLibraryModel(gltf, asset) {
