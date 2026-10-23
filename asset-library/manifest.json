@@ -197,6 +197,31 @@
       "armorTier": 1
     },
     {
+      "id": "hero_knight_t1s",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_knight_t1s.glb",
+      "heightM": 1.8,
+      "triangles": 10723,
+      "bytes": 1691920,
+      "sha256": "2d038bcca77538c823cc64e8dcbca3dbb7f2ef7279e8fa9ec1c107512e5e7362",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 195-250 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit",
+        "account": "owner subscription",
+        "taskId": "ae08ba95-9849-41f9-9249-aa84a11d455d",
+        "prompt": "[pipeline summary] blade-art#t4 S grade: tier1 knight with steel pauldrons, thin breastplate, greaves, green gem: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_knight_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/knight_t1s",
+        "createdAt": "2026-10-23T12:40:00.000Z",
+        "rawSha256": "d89688d8ac0b6db8a259e7eefad263a53a078ffe9075335833358402253cd0aa"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "knight",
+      "armorTier": 1.5
+    },
+    {
       "id": "hero_knight_t2",
       "kind": "character",
       "body": "biped",
@@ -220,6 +245,32 @@
       "role": "hero",
       "heroId": "knight",
       "armorTier": 2
+    },
+    {
+      "id": "hero_knight_t2u",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_knight_t2u.glb",
+      "heightM": 1.8,
+      "triangles": 10939,
+      "bytes": 1658480,
+      "sha256": "ce7cbc31a1db51f9634b7d3956bf1a2a12b16f440ceeb615875ee85ebb22824e",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 195-250 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit",
+        "account": "owner subscription",
+        "taskId": "2e9879b9-6cce-4ea8-8d48-d40219fa1c87",
+        "prompt": "[pipeline summary] blade-art#t4 U grade storm theme: steel-blue plate, sky-blue glow, lightning fin pauldrons, bolt emblem: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_knight_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t4-pc/knight_t2u",
+        "createdAt": "2026-10-23T12:40:00.000Z",
+        "rawSha256": "5e3503c8b7cd424a40e8dc608ba7fe98c34509fe4b2e7292183d9e5cf47ed117"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "knight",
+      "armorTier": 2.5,
+      "armorTheme": "storm"
     },
     {
       "id": "hero_knight_t3",

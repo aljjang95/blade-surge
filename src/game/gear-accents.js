@@ -12,6 +12,8 @@ import { RARITY_INFO } from '../data/items.js';
  * 셰이더는 재질마다 한 번 붙인 뒤 장비가 바뀌면 유니폼 값만 바꾼다(재컴파일·프레임 할당 없음).
  */
 export const GEAR_RIM_STRENGTH = Object.freeze({ N: 0, S: .3, E: .62, U: .78, L: .95 });
+// S(1.5)·U(2.5) 등급 몸은 철판·테마 장식으로 등급을 이미 보여 준다. 몸 전체 윤곽광이 그 색을 덮지 않게 갑옷 윤곽만 줄인다.
+export const GRADE_BODY_RIM_SCALE = .4;
 const HOOKED = new WeakSet();
 const FEET_BONES = ['LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'];
 const RING_BONES = ['LeftForeArm', 'LeftHand'];
@@ -89,6 +91,7 @@ export function applyGearAccents(model, gear = {}, enh = {}) {
   state.feetBones.value.set(gearBoneMask(bones, FEET_BONES)); state.ringBones.value.set(gearBoneMask(bones, RING_BONES));
   for (const skin of skins) for (const material of Array.isArray(skin.material) ? skin.material : [skin.material]) hook(material, state);
   gearRimColor(gear.armor, enh.armor, state.body.value);
+  if (!Number.isInteger(skins[0].userData.libraryBody)) state.body.value.multiplyScalar(GRADE_BODY_RIM_SCALE);
   // 신발·반지가 없으면 그 부위도 몸 윤곽을 따른다.
   if (gear.boots) gearRimColor(gear.boots, enh.boots, state.feet.value); else state.feet.value.copy(state.body.value);
   if (gear.ring) gearRimColor(gear.ring, enh.ring, state.ring.value); else state.ring.value.copy(state.body.value);
