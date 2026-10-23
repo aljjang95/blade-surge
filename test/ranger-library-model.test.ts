@@ -236,9 +236,9 @@ test('v5 는 v4 와 골격 노드·스킨 역바인드·11개 클립 바이트�
   expect(rangerClipSource()).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
   expect(REV.clipSource).toMatchObject({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
   // 서명이 없거나 v4 가 아닌 개정을 원본으로 대면 거절한다.
-  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, revision: 'ranger-library-v3' } })).toThrow('superseded revision');
-  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, motionSignature: undefined } })).toThrow('superseded revision');
-  expect(rangerClipSource(REV_V4)).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
+  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, revision: 'ranger-library-v3' } } as any)).toThrow('superseded revision');
+  expect(() => rangerClipSource({ ...REV, clipSource: { ...REV.clipSource, motionSignature: undefined } } as any)).toThrow('superseded revision');
+  expect(rangerClipSource(REV_V4 as any)).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
 });
 
 async function ranger() {
