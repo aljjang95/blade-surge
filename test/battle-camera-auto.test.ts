@@ -29,6 +29,9 @@ describe('전투 카메라 AUTO', () => {
     expect(Math.abs(behind.yaw)).toBeGreaterThan(100);
     const b = behind.yaw * Math.PI / 180, fx = -Math.sin(b), fz = -Math.cos(b), d = Math.hypot(.5, 10);
     expect(Math.acos((fx * .5 + fz * 10) / d) * 180 / Math.PI).toBeCloseTo(AUTO_CAMERA.frontCone, 3);
+    // 세로 화면은 위협을 화면 세로축에 더 가깝게 세운다.
+    const portrait = autoCameraGoal(ctxOf({ boss: actor(.5, 10), camera: cameraFor({ yaw: 0, pitch: 0, zoom: 100 }, 390 / 844) }), goal());
+    expect(Math.abs(portrait.yaw)).toBeGreaterThan(Math.abs(behind.yaw) + 30);
     const ahead = autoCameraGoal(ctxOf({ boss: actor(2, -9) }), goal());
     expect(ahead.yaw).toBe(0);
     // 예고 중이 아닌 일반 적 무리로는 돌리지 않는다.

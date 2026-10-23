@@ -37,6 +37,8 @@ const setup = async (page, ch, st) => {
   if (!ok) throw Error(`${ch}-${st} 시작 실패`);
   await page.waitForFunction(() => window.app.battle?.active && window.app.battle.player && window.app.battle.elapsed > .3, null, { timeout: 90000 });
   await page.waitForTimeout(400);
+  // 세로 화면의 '가로로 돌려주세요' 안내는 실제 버튼으로 닫는다(전투 시작마다 다시 뜰 수 있다).
+  if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
   await page.evaluate(() => {
     const app = window.app; app.testPause = true;
     let s = 77; Math.random = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
@@ -87,9 +89,12 @@ try {
           for (const e of b.enemies) if (e !== boss) { e.update = () => {}; e.pos.set(o.x + 5000, 0, o.z + 5000); }
           boss.spawning = false; boss.hp = boss.maxHp = 1e12; boss.pos.set(o.x + 3, 0, o.z + 9); boss.atkCd = 0;
         } else {
-          let i = 0; const ring = [[4, -3], [-6, -4], [8, 2], [-5, 6], [2, 9], [-9, -1]];
-          for (const e of b.enemies) { if (i < ring.length) { e.pos.set(o.x + ring[i][0], 0, o.z + ring[i][1]); e.spawning = false; e.hp = e.maxHp = 1e12; i++; } else { e.update = () => {}; e.pos.set(o.x + 5000, 0, o.z + 5000); } }
-          while (i < ring.length) { const e = b.spawnEnemy(b.enemies[0]?.def ? Object.keys(window.__EN).find(k => window.__EN[k] === b.enemies[0].def) : 'skeleton', null, null, new V(o.x + ring[i][0], 0, o.z + ring[i][1])); if (e) { e.spawning = false; e.hp = e.maxHp = 1e12; } i++; }
+          // 무리는 제자리에 고정한다(쫓아와 뭉치면 퍼짐 비교가 안 된다).
+          const ring = [[4, -3], [-6, -4], [8, 2], [-5, 6], [2, 9], [-9, -1]];
+          for (const e of b.enemies) { e.update = () => {}; e.pos.set(o.x + 5000, 0, o.z + 5000); }
+          for (const [dx, dz] of ring) b.spawnEnemy('skel_minion', null, null, new V(o.x + dx, 0, o.z + dz));
+          let i = 0;
+          for (const e of b.enemies) if (e.pos.x < o.x + 1000 && i < ring.length) { e.pos.set(o.x + ring[i][0], 0, o.z + ring[i][1]); e.spawning = false; e.hp = e.maxHp = 1e12; e.update = () => {}; i++; }
         }
         app.cameraControls.reset();
         if (mode === 'manual') app.cameraControls.auto.interrupt();

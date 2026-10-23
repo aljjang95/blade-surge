@@ -10,7 +10,8 @@ export const AUTO_CAMERA = Object.freeze({
   yawOmega: 2.6, pitchOmega: 3.2, zoomOmega: 2.4,
   yawMaxRate: 70, pitchMaxRate: 16, zoomMaxRate: 32,
   // 위협이 카메라 정면에서 이 각도(도)를 넘어 옆·뒤로 가면, 이 각도 안으로 들어오도록 최소한만 돌린다.
-  frontCone: 62, minThreatDistance: 2.2,
+  // 세로 화면은 좌우가 좁아 예고 범위가 옆으로 넘친다. 위협을 화면 세로축(정면)에 더 가깝게 세운다.
+  frontCone: 62, frontConePortrait: 16, minThreatDistance: 2.2,
   threatRange: 13, bossRange: 24, bossReach: 4.5,
   // 위협이 사라진 뒤 이 시간(초)이 지나면 지역 기본 시점(던전 진행 방향)으로 돌아간다.
   calmReturn: 2.5,
@@ -78,7 +79,8 @@ export function autoCameraGoal(ctx, out, cfg = AUTO_CAMERA) {
       // 카메라는 목표점에서 (sin b, cos b) 방향에 있고 정면은 그 반대다.
       const b = finite(ctx.bearing) + current.yaw * RAD;
       const angle = wrapDegrees((Math.atan2(-tx, -tz) - b) * DEG);   // 위협을 정확히 정면에 두는 방위까지의 회전
-      const excess = Math.abs(angle) - cfg.frontCone;
+      const cone = finite(ctx.camera?.aspect, 2) < 1 ? cfg.frontConePortrait : cfg.frontCone;
+      const excess = Math.abs(angle) - cone;
       if (excess > 0) out.yaw = wrapDegrees(current.yaw + Math.sign(angle) * excess);
     }
   } else if (ctx.calm >= cfg.calmReturn) out.yaw = base.yaw;
