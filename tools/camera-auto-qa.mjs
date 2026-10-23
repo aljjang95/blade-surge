@@ -97,7 +97,7 @@ try {
           for (const e of b.enemies) if (e.pos.x < o.x + 1000 && i < ring.length) { e.pos.set(o.x + ring[i][0], 0, o.z + ring[i][1]); e.spawning = false; e.hp = e.maxHp = 1e12; e.update = () => {}; i++; }
         }
         app.cameraControls.reset();
-        if (mode === 'manual') app.cameraControls.auto.interrupt();
+        if (mode === 'auto') app.cameraControls.auto.resume();
       }, { scene, mode });
       const rows = [];
       for (const [ti, frames] of [30, 150, 300].entries()) {

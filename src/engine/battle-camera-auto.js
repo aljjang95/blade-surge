@@ -15,6 +15,10 @@ export const AUTO_CAMERA = Object.freeze({
   threatRange: 13, bossRange: 24, bossReach: 4.5,
   // 위협이 사라진 뒤 이 시간(초)이 지나면 지역 기본 시점(던전 진행 방향)으로 돌아간다.
   calmReturn: 2.5,
+  // 조이스틱 이동 중에는 yaw 를 이 비율로만 돌린다(화면 기준 이동 방향이 엄지 아래에서 빨리 돌지 않게).
+  movingYawScale: .45,
+  // 스테이지 시작 뒤 카메라가 자리 잡기 전에는 투영 맞춤을 쓰지 않는다(초).
+  fitSettle: .6,
   // 무리 퍼짐 반경(월드 단위) → 줌. 지역 기본 줌(100 기준)에 곱한다.
   spreadNear: 3, spreadFar: 10, zoomNear: 100, zoomFar: 80, bossZoomPerRadius: 5, bossZoomMin: 80,
   // 영웅·보스 예고 범위가 들어와야 하는 화면 안전 상자(NDC 반폭). HUD 가장자리를 비워 둔다.
@@ -89,7 +93,7 @@ export function autoCameraGoal(ctx, out, cfg = AUTO_CAMERA) {
   let zoom = count > 1 ? cfg.zoomNear + (cfg.zoomFar - cfg.zoomNear) * smooth((spread - cfg.spreadNear) / (cfg.spreadFar - cfg.spreadNear)) : cfg.zoomNear;
   if (alive(boss) && threat === boss) zoom = Math.min(zoom, Math.max(cfg.bossZoomMin, cfg.zoomNear - finite(boss.radius, 1) * cfg.bossZoomPerRadius));
   zoom *= scale;
-  const camera = ctx.camera;
+  const camera = ctx.fitReady === false ? null : ctx.camera;
   if (camera && threat) {
     const reach = (threat === boss ? cfg.bossReach : 1.5) + finite(threat.radius, .7);
     const y = finite(threat.pos.y);
@@ -119,8 +123,10 @@ export class BattleAutoCamera {
     this.cfg = cfg;
     this.velocity = { yaw: 0, pitch: 0, zoom: 0 };
     this.goal = { yaw: 0, pitch: 0, zoom: 100, threat: null };
-    this.idle = Infinity; this.calm = Infinity;
+    this.idle = Infinity; this.calm = Infinity; this.settle = Infinity;
   }
+  /** 새 스테이지: 속도·위협 기억을 버린다. 대기 상태(손댄 직후인지)는 그대로 둔다. */
+  restart() { this.velocity.yaw = this.velocity.pitch = this.velocity.zoom = 0; this.calm = 0; this.settle = 0; this.goal.threat = null; }
   /** 사용자가 시점을 직접 움직였다. 즉시 멈추고 속도를 버린다. */
   interrupt() { this.idle = 0; this.velocity.yaw = this.velocity.pitch = this.velocity.zoom = 0; }
   /** 복원·AUTO 켜기: 기다리지 않고 바로 복귀를 시작한다. */
@@ -129,13 +135,14 @@ export class BattleAutoCamera {
   /** value({yaw,pitch,zoom})를 제자리에서 고친다. 정지 중이면 false. */
   step(dt, value, ctx) {
     const cfg = this.cfg; dt = finite(dt); if (!(dt > 0) || !value) return false;
-    this.idle += dt; ctx.calm = this.calm;
+    this.idle += dt; this.settle += dt; ctx.calm = this.calm; ctx.fitReady = this.settle >= cfg.fitSettle;
     autoCameraGoal(ctx, this.goal, cfg);
     this.calm = this.goal.threat ? 0 : this.calm + dt;
     if (this.idle < cfg.resumeDelay) return false;
     const w = Math.max(.08, smooth((this.idle - cfg.resumeDelay) / cfg.resumeRamp)), v = this.velocity, g = this.goal;
     const yawGoal = value.yaw + wrapDegrees(g.yaw - value.yaw);
-    value.yaw = wrapDegrees(criticalStep(value.yaw, yawGoal, v, 'yaw', cfg.yawOmega * w, dt, cfg.yawMaxRate * w));
+    const yw = ctx.moving ? w * cfg.movingYawScale : w;
+    value.yaw = wrapDegrees(criticalStep(value.yaw, yawGoal, v, 'yaw', cfg.yawOmega * yw, dt, cfg.yawMaxRate * yw));
     value.pitch = clamp(criticalStep(value.pitch, g.pitch, v, 'pitch', cfg.pitchOmega * w, dt, cfg.pitchMaxRate * w), -18, 20);
     value.zoom = clamp(criticalStep(value.zoom, g.zoom, v, 'zoom', cfg.zoomOmega * w, dt, cfg.zoomMaxRate * w), 70, 140);
     return true;

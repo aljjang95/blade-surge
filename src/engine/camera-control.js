@@ -62,7 +62,7 @@ export class CameraControls {
     this.auto = new BattleAutoCamera();
     this.autoButton = document.getElementById('battle-camera-auto');
     this.autoBase = { yaw: 0, pitch: 0, zoom: 100 };
-    this.autoCtx = { player: null, enemies: null, boss: null, base: this.autoBase, current: null, bearing: 0, walkable: null, camera: null, calm: 0 };
+    this.autoCtx = { player: null, enemies: null, boss: null, base: this.autoBase, current: null, bearing: 0, walkable: null, camera: null, calm: 0, moving: false };
     this.autoButton?.addEventListener('click', () => this.toggleAuto());
     // Battle pause, death, modal and stage transitions already clear gameplay input.
     // End capture at that same boundary, even if no pointer event arrives while paused.
@@ -183,7 +183,8 @@ export class CameraControls {
   currentValue() { return normalizeBattleCamera(this.app.renderer.battleCamera || this.value); }
   /** 사용자 조작 경로. AUTO 는 그 즉시 멈췄다가 무입력 뒤 복귀한다. */
   set(value) { this.value = normalizeBattleCamera(value); this.app.renderer.battleCamera = this.value; this.auto.interrupt(); }
-  reset() { this.finish(); this.set({}); this.auto.resume(); }
+  // 복원도 사용자 입력이다. 기본 시점을 보여 준 뒤 무입력 대기를 거쳐 AUTO 가 다시 움직인다.
+  reset() { this.finish(); this.set({}); }
   get autoOn() { return this.settings?.cameraAuto !== false; }
   toggleAuto() {
     const settings = this.settings; if (!settings) return;
@@ -211,7 +212,9 @@ export class CameraControls {
     ctx.player = battle.player; ctx.enemies = battle.enemies; ctx.boss = battle.boss; ctx.camera = renderer.camera;
     ctx.walkable = battle.world ? (this._walkable ??= (x, z) => this._world.walkable(x, z)) : null; this._world = battle.world;
     let value = renderer.battleCamera;
-    if (!value || value !== this.value) { value = this.value = normalizeBattleCamera(value); renderer.battleCamera = value; }
+    // 스테이지가 바뀌어 지역 시점이 새로 깔리면 이전 속도·위협 기억을 버리고 투영 맞춤은 카메라가 자리 잡을 때까지 쉰다.
+    if (!value || value !== this.value) { value = this.value = normalizeBattleCamera(value); renderer.battleCamera = value; this.auto.restart(); }
+    ctx.moving = Math.hypot(this.app.input.move?.x || 0, this.app.input.move?.y || 0) > .2;
     ctx.current = value;
     this.auto.step(realDt, value, ctx);
     this.syncAuto();

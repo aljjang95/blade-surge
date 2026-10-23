@@ -80,6 +80,21 @@ describe('전투 카메라 AUTO', () => {
     expect(Math.abs(trace[trace.length - 1])).toBeGreaterThan(100);
     expect(run()).toEqual(trace);
     const auto = new BattleAutoCamera(); auto.resume(); expect(auto.holding).toBe(false); auto.interrupt(); expect(auto.holding).toBe(true);
+    // 이동 중에는 yaw 가 더 천천히 돈다.
+    const turn = (moving: boolean) => { const a = new BattleAutoCamera(), v = { yaw: 0, pitch: 0, zoom: 100 }; a.resume(); for (let i = 0; i < 120; i++) a.step(1 / 60, v, ctxOf({ boss: actor(.5, 10), current: v, moving })); return Math.abs(v.yaw); };
+    expect(turn(true)).toBeLessThan(turn(false) * .7);
+  });
+  test('지역 방위(side)가 있어도 원뿔 판정은 실제 카메라 정면 기준이다', () => {
+    const bearing = Math.atan2(3, 8.5), b = autoCameraGoal(ctxOf({ boss: actor(-3, 9), bearing }), goal());
+    const rad = bearing + b.yaw * Math.PI / 180, fx = -Math.sin(rad), fz = -Math.cos(rad), d = Math.hypot(3, 9);
+    expect(Math.acos((fx * -3 + fz * 9) / d) * 180 / Math.PI).toBeCloseTo(AUTO_CAMERA.frontCone, 3);
+  });
+  test('새 스테이지 직후에는 투영 맞춤을 쉬고 이전 속도를 버린다', () => {
+    const auto = new BattleAutoCamera(); auto.resume(); auto.velocity.yaw = 50; auto.restart();
+    expect(auto.velocity.yaw).toBe(0);
+    const v = { yaw: 0, pitch: 0, zoom: 130 }, boss = actor(9, -4, { radius: 1.6 });
+    auto.step(1 / 60, v, ctxOf({ boss, current: v, camera: cameraFor(v) }));
+    expect(auto.goal.zoom).toBeGreaterThan(80);
   });
   test('AUTO 설정은 기본 켬, 이전 저장은 켬으로 이관, 끈 값은 보존된다', () => {
     const fresh = new Economy().s; expect(fresh.settings.cameraAuto).toBe(true);
