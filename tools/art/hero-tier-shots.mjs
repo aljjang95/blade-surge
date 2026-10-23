@@ -1,7 +1,8 @@
 /**
  * 영웅·갑옷 단계별 촬영 — 실제 빌드(dist)를 vite preview로 띄우고 Playwright Chromium(SwiftShader)에서
  * 지정 영웅이 지정 갑옷 단계 몸체(hero_<id>_t<tier>)로 보이는지 ① 로비 ② 영웅 화면 ③ 전투 기본 카메라를 390x844·1280x720로 찍는다.
- *   bun run build && node tools/art/hero-tier-shots.mjs <outDir> --hero <knight|barbarian|mage|ranger|rogue> --tier <1|2|3> [--dist dist]
+ *   bun run build && node tools/art/hero-tier-shots.mjs <outDir> --hero <knight|barbarian|mage|ranger|rogue> --tier <1|1.5|2|2.5|3> [--theme <세트>] [--dist dist]
+ * 1.5 = S등급 몸(hero_<id>_t1s, S 갑옷 a_chain), 2.5 = U등급 테마 몸(hero_<id>_t2u, 영웅 대표 테마 갑옷 또는 --theme 세트 갑옷).
  * 단계는 모델을 바꾸지 않고, 그 단계가 되는 실제 갑옷 아이템(a_town_oath/ember/star = appearanceTier 1/2/3)을
  * 게임 저장 상태(app.eco)의 인벤토리에 넣어 영웅에게 장착시키는 방식으로 만든다(look.js applyLook → heroAppearanceTier).
  * 출력: <장면>_<폭>.png, <장면>_<폭>_head.png, report.json(콘솔 오류, 장면별 실제 몸체 asset id·단계, 불일치 여부).
@@ -16,16 +17,21 @@ import { launchOpts } from '../chrome.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, def) => { const i = args.indexOf(name); return i < 0 ? def : args[i + 1]; };
-const outArg = args.find((a, i) => !a.startsWith('--') && !['--dist', '--hero', '--tier'].includes(args[i - 1]));
+const outArg = args.find((a, i) => !a.startsWith('--') && !['--dist', '--hero', '--tier', '--theme'].includes(args[i - 1]));
 const HERO = flag('--hero', ''), TIER = Number(flag('--tier', 0));
 // 갑옷 단계 → 그 단계가 되는 실제 갑옷 아이템(src/data/items.js TOWN_ITEMS, appearanceTier 명시)
-const ARMOR_BY_TIER = { 1: 'a_town_oath', 2: 'a_town_ember', 3: 'a_town_star' };
-if (!outArg || !['knight', 'barbarian', 'mage', 'ranger', 'rogue'].includes(HERO) || !ARMOR_BY_TIER[TIER]) { console.error('사용: node tools/art/hero-tier-shots.mjs <outDir> --hero <knight|barbarian|mage|ranger|rogue> --tier <1|2|3> [--dist dist]'); process.exit(2); }
+// U 테마 몸의 영웅별 대표 세트(art-src/t4-pc/PC_BRIEF.md)와 세트 → U 갑옷 id
+const HERO_THEME = { knight: 'storm', rogue: 'plague', mage: 'frost', ranger: 'phoenix', barbarian: 'gravity' };
+const THEME_ARMOR = { storm: 'a_storm', blood: 'a_blood', gravity: 'a_gravity', phoenix: 'a_phoenix', frost: 'a_rime', plague: 'a_plague', rune: 'a_sigil', tether: 'a_bind' };
+const THEME = flag('--theme', HERO_THEME[HERO]);
+const ARMOR_BY_TIER = { 1: 'a_town_oath', 1.5: 'a_chain', 2: 'a_town_ember', 2.5: THEME_ARMOR[THEME], 3: 'a_town_star' };
+const BODY_ID = `hero_${HERO}_` + ({ 1.5: 't1s', 2.5: 't2u' }[TIER] || `t${TIER}`);
+if (!outArg || !['knight', 'barbarian', 'mage', 'ranger', 'rogue'].includes(HERO) || !ARMOR_BY_TIER[TIER]) { console.error('사용: node tools/art/hero-tier-shots.mjs <outDir> --hero <knight|barbarian|mage|ranger|rogue> --tier <1|1.5|2|2.5|3> [--theme <세트>] [--dist dist]'); process.exit(2); }
 const PROJ = resolve(decodeURIComponent(new URL('../..', import.meta.url).pathname));
 const OUT = resolve(outArg), DIST = resolve(PROJ, flag('--dist', 'dist')), PORT = 4297 + Math.floor(Math.random() * 400);
 const SIZES = [{ width: 390, height: 844 }, { width: 1280, height: 720 }];
 mkdirSync(OUT, { recursive: true });
-const report = { at: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: PROJ }).toString().trim(), dist: DIST, hero: HERO, tier: TIER, armorItem: ARMOR_BY_TIER[TIER], errors: [], scenes: {}, shots: [], bodies: [], mismatches: [] };
+const report = { at: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: PROJ }).toString().trim(), dist: DIST, hero: HERO, tier: TIER, body: BODY_ID, armorItem: ARMOR_BY_TIER[TIER], errors: [], scenes: {}, shots: [], bodies: [], mismatches: [] };
 
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--outDir', DIST, '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
@@ -83,7 +89,7 @@ try {
         const body = await page.evaluate(readBody, scene).catch(() => null);
         const shot = { file: `${base}.png`, viewport: size, head: info, body };
         report.bodies.push({ scene, width: size.width, ...body });
-        if (!body || body.asset !== `hero_${HERO}_t${TIER}` || body.tier !== TIER) report.mismatches.push({ scene, width: size.width, expected: `hero_${HERO}_t${TIER}`, body });
+        if (!body || body.asset !== BODY_ID || body.tier !== TIER) report.mismatches.push({ scene, width: size.width, expected: BODY_ID, body });
         if (info && !info.behind) {
           const S = 2, half = Math.max(70, info.sizePx * 2.4), W = size.width * S, H = size.height * S;
           const left = Math.max(0, Math.round((info.center.x - half) * S)), top = Math.max(0, Math.round((info.center.y - half) * S));
@@ -112,7 +118,7 @@ try {
   report.equipped = equipped;
   await page.waitForFunction((h) => window.app.showcase?.def?.id === h, HERO, { timeout: 60000 });
   // 단계 몸체는 비동기로 받은 뒤 교체된다 — 기대 asset 이 될 때까지 최대 60초 기다린다(안 되면 불일치로 기록)
-  await page.waitForFunction((id) => window.app.showcase?.root?.userData.libraryBodyAssetId === id, `hero_${HERO}_t${TIER}`, { timeout: 60000 }).catch(() => {});
+  await page.waitForFunction((id) => window.app.showcase?.root?.userData.libraryBodyAssetId === id, BODY_ID, { timeout: 60000 }).catch(() => {});
 
   await shoot('lobby', async () => { await page.evaluate(() => window.app.meta.openTab('home')); await closePopups(); await settle(); });
   await shoot('hero', async () => { await page.evaluate((h) => { const m = window.app.meta; m.heroSel = h; m.openTab('heroes'); m.renderHeroes?.(); }, HERO); await closePopups(); await settle(); });

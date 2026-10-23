@@ -28,7 +28,9 @@ if (role === 'hero' && (!heroId || !/^[a-z][a-z0-9_-]{0,63}$/.test(heroId))) thr
 if (role && role !== 'hero') throw new Error(`invalid --role: ${role}`);
 // 영웅 갑옷 단계(1|2|3). 메시만 있는 2·3단계는 --map '{}' 로 넣으면 1단계 클립을 런타임에서 공유한다.
 const armorTier = args.armorTier === undefined ? undefined : Number(args.armorTier);
-if (armorTier !== undefined && (role !== 'hero' || ![1, 2, 3].includes(armorTier))) throw new Error('--armorTier requires --role hero and 1|2|3');
+if (armorTier !== undefined && (role !== 'hero' || ![1, 1.5, 2, 2.5, 3].includes(armorTier))) throw new Error('--armorTier requires --role hero and 1|1.5|2|2.5|3');
+const armorTheme = args.armorTheme === undefined ? undefined : String(args.armorTheme);
+if (armorTheme !== undefined && (armorTier === undefined || !/^[a-z]+$/.test(armorTheme))) throw new Error('--armorTheme requires --armorTier and a lowercase set id');
 const avatar = args.avatar === true || args.avatar === 'true';
 if (avatar && role !== 'hero') throw new Error('--avatar requires --role hero');
 if (avatar && armorTier !== undefined) throw new Error('--avatar cannot be combined with --armorTier');
@@ -42,7 +44,7 @@ const map = args.map || (kind === 'prop' || avatar ? '{}' : JSON.stringify(role 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 // 갑옷 단계 메시를 1단계 정규화 골격에 다시 묶은 파일은 재정규화하면 골격 배율·원점이 1단계와 어긋나므로 그대로 들인다.
 const prenormalized = args.prenormalized === true || args.prenormalized === 'true';
-if (prenormalized && !(avatar || (role === 'hero' && armorTier > 1))) throw new Error('--prenormalized is only for hero armor tiers 2|3 or avatars');
+if (prenormalized && !(avatar || (role === 'hero' && armorTier > 1))) throw new Error('--prenormalized is only for hero armor tiers above 1 or avatars');
 // Blender 임시 파일(WebP 변환 등)은 프로젝트 안 work/tmp/blender 에서만 만든다.
 const blenderTemp = resolve(root, 'work/tmp/blender');
 const run = (command, commandArgs) => new Promise((resolveRun, reject) => {
@@ -78,7 +80,7 @@ try {
     bytes: bytes.length, sha256: sha256(bytes),
     clips: Object.fromEntries(clips.map((key) => [key, key])),
     provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: args.taskId || '', prompt: args.prompt || '', createdAt: new Date().toISOString(), rawSha256: sha256(rawBytes) },
-    license: 'owner-generated (Tripo subscription)', shared: args.shared !== 'false', ...(role ? { role, heroId } : {}), ...(armorTier ? { armorTier } : {}), ...(avatar ? { avatar: true } : {}), ...(boss ? { boss: true } : {}),
+    license: 'owner-generated (Tripo subscription)', shared: args.shared !== 'false', ...(role ? { role, heroId } : {}), ...(armorTier ? { armorTier } : {}), ...(armorTheme ? { armorTheme } : {}), ...(avatar ? { avatar: true } : {}), ...(boss ? { boss: true } : {}),
   });
   validateManifest(manifest);
   await rename(staged, output);

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID } from '../data/items.js';
-import { heroAppearanceTier } from '../data/hero-library.js';
-import { libraryAssets, libraryAssetForAvatar, resolveAssetSource } from '../engine/library-assets.js';
+import { heroAppearance } from '../data/hero-library.js';
+import { libraryAssets, libraryAssetForAvatar, pickHeroLibraryAsset, resolveAssetSource } from '../engine/library-assets.js';
 import { spawnCharacter, disposeCharacter, preloadHeroBody } from '../engine/assets.js';
 import { applyLook } from '../game/look.js';
 
@@ -20,16 +20,15 @@ export function heroPortraitSnapshot(app, id) {
     return [slot, inst ? { ...inst } : null];
   }));
   const avatarId = (app.eco?.displayAvatar || app.eco?.equippedAvatar)?.call(app.eco, id) || null;
-  const tier = heroAppearanceTier(equipment, ITEM_BY_ID);
-  const body = libraryAssetForAvatar(avatarId) || libraryAssets().filter(asset =>
-    asset.role === 'hero' && !asset.avatar && asset.heroId === id && (asset.armorTier || 1) <= tier
-  ).sort((a, b) => (b.armorTier || 1) - (a.armorTier || 1))[0];
+  const look = heroAppearance(equipment, ITEM_BY_ID), tier = look.tier;
+  const body = libraryAssetForAvatar(avatarId) || pickHeroLibraryAsset(libraryAssets().filter(asset =>
+    asset.role === 'hero' && !asset.avatar && asset.heroId === id), look);
   if (model && !modelIds.has(model)) modelIds.set(model, ++nextModelId);
   const appearance = Object.entries(equipment).map(([slot, inst]) =>
     [slot, inst?.id || null, inst?.enh || 0, inst?.appearanceTier || null]);
   const key = JSON.stringify([id, model ? modelIds.get(model) : null,
     body?.id || null, body ? resolveAssetSource(body) : null, body?.sha256 || null, avatarId, appearance]);
-  return { id, def, model, equipment, avatarId, tier, body, key };
+  return { id, def, model, equipment, avatarId, tier, look, body, key };
 }
 
 function deadline(promise, ms = 15000) {
@@ -68,7 +67,7 @@ export function createHeroPortraitRenderer({ preload = preloadHeroBody, spawn = 
   return {
     async capture(snapshot, alive) {
       if (!snapshot.model || !snapshot.body) return null;
-      const loaded = await deadline(preload(snapshot.id, snapshot.tier, snapshot.avatarId));
+      const loaded = await deadline(preload(snapshot.id, snapshot.look, snapshot.avatarId));
       if (!loaded || !alive()) return null;
       const instance = spawn(snapshot.model);
       try {

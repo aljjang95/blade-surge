@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
 import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier } from '../engine/assets.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
-import { heroAppearanceTier } from '../data/hero-library.js';
+import { heroAppearance } from '../data/hero-library.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
@@ -68,7 +68,7 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   if (model.userData.authoredContract?.role === 'hero') {
     const swapped = hasAvatar
       ? applyLibraryHeroBody(model, avatarAsset, () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); })
-      : applyLibraryHeroTier(model, heroAppearanceTier(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
+      : applyLibraryHeroTier(model, heroAppearance(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
     if (swapped) model.userData.onLibraryBodySwap?.();
   }
   // 아바타 몸체가 흉갑·어깨·허리 장식을 소유하므로 기존 몸통 장식은 겹치지 않게 끈다.

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { applyGearAccents, gearBoneMask, gearRimColor, removeGearAccents, GEAR_RIM_STRENGTH } from '../src/game/gear-accents.js';
+import { applyGearAccents, gearBoneMask, gearRimColor, removeGearAccents, GEAR_RIM_STRENGTH, GRADE_BODY_RIM_SCALE } from '../src/game/gear-accents.js';
 import { ITEM_BY_ID as ITEMS } from '../src/data/items.js';
 
 const ITEM_BY_ID: Record<string, any> = ITEMS;
@@ -63,4 +63,19 @@ test('장비 표식은 재질 셰이더를 한 번만 고치고 장비가 바뀌
 test('라이브러리 몸체가 없는 모델은 건드리지 않는다', () => {
   const root = new THREE.Group(); root.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial()));
   expect(applyGearAccents(root, { armor: ITEM_BY_ID.a_king })).toEqual([]);
+});
+
+test('S·U 등급 몸(소수 단계)은 갑옷 윤곽광을 줄여 몸의 등급 장식 색을 덮지 않는다', () => {
+  const plain = libraryHero(), graded = libraryHero();
+  graded.skin.userData.libraryBody = 2.5;
+  const uniforms = (material: THREE.MeshStandardMaterial) => {
+    const shader: any = { uniforms: {}, vertexShader: 'void main(){\n#include <skinning_vertex>\n}', fragmentShader: 'void main(){\n#include <emissivemap_fragment>\n}' };
+    material.onBeforeCompile(shader, null as any);
+    return shader.uniforms;
+  };
+  applyGearAccents(plain.root, { armor: ITEM_BY_ID.a_storm });
+  applyGearAccents(graded.root, { armor: ITEM_BY_ID.a_storm });
+  const full = uniforms(plain.material).gearRimBody.value, low = uniforms(graded.material).gearRimBody.value;
+  expect(low.b).toBeCloseTo(full.b * GRADE_BODY_RIM_SCALE, 6);
+  expect(low.b).toBeGreaterThan(0);
 });

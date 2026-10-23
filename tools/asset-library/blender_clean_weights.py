@@ -8,9 +8,11 @@
 #   3) 그 밖: 팔 뼈 선분보다 몸통 축(Hips→HeadTop)에 더 가깝고, 팔 가중치가 0.5 미만이거나 몸 뒤쪽이면 팔 가중치를 뺀다.
 #   4) 남은 가중치를 다시 정규화한다. 하나도 안 남으면 가장 가까운 몸통 뼈 1.
 #   blender -b -P tools/asset-library/blender_clean_weights.py -- --input <rigged.glb> --output <cleaned.glb> --report <r.json>
-#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12]
+#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0]
 #   장식 색 범위: 기본은 궁수 1단계의 초록(60–160°). 궁수 2단계 붉은 후드는 --decor-hue 60-160,340-25 처럼 여러 구간(도, 360 을 넘는
 #   구간은 340-25 처럼 감아 쓴다)을 준다. 범위에 드는 정점이 몸 앞이면 땋은 머리 규칙, 몸 뒤면 망토 규칙을 받는다.
+#   --smooth-cape N: 망토 규칙을 받은 정점의 가중치를 메시 이웃 평균으로 N 번 고른다(망토 밖 이웃은 고정 기준). 2026-10-23 기사 S등급:
+#   망토 밑단 이웃 정점끼리 다리·골반 가중치가 들쭉날쭉해 달리기에서 밑단이 가시처럼 찢어져 보였다. 기본 0 은 이전과 같은 출력.
 import bpy, colorsys, json, sys
 import numpy as np
 from pathlib import Path
@@ -65,6 +67,31 @@ def vertex_decor(mesh, ranges, sat, val):
         out[i] = bool(in_hue(hh, ranges) and ss >= sat and vv >= val)
     return out
 
+def smooth_weights(mesh, idx, rounds):
+    # 정점×관절 가중치 행렬에서 idx 정점만 이웃 평균(자기 포함)으로 rounds 번 바꾸고, 관절 4개까지 남겨 다시 정규화한다.
+    me = mesh.data; V = len(me.vertices); G = len(mesh.vertex_groups)
+    W = np.zeros((V, G), dtype=np.float64)
+    for v in me.vertices:
+        for g in v.groups: W[v.index, g.group] = g.weight
+    nb = [[] for _ in range(V)]
+    for e in me.edges:
+        i, j = e.vertices; nb[i].append(j); nb[j].append(i)
+    idx = sorted(set(idx))
+    for _ in range(rounds):
+        N = W.copy()
+        for i in idx:
+            ring = [i] + nb[i]; N[i] = W[ring].mean(axis=0)
+        W = N
+    for i in idx:
+        row = W[i]; keep = np.argsort(row)[-4:]; out = np.zeros(G); out[keep] = row[keep]
+        tot = out.sum()
+        if tot <= 1e-6: continue
+        out /= tot
+        # 정점이 실제로 속한 관절만 지운다(속하지 않은 그룹 remove 는 Blender 판에 따라 오류).
+        for g in list(me.vertices[i].groups): mesh.vertex_groups[g.group].remove([i])
+        for gi in np.nonzero(out > 1e-4)[0]: mesh.vertex_groups[int(gi)].add([i], float(out[gi]), 'REPLACE')
+    return len(idx)
+
 def main():
     a = args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -92,6 +119,7 @@ def main():
         full = next((k for k in gi if norm(k) == n), None)
         if full is None: full = mesh.vertex_groups.new(name='mixamorig:' + n).name; gi[full] = mesh.vertex_groups[full].index; names[gi[full]] = full
         return mesh.vertex_groups[full]
+    capeIdx = []
     spine2 = group('Spine2'); stats = {'headRegion': 0, 'hanging': 0, 'braid': 0, 'cape': 0, 'armStripped': 0, 'empty': 0, 'decorOnArm': 0}
     decor = dict(hue=a.get('decor-hue', '60-160'), sat=float(a.get('decor-sat', 0.25)), val=float(a.get('decor-val', 0.12)))
     green = vertex_decor(mesh, hue_ranges(decor['hue']), decor['sat'], decor['val'])
@@ -123,7 +151,7 @@ def main():
             if braid: stats['braid'] += 1
         elif green[v.index] and not on_arm and front_side < -0.02:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
-            stats['cape'] += 1
+            stats['cape'] += 1; capeIdx.append(v.index)
         elif arm_w > 0:
             behind = (p - J['Spine1']).dot(front) < -0.02
             if d_body < d_arm and (arm_w < 0.5 or behind):
@@ -135,6 +163,18 @@ def main():
         for n in w: mesh.vertex_groups[n].remove([v.index])
         for n, x in new.items():
             if x / tot > 1e-4: mesh.vertex_groups[n].add([v.index], x / tot, 'REPLACE')
+    rounds = int(a.get('smooth-cape', 0))
+    if rounds > 0 and capeIdx:
+        # 망토 테두리(금장 등 장식 색 밖) 정점도 같이 고르도록 몸 뒤쪽 이웃으로 rounds//2 고리 넓힌다. 팔 가중치가 있는 정점은 넣지 않는다.
+        behind = {v.index for v in mesh.data.vertices if ((mw @ v.co) - J['Spine1']).dot(front) < -0.02
+                  and not any(is_arm(names[g.group]) and g.weight > 0 for g in v.groups)}
+        grown = set(capeIdx); nb = {}
+        for e in mesh.data.edges:
+            i, j = e.vertices; nb.setdefault(i, []).append(j); nb.setdefault(j, []).append(i)
+        ring = set(capeIdx)
+        for _ in range(max(1, rounds // 2)):
+            ring = {j for i in ring for j in nb.get(i, ()) if j in behind and j not in grown}; grown |= ring
+        stats['capeSmoothed'] = smooth_weights(mesh, sorted(grown), rounds)
     # 전달 크기: blender_swap_body.py 와 같이 텍스처를 1024px·WEBP 82 로 줄인다.
     for image in bpy.data.images:
         w, h = image.size

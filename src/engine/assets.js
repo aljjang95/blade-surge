@@ -67,7 +67,7 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
   const libraryAsset = !contract && allowLibrary && !heroId
     ? libraryLoader.assetFor(requestedAsset || name) || (roster ? libraryLoader.assetFor(fallbackAsset) : null)
     : null;
-  if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
+  if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, { tier: libraryAsset.armorTier || 1, theme: libraryAsset.armorTheme || null });
   const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
   if (libraryAsset) {
@@ -147,7 +147,7 @@ export function preloadAvatarBody(avatarId) {
  * 전투 영웅이 실제로 입을 몸체(아바타 → 갑옷 단계)를 Player 생성 전에 받아 둔다.
  * 받지 않은 2·3단계 몸체가 렌더 준비 도중 비동기로 교체되면 준비가 "cached material ... replaced"로 실패해 출격이 막혔다.
  */
-/** @param {string} heroId @param {number} [tier] @param {string|null} [avatarId] */
+/** @param {string} heroId @param {number|{ tier: number, theme?: string|null }} [tier] @param {string|null} [avatarId] */
 export function preloadHeroBody(heroId, tier = 1, avatarId = null) {
   const avatar = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
   return preloadLibraryBody(avatar || libraryLoader.assetForHero(heroId, tier));

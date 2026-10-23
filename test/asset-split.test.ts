@@ -47,10 +47,10 @@ test('모든 규칙은 이유가 있고, remote 규칙은 묶음 이름이 있�
 
 // 번들이 만드는 해시 이름(assets/<이름>-<해시>.glb)은 public 에 없으니 asset-library 목록으로 분류를 확인한다.
 const hashed = (id: string) => `assets/${id}-Ab12Cd34.glb`;
-test('번들 해시 이름 GLB: 1단계 영웅·몬스터는 core, 2·3단계 몸체와 아바타는 remote', () => {
+test('번들 해시 이름 GLB: 1단계 영웅·몬스터는 core, S·2·U·3단계 몸체와 아바타는 remote', () => {
   for (const asset of manifest.assets as { id: string; role?: string; armorTier?: number; avatar?: boolean }[]) {
     const verdict = classify(hashed(asset.id), split)!;
-    const expected = asset.avatar ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) >= 2 ? 'remote' : 'core';
+    const expected = asset.avatar ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) > 1 ? 'remote' : 'core';
     expect(verdict.class, asset.id).toBe(expected);
   }
 });

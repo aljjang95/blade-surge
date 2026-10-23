@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import {
-  HERO_HAND_GRIP, LIBRARY_SOCKET_NAMES, heroAppearanceTier, heroGripRotation, heroHandBones, heroModelContract, heroTierCandidates,
+  HERO_HAND_GRIP, LIBRARY_SOCKET_NAMES, heroAppearance, heroAppearanceTier, heroGripRotation, heroHandBones, heroModelContract, heroTierCandidates,
   librarySocketScale, logicalClipForAnimation, requiredHeroLogicalClips, resolveSharedHeroClips,
 } from '../src/data/hero-library.js';
 import { libraryAssetForHero, selectHeroLibraryAsset } from '../src/engine/library-assets.js';
@@ -11,11 +11,11 @@ import { Actor } from '../src/game/actor.js';
 import { Player } from '../src/game/player.js';
 
 const SCHEMA = 'tll.game-asset-library.v1';
-const hero = (id: string, armorTier?: number, clips: Record<string, string> = { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }) => ({
+const hero = (id: string, armorTier?: number, clips: Record<string, string> = { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }, extra: object = {}) => ({
   id, kind: 'character', role: 'hero', heroId: 'knight', body: 'biped', replaces: null,
   file: '/models/library/' + id + '.glb', heightM: 1.6, triangles: 1, bytes: 1, sha256: 'a'.repeat(64), clips,
   provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: '', prompt: '', createdAt: '2026-10-12T00:00:00.000Z', rawSha256: 'b'.repeat(64) },
-  license: 'owner-generated', shared: true, ...(armorTier ? { armorTier } : {}),
+  license: 'owner-generated', shared: true, ...(armorTier ? { armorTier } : {}), ...extra,
 });
 const manifestOf = (...assets: object[]) => ({ schema: SCHEMA, assets });
 
@@ -25,12 +25,16 @@ function handScene(right: string, left: string, extra: string[] = []) {
   return scene;
 }
 
-test('manifest accepts hero role and optional armorTier 1|2|3 only', () => {
+test('manifest accepts hero role and optional armorTier 1|1.5|2|2.5|3 with armorTheme', () => {
   expect(validateManifest(manifestOf(hero('hero_knight_t1'))).assets[0].heroId).toBe('knight');
   expect(validateManifest(manifestOf(hero('hero_knight_t3', 3, {}))).assets[0].armorTier).toBe(3);
   expect(() => validateManifest(manifestOf({ ...hero('hero_knight_t1'), heroId: '' }))).toThrow('invalid hero role');
   expect(() => validateManifest(manifestOf(hero('hero_knight_t4', 4)))).toThrow('invalid armor tier');
-  expect(() => validateManifest(manifestOf({ ...hero('hero_knight_t1'), armorTier: 1.5 }))).toThrow('invalid armor tier');
+  expect(validateManifest(manifestOf({ ...hero('hero_knight_t1s'), armorTier: 1.5 })).assets[0].armorTier).toBe(1.5);
+  expect(() => validateManifest(manifestOf({ ...hero('hero_knight_t1'), armorTier: 1.25 }))).toThrow('invalid armor tier');
+  expect(validateManifest(manifestOf(hero('hero_knight_t2u', 2.5, {}, { armorTheme: 'storm' }))).assets[0].armorTheme).toBe('storm');
+  expect(() => validateManifest(manifestOf(hero('hero_knight_t2u', undefined, {}, { armorTheme: 'storm' })))).toThrow('invalid armor theme');
+  expect(() => validateManifest(manifestOf(hero('hero_knight_t2u', 2.5, {}, { armorTheme: 'Storm!' })))).toThrow('invalid armor theme');
   expect(() => validateManifest(manifestOf(hero('hero_knight_t1', 1, { idle: 'idle', unknown: 'x' })))).toThrow('invalid logical clip mapping');
   const monster = { ...hero('monster_t2', 2), role: undefined, clips: { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' } };
   expect(() => validateManifest(manifestOf(monster))).toThrow('invalid armor tier');
@@ -40,7 +44,7 @@ test('armor appearance tier: instance tier, then item tier, then rarity; no armo
   const defs = { a_n: { slot: 'armor', rarity: 'N' }, a_s: { slot: 'armor', rarity: 'S' }, a_e: { slot: 'armor', rarity: 'E' }, a_u: { slot: 'armor', rarity: 'U' },
     a_l: { slot: 'armor', rarity: 'L' }, a_town: { slot: 'armor', rarity: 'L', appearanceTier: 2 }, w_l: { slot: 'weapon', rarity: 'L' } };
   const armor = (id: string, appearanceTier?: number) => heroAppearanceTier({ armor: { id, enh: 0, ...(appearanceTier ? { appearanceTier } : {}) } }, defs);
-  expect([armor('a_n'), armor('a_s'), armor('a_e'), armor('a_u'), armor('a_l')]).toEqual([1, 1, 2, 2, 3]);
+  expect([armor('a_n'), armor('a_s'), armor('a_e'), armor('a_u'), armor('a_l')]).toEqual([1, 1.5, 2, 2.5, 3]);
   expect(armor('a_town')).toBe(2);
   expect(armor('a_n', 3)).toBe(3);
   expect(heroAppearanceTier({}, defs)).toBe(1);
@@ -49,7 +53,8 @@ test('armor appearance tier: instance tier, then item tier, then rarity; no armo
 });
 
 test('tier fallback picks the closest lower tier, then the legacy KayKit model', () => {
-  expect(heroTierCandidates(3)).toEqual([3, 2, 1, 'legacy']);
+  expect(heroTierCandidates(3)).toEqual([3, 2.5, 2, 1.5, 1, 'legacy']);
+  expect(heroTierCandidates(2.5)).toEqual([2.5, 2, 1.5, 1, 'legacy']);
   expect(heroTierCandidates(1)).toEqual([1, 'legacy']);
   const sparse = manifestOf(hero('hero_knight_t1', 1), hero('hero_knight_t3', 3, {}));
   expect(selectHeroLibraryAsset(sparse, 'knight', 3)?.id).toBe('hero_knight_t3');
@@ -57,6 +62,19 @@ test('tier fallback picks the closest lower tier, then the legacy KayKit model',
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t1')), 'knight', 3)?.id).toBe('hero_knight_t1');
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t2', 2, {})), 'knight', 1)).toBeNull();
   expect(selectHeroLibraryAsset(sparse, 'mage', 3)).toBeNull();
+  // S(1.5)·U(2.5) 등급 몸: 없으면 아래 단계, 테마 몸은 같은 세트일 때만.
+  const graded = manifestOf(hero('hero_knight_t1', 1), hero('hero_knight_t1s', 1.5, {}), hero('hero_knight_t2', 2, {}),
+    hero('hero_knight_t2u', 2.5, {}, { armorTheme: 'storm' }), hero('hero_knight_t3', 3, {}));
+  expect(selectHeroLibraryAsset(graded, 'knight', 1.5)?.id).toBe('hero_knight_t1s');
+  expect(selectHeroLibraryAsset(graded, 'knight', { tier: 2.5, theme: 'storm' })?.id).toBe('hero_knight_t2u');
+  expect(selectHeroLibraryAsset(graded, 'knight', { tier: 2.5, theme: 'blood' })?.id).toBe('hero_knight_t2');
+  expect(selectHeroLibraryAsset(graded, 'knight', 2.5)?.id).toBe('hero_knight_t2');
+  expect(selectHeroLibraryAsset(graded, 'knight', { tier: 3, theme: 'storm' })?.id).toBe('hero_knight_t3');
+  expect(selectHeroLibraryAsset(sparse, 'knight', 1.5)?.id).toBe('hero_knight_t1');
+  const defs2 = { a_storm: { slot: 'armor', rarity: 'U', set: 'storm' }, a_s: { slot: 'armor', rarity: 'S' } };
+  expect(heroAppearance({ armor: { id: 'a_storm', enh: 0 } }, defs2)).toEqual({ tier: 2.5, theme: 'storm' });
+  expect(heroAppearance({ armor: { id: 'a_s', enh: 0 } }, defs2)).toEqual({ tier: 1.5, theme: null });
+  expect(heroAppearance({}, defs2)).toEqual({ tier: 1, theme: null });
   // 정본 manifest 는 다섯 영웅의 1단계 몸체를 등록한다.
   for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) expect(libraryAssetForHero(id)?.id).toBe('hero_' + id + '_t1');
 });
