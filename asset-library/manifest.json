@@ -161,6 +161,31 @@
       "armorTier": 1
     },
     {
+      "id": "hero_rogue_t1s",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_rogue_t1s.glb",
+      "heightM": 1.8,
+      "triangles": 10992,
+      "bytes": 1603468,
+      "sha256": "cefd8f335d85aa60f9f8f2b1f26a8fa6c1b816e31c2c04ca0c70a3b94a29f202",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 340-25 --decor-sat 0.5 --decor-val 0.2 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit",
+        "account": "owner subscription",
+        "taskId": "061e6bfc-ebdd-4dc3-9701-290d234ded7e",
+        "prompt": "[pipeline summary] blade-art#t4 S grade: tier1 rogue with dark leather plates, spiked pauldrons, long red scarf and tattered red-trimmed coat: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup → rotation-only rebind onto hero_rogue_t1 skeleton (mesh-only, shares tier1 clips; game loads heroes-next body-fit rebound onto rogue-library-t1-v2). Source art-src/t4-pc/rogue_t1s",
+        "createdAt": "2026-10-23T14:30:00.000Z",
+        "rawSha256": "c5b01e7a58e8390aa74de15d56a1cab6c822100a796c4d119ef5fb80bc4234db"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "rogue",
+      "armorTier": 1.5
+    },
+    {
       "id": "hero_ranger_t1",
       "kind": "character",
       "body": "biped",
@@ -529,6 +554,32 @@
       "role": "hero",
       "heroId": "rogue",
       "armorTier": 2
+    },
+    {
+      "id": "hero_rogue_t2u",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_rogue_t2u.glb",
+      "heightM": 1.8,
+      "triangles": 10871,
+      "bytes": 1630736,
+      "sha256": "4d61001a9bde29401fb51716064d90c03001cb6f064a45dc734d1a7298abf736",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 50-160 --decor-sat 0.15 --decor-val 0.08 --smooth-cape 8 --merge-bone neutral_bone) + rebind-library-body.mjs --no-clips --scale=height",
+        "account": "owner subscription",
+        "taskId": "d387ae62-d107-4884-93b4-78470d3ec53b",
+        "prompt": "[pipeline summary] blade-art#t4 U grade plague theme: murky green tattered cloak and scarf, bone-studded leather, green rune gems: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (66 joints incl. neutral_bone → merged) → decor/cape weight cleanup → rotation-only rebind onto hero_rogue_t1 skeleton (mesh-only, shares tier1 clips; game loads heroes-next body-fit rebound onto rogue-library-t1-v2). Source art-src/t4-pc/rogue_t2u",
+        "createdAt": "2026-10-23T14:30:00.000Z",
+        "rawSha256": "a0a960d2df4775c84120ba9e956665775f0a67872afee7fd7a3d0c0131cc0483"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "rogue",
+      "armorTier": 2.5,
+      "armorTheme": "plague"
     },
     {
       "id": "hero_rogue_t3",

@@ -8,11 +8,12 @@
 #   3) 그 밖: 팔 뼈 선분보다 몸통 축(Hips→HeadTop)에 더 가깝고, 팔 가중치가 0.5 미만이거나 몸 뒤쪽이면 팔 가중치를 뺀다.
 #   4) 남은 가중치를 다시 정규화한다. 하나도 안 남으면 가장 가까운 몸통 뼈 1.
 #   blender -b -P tools/asset-library/blender_clean_weights.py -- --input <rigged.glb> --output <cleaned.glb> --report <r.json>
-#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0]
+#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0] [--merge-bone neutral_bone]
 #   장식 색 범위: 기본은 궁수 1단계의 초록(60–160°). 궁수 2단계 붉은 후드는 --decor-hue 60-160,340-25 처럼 여러 구간(도, 360 을 넘는
 #   구간은 340-25 처럼 감아 쓴다)을 준다. 범위에 드는 정점이 몸 앞이면 땋은 머리 규칙, 몸 뒤면 망토 규칙을 받는다.
 #   --smooth-cape N: 망토 규칙을 받은 정점의 가중치를 메시 이웃 평균으로 N 번 고른다(망토 밖 이웃은 고정 기준). 2026-10-23 기사 S등급:
 #   망토 밑단 이웃 정점끼리 다리·골반 가중치가 들쭉날쭉해 달리기에서 밑단이 가시처럼 찢어져 보였다. 기본 0 은 이전과 같은 출력.
+#   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
 import numpy as np
 from pathlib import Path
@@ -92,12 +93,58 @@ def smooth_weights(mesh, idx, rounds):
         for gi in np.nonzero(out > 1e-4)[0]: mesh.vertex_groups[int(gi)].add([i], float(out[gi]), 'REPLACE')
     return len(idx)
 
+def merge_bones(arm, mesh, bone_names):
+    # Tripo 리그가 가끔 덧붙이는 이동값 없는 뿌리 관절(예: 2026-10-23 도적 U 의 neutral_bone, 오른 허벅지 정점 6개가 가중치 1)을 없앤다.
+    # 그 관절에 묶인 정점은 메시 이웃(그 관절에 안 묶인 정점) 가중치 평균을 받고, 이웃이 없으면 가장 가까운 관절 1.
+    # 그 관절이 그대로 남으면 움직이지 않는 뿌리에 붙은 정점이 다리를 따라가지 않아 가시처럼 늘어진다.
+    out = []
+    for bone_name in bone_names:
+        g = mesh.vertex_groups.get(bone_name)
+        if bone_name not in arm.data.bones:
+            out.append({'bone': bone_name, 'found': False}); continue
+        if arm.data.bones[bone_name].children: raise ValueError('--merge-bone: child joints exist under ' + bone_name)
+        moved = {}; fallback = 0; S = set()
+        if g is not None:
+            names = {x.index: x.name for x in mesh.vertex_groups}
+            S = {v.index for v in mesh.data.vertices if any(x.group == g.index and x.weight > 0 for x in v.groups)}
+            nb = {}
+            for e in mesh.data.edges:
+                i, j = e.vertices; nb.setdefault(i, []).append(j); nb.setdefault(j, []).append(i)
+            heads = {b.name: arm.matrix_world @ b.head_local for b in arm.data.bones if b.name != bone_name}
+            for vi in sorted(S):
+                v = mesh.data.vertices[vi]
+                own = {names[x.group]: x.weight for x in v.groups if x.group != g.index and x.weight > 0}
+                ring = [j for j in nb.get(vi, ()) if j not in S]
+                acc = {}
+                for j in ring:
+                    for x in mesh.data.vertices[j].groups:
+                        if x.weight > 0 and x.group != g.index: acc[names[x.group]] = acc.get(names[x.group], 0) + x.weight / len(ring)
+                # 이웃 평균의 자잘한 몫(손이 허벅지 옆이라 묻은 0.004 엄지 등)은 버리고 큰 몫만 남긴다.
+                acc = {n: x for n, x in acc.items() if x >= 0.05}
+                if not acc:
+                    p = mesh.matrix_world @ v.co; acc = {min(heads, key=lambda n: (p - heads[n]).length): 1.0}; fallback += 1
+                share = next(x.weight for x in v.groups if x.group == g.index)
+                new = dict(own)
+                for n, x in acc.items(): new[n] = new.get(n, 0) + share * x
+                tot = sum(new.values())
+                for n in new:
+                    if n not in mesh.vertex_groups: mesh.vertex_groups.new(name=n)
+                    mesh.vertex_groups[n].add([vi], new[n] / tot, 'REPLACE')
+                for n, x in acc.items(): moved[n] = moved.get(n, 0) + 1
+            mesh.vertex_groups.remove(g)
+        bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+        arm.data.edit_bones.remove(arm.data.edit_bones[bone_name]); bpy.ops.object.mode_set(mode='OBJECT')
+        out.append({'bone': bone_name, 'found': True, 'vertices': len(S),
+                    'mergedInto': moved, 'nearestFallback': fallback})
+    return out
+
 def main():
     a = args()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=a['input'])
     arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
     mesh = max((o for o in bpy.data.objects if o.type == 'MESH'), key=lambda o: len(o.data.vertices))
+    merged = merge_bones(arm, mesh, [x for x in a.get('merge-bone', '').split(',') if x]) if a.get('merge-bone') else []
     arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
     J = {norm(b.name): arm.matrix_world @ b.head_local for b in arm.data.bones}
     up = (J['Head'] - J['Hips']).normalized()
@@ -182,7 +229,7 @@ def main():
             f = 1024 / max(w, h); image.scale(max(1, round(w * f)), max(1, round(h * f))); image.pack()
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_animations=False, export_cameras=False, export_lights=False,
         export_image_format='WEBP', export_image_quality=82, export_yup=True)
-    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'decor': decor, 'decorVertices': int(sum(green)), 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
+    Path(a['report']).write_text(json.dumps({'ok': True, **stats, 'mergedBones': merged, 'decor': decor, 'decorVertices': int(sum(green)), 'vertices': len(mesh.data.vertices)}, ensure_ascii=False), encoding='utf-8')
 
 try: main()
 except Exception as e:
