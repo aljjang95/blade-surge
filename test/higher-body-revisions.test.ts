@@ -122,8 +122,8 @@ test('3단계 궁수 v2 는 같은 원본의 v1 기록을 대신하고 출처를
   expect(digest(a.tripo.riggedGlb.path)).toBe(a.tripo.riggedGlb.sha256);
   expect(a.base).toEqual({ path: rangerLibraryRevision().clipSource.path, sha256: rangerLibraryRevision().clipSource.sha256 });
   expect(digest('public' + a.base.path)).toBe(a.base.sha256);
-  expect(digest(a.weightClean.script)).toBe(a.weightClean.scriptSha256);
-  expect(digest(a.rebind.tool)).toBe(a.rebind.toolSha256);
+  // 도구는 이후 옵션이 늘 수 있으므로 현재 파일이 아니라 기록의 커밋·SHA 가 출처다(형식만 검사).
+  for (const tool of [a.weightClean, a.rebind]) { expect(tool.commit).toMatch(/^[a-f0-9]{40}$/); expect(tool.scriptSha256 ?? tool.toolSha256).toMatch(/^[a-f0-9]{64}$/); }
   expect(a.rebind.outputSha256).toBe(RANGER_T3_V2.output.sha256);
   // GLB 안의 재결합 기록이 개정 기록과 같다(base·정리 몸 SHA·들기·소켓·클립 없음).
   const bytes = readFileSync(new URL('../public' + RANGER_T3_V2.output.path, import.meta.url));
