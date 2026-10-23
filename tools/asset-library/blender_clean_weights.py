@@ -77,6 +77,8 @@ def main():
     # 몸 앞쪽: 어깨선과 위 방향의 외적. 발끝이 앞이므로 부호를 발끝으로 맞춘다.
     side = (J['LeftArm'] - J['RightArm']).normalized(); front = side.cross(up).normalized()
     if (J['LeftToeBase'] - J['LeftFoot']).dot(front) < 0: front = -front
+    # Tripo 55관절 프리셋에는 HeadTop_End 가 없다: 목→머리 방향으로 머리 길이만큼 늘려 만든다.
+    if 'HeadTop_End' not in J: J['HeadTop_End'] = J['Head'] + (J['Head'] - J['Neck']).normalized() * (J['Head'] - J['Neck']).length * 1.6
     body = [J[n] for n in ('Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End')]
     arms = []
     for s in ('Left', 'Right'):

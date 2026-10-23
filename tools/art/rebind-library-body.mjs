@@ -71,7 +71,11 @@ const G1 = graph(j), G2 = graph(b);
 const norm = (name) => name.replace(/^mixamorig:?/, '');
 const joints1 = j.skins[0].joints, joints2 = b.skins[0].joints;
 const idx2 = new Map(joints2.map((n) => [norm(b.nodes[n].name), n]));
-const missing = joints1.map((n) => norm(j.nodes[n].name)).filter((name) => !idx2.has(name));
+// Tripo Mixamo 프리셋 55관절은 끝 관절(HeadTop_End·손가락 4번)이 없다. 끝 관절은 가중치를 받지 않으므로 빠져도 된다
+// (그 관절 쪽 뼈 방향은 맞추지 않고 부모 회전을 따른다). 끝이 아닌 관절이 없으면 멈춘다.
+const isLeaf = (n) => !(j.nodes[n].children || []).some((c) => joints1.includes(c));
+const missingJoints = joints1.filter((n) => !idx2.has(norm(j.nodes[n].name))).map((n) => norm(j.nodes[n].name));
+const missing = joints1.filter((n) => !idx2.has(norm(j.nodes[n].name)) && !isLeaf(n)).map((n) => norm(j.nodes[n].name));
 if (missing.length) throw new Error('body skeleton lacks base joints: ' + missing.join(','));
 const pos = (G, i) => new THREE.Vector3().setFromMatrixPosition(G.world(i));
 const j1 = (name) => joints1.find((n) => norm(j.nodes[n].name) === name);
@@ -125,7 +129,7 @@ for (const i of order) {
   const restW = parentW.clone().multiply(G1.local(i));
   const name = norm(j.nodes[i].name), next = NEXT[name];
   let W = restW;
-  if (next && j1(next) != null) {
+  if (next && j1(next) != null && idx2.has(next)) {
     const c = j1(next), cLocal = new THREE.Vector3(...(j.nodes[c].translation || [0, 0, 0]));
     const from = cLocal.clone().applyMatrix4(restW).sub(new THREE.Vector3().setFromMatrixPosition(restW));
     const to = P2a(next).sub(P2a(name));
@@ -143,7 +147,7 @@ for (const i of order) {
 }
 // 관절 위치 차이(F 자세 base 관절 ↔ body 관절)는 회전 중심 오차다. 기록으로 남긴다.
 const jointGap = {};
-for (const i of joints1) { const name = norm(j.nodes[i].name); jointGap[name] = +(new THREE.Vector3().setFromMatrixPosition(worldF.get(i)).distanceTo(P2a(name))).toFixed(4); }
+for (const i of joints1) { const name = norm(j.nodes[i].name); if (!idx2.has(name)) continue; jointGap[name] = +(new THREE.Vector3().setFromMatrixPosition(worldF.get(i)).distanceTo(P2a(name))).toFixed(4); }
 
 // ---- 3) 몸 메시 복사(정점·법선은 닮음 변환만) ----
 // base 에 없는 body 관절은 body 골격에서 가장 가까운 조상 중 base 에 있는 관절로 합친다(손가락 → 손).
@@ -388,7 +392,7 @@ const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
 const { materialFinish: _staleFinish, bodySwap: _staleSwap, ...baseExtras } = j.asset.extras || {};
 const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, socketMode, ...(noClips ? { clips: 'none' } : {}),
-  ...(Object.keys(collapsed).length ? { collapsedJoints: collapsed } : {}), ...(bodyBind.source !== 'mesh-node' ? { bodyBindFrame: bodyBind.source } : {}), yawDeg: Math.round(turn * 180 / Math.PI),
+  ...(Object.keys(collapsed).length ? { collapsedJoints: collapsed } : {}), ...(missingJoints.length ? { bodyMissingLeafJoints: missingJoints } : {}), ...(bodyBind.source !== 'mesh-node' ? { bodyBindFrame: bodyBind.source } : {}), yawDeg: Math.round(turn * 180 / Math.PI),
   maxSwingDeg: +maxSwingDeg.toFixed(2), maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
 j.asset.extras = { ...baseExtras, bodyRebind: rebind };
 
