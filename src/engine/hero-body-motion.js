@@ -7,7 +7,7 @@ import R2_BODY_MOTION_V2 from '../data/rogue-t2-body-motion-v2.json';
 import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v2.json';
 import RANGER_T2_MOTION from '../data/ranger-t2-body-motion-v2.json';
 import RANGER_T3_MOTION from '../data/ranger-t3-body-motion-v2.json';
-import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
+import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, t4BodyRevisions, validateHigherBodyRevisions } from './library-assets.js';
 
 // 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정, 예: 3단계 궁수 body-fit-v2).
 const HIGHER_BODY_REVISIONS = higherBodyRevisions();
@@ -308,7 +308,9 @@ const higherMotionRegistry = createHigherBodyMotionRegistry({schema:'blade-surge
 export function selectedBodyMotionIdentity(asset) {
   const revised = revisedLibraryFile(asset);
   // 1단계 궁수는 라이브러리 개정(v6) 기록이 몸 출처다. 2·3단계·아바타는 상위 몸체 기록을 쓴다.
-  const revision = asset.id === RANGER_T1 ? rangerLibraryRevision() : HIGHER_BODY_REVISIONS.revisions.find(item => item.asset === asset.id);
+  // 등급 몸(S·U) 교정본은 저작 동작이 없어도 실제 선택 파일의 개정 id·SHA 로 기록한다(등록부에 없으면 원본 클립 그대로).
+  const revision = asset.id === RANGER_T1 ? rangerLibraryRevision() : HIGHER_BODY_REVISIONS.revisions.find(item => item.asset === asset.id)
+    || t4BodyRevisions().revisions.find(item => item.asset === asset.id);
   return Object.freeze({ asset: asset.id, heroId: asset.heroId, revisionId: revised && revision ? revision.id : null,
     path: revised || asset.file, sha256: revised && revision ? revision.output.sha256 : asset.sha256 });
 }
