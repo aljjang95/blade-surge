@@ -473,7 +473,7 @@
    "bytes": 272704,
    "source": {
     "path": "public/models/heroes-next/ranger-library-t1-v6.glb",
-    "sha256": "54c7afe5a81252649069d577ec76dc80cd664f3d29c7eeef888e72457f5ca75f"
+    "sha256": "344b4ce1bd3c2c602fbbc8b90bd4a9d922b3bf632e085e7cf2e9d55bde440d5b"
    },
    "humanoid": true,
    "hipsBone": "mixamorig:Hips",

@@ -7,6 +7,7 @@
 // swap-library-body.mjs(blender_swap_body.py) 는 몸을 v4 관절 길이로 늘이고 A→T 로 메시를 굽혀서 Tripo 자동 가중치(땋은 머리·망토에
 // 섞인 어깨·팔 가중치) 때문에 땋은 머리가 어깨 위로 끌려가고 망토가 사라졌다(2026-10-23 궁수 v5). 이 패커는 메시 정점을 닮음 변환만 한다.
 // 활 소켓(뼈 자식 노드)은 손 관절 위치 차이만큼 손 로컬에서 옮겨 보이는 손바닥에 남게 한다.
+// --sockets=none(기본): 활 소켓을 base 그대로 둔다. draw: 아래 5) 규칙으로 옮김(궁수 v6 실측에서 활 아래 림이 다리에 더 들어가 쓰지 않음).
 // --lift=<m>: 발바닥 맞춤 뒤 몸을 세계 Y 로 더 올린다(대기 자세 접지 여유. 궁수 v6 는 0.012).
 //   node tools/art/rebind-library-body.mjs <base.glb> <body.glb> <출력.glb> [기록 JSON 문자열] [--lift=<m>]
 import fs from 'node:fs';
@@ -19,7 +20,8 @@ const FULL_DRAW = 0.41, BOW_HIT_AT = 0.42;
 
 const argv = process.argv.slice(2), flags = Object.fromEntries(argv.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 const [basePath, bodyPath, outputPath, extraJson] = argv.filter((a) => !a.startsWith('--'));
-const lift = Number(flags.lift || 0);
+const lift = Number(flags.lift || 0), socketMode = flags.sockets || 'none';
+if (!['none', 'draw'].includes(socketMode)) throw new Error('--sockets must be none|draw');
 if (!Number.isFinite(lift) || Math.abs(lift) > 0.05) throw new Error('--lift must be within ±0.05 m');
 if (!outputPath) throw new Error('Usage: node tools/art/rebind-library-body.mjs base.glb body.glb output.glb [extras-json]');
 
@@ -263,8 +265,8 @@ const handShift = (p) => P2a(norm(j.nodes[p].name)).applyMatrix4(worldF.get(p).c
 const scaleOf = (p) => new THREE.Vector3().setFromMatrixScale(G1.world(p)).x;
 const grip = socketNodes.find((i) => j.nodes[i].name === 'RangerBowGrip_L'), nock = socketNodes.find((i) => j.nodes[i].name === 'RangerDrawNock_R');
 const shifts = new Map();
-if (grip != null) shifts.set(grip, handShift(G1.parent.get(grip)));
-if (grip != null && nock != null) {
+if (grip != null && socketMode === 'draw') shifts.set(grip, handShift(G1.parent.get(grip)));
+if (grip != null && nock != null && socketMode === 'draw') {
   const anim = j.animations.find((a) => a.name === 'bow_shoot');
   if (!anim) throw new Error('bow_shoot clip is required to place the draw nock');
   const tFull = attackPhase(FULL_DRAW, BOW_HIT_AT) * Math.max(...anim.samplers.map((smp) => j.accessors[smp.input].max[0]));
@@ -331,7 +333,7 @@ function compact() {
 const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
 const { materialFinish: _staleFinish, bodySwap: _staleSwap, ...baseExtras } = j.asset.extras || {};
-const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, yawDeg: Math.round(turn * 180 / Math.PI),
+const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), liftM: lift, socketMode, yawDeg: Math.round(turn * 180 / Math.PI),
   maxSwingDeg: +maxSwingDeg.toFixed(2), maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
 j.asset.extras = { ...baseExtras, bodyRebind: rebind };
 

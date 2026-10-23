@@ -66,8 +66,8 @@
     },
     "rebind": {
       "tool": "tools/art/rebind-library-body.mjs",
-      "toolSha256": "f18b2919dc879c4d00ec6d518eb68dfe01afe70f5f9d4d4ae2d956ac334ebab1",
-      "outputSha256": "d4ad59a5b079ca3a328328d0724e2745a84b0d317a4d7764bc59f7cf694ef2bb",
+      "toolSha256": "f2bb80dc90bba8af9d0ad0692cea9f647a458ad3530156decfb30737c1b2d3af",
+      "outputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
       "rule": "base 의 골격 노드 TRS·스킨 관절 순서·클립 바이트는 그대로. 몸 정점은 닮음 변환만, 역바인드 = 회전만 바꾼 base 골격 자세 F 의 관절 세계 행렬의 역. 활 소켓은 손 관절 차이만큼 손 로컬에서 이동.",
       "extras": {
         "method": "rotation-only-bind-pose",
@@ -75,41 +75,24 @@
         "bodySha256": "d1abe450aa9f8deefe0f00ae100420d3fb6ac64f244847a44d66e28ac3e4301b",
         "scale": 1.867437,
         "liftM": 0.012,
+        "socketMode": "none",
         "yawDeg": 0,
         "maxSwingDeg": 47.07,
         "maxJointGapM": 0.0967,
-        "sockets": {
-          "RangerBowGrip_L": {
-            "parent": "mixamorig:LeftHand",
-            "shiftLocal": [
-              0.0059,
-              0.6956,
-              -2.5682
-            ],
-            "shiftM": 0.0479
-          },
-          "RangerDrawNock_R": {
-            "parent": "mixamorig:RightHand",
-            "shiftLocal": [
-              -1.5941,
-              0.5805,
-              -2.0497
-            ],
-            "shiftM": 0.0479
-          }
-        }
-      }
+        "sockets": {}
+      },
+      "socketNote": "활 소켓은 v4 위치 그대로(--sockets=none). 손 관절 차이만큼 옮기는 draw 모드는 실측(combat-mesh-qa)에서 활 아래 림이 다리에 10–11cm 들어가 더 나빴다(none 7.2–8.0, v4 6.1)."
     },
     "commands": [
       "blender -b -P tools/asset-library/blender_clean_weights.py -- --input <ranger_t1_v5.rigged.glb> --output <clean.glb> --report <clean.json>",
-      "node tools/art/rebind-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <clean.glb> <v6-raw.glb>",
+      "node tools/art/rebind-library-body.mjs public/models/heroes-next/ranger-library-t1-v4.glb <clean.glb> <v6-raw.glb> --lift=0.012 --sockets=none",
       "node tools/art/finish-library-materials.mjs <v6-raw.glb> public/models/heroes-next/ranger-library-t1-v6.glb ranger-library-v6"
     ]
   },
   "materialFinish": {
     "tool": "tools/art/finish-library-materials.mjs",
     "recipe": "library-skin-finish-v1",
-    "inputSha256": "d4ad59a5b079ca3a328328d0724e2745a84b0d317a4d7764bc59f7cf694ef2bb",
+    "inputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
     "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
     "materials": [
       {
@@ -123,7 +106,7 @@
   },
   "output": {
     "path": "/models/heroes-next/ranger-library-t1-v6.glb",
-    "sha256": "54c7afe5a81252649069d577ec76dc80cd664f3d29c7eeef888e72457f5ca75f"
+    "sha256": "344b4ce1bd3c2c602fbbc8b90bd4a9d922b3bf632e085e7cf2e9d55bde440d5b"
   },
   "sockets": {
     "bowGrip": "RangerBowGrip_L",
@@ -150,7 +133,52 @@
     "releasePhase": 0.42
   },
   "deathContact": {
-    "pending": "v6 실측 전"
+    "method": "tools/art/author-ranger-t1-body-motion.mjs 4배 조밀 검사(실제 loadHeroModel → spawnCharacter 경로)",
+    "bodyMotion": {
+      "record": "src/data/ranger-t1-body-motion-v2.json",
+      "dodge": {
+        "skinMinY": -0.020634,
+        "skinMaxY": 0.025463,
+        "limitAbs": 0.03,
+        "offsetMaxM": 0.282099,
+        "pass": true
+      },
+      "death": {
+        "skinMinY": -0.006061,
+        "endSkinY": -0.006,
+        "limit": -0.01,
+        "endAbsLimit": 0.03,
+        "pass": true
+      }
+    },
+    "rawClip": {
+      "standingFeetY": 0.007,
+      "dodgeMinY": -0.181,
+      "deathEndY": -0.103,
+      "note": "원본 v4 클립을 덮지 않고 재생한 값(0.25초 간격 표본). 구르기 중간 최저점은 등 뒤 망토(Spine2 가중) 정점이다."
+    },
+    "combatMesh": {
+      "tool": "tools/combat-mesh-qa.mjs",
+      "weaponHeadCm": {
+        "attack1_5": 0,
+        "skill0_3": 0,
+        "cheer": 6.8,
+        "hit": 0.9
+      },
+      "weaponLegCm": {
+        "attack3": 7.4,
+        "attack4": 7.2,
+        "skill3": 8,
+        "hit": 9.8
+      },
+      "v4": {
+        "attack3Leg": 6.1,
+        "hitLeg": 6.1,
+        "cheerHead": 0,
+        "hitTorso": 0
+      },
+      "note": "v6 몸(망토·머리카락 부피)이 v4 보다 커서 피격·환호에서 활이 몸통(8.4cm)·머리카락(6.8cm)에 더 들어간다. 클립은 2·3단계와 공유하므로 이번 개정에서 바꾸지 않았다."
+    }
   },
   "clips": {
     "bow_shoot": 1,
