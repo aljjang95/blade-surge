@@ -95,16 +95,25 @@ const higherRevisions = validateHigherBodyRevisions(HIGHER_BODY_REVISIONS);
 // 1단계 클립을 교정본(heroes-next)에서 받는 영웅(도적·궁수)은 등급 몸도 정규화본이 아니라 그 1단계 교정본 골격에 재결합한 몸을 쓴다
 // (기사 등 다른 영웅의 S·U 몸은 정규화본 그대로). 다섯 기록 계약(higher-body-revisions-v1)은 바꾸지 않고 별도 기록·목표로 얹는다.
 // 검사는 상위 몸체와 같다(원본 SHA = manifest, 고정 출력 경로, GENERATED 는 실제 SHA). 여기에 더해 재결합 base 가 그 영웅의
-// 현재 1단계 교정본 출력(경로·SHA)과 같아야 한다. 궁수 S·U 몸은 아래 목록에 한 줄씩 넣고 기록 JSON 에 같은 형식으로 추가하면 된다.
-const T4_BODY_BASES = Object.freeze({ rogue: ROGUE_LIBRARY_REVISION, ranger: RANGER_LIBRARY_REVISION });
+// 현재 1단계 클립 원본(경로·SHA)과 같아야 한다. 도적은 1단계 교정본 출력(v2)이 곧 클립 원본이다. 궁수 1단계 v6 은 몸만 바꾼 개정이라
+// 출력의 역바인드가 바인드 자세가 아니어서(재결합 결과) 재결합 base 로 쓸 수 없고, 골격·클립 바이트가 같은 클립 원본(v4,
+// rangerClipSource)에 재결합한다(궁수 2·3단계 v2 몸과 같은 base).
+const T4_BODY_BASES = Object.freeze({
+  rogue: Object.freeze({ path: ROGUE_LIBRARY_REVISION.output.path, sha256: ROGUE_LIBRARY_REVISION.output.sha256 }),
+  ranger: Object.freeze((({ path, sha256 }) => ({ path, sha256 }))(rangerClipSource(RANGER_LIBRARY_REVISION))),
+});
 const T4_BODY_TARGETS = Object.freeze([
   Object.freeze({ asset: 'hero_rogue_t1s', id: 'rogue-t1s-body-fit-v1', prefix: '/models/heroes-next/rogue-t1s-body-fit-v1' }),
   Object.freeze({ asset: 'hero_rogue_t2u', id: 'rogue-t2u-body-fit-v1', prefix: '/models/heroes-next/rogue-t2u-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_ranger_t1s', id: 'ranger-t1s-body-fit-v1', prefix: '/models/heroes-next/ranger-t1s-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_ranger_t2u', id: 'ranger-t2u-body-fit-v1', prefix: '/models/heroes-next/ranger-t2u-body-fit-v1' }),
 ]);
+/** 등급 몸 재결합 base(영웅별 1단계 클립 원본 경로·SHA). */
+export const t4BodyBase = (heroId) => T4_BODY_BASES[heroId] || null;
 
 function validateT4BodyRevision(revision, target) {
   validateHigherBodyRevision(revision, target);
-  const heroId = manifest.assets.find(asset => asset.id === target.asset)?.heroId, base = T4_BODY_BASES[heroId]?.output;
+  const heroId = manifest.assets.find(asset => asset.id === target.asset)?.heroId, base = T4_BODY_BASES[heroId];
   requireHigherBody(base && revision.authoring?.kind === 'body-rebind'
     && revision.authoring.base?.path === base.path && revision.authoring.base.sha256 === base.sha256);
   return revision;
@@ -135,7 +144,7 @@ const LIBRARY_REVISIONS = Object.freeze([
 ]);
 let bundledFiles = {};
 try {
-  // 아래 열 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
+  // 아래 열두 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
   // 전달 크기를 위해 빌드 산출물에서 뺀다. 원본 파일·해시 계약은 asset-library/normalized 에 그대로 있다(test/library-bundle-exclusions.test.ts 가 검증).
   bundledFiles = import.meta.glob([
     '../../asset-library/normalized/*.glb',
@@ -143,6 +152,7 @@ try {
     '!../../asset-library/normalized/hero_rogue_t1.glb', '!../../asset-library/normalized/hero_rogue_t2.glb', '!../../asset-library/normalized/hero_rogue_t3.glb',
     '!../../asset-library/normalized/avatar_ranger_fox.glb', '!../../asset-library/normalized/avatar_rogue_crow.glb',
     '!../../asset-library/normalized/hero_rogue_t1s.glb', '!../../asset-library/normalized/hero_rogue_t2u.glb',
+    '!../../asset-library/normalized/hero_ranger_t1s.glb', '!../../asset-library/normalized/hero_ranger_t2u.glb',
   ], { eager: true, query: '?url', import: 'default' });
 } catch {
   // Bun의 계약 테스트는 Vite URL 변환 없이 공개 경로를 사용한다.
