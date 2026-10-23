@@ -5,6 +5,7 @@ import ROGUE_REVISION from '../data/rogue-library-revision-v2.json';
 import HIGHER_BODY_MOTION from '../data/higher-body-motion-v1.json';
 import R2_BODY_MOTION_V2 from '../data/rogue-t2-body-motion-v2.json';
 import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v2.json';
+import RANGER_T2_MOTION from '../data/ranger-t2-body-motion-v2.json';
 import RANGER_T3_MOTION from '../data/ranger-t3-body-motion-v2.json';
 import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
 
@@ -130,13 +131,18 @@ export function createBodyMotionClip(baseClip, motion = FOX_BODY_MOTION) {
 // v6 는 v4 와 골격 노드·클립 바이트가 같은 몸 재결합 개정이다. 새 몸(머리·망토 부피·발 모양)에 맞춘 Hips 높이만 저작 기록으로 덮는다.
 // 상한 0.3m: v6 망토(등 뒤 약 19cm)가 앞구르기 중간에 바닥을 파서 골반을 최대 0.28m 올려야 한다(v5 는 0.12 안).
 // 기록은 480Hz 격자 오프셋(선형)이며 띠 안에서 평활한 곡선이다(tools/art/author-ranger-t1-body-motion.mjs). 런타임은 접지를 계산하지 않고 검사만 한다.
-// 같은 방식으로 v4 골격에 재결합한 3단계 v2 몸(ranger-t3-body-fit-v2)도 같은 띠 곡선 계약을 쓴다(ranger-t3-body-motion-v2,
-// tools/art/author-ranger-t3-body-motion.mjs). 이때 클립 원본은 몸 개정 기록의 재결합 base(v4)다.
-const RANGER_T1 = 'hero_ranger_t1', RANGER_T3 = 'hero_ranger_t3', T1_LIMIT_METERS = .3;
+// 같은 방식으로 v4 골격에 재결합한 2·3단계 v2 몸(ranger-t{2,3}-body-fit-v2)도 같은 띠 곡선 계약을 쓴다(ranger-t{2,3}-body-motion-v2,
+// tools/art/author-ranger-higher-body-motion.mjs). 이때 클립 원본은 몸 개정 기록의 재결합 base(v4)다.
+const RANGER_T1 = 'hero_ranger_t1', RANGER_T2 = 'hero_ranger_t2', RANGER_T3 = 'hero_ranger_t3', T1_LIMIT_METERS = .3;
+const RANGER_BAND_PREFIX = Object.freeze({ [RANGER_T2]: 'ranger-t2', [RANGER_T3]: 'ranger-t3' });
+// 골반 오프셋 크기 상한. 1단계는 0.3m, 2·3단계는 기존 상위 몸체 계약과 같은 0.35m(구르기에서 2단계 등 뒤 후드가 바닥을 파 0.34m 까지 올린다).
+// 접지 수용 기준(구르기 ±0.03m, 사망 > -0.01m)은 단계와 무관하게 같다.
+const HIGHER_BAND_LIMIT_METERS = .35;
 export function validateRangerT1Motion(motion, revision = rangerLibraryRevision()) {
   const t1 = revision?.asset === RANGER_T1;
   const source = t1 ? rangerClipSource(revision) : revision?.authoring?.kind === 'body-rebind' ? revision.authoring.base : null;
-  requireMotion(source && (t1 || (revision.asset === RANGER_T3 && /^ranger-t3-body-fit-v([2-9]|[1-9]\d+)$/.test(revision.id)
+  const prefix = RANGER_BAND_PREFIX[revision?.asset];
+  requireMotion(source && (t1 || (prefix && new RegExp('^' + prefix + '-body-fit-v([2-9]|[1-9]\\d+)$').test(revision.id)
       && motion?.motionRevisionId === revision.id.replace('-body-fit-', '-body-motion-')))
     && motion?.schema === (t1 ? 'blade-surge.ranger-t1-body-motion.v1' : 'blade-surge.ranger-band-body-motion.v1')
     && motion.asset === revision.asset && motion.heroId === 'ranger'
@@ -152,7 +158,7 @@ export function validateRangerT1Motion(motion, revision = rangerLibraryRevision(
     requireMotion(typeof profile?.profileId === 'string' && profile.interpolation === 'LINEAR' && profile.gridHz >= 120
       && Number.isFinite(profile.parentWorldYGain) && profile.parentWorldYGain > 0
       && Number.isFinite(profile.minOffsetMeters) && Number.isFinite(profile.maxOffsetMeters)
-      && profile.minOffsetMeters >= -T1_LIMIT_METERS && profile.maxOffsetMeters <= T1_LIMIT_METERS
+      && profile.minOffsetMeters >= -(t1 ? T1_LIMIT_METERS : HIGHER_BAND_LIMIT_METERS) && profile.maxOffsetMeters <= (t1 ? T1_LIMIT_METERS : HIGHER_BAND_LIMIT_METERS)
       && profile.initialOffsetMeters === 0 && (base.clip !== 'dodge' || profile.finalOffsetMeters === 0), '1단계 저작 프로필 불일치');
     requireMotion(validation?.pass === true && validation.densePenetrationMinMeters > validation.acceptance.low
       && (validation.acceptance.high === null || validation.denseFloatMaxMeters < validation.acceptance.high)
@@ -289,6 +295,7 @@ const rangerT1Motion = validateRangerT1Motion(RANGER_T1_MOTION);
 // 띠 곡선을 쓰는 궁수 몸(자산 → 검사 끝난 기록). 3단계는 게임이 쓰는 몸 개정(v2) 기록에 묶는다.
 const RANGER_BAND_MOTIONS = new Map([
   [RANGER_T1, rangerT1Motion],
+  [RANGER_T2, validateRangerT1Motion(RANGER_T2_MOTION, HIGHER_BODY_REVISIONS.revisions.find(revision => revision.asset === RANGER_T2))],
   [RANGER_T3, validateRangerT1Motion(RANGER_T3_MOTION, HIGHER_BODY_REVISIONS.revisions.find(revision => revision.asset === RANGER_T3))],
 ]);
 // v1 번들 위에 자산별 새 패킷을 얹는다. 띠 곡선으로 옮긴 자산(3단계 궁수 v2 몸)의 v1 패킷은 이력으로만 남고 등록하지 않는다.

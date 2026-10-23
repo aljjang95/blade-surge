@@ -18,8 +18,8 @@
   "reason": "v1 곡선은 v1 몸(ranger-t3-body-fit-v1) 전용이다"
  },
  "tool": {
-  "path": "tools/art/author-ranger-t3-body-motion.mjs",
-  "sha256": "ec804151bc0955600e57cec1bc733c8817576109e05d0884df0c3dc7f008eb35",
+  "path": "tools/art/author-ranger-higher-body-motion.mjs",
+  "sha256": "7684bd39bfdd88e10b35c5ebcc673d5d7848730e52e787ff8a52868b2457fa4b",
   "methodFrom": "tools/art/author-ranger-t1-body-motion.mjs",
   "profile": {
    "gridHz": 480,

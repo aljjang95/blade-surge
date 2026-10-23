@@ -5,6 +5,7 @@ import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v6.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 import HIGHER_BODY_REVISIONS_V1 from '../data/higher-body-revisions-v1.json';
+import RANGER_T2_BODY_REVISION_V2 from '../data/ranger-t2-body-revision-v2.json';
 import RANGER_T3_BODY_REVISION_V2 from '../data/ranger-t3-body-revision-v2.json';
 import ANIM_PACKS from '../data/anim-packs-v1.json';
 
@@ -26,8 +27,8 @@ export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
 // 자산별 출력 이름을 코드에서 고정한다. 초안은 원본을 고르고 실제 생성·검증된 기록만 활성화한다.
 const HIGHER_BODY_TARGETS = Object.freeze([
-  Object.freeze({ asset: 'hero_ranger_t2', id: 'ranger-t2-body-fit-v1', prefix: '/models/heroes-next/ranger-t2-body-fit-v1' }),
-  // 3단계 궁수는 v2(앞머리를 가른 Tripo 몸 재결합, ranger-t3-body-revision-v2.json)가 v1 을 대신한다. v1 기록·파일은 이력으로 남는다.
+  // 2·3단계 궁수는 v2(앞머리를 가른 Tripo 몸 재결합, ranger-t{2,3}-body-revision-v2.json)가 v1 을 대신한다. v1 기록·파일은 이력으로 남는다.
+  Object.freeze({ asset: 'hero_ranger_t2', id: 'ranger-t2-body-fit-v2', prefix: '/models/heroes-next/ranger-t2-body-fit-v2' }),
   Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v2', prefix: '/models/heroes-next/ranger-t3-body-fit-v2' }),
   Object.freeze({ asset: 'hero_rogue_t2', id: 'rogue-t2-body-fit-v1', prefix: '/models/heroes-next/rogue-t2-body-fit-v1' }),
   Object.freeze({ asset: 'hero_rogue_t3', id: 'rogue-t3-body-fit-v1', prefix: '/models/heroes-next/rogue-t3-body-fit-v1' }),
@@ -35,9 +36,10 @@ const HIGHER_BODY_TARGETS = Object.freeze([
 ]);
 // 대신 쓰는 개정이 가리키는 이전 기록(이력). 이력 기록도 자기 고정 경로 계약을 그대로 지켜야 한다.
 const HIGHER_BODY_HISTORY = Object.freeze([
+  Object.freeze({ asset: 'hero_ranger_t2', id: 'ranger-t2-body-fit-v1', prefix: '/models/heroes-next/ranger-t2-body-fit-v1' }),
   Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v1', prefix: '/models/heroes-next/ranger-t3-body-fit-v1' }),
 ]);
-const HIGHER_BODY_SUPERSEDING = Object.freeze([RANGER_T3_BODY_REVISION_V2]);
+const HIGHER_BODY_SUPERSEDING = Object.freeze([RANGER_T2_BODY_REVISION_V2, RANGER_T3_BODY_REVISION_V2]);
 const requireHigherBody = (condition) => { if (!condition) throw new Error('Higher body revision requires an exact unique asset/source/public output contract'); };
 
 function validateHigherBodyRevision(revision, target) {
