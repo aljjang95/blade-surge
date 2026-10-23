@@ -8,11 +8,17 @@
 #   3) 그 밖: 팔 뼈 선분보다 몸통 축(Hips→HeadTop)에 더 가깝고, 팔 가중치가 0.5 미만이거나 몸 뒤쪽이면 팔 가중치를 뺀다.
 #   4) 남은 가중치를 다시 정규화한다. 하나도 안 남으면 가장 가까운 몸통 뼈 1.
 #   blender -b -P tools/asset-library/blender_clean_weights.py -- --input <rigged.glb> --output <cleaned.glb> --report <r.json>
-#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0] [--merge-bone neutral_bone]
+#     [--decor-hue 60-160[,340-20…]] [--decor-sat 0.25] [--decor-val 0.12] [--smooth-cape 0] [--merge-bone neutral_bone] [--braid-hue 60-160] [--pauldron 0.5]
 #   장식 색 범위: 기본은 궁수 1단계의 초록(60–160°). 궁수 2단계 붉은 후드는 --decor-hue 60-160,340-25 처럼 여러 구간(도, 360 을 넘는
 #   구간은 340-25 처럼 감아 쓴다)을 준다. 범위에 드는 정점이 몸 앞이면 땋은 머리 규칙, 몸 뒤면 망토 규칙을 받는다.
 #   --smooth-cape N: 망토 규칙을 받은 정점의 가중치를 메시 이웃 평균으로 N 번 고른다(망토 밖 이웃은 고정 기준). 2026-10-23 기사 S등급:
 #   망토 밑단 이웃 정점끼리 다리·골반 가중치가 들쭉날쭉해 달리기에서 밑단이 가시처럼 찢어져 보였다. 기본 0 은 이전과 같은 출력.
+#   --braid-hue 60-160 [--braid-sat 0.25] [--braid-val 0.12]: 땋은 머리 규칙(몸 앞 장식 → 가슴 아래는 Spine2 100%)을 이 색에만 준다. 2026-10-24 궁수 U 불사조:
+#   망토 불꽃(주황)을 장식 범위에 넣자 골반 앞 불꽃 깃털까지 땋은 머리 규칙으로 Spine2 에 굳어, 구르기에서 0.39m 바닥을 팠다.
+#   기본(없음)은 장식 범위 전체로 이전과 같은 출력.
+#   --pauldron 0.5: 어깨(LeftShoulder·RightShoulder)+팔 가중치 합이 0.5 이상인 장식 정점은 땋은 머리·망토 규칙을 받지 않는다. 2026-10-24
+#   궁수 U 불사조: 왼어깨 불꽃 깃털 견갑(어깨 .49·팔 .47)이 망토 규칙으로 어깨·팔을 잃고 Spine2 에 굳어 구르기에서 0.39m 바닥을 팠다.
+#   기본(없음)은 이전과 같은 출력.
 #   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
 import numpy as np
@@ -170,6 +176,14 @@ def main():
     spine2 = group('Spine2'); stats = {'headRegion': 0, 'hanging': 0, 'braid': 0, 'cape': 0, 'armStripped': 0, 'empty': 0, 'decorOnArm': 0}
     decor = dict(hue=a.get('decor-hue', '60-160'), sat=float(a.get('decor-sat', 0.25)), val=float(a.get('decor-val', 0.12)))
     green = vertex_decor(mesh, hue_ranges(decor['hue']), decor['sat'], decor['val'])
+    # --braid-hue: 땋은 머리 규칙(앞쪽 장식 → Head/Spine2)을 받을 색을 따로 정한다(채도·명도는 --braid-sat 0.25·--braid-val 0.12).
+    # 없으면 장식 범위 전체(이전과 같은 출력).
+    braidMask = green
+    pauldron = float(a['pauldron']) if 'pauldron' in a else None
+    if pauldron is not None: decor['pauldron'] = pauldron
+    if 'braid-hue' in a:
+        decor.update(braidHue=a['braid-hue'], braidSat=float(a.get('braid-sat', 0.25)), braidVal=float(a.get('braid-val', 0.12)))
+        braidMask = vertex_decor(mesh, hue_ranges(decor['braidHue']), decor['braidSat'], decor['braidVal'])
     mw = mesh.matrix_world
     for v in mesh.data.vertices:
         w = {names[g.group]: g.weight for g in v.groups if g.weight > 0}
@@ -183,8 +197,11 @@ def main():
         d_arm = min(seg_dist(p, s0, s1) for s0, s1 in arms) if arm_w > 0 else 1e9
         # 장식 색이 넓은 경우(붉은 갑옷 전체 등) 팔 소매·팔 갑옷을 장식으로 오판하지 않게: 팔 선분에 더 가깝고 팔 가중치가 주인 정점은 장식 규칙에서 뺀다.
         on_arm = arm_w >= 0.5 and d_arm < d_body
+        # --pauldron X: 어깨+팔 가중치 합이 X 이상인 장식(어깨 견갑 깃털 등)은 장식 규칙에서 빼고 팔·어깨를 따라가게 둔다(기본 끔).
+        # --braid-hue 를 함께 주면 땋은 머리 색(머리카락)은 빼고 나머지 장식에만 적용한다(머리카락은 어깨를 따라가면 안 된다).
+        if pauldron is not None and green[v.index] and not (braidMask is not green and braidMask[v.index]) and arm_w + sum(x for n, x in w.items() if is_shoulder(n)) >= pauldron: on_arm = True
         if green[v.index] and on_arm: stats['decorOnArm'] += 1
-        braid = green[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
+        braid = braidMask[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
         if head_w >= 0.2 or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
