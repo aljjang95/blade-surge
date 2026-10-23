@@ -148,7 +148,8 @@ function addView(bytes, target) {
   binLength += bytes.length; j.bufferViews.push(view); return j.bufferViews.length - 1;
 }
 function copyView(i) {
-  if (!viewMap.has(i)) { const v = b.bufferViews[i]; viewMap.set(i, addView(Buffer.from(body.bin.subarray(v.byteOffset || 0, (v.byteOffset || 0) + v.byteLength)), v.target)); }
+  if (!viewMap.has(i)) { const v = b.bufferViews[i];
+    if (v.byteStride) throw new Error('interleaved body buffer views are not supported'); viewMap.set(i, addView(Buffer.from(body.bin.subarray(v.byteOffset || 0, (v.byteOffset || 0) + v.byteLength)), v.target)); }
   return viewMap.get(i);
 }
 function addFloatAccessor(values, type, target, withBounds) {

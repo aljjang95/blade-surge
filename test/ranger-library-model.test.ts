@@ -244,7 +244,7 @@ test('v6 는 v4 와 관절 노드·스킨 관절 순서·11개 클립 바이트�
   expect(rangerClipSource(REV_V4 as any)).toEqual({ revision: REV_V4.id, path: REV_V4.output.path, sha256: REV_V4.output.sha256 });
 });
 
-test('v6 몸은 F 자세(역바인드 기준)에서 Tripo 원본 모양 그대로다: 같은 정점 수·삼각형, 정점은 닮음 변환만', () => {
+test('v6 몸 메시는 재결합 입력(가중치 정리본)과 정점 수가 같고 키가 v4 와 같은 범위다', () => {
   const read = (path: string) => { const b = readFileSync(new URL(path, import.meta.url)), p = glbParts(b); return { j: p.json, bin: p.binChunk.subarray(8) }; };
   const g = read('../public' + REV.output.path), skinPos = (gg: any) => { const p = gg.j.meshes[0].primitives[0], acc = gg.j.accessors[p.attributes.POSITION]; return acc; };
   const acc = skinPos(g);

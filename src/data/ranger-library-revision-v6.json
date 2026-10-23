@@ -66,7 +66,7 @@
     },
     "rebind": {
       "tool": "tools/art/rebind-library-body.mjs",
-      "toolSha256": "f2bb80dc90bba8af9d0ad0692cea9f647a458ad3530156decfb30737c1b2d3af",
+      "toolSha256": "01dfed759f0bed6ce1c7d6dba337e7a9a8ff192645e18934f600a8da35fbdccf",
       "outputSha256": "0ac50bec63fb9783bb035d5fd0fe92f8d185bf5a17ed8da561b7e9ec5d781d15",
       "rule": "base 의 골격 노드 TRS·스킨 관절 순서·클립 바이트는 그대로. 몸 정점은 닮음 변환만, 역바인드 = 회전만 바꾼 base 골격 자세 F 의 관절 세계 행렬의 역. 활 소켓은 손 관절 차이만큼 손 로컬에서 이동.",
       "extras": {
