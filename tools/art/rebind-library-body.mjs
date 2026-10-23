@@ -9,7 +9,7 @@
 // 활 소켓(뼈 자식 노드)은 손 관절 위치 차이만큼 손 로컬에서 옮겨 보이는 손바닥에 남게 한다.
 // --sockets=none(기본): 활 소켓을 base 그대로 둔다. draw: 아래 5) 규칙으로 옮김(궁수 v6 실측에서 활 아래 림이 다리에 더 들어가 쓰지 않음).
 // --lift=<m>: 발바닥 맞춤 뒤 몸을 세계 Y 로 더 올린다(대기 자세 접지 여유. 궁수 v6 는 0.012).
-// --scale=head|fit: 닮음 배율 기준(아래 fitScale 주석).
+// --scale=head|fit|height: 닮음 배율 기준(아래 fitScale·height 주석).
 // --no-clips: 출력에서 클립을 뺀다(2·3단계 body-fit·정규화본처럼 1단계 클립을 공유하는 메시 전용 파일). 골격 노드·역바인드 규약은 같다.
 // body 관절이 base 골격에 없으면(마법사·야만전사 1단계는 손가락 없는 25·33관절) 그 가중치를 base 에 있는 가장 가까운 조상 관절로 합친다.
 //   node tools/art/rebind-library-body.mjs <base.glb> <body.glb> <출력.glb> [기록 JSON 문자열] [--lift=<m>] [--sockets=none|draw] [--no-clips]
@@ -91,6 +91,14 @@ function meshMinY(g, bin, M) {
   }
   return min;
 }
+function meshMaxY(g, bin, M) {
+  const meshNode = g.nodes.findIndex((n) => n.skin != null && n.mesh != null); let max = -Infinity;
+  for (const p of g.meshes[g.nodes[meshNode].mesh].primitives) {
+    const v = floats(g, bin, p.attributes.POSITION), t = new THREE.Vector3();
+    for (let i = 0; i < v.length; i += 3) max = Math.max(max, t.set(v[i], v[i + 1], v[i + 2]).applyMatrix4(M).y);
+  }
+  return max;
+}
 // glTF 스킨 정점의 바인드 자세 세계 위치는 관절 세계 × 역바인드 × 정점이다(메시 노드 변환은 쓰이지 않는다). Tripo 원본은 이것이
 // 메시 노드 세계와 같지만, 이미 정리된 body-fit·정규화본은 정점이 세계 단위라 메시 노드 배율(0.01 등)을 곱하면 안 된다.
 function bindFrame(g, G, bin) {
@@ -117,13 +125,17 @@ function fitScale() {
   return num / den;
 }
 const scaleMode = flags.scale || 'head';
-if (!['head', 'fit'].includes(scaleMode)) throw new Error('--scale must be head|fit');
-const s = scaleMode === 'fit' ? fitScale() : P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
+if (!['head', 'fit', 'height'].includes(scaleMode)) throw new Error('--scale must be head|fit|height');
+const baseBind = bindFrame(j, G1, base.bin), bodyBind = bindFrame(b, G2, body.bin);
+// --scale=height: 바인드 자세 메시 키(바닥~꼭대기) 비로 base 와 같은 키를 맞춘다. Tripo 관절이 메시 안에서 위로 치우친 몸
+// (2026-10-23 도적 U: 목·머리·어깨 관절이 키의 약 5% 높고 손 관절이 팔꿈치 높이)에서 fit 이 몸을 다른 단계보다 9% 작게 만들었다.
+const meshHeight = (g, bin, M) => meshMaxY(g, bin, M) - meshMinY(g, bin, M);
+const s = scaleMode === 'fit' ? fitScale() : scaleMode === 'height' ? meshHeight(j, base.bin, baseBind.M) / meshHeight(b, body.bin, bodyBind.M)
+  : P1('Head').distanceTo(P1('Hips')) / P2('Head').distanceTo(P2('Hips'));
 if (!Number.isFinite(s) || s <= 0) throw new Error('invalid scale: ' + s);
 const R = new THREE.Matrix4().makeRotationY(turn), S = new THREE.Matrix4().makeScale(s, s, s);
 const A = new THREE.Matrix4().multiplyMatrices(R, S);
 const h1 = P1('Hips'), h2 = P2('Hips').applyMatrix4(A);
-const baseBind = bindFrame(j, G1, base.bin), bodyBind = bindFrame(b, G2, body.bin);
 const ground = meshMinY(j, base.bin, baseBind.M) - (meshMinY(b, body.bin, bodyBind.M) * s) + lift;
 A.premultiply(new THREE.Matrix4().makeTranslation(h1.x - h2.x, ground, h1.z - h2.z));
 const P2a = (name) => P2(name).applyMatrix4(A);

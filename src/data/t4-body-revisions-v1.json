@@ -32,15 +32,15 @@
       "status": "GENERATED",
       "source": {
         "path": "asset-library/normalized/hero_rogue_t2u.glb",
-        "sha256": "ef01560a19fb60f961a4fa1c2a46f857269c5b0e0119dfc39f56c0880cc0a032"
+        "sha256": "4d61001a9bde29401fb51716064d90c03001cb6f064a45dc734d1a7298abf736"
       },
       "output": {
         "path": "/models/heroes-next/rogue-t2u-body-fit-v1.glb",
-        "sha256": "5c2ac1fb62ce25a62a5e32689fa1118bccf5cf81fc5a0198ca505301440320d2"
+        "sha256": "5051592d589398c3e362c50ad8cc1b3ebfe0556f554c5620a0a348b0656b954f"
       },
       "authoring": {
         "kind": "body-rebind",
-        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=fit",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height",
         "body": "art-src/t4-pc/rogue_t2u/rigged.glb → blender_clean_weights.py --decor-hue 50-160 --decor-sat 0.15 --decor-val 0.08 --smooth-cape 8 --merge-bone neutral_bone",
         "base": {
           "path": "/models/heroes-next/rogue-library-t1-v2.glb",
