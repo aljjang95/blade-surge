@@ -65,7 +65,7 @@ test('라이브러리 몸체가 없는 모델은 건드리지 않는다', () => 
   expect(applyGearAccents(root, { armor: ITEM_BY_ID.a_king })).toEqual([]);
 });
 
-test('S·U 등급 몸(소수 단계)은 갑옷 윤곽광을 줄여 몸의 등급 장식 색을 덮지 않는다', () => {
+test('S·U 등급 몸(소수 단계)은 갑옷 윤곽광을 꺼 몸의 등급 장식 색을 덮지 않는다', () => {
   const plain = libraryHero(), graded = libraryHero();
   graded.skin.userData.libraryBody = 2.5;
   const uniforms = (material: THREE.MeshStandardMaterial) => {
@@ -76,6 +76,7 @@ test('S·U 등급 몸(소수 단계)은 갑옷 윤곽광을 줄여 몸의 등급
   applyGearAccents(plain.root, { armor: ITEM_BY_ID.a_storm });
   applyGearAccents(graded.root, { armor: ITEM_BY_ID.a_storm });
   const full = uniforms(plain.material).gearRimBody.value, low = uniforms(graded.material).gearRimBody.value;
+  expect(full.b).toBeGreaterThan(0);
   expect(low.b).toBeCloseTo(full.b * GRADE_BODY_RIM_SCALE, 6);
-  expect(low.b).toBeGreaterThan(0);
+  expect(GRADE_BODY_RIM_SCALE).toBe(0);
 });
