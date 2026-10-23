@@ -1,0 +1,37 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#16232d">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+R.setSize(512, 512); R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(R.domElement);
+const pm = new THREE.PMREMGenerator(R); const env = pm.fromScene(new RoomEnvironment(), .04).texture;
+const loader = new GLTFLoader(); const cache = {};
+const load = (u) => cache[u] ||= loader.loadAsync(u);
+window.shoot = async (url, clipUrl, views, clipName = 'idle', time = .3) => {
+  const g = await load(url); const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a3440); 
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 1.5));
+  const k = new THREE.DirectionalLight(0xfff0dd, 2.5); k.position.set(1, 3, 4); scene.add(k);
+  const root = (await import('three/addons/utils/SkeletonUtils.js')).clone(g.scene); scene.add(root);
+  root.traverse(o => { if (o.isMesh) for (const m of [].concat(o.material)) { if (m.metalness > .22) m.metalness = .22; if (m.transparent && m.opacity >= 1) { m.transparent = false; m.depthWrite = true; m.alphaTest = Math.max(m.alphaTest || 0, .5); } if (m.map) m.map.colorSpace = THREE.SRGBColorSpace; } });
+  let clips = g.animations; if (clipUrl) clips = (await load(clipUrl)).animations;
+  const idle = clips.find(c => c.name.toLowerCase() === clipName.toLowerCase()) || clips.find(c => /^idle$/i.test(c.name)) || clips.find(c => /idle/i.test(c.name));
+  if (idle) { const m = new THREE.AnimationMixer(root); m.clipAction(idle).play(); m.update(time); }
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root); const h = box.max.y - box.min.y;
+  let head = null; root.traverse(o => { if (o.isBone && /head$/i.test(o.name) && !head) head = o; });
+  const hp = new THREE.Vector3(); if (head) head.getWorldPosition(hp); else hp.set(0, box.max.y - h * .1, 0);
+  const out = {};
+  for (const v of views) {
+    const cam = new THREE.PerspectiveCamera(v.fov, 1, .01, 50);
+    const tgt = v.full ? new THREE.Vector3(0, box.min.y + h * .5, 0) : hp.clone().add(new THREE.Vector3(0, h * .035, 0));
+    const d = v.full ? h * 1.6 : h * .75; const a = v.yaw * Math.PI / 180, e = (v.pitch || 0) * Math.PI / 180;
+    cam.position.set(tgt.x + Math.sin(a) * Math.cos(e) * d, tgt.y + Math.sin(e) * d, tgt.z + Math.cos(a) * Math.cos(e) * d); cam.lookAt(tgt);
+    R.render(scene, cam); out[v.name] = R.domElement.toDataURL('image/png');
+  }
+  return { out, h, head: head?.name, clip: idle?.name };
+};
+window.ready = true;
+</script>

@@ -5,7 +5,8 @@ import ROGUE_REVISION from '../data/rogue-library-revision-v2.json';
 import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
 import HIGHER_BODY_MOTION from '../data/higher-body-motion-v1.json';
 import R2_BODY_MOTION_V2 from '../data/rogue-t2-body-motion-v2.json';
-import { revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
+import RANGER_T1_MOTION from '../data/ranger-t1-body-motion-v1.json';
+import { rangerClipSource, rangerLibraryRevision, revisedLibraryFile, validateHigherBodyRevisions } from './library-assets.js';
 
 const FOX = 'avatar_ranger_fox';
 const DURATIONS = { dodge: .5, death: 1.25 };
@@ -76,6 +77,8 @@ function artistStabValue(time){
 }
 const states = new WeakMap();
 const bodyClips = new WeakMap();
+// 저작 덮어쓰기 클립 → 그 원본 클립. 이미 덮인 클립 맵으로 다시 등록해도 원본에서 다시 만든다(덮어쓰기 위에 덮지 않음).
+const overlayBases = new WeakMap();
 const requireMotion = (condition, message) => { if (!condition) throw new Error('여우 저작 동작: ' + message); };
 
 /** 번들에 저장된 저작 트랙만 읽는다. 캐릭터 위치·접지·현재 액션을 프레임마다 보정하지 않는다. */
@@ -118,6 +121,67 @@ export function createBodyMotionClip(baseClip, motion = FOX_BODY_MOTION) {
   // 나머지 트랙은 원본 객체를 공유한다. 공유 GLB·클립 캐시·기존 트랙 배열은 수정하지 않는다.
   return new THREE.AnimationClip(baseClip.name, baseClip.duration,
     baseClip.tracks.map(track => track === original ? replacement : track), baseClip.blendMode);
+}
+
+// ---- 궁수 1단계 v5 몸 전용 회피·사망 골반 높이(ranger-t1-body-motion-v1) ----
+// v5 는 v4 와 클립 바이트가 같은 몸 교체 개정이다. 새 몸(머리 부피·발 모양)에 맞춘 Hips 높이만 저작 기록으로 덮는다.
+// 기록은 480Hz 격자 오프셋(선형)이며 띠 안에서 평활한 곡선이다(tools/art/author-ranger-t1-body-motion.mjs). 런타임은 접지를 계산하지 않고 검사만 한다.
+const RANGER_T1 = 'hero_ranger_t1', T1_LIMIT_METERS = .12;
+export function validateRangerT1Motion(motion, revision = rangerLibraryRevision()) {
+  const source = rangerClipSource(revision);
+  requireMotion(motion?.schema === 'blade-surge.ranger-t1-body-motion.v1' && motion.asset === RANGER_T1 && motion.heroId === 'ranger'
+    && motion.revisionId === revision.id && motion.body?.path === revision.output.path && motion.body.sha256 === revision.output.sha256
+    && motion.base?.path === source.path && motion.base.sha256 === source.sha256
+    && motion.base.path === RANGER_REVISION.output.path && motion.base.sha256 === RANGER_REVISION.output.sha256, '1단계 몸·클립 원본 출처 불일치');
+  requireMotion(Array.isArray(motion.clipOverrides) && motion.clipOverrides.length === 2
+    && sameValue(motion.clipOverrides.map(entry => entry.base?.clip).sort(), ['death', 'dodge']), '1단계 회피·사망 저작 목록 불일치');
+  for (const entry of motion.clipOverrides) {
+    const base = entry.base, profile = entry.authoring, validation = entry.validation;
+    requireMotion(base.duration === DURATIONS[base.clip] && base.hipsTrack === 'mixamorigHips.position' && base.interpolation === 'LINEAR'
+      && SHA.test(base.sourceTrackSha256) && finiteArray(base.times) && finiteArray(base.values) && base.values.length === base.times.length * 3, '1단계 원본 트랙 snapshot 불일치');
+    requireMotion(typeof profile?.profileId === 'string' && profile.interpolation === 'LINEAR' && profile.gridHz >= 120
+      && Number.isFinite(profile.parentWorldYGain) && profile.parentWorldYGain > 0
+      && Number.isFinite(profile.minOffsetMeters) && Number.isFinite(profile.maxOffsetMeters)
+      && profile.minOffsetMeters >= -T1_LIMIT_METERS && profile.maxOffsetMeters <= T1_LIMIT_METERS
+      && profile.initialOffsetMeters === 0 && (base.clip !== 'dodge' || profile.finalOffsetMeters === 0), '1단계 저작 프로필 불일치');
+    requireMotion(validation?.pass === true && validation.densePenetrationMinMeters > validation.acceptance.low
+      && (validation.acceptance.high === null || validation.denseFloatMaxMeters < validation.acceptance.high)
+      && (validation.acceptance.endAbs === null || Math.abs(validation.endMeters) < validation.acceptance.endAbs), '1단계 저작 검증 기록 불일치');
+  }
+  return freezeTree(structuredClone(motion));
+}
+
+/** 1단계 v5 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
+export function createRangerT1BodyMotionClip(baseClip, motion) {
+  const entry = motion.clipOverrides.find(item => item.base.clip === baseClip?.name);
+  requireMotion(entry && baseClip.duration === entry.base.duration, '1단계 저작 클립 이름·길이 불일치');
+  const matches = baseClip.tracks.filter(track => track.name === entry.base.hipsTrack), source = entry.base, output = entry.outputTrack, profile = entry.authoring;
+  requireMotion(matches.length === 1, '1단계 골반 위치 트랙 개수 불일치');
+  const original = matches[0];
+  requireMotion(original.ValueTypeName === 'vector' && original.getValueSize() === 3 && original.getInterpolation() === THREE.InterpolateLinear
+    && original.times.length === source.times.length && original.values.length === source.values.length
+    && source.times.every((value, index) => Object.is(value, original.times[index]))
+    && source.values.every((value, index) => Object.is(value, original.values[index])), '1단계 실제 decoded 원본 트랙 snapshot 불일치');
+  const times = output?.times, values = output?.values;
+  requireMotion(output?.name === original.name && output.type === 'vector' && output.interpolation === 'LINEAR'
+    && finiteArray(times) && finiteArray(values) && times.length >= Math.ceil(baseClip.duration * 120) + 1 && times.length <= 1000
+    && values.length === times.length * 3 && times[0] === 0 && times.at(-1) === baseClip.duration
+    && times.every((time, index) => !index || time > times[index - 1])
+    && Array.from(original.times).every(time => times.some(sample => Object.is(sample, time))), '1단계 저작 시간·값 배열 불일치');
+  const interpolant = original.createInterpolant();
+  let minOffset = Infinity, maxOffset = -Infinity;
+  for (let index = 0; index < times.length; index++) {
+    const reference = interpolant.evaluate(times[index]), offset = index * 3;
+    requireMotion(Object.is(Math.fround(values[offset]), reference[0]) && Object.is(Math.fround(values[offset + 2]), reference[2]), '1단계 골반 수평 이동 변경');
+    const deltaMeters = (Math.fround(values[offset + 1]) - reference[1]) * profile.parentWorldYGain;
+    minOffset = Math.min(minOffset, deltaMeters); maxOffset = Math.max(maxOffset, deltaMeters);
+    requireMotion(deltaMeters >= profile.minOffsetMeters - 2e-6 && deltaMeters <= profile.maxOffsetMeters + 2e-6, '1단계 저작 높이 범위 초과');
+    if (!index) requireMotion(closeMeters(deltaMeters, profile.initialOffsetMeters), '1단계 저작 시작 자세 불일치');
+    if (index === times.length - 1) requireMotion(Math.abs(deltaMeters - profile.finalOffsetMeters) <= 1e-5, '1단계 저작 끝 자세 불일치');
+  }
+  requireMotion(maxOffset - minOffset > 2e-6, '전 동작 상수 높이 변경은 허용하지 않습니다.');
+  const replacement = new THREE.VectorKeyframeTrack(original.name, times, values, THREE.InterpolateLinear);
+  return new THREE.AnimationClip(baseClip.name, baseClip.duration, baseClip.tracks.map(track => track === original ? replacement : track), baseClip.blendMode);
 }
 
 const HIGHER_TARGETS = Object.freeze({
@@ -206,13 +270,15 @@ export function createHigherBodyMotionRegistry(bundle, revisions = HIGHER_BODY_R
   return freezeTree(records);
 }
 
+const rangerT1Motion = validateRangerT1Motion(RANGER_T1_MOTION);
 const higherMotionRegistry = createHigherBodyMotionRegistry({schema:'blade-surge.higher-body-motion.v2',
   bodies:[...HIGHER_BODY_MOTION.bodies.filter(body=>body.asset!==R2),R2_BODY_MOTION_V2]});
 
 /** 로더 호출 시 선택한 몸체 revision을 캡처한다. 원본 fallback을 교정본으로 오인하지 않는다. */
 export function selectedBodyMotionIdentity(asset) {
-  const revision = HIGHER_BODY_REVISIONS.revisions.find(item => item.asset === asset.id);
   const revised = revisedLibraryFile(asset);
+  // 1단계 궁수는 라이브러리 개정(v5) 기록이 몸 출처다. 2·3단계·아바타는 상위 몸체 기록을 쓴다.
+  const revision = asset.id === RANGER_T1 ? rangerLibraryRevision() : HIGHER_BODY_REVISIONS.revisions.find(item => item.asset === asset.id);
   return Object.freeze({ asset: asset.id, heroId: asset.heroId, revisionId: revised && revision ? revision.id : null,
     path: revised || asset.file, sha256: revised && revision ? revision.output.sha256 : asset.sha256 });
 }
@@ -262,8 +328,9 @@ export function registerHeroBodyMotion(root, clips, registry = higherMotionRegis
   if (!['ranger', 'rogue'].includes(heroId) || states.has(root)) return;
   const entries = [];
   for (const name of [...Object.keys(DURATIONS), ...(heroId==='rogue'?['stab']:[])]) {
-    const base = clips[name]; if (!base) continue;
-    const aliases = Object.entries(clips).filter(([, clip]) => clip === base).map(([key]) => ({ key, installed: base, owned: true }));
+    const installed = clips[name]; if (!installed) continue;
+    const base = overlayBases.get(installed) || installed;
+    const aliases = Object.entries(clips).filter(([, clip]) => clip === installed).map(([key]) => ({ key, installed, owned: true }));
     entries.push({ base, aliases });
   }
   states.set(root, { clips, entries, registry, heroId, version: 0 });
@@ -275,6 +342,18 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
   const state = states.get(root); if (!state) return null;
   const body = state.registry.find(item => item.asset === identity.asset);
   const fox = state.heroId === 'ranger' && identity.asset === FOX;
+  // 1단계 v5 몸: 로더가 고른 개정 id 가 있을 때만 쓰고, 있으면 경로·SHA 가 정확히 같아야 한다(아니면 거절). id 가 없으면 원본 클립.
+  const t1 = state.heroId === 'ranger' && identity.asset === RANGER_T1 && identity.revisionId != null;
+  if (t1) requireMotion(identity.heroId === 'ranger' && identity.revisionId === rangerT1Motion.revisionId
+    && identity.path === rangerT1Motion.body.path && identity.sha256 === rangerT1Motion.body.sha256, '실제 선택 1단계 몸체와 모션 불일치');
+  if (t1) {
+    requireMotion(rangerT1Motion.clipOverrides.every(entry => state.entries.some(item => item.base.name === entry.base.clip)), '1단계 공유 원본 클립 누락');
+    const parent = root.getObjectByName('mixamorigHips')?.parent;
+    requireMotion(parent, '실제 골반 부모 없음'); parent.updateWorldMatrix(true, false);
+    const matrix = parent.matrixWorld.elements;
+    requireMotion(Math.abs(matrix[1]) < 1e-7 && Math.abs(matrix[9]) < 1e-7 && matrix[5] > 0
+      && rangerT1Motion.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '1단계 골반 부모 world/native 축·배율 불일치');
+  }
   if(identity.asset===R2)requireMotion(isR2V2(body)&&body.authoringMethod===REPAIRED_METHOD,'R2 reviewed repaired v2 required; no legacy fallback');
   if (body) requireMotion(body.heroId === state.heroId && identity.heroId === state.heroId && identity.revisionId === body.revisionId
     && identity.path === body.body.path && identity.sha256 === body.body.sha256, '실제 선택 몸체와 모션 불일치');
@@ -291,14 +370,15 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     requireMotion(Math.abs(matrix[4])<1e-7&&Math.abs(matrix[6])<1e-7,'signed STAB actual parent localY world axis');
   }
   const changes = state.entries.map(entry => {
-    const active = fox || body?.clipOverrides.some(item => item.base.clip === entry.base.name);
+    const active = fox || (t1 && rangerT1Motion.clipOverrides.some(item => item.base.clip === entry.base.name))
+      || body?.clipOverrides.some(item => item.base.clip === entry.base.name);
     let next = entry.base;
     if (active) {
       let cache = bodyClips.get(entry.base);
       if (!cache) { cache = new Map(); bodyClips.set(entry.base, cache); }
-      const key = fox ? FOX_BODY_MOTION : body;
+      const key = fox ? FOX_BODY_MOTION : t1 ? rangerT1Motion : body;
       next = cache.get(key);
-      if (!next) { next = fox ? createBodyMotionClip(entry.base) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); }
+      if (!next) { next = fox ? createBodyMotionClip(entry.base) : t1 ? createRangerT1BodyMotionClip(entry.base, rangerT1Motion) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); overlayBases.set(next, entry.base); }
     }
     return { entry, next };
   });

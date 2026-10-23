@@ -115,7 +115,11 @@ test('v4 사망: 1단계·갑옷 2·3단계·여우 아바타 모두 실제 활 
 }, 60_000);
 
 test('v4 사망은 쓰러짐(18f=0.75초까지)·몸·끝 자세가 v3 와 같고 정착 구간 활 회전에 새 튐이 없다', async () => {
-  const inst = spawnCharacter(await loadHeroModel('ranger', 1)), old = await v3Death(), now = inst.clips.death;
+  // 비교 대상은 GLB 의 v4 death 클립 바이트다(v5 GLB 도 같은 바이트). 1단계 v5 몸 전용 골반 곡선(ranger-t1-body-motion-v1)은 런타임 덮어쓰기라
+  // 여기서는 빼고, 그 접지는 위 테스트(실제 런타임 clips.death)가 잰다.
+  const gltf = await loadHeroModel('ranger', 1), inst = spawnCharacter(gltf), old = await v3Death();
+  const now = gltf.animations.find((c: THREE.AnimationClip) => c.name === 'death')!;
+  expect(inst.clips.death).not.toBe(now);
   const bones: THREE.Object3D[] = []; inst.root.traverse((o: any) => { if (o.isBone) bones.push(o); });
   const bow = node(inst, 'Bow'), grip = node(inst, 'RangerBowGrip_L');
   let early = 0, body = 0;
