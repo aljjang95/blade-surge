@@ -3,6 +3,7 @@ import { AVATARS, AVATAR_BY_ID } from '../src/data/avatars.js';
 import { HEROES, heroStats } from '../src/data/heroes.js';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
+import realManifest from '../asset-library/manifest.json';
 import { createLibraryLoader, selectHeroLibraryAsset, validateManifest } from '../src/engine/library-assets.js';
 
 const provenance = { tool: 'fixture', account: 'test', taskId: 'avatar-test', prompt: 'fixture', createdAt: '2026-10-13T00:00:00.000Z', rawSha256: 'b'.repeat(64) };
@@ -92,5 +93,16 @@ test('아바타 착용 전후 전투력과 스탯은 동일하다', () => {
   expect(after).toEqual(before);
   expect(eco.heroPower('knight')).toBe(before.power);
   expect(AVATAR_BY_ID.avatar_knight_sakura.heroId).toBe('knight');
-  expect(AVATARS).toHaveLength(5);
+  expect(AVATARS).toHaveLength(7);
+});
+
+test('판매 중인 아바타는 모두 manifest 의 아바타 몸(같은 영웅, 메시 전용)이고 1차와 같은 가격·문구다', () => {
+  for (const avatar of AVATARS) {
+    const asset = (realManifest as any).assets.find((a: any) => a.id === avatar.id);
+    expect(asset?.avatar).toBe(true);
+    expect(asset.heroId).toBe(avatar.heroId);
+    expect(asset.clips).toEqual({});
+    expect(avatar.price).toBe(2980);
+    expect(avatar.desc).toBe(AVATARS[0].desc);
+  }
 });

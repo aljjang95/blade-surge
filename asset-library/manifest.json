@@ -1567,6 +1567,56 @@
       },
       "license": "owner-generated (Tripo subscription)",
       "shared": true
+    },
+    {
+      "id": "avatar_knight_pumpkin",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/avatar_knight_pumpkin.glb",
+      "heightM": 1.8,
+      "triangles": 10816,
+      "bytes": 1752696,
+      "sha256": "820445d1c5354ba110b1ffb42c0f48d341ae39940c2b8a3eb4d13461b9a74de7",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 0-360 --decor-sat 0 --decor-val 0 --braid-hue 300-301 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit",
+        "account": "owner subscription",
+        "taskId": "8524553f-72e5-4e54-91c6-65d8aedc70e0",
+        "prompt": "[pipeline summary] blade-art#t5 halloween cash avatar \"Pumpkin Lantern Knight\": orange pumpkin plate with black trim, jack-o-lantern pauldrons, black bat-wing cape; same face as knight tier1. Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → weight cleanup (black cape cannot be picked by color: every vertex behind the body takes the cape rule, no braid rule) → rotation-only rebind onto hero_knight_t1 skeleton (mesh-only, shares tier1 clips). Source art-src/t5-pc/avatar_knight_pumpkin",
+        "createdAt": "2026-10-24T02:27:43.968Z",
+        "rawSha256": "e15a797db75d4f37ac47733e8e82ad5d69a7b93ee94450a2168aacb663d484c1"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "knight",
+      "avatar": true
+    },
+    {
+      "id": "avatar_mage_pumpkin",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/avatar_mage_pumpkin.glb",
+      "heightM": 1.8,
+      "triangles": 10580,
+      "bytes": 1668868,
+      "sha256": "aada2ae99f77c09501fb80db748af7be61ba40f26b9e0f4e0fdb714b647e6255",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 0-360 --decor-sat 0 --decor-val 0 --braid-hue 300-301 --smooth-cape 8) + rebind-library-body.mjs --no-clips",
+        "account": "owner subscription",
+        "taskId": "e88671c8-13c8-4abc-8825-588c20f55c8b",
+        "prompt": "[pipeline summary] blade-art#t5 halloween cash avatar \"Pumpkin Witch\": black-orange witch robe, big witch hat with jack-o-lantern band (brim above brows), bat and moon motifs; same face as mage tier1. Codex concept (b) → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → weight cleanup (every vertex behind the body takes the cape rule, no braid rule) → rotation-only rebind onto hero_mage_t1 skeleton with Hips→Head scale (fit made her 20% larger than tier1) (mesh-only, shares tier1 clips). Source art-src/t5-pc/avatar_mage_pumpkin",
+        "createdAt": "2026-10-24T02:27:44.054Z",
+        "rawSha256": "ed159778aede06dc835e9326db7919b0b5e11adac94c30f7210fef9fa9b8e634"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "mage",
+      "avatar": true
     }
   ]
 }
