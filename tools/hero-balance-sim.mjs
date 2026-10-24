@@ -8,8 +8,16 @@ import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, s
  * 스킬별 1회 피해·기본 연타 DPS·60초 순환 추정을 모든 영웅에 같은 방식으로 잰다.
  * 적은 움직이지 않는 허수아비(update 생략, 체력 무한대급)이고 마나·쿨다운·궁극기 게이지는 시전 가능하게 채운다.
  */
-export const HEROES_ALL = ['knight', 'barbarian', 'werewolf', 'mage', 'rogue', 'ranger'];
+export const HEROES_ALL = ['knight', 'barbarian', 'werewolf', 'mage', 'rogue', 'ranger', 'blackcat', 'ranger@SSR'];
 export const SSR_SET = ['knight', 'barbarian', 'werewolf'];
+/** 신규 SSR 판정 기준: 같은 kit 영웅. SR kit 이면 같은 영웅을 SSR 등급으로 올린 가상 영웅('<id>@SSR')과 잰다(등급 배율 차이를 빼고 스킬 설계만 비교). */
+export const NEW_SSR = Object.freeze({ werewolf: 'barbarian', blackcat: 'ranger@SSR' });
+/** '<id>@SSR' 가상 영웅을 runtime.HEROES 에 더한다(정의는 그대로, rarity 만 SSR). */
+export function withGradeVariants(runtime, heroes) {
+  const extra = {};
+  for (const id of heroes) { const m = /^(.+)@(SSR|SSSR)$/.exec(id); if (m && runtime.HEROES[m[1]]) extra[id] = { ...runtime.HEROES[m[1]], rarity: m[2] }; }
+  return Object.keys(extra).length ? { ...runtime, HEROES: { ...runtime.HEROES, ...extra } } : runtime;
+}
 export const FPS = 60;
 export const SKILL_WINDOW = 3;    // 시전 뒤 피해를 모으는 시간(초)
 export const BUFF_WINDOW = 6;     // 버프 배율 측정용 기본 연타 시간(초)
@@ -112,9 +120,14 @@ function measureBuff(runtime, heroId, situation, index, seed) {
     if (!player.tryCastSkill(index)) { cleanup(f); return null; }
     let guard = 0;
     while (player.state === 'skill' && guard++ < FPS * 5) stepCombatFlow(f, 1 / FPS);
-    const isBuff = player.buffs.atk > 1 || player.buffs.atkSpd > 1;
+    let isBuff = player.buffs.atk > 1 || player.buffs.atkSpd > 1, durationLeft = player.buffs.t;
+    // 받는 피해 표식(검은 고양이 불길한 징조)도 버프처럼 잰다: 화살이 닿을 때까지(최대 0.6초) 기다려 시전자 표식이 붙은 적이 있으면 표식 남은 시간을 쓴다.
+    if (!isBuff) {
+      const markLeft = () => Math.max(0, ...game.enemies.filter(e => e.alive && e.omenBy === player).map(e => e.omenUntil - game.elapsed));
+      for (let k = 0; k < FPS * 0.6 && !(markLeft() > 0); k++) stepCombatFlow(f, 1 / FPS);
+      if (markLeft() > 0) { isBuff = true; durationLeft = markLeft(); }
+    }
     if (!isBuff) { cleanup(f); return null; }
-    const durationLeft = player.buffs.t;
     game.input.attackHeld = true;
     const t0 = game.elapsed;
     run(f, BUFF_WINDOW);
@@ -168,6 +181,7 @@ export function measureHero(runtime, heroId, { seeds = SEEDS } = {}) {
 
 /** 여러 영웅을 재서 SSR 셋 평균 대비 비율과 werewolf 판정을 붙인다. */
 export function runHeroBalance(runtime, { heroes = HEROES_ALL, seeds = SEEDS } = {}) {
+  runtime = withGradeVariants(runtime, heroes);
   const results = {};
   for (const id of heroes) results[id] = measureHero(runtime, id, { seeds });
   const ssr = SSR_SET.filter(id => results[id]);
@@ -179,23 +193,43 @@ export function runHeroBalance(runtime, { heroes = HEROES_ALL, seeds = SEEDS } =
   return { seeds, ssrAvg, results, verdict: judge(results, ssr) };
 }
 
-/** werewolf 판정: barbarian 대비 0.95~1.06배(A·B), SSR 최고치의 1.06배 이하, 고유 두 스킬이 실제 피해를 낸다. */
+/** 고유 두 스킬 id(판정 대상). */
+export const OWN_SKILLS = Object.freeze({ werewolf: ['blood_howl', 'moonlit_hunt'], blackcat: ['cat_omen', 'nine_lives'] });
+
+/**
+ * 신규 SSR 판정(측정된 것만): 기준 영웅(NEW_SSR) 대비 0.95~1.06배(A·B), 고유 두 스킬이 두 상황 모두 실제 피해를 낸다.
+ * 근접 kit(기준이 SSR 셋 안)은 SSR 최고치의 1.06배 이하도 본다. 원거리 kit 은 A(둘러싼 무리)·B(단일) 편차가 커서
+ * 두 상황의 SSR 평균 대비 비율 평균이 SSR 셋 최고치의 1.06배 이하인지 본다.
+ */
 export function judge(results, ssr = SSR_SET) {
-  const reasons = [], w = results.werewolf, b = results.barbarian;
-  if (!w || !b) return { pass: false, reasons: ['werewolf·barbarian 측정이 필요하다'] };
-  for (const sit of ['A', 'B']) {
-    const ratio = w.cycle[sit].total / b.cycle[sit].total;
-    const top = Math.max(...ssr.filter(id => results[id]).map(id => results[id].cycle[sit].total));
-    const vsTop = w.cycle[sit].total / top;
-    if (ratio < 0.95 || ratio > 1.06) reasons.push(`${sit}: werewolf/barbarian 순환 추정 ${ratio.toFixed(3)}배 (허용 0.95~1.06)`);
-    if (vsTop > 1.06) reasons.push(`${sit}: werewolf가 SSR 최고치의 ${vsTop.toFixed(3)}배 (허용 ≤1.06)`);
-  }
-  for (const id of ['blood_howl', 'moonlit_hunt']) {
-    const row = w.skills.find(s => s.id === id);
-    if (!row) reasons.push(`${id} 스킬이 werewolf 스킬 목록에 없다`);
-    else if (!row.cast) reasons.push(`${id} 시전 실패`);
-    else if (!(row.A > 0 || row.B > 0)) reasons.push(`${id} 피해가 0이다`);
-    else if (!(row.A > 0 && row.B > 0)) reasons.push(`${id} 피해가 한쪽 상황에서 0이다 (A=${row.A.toFixed(0)}, B=${row.B.toFixed(0)})`);
+  const reasons = [];
+  const targets = Object.keys(NEW_SSR).filter(id => results[id]);
+  if (!targets.length) return { pass: false, reasons: ['신규 SSR 측정이 필요하다'] };
+  const ssrRows = ssr.filter(id => results[id]);
+  const avg = sit => ssrRows.reduce((s, id) => s + results[id].cycle[sit].total, 0) / (ssrRows.length || 1);
+  const blended = id => (results[id].cycle.A.total / avg('A') + results[id].cycle.B.total / avg('B')) / 2;
+  for (const id of targets) {
+    const w = results[id], base = NEW_SSR[id], b = results[base];
+    if (!b) { reasons.push(`${id}: 기준 ${base} 측정이 필요하다`); continue; }
+    for (const sit of ['A', 'B']) {
+      const ratio = w.cycle[sit].total / b.cycle[sit].total;
+      if (ratio < 0.95 || ratio > 1.06) reasons.push(`${sit}: ${id}/${base} 순환 추정 ${ratio.toFixed(3)}배 (허용 0.95~1.06)`);
+      if (ssr.includes(base)) {
+        const top = Math.max(...ssrRows.map(x => results[x].cycle[sit].total));
+        if (w.cycle[sit].total / top > 1.06) reasons.push(`${sit}: ${id}가 SSR 최고치의 ${(w.cycle[sit].total / top).toFixed(3)}배 (허용 ≤1.06)`);
+      }
+    }
+    if (!ssr.includes(base) && ssrRows.length) {
+      const top = Math.max(...ssrRows.map(blended));
+      if (blended(id) > top * 1.06) reasons.push(`${id}: 무리·단일 평균 SSR 대비 ${blended(id).toFixed(3)} > SSR 최고 ${top.toFixed(3)}×1.06`);
+    }
+    for (const sk of OWN_SKILLS[id] || []) {
+      const row = w.skills.find(s => s.id === sk);
+      if (!row) reasons.push(`${sk} 스킬이 ${id} 스킬 목록에 없다`);
+      else if (!row.cast) reasons.push(`${sk} 시전 실패`);
+      else if (!(row.A > 0 || row.B > 0)) reasons.push(`${sk} 피해가 0이다`);
+      else if (!(row.A > 0 && row.B > 0)) reasons.push(`${sk} 피해가 한쪽 상황에서 0이다 (A=${row.A.toFixed(0)}, B=${row.B.toFixed(0)})`);
+    }
   }
   return { pass: reasons.length === 0, reasons };
 }
