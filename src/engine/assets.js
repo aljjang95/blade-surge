@@ -17,6 +17,7 @@ import { tuneCharacterTextures } from './texture-sampling.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
+import { refitHeroBoots } from './hero-boots.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
@@ -440,7 +441,23 @@ function swapLibraryHeroBody(root, gltf, target) {
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
   root.userData.libraryBodyMotionIdentity = identity;
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  // 등급 부츠는 새 몸의 본·역바인드로 다시 묶는다(부츠가 없으면 무동작).
+  refitHeroBoots(root, createBootsMaterial);
   return true;
+}
+
+// ---------- 등급 부츠(hero-boots.js) ----------
+const bootsFiles = new Map();
+/** 부츠 GLB 를 한 번만 받아 나눠 쓴다(실패하면 캐시를 비워 다음 요청에서 다시 시도). */
+export function loadBootsModel(path) {
+  if (!bootsFiles.has(path)) bootsFiles.set(path, loadLibraryGltf(path).catch((error) => { bootsFiles.delete(path); throw error; }));
+  return bootsFiles.get(path);
+}
+/** 부츠 재질은 영웅 몸과 같은 마감을 거친 인스턴스별 복제본이다. */
+export function createBootsMaterial(material) {
+  const next = cloneCharacterMaterial(material, true);
+  normalizeLibrarySkinMaterial(next); tuneCharacterTextures(next);
+  return next;
 }
 
 export const materialsOf = (mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean);
