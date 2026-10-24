@@ -100,7 +100,7 @@ async function prepareState(s, o = {}) {
   const info = await s.page.evaluate((p) => {
     const e = window.app.eco;
     if (p.tutorial) e.s.tutorial = { completed: true };
-    for (const id of [p.hero, ...p.own]) if (!e.ownHero(id)) e.grantHero(id);
+    for (const id of [p.hero, ...p.own]) if (!e.ownHero(id)) (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
     e.s.selected = p.hero;
     const h = e.hero(p.hero);
     if (p.level) { h.level = p.level; h.exp = 0; }

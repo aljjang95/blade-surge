@@ -59,7 +59,7 @@ try {
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
   for (let i = 0; i < 3; i++) { const close = page.getByRole('button', { name: '닫기' }).first(); if (await close.isVisible().catch(() => false)) { await close.click(); await page.waitForTimeout(400); } }
-  await page.evaluate((heroId) => { const eco = window.app.eco; window.app.ui.confirm = async () => true; if (!eco.s.heroes[heroId]) eco.grantHero(heroId); eco.s.gems = 99999; }, HERO);
+  await page.evaluate((heroId) => { const eco = window.app.eco; window.app.ui.confirm = async () => true; if (!eco.s.heroes[heroId]) (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true); eco.s.gems = 99999; }, HERO);
   const clear = "for (const s of ['weapon','armor','ring','boots']) eco.unequip(heroId, s); eco.equipAvatar(heroId, null);";
   await step('base', clear);
   await step('armor-N', clear + "put('a_leather');");

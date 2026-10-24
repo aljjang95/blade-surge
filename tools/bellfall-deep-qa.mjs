@@ -344,7 +344,7 @@ async function applyFixture() {
   const fixture = await page.evaluate(({ heroId, id, items, unlockCode, minLevel, quality }) => {
     const a = window.app, e = a.eco;
     a.expeditionUI.result = null; a.toLobby(); a.testPause = true; a.ui.closeModal();
-    e.grantHero(heroId); e.s.selected = heroId;
+    (e.s.roster.policy = 1, e.s.roster.starterChosen = true); e.s.selected = heroId;
     const h = e.hero(heroId); h.level = 50; h.star = 3; h.skills = h.skills.map(() => 5); h.exp = 0; h.equip = {};
     for (const def of items) { const inst = e.addItem(def.rarity, def.slot); inst.id = def.id; inst.enh = 15; h.equip[def.slot] = inst.uid; }
     a.expedition.s.level = Math.max(a.expedition.s.level, minLevel, 10);

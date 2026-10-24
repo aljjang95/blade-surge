@@ -38,7 +38,7 @@ for (const h of HEROES) {
   for (const slot of [4, 5]) {
     const info = await page.evaluate(async ({ h, slot }) => {
       const a = window.app; a.testPause = false;
-      const e = a.eco; if (!e.ownHero(h)) e.grantHero(h);
+      const e = a.eco; if (!e.ownHero(h)) (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
       e.s.selected = h; e.hero(h).level = 25; e.s.energy = 9999; e.save();
       a.battle.stop?.();
       await a.startStage(e.nextStage());
