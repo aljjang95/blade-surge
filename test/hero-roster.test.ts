@@ -355,6 +355,17 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
     expect(eco.s.roster.policy).toBe(HERO_POLICY.LEGACY);
   });
 
+  test('상점 아바타는 미소유 영웅이면 구매 전에 막아 보석을 쓰지 않는다', async () => {
+    const eco = chosen('knight'); eco.s.gems = 99999; const toasts: string[] = [];
+    const meta: any = Object.create(Meta.prototype);
+    Object.assign(meta, { eco, app: { showcaseHero: () => {} }, ui: { toast: (m: string) => toasts.push(m), confirm: async () => true }, renderShop: () => {}, refreshTop: () => {} });
+    await meta.buyOrEquipAvatar('avatar_mage_astral');
+    expect(eco.s.gems).toBe(99999); expect(eco.s.avatars.owned).not.toContain('avatar_mage_astral'); expect(toasts.at(-1)).toContain('영웅을 먼저 해금');
+    eco.applyIapState({ entitlements: { heroes: ['mage'] } });
+    await meta.buyOrEquipAvatar('avatar_mage_astral');
+    expect(eco.s.avatars.owned).toContain('avatar_mage_astral'); expect(eco.s.avatars.equipped.mage).toBe('avatar_mage_astral');
+  });
+
   test('원정 직업(전직)은 미소유 영웅이면 열지도 고르지도 못한다', () => {
     const eco = chosen('knight'); const ex = new ExpeditionEconomy(eco);
     const job = JOBS.find((j: any) => j.heroId !== 'knight')!;
