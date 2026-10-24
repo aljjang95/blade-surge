@@ -32,6 +32,7 @@ import { heroGrade } from '../data/hero-grades.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { paceShort } from './pace-short.js';
 import { campaignTown } from '../data/campaign-towns.js';
+import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
@@ -296,16 +297,16 @@ export class Meta {
       const grade = own ? heroGrade(def, h) : def.rarity;
       const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${grade}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
       c.dataset.heroId = id;
-      c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
+      c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 잠금 · 해금 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">잠금</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
       bindHeroPortrait(c.querySelector('img'), this.app, id);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
     this.app.wardrobe?.show(id);
-    if (!own) { det.innerHTML = `<div class="hs-locked"><h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button></div>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
+    if (!own) { this.renderLockedHero(id, det); return; }
     renderOwnedHero(this, id, det);
     // 성장 진입: 스킬 트리(SP)와 초월(SR→SSR→SSSR). 이름 줄 아래에 작게 둔다.
     const growthLinks = document.createElement('div'); growthLinks.className = 'hs-growth-links';
@@ -314,6 +315,49 @@ export class Meta {
       b.setAttribute('aria-label', HEROES[id].name + ' ' + label + ' 열기'); b.onclick = open; growthLinks.append(b);
     }
     det.querySelector('.hs-id')?.append(growthLinks);
+  }
+  /** 현금 영웅 상품 입구가 열려 있는지(레인 B 가 app.heroPurchase 를 꽂는다). 없거나 false 면 가격 문구를 보이지 않는다. */
+  heroPurchaseOn() { try { return this.app?.heroPurchase?.available?.() === true; } catch { return false; } }
+  /** 미보유 영웅 상세: 무료 해금(진행 + 보석) 과 바로 해금(결제). 사유는 숨기지 않고 보여 준다. */
+  renderLockedHero(id, det) {
+    const def = HEROES[id], q = this.eco.heroUnlockQuote(id), payOn = this.heroPurchaseOn();
+    const price = (productId) => { const krw = IAP_BY_ID[productId]?.priceKRW; return Number.isFinite(krw) ? '₩' + fmt(krw) : ''; };
+    const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid)).length;
+    const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다 (보유 ${fmt(q.have)} / 필요 ${fmt(q.gems)})`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
+    const freeCond = q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' ? '' : `<p>조건: 캠페인 <b>${q.needLabel}</b> 클리어 · 보석 <b>${fmt(q.gems)}</b> (영웅 ${q.step + 2}번째 해금)</p>`;
+    det.innerHTML = `<div class="hs-locked hero-lock" data-hero-lock="${id}"><h2>${esc(def.name)}</h2><div class="sub">${esc(def.title)} · ${def.rarity} · 잠금</div>
+      <p class="hl-skills">${def.skills.slice(0, 4).map((s) => esc(s.name)).join(' · ')}</p>
+      <div class="hl-box" data-lock="free"><h3>무료 해금</h3>${freeCond}${why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}<button type="button" class="btn btn-gold" id="h-free" ${q.canFree ? '' : 'disabled'} aria-describedby="hl-why">${q.canFree ? `보석 ${fmt(q.gems)}개로 해금` : '아직 해금할 수 없음'}</button></div>
+      <div class="hl-box" data-lock="paid"><h3>바로 해금</h3><p>${payOn ? `조건 없이 지금 열립니다 · ${price(heroProductId(id))}` : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p><button type="button" class="btn btn-ghost" id="h-buy">${payOn ? `${esc(def.name)} 바로 해금 ${price(heroProductId(id))}` : '바로 해금 (준비 중)'}</button>${payOn && lockedLeft > 1 && IAP_BY_ID[HERO_ALL_PRODUCT_ID] ? `<button type="button" class="btn btn-ghost" id="h-buy-all">전원 해금 ${price(HERO_ALL_PRODUCT_ID)}</button>` : ''}</div></div>`;
+    det.querySelector('#h-free').onclick = () => this.unlockHeroFree(id);
+    det.querySelector('#h-buy').onclick = () => this.buyHero(heroProductId(id), id);
+    const all = det.querySelector('#h-buy-all'); if (all) all.onclick = () => this.buyHero(HERO_ALL_PRODUCT_ID, id);
+  }
+  /** 다음 열릴 관문 번호 → '3-5' 식 표기(마지막으로 깬 관문). */
+  stageLabel(unlocked) { const cleared = Math.max(1, unlocked - 1); return Math.ceil(cleared / STAGES_PER_CHAPTER) + '-' + (((cleared - 1) % STAGES_PER_CHAPTER) + 1); }
+  async unlockHeroFree(id) {
+    const q = this.eco.heroUnlockQuote(id), def = HEROES[id]; if (!q.canFree) { audio.play('ui_error'); return; }
+    const ok = await this.ui.confirm('영웅 해금', `${esc(def.name)}을(를) 보석 ${fmt(q.gems)}개로 해금할까요?<br>해금하면 되돌릴 수 없습니다.`, { ok: '해금' });
+    if (!ok) return;
+    const r = this.eco.unlockHeroFree(id);
+    if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 해금을 취소했습니다. 보석은 그대로입니다' : r?.reason === 'gems' ? '보석이 부족합니다' : '지금은 해금할 수 없습니다', 'red'); audio.play('ui_error'); this.renderHeroes(); return; }
+    this.trackFunnel('hero_unlock_free', { hero: id, step: q.step });
+    audio.play('jingle_win0', { vol: 0.5 }); this.ui.toast(`${def.name} 해금!`, 'gold');
+    this.heroSel = id; this.renderHeroes(); this.refreshTop();
+  }
+  /** 영웅 상품 구매. 성공 문구는 서버 검증을 거친 buy 결과 ok:true 뒤에만 쓴다. */
+  async buyHero(productId, heroId) {
+    if (!this.heroPurchaseOn()) { await this.ui.paySheet({ id: productId, name: HEROES[heroId]?.name }); return; }
+    if (this._heroBuying) return;
+    this._heroBuying = true; this.trackFunnel('paysheet_open', { sku: productId });
+    try {
+      const r = await this.app.heroPurchase.buy(productId);
+      if (r?.ok === true) {
+        if (this.eco.ownHero(heroId)) { audio.pick('coin', 2, { vol: 0.7 }); this.ui.toast(`${HEROES[heroId].name} 해금!`, 'gold'); }
+        else this.ui.toast('결제는 확인됐습니다. 영웅 반영까지 잠시 걸릴 수 있어요', 'gold');
+      } else { this.ui.toast(this.purchaseFailText(r), 'red'); audio.play('ui_error'); }
+    } catch { this.ui.toast('구매하지 못했습니다', 'red'); }
+    finally { this._heroBuying = false; if (this.tab === 'heroes') this.renderHeroes(); this.refreshTop(); }
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
@@ -419,9 +463,9 @@ export class Meta {
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
-      const sub = r.type === 'hero' ? (r.dup ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
+      const sub = r.type === 'hero' ? (r.dup || r.locked ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
       // 영웅 일러스트는 카드를 가득 채우고, 장비·재료 아이콘은 잘리지 않게 안쪽에 맞춘다
-      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
+      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && r.locked ? '<span class="new">잠금 영웅</span>' : r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
       const step = plan.cards[i];
       if (step.hintAt !== null) later(() => c.classList.add('hint'), step.hintAt);
@@ -434,6 +478,7 @@ export class Meta {
   /** 중복 영웅 결과: 받은 조각과 다음 초월까지의 진행(조각은 이미 지급된 뒤의 보유량). */
   dupShardText(r) {
     const p = shardProgress(HEROES[r.id], this.eco.hero(r.id));
+    if (r.locked) return '해금 전 · 조각 +' + r.shards + ' (해금하면 초월에 쓰여요)';
     return '조각 +' + r.shards + (p.need ? ' · 초월 ' + p.have + '/' + p.need : ' · 최고 등급');
   }
   revealDone() {
@@ -445,7 +490,7 @@ export class Meta {
     again.title = st.ok ? '' : `보석 ${fmt(st.need)}개가 더 필요합니다 (보유 ${fmt(this.eco.s.gems)})`;
     $('btn-reveal-close').focus({ preventScroll: true });
   }
-  revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
+  revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup && !r.locked)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
   showRates() {

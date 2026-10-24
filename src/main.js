@@ -28,6 +28,7 @@ import { HEROES } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
+import { runStarterSelect } from './ui/starter-select.js';
 import { createCompanion } from './companion/bootstrap.ts';
 import { ExpeditionEconomy } from './game/expedition-economy.js';
 import { buildExpeditionStage } from './game/expedition-combat.js';
@@ -69,6 +70,7 @@ import './ui/maple-window.css';
 import './ui/lobby-clarity.css';
 import './ui/campaign-town.css';
 import './ui/campaign-map.css';
+import './ui/starter-select.css';
 import { MapleUI } from './ui/maple-ui.js';
 import { buildIdentity, classifyStartupFailure, onMediaQueryChange, startupFailureDetails, storageAvailability } from './platform/startup-compat.js';
 const BOOT_TIPS = [
@@ -225,6 +227,8 @@ class App {
       await audio.init(); audio.resume(); await screenReady; res();
     }; start.addEventListener('click', go, { once: true }); });
     startup.stage = 'lobby';
+    // 새 저장(정책 2)은 튜토리얼·로비보다 먼저 시작 영웅을 하나 고른다. 기존 저장(정책 1)과 이미 고른 저장은 건너뛴다.
+    await runStarterSelect(this).catch((error) => console.error(error));
     clearInterval(this._tipTimer);
     const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
