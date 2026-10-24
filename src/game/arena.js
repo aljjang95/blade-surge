@@ -11,7 +11,8 @@ import { STARTER_ATMOSPHERE } from '../data/starter-village.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { activeCampaignSkin } from '../data/campaign-towns.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
-import { softCircleTex } from '../engine/assets.js';
+import { softCircleTex, loadLibraryGltf } from '../engine/assets.js';
+import { createStarterPropLoader } from './starter-village-props.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 import { libraryAssets } from '../engine/library-assets.js';
@@ -263,6 +264,21 @@ export class Arena {
     const rim = new THREE.DirectionalLight(A.rim, A.rimI); rim.position.set(2, 4, -4);
     this.scene.add(rim); this.lights.push(rim);
     this.floorData = null;
+    this.adoptStarterProps(this.lobbyHall);
+  }
+
+  /**
+   * 초보자 마을 Tripo 소품 GLB(remote 묶음 starter-village)를 받아 절차 모델과 바꾼다. 장면은 절차 모델로 먼저 열리고,
+   * 못 받은 소품은 절차 모델 그대로다(오프라인 등). 로비를 다시 지으면 늦게 온 결과는 무시한다.
+   */
+  adoptStarterProps(hall) {
+    const starter = hall.userData.starter; if (!starter) return;
+    this.starterPropLoader ||= createStarterPropLoader(loadLibraryGltf);
+    this.starterPropLoader.load().then((templates) => {
+      if (this.lobbyHall !== hall || !starter.applyProps(templates).length) return;
+      // 숨은 폴백 메시는 카메라 시선 가림 판정에서 뺀다.
+      this.renderer.lobbyOccluders = []; hall.traverseVisible((o) => { if (o.isMesh) this.renderer.lobbyOccluders.push(o); });
+    }).catch(() => {});
   }
 
   // ================= 무한의 성 — 한 층 전체 =================

@@ -52,6 +52,8 @@
     { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{rogue,ranger}-{t1s,t2u}-body-fit-v1.glb", "reason": "도적·궁수 S등급(1.5)·U등급 테마(2.5) 몸체(t4-body-revisions)" },
     { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow,rogue-vampire,ranger-blackcat}-body-fit-v1.glb", "reason": "여우·까마귀·흡혈 백작·검은 고양이 아바타 몸체(할로윈 t5 는 t5-avatar-body-revisions)" },
 
+    { "class": "remote", "group": "starter-village", "glob": "models/starter-village-v1/*.glb", "reason": "초보자 마을 Tripo 소품 8종(약 4.1MB). AAB 60MB 여유 0.49MB 라 core 금지. 로비 진입 때 바로 받고(EARLY), 못 받으면 절차 모델 폴백" },
+
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },
     { "class": "core", "glob": "models/**", "reason": "영웅 1단계·로비·성채·무기·환경 모델" },
     { "class": "core", "glob": "img/**", "reason": "UI·아이콘·초상·장비·재질" },

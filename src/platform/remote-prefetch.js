@@ -7,6 +7,10 @@ export const PREFETCH_STAGE = 8;
 /** 와이파이에서 한가할 때 받는 순서(앞쪽이 먼저). 다음 지역 묶음은 항상 맨 앞이다. */
 /** 1지역 보스·중간 보스 곡: 첫 보스(1-3) 전에 도착하도록 로비에 들어오면 네트워크 종류와 상관없이(데이터 절약 모드만 제외) 바로 받는다. */
 export const EARLY_GROUP = 'early-music';
+/** 초보자 마을 소품 GLB(약 4.1MB): 첫 로비 장면이 곧바로 쓰므로 보스 곡 묶음과 같이 로비 진입 때 받는다. */
+export const STARTER_VILLAGE_GROUP = 'starter-village';
+/** 로비에 들어오면 네트워크 종류와 상관없이(데이터 절약 모드만 제외) 바로 받는 묶음. */
+export const EARLY_GROUPS = Object.freeze([EARLY_GROUP, STARTER_VILLAGE_GROUP]);
 export const IDLE_GROUP_ORDER = Object.freeze(['heroes-t2', 'expeditions', 'avatars', 'arena', 'heroes-t3', 'cinematic', 'bgm-extra']);
 
 export function connectionKind(nav = globalThis.navigator) {
@@ -49,7 +53,7 @@ export function createPrefetcher(assets, { nav = globalThis.navigator, idle = (f
       if (!assets.enabled) return;
       const net = connectionKind(nav);
       if (net.saveData) return;
-      void run(EARLY_GROUP);
+      for (const group of EARLY_GROUPS) void run(group);
       const next = nextRegionGroup(progress);
       if (next) void run(next);
       if (!net.unmetered || running) return;
