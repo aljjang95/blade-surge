@@ -14,7 +14,7 @@
  },
  "tool": {
   "path": "tools/art/author-tier-body-motion.mjs",
-  "sha256": "6b4f76690bf9624c0053350aa1a011857147e09518541f17feb64508056a3fe7",
+  "sha256": "bea7c5e7bc6effd94fc14f8dd1e5addb4151d6b21cdd785f76dd9225b5214796",
   "methodFrom": "tools/art/author-ranger-higher-body-motion.mjs",
   "profile": {
    "gridHz": 480,

@@ -1,0 +1,52 @@
+{
+  "schema": "blade-surge.t5-avatar-body-revisions.v1",
+  "note": "할로윈 아바타(t5) 중 게임이 정규화본이 아니라 heroes-next 교정 몸을 쓰는 것. 1단계 클립이 교정본(heroes-next)인 영웅(도적·궁수)만 여기에 둔다. higher-body-revisions-v1.json(다섯 기록)·t4-body-revisions-v1.json(네 기록)은 그대로 둔다.",
+  "revisions": [
+    {
+      "id": "rogue-vampire-body-fit-v1",
+      "asset": "avatar_rogue_vampire",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/avatar_rogue_vampire.glb",
+        "sha256": "7e03df7f3351b8d2306f16b2be31add2dc4ae475d89ea2f1ff5e429e97c3f6df"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-vampire-body-fit-v1.glb",
+        "sha256": "e416cbf6b23ce4f15088cf1277e4c696c16d903059d398bd3acbafed2bd3255e"
+      },
+      "authoring": {
+        "kind": "body-rebind",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height --collapse='(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)' --no-aim='(Left|Right)Hand'",
+        "body": "art-src/t5-pc/avatar_rogue_vampire/rigged.glb → blender_clean_weights.py --decor-hue 340-25 --decor-sat 0.5 --decor-val 0.2 --smooth-cape 8 --head-rigid 1",
+        "base": {
+          "path": "/models/heroes-next/rogue-library-t1-v2.glb",
+          "sha256": "19f7e1492d947c6055cbbd8b51f3ee355c5c72f8ec4ab6296be32fb9d1e1c846"
+        }
+      }
+    },
+    {
+      "id": "ranger-blackcat-body-fit-v1",
+      "asset": "avatar_ranger_blackcat",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/avatar_ranger_blackcat.glb",
+        "sha256": "7b782e0348529eae49270a5bd50780b24d0bda1ae7d1af9a3ef87a620d566475"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-blackcat-body-fit-v1.glb",
+        "sha256": "2a503a04ac2dbb43ac3229024e8ab722ca36a6786a6383cafbc57b3058d9e6bc"
+      },
+      "authoring": {
+        "kind": "body-rebind",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height",
+        "body": "art-src/t5-pc/avatar_ranger_blackcat/rigged.glb → blender_clean_weights.py --decor-hue 60-160,355-40 --decor-sat 0.5 --decor-val 0.3 --braid-hue 60-160 --smooth-cape 8",
+        "base": {
+          "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+          "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+        }
+      }
+    }
+  ]
+}

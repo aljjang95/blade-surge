@@ -314,10 +314,11 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .avatar-shop-item.avatar-pending { filter: saturate(.55); }
 /* 아바타 초상(512² 배경 합성 webp)은 얼굴이 읽히게 크게, 사각 카드 그림으로 보인다. */
 .avatar-shop-item > img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; filter: none; box-shadow: 0 3px 10px rgba(0,0,0,.45); }
-.hero-avatar-row { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.04); }
-.hero-avatar-row > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hero-avatar-row { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.04); }
+/* 좁은 상세 패널(가로 667×375 등)에서 버튼 셋이 설명 폭을 0으로 밀지 않게 설명은 최소 120px, 버튼은 다음 줄로 */
+.hero-avatar-row > div { flex: 1 1 120px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .hero-avatar-row small { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
-.hero-avatar-buttons { flex: 0 0 auto; display: flex; gap: 6px; }
+.hero-avatar-buttons { flex: 0 1 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .hero-avatar-row .btn { flex: 0 0 auto; min-width: 72px; }
 .hero-avatar-row .btn[aria-pressed="true"], .hero-avatar-row .btn[aria-checked="true"] { border-color: var(--gold, #ffd060); color: var(--gold, #ffd060); }
 
@@ -983,6 +984,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .avatar-shop-item .si-desc { font-size: 9px; }
   .avatar-shop-item .btn { font-size: 11px; }
   .hero-avatar-row { align-items: stretch; flex-direction: column; }
+  .hero-avatar-row > div { flex: 0 0 auto; }
   .hero-avatar-row .btn, .hero-avatar-buttons { width: 100%; }
   .hero-avatar-buttons .btn { flex: 1 1 0; }
 }
