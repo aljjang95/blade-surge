@@ -70,9 +70,9 @@ test('발목 높이와 본 rest 위치는 몸 지오메트리 공간 기준이�
 });
 
 test('저작 계약: 밑창 y·윗단 범위 밖은 거절', () => {
-  expect(bootsGeometryContract(bootsScene().scene.children[0].geometry)).toBe(true);
-  expect(bootsGeometryContract(bootsScene(0.2).scene.children[0].geometry)).toBe(false);   // 밑창이 발목 위
-  expect(bootsGeometryContract(bootsScene(-1).scene.children[0].geometry)).toBe(false);    // 너무 아래(미터 아님)
+  expect(bootsGeometryContract((bootsScene().scene.children[0] as THREE.Mesh).geometry)).toBe(true);
+  expect(bootsGeometryContract((bootsScene(0.2).scene.children[0] as THREE.Mesh).geometry)).toBe(false);   // 밑창이 발목 위
+  expect(bootsGeometryContract((bootsScene(-1).scene.children[0] as THREE.Mesh).geometry)).toBe(false);    // 너무 아래(미터 아님)
 });
 
 test('왼발은 x 반전 + 감김 뒤집기 + 법선 반전, 원본은 그대로', () => {
