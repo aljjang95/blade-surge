@@ -114,6 +114,21 @@ function installHelpers() {
     cam.position.copy(saved.p); cam.quaternion.copy(saved.q); cam.updateMatrixWorld(true);
     return out.toDataURL('image/png');
   };
+  // 바닥 접지 측면: 골반 수평 위치 기준 오른쪽 2.4m·높이 0.45m 에서 수평으로 본다(높이·거리·방향 고정, 수평 위치만 따라감). 바닥선이 화면 가운데 아래에 온다.
+  q.side = () => {
+    const root = rootOf(); if (!root) return null;
+    root.updateWorldMatrix(true, true);
+    const hips = bone(root, 'Hips'); if (!hips) return null;
+    const cam = app.renderer.camera, canvas = app.renderer.r.domElement, saved = { p: cam.position.clone(), q: cam.quaternion.clone() };
+    const c = hips.getWorldPosition(new T.Vector3()); c.y = 0.45;
+    cam.position.set(c.x + 2.4, 0.45, c.z); cam.lookAt(c.x, 0.45, c.z); cam.updateMatrixWorld(true);
+    app.renderer.render();
+    const out = document.createElement('canvas'); out.width = 768; out.height = 512;
+    const side = Math.min(canvas.width, canvas.height * 1.5);
+    out.getContext('2d').drawImage(canvas, (canvas.width - side) / 2, (canvas.height - side / 1.5) / 2, side, side / 1.5, 0, 0, 768, 512);
+    cam.position.copy(saved.p); cam.quaternion.copy(saved.q); cam.updateMatrixWorld(true);
+    return out.toDataURL('image/png');
+  };
   window.__gpQA = q;
 }
 
@@ -207,12 +222,12 @@ try {
           let frames = 40, mid = 20;
           if (pose === 'run') { key('keydown', 'KeyD'); frames = 50; mid = 36; }
           if (pose === 'attack') { p.cds?.fill?.(0); p.startCombo(0); const dur = p.def.combo[0].dur || .6; frames = Math.max(8, Math.round(dur * 60)); mid = Math.round(frames * .5); }
-          if (pose === 'dodge') { p.dodge(null); frames = DODGE_FRAMES ? 28 : 19; mid = 9; }
-          // --dodge-frames: 구르기 시작·중간·끝(2·9·17 스텝, 1/60초)과 대기로 섞이는 0.15초(22·26 스텝, 클립 0.59·0.69초 — 기사 몸이 바닥을 파던 구간)를
-          // 같은 고정 카메라로 더 남긴다.
-          const extra = pose === 'dodge' && DODGE_FRAMES ? { 2: 's', 9: 'm', 17: 'e', 22: 'f22', 26: 'f26' } : {}, extras = {};
+          if (pose === 'dodge') { p.dodge(null); frames = DODGE_FRAMES ? 30 : 19; mid = 9; }
+          // --dodge-frames: 구르기 시작·중간·끝(2·9·17 스텝, 1/60초)과 대기로 섞이는 0.15초(22·24·26·28 스텝, 클립 0.59·0.69초 — 기사 몸이 바닥을 파던 구간)를
+          // 같은 고정 카메라로 더 남긴다. 각 프레임은 바닥 접지 측면(q.side, *_side.png)도 함께 찍는다.
+          const extra = pose === 'dodge' && DODGE_FRAMES ? { 2: 's', 9: 'm', 17: 'e', 22: 'f22', 24: 'f24', 26: 'f26', 28: 'f28' } : {}, extras = {};
           let image = null;
-          for (let f = 0; f < frames; f++) { step(); if (f === mid) image = q.closeup(); if (extra[f]) extras[extra[f]] = q.closeup(); }
+          for (let f = 0; f < frames; f++) { step(); if (f === mid) image = q.closeup(); if (extra[f]) { extras[extra[f]] = q.closeup(); extras[extra[f] + '_side'] = q.side(); } }
           if (pose === 'run') key('keyup', 'KeyD');
           return { image, extras, state: p.state };
         }, [pose, DODGE_FRAMES]);
