@@ -78,3 +78,6 @@
   (violet 0xb070ff family). Character fully inside the central 40% horizontal band, empty decorative space left and right.
   No text, no letters, no logo, no watermark, no realistic proportions, no photoreal style, plain clean edges.
   ```
+- **운영 반영(2026-10-25 06:39 KST)**: PR #295 squash `f6b84e4`. 운영 `version.json` = `ee0817c`(초보자 마을 #292 배포, `f6b84e4` 포함, dirty=false). 이 세션의 PC 배포(`C:\Work\tasks\blade-deploy-295.ps1`)는 다른 세션이 배포 잠금을 잡고 있어 exit 1로 멈췄고, 그 세션의 배포가 같은 변경을 실었다.
+- **운영 촬영**(Playwright, 390x844·1280x720): 지금 시계에서는 광전사 픽업이고 확률표·페이지 어디에도 '검은 고양이'가 없다. 11-10 가짜 시계에서는 픽업이 '검은 고양이 사냥꾼'이고 띠 '신규 SSR · 그믐밤 픽업', 확률표는 픽업 1.00%·다른 SSR 셋이다. pageerror 0.
+- **촬영으로 찾은 결함**: 정사각 초상 대체 배너(검은 고양이·늑대인간)가 `object-fit: cover`로 확대됐다. 그래서 390에서는 머리만, 1280에서는 흐린 얼굴 클로즈업으로 보였다. 정사각 상자 + 흐린 같은 그림으로 좌우를 채우도록 고쳤다(`data-fit="square"`, 후속 PR).
