@@ -39,6 +39,16 @@ export function boardHtml(/** @type {any} */ board, /** @type {number|null} */ s
   return '<div class="rs-board" data-total="' + board.total + '"><span class="rs-ring" aria-hidden="true"></span><span class="rs-center rar-' + it.rarity + '">' + itemIconHtml(it, '', { heroId }) + (caption ? '<b>' + esc(it.name) + '</b>' : '') + '</span>' +
     board.sockets.map((/** @type {any} */ s) => socketHtml(s, board.total, selected)).join('') + '</div>';
 }
+/**
+ * 장비 상세용 큰 미리보기 판: 위에 3D 장비 무대(실패 시 큰 아이콘 대체), 아래에 소켓 줄.
+ * 소켓은 미리보기를 가리지 않도록 무대 바깥 줄에 놓는다. 무대 DOM 은 다시 그려도 유지된다(bindRunePane).
+ */
+export function stageBoardHtml(/** @type {any} */ board, /** @type {number|null} */ selected, /** @type {string} */ heroId) {
+  const it = ITEM_BY_ID[board.itemId], color = RARITY_COLOR[it.rarity] || '#d6aa48';
+  return '<div class="rs-board rs-stage-board" data-total="' + board.total + '"><div class="rs-stage rar-' + it.rarity + '" data-item="' + board.itemId + '" style="--rar:' + color + '">' +
+    '<span class="rs-stage-floor" aria-hidden="true"></span><span class="rs-stage-fallback">' + itemIconHtml(it, '', { heroId }) + '</span><div class="rs-stage-gl" aria-hidden="false"></div><b class="rs-stage-name">' + esc(it.name) + '</b></div>' +
+    '<div class="rs-sockrow">' + board.sockets.map((/** @type {any} */ s) => socketHtml(s, board.total, selected)).join('') + '</div></div>';
+}
 /** 가문 4칸. */
 export const familiesHtml = (/** @type {any[]} */ families, /** @type {Record<string, number>|null} */ after = null) => '<div class="rs-families">' + families.map((f) => {
   const to = after ? after[f.id] : f.count, changed = after && to !== f.count;
@@ -56,10 +66,38 @@ export function runePaneHtml(meta, uid, heroId, selected) {
   const board = socketBoard(meta.eco, heroId, uid); if (!board) return '';
   const sel = selected ?? defaultSocket(board), on = board.synergies.filter((/** @type {any} */ s) => s.active);
   const cur = board.sockets[sel];
-  return '<section class="rs-pane" aria-label="룬 소켓">' + boardHtml(board, sel, heroId) + familiesHtml(board.families) +
+  return '<section class="rs-pane" aria-label="룬 소켓">' + stageBoardHtml(board, sel, heroId) + familiesHtml(board.families) +
     '<div class="rs-syns">' + (on.length ? on.map((/** @type {any} */ s) => synergyChip(s, { suffix: ' 발동' })).join('') : '<span class="rs-syn-none">공명 없음 · 두 가문 각 2개</span>') + '<button type="button" class="rs-overview-link" id="rs-overview" aria-label="룬 각인판 · 전체 보기">각인판 ›</button></div>' +
     '<div class="rs-actions"><button type="button" class="btn rs-btn-cream" id="rs-swap"' + (cur?.rune ? '' : ' disabled') + '>' + (cur?.state === 'locked' && cur.rune ? '룬 빼기' : '룬 교체') + '</button>' +
     '<button type="button" class="btn btn-gold" id="rs-insert"' + (board.sockets.some((/** @type {any} */ s) => s.state === 'empty') ? '' : ' disabled') + '>룬 장착</button></div></section>';
+}
+
+
+// ------------------------------------------------------------------ 3D 장비 무대(룬 소켓 탭)
+/** @type {{ el: HTMLElement|null, handle: { dispose: () => void }|null, seq: number }} */
+const stage = { el: null, handle: null, seq: 0 };
+/** 무대의 렌더러·지오메트리·렌더 루프를 정리한다(탭 전환·시트 닫기·다른 장비). */
+export function disposeRuneStage() {
+  stage.seq++; stage.handle?.dispose(); stage.handle = null;
+  if (stage.el) delete stage.el.dataset.stageState;
+  stage.el = null;
+}
+async function mountStage(/** @type {HTMLElement|null} */ el, /** @type {string} */ heroId) {
+  if (!el) return;
+  if (stage.el === el) return;   // 같은 무대(다시 그린 뒤 옮겨 온 것)
+  disposeRuneStage();
+  stage.el = el; el.dataset.stageState = 'pending';
+  const token = ++stage.seq, it = ITEM_BY_ID[el.dataset.item || ''], gl = /** @type {HTMLElement} */ (el.querySelector('.rs-stage-gl'));
+  const fail = () => { if (token !== stage.seq) return; gl.textContent = ''; el.dataset.stageState = 'fallback'; };
+  try {
+    const { mountItemPreview } = await import('./item-preview-3d.js');
+    if (token !== stage.seq) return;
+    const rim = Number.parseInt((RARITY_COLOR[it.rarity] || '#ffffff').replace('#', ''), 16) || 0xffffff;
+    const handle = await mountItemPreview(gl, it, { heroId, rimColor: rim, reducedMotion: !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
+    if (token !== stage.seq) { handle.dispose(); return; }
+    stage.handle = handle;
+    if (gl.querySelector('canvas[data-preview-state="ready"]')) el.dataset.stageState = 'ready'; else fail();
+  } catch (error) { fail(); console.warn('rune stage', error); }
 }
 
 /**
@@ -71,7 +109,13 @@ export function bindRunePane(root, ctx) {
   const pane = root.querySelector('.rs-pane'); if (!pane) return;
   warmRuneSounds();
   const { meta, uid, heroId, state } = ctx, { ui } = meta;
-  const redraw = () => { const host = /** @type {HTMLElement} */ (pane.parentElement); host.innerHTML = runePaneHtml(meta, uid, heroId, state.socket); bindRunePane(root, ctx); };
+  const redraw = () => {
+    const host = /** @type {HTMLElement} */ (pane.parentElement), oldStage = host.querySelector('.rs-stage');
+    host.innerHTML = runePaneHtml(meta, uid, heroId, state.socket);
+    if (oldStage) host.querySelector('.rs-stage')?.replaceWith(oldStage);   // WebGL 무대는 다시 만들지 않고 그대로 옮긴다
+    bindRunePane(root, ctx);
+  };
+  mountStage(/** @type {HTMLElement|null} */ (pane.querySelector('.rs-stage')), heroId);
   pane.querySelectorAll('.rs-socket').forEach((el) => /** @type {HTMLElement} */ (el).onclick = () => {
     const board = socketBoard(meta.eco, heroId, uid), s = board?.sockets[+(/** @type {HTMLElement} */ (el).dataset.socket || 0)];
     if (!s) return;

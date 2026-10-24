@@ -37,11 +37,11 @@ const KEY_STEP = Math.PI / 8;
  * @param {any} item
  * @param {{ heroId?: string|null, reducedMotion?: boolean }} options
  */
-export async function mountItemPreview(host, item, { heroId = null, reducedMotion = false } = {}) {
+export async function mountItemPreview(host, item, { heroId = null, reducedMotion = false, rimColor = 0xffffff } = {}) {
   const form = resolveItemForm(item, heroId);
   const direction = itemViewDirection(item.slot);
   const homeYaw = -Math.atan2(direction.x, direction.z), tilt = Math.asin(direction.y);
-  let disposed = false, frame = 0, model = null, last = 0, yaw = homeYaw, dragging = null, autoSpin = !reducedMotion;
+  let disposed = false, paused = false, frame = 0, model = null, last = 0, yaw = homeYaw, dragging = null, autoSpin = !reducedMotion;
   const width = Math.max(160, Math.round(host.clientWidth || 280)), height = Math.max(160, Math.round(host.clientHeight || 220));
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(2, globalThis.devicePixelRatio || 1)); renderer.setSize(width, height, false);
@@ -56,12 +56,12 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
   const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment();
   const env = pmrem.fromScene(room); scene.environment = env.texture; room.dispose(); pmrem.dispose();
   scene.add(new THREE.HemisphereLight(0xe9f2ff, 0x324151, 1.25));
-  for (const [x, y, z, power] of [[-3, 5, 6, 2.8], [4, 2, -2, 4.5]]) { const light = new THREE.DirectionalLight(0xffffff, power); light.position.set(x, y, z); scene.add(light); }
+  for (const [x, y, z, power, color] of [[-3, 5, 6, 2.8, 0xffffff], [4, 2, -2, 4.5, rimColor]]) { const light = new THREE.DirectionalLight(color, power); light.position.set(x, y, z); scene.add(light); }
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 100);
   const pivot = new THREE.Group(); scene.add(pivot);
   const render = () => { if (!disposed) { pivot.rotation.y = yaw; renderer.render(scene, camera); } };
   const tick = (time) => {
-    frame = 0; if (disposed) return;
+    frame = 0; if (disposed || paused) { last = 0; return; }
     const dt = last ? Math.min(.05, (time - last) / 1000) : 0; last = time;
     if (!dragging && autoSpin) yaw += dt * .6;
     render(); if (autoSpin || dragging) frame = requestAnimationFrame(tick);
@@ -80,6 +80,15 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
   canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp); canvas.addEventListener('lostpointercapture', onUp);
   canvas.addEventListener('keydown', onKey);
   canvas.style.touchAction = 'none';
+  // 화면 밖이거나 탭이 숨겨지면 렌더 루프를 멈추고, 다시 보이면 이어서 돈다.
+  let inView = true;
+  const syncPause = () => {
+    paused = !inView || document.hidden;
+    if (!paused && !disposed && model && !frame && (autoSpin || dragging)) frame = requestAnimationFrame(tick);
+  };
+  const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => { inView = entries[entries.length - 1].isIntersecting; syncPause(); }) : null;
+  observer?.observe(host);
+  document.addEventListener('visibilitychange', syncPause);
   const lost = (event) => { event.preventDefault(); dispose(); host.textContent = '3D 미리보기를 표시할 수 없습니다.'; };
   canvas.addEventListener('webglcontextlost', lost);
   function dispose() {
@@ -88,6 +97,7 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
     if (frame) cancelAnimationFrame(frame); frame = 0;
     canvas.removeEventListener('webglcontextlost', lost);
     canvas.removeEventListener('keydown', onKey);
+    observer?.disconnect(); document.removeEventListener('visibilitychange', syncPause);
     model?.userData.dispose?.(); model = null;
     env.dispose(); renderer.dispose(); renderer.forceContextLoss?.(); canvas.remove();
   }
