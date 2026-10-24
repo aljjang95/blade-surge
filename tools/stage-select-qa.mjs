@@ -165,6 +165,11 @@ try {
       s = await state();
       check('시드(1-3 클리어): 추천·기본 선택 1-4, 첫 안내 없음', s.open && s.tab === 'campaign' && s.selected === '1-4' && !s.enterDisabled && !s.intro, s);
       await shot('07-seed-1-4');
+      // --regions: 6지역 지도·노드 배치 캡처(지역 넘기기 버튼 실제 입력). 잠긴 지역도 볼 수 있다.
+      if (args.includes('--regions')) {
+        for (let ch = 2; ch <= 6; ch++) { await act('#stage-select .ss-region-step[data-dir="next"]'); await settle(900); await shot(`08-region-${ch}`); }
+        const nodesOk = await layout(); check('6지역 넘겨 보기 후 노드 화면 안', nodesOk.nodesInView, nodesOk);
+      }
       await act('#stage-select-close'); await settle(200);
       check('런타임 오류 0', row.errors.length === 0, row.errors.slice(0, 5));
     } catch (error) {

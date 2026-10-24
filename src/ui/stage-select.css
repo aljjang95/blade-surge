@@ -72,24 +72,17 @@ dialog.ss-dialog[open]::after { right: -7px; }
 .ss-dialog[data-tab="campaign"] .ss-list { overflow: hidden; }
 .ss-list-note { flex: none; margin: 0; padding: 4px 12px 6px; color: var(--ss-muted); font-size: var(--type-sm, 14px); line-height: 1.3; font-variant-numeric: tabular-nums; }
 
-/* 지도: 지역 그림(4:3)을 cover 로 깔고, 노드는 같은 cover 규칙으로 그림 좌표(--x, --y)를 화면 위치로 바꾼다.
-   cover 배율 = max(가로/1200, 세로/900) → 그림 폭 = max(100cqw, 100cqh × 4/3), 그림 높이 = max(100cqh, 100cqw × 3/4). */
+/* 지도: 지역 그림(4:3)을 덮는 크기로 깔고, 노드·점선 길은 layoutStageMap 이 px 로 배치한다(--map-size, --map-pos, 각 노드 left/top). */
 .ss-path {
   --ss-node: 52px;
-  container-type: size;
   position: absolute; inset: 0; list-style: none; margin: 0; padding: 0;
-  background: var(--map-art, none) center / cover no-repeat,
-    radial-gradient(120% 90% at 25% 20%, rgba(92, 150, 96, .55), transparent 60%), radial-gradient(90% 80% at 80% 85%, rgba(44, 104, 112, .5), transparent 62%), linear-gradient(180deg, #24443a, #14292c);
+  background-image: var(--map-art, none), radial-gradient(120% 90% at 25% 20%, rgba(92, 150, 96, .55), transparent 60%), radial-gradient(90% 80% at 80% 85%, rgba(44, 104, 112, .5), transparent 62%), linear-gradient(180deg, #24443a, #14292c);
+  background-size: var(--map-size, cover), auto, auto, auto; background-position: var(--map-pos, center), center, center, center; background-repeat: no-repeat;
 }
 .ss-path::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 40px rgba(0, 0, 0, .55); }
 .ss-road { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.ss-road polyline { fill: none; stroke: rgba(233, 214, 160, .62); stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 34; }
-.ss-path[data-art="true"] .ss-road { display: none; }
-.ss-step {
-  position: absolute; z-index: 1; width: 0; height: 0;
-  left: calc(50% + (var(--x) - .5) * max(100cqw, 133.333cqh));
-  top: calc(50% + (var(--y) - .5) * max(100cqh, 75cqw));
-}
+.ss-road polyline { fill: none; stroke: rgba(255, 222, 140, .72); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; filter: drop-shadow(0 0 2px rgba(255, 190, 80, .8)); }
+.ss-step { position: absolute; z-index: 1; width: 0; height: 0; left: 50%; top: 50%; }
 .oath-visual .ss-dialog .ss-node, .ss-dialog .ss-node {
   position: absolute; left: 0; top: 0; transform: translate(-50%, calc(var(--ss-node) / -2)); display: flex; flex-direction: column; align-items: center;
   width: max-content; min-width: 48px; min-height: 48px; margin: 0; padding: 0; border: 0; background: none; color: var(--ss-text);

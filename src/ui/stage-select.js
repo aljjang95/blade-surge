@@ -4,7 +4,7 @@
 import { stageDef } from '../data/stages.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
-import { STAGE_MAP_WIDTH, STAGE_MAP_HEIGHT, DEFAULT_STAGE_NODES, stageMapFor } from '../data/stage-select-maps.js';
+import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap } from '../data/stage-select-maps.js';
 import { cardThumb } from './citadel-command.js';
 import {
   stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory,
@@ -147,6 +147,8 @@ export class StageSelectUI {
     this.dialog.addEventListener('pointerdown', (event) => { if (event.target === this.dialog) this.backdropPress = true; });
     this.dialog.addEventListener('click', (event) => { if (event.target === this.dialog && this.backdropPress) this.close(); this.backdropPress = false; });
     this.onChange = () => { if (this.dialog.open) this.render(); };
+    this.resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (this.dialog.open) this.layoutMap(); }) : null;
+    this.resizeObserver?.observe(this.list);
     app.eco.onChange(this.onChange);
   }
 
@@ -181,6 +183,7 @@ export class StageSelectUI {
     this.app.citadel?.clearInput?.();
     this.dialog.showModal();
     this.opened = true;
+    this.layoutMap();
     this.focusSelected();
     return true;
   }
@@ -252,9 +255,8 @@ export class StageSelectUI {
     const model = this.readModel();
     // 다른 지역을 넘겨 보는 동안 선택은 유지한다. 그 지역에 다음 관문이 있으면 그것을 고른다.
     const stage = model.campaign.stages.find((entry) => entry.recommended) || model.campaign.stages.find((entry) => entry.unlocked && !entry.cleared) || [...model.campaign.stages].reverse().find((entry) => entry.unlocked);
-    if (stage) return this.select({ tab: 'campaign', ch: stage.ch, st: stage.st });
-    this.model = { ...model, tab: 'campaign', selection: this.selection?.tab === 'campaign' ? this.selection : null };
-    this.paint();
+    // 잠긴 지역은 첫 관문을 골라 해금 조건을 상세 줄에 보여 준다(입장 버튼은 잠김).
+    return this.select({ tab: 'campaign', ch, st: stage ? stage.st : 1 });
   }
 
   render() {
@@ -300,19 +302,12 @@ export class StageSelectUI {
     if (map.art) path.style.setProperty('--map-art', `url("${map.art}")`);
     const road = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     road.setAttribute('class', 'ss-road');
-    road.setAttribute('viewBox', `0 0 ${STAGE_MAP_WIDTH} ${STAGE_MAP_HEIGHT}`);
-    road.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     road.setAttribute('aria-hidden', 'true');
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    line.setAttribute('points', map.nodes.map(([x, y]) => `${Math.round(x * STAGE_MAP_WIDTH)},${Math.round(y * STAGE_MAP_HEIGHT)}`).join(' '));
-    road.append(line);
+    road.append(document.createElementNS('http://www.w3.org/2000/svg', 'polyline'));
     path.append(road);
     for (const stage of campaign.stages) {
       const item = node('li', 'ss-step');
       item.dataset.rank = stage.regionBoss ? 'region' : stage.midboss ? 'mid' : stage.boss ? 'warden' : 'captain';
-      const [x, y] = map.nodes[stage.st - 1] || DEFAULT_STAGE_NODES[stage.st - 1];
-      item.style.setProperty('--x', String(x));
-      item.style.setProperty('--y', String(y));
       const pick = button('', () => this.select({ tab: 'campaign', ch: stage.ch, st: stage.st }), 'ss-node');
       pick.dataset.stage = stage.code;
       pick.dataset.locked = String(!stage.unlocked);
@@ -334,9 +329,28 @@ export class StageSelectUI {
       item.append(pick);
       path.append(item);
     }
+    this.mapNodes = map.nodes.length === 10 ? map.nodes : DEFAULT_STAGE_NODES;
     this.list.replaceChildren(path);
-    this.listNote.textContent = chapter.unlocked ? '' : chapter.lockReason;
-    this.listNote.hidden = chapter.unlocked;
+    this.listNote.textContent = '';
+    this.listNote.hidden = true;
+    this.layoutMap();
+  }
+
+  /** 지도 크기가 정해진 뒤(열 때·창 크기 변경) 그림과 노드를 px 로 배치한다. */
+  layoutMap() {
+    const path = this.list.querySelector('.ss-path');
+    if (!path || !this.mapNodes) return;
+    const width = path.clientWidth, height = path.clientHeight;
+    if (!width || !height) return;
+    const layout = layoutStageMap(this.mapNodes, width, height);
+    path.style.setProperty('--map-size', `${layout.size[0].toFixed(1)}px ${layout.size[1].toFixed(1)}px`);
+    path.style.setProperty('--map-pos', `${layout.offset[0].toFixed(1)}px ${layout.offset[1].toFixed(1)}px`);
+    path.dataset.compressed = String(layout.compressed);
+    const steps = path.querySelectorAll('.ss-step');
+    layout.points.forEach(([x, y], index) => { const step = steps[index]; if (step) { step.style.left = `${x.toFixed(1)}px`; step.style.top = `${y.toFixed(1)}px`; } });
+    const road = path.querySelector('.ss-road');
+    road?.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    road?.firstElementChild?.setAttribute('points', layout.points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
   }
 
   paintDungeons() {
@@ -449,6 +463,7 @@ export class StageSelectUI {
 
   destroy() {
     this.close();
+    this.resizeObserver?.disconnect();
     const listeners = this.app.eco.listeners;
     const index = listeners.indexOf(this.onChange);
     if (index >= 0) listeners.splice(index, 1);
