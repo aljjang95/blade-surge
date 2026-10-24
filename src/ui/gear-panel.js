@@ -14,7 +14,7 @@ import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
-import { runePaneHtml, bindRunePane, openRuneOverview } from './rune-socket.js';
+import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -288,7 +288,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
   let preview = null, previewOpen = false, previewSeq = 0;
   const disposePreview = () => { previewSeq++; preview?.dispose(); preview = null; };
   const render = () => {
-    disposePreview();
+    disposePreview(); disposeRuneStage();
     const inst = eco.s.inventory.find((x) => x.uid === uid);
     if (!inst) {
       ui.modal('<h2 style="color:var(--red)">장비 파괴</h2><p>강화에 실패해 장비가 파괴되었습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="m-ok">확인</button></div>', { onOpen: (b) => b.querySelector('#m-ok').onclick = () => { ui.closeModal(); meta.renderHeroes(); } });
@@ -310,7 +310,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
     const visual = itemVisual(it, { heroId });
     ui.modal('<div class="item-sheet rar-line-' + it.rarity + '" data-slot="' + it.slot + '">' +
       '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it, '', heroId) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (set ? ' · ' + esc(set.name) : '') + (it.slot === 'weapon' ? ' · <span class="is-form" data-variant="' + visual.variant + '">' + esc(visual.formLabel) + '</span>' : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm is-3d-toggle" id="i-3d" aria-controls="is-preview" aria-pressed="' + previewOpen + '">3D로 보기</button><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
-      '<section class="is-preview" id="is-preview" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
+      '<section class="is-preview" id="is-preview" style="--rar:' + RARITY_COLOR[it.rarity] + '" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
       '<div class="is-body"><div class="is-compare" aria-label="현재 장비와 비교">' +
       '<div class="is-power ' + trendClass(powerDelta) + '"><span>' + HEROES[heroId].name + ' · ' + label + ' 전투력</span><b>' + fmt(p.before.power) + ' → ' + fmt(p.after.power) + '</b><em>' + (powerDelta === 0 ? '변화 없음' : signed(powerDelta)) + '</em></div>' +
       (equipped ? '<div class="is-cards single">' + itemCardHtml(inst, '현재 장비', true, heroId) + '</div>' : '<div class="is-cards">' + itemCardHtml(p.current, '현재 ' + SLOT_NAME[it.slot], p.current && p.current.uid === uid, heroId) + '<span class="is-vs" aria-hidden="true">→</span>' + itemCardHtml(inst, '선택한 장비', false, heroId) + '</div>') +
@@ -321,7 +321,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
       setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
         (side === 'rune' ? '<div class="is-side-body">' + runePaneHtml(meta, uid, heroId, runeState.socket) + '</div>' : enhanceHtml(meta, inst)) + '</div>' : enhanceHtml(meta, inst)) + '</div>' +
       '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button><button type="button" class="btn btn-gold" id="i-eq">' + primary + '</button></footer></div>',
-    { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); },
+    { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); disposeRuneStage(); },
       onOpen: (b) => {
       // 강화 연출 뒤 다시 그리기는 이 시트가 아직 열린 현재 모달일 때만 한다(판매 확인 등으로 바뀌면 취소).
       const seq = ui.modalSeq;
@@ -342,15 +342,23 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         }
       };
       previewToggle.onclick = () => {
+        if (side === 'rune') return;   // 룬 탭은 자기 무대를 쓴다: 시트당 렌더러 1개
         previewOpen = !previewOpen; previewToggle.setAttribute('aria-pressed', String(previewOpen)); previewSection.hidden = !previewOpen;
         if (previewOpen) openPreview(); else disposePreview();
       };
+      // 룬 소켓 탭은 자기 큰 3D 무대를 쓰므로 위쪽 선택형 미리보기(렌더러 하나 더)는 닫아 둔다.
+      if (side === 'rune') { previewOpen = false; previewSection.hidden = true; previewToggle.hidden = true; previewToggle.setAttribute('aria-pressed', 'false'); }
       if (previewOpen) openPreview();
       const later = (ms) => { clearTimeout(rerenderTimer); rerenderTimer = setTimeout(() => { rerenderTimer = 0; if (ui.modalSeq === seq && ui.el.modal.classList.contains('show')) render(); }, ms); };
       const close = () => { ui.closeModal(); if (meta._sheetDirty) { meta._sheetDirty = false; meta.renderHeroes(); } meta.focusInventory(uid, it.slot); };
       b.querySelector('#i-close').onclick = close;
       b.querySelectorAll('[data-side-tab]').forEach((el) => el.onclick = () => { if (side === el.dataset.sideTab) return; side = el.dataset.sideTab; audio.play('ui_click', { vol: 0.4 }); render(); });
       bindRunePane(b, { meta, uid, heroId, state: runeState, back: () => showItemSheet(meta, uid, heroId, { focus: 'rune', socket: runeState.socket }) });
+      // 좁은 세로 화면: 룬 소켓 탭을 열면 판(미리보기 + 소켓)이 보이도록 본문을 그 위치로 올린다.
+      if (side === 'rune' && globalThis.matchMedia?.('(max-width: 600px)').matches) {
+        const body = b.querySelector('.is-body'), panel = b.querySelector('.is-side');
+        if (body && panel) body.scrollTop += panel.getBoundingClientRect().top - body.getBoundingClientRect().top;
+      }
       b.querySelector('#i-eq').onclick = () => {
         if (equipped) eco.unequip(heroId, it.slot); else eco.equip(heroId, uid);
         audio.play('ui_confirm', { vol: 0.5 }); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();

@@ -135,14 +135,21 @@
 /* 선택형 3D 미리보기: 목록 썸네일과 같은 원본 · 같은 조명. 시트 안에서만 하나 만든다. */
 .is-3d-toggle[aria-pressed="true"] { background: rgba(255, 216, 112, .22); border-color: #ffd870; }
 .is-preview { flex: none; display: grid; gap: 6px; margin: 4px 0 2px; }
-.is-preview[hidden] { display: none; }
-.is-preview-stage { display: grid; place-items: center; height: clamp(160px, 30vh, 240px); border-radius: 12px; border: 1px solid rgba(255, 216, 112, .35); background: radial-gradient(circle at 50% 35%, #2a5d74 0, #123044 70%); color: #d8e6ee; font-size: var(--type-sm, 14px); text-align: center; overflow: hidden; }
+.is-preview[hidden], .is-3d-toggle[hidden] { display: none !important; }
+.is-preview-stage { position: relative; display: grid; place-items: center; height: clamp(200px, 32dvh, 300px); border-radius: 12px; border: 2px solid color-mix(in srgb, var(--rar, #d6aa48) 70%, #000); background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--rar, #d6aa48) 34%, transparent) 0, transparent 55%), radial-gradient(circle at 50% 35%, #2a5d74 0, #123044 70%); color: #d8e6ee; font-size: var(--type-sm, 14px); text-align: center; overflow: hidden; }
 .is-preview-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 .is-preview-canvas:active { cursor: grabbing; }
 /* 3D 미리보기는 ←/→ 회전 · Home 처음 각도를 받는다(tabIndex 0). */
 .is-preview-canvas:focus-visible { outline: 3px solid #fff0b3; outline-offset: -3px; }
 .is-preview-caption { margin: 0; color: #c4dce8; font-size: var(--type-sm, 14px); line-height: 1.45; }
 .is-preview-caption:empty { display: none; }
+/* 낮은 가로 화면: 미리보기를 낮추고 본문은 최소 높이를 지켜 스크롤한다(하단 버튼이 모달 밖으로 잘리지 않게). */
+@media (max-height: 480px) {
+  .is-preview { gap: 2px; margin: 2px 0 0; }
+  .is-preview-stage { height: clamp(88px, 26dvh, 120px); }
+  .is-preview-caption { display: none; }
+  .item-sheet:has(.is-preview:not([hidden])) .is-body { flex: 1 1 auto; min-height: 96px; }
+}
 .is-head-copy { flex: 1 1 auto; min-width: 0; }
 :root:root .item-sheet .is-head-copy h2 { margin: 0; font-size: 19px; line-height: 1.2; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .is-plus { color: var(--gold); }
