@@ -1,11 +1,11 @@
 // 등급 몸(S 1.5·U 2.5) heroes-next 교정 몸(t4-body-revisions) 전용 회피·사망 골반 높이 곡선 저작기(<영웅>-t1s|t2u-body-motion-vN).
 // 궁수 2·3단계 v2 저작기(author-ranger-higher-body-motion.mjs)와 같은 방법·같은 PROFILE(띠·수용 기준·격자·평활 반복)을 쓴다.
-// 다른 점은 몸 기록을 t4BodyRevisions() 에서 받고, 클립 원본(base)을 그 기록의 재결합 base(영웅의 1단계 교정본)로 적는 것뿐이다.
+// 다른 점은 몸 기록을 tierRebindBodyRevisions()(등급 몸 t4 + 할로윈 아바타 t5)에서 받고, 클립 원본(base)을 그 기록의 재결합 base(영웅의 1단계 교정본)로 적는 것뿐이다.
 // 1) 실제 게임 경로(loadHeroAsset → spawnCharacter)의 몸 스킨 최저 높이 m(t)를 480Hz 격자(원본 키 시간 포함)에서 잰다(원본 클립 재생).
 // 2) 띠 band.low ≤ m(t)+o(t) ≤ band.high 안에서 [1,2,1]/4 평활 → 띠로 자르기를 수렴할 때까지 반복한다. 시작(과 회피 끝)은 0 으로 고정.
 // 3) 격자 사이 4배 조밀 검사로 실제 수용 기준(구르기 ±0.03m, 사망 > -0.01m·끝 |y|<0.03m)을 다시 확인하고, 넘으면 실패로 끝낸다.
 // 수평(X/Z)·다른 트랙·다른 클립은 바꾸지 않는다. 먼저 tools/art/measure-body-contact.mjs 로 곡선이 꼭 필요한지 판정한다.
-//   bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u> <출력.json> [보고.json] [--band-dodge=lo,hi] [--band-death=lo,hi]
+//   bun tools/art/author-tier-body-motion.mjs <hero_<영웅>_t1s|t2u | avatar_<영웅>_<테마>> <출력.json> [보고.json] [--band-dodge=lo,hi] [--band-death=lo,hi]
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import * as THREE from 'three';
@@ -13,7 +13,7 @@ import manifest from '../../asset-library/manifest.json' with { type: 'json' };
 import { installRangerRuntimeLoader } from './ranger-runtime-loader.mjs';
 import { PROFILE, keyValue, trackSha } from './author-ranger-t1-body-motion.mjs';
 import { loadHeroAsset, spawnCharacter, disposeCharacter } from '../../src/engine/assets.js';
-import { t4BodyRevisions } from '../../src/engine/library-assets.js';
+import { tierRebindBodyRevisions } from '../../src/engine/library-assets.js';
 
 const CLIPS = ['dodge', 'death'];
 const sha = (value) => createHash('sha256').update(value).digest('hex');
@@ -36,7 +36,7 @@ export async function authorTierBodyMotion(ASSET, bands = {}) {
     const accept = PROFILE[name]?.accept;
     if (!accept || band.length !== 2 || !(band[0] < band[1]) || band[0] <= accept[0] || band[1] >= accept[1]) throw new Error('띠는 수용 기준 안쪽: ' + name);
   }
-  const asset = manifest.assets.find((a) => a.id === ASSET), rev = t4BodyRevisions().revisions.find((r) => r.asset === ASSET);
+  const asset = manifest.assets.find((a) => a.id === ASSET), rev = tierRebindBodyRevisions().find((r) => r.asset === ASSET);
   if (!asset || !rev || !rev.useInGame || rev.status !== 'GENERATED') throw new Error(ASSET + ' 등급 몸 교정 기록이 활성 상태가 아님');
   const fit = /^(.+)-body-fit-v([1-9]\d*)$/.exec(rev.id);
   if (!fit) throw new Error('개정 id 형식: ' + rev.id);

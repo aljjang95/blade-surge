@@ -9,6 +9,10 @@
 // 활 소켓(뼈 자식 노드)은 손 관절 위치 차이만큼 손 로컬에서 옮겨 보이는 손바닥에 남게 한다.
 // --sockets=none(기본): 활 소켓을 base 그대로 둔다. draw: 아래 5) 규칙으로 옮김(궁수 v6 실측에서 활 아래 림이 다리에 더 들어가 쓰지 않음).
 // --lift=<m>: 발바닥 맞춤 뒤 몸을 세계 Y 로 더 올린다(대기 자세 접지 여유. 궁수 v6 는 0.012).
+// --no-aim=<정규식>: 이름이 맞는 base 관절은 body 뼈 방향에 맞추지 않고 부모 회전만 따른다(--collapse 처럼 ^ 로 시작 일치).
+//   2026-10-24 흡혈 백작 아바타: Tripo 리그 손가락 관절이 손목 높이 한 평면에 몰려(왼손은 손→중지 0.5cm, 오른손은 몸 쪽 수평)
+//   손이 108°·122° 비틀린 바인드 자세가 되었다. 손가락은 --collapse 로 손에 합치고 손은 --no-aim='(Left|Right)Hand$' 로 아래팔을 따르게 한다.
+//   기본(없음)은 이전과 같은 출력.
 // --scale=head|fit|height: 닮음 배율 기준(아래 fitScale·height 주석).
 // --no-clips: 출력에서 클립을 뺀다(2·3단계 body-fit·정규화본처럼 1단계 클립을 공유하는 메시 전용 파일). 골격 노드·역바인드 규약은 같다.
 // body 관절이 base 골격에 없으면(마법사·야만전사 1단계는 손가락 없는 25·33관절) 그 가중치를 base 에 있는 가장 가까운 조상 관절로 합친다.
@@ -23,8 +27,8 @@ const FULL_DRAW = 0.41, BOW_HIT_AT = 0.42;
 
 const argv = process.argv.slice(2), flags = Object.fromEntries(argv.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 const [basePath, bodyPath, outputPath, extraJson] = argv.filter((a) => !a.startsWith('--'));
-const lift = Number(flags.lift || 0), socketMode = flags.sockets || 'none', noClips = 'no-clips' in flags;
-for (const k of Object.keys(flags)) if (!['lift', 'sockets', 'no-clips', 'scale', 'collapse'].includes(k)) throw new Error('unknown flag --' + k);
+const lift = Number(flags.lift || 0), noAimRe = flags['no-aim'] ? new RegExp('^(' + flags['no-aim'] + ')') : null, socketMode = flags.sockets || 'none', noClips = 'no-clips' in flags;
+for (const k of Object.keys(flags)) if (!['lift', 'sockets', 'no-clips', 'scale', 'collapse', 'no-aim'].includes(k)) throw new Error('unknown flag --' + k);
 if (!['none', 'draw'].includes(socketMode)) throw new Error('--sockets must be none|draw');
 if (!Number.isFinite(lift) || Math.abs(lift) > 0.05) throw new Error('--lift must be within ±0.05 m');
 if (!outputPath) throw new Error('Usage: node tools/art/rebind-library-body.mjs base.glb body.glb output.glb [extras-json]');
@@ -157,7 +161,7 @@ for (const i of order) {
   const restW = parentW.clone().multiply(G1.local(i));
   const name = norm(j.nodes[i].name), next = NEXT[name];
   let W = restW;
-  if (next && j1(next) != null && idx2.has(next)) {
+  if (next && j1(next) != null && idx2.has(next) && !noAimRe?.test(name)) {
     const c = j1(next), cLocal = new THREE.Vector3(...(j.nodes[c].translation || [0, 0, 0]));
     const from = cLocal.clone().applyMatrix4(restW).sub(new THREE.Vector3().setFromMatrixPosition(restW));
     const to = P2a(next).sub(P2a(name));
@@ -422,7 +426,7 @@ function compact() {
 const bin = compact();
 j.buffers = [{ byteLength: bin.length }];
 const { materialFinish: _staleFinish, bodySwap: _staleSwap, ...baseExtras } = j.asset.extras || {};
-const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), ...(scaleMode !== 'head' ? { scaleMode } : {}), liftM: lift, socketMode, ...(noClips ? { clips: 'none' } : {}),
+const rebind = { method: 'rotation-only-bind-pose', baseSha256: base.sha256, bodySha256: body.sha256, scale: +s.toFixed(6), ...(scaleMode !== 'head' ? { scaleMode } : {}), liftM: lift, ...(noAimRe ? { noAim: flags['no-aim'] } : {}), socketMode, ...(noClips ? { clips: 'none' } : {}),
   ...(Object.keys(collapsed).length ? { collapsedJoints: collapsed } : {}), ...(missingJoints.length ? { bodyMissingLeafJoints: missingJoints } : {}), ...(bodyBind.source !== 'mesh-node' ? { bodyBindFrame: bodyBind.source } : {}), yawDeg: Math.round(turn * 180 / Math.PI),
   maxSwingDeg: +maxSwingDeg.toFixed(2), hipsHeightM: { base: +P1('Hips').y.toFixed(4), body: +P2a('Hips').y.toFixed(4) }, maxJointGapM: Math.max(...Object.values(jointGap)), jointGapM: jointGap, sockets, ...(extraJson ? JSON.parse(extraJson) : {}) };
 j.asset.extras = { ...baseExtras, bodyRebind: rebind };
