@@ -792,7 +792,7 @@
     }
   },
   "pinned": {
-    "src/engine/hero-body-motion.js": "027d446cdffb0174807ef83a31a7b4673b2446108a9fb342fe744a20cea89a1c",
+    "src/engine/hero-body-motion.js": "a0f03f447da3e47c8346ca039623e084951302ed1b306df820a7648b6f35a875",
     "src/data/rogue-t2-body-motion-v2.json": "16c695e2e24ce5d1819b0fb242ca69570523aff409fe6d8bc62d5aae7646fb1c",
     "tools/combat-mesh-qa.mjs": "4a02ee11bda1799ce13c59f075d3f4399c8dcb3086396734f248a75ec9b2c9e5",
     "src/data/higher-body-motion-v1.json": "3b5d0a0e6099350d5c3f322a3cf49c71f837d29403f65e26c3d7e1abacff9dcd",

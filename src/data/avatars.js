@@ -7,6 +7,7 @@ export const AVATARS = Object.freeze([
   Object.freeze({ id: 'avatar_ranger_fox', heroId: 'ranger', name: '설원 여우 사냥꾼', price: 2980, desc: '순수 외형이며 성능에 영향을 주지 않습니다.' }),
   // 할로윈 2차(t5)
   Object.freeze({ id: 'avatar_rogue_vampire', heroId: 'rogue', name: '흡혈 백작', price: 2980, desc: '순수 외형이며 성능에 영향을 주지 않습니다.' }),
+  Object.freeze({ id: 'avatar_ranger_blackcat', heroId: 'ranger', name: '검은 고양이 사냥꾼', price: 2980, desc: '순수 외형이며 성능에 영향을 주지 않습니다.' }),
 ]);
 
 export const AVATAR_BY_ID = Object.freeze(Object.fromEntries(AVATARS.map((avatar) => [avatar.id, avatar])));

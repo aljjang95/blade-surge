@@ -12,6 +12,7 @@ import ROGUE_T2U_MOTION from '../data/rogue-t2u-body-motion-v1.json';
 import RANGER_T1S_MOTION from '../data/ranger-t1s-body-motion-v1.json';
 import RANGER_T2U_MOTION from '../data/ranger-t2u-body-motion-v1.json';
 import ROGUE_VAMPIRE_MOTION from '../data/rogue-vampire-body-motion-v1.json';
+import RANGER_BLACKCAT_MOTION from '../data/ranger-blackcat-body-motion-v1.json';
 import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, tierRebindBodyRevisions, validateHigherBodyRevisions } from './library-assets.js';
 
 // 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정, 예: 3단계 궁수 body-fit-v2).
@@ -184,7 +185,7 @@ export const validateRangerBandMotion = validateRangerT1Motion;
 // 궁수 2·3단계 v2 와 같은 띠 곡선 계약·같은 수용 기준·같은 오프셋 상한(0.35m). 클립 원본은 몸 기록의 재결합 base(영웅의 1단계 클립 원본)다.
 // 2026-10-23 도적 S·U: 원본 클립 그대로면 구르기 최저 -0.116/-0.135m, 사망 최저 -0.027/-0.109m(망토·목도리가 바닥을 판다)라 곡선이 필요했다.
 // 궁수 S·U 몸도 같은 경로다(클립 원본 = 재결합 base = 1단계 v6 의 클립 원본 v4). 2026-10-24 궁수 S·U: 원본 클립 그대로면 구르기 최저
-// -0.193/-0.139m, 사망 최저 -0.083/-0.203m. 2026-10-24 흡혈 백작 아바타: 구르기 -0.131/+0.273m, 사망 최저 -0.084m.
+// -0.193/-0.139m, 사망 최저 -0.083/-0.203m. 2026-10-24 흡혈 백작 아바타: 구르기 -0.131/+0.273m, 사망 최저 -0.084m. 검은 고양이 아바타: 구르기 -0.171/+0.090m, 사망 최저·끝 -0.073m.
 export function validateTierBandMotion(motion, revision) {
   const asset = revision?.asset, base = revision?.authoring?.kind === 'body-rebind' ? revision.authoring.base : null;
   const fit = /^(.+)-body-fit-v([1-9]\d*)$/.exec(String(revision?.id));
@@ -331,7 +332,7 @@ const RANGER_BAND_MOTIONS = new Map([
 ]);
 // 등급 몸 띠 곡선(위 validateTierBandMotion). 상수 검사 도구(SHA·freezeTree)가 정의된 뒤에 만든다.
 // 할로윈 아바타(t5) 도적·궁수 교정 몸도 같은 띠 곡선 계약이다(t5-avatar-body-revisions).
-const TIER_BAND_SOURCES = [ROGUE_T1S_MOTION, ROGUE_T2U_MOTION, RANGER_T1S_MOTION, RANGER_T2U_MOTION, ROGUE_VAMPIRE_MOTION];
+const TIER_BAND_SOURCES = [ROGUE_T1S_MOTION, ROGUE_T2U_MOTION, RANGER_T1S_MOTION, RANGER_T2U_MOTION, ROGUE_VAMPIRE_MOTION, RANGER_BLACKCAT_MOTION];
 const TIER_BAND_MOTIONS = new Map(TIER_BAND_SOURCES.map(motion => [motion.asset,
   validateTierBandMotion(motion, tierRebindBodyRevisions().find(revision => revision.asset === motion.asset))]));
 // v1 번들 위에 자산별 새 패킷을 얹는다. 띠 곡선으로 옮긴 자산(3단계 궁수 v2 몸)의 v1 패킷은 이력으로만 남고 등록하지 않는다.

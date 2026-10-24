@@ -24,7 +24,7 @@ const assetFor = (id: string) => {
 };
 const copy = () => structuredClone(T5) as any;
 const BASES: Record<string, { path: string, sha256: string }> = { rogue: ROGUE_LIBRARY.output, ranger: RANGER_V4.output };
-const ASSETS = ['avatar_rogue_vampire'];
+const ASSETS = ['avatar_rogue_vampire', 'avatar_ranger_blackcat'];
 
 test('할로윈 아바타 교정 기록은 manifest 원본 SHA·실제 출력 SHA·1단계 클립 원본 base 와 정확히 맞는다', () => {
   expect(t5AvatarBodyRevisions()).toBe(T5);
@@ -74,6 +74,10 @@ test('목표 밖 기록·다른 경로·원본 SHA 위조·base 불일치·초�
     value => { value.revisions[0].output.sha256 = 'not-a-sha'; },
     value => { value.revisions[0].id = 'rogue-vampire-body-fit-v2'; },
     value => { value.revisions[0].asset = 'avatar_rogue_crow'; },
+    // 궁수 base 는 v6 출력(재결합 결과라 바인드 자세 아님)도, 도적 base 도 아니다.
+    value => { value.revisions[1].authoring.base = { path: '/models/heroes-next/ranger-library-t1-v6.glb', sha256: value.revisions[1].authoring.base.sha256 }; },
+    value => { value.revisions[1].authoring.base = structuredClone(value.revisions[0].authoring.base); },
+    value => { value.revisions[1].asset = 'avatar_ranger_fox'; },
   ];
   for (const change of tamper) {
     const value = copy(); change(value);

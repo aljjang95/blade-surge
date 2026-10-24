@@ -12,6 +12,7 @@ import MOTION_T2U from '../src/data/rogue-t2u-body-motion-v1.json';
 import RANGER_T1S from '../src/data/ranger-t1s-body-motion-v1.json';
 import RANGER_T2U from '../src/data/ranger-t2u-body-motion-v1.json';
 import ROGUE_VAMPIRE from '../src/data/rogue-vampire-body-motion-v1.json';
+import RANGER_BLACKCAT from '../src/data/ranger-blackcat-body-motion-v1.json';
 import ROGUE_LIBRARY from '../src/data/rogue-library-revision-v2.json';
 import RANGER_V4 from '../src/data/ranger-library-revision-v4.json';
 import manifest from '../asset-library/manifest.json';
@@ -25,7 +26,7 @@ afterAll(() => restore());
 const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const CASES = [['hero_rogue_t1s', MOTION_T1S], ['hero_rogue_t2u', MOTION_T2U], ['hero_ranger_t1s', RANGER_T1S], ['hero_ranger_t2u', RANGER_T2U],
   // 할로윈 아바타(t5) 도적·궁수 교정 몸도 같은 계약(t5-avatar-body-revisions).
-  ['avatar_rogue_vampire', ROGUE_VAMPIRE]].map(([id, MOTION]: any) => ({
+  ['avatar_rogue_vampire', ROGUE_VAMPIRE], ['avatar_ranger_blackcat', RANGER_BLACKCAT]].map(([id, MOTION]: any) => ({
   id, MOTION, HERO: id.split('_')[1], ASSET: manifest.assets.find((a: any) => a.id === id)!, REV: tierRebindBodyRevisions().find((r: any) => r.asset === id)!,
 }));
 const TUNED = ['dodge', 'death'];

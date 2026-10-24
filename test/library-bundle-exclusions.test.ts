@@ -10,7 +10,7 @@ const EXCLUDED = ['hero_ranger_t1', 'hero_ranger_t2', 'hero_ranger_t3', 'hero_ro
   // 궁수 S·U 등급 몸도 같은 경로(1단계 클립 원본 v4 골격에 재결합).
   'hero_ranger_t1s', 'hero_ranger_t2u',
   // 할로윈 아바타(t5) 도적·궁수는 heroes-next 교정 몸(t5-avatar-body-revisions-v1)이 대신 로드된다.
-  'avatar_rogue_vampire'];
+  'avatar_rogue_vampire', 'avatar_ranger_blackcat'];
 const source = readFileSync(new URL('../src/engine/library-assets.js', import.meta.url), 'utf8');
 
 test('번들에서 뺀 원본은 모두 교정본이 선택되어 원본 번들 경로를 쓰지 않는다', () => {

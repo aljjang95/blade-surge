@@ -1592,6 +1592,31 @@
       "role": "hero",
       "heroId": "rogue",
       "avatar": true
+    },
+    {
+      "id": "avatar_ranger_blackcat",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/avatar_ranger_blackcat.glb",
+      "heightM": 1.8,
+      "triangles": 11061,
+      "bytes": 1665156,
+      "sha256": "7b782e0348529eae49270a5bd50780b24d0bda1ae7d1af9a3ef87a620d566475",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 60-160,355-40 --decor-sat 0.5 --decor-val 0.3 --braid-hue 60-160 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=height",
+        "account": "owner subscription",
+        "taskId": "d2a8856b-5783-4f18-854c-49e099622083",
+        "prompt": "[pipeline summary] blade-art#t5 Halloween cash avatar \"Black Cat Hunter\": tier1 ranger (green braid over the left shoulder, elf ears, green eyes) in short black cat-ear capelet (hood down), purple-orange leather, paw-print ornaments, no tail: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints) → decor/cape weight cleanup (green braid rule, orange cape lining) → rotation-only rebind onto hero_ranger_t1 skeleton (mesh-only, shares tier1 clips; game loads heroes-next body-fit rebound onto ranger-library-t1-v4 = v6 clip source). Source art-src/t5-pc/avatar_ranger_blackcat",
+        "createdAt": "2026-10-24T13:00:00.000Z",
+        "rawSha256": "2e14edb74b218cde2c8aaa721f9aa644f9d687062a2a9817cc856fbbab9ce129"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "ranger",
+      "avatar": true
     }
   ]
 }

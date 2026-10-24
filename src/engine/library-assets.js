@@ -145,6 +145,7 @@ export function validateT4BodyRevisions(value) {
 // 클립 원본)를 별도 기록·목표로 얹는다.
 const T5_AVATAR_BODY_TARGETS = Object.freeze([
   Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v1', prefix: '/models/heroes-next/rogue-vampire-body-fit-v1' }),
+  Object.freeze({ asset: 'avatar_ranger_blackcat', id: 'ranger-blackcat-body-fit-v1', prefix: '/models/heroes-next/ranger-blackcat-body-fit-v1' }),
 ]);
 
 /** 할로윈 아바타(t5) 교정 기록이 목표와 일대일인지 번들 로드 시 검사한다. */
@@ -175,7 +176,7 @@ try {
     '!../../asset-library/normalized/avatar_ranger_fox.glb', '!../../asset-library/normalized/avatar_rogue_crow.glb',
     '!../../asset-library/normalized/hero_rogue_t1s.glb', '!../../asset-library/normalized/hero_rogue_t2u.glb',
     '!../../asset-library/normalized/hero_ranger_t1s.glb', '!../../asset-library/normalized/hero_ranger_t2u.glb',
-    '!../../asset-library/normalized/avatar_rogue_vampire.glb',
+    '!../../asset-library/normalized/avatar_rogue_vampire.glb', '!../../asset-library/normalized/avatar_ranger_blackcat.glb',
   ], { eager: true, query: '?url', import: 'default' });
 } catch {
   // Bun의 계약 테스트는 Vite URL 변환 없이 공개 경로를 사용한다.
