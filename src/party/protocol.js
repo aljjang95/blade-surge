@@ -2,7 +2,7 @@ import { PARTY_VISUAL_LIMIT, validPartyVisual } from './visual-protocol.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 // The host simulates combat. The relay validates membership, lifecycle and bounded data,
 // not damage correctness. No competitive/account reward authority is implied.
-export const PARTY_HEROES = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger', 'werewolf']);
+export const PARTY_HEROES = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger', 'werewolf', 'blackcat']);
 export const PARTY_LIMITS = Object.freeze({ members: 4, ttlMs: 45 * 60 * 1000, bytes: 65536,
   messagesPerSecond: 40, bytesPerSecond: 768 * 1024, snapshotsPerSecond: 10, inputsPerSecond: 20,
   enemies: 180, rooms: 64, projectiles: 160, events: 32, warnings: 48 });

@@ -29,8 +29,8 @@ const SKILL_OWNER = Object.freeze(Object.fromEntries(Object.entries(HERO_SKILLS)
 export const heroForWeapon = (weapon) => Object.hasOwn(HERO_BY_WEAPON, weapon) ? HERO_BY_WEAPON[weapon] : 'knight';
 // 늑대인간 족장처럼 kit 이 있는 영웅은 기준 영웅(광전사)의 소리 세트를 쓴다.
 const heroOr = (heroId, weapon) => { const kit = kitOf(heroId); return HERO_IDS.includes(kit) ? kit : heroForWeapon(weapon); };
-/** 고유 스킬이 빌려 쓰는 광전사 스킬 소리(핏빛 포효 = 광폭화, 월광 사냥 = 지옥의 도끼). */
-export const SKILL_SOUND_ALIAS = Object.freeze({ blood_howl: 'berserk', moonlit_hunt: 'hell_axe' });
+/** 고유 스킬이 빌려 쓰는 기준 영웅 스킬 소리(핏빛 포효 = 광폭화, 월광 사냥 = 지옥의 도끼, 불길한 징조 = 삼중 추적화살, 아홉 목숨의 밤 = 폭풍의 일곱 화살). */
+export const SKILL_SOUND_ALIAS = Object.freeze({ blood_howl: 'berserk', moonlit_hunt: 'hell_axe', cat_omen: 'ranger_volley', nine_lives: 'ranger_tempest' });
 /** 영웅 한 명이 쓰는 파일 전체(휘두름·마무리·타격·궁극기 충격·스킬 8). 영웅을 고를 때 지연 로드한다. */
 export function heroSoundFiles(heroId) {
   const h = heroOr(heroId, '');
