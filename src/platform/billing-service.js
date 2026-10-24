@@ -2,9 +2,10 @@
 // - 가격 표시는 Play가 돌려준 값(formattedPrice)만 쓴다. 카탈로그 priceKRW는 폴백으로 보이지 않는다.
 // - 구매 토큰은 어댑터 → 서버 verify로만 흐른다. 저장·로그·퍼널에 남기지 않는다.
 import { loadPlayCatalogAdapter } from './iap-billing.js';
+import { soldOn } from '../shared/iap-catalog.js';
 import { createHeroPurchase } from './hero-purchase.js';
 
-const validProduct = (p) => p && typeof p.id === 'string' && ['inapp', 'subs'].includes(p.playType);
+const validProduct = (p) => p && typeof p.id === 'string' && soldOn(p, 'play') && ['inapp', 'subs'].includes(p.playType);
 
 // 서버 /iap/* 한도(계정당 10분 30회)를 아끼려고 sync가 verify하는 대상을 줄인다.
 // 미승인(acknowledged=false) 토큰은 항상, 승인된 구독은 상품별 6시간에 한 번만 확인한다(승인된 일회성 상품은 서버가 이미 처리).
