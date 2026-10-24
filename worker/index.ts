@@ -6,6 +6,7 @@ import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src
 import { SOCIAL_CONFIG } from '../src/social/config.js';
 import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router';
 import { reconcileVoided } from './v1/iap';
+import { reconcileWebPayments } from './v1/portone';
 import { schemaReady, type D1Database } from './v1/db';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
@@ -172,8 +173,18 @@ export async function reconcileIap(env: Env, now = Date.now()): Promise<void> {
   if (r.failed) console.warn('iap reconcile partial', r.failed);
 }
 
+/** 시간당 웹 결제(포트원) 취소 회수·미완료 결제 지급 대사. WEB_BILLING_ENABLED를 꺼도 돈다(환불 반영). 호출 수는 WEB_RECONCILE_MAX로 제한. */
+export async function reconcileWeb(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const r = await reconcileWebPayments({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/web-reconcile') });
+  if (r.failed) console.warn('web payment reconcile partial', r.failed);
+}
+
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
   // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
   await cleanupStoreMetadata(env);
   try { await reconcileIap(env); } catch (error) { console.warn('iap reconcile failed', error instanceof Error ? error.name : 'unknown'); }
+  try { await reconcileWeb(env); } catch (error) { console.warn('web payment reconcile failed', error instanceof Error ? error.name : 'unknown'); }
 } };

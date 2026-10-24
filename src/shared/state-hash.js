@@ -24,11 +24,15 @@ function cyrb53(text, seed) {
 export function hashText(text) { return cyrb53(text, 0) + cyrb53(text, 0x9e3779b9); }
 export function hashValue(value) { return hashText(canonicalJson(value)); }
 
-/** 패리티 비교 대상: 서버가 정본으로 지는 경제·진행 필드. */
+/**
+ * 패리티 비교 대상: 서버가 정본으로 지는 경제·진행 필드.
+ * roster(영웅 소유)를 포함한다: 서버·클라이언트가 같은 함수로 계산하므로 한 배포 안에서는 서로 일치하고,
+ * 배포 전 해시와는 값이 달라질 뿐 정합성은 다음 /me·/cmd 응답의 stateHash로 즉시 다시 맞춰진다(정보용 비교).
+ */
 export const PARITY_KEYS = Object.freeze([
   'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless',
   'transcendStones', 'skillResets', 'heroes', 'selected', 'inventory', 'invSeq', 'avatars', 'progress', 'pass',
-  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed',
+  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster',
 ]);
 export function paritySubset(state) {
   const out = {};

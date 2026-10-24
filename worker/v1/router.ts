@@ -10,10 +10,11 @@ import { importLegacy, shadowSnapshot } from './import';
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
 import { handleRtdn } from './rtdn';
+import { webBillingOn, webComplete, webIntent, type PortoneDeps, type PortoneEnv } from './portone';
 import { ingestFunnel } from './funnel';
 
 export const V1_PREFIX = '/api/v1';
-export interface V1Env extends AuthEnv, IapEnv {
+export interface V1Env extends AuthEnv, IapEnv, PortoneEnv {
   APP_ORIGIN: string;
   V1_ENABLED?: string;
   SOCIAL_DEV_ORIGINS?: string;
@@ -22,17 +23,18 @@ const LOCAL = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
 const allowedOrigin = (origin: string, env: V1Env) => origin === env.APP_ORIGIN || (env.SOCIAL_DEV_ORIGINS === 'true' && LOCAL.test(origin));
 
 let googleVerifier: ReturnType<typeof createGoogleVerifier> | null = null;
-export const defaultDeps: AuthDeps & IapDeps = {
+export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
   now: () => Date.now(),
   // Pub/Sub push OIDC 토큰은 만료 전까지 재사용될 수 있어 발급 후 1시간까지 받는다(구글 로그인 토큰은 기존 10분).
   verifyIdToken: (provider, token, clientIds) => (googleVerifier ??= createGoogleVerifier()).verify(token, clientIds, provider === 'pubsub' ? 3600000 : 600000),
 };
 
-export function v1Flags(env: V1Env): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true' };
+/** webBilling은 서버 권위 계정에게만 켠다(그림자·로컬 계정은 roster를 서버가 강제하지 못해 현금 판매를 열지 않는다). */
+export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null): Record<string, boolean> {
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId) };
 }
 
-export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps = defaultDeps): Promise<Response> {
+export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps & PortoneDeps = defaultDeps): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.slice(V1_PREFIX.length) || '/';
   try {
@@ -60,7 +62,7 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     // 비인증 경로는 요청 IP(해시)로 먼저 제한한다. 본문을 읽거나 DB·제공자를 부르기 전에 거른다.
     if (method === 'POST' && path === '/auth/session') { await rateLimit(c, 'session', await ipKey(request)); return json(await createSession(c, await readJson(request))); }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
-    if (method === 'GET' && path === '/me') return json(await getMe(c, await requireSession(c), v1Flags(env)));
+    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
       const auth = await requireSession(c);
       await rateLimit(c, 'iapRead', auth.account.account_id);
@@ -75,6 +77,8 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       if (path === '/import') { await rateLimit(c, 'import', await ipKey(request)); return json(await importLegacy(c, auth, await readJson(request, IMPORT_LIMIT))); }
       if (path === '/shadow/snapshot') return json(await shadowSnapshot(c, auth, await readJson(request, IMPORT_LIMIT)));
       if (path === '/iap/intent') { await rateLimit(c, 'iap', auth.account.account_id); return json(await intent(c, auth, await readJson(request))); }
+      if (path === '/iap/web/intent') { await rateLimit(c, 'iap', auth.account.account_id); return json(await webIntent(c, auth, await readJson(request))); }
+      if (path === '/iap/web/complete') { await rateLimit(c, 'iap', auth.account.account_id); return json(await webComplete(c, auth, await readJson(request))); }
       if (path === '/iap/verify') { await rateLimit(c, 'iap', auth.account.account_id); return json(await iapVerify(c, auth, await readJson(request))); }
       if (path === '/funnel') { await rateLimit(c, 'funnel', auth.account.account_id); return json(await ingestFunnel(c, auth, await readJson(request))); }
       if (path === '/runs/start') { await rateLimit(c, 'runStart', auth.account.account_id); return json(await startRun(c, auth, await readJson(request))); }

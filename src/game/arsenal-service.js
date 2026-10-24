@@ -19,7 +19,7 @@ export class ArsenalService {
     return this.app.expedition.transact(()=>fn(this.s));
   }
   setArt(id,heroId=this.app.eco.s.selected){
-    if(!COMBAT_ARTS.some(a=>a.id===id)||!this.app.eco.hero(heroId))return {ok:false,error:'사용 가능한 영웅과 기예를 선택해 주세요.'};
+    if(!COMBAT_ARTS.some(a=>a.id===id)||!this.app.eco.ownHero(heroId))return {ok:false,error:'사용 가능한 영웅과 기예를 선택해 주세요.'};
     return this.transact(s=>{s.heroes[heroId].artId=id;return {ok:true};});
   }
   setMix(mix){return this.transact(s=>{s.mix=normalizeMix({...s.mix,...mix});return {ok:true,mix:{...s.mix}};},true);}
@@ -37,7 +37,7 @@ export class ArsenalService {
   }
   variantForHero(heroId=this.app.eco.s.selected){return this.variantForConfig(this.current(heroId),heroId);}
   savePreset(index,name,heroId=this.app.eco.s.selected){
-    if(!Number.isInteger(index)||index<0||index>2||!this.app.eco.hero(heroId))return {ok:false,error:'사용 가능한 영웅과 구성 슬롯을 선택해 주세요.'};
+    if(!Number.isInteger(index)||index<0||index>2||!this.app.eco.ownHero(heroId))return {ok:false,error:'사용 가능한 영웅과 구성 슬롯을 선택해 주세요.'};
     return this.transact(s=>{s.heroes[heroId].presets[index]={...this.current(heroId),name:typeof name==='string'?name.trim().slice(0,20)||`구성 ${index+1}`:`구성 ${index+1}`};return {ok:true};});
   }
   stats(config,heroId){
@@ -59,6 +59,7 @@ export class ArsenalService {
     return {preset:structuredClone(p),missing,transfers,valid:!missing.length,before,after};
   }
   applyPreset(index,heroId=this.app.eco.s.selected){
+    if(!this.app.eco.ownHero(heroId))return {ok:false,error:'해금하지 않은 영웅의 구성은 적용할 수 없습니다.'};
     const preview=this.preview(index,heroId);if(!preview)return {ok:false,error:'먼저 현재 구성을 저장해 주세요.'};
     if(!preview.valid)return {ok:false,error:`보관함에 없는 구성: ${preview.missing.join(', ')}. 현재 장비로 다시 저장해 주세요.`};
     return this.transact(s=>{

@@ -34,7 +34,7 @@ await page.evaluate(() => window.app.ui.closeModal());
 const setup = async (setId, heroId = 'knight', mobs = 14) => page.evaluate(async ({ setId, heroId, mobs }) => {
   const a = window.app, e = a.eco;
   a.testPause = false;
-  if (!e.ownHero(heroId)) e.grantHero(heroId);
+  (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
   e.s.selected = heroId; e.hero(heroId).level = 25; e.s.energy = 9999; e.s.fragments = 9999;
   for (const sl of ['weapon', 'armor', 'ring', 'boots']) { const r = e.craftSetItem(setId, sl); if (r.ok) e.equip(heroId, r.inst.uid); }
   e.save();

@@ -78,7 +78,7 @@ try {
       const app = window.app, eco = app.eco;
       if (!eco.reset()) throw Error('독립 저장 초기화 실패');
       const before = { selected: eco.s.selected, level: eco.hero(hero)?.level, energy: eco.s.energy, inventory: eco.s.inventory.length };
-      const granted = !eco.ownHero(hero); if (granted) eco.grantHero(hero);
+      const granted = !eco.ownHero(hero); (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true);
       eco.s.daily.last = Math.floor(Date.now() / 86400000); eco.s.tutorial = { completed: true };
       eco.s.selected = hero; eco.hero(hero).level = 5; eco.hero(hero).exp = 0;
       if (!eco.save()) throw Error('fixture 저장 실패');
