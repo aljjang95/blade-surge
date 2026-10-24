@@ -306,6 +306,15 @@ export class ParticlePool {
     this.col[i * 3] = color.r; this.col[i * 3 + 1] = color.g; this.col[i * 3 + 2] = color.b;
     this.size[i] = size; this.size0[i] = size; this.alpha[i] = 1; this.age[i] = 0; this.life[i] = life; this.grav[i] = grav; this.drag[i] = drag; this.shrink[i] = shrink;
   }
+  /**
+   * 장식용 방출: 풀에 빈자리가 있을 때만 낸다. 가득 차면 건너뛰고 false.
+   * emit() 의 가득 참 분기는 Math.random 으로 교체 대상을 고르므로, 시드 전투(app.step) 결정성에 닿으면 안 되는 장식은 이것을 쓴다.
+   */
+  emitIfFree(x, y, z, vx, vy, vz, color, size, life, options) {
+    if (this.n >= this.max) return false;
+    this.emit(x, y, z, vx, vy, vz, color, size, life, options);
+    return true;
+  }
   update(dt) {
     let n = this.n;
     for (let i = 0; i < n; i++) {

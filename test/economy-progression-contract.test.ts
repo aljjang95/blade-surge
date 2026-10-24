@@ -100,6 +100,9 @@ for (const grade of ['SR', 'SSR'] as const) test(`${grade} 초월 견적·부족
 
 test('신규 보석 SKU는 정확 지급·부족/저장 실패 롤백, 모든 현금 SKU는 무지급', () => {
   const eco = new Economy(); eco.s.gems = 10000;
+  // 초월석은 진행도 게이트(Lv.30, shop-gates.js): 1레벨에서는 보석을 쓰지 않고 거절한다.
+  const lv1 = JSON.stringify(eco.s); expect(eco.purchase('tstone10')).toMatchObject({ ok: false, reason: 'level', need: 30, have: 1 }); expect(JSON.stringify(eco.s)).toBe(lv1);
+  eco.s.heroes.knight.level = 30;
   for (const [id, key, n, price] of [['skill_reset1', 'skillResets', 1, 300], ['skill_reset5', 'skillResets', 5, 1250], ['tstone10', 'transcendStones', 10, 900]] as const) {
     const before = structuredClone(eco.s);
     fail = true; expect(eco.purchase(id)).toEqual({ ok: false, reason: 'storage' }); expect(eco.s).toEqual(before); fail = false;

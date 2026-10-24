@@ -69,7 +69,7 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
   } else {
     cells = (state.avatars?.owned || []).map((id) => AVATAR_BY_ID[id]).filter(Boolean).map((avatar) => {
       const worn = eco.equippedAvatar?.(avatar.heroId) === avatar.id;
-      return { type: 'avatar', key: 'a:' + avatar.id, id: avatar.id, name: avatar.name, icon: HEROES[avatar.heroId]?.portrait || uiArt('treasure-chest'), qty: null, desc: avatar.desc + (worn ? ' 착용 중입니다.' : ''), worn, rarity: null };
+      return { type: 'avatar', key: 'a:' + avatar.id, id: avatar.id, name: avatar.name, icon: avatar.portrait || HEROES[avatar.heroId]?.portrait || uiArt('treasure-chest'), qty: null, desc: avatar.desc + (worn ? ' 착용 중입니다.' : ''), worn, rarity: null };
     });
   }
   const capacity = slotCapacity(cells.length);

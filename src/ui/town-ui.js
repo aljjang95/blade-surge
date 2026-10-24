@@ -341,13 +341,15 @@ export class TownUI {
       const icon = item ? itemVisual(item, { heroId: this.app.eco?.s?.selected }).iconUrl : resourceArt(offer.consumableId || offer.id);
       const stats = item ? [item.atk && '공격 +' + fmt(item.atk), item.hp && '체력 +' + fmt(item.hp), item.def && '방어 +' + fmt(item.def)].filter(Boolean).join(' · ') : '';
       const owned = !!offer.owned, soldOut = offer.stockLeft !== undefined && offer.stockLeft <= 0, ok = this.affordable(offer.price, wallet);
-      const state = soldOut ? '품절' : owned ? '보유 중' : null;
+      // 레벨 잠금(shop-gates.js): 버튼은 막고 언제 살 수 있는지 적는다.
+      const lockedByLevel = !!offer.levelLocked && !soldOut;
+      const state = soldOut ? '품절' : owned ? '보유 중' : lockedByLevel ? 'Lv.' + fmt(offer.requires?.level) + ' 해금' : null;
       return '<article class="town-offer" data-rarity="' + safe(rarity || '') + '" style="--rarity:' + color + '"><img class="town-offer-icon" src="' + safe(icon) + '" alt="" decoding="async">' +
         '<div class="town-offer-copy"><small>' + safe(RARITY_INFO[rarity]?.name || (item ? '장비' : '소모품')) + (offer.stockLeft !== undefined ? ' · 남은 ' + fmt(offer.stockLeft) : '') +
         // 무기·갑옷은 마을 단계에 맞는 외형(1~3단계)을 입는다. 서비스 응답에 없으면 상점 데이터에서 읽는다.
         (tier(offer) ? ' · 외형 ' + tier(offer) + '단계' : '') + '</small>' +
-        '<h3>' + safe(offer.name || item?.name || offer.id) + '</h3>' + (stats ? '<p>' + safe(stats) + '</p>' : '') + '<div class="town-prices">' + this.priceChips(offer.price, wallet) + '</div></div>' +
-        '<button type="button" class="town-buy" data-town-act="buy" data-offer="' + safe(offer.id) + '"' + (soldOut || !ok ? ' disabled' : '') + '>' + (state || (ok ? '구매' : '부족')) + '</button></article>';
+        '<h3>' + safe(offer.name || item?.name || offer.id) + '</h3>' + (stats ? '<p>' + safe(stats) + '</p>' : '') + (lockedByLevel ? '<p class="town-need">' + safe(offer.lockText || '필요: ' + requiresText(offer.requires)) + '</p>' : '') + '<div class="town-prices">' + this.priceChips(offer.price, wallet) + '</div></div>' +
+        '<button type="button" class="town-buy" data-town-act="buy" data-offer="' + safe(offer.id) + '"' + (soldOut || !ok || lockedByLevel ? ' disabled' : '') + '>' + (state || (ok ? '구매' : '부족')) + '</button></article>';
     };
     return head + (gear.length ? '<h3 class="town-section">이 마을의 장비</h3><div class="town-offers">' + gear.map(card).join('') + '</div>' : '') +
       (supply.length ? '<h3 class="town-section">소모품</h3><div class="town-offers">' + supply.map(card).join('') + '</div>' : '');
