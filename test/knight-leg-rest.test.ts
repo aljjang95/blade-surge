@@ -82,3 +82,23 @@ test('용암 오니 군주: 역바인드 닮음 맞춤으로 bind 자세 키가 
   expect(hi).toBeGreaterThan(1.65); expect(hi).toBeLessThan(1.85);
   expect(json && bin && prim).toBeTruthy();
 });
+
+test('다리 맞춤 법선 보정: Three.js 가 법선에 스킨 행렬을 그대로 곱해도 렌더 법선이 역전치(올바른) 법선과 같다', async () => {
+  const { correctNormal } = await import('../tools/art/fit-leg-rest.mjs');
+  for (const s of [0.54, 0.62, 0.7]) for (const n of [[0, 1, 0], [0.6, 0.8, 0], [0.3, -0.5, 0.81], [1, 0, 0]]) {
+    const len = Math.hypot(...n), u = n.map((v) => v / len);
+    const stored = correctNormal(u[0], u[1], u[2], s);
+    const rendered = new THREE.Vector3(stored[0], stored[1] * s, stored[2]).normalize();   // 스킨 행렬 diag(1,s,1) 를 그대로 곱함
+    const correct = new THREE.Vector3(u[0], u[1] / s, u[2]).normalize();                   // 역전치 diag(1,1/s,1)
+    expect(rendered.angleTo(correct)).toBeLessThan(1e-6);
+  }
+});
+
+test('맞춤 도구는 이미 맞춘 출하 파일에 다시 적용하지 않는다(역바인드 ≠ 노드 rest)', async () => {
+  const { writeLegRest } = await import('../tools/art/fit-leg-rest.mjs');
+  const { writeBodyScale } = await import('../tools/art/fit-body-scale.mjs');
+  for (const id of ['hero_knight_t2', 'hero_knight_t3', 'avatar_knight_sakura']) expect(() => writeLegRest(readFileSync(`asset-library/normalized/${id}.glb`))).toThrow('already fitted');
+  expect(() => writeBodyScale(readFileSync('asset-library/normalized/avatar_barbarian_oni.glb'))).toThrow('already fitted');
+  // 바르게 묶인 1단계 몸은 배율 ≈ 1 이라 닮음 맞춤 대상이 아니다.
+  expect(() => writeBodyScale(readFileSync('asset-library/normalized/hero_barbarian_t1.glb'))).toThrow('already fits');
+});

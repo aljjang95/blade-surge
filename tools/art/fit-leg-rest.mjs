@@ -4,7 +4,8 @@
 //   발·발끝(과 자식): 세로 이동만(발바닥 → 몸 바닥 0). 발 모양·크기는 그대로라 등급 부츠 배율·접지 계산이 1단계와 같아진다.
 //   정강이: 메시 무릎 → 뼈 무릎, 메시 발목 → 이동한 발목으로 세로 선형 사상.
 //   허벅지: 뼈 골반 관절은 고정, 메시 무릎 → 뼈 무릎으로 세로 선형 사상.
-// 관절 높이에서 이웃 사상이 같은 값을 내므로 관절 근처 섞인 가중치 정점이 찢어지지 않는다. 몸통·팔·머리 역바인드와 정점·가중치·UV·재질은 바이트 그대로다.
+// 관절 높이에서 이웃 사상이 같은 값을 내므로 관절 근처 섞인 가중치 정점이 찢어지지 않는다. 세로 배율 때문에 틀어지는 조명을 막으려고 다리 정점 법선만
+// 미리 보정한다(correctNormal). 몸통·팔·머리 역바인드와 정점 위치·가중치·UV·재질은 바이트 그대로다.
 //   node tools/art/fit-leg-rest.mjs <입력.glb> <출력.glb>   (출력 없이 부르면 측정만)
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -44,6 +45,37 @@ export function readAccessor(json, bin, index) {
 
 export const bare = (name) => String(name).replace(/[^A-Za-z0-9]/g, '').replace(/^mixamorig/i, '');
 
+/** 노드 world 행렬(TRS·matrix, 부모 순). */
+export function nodeWorlds(json) {
+  const parent = new Map(), out = new Map();
+  json.nodes.forEach((n, i) => (n.children || []).forEach((c) => parent.set(c, i)));
+  const local = (n) => n.matrix ? new THREE.Matrix4().fromArray(n.matrix)
+    : new THREE.Matrix4().compose(new THREE.Vector3(...(n.translation || [0, 0, 0])), new THREE.Quaternion(...(n.rotation || [0, 0, 0, 1])), new THREE.Vector3(...(n.scale || [1, 1, 1])));
+  const world = (i) => {
+    if (!out.has(i)) { const m = local(json.nodes[i]); if (parent.has(i)) m.premultiply(world(parent.get(i))); out.set(i, m); }
+    return out.get(i);
+  };
+  return world;
+}
+
+/** 역바인드가 노드 rest 자세 그대로인지(맞춤 도구를 아직 적용하지 않은 원본인지). 맞춘 파일은 역바인드에 사상이 곱해져 rest 와 달라진다. */
+export function bindMatchesRest(json, skin, inverses, tolerance = 1e-4) {
+  // glTF 스킨 메시는 메시 노드 변환을 쓰지 않으므로 관절 world 와 역바인드의 역을 바로 비교한다.
+  const world = nodeWorlds(json);
+  return skin.joints.every((j, k) => {
+    const rest = world(j).elements, bind = new THREE.Matrix4().fromArray(inverses, k * 16).invert().elements;
+    return rest.every((v, i) => Math.abs(v - bind[i]) < tolerance);
+  });
+}
+
+/** 세로 배율이 섞인 스킨 행렬에서 바르게 보이도록 법선을 미리 보정한다.
+ *  Three.js 는 법선에 스킨 행렬 자체를 곱한다(역전치 아님). 정점의 섞인 세로 배율이 s 면 diag(1, 1/s², 1)·n 을 저장해 두면
+ *  렌더 결과가 diag(1, s, 1)·diag(1, 1/s², 1)·n = diag(1, 1/s, 1)·n ∝ 역전치 법선이 된다. */
+export function correctNormal(nx, ny, nz, s) {
+  const y = ny / (s * s), len = Math.hypot(nx, y, nz) || 1;
+  return [nx / len, y / len, nz / len];
+}
+
 /** GLB 하나의 다리 관절 높이(뼈 rest·메시 추정)와 새 역바인드를 계산한다. */
 export function planLegRest(bytes) {
   const { json, bin } = readGlb(bytes);
@@ -55,6 +87,7 @@ export function planLegRest(bytes) {
   const inverses = readAccessor(json, bin, skin.inverseBindMatrices);
   const pos = readAccessor(json, bin, prim.attributes.POSITION);
   const joints = readAccessor(json, bin, prim.attributes.JOINTS_0), weights = readAccessor(json, bin, prim.attributes.WEIGHTS_0);
+  if (!bindMatchesRest(json, skin, inverses)) throw new Error('inverse binds differ from node rest (already fitted?); apply to the original only');
   const names = skin.joints.map((j) => bare(json.nodes[j].name));
   const slot = (n) => { const k = names.indexOf(n); if (k < 0) throw new Error('joint missing: ' + n); return k; };
   const restY = (k) => new THREE.Matrix4().fromArray(inverses, k * 16).invert().elements[13];
@@ -87,8 +120,7 @@ export function planLegRest(bytes) {
       for (let c = 0; c < 4; c++) { const k = joints[i * 4 + c]; if (k === foot || under(k, foot)) w += weights[i * 4 + c]; }
       if (w > 0.5) sole = Math.min(sole, pos[i * 3 + 1]);
     }
-    // 이미 맞춘 파일(발 rest 가 메시 발목 근처)에 다시 적용하면 두 번 옮겨진다.
-    if (ankle - meshAnkle < 0.1) throw new Error(`${side} foot rest already near mesh ankle (${ankle.toFixed(3)} vs ${meshAnkle.toFixed(3)}); apply to the original only`);
+    if (ankle - meshAnkle < 0.1) throw new Error(`${side} foot rest already near mesh ankle (${ankle.toFixed(3)} vs ${meshAnkle.toFixed(3)}); nothing to fit`);
     const lift = floor < -1e-4 ? -sole : 0;          // 발바닥을 몸 바닥 0 으로
     const ankleTarget = meshAnkle + lift;
     const thigh = (hip - knee) / (hip - meshKnee), shin = (knee - ankleTarget) / (meshKnee - meshAnkle);
@@ -100,13 +132,25 @@ export function planLegRest(bytes) {
     for (let k = 0; k < names.length; k++) if (k === foot || under(k, foot)) maps.set(k, vertical(ankleTarget, meshAnkle, 1));
     report.sides[side] = { hip, knee, ankle, meshKnee, meshAnkle, sole, lift, ankleTarget, thigh, shin };
   }
+  const scaleOf = new Float32Array(names.length).fill(1);
+  for (const [k, m] of maps) scaleOf[k] = m.elements[5];
+  let normals = null;
+  if (prim.attributes.NORMAL !== undefined) {
+    const n = readAccessor(json, bin, prim.attributes.NORMAL);
+    normals = new Float32Array(n.length);
+    for (let i = 0; i < n.length / 3; i++) {
+      let sb = 0;
+      for (let c = 0; c < 4; c++) sb += weights[i * 4 + c] * scaleOf[joints[i * 4 + c]];
+      normals.set(Math.abs(sb - 1) < 1e-6 ? [n[i * 3], n[i * 3 + 1], n[i * 3 + 2]] : correctNormal(n[i * 3], n[i * 3 + 1], n[i * 3 + 2], sb), i * 3);
+    }
+  }
   const next = Float32Array.from(inverses);
   for (const [k, m] of maps) {
     const inv = new THREE.Matrix4().fromArray(inverses, k * 16).multiply(m);
     next.set(inv.elements, k * 16);
   }
   report.changedJoints = [...maps.keys()].map((k) => names[k]).sort();
-  return { json, skin, inverses, next, report };
+  return { json, skin, prim, inverses, next, normals, report };
 }
 
 /** 역바인드 accessor 만 다시 쓴 GLB(나머지 바이트 그대로). */
@@ -116,6 +160,11 @@ export function writeLegRest(bytes) {
   if (acc.componentType !== 5126 || stride !== 64) throw new Error('packed float MAT4 inverse binds expected');
   const out = Buffer.from(bytes);
   for (let i = 0; i < plan.next.length; i++) out.writeFloatLE(plan.next[i], binStart + start + i * 4);
+  if (plan.normals) {
+    const view = accessorView(json, plan.prim.attributes.NORMAL);
+    if (view.acc.componentType !== 5126) throw new Error('float NORMAL expected');
+    for (let i = 0; i < plan.normals.length / 3; i++) for (let c = 0; c < 3; c++) out.writeFloatLE(plan.normals[i * 3 + c], binStart + view.start + i * view.stride + c * 4);
+  }
   return { bytes: out, report: plan.report };
 }
 

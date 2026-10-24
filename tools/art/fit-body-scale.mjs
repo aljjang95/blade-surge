@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from 'three';
-import { readGlb, accessorView, readAccessor, bare } from './fit-leg-rest.mjs';
+import { readGlb, accessorView, readAccessor, bare, bindMatchesRest } from './fit-leg-rest.mjs';
 
 const PAIRS = [['Hips', 'Spine'], ['Spine', 'Spine1'], ['Spine2', 'Neck'], ['Neck', 'Head'],
   ...['Left', 'Right'].flatMap((s) => [[s + 'UpLeg', s + 'Leg'], [s + 'Leg', s + 'Foot'], [s + 'Shoulder', s + 'Arm'], [s + 'Arm', s + 'ForeArm'], [s + 'ForeArm', s + 'Hand']])];
@@ -18,6 +18,8 @@ export function planBodyScale(bytes) {
   const skin = json.skins[0], prim = json.meshes[0].primitives[0];
   const inverses = readAccessor(json, bin, skin.inverseBindMatrices), pos = readAccessor(json, bin, prim.attributes.POSITION);
   const joints = readAccessor(json, bin, prim.attributes.JOINTS_0), weights = readAccessor(json, bin, prim.attributes.WEIGHTS_0);
+  // 역바인드만 바꾸므로 원시 POSITION 으로는 이미 맞춘 파일을 알 수 없다. 역바인드가 노드 rest 와 같은 원본에만 적용한다.
+  if (!bindMatchesRest(json, skin, inverses)) throw new Error('inverse binds differ from node rest (already fitted?); apply to the original only');
   const names = skin.joints.map((j) => bare(json.nodes[j].name));
   const rest = (k) => new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(inverses, k * 16).invert());
   let sole = Infinity, top = -Infinity;
@@ -57,7 +59,7 @@ export function writeBodyScale(bytes) {
   const plan = planBodyScale(bytes), { json, binStart } = readGlb(bytes);
   const { start, stride, acc } = accessorView(json, plan.skin.inverseBindMatrices);
   if (acc.componentType !== 5126 || stride !== 64) throw new Error('packed float MAT4 inverse binds expected');
-  if (Math.abs(plan.report.sole) < 1e-3 && Math.abs(plan.report.scale - 1) < 0.02) throw new Error('already fitted');
+  if (Math.abs(plan.report.sole) < 1e-3 && Math.abs(plan.report.scale - 1) < 0.02) throw new Error('already fits the skeleton (scale ≈ 1, sole 0)');
   const out = Buffer.from(bytes);
   for (let i = 0; i < plan.next.length; i++) out.writeFloatLE(plan.next[i], binStart + start + i * 4);
   return { bytes: out, report: plan.report };
