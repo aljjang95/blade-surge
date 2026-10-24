@@ -3,6 +3,7 @@ import { AVATARS, AVATAR_BY_ID } from '../src/data/avatars.js';
 import { HEROES, heroStats } from '../src/data/heroes.js';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
+import libraryManifest from '../asset-library/manifest.json';
 import { createLibraryLoader, selectHeroLibraryAsset, validateManifest } from '../src/engine/library-assets.js';
 
 const provenance = { tool: 'fixture', account: 'test', taskId: 'avatar-test', prompt: 'fixture', createdAt: '2026-10-13T00:00:00.000Z', rawSha256: 'b'.repeat(64) };
@@ -92,5 +93,7 @@ test('아바타 착용 전후 전투력과 스탯은 동일하다', () => {
   expect(after).toEqual(before);
   expect(eco.heroPower('knight')).toBe(before.power);
   expect(AVATAR_BY_ID.avatar_knight_sakura.heroId).toBe('knight');
-  expect(AVATARS).toHaveLength(5);
+  // 상품 수는 manifest 의 아바타 몸체 수와 같다(모든 상품에 몸체가 있다).
+  const manifestAvatars = (libraryManifest.assets as any[]).filter(asset => asset.avatar === true).map(asset => asset.id).sort();
+  expect(AVATARS.map(avatar => avatar.id).sort()).toEqual(manifestAvatars);
 });

@@ -50,7 +50,7 @@
     { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{ranger-t2-body-fit-v2,rogue-t2-body-fit-v1}.glb", "reason": "궁수·도적 2단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "heroes-t3", "glob": "models/heroes-next/{ranger-t3-body-fit-v2,rogue-t3-body-fit-v1}.glb", "reason": "궁수·도적 3단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{rogue,ranger}-{t1s,t2u}-body-fit-v1.glb", "reason": "도적·궁수 S등급(1.5)·U등급 테마(2.5) 몸체(t4-body-revisions)" },
-    { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow}-body-fit-v1.glb", "reason": "여우·까마귀 아바타 몸체" },
+    { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow,rogue-vampire,ranger-blackcat}-body-fit-v1.glb", "reason": "여우·까마귀·흡혈 백작·검은 고양이 아바타 몸체(할로윈 t5 는 t5-avatar-body-revisions)" },
 
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },
     { "class": "core", "glob": "models/**", "reason": "영웅 1단계·로비·성채·무기·환경 모델" },

@@ -1,0 +1,29 @@
+{
+  "schema": "blade-surge.t5-avatar-body-revisions.v1",
+  "note": "할로윈 아바타(t5) 중 게임이 정규화본이 아니라 heroes-next 교정 몸을 쓰는 것. 1단계 클립이 교정본(heroes-next)인 영웅(도적·궁수)만 여기에 둔다. higher-body-revisions-v1.json(다섯 기록)·t4-body-revisions-v1.json(네 기록)은 그대로 둔다.",
+  "revisions": [
+    {
+      "id": "rogue-vampire-body-fit-v1",
+      "asset": "avatar_rogue_vampire",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/avatar_rogue_vampire.glb",
+        "sha256": "856188ee73ae51a2b07414b409e12dbb71a00115d2db0d152c3bd685d3ed256b"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-vampire-body-fit-v1.glb",
+        "sha256": "3d55c6bbe8b1771a06de77d84cb904a6dfd9f49576ca668e4f073466fb4cc850"
+      },
+      "authoring": {
+        "kind": "body-rebind",
+        "tool": "tools/art/rebind-library-body.mjs --no-clips --scale=height --collapse='(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)' --no-aim='(Left|Right)Hand'",
+        "body": "art-src/t5-pc/avatar_rogue_vampire/rigged.glb → blender_clean_weights.py --decor-hue 340-25 --decor-sat 0.5 --decor-val 0.2 --smooth-cape 8 --head-rigid 1",
+        "base": {
+          "path": "/models/heroes-next/rogue-library-t1-v2.glb",
+          "sha256": "19f7e1492d947c6055cbbd8b51f3ee355c5c72f8ec4ab6296be32fb9d1e1c846"
+        }
+      }
+    }
+  ]
+}

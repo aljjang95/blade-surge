@@ -8,6 +8,7 @@ import HIGHER_BODY_REVISIONS_V1 from '../data/higher-body-revisions-v1.json';
 import RANGER_T2_BODY_REVISION_V2 from '../data/ranger-t2-body-revision-v2.json';
 import RANGER_T3_BODY_REVISION_V2 from '../data/ranger-t3-body-revision-v2.json';
 import T4_BODY_REVISIONS_V1 from '../data/t4-body-revisions-v1.json';
+import T5_AVATAR_BODY_REVISIONS_V1 from '../data/t5-avatar-body-revisions-v1.json';
 import ANIM_PACKS from '../data/anim-packs-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
@@ -119,32 +120,53 @@ function validateT4BodyRevision(revision, target) {
   return revision;
 }
 
-/** 등급 몸 교정 기록이 목표와 일대일인지 번들 로드 시 검사한다. */
-export function validateT4BodyRevisions(value) {
-  requireHigherBody(value?.schema === 'blade-surge.t4-body-revisions.v1'
-    && Array.isArray(value.revisions) && value.revisions.length === T4_BODY_TARGETS.length);
-  requireHigherBody(new Set(value.revisions.map(revision => revision?.id)).size === T4_BODY_TARGETS.length
-    && new Set(value.revisions.map(revision => revision?.asset)).size === T4_BODY_TARGETS.length
-    && new Set(value.revisions.map(revision => revision?.output?.path)).size === T4_BODY_TARGETS.length);
+// 기록 묶음(schema)이 목표와 일대일인지 검사한다(등급 몸 t4 와 할로윈 아바타 t5 공통).
+function validateRebindRevisionSet(value, schema, targets) {
+  requireHigherBody(value?.schema === schema && Array.isArray(value.revisions) && value.revisions.length === targets.length);
+  requireHigherBody(new Set(value.revisions.map(revision => revision?.id)).size === targets.length
+    && new Set(value.revisions.map(revision => revision?.asset)).size === targets.length
+    && new Set(value.revisions.map(revision => revision?.output?.path)).size === targets.length);
   return value.revisions.map(revision => {
-    const target = T4_BODY_TARGETS.find(entry => entry.id === revision?.id);
+    const target = targets.find(entry => entry.id === revision?.id);
     requireHigherBody(target);
     return validateT4BodyRevision(revision, target);
   });
 }
 
+/** 등급 몸 교정 기록이 목표와 일대일인지 번들 로드 시 검사한다. */
+export function validateT4BodyRevisions(value) {
+  return validateRebindRevisionSet(value, 'blade-surge.t4-body-revisions.v1', T4_BODY_TARGETS);
+}
+
+// ---- 할로윈 아바타(t5) 중 도적·궁수의 heroes-next 교정 몸 ----
+// 1차 까마귀·여우처럼 정규화본(asset-library/normalized)은 manifest 원본으로 남고, 게임은 그 영웅의 1단계 클립 원본(T4_BODY_BASES:
+// 도적 rogue-library-t1-v2, 궁수 v4 = rangerClipSource)에 재결합한 몸을 받는다. 다섯 기록(higher-body-revisions-v1)·등급 몸 네 기록
+// (t4-body-revisions-v1) 계약은 그대로 두고, 같은 검사(원본 SHA = manifest, 고정 출력 경로, GENERATED 실제 SHA, 재결합 base = 1단계
+// 클립 원본)를 별도 기록·목표로 얹는다.
+const T5_AVATAR_BODY_TARGETS = Object.freeze([
+  Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v1', prefix: '/models/heroes-next/rogue-vampire-body-fit-v1' }),
+]);
+
+/** 할로윈 아바타(t5) 교정 기록이 목표와 일대일인지 번들 로드 시 검사한다. */
+export function validateT5AvatarBodyRevisions(value) {
+  return validateRebindRevisionSet(value, 'blade-surge.t5-avatar-body-revisions.v1', T5_AVATAR_BODY_TARGETS);
+}
+
 const T4_BODY_REVISIONS = Object.freeze(T4_BODY_REVISIONS_V1);
 const t4Revisions = validateT4BodyRevisions(T4_BODY_REVISIONS);
+const T5_AVATAR_BODY_REVISIONS = Object.freeze(T5_AVATAR_BODY_REVISIONS_V1);
+const t5Revisions = validateT5AvatarBodyRevisions(T5_AVATAR_BODY_REVISIONS);
 const LIBRARY_REVISIONS = Object.freeze([
   ...HIGHER_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: higherRevisions.find(revision => revision.id === target.id) })),
   ...T4_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: t4Revisions.find(revision => revision.id === target.id) })),
+  ...T5_AVATAR_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: t5Revisions.find(revision => revision.id === target.id) })),
   Object.freeze({ id: FOX_BODY_REVISION_ID, prefix: '/models/heroes-next/ranger-fox-', revision: FOX_BODY_REVISION }),
   Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
   Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),
 ]);
 let bundledFiles = {};
 try {
-  // 아래 열두 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
+  // 아래 원본들은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
   // 전달 크기를 위해 빌드 산출물에서 뺀다. 원본 파일·해시 계약은 asset-library/normalized 에 그대로 있다(test/library-bundle-exclusions.test.ts 가 검증).
   bundledFiles = import.meta.glob([
     '../../asset-library/normalized/*.glb',
@@ -153,6 +175,7 @@ try {
     '!../../asset-library/normalized/avatar_ranger_fox.glb', '!../../asset-library/normalized/avatar_rogue_crow.glb',
     '!../../asset-library/normalized/hero_rogue_t1s.glb', '!../../asset-library/normalized/hero_rogue_t2u.glb',
     '!../../asset-library/normalized/hero_ranger_t1s.glb', '!../../asset-library/normalized/hero_ranger_t2u.glb',
+    '!../../asset-library/normalized/avatar_rogue_vampire.glb',
   ], { eager: true, query: '?url', import: 'default' });
 } catch {
   // Bun의 계약 테스트는 Vite URL 변환 없이 공개 경로를 사용한다.
@@ -191,7 +214,7 @@ export function revisedLibraryFile(asset, revision = null) {
   if (!revision || asset.id !== revision.asset) return null;
   const higherTarget = HIGHER_BODY_TARGETS.find(target => target.id === revision.id);
   if (higherTarget) validateHigherBodyRevision(revision, higherTarget);
-  const t4Target = T4_BODY_TARGETS.find(target => target.id === revision.id);
+  const t4Target = T4_BODY_TARGETS.find(target => target.id === revision.id) || T5_AVATAR_BODY_TARGETS.find(target => target.id === revision.id);
   if (t4Target) validateT4BodyRevision(revision, t4Target);
   if (!revision.useInGame) return null;
   if (!entry || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
@@ -208,6 +231,10 @@ export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
 export const higherBodyRevisionHistory = () => HIGHER_BODY_REVISIONS_V1.revisions.filter(revision => HIGHER_BODY_SUPERSEDING.some(next => next.supersedes === revision.id));
 /** 게임이 쓰는 등급 몸(S·U) 교정 기록. */
 export const t4BodyRevisions = () => T4_BODY_REVISIONS;
+/** 게임이 쓰는 할로윈 아바타(t5) 도적·궁수 교정 기록. */
+export const t5AvatarBodyRevisions = () => T5_AVATAR_BODY_REVISIONS;
+/** 회피·사망 띠 곡선을 받을 수 있는 1단계 클립 원본 재결합 몸 기록(등급 몸 t4 + 할로윈 아바타 t5). */
+export const tierRebindBodyRevisions = () => [...T4_BODY_REVISIONS.revisions, ...T5_AVATAR_BODY_REVISIONS.revisions];
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 /**

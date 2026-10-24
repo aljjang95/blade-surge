@@ -1567,6 +1567,31 @@
       },
       "license": "owner-generated (Tripo subscription)",
       "shared": true
+    },
+    {
+      "id": "avatar_rogue_vampire",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/avatar_rogue_vampire.glb",
+      "heightM": 1.8,
+      "triangles": 10700,
+      "bytes": 1424816,
+      "sha256": "856188ee73ae51a2b07414b409e12dbb71a00115d2db0d152c3bd685d3ed256b",
+      "clips": {},
+      "provenance": {
+        "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 340-25 --decor-sat 0.5 --decor-val 0.2 --smooth-cape 8 --head-rigid 1) + rebind-library-body.mjs --no-clips --scale=height --collapse='(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)' --no-aim='(Left|Right)Hand'",
+        "account": "owner subscription",
+        "taskId": "5f243e66-ac72-4f72-b064-6fbeb9697d6d",
+        "prompt": "[pipeline summary] blade-art#t5 Halloween cash avatar \"Vampire Count\": tier1 rogue (black hair, red eyes) in crimson-black high-collar cape, silver bat brooch, black vest: Codex concept → Tripo H3.1 image-to-3D, retopo ~11k, Humanoid+Mixamo rig (65 joints; finger joints collapsed at the wrist → merged into hands; face carried shoulder/arm weights → whole head above the neck joint bound to Head) → decor/cape weight cleanup → rotation-only rebind onto hero_rogue_t1 skeleton (mesh-only, shares tier1 clips; game loads heroes-next body-fit rebound onto rogue-library-t1-v2). Source art-src/t5-pc/avatar_rogue_vampire",
+        "createdAt": "2026-10-24T12:00:00.000Z",
+        "rawSha256": "e471fbe211cfe6c8003758907ed67cf1f67c88407764f408a8e30404f977c38c"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "rogue",
+      "avatar": true
     }
   ]
 }
