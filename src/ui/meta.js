@@ -14,7 +14,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, PICKUP_THEMES, rotationWindow, heroReleased } from '../data/gacha-banners.js';
-import { heroBannerArt, beginnerBannerArt } from '../data/banner-art.js';
+import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/banner-art.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
@@ -471,6 +471,8 @@ export class Meta {
     else { const ba = beginnerBannerArt() /* 사실풍 초상 대신 3D 렌더(그림체 규칙 12.9) */; artSrc = ba.src; artKind = ba.kind; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
     wrap.style.setProperty('--banner-bg', 'url("' + artSrc + '")');
     art.parentElement?.setAttribute('data-art', id === 'gear' ? 'icon' : artKind); art.setAttribute('data-art', id === 'gear' ? 'icon' : artKind);
+    // 정사각 초상(치비·3D 가로 렌더가 없는 영웅) 대체 그림은 확대해 자르지 않고 정사각 상자로 두고 흐린 같은 그림으로 좌우를 채운다.
+    art.parentElement?.setAttribute('data-fit', artKind === 'fallback' && id !== 'gear' && artSrc !== FALLBACK_BANNER_ART ? 'square' : '');
     if (art.getAttribute('src') !== artSrc) { art.setAttribute('src', artSrc); art.onerror = () => { art.onerror = null; art.dataset.art = 'fallback'; art.parentElement?.setAttribute('data-art', 'fallback'); art.setAttribute('src', HEROES[bannerPickup('hero', now)]?.portrait || ''); }; }
     set($('banner-title'), title); set($('banner-kicker'), kicker); $('banner-timer-wrap').hidden = id === 'beginner';
     const gear = $('gz-gear'), feat = id === 'gear' ? gachaContents('gear', now).filter((x) => x.featured && x.kind === 'gear') : [];

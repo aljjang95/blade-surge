@@ -322,6 +322,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 /* 치비 배너(16:9, 캐릭터는 가운데 40% 띠): 가로 화면은 좌우를 꽉 채우고, 세로 화면은 가운데를 잘라 얼굴·무기를 남긴다. */
 .banner-art[data-art="chibi"] img { object-fit: cover; object-position: 50% 45%; }
 /* 장비 배너: 정사각 아이콘은 가운데에 크게 두고, 같은 이미지를 흐리게 키운 배경과 세트 빛 장식으로 좌우 빈자리를 채운다. */
+.banner-art[data-fit="square"] img { position: absolute; left: 50%; top: 0; width: auto; max-width: none; height: 100%; aspect-ratio: 1; transform: translateX(-50%); object-fit: contain; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.banner-art[data-fit="square"]::before { content: ''; position: absolute; inset: -12%; background: var(--banner-bg) center / cover no-repeat; filter: blur(28px) saturate(1.4) brightness(.8); }
 .gacha-wrap[data-banner="gear"] .banner-art img { position: absolute; left: 50%; top: 0; width: auto; max-width: none; height: 100%; aspect-ratio: 1; transform: translateX(-50%); object-fit: contain; object-position: center; -webkit-mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); }
 .gacha-wrap[data-banner="gear"] .banner-art::before { content: ''; position: absolute; inset: -12%; background: var(--banner-bg) center / cover no-repeat; filter: blur(28px) saturate(1.6) brightness(1.15); }
 .gacha-wrap[data-banner="gear"] .banner-art::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(255, 226, 140, .38), transparent 60%); pointer-events: none; }
@@ -1157,4 +1159,5 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 /* 세로 화면 장비 배너: 정사각 아이콘이 폭에 맞게 들어오도록 폭 기준으로 둔다. */
 @media (max-width: 600px) {
   .gacha-wrap[data-banner="gear"] .banner-art img { width: 100%; height: auto; top: 38%; transform: translate(-50%, -50%); }
+  .banner-art[data-fit="square"] img { width: 100%; height: auto; -webkit-mask-image: none; mask-image: none; }
 }
