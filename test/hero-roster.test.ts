@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Economy } from '../src/game/economy.js';
+import { Economy, heroPickup } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import { ArsenalService } from '../src/game/arsenal-service.js';
 import { MasterworksService } from '../src/game/masterworks-service.js';
@@ -8,6 +8,7 @@ import { normalizeSave } from '../src/game/save.js';
 import { HEROES, HERO_ORDER, levelExp } from '../src/data/heroes.js';
 import { JOBS } from '../src/data/expansion.js';
 import { GACHA } from '../src/data/shop.js';
+import { GACHA_MILEAGE } from '../src/data/gacha-banners.js';
 import { HERO_FREE_UNLOCK, HERO_FREE_UNLOCK_TOTAL_GEMS, HERO_POLICY, rosterOwns } from '../src/data/hero-roster.js';
 import { OPS, validateOp } from '../src/shared/v1-ops.js';
 import { Meta } from '../src/ui/meta.js';
@@ -119,44 +120,40 @@ describe('무료 해금', () => {
     const eco = fresh(); eco.s.gems = 99999; eco.s.progress.unlocked = 60;
     expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'starter-pending' });
   });
-  test('진행 조건과 보석 조건을 각각 확인하고 사유를 돌려준다', () => {
-    const eco = chosen('knight', { unlocked: 1, gems: 99999 });
-    const [first] = HERO_FREE_UNLOCK;
-    let q = eco.heroUnlockQuote('mage');
-    expect(q).toMatchObject({ reason: 'progress', canFree: false, need: first.need, gems: first.gems, step: 0, needLabel: '3-5' });
-    expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'progress' });
-    eco.s.progress.unlocked = first.need - 1; expect(eco.heroUnlockQuote('mage').reason).toBe('progress');
-    eco.s.progress.unlocked = first.need; eco.s.gems = first.gems - 1;
-    q = eco.heroUnlockQuote('mage'); expect(q.reason).toBe('gems'); expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'gems' });
-    expect(eco.s.gems).toBe(first.gems - 1); expect(eco.ownHero('mage')).toBe(false);
-    eco.s.gems = first.gems; expect(eco.heroUnlockQuote('mage').canFree).toBe(true);
+  test('보석 해금 사다리는 닫혔다: 진행·보석이 충분해도 사유 gacha이고 상태는 그대로다(영웅은 소환으로만)', () => {
+    const eco = chosen('knight', { unlocked: 60, gems: 99999 });
+    const before = JSON.stringify(eco.s);
+    for (const id of ['mage', 'rogue', 'ranger', 'barbarian']) {
+      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'gacha', canFree: false, owned: false });
+      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'gacha' });
+    }
+    expect(JSON.stringify(eco.s)).toBe(before);
+    expect(eco.heroUnlockQuote('knight').reason).toBe('owned'); expect(eco.heroUnlockQuote('ghost').reason).toBe('unknown');
   });
-  test('해금하면 보석을 쓰고 소유를 열며 다음 영웅은 한 단계 비싼 조건이 된다', () => {
-    const eco = chosen('knight', { unlocked: HERO_FREE_UNLOCK[3].need, gems: 20000 });
-    const order = ['mage', 'rogue', 'ranger', 'barbarian'];
-    let spent = 0;
-    order.forEach((id, i) => {
-      const q = eco.heroUnlockQuote(id); expect(q).toMatchObject({ step: i, gems: HERO_FREE_UNLOCK[i].gems, need: HERO_FREE_UNLOCK[i].need });
-      const before = eco.s.gems; expect(eco.unlockHeroFree(id)).toEqual({ ok: true, id, gems: HERO_FREE_UNLOCK[i].gems });
-      spent += HERO_FREE_UNLOCK[i].gems; expect(eco.s.gems).toBe(before - HERO_FREE_UNLOCK[i].gems); expect(eco.ownHero(id)).toBe(true);
-    });
-    expect(spent).toBe(HERO_FREE_UNLOCK_TOTAL_GEMS);
-    expect(eco.ownedHeroIds()).toEqual(HERO_ORDER);
-    expect(eco.heroUnlockQuote('barbarian').reason).toBe('owned');
-    expect(eco.unlockHeroFree('barbarian')).toEqual({ ok: false, reason: 'owned' });
+  test('소환 첫 획득은 해금(조각 0)이고 같은 영웅을 또 뽑으면 조각 +40이다', () => {
+    const eco = chosen('knight', { unlocked: 1, gems: 0 }); eco.gachaRng = () => 0; // SR 영웅 칸의 첫 후보(mage)
+    const first = eco.rollResult('SR');
+    expect(first).toMatchObject({ type: 'hero', id: 'mage', dup: false, unlocked: true, shards: 0 });
+    expect(eco.ownHero('mage')).toBe(true); expect(eco.s.roster.owned).toEqual(['knight', 'mage']); expect(eco.s.heroes.mage.shards).toBe(0);
+    const again = eco.rollResult('SR');
+    expect(again).toMatchObject({ id: 'mage', dup: true, shards: GACHA.dupShards }); expect('unlocked' in again).toBe(false);
+    expect(eco.s.heroes.mage.shards).toBe(GACHA.dupShards);
+    expect(eco.s.roster.owned).toEqual(['knight', 'mage']);
   });
-  test('결제로 연 영웅은 무료 해금 단계를 올리지 않는다', () => {
+  test('결제로 연 영웅은 소환 규칙을 바꾸지 않는다(결제 권한은 소유로 보이고 다른 영웅은 여전히 소환으로만)', () => {
     const eco = chosen('knight', { unlocked: 60 });
     eco.applyIapState({ entitlements: { heroes: ['mage'] } });
-    expect(eco.ownHero('mage')).toBe(true);
-    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ step: 0, gems: HERO_FREE_UNLOCK[0].gems });
+    expect(eco.ownHero('mage')).toBe(true); expect(eco.heroUnlockQuote('mage').reason).toBe('owned');
+    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'gacha', step: 0 });
   });
-  test('저장이 실패하면 보석과 소유를 되돌린다', () => {
-    const storage = createMemoryStorage(); const eco = new Economy({ storage });
-    eco.chooseStarter('knight'); eco.s.progress.unlocked = 60; eco.s.gems = 5000;
+  test('저장이 실패하면 소환·마일리지 교환의 소유·보석·조각이 되돌아간다', () => {
+    const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0 });
+    eco.chooseStarter('mage'); eco.s.gems = 5000; eco.gachaState().mileage = GACHA_MILEAGE.cost;
+    const before = JSON.stringify(eco.s);
     storage.setItem = () => { throw new Error('quota'); };
-    expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'storage' });
-    expect(eco.s.gems).toBe(5000); expect(eco.s.roster.owned).toEqual(['knight']); expect(eco.ownHero('mage')).toBe(false);
+    expect(eco.exchangeMileage()).toBeNull(); expect(eco.lastGachaError).toBe('storage');
+    expect(eco.pull(10)).toBeNull(); expect(eco.lastGachaError).toBe('storage');
+    expect(JSON.stringify(eco.s)).toBe(before); expect(eco.s.roster.owned).toEqual(['mage']); expect(eco.ownHero(heroPickup())).toBe(false);
   });
   test('정책 1 은 무료 해금 대상이 없다', () => {
     expect(withStore(legacyRaw()).heroUnlockQuote('mage').reason).toBe('owned');
@@ -164,31 +161,38 @@ describe('무료 해금', () => {
 });
 
 describe('가챠', () => {
-  test('미보유 영웅이 나오면 소유를 열지 않고 조각만 쌓는다', () => {
+  test('시작 영웅을 고르기 전에는 해금하지 않고 조각만 쌓는다', () => {
     const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter('knight');
-    const target = GACHA.featured; expect(eco.ownHero(target)).toBe(false);
+    const target = 'barbarian'; expect(eco.s.roster.starterChosen).toBe(false); expect(eco.ownHero(target)).toBe(false);
     const before = eco.s.heroes[target].shards;
-    const res = eco.rollResult('SSR', true);
+    const res = eco.rollResult('SSR', { featured: target });
     expect(res).toMatchObject({ type: 'hero', id: target, dup: false, locked: true, shards: GACHA.dupShards });
     expect(eco.s.heroes[target].shards).toBe(before + GACHA.dupShards);
-    expect(eco.ownHero(target)).toBe(false);
-    expect(eco.s.roster.owned).toEqual(['knight']);
+    expect(eco.ownHero(target)).toBe(false); expect(eco.s.roster.owned).toEqual(['knight']);
   });
-  test('보유 영웅은 지금처럼 중복 조각이고 locked 표시가 없다', () => {
+  test('시작 영웅을 고른 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0)이다', () => {
     const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter(GACHA.featured);
-    const res = eco.rollResult('SSR', true);
-    expect(res).toMatchObject({ dup: true, shards: GACHA.dupShards }); expect('locked' in res).toBe(false);
+    eco.chooseStarter('mage'); const target = heroPickup(); expect(eco.ownHero(target)).toBe(false);
+    const res = eco.rollResult('SSR');
+    expect(res).toMatchObject({ type: 'hero', id: target, dup: false, unlocked: true, shards: 0, featured: true }); expect('locked' in res).toBe(false);
+    expect(eco.ownHero(target)).toBe(true); expect(eco.s.roster.owned).toEqual(['mage', target]);
+    expect(eco.s.heroes[target].shards).toBe(0);
   });
-  test('열 번 뽑아도 소유는 늘지 않고 해금 뒤에는 쌓인 조각이 그대로 남는다', () => {
+  test('보유 영웅은 중복 조각이고 locked 표시가 없다', () => {
+    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
+    eco.chooseStarter(heroPickup());
+    const res = eco.rollResult('SSR');
+    expect(res).toMatchObject({ dup: true, shards: GACHA.dupShards }); expect('locked' in res).toBe(false); expect('unlocked' in res).toBe(false);
+  });
+  test('열 번씩 뽑으면 소유가 늘고(중복 없이 정렬 유지) 해금 전에 쌓인 조각은 그대로 남는다', () => {
     const eco = new Economy({ storage: createMemoryStorage(), gachaSeed: 5 });
-    eco.chooseStarter('knight'); eco.s.tickets = 100;
-    for (let i = 0; i < 6; i++) eco.pull(10);
-    expect(eco.s.roster.owned).toEqual(['knight']);
-    eco.s.progress.unlocked = 60; eco.s.gems = 99999;
-    const shards = eco.s.heroes.mage.shards;
-    expect(eco.unlockHeroFree('mage').ok).toBe(true); expect(eco.s.heroes.mage.shards).toBe(shards);
+    eco.chooseStarter('knight'); eco.s.tickets = 0; eco.s.gems = 99999; eco.s.heroes.mage.shards = 77;
+    for (let i = 0; i < 6; i++) expect(eco.pull(10)).not.toBeNull();
+    const owned = eco.s.roster.owned;
+    expect(owned.length).toBeGreaterThan(1); expect(new Set(owned).size).toBe(owned.length); expect(owned[0]).toBe('knight');
+    // 해금은 조각을 지우지 않는다: 미보유 상태에서 쌓은 조각 77은 첫 획득 뒤에도 남는다(중복이 더 나오면 40씩 늘 뿐 줄지 않는다).
+    if (eco.ownHero('mage')) expect(eco.s.heroes.mage.shards).toBeGreaterThanOrEqual(77);
+    else expect(eco.heroUnlockQuote('mage').reason).toBe('gacha');
   });
 });
 
@@ -318,12 +322,13 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
     expect(eco.equipAvatar('knight', 'avatar_knight_sakura').ok).toBe(true);
   });
 
-  test('무료 해금 직후에는 같은 명령이 허용된다', () => {
-    const eco = chosen('knight'); eco.s.heroes.mage.level = 30; eco.s.gold = 99999999; eco.s.heroes.mage.shards = 9999;
+  test('소환 해금 직후에는 같은 명령이 허용된다', () => {
+    const eco = chosen('knight'); eco.gachaRng = () => 0; eco.s.heroes.mage.level = 30; eco.s.gold = 99999999; eco.s.heroes.mage.shards = 9999;
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
     const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
     expect(eco.levelUpHero('mage')).toBe(false); expect(eco.equipAvatar('mage', 'avatar_mage_astral').ok).toBe(false);
-    expect(eco.unlockHeroFree('mage').ok).toBe(true);
+    expect(eco.unlockHeroFree('mage').ok).toBe(false); // 보석 해금은 닫혔다
+    expect(eco.rollResult('SR')).toMatchObject({ id: 'mage', unlocked: true }); expect(eco.s.heroes.mage.shards).toBe(9999);
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
     expect(eco.levelUpHero('mage')).toBe(true); expect(eco.s.heroes.mage.level).toBe(31);
     expect(eco.promoteHero('mage')).toBe(true);
@@ -406,7 +411,11 @@ describe('v1-ops 새 명령', () => {
     const r1 = OPS.chooseStarter.run(eco, 'rogue'); expect(OPS.chooseStarter.ok(r1)).toBe(true); expect(eco.s.roster.starter).toBe('rogue');
     expect(OPS.chooseStarter.ok(OPS.chooseStarter.run(eco, 'mage'))).toBe(false);
     eco.s.progress.unlocked = 60; eco.s.gems = 9000;
-    const r2 = OPS.unlockHeroFree.run(eco, 'mage'); expect(OPS.unlockHeroFree.ok(r2)).toBe(true); expect(eco.ownHero('mage')).toBe(true);
-    expect(OPS.unlockHeroFree.ok(OPS.unlockHeroFree.run(eco, 'mage'))).toBe(false);
+    // 보석 해금 명령은 남아 있지만 소환으로만 획득하므로 실패한다.
+    expect(OPS.unlockHeroFree.ok(OPS.unlockHeroFree.run(eco, 'mage'))).toBe(false); expect(eco.ownHero('mage')).toBe(false);
+    // 소환 명령이 같은 규칙으로 영웅을 해금한다(결과 배열이 성공 값).
+    eco.s.tickets = 10; eco.gachaRng = () => 0;
+    const r2 = OPS.pull.run(eco, 1, 'hero'); expect(OPS.pull.ok(r2)).toBe(true); expect(eco.s.tickets).toBe(9);
+    expect(OPS.pull.ok(OPS.pull.run(eco, 5, 'hero'))).toBe(false);
   });
 });
