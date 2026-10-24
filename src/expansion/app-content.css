@@ -143,6 +143,7 @@
 #tab-stage .exp-result-shell .exp-film-link { margin:0 0 10px; font-size:12px; }
 #tab-stage .exp-result-shell .exp-result-message { color:#f3dfac; }
 #tab-stage .exp-result-footer { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); flex:0 0 auto; gap:8px; padding:8px max(16px,var(--sar)) calc(8px + var(--sab)) max(16px,var(--sal)); border-top:1px solid #b7ccbd38; background:#14201f; }
+#tab-stage .exp-result-footer .exp-reward-use { grid-column:1 / -1; }
 #tab-stage .exp-result-footer button { padding:8px; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
 @media(max-width:520px) {
   #tab-stage .exp-result-summary { flex-direction:column; align-items:stretch; gap:12px; }

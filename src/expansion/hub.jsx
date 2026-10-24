@@ -1,3 +1,4 @@
+import {currentRewardAction,openRewardTarget} from '../ui/reward-next.js';
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ALL_DUNGEONS as DUNGEONS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, ARENA_RIVALS } from '../data/expansion.js';
@@ -128,6 +129,14 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
   // Recheck the live receipt as well as disabling controls: old handlers must not leave a failed result.
   const depart=fn=>{if(controller.result!==result || result.saveError || app.stageStarting)return;return fn();};
   const openTab=tab=>depart(()=>{controller.result=null;app.toLobby();controller.open(tab);});
+  // 이번 원정 보상으로 지금 쓸 곳 한 가지(승리·저장 완료 때만). 누르는 순간 재화로 다시 골라 달라졌으면 이동하지 않고 다시 그린다.
+  const gotOf=()=>Object.entries(rewards||{}).filter(([,n])=>typeof n==='number').map(([k,n])=>({k,n}));
+  const useAction=result.win&&!result.saveError?currentRewardAction(app,result.kind==='arena'?'arena':'dungeon',gotOf()):null;
+  const useReward=()=>depart(()=>{
+    const live=currentRewardAction(app,result.kind==='arena'?'arena':'dungeon',gotOf());
+    if(!live||live.id!==useAction.id){controller.render();app.ui?.toast?.('보유 재화를 다시 확인했습니다.');return;}
+    controller.result=null;app.toLobby();if(app.mode!=='lobby')return;openRewardTarget(app,live.target);
+  });
   const retrySave=()=>{if(controller.result===result && result.saveError && !app.stageStarting)controller.showResult(app.battle,result.win);};
   return <section className="exp-shell exp-result-shell" aria-labelledby="exp-title" data-outcome={result.win?'victory':'defeat'}>
     <header className="exp-header exp-result-header">
@@ -197,6 +206,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
       {!(nextChallenge?.action === 'retry') && <button className={nextChallenge ? 'exp-result-retry' : 'exp-primary'} disabled={blocked} onClick={()=>depart(()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth,conquestId:result.conquestId}))}>다시 도전 · {retryEnergy===null?'비용 확인 필요':`에너지 ${retryEnergy}`}</button>}
       {/* 결과 뒤 핵심 행동만 둔다: 다시 도전 · 다음 던전 · 장비 정비(로비는 머리글). 제작 공방 · 퀘스트는 메뉴에서 연다. */}
       <button className="exp-result-gear" disabled={blocked} onClick={()=>depart(()=>{const heroId=app.eco?.s?.selected;controller.result=null;app.toLobby();if(heroId)app.meta.heroSel=heroId;app.meta.openTab('heroes');})}>장비 정비</button>
+      {useAction && <button className="exp-primary exp-reward-use" data-reward-action={useAction.id} disabled={blocked} onClick={useReward}><span>{useAction.label}<br/><small>{useAction.hint}</small></span></button>}
     </footer>
   </section>;
 }
