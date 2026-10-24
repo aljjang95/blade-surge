@@ -132,3 +132,40 @@ export function stopVibration(grade) { return grade === 3 ? [40, 30, 80] : 25; }
 export function stripOffset(pos, cells, cell, view) {
   return view / 2 - (cells - 1 - pos + 0.5) * cell;
 }
+
+/**
+ * 장식용 결정적 난수(mulberry32). 릴 문양 배치에만 쓴다. 전투 난수(전역 무작위 함수)를 소비하지 않아
+ * 연출 설정(기본·짧게·움직임 줄이기)이 달라도 이후 전투 결과가 바뀌지 않는다.
+ * @param {string} seed
+ */
+export function decorRng(seed) {
+  let h = 1779033703 ^ String(seed).length;
+  for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * 릴 한 줄의 장식 가문 목록(칸 번호 s 0..cells-1, 결과 칸 fin 은 null). 결과 칸 위·아래는 결과와 다른 가문으로 둔다.
+ * @param {{ seed: string, cells: number, fin: number, resultFam: string, families: readonly string[] }} o
+ * @returns {Array<string|null>}
+ */
+export function decorFamilies({ seed, cells, fin, resultFam, families }) {
+  const rng = decorRng(seed), n = families.length, out = /** @type {Array<string|null>} */ (new Array(cells).fill(null));
+  let prev = resultFam;
+  for (let s = cells - 1; s >= 0; s--) {
+    if (s === fin) { prev = resultFam; continue; }
+    let f = families[Math.floor(rng() * n)];
+    const near = s === fin + 1 || s === fin - 1;
+    if (f === prev || (near && f === resultFam)) f = families[(families.indexOf(f) + 1 + (f === resultFam ? 1 : 0)) % n];
+    if (f === resultFam && near) f = families[(families.indexOf(f) + 2) % n];
+    out[s] = f; prev = f;
+  }
+  return out;
+}

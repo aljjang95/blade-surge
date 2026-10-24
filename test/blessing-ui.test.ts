@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { REEL_TIMINGS, REEL_OVERSHOOT, TICK_MIN_INTERVAL, planReels, cellsForReel, reelAt, timelineAt, eventsBetween, stopOrder, shouldTick, stopVibration, stripOffset } from '../src/ui/blessing-reel-timeline.js';
+import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
+import { decorFamilies, REEL_TIMINGS, REEL_OVERSHOOT, TICK_MIN_INTERVAL, planReels, cellsForReel, reelAt, timelineAt, eventsBetween, stopOrder, shouldTick, stopVibration, stripOffset } from '../src/ui/blessing-reel-timeline.js';
 import { heldPreRunBoons, launchWithBlessing } from '../src/ui/blessing-launch.js';
 import { boonEffectText } from '../src/ui/blessing-glyphs.js';
-import { blessingOddsHtml } from '../src/ui/blessing-odds.js';
+import { blessingOddsHtml, inertBackground, trapTab } from '../src/ui/blessing-odds.js';
 import { EVENT_SOUNDS, EVENT_SOUND_FILES } from '../src/engine/combat-sound-library.js';
-import { oddsTable } from '../src/game/blessing-core.js';
+import { oddsTable, dayKey } from '../src/game/blessing-core.js';
 import { Economy } from '../src/game/economy.js';
 
 // ---------- 릴 타임라인 ----------
@@ -151,10 +151,10 @@ test('보관 각인 → preRunBoons(등급 n이면 같은 id n번)', () => {
   expect(heldPreRunBoons(null)).toEqual([]);
 });
 
-test('출격 시작 성공 뒤에만 소모한다: 시작 직전 넘기고, 성공이면 보관이 비워진다', async () => {
+test('소모는 시작 직전에 먼저 저장하고 각인을 넘긴다: 시작 시점엔 이미 비워져 있고 결과는 소모됨', async () => {
   const { app, eco, battle, calls } = fakeApp(2);
   const seen: { atStart: string[] | null } = { atStart: null };
-  const out = await launchWithBlessing(app, async () => { seen.atStart = battle.preRunBoons; expect(eco.blessingState().held).not.toBeNull(); return true; });
+  const out = await launchWithBlessing(app, async () => { seen.atStart = battle.preRunBoons; expect(eco.blessingState().held).toBeNull(); return true; });
   expect(seen.atStart).toEqual(['ember_edge', 'ember_edge']);
   expect(out).toEqual({ started: true, consumed: true, preRunBoons: ['ember_edge', 'ember_edge'] });
   expect(eco.blessingState().held).toBeNull();
@@ -179,4 +179,102 @@ test('보관 각인이 없으면 아무것도 넘기지 않는다(파티·결투
   const out = await launchWithBlessing({ eco, battle }, async () => true);
   expect(out).toEqual({ started: true, consumed: false, preRunBoons: [] });
   expect(battle.calls).toBe(0);
+});
+
+// ---------- 리뷰 반영: 출격 순서·초기화 ----------
+test('선택 없이 출격해도 성공하면 후보(offer)·준비 굴림 수가 초기화되어 다음 보석 비용이 30으로 돌아온다', async () => {
+  const eco = new Economy();
+  eco.s.blessing = { ...eco.blessingState(), held: null, charms: 0, freeDay: dayKey(Date.now()), runGemRolls: 2, runRolls: 3, offer: { candidates: [{ id: 'ember_edge', grade: 1 }, { id: 'tide_breath', grade: 1 }, { id: 'storm_eye', grade: 2 }], guaranteed: false, picked: -1 } };
+  const battle = { calls: 0, setPreRunBoons() { this.calls++; return []; } };
+  const out = await launchWithBlessing({ eco, battle }, async () => true);
+  expect(out.started).toBe(true);
+  const b = eco.blessingState();
+  expect(b.offer).toBeNull(); expect(b.runGemRolls).toBe(0); expect(b.runRolls).toBe(0);
+  expect(battle.calls).toBe(0);
+  expect(eco.blessingQuote().cost.gems).toBe(30);
+});
+
+test('출격 시작 실패면 굴림 상태도 건드리지 않고 되돌린다(후보·굴림 수 유지는 소모 전 상태가 아니라 보관 각인만 복원)', async () => {
+  const { app, eco } = fakeApp(2);
+  const out = await launchWithBlessing(app, async () => false);
+  expect(out.started).toBe(false); expect(out.consumed).toBe(false);
+  expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 2 });
+});
+
+test('소모 저장이 실패하면 출격하지 않고 setPreRunBoons 도 부르지 않는다(보관 각인 그대로)', async () => {
+  const { app, eco, calls } = fakeApp(2);
+  eco.save = () => false;
+  let started = 0;
+  const out = await launchWithBlessing(app, async () => { started++; return true; });
+  expect(out).toEqual({ started: false, consumed: false, preRunBoons: [], saveFailed: true });
+  expect(started).toBe(0); expect(calls).toEqual([]);
+  expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 2 });
+});
+
+test('출격 시작이 예외로 실패해도 보관 각인을 복원하고 넘긴 각인을 거둔다(같은 일회용 각인은 한 번만 쓰인다)', async () => {
+  const { app, eco, battle } = fakeApp(3);
+  let threw = false;
+  try { await launchWithBlessing(app, async () => { expect(eco.blessingState().held).toBeNull(); throw new Error('asset load'); }); } catch { threw = true; }
+  expect(threw).toBe(true);
+  expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 3 });
+  expect(battle.preRunBoons).toBeNull();
+  // 성공 쪽은 소모 후 다시 복원할 수 없다.
+  const ok = await launchWithBlessing(app, async () => true);
+  expect(ok.consumed).toBe(true);
+  expect(eco.blessingState().held).toBeNull();
+  expect(eco.blessingRestore(null).ok).toBe(false);
+});
+
+test('blessingRestore 는 다른 각인을 이미 보관 중이면 덮어쓰지 않는다', () => {
+  const { eco } = fakeApp(1);
+  expect(eco.blessingRestore({ id: 'tide_breath', grade: 2 }).ok).toBe(false);
+  expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 1 });
+});
+
+// ---------- 리뷰 반영: 확률 시트 접근성 ----------
+function fakeEl(name: string, attrs: Record<string, string> = {}) {
+  const a = new Map(Object.entries(attrs));
+  return { name, hasAttribute: (k: string) => a.has(k), setAttribute: (k: string, v: string) => { a.set(k, v); }, removeAttribute: (k: string) => { a.delete(k); } };
+}
+test('시트가 열리면 뒤 준비 영역은 inert, 닫으면 해제(원래 inert 였던 것은 그대로)', () => {
+  const sheet = fakeEl('sheet'), shade = fakeEl('shade'), a = fakeEl('a'), b = fakeEl('b', { inert: '' });
+  const host = { children: [a, b, shade, sheet] } as any;
+  const restore = inertBackground(host, [shade, sheet] as any);
+  expect(a.hasAttribute('inert')).toBe(true); expect(b.hasAttribute('inert')).toBe(true);
+  expect(sheet.hasAttribute('inert')).toBe(false); expect(shade.hasAttribute('inert')).toBe(false);
+  restore();
+  expect(a.hasAttribute('inert')).toBe(false); expect(b.hasAttribute('inert')).toBe(true);
+});
+
+test('시트 안 Tab 순환: 마지막에서 Tab 은 처음으로, 처음에서 Shift+Tab 은 마지막으로, 시트 밖 초점은 안으로', () => {
+  const mk = (name: string) => ({ name, hidden: false, closest: () => null, focus() { focused = this; } });
+  let focused: any = null;
+  const items = [mk('close'), mk('toggle1'), mk('toggle2')];
+  const sheet = { querySelectorAll: () => items, contains: (el: any) => items.includes(el) } as any;
+  const ev = (shiftKey: boolean) => { const e = { key: 'Tab', shiftKey, prevented: false, preventDefault() { this.prevented = true; } }; return e; };
+  let e = ev(false); expect(trapTab(e, sheet, items[2] as any)).toBe(true); expect(e.prevented).toBe(true); expect(focused).toBe(items[0]);
+  e = ev(true); expect(trapTab(e, sheet, items[0] as any)).toBe(true); expect(focused).toBe(items[2]);
+  e = ev(false); expect(trapTab(e, sheet, items[0] as any)).toBe(false); expect(e.prevented).toBe(false);
+  e = ev(true); expect(trapTab(e, sheet, {} as any)).toBe(true); expect(focused).toBe(items[2]);
+  expect(trapTab({ key: 'Enter', preventDefault() {} }, sheet, items[0] as any)).toBe(false);
+});
+
+// ---------- 리뷰 반영: 장식 난수는 전투 난수를 쓰지 않는다 ----------
+test('릴 장식 문양: 연출 3종(기본·짧게·움직임 줄이기 이전 계획)에서 Math.random 호출 0회, 같은 시드면 같은 배치', () => {
+  const spy = spyOn(Math, 'random');
+  try {
+    const fams = ['ember', 'tide', 'storm', 'stone'];
+    for (const opts of [{}, { short: true }, { short: true, reduced: true }]) {
+      const plan = planReels(opts);
+      plan.reels.forEach((r, i) => {
+        const cells = cellsForReel(plan, i), fin = r.final;
+        const make = () => decorFamilies({ seed: `ember_edge:2:${i}:${plan.short ? 's' : 'f'}`, cells, fin, resultFam: 'tide', families: fams });
+        const a = make();
+        expect(a).toEqual(make());
+        expect(a[fin]).toBeNull();
+        for (const n of [fin - 1, fin + 1]) if (a[n]) expect(a[n]).not.toBe('tide');
+      });
+    }
+    expect(spy).toHaveBeenCalledTimes(0);
+  } finally { spy.mockRestore(); }
 });

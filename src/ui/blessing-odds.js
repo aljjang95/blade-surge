@@ -30,6 +30,31 @@ export function blessingOddsHtml(table = oddsTable()) {
   </div>`;
 }
 
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * 시트가 열린 동안 뒤 준비 영역(host 의 시트·그늘막 외 자식)을 inert 로 막는다. 반환값을 부르면 원래 상태로 되돌린다.
+ * 원래 inert 였던 요소는 그대로 둔다.
+ * @param {HTMLElement} host @param {Element[]} keep 막지 않을 요소(시트·그늘막)
+ */
+export function inertBackground(host, keep) {
+  const touched = [...host.children].filter(el => !keep.includes(el) && !el.hasAttribute('inert'));
+  touched.forEach(el => el.setAttribute('inert', ''));
+  return () => touched.forEach(el => el.removeAttribute('inert'));
+}
+
+/** Tab/Shift+Tab 을 시트 안에서 순환시킨다. 처리했으면 true. */
+export function trapTab(/** @type {{ key: string, shiftKey?: boolean, preventDefault: () => void }} */ e, /** @type {HTMLElement} */ sheet, active = /** @type {Element|null} */ (globalThis.document?.activeElement ?? null)) {
+  if (e.key !== 'Tab') return false;
+  const items = [...sheet.querySelectorAll(FOCUSABLE)].filter(el => !(/** @type {HTMLElement} */ (el)).hidden && !el.closest('[hidden]'));
+  if (!items.length) { e.preventDefault(); return true; }
+  const first = /** @type {HTMLElement} */ (items[0]), last = /** @type {HTMLElement} */ (items[items.length - 1]);
+  const inside = !!active && sheet.contains(active);
+  if (e.shiftKey && (!inside || active === first)) { e.preventDefault(); last.focus({ preventScroll: true }); return true; }
+  if (!e.shiftKey && (!inside || active === last)) { e.preventDefault(); first.focus({ preventScroll: true }); return true; }
+  return false;
+}
+
 /**
  * 시트를 연다. 반환값은 닫기 함수. onClose 는 닫힐 때 한 번 불린다.
  * @param {HTMLElement} host 준비 창(dialog)
@@ -41,13 +66,13 @@ export function openBlessingOdds(host, onClose) {
   const sheet = document.createElement('section');
   sheet.className = 'blessing-odds'; sheet.setAttribute('role', 'region'); sheet.setAttribute('aria-label', '전운 굴리기 확률');
   sheet.innerHTML = blessingOddsHtml();
-  let closed = false;
+  let closed = false, restoreBackground = () => {};
   const close = () => {
     if (closed) return; closed = true;
-    shade.remove(); sheet.remove(); host.removeEventListener('keydown', onKey, true);
+    shade.remove(); sheet.remove(); host.removeEventListener('keydown', onKey, true); restoreBackground();
     onClose?.();
   };
-  const onKey = (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  const onKey = (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; } if (trapTab(e, sheet)) e.stopPropagation(); };
   shade.addEventListener('click', close);
   sheet.querySelector('[data-odds-close]')?.addEventListener('click', close);
   sheet.addEventListener('click', e => {
@@ -58,6 +83,7 @@ export function openBlessingOdds(host, onClose) {
   });
   host.addEventListener('keydown', onKey, true);
   host.append(shade, sheet);
+  restoreBackground = inertBackground(host, [shade, sheet]);
   /** @type {HTMLElement|null} */ (sheet.querySelector('[data-odds-close]'))?.focus({ preventScroll: true });
   return close;
 }

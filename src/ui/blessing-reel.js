@@ -8,7 +8,7 @@ import './blessing-reel.css';
 import { audio } from '../engine/audio.js';
 import { EVENT_SOUNDS } from '../engine/combat-sound-library.js';
 import { BLESSING_PITY } from '../data/blessing.js';
-import { planReels, cellsForReel, reelAt, eventsBetween, shouldTick, stopVibration, stripOffset } from './blessing-reel-timeline.js';
+import { planReels, decorFamilies, cellsForReel, reelAt, eventsBetween, shouldTick, stopVibration, stripOffset } from './blessing-reel-timeline.js';
 import { BOON_BY_ID, FAMILY_BY_ID, GRADE_LABEL, glyphSvg, boonEffectText, gradeDots } from './blessing-glyphs.js';
 import { openBlessingOdds } from './blessing-odds.js';
 
@@ -204,14 +204,12 @@ export class BlessingSlot {
     const geo = this.reels.map((r, i) => {
       const c = candidates[i], cells = cellsForReel(plan, i), fin = plan.reels[i].final;
       const resultFam = BOON_BY_ID[c.id]?.family || 'ember';
-      let prev = resultFam, html = '';
+      let html = '';
+      // 장식 문양은 굴림 결과·릴 번호로 시드한 결정적 난수(전역 무작위 함수는 전투 난수를 흔든다).
+      const deco = decorFamilies({ seed: `${c.id}:${c.grade}:${i}:${plan.short ? 's' : 'f'}`, cells, fin, resultFam, families: FAMILIES });
       // DOM 위에서부터 칸 번호가 큰 순서. 결과 칸 위·아래는 결과와 다른 가문으로 두어 멈춤이 또렷하다.
       for (let s = cells - 1; s >= 0; s--) {
-        if (s === fin) { html += `<div class="blessing-cell is-result">${tileHtml(c, { label: true })}</div>`; prev = resultFam; continue; }
-        let f = FAMILIES[Math.floor(Math.random() * 4)];
-        if (f === prev || ((s === fin + 1 || s === fin - 1) && f === resultFam)) f = FAMILIES[(FAMILIES.indexOf(f) + 1 + (f === resultFam ? 1 : 0)) % 4];
-        if (f === resultFam && (s === fin + 1 || s === fin - 1)) f = FAMILIES[(FAMILIES.indexOf(f) + 2) % 4];
-        html += `<div class="blessing-cell">${blankTileHtml(f)}</div>`; prev = f;
+        html += s === fin ? `<div class="blessing-cell is-result">${tileHtml(c, { label: true })}</div>` : `<div class="blessing-cell">${blankTileHtml(deco[s])}</div>`;
       }
       r.root.className = 'blessing-reel'; r.card.hidden = true; r.strip.hidden = false;
       r.inner.innerHTML = html;
