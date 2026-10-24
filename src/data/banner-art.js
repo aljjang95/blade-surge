@@ -22,8 +22,12 @@ export function heroBannerArt(id, portrait) {
   return { src: id === 'barbarian' ? FALLBACK_BANNER_ART : (portrait || FALLBACK_BANNER_ART), kind: 'fallback' };
 }
 
-/** 초보자 배너 일러스트. 치비가 있으면 그것, 없으면 대체 초상(없으면 banner_featured). */
-export function beginnerBannerArt(portrait, chibi = BEGINNER_BANNER_ART) {
+/**
+ * 초보자 배너 일러스트. 치비가 있으면 그것, 없으면 대체 초상(없으면 banner_featured).
+ * @param {string} [portrait]
+ * @param {string | null} [chibi]
+ */
+export function beginnerBannerArt(portrait, chibi = /** @type {string | null} */ (BEGINNER_BANNER_ART)) {
   if (chibi) return { src: chibi, kind: 'chibi' };
   return { src: portrait || FALLBACK_BANNER_ART, kind: 'fallback' };
 }
