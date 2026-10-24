@@ -6,9 +6,9 @@ import { normalizeSave } from '../src/game/save.js';
 import { DEFAULT_SKILL_LOADOUT, normalizeSkillLoadout, skillIndexForCombatSlot } from '../src/game/progression.js';
 const CAT:any=HEROES, IMPL:any=SKILLS;
 
-test('all five heroes expose exactly eight skills', () => {
-  expect(HERO_ORDER).toHaveLength(5);
-  expect(HERO_ORDER.map(id=>CAT[id].skills.length)).toEqual([8,8,8,8,8]);
+test('all six heroes (five + summon-only werewolf) expose exactly eight skills', () => {
+  expect(HERO_ORDER).toHaveLength(6);
+  expect(HERO_ORDER.map(id=>CAT[id].skills.length)).toEqual([8,8,8,8,8,8]);
 });
 
 test('knight awakening III opens at PRD level 30; other advanced unlocks retain their progression', () => {
@@ -19,9 +19,9 @@ test('awakening and advanced MP costs follow the progression contract', () => {
   for(const id of HERO_ORDER) expect(CAT[id].skills.slice(4).map((s:any)=>s.mp)).toEqual([26,34,38,52]);
 });
 
-test('all ten advanced skill implementations resolve', () => {
+test('all twelve advanced skill implementations resolve', () => {
   const ids=HERO_ORDER.flatMap(id=>CAT[id].skills.slice(6).map((s:any)=>s.id));
-  expect(ids).toHaveLength(10);
+  expect(ids).toHaveLength(12);
   for(const id of ids) expect(IMPL[id]).toBeDefined();
 });
 

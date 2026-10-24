@@ -32,6 +32,8 @@ function fixture() {
   return audio;
 }
 const layersOf = (...args: unknown[]): any[] => [...(hitLayers as any)(...args)];
+// 효과음 폴더는 kit 이 없는 다섯 영웅 것뿐이다(늑대인간 족장은 광전사 세트를 쓴다).
+const FIVE = Object.values(HEROES).filter(hero => !('kit' in hero));
 const names = (audio: any) => [...audio._voices].map((voice: any) => voice.src.buffer.name as string);
 afterEach(() => mock.restore());
 
@@ -56,7 +58,7 @@ test('Mirelo 타격 라이브러리: 타격·처치·콤보 파일이 manifest �
     // 접촉 레이어는 짧아서 몹몰이에서 보이스 상한을 오래 붙잡지 않는다.
     if (a.id.startsWith('hit/t_')) expect(a.durationSec).toBeLessThanOrEqual(1);
   }
-  for (const hero of Object.values(HEROES)) for (const i of [0, 1]) expect(asset(`hero/${hero.id}/hit_${i}`).onsetMs).toBeLessThanOrEqual(2);
+  for (const hero of FIVE) for (const i of [0, 1]) expect(asset(`hero/${hero.id}/hit_${i}`).onsetMs).toBeLessThanOrEqual(2);
 });
 
 test('모든 이벤트·등급은 트랜지언트와 바디 2레이어를 내고 등급별 파일이 구분된다', () => {
@@ -80,7 +82,7 @@ test('모든 이벤트·등급은 트랜지언트와 바디 2레이어를 내고
 });
 
 test('무기가 주어지면 그 무기 영웅의 전용 접촉 레이어가 하나 붙고 공용 접촉음은 절반 이하로 줄어든다', () => {
-  for (const hero of Object.values(HEROES)) for (const tier of HIT_TIERS) for (const crit of [false, true]) {
+  for (const hero of FIVE) for (const tier of HIT_TIERS) for (const crit of [false, true]) {
     const plain = layersOf('slash', tier, { crit }), armed = layersOf('slash', tier, { weapon: hero.weapon, crit });
     const heroLayers = armed.filter(layer => layer.role === 'hero');
     expect(heroLayers).toHaveLength(1); expect(heroLayers[0].hero).toBe(hero.id);
@@ -91,7 +93,7 @@ test('무기가 주어지면 그 무기 영웅의 전용 접촉 레이어가 하
     expect(armed[0].role).toBe('transient'); expect(armed[0].vol).toBeLessThanOrEqual(plain[0].vol * .5 + 1e-9);
     expect(armed.filter(layer => layer.role === 'body')).toHaveLength(1);
   }
-  expect(Object.keys(HERO_BY_WEAPON).sort()).toEqual(Object.values(HEROES).map(hero => hero.weapon).sort());
+  expect(Object.keys(HERO_BY_WEAPON).sort()).toEqual(FIVE.map(hero => hero.weapon).sort());
   for (const weapon of ['', 'blade', '__proto__']) expect(layersOf('slash', 'basic', { weapon }).some(layer => layer.role === 'hero')).toBe(false);
 });
 
@@ -127,7 +129,7 @@ test('Mirelo 타격은 한 번에 트랜지언트+바디를 재생하고 오디�
 
 test('타격은 무기를 받거나 직전 휘두름의 무기로 그 영웅의 전용 접촉음을 얹고, 접촉음 변형은 연달아 반복되지 않는다', () => {
   const rng = spyOn(Math, 'random').mockImplementation(() => { throw new Error('게임 난수 사용'); });
-  for (const hero of Object.values(HEROES)) {
+  for (const hero of FIVE) {
     const own = (n: string) => n.startsWith(`mirelo-v1/hero/${hero.id}/hit_`), anyHero = (n: string) => /^mirelo-v1\/hero\/[a-z]+\/hit_/.test(n);
     // 1) 호출부가 무기를 넘기는 경로(rpg-battle).
     const direct = fixture(); direct.hit('slash', { weapon: hero.weapon });

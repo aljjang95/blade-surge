@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ARMORY_ITEMS } from '../data/armory.js';
-import { kitOf } from '../data/heroes.js';
 
 const templates = new Map();
 let pending;
@@ -45,7 +44,7 @@ export function applyArmoryAppearance(model, equip, definitions, hero = {}) {
   if (!skin) return;
   const attachments = [];
   const fit = {
-    weapon: ['handslot.r', [0, 0, 0], ['knight', 'barbarian'].includes(kitOf(hero)) ? .85 : .22],
+    weapon: ['handslot.r', [0, 0, 0], ['knight', 'barbarian'].includes(hero.id) ? .85 : .22],
     armor: ['chest', [0, 1.07, .23], .8],
     ring: ['wrist.l', [.55, .87, .06], .27],
     boots: ['hips', [0, .29, .06], .75],
