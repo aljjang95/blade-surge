@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { kitOf } from '../data/heroes.js';
 import { applySurfaceDetail, projectSurfaceUV } from '../engine/surface-textures.js';
 
 // 좌표는 원본 GLB의 바인드 포즈이며 현재 애니메이션 포즈에서 생성하지 않는다.
@@ -325,7 +324,7 @@ export function applyArmorAppearance(model, hero, item) {
     batch.parts.push({ name: `Armor_${name}`, bone: skeleton.bones[index].name, start: batch.count, count });
     batch.count += count; batch.geometries.push(flat);
   };
-  const broad = kitOf(hero) === 'barbarian' ? .08 : 0;
+  const broad = hero.id === 'barbarian' ? .08 : 0;
   const soft = ['robe', 'leather', 'padded'].includes(style.cut);
   add(`cut_${style.cut}_cuirass`, 'chest', rounded(.63 + broad, soft ? .44 : .47, soft ? .59 : .62, soft ? .09 : .035), body, [0, 1.045, .04]);
   // 의상 개구부와 허리 솔기를 연결하는 연속 띠다.

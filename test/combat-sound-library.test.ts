@@ -70,7 +70,8 @@ test('모든 배송 효과음의 디코딩 피크는 0.98 미만이다(MP3 디�
 });
 
 test('다섯 영웅의 휘두름·마무리·접촉·궁극기와 40 스킬은 모두 배송 파일이고 75개가 서로 다른 소리다', () => {
-  const heroes = Object.values(HEROES);
+  // kit 을 빌려 쓰는 소환 전용 영웅(늑대인간 족장)은 자기 효과음 폴더가 없다(광전사 세트를 쓴다). 고유 파일 75개 계약은 원래 다섯 기준.
+  const heroes = Object.values(HEROES).filter(hero => !('kit' in hero));
   expect(heroes.map(hero => hero.id).sort()).toEqual(['barbarian', 'knight', 'mage', 'ranger', 'rogue']);
   const sha = (name: string): string => { const asset = shipped(name); expect(asset).toBeDefined(); return asset.sha256; };
   const swings = new Set<string>(), finishers = new Set<string>(), hits = new Set<string>(), ults = new Set<string>(), skills = new Set<string>();
@@ -103,7 +104,7 @@ test('실제 release 경로는 직업 샘플을 재생하고 글로벌 RNG·타�
   const rng = spyOn(Math, 'random').mockImplementation(() => { throw new Error('게임 난수 사용'); });
   const timer = spyOn(globalThis, 'setTimeout').mockImplementation((() => { throw new Error('release 타이머 사용'); }) as any);
   const audio = fixture();
-  for (const hero of Object.values(HEROES)) {
+  for (const hero of Object.values(HEROES).filter(h => !('kit' in h))) {
     audio.ctx.currentTime += .2;
     audio.attackRelease({ weapon: hero.weapon, ranged: 'ranged' in hero && hero.ranged });
     audio.ctx.currentTime += .12;

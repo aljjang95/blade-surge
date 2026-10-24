@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
+import { HERO_LEGACY_IDS } from '../src/data/hero-roster.js';
 import { resolveJobHero } from '../src/data/jobs.js';
 import { Player } from '../src/game/player.js';
 import { SKILLS } from '../src/game/skills.js';
@@ -34,7 +35,7 @@ test('new and legacy saves receive Ranger once without altering existing progres
   legacy.heroes.knight.level = 19; legacy.gold = 4321;
   const migrated = normalizeSave(legacy, eco.fresh());
   expect(migrated.heroes.ranger.level).toBe(1);
-  expect(migrated.roster).toMatchObject({ policy: 1, owned: Object.keys(HEROES) });
+  expect(migrated.roster).toMatchObject({ policy: 1, owned: [...HERO_LEGACY_IDS] });
   expect(migrated.heroes.knight.level).toBe(19);
   expect(migrated.gold).toBe(4321);
   migrated.heroes.ranger.star = 4; migrated.heroes.ranger.shards = 37;
