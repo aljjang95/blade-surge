@@ -300,6 +300,96 @@
       "chosen": false,
       "note": "자부심 구조의 핵심 화면으로 명예의 전당 탭에 채택(community-fame 노드)",
       "sha256": "f7a06a3af9ec99b2736dda44cf06b482013d7129c48ac387eeac84bd571c428e"
+    },
+    {
+      "id": "C20",
+      "group": "rune-20261024",
+      "title": "장비 상세 안 룬 소켓 탭",
+      "image": "images/rune-a1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": true,
+      "note": "기존 장비 상세 팝업 오른쪽에 강화|룬 소켓 탭. 원형 소켓판·잠긴 +15 소켓·가문 4칸·공명 칩. DOM 기존 창 재사용이라 가장 싸고 844x390에서 한눈에 읽힌다(대표님 2026-10-24 추천안 승인)",
+      "sha256": "1961f86781aa904c9b75662ac134ddc78d59018d142bc5ff9f25548809087feb"
+    },
+    {
+      "id": "C21",
+      "group": "rune-20261024",
+      "title": "대장간 제단 룬 공방(3D 칼날 소켓)",
+      "image": "images/rune-a2.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "횃불 대장간·육각 룬석·제단 분위기를 룬 가방·합성 화면(rune-bag-merge)에 차용",
+      "sha256": "9673ed40ade64062d8290092743e47b8d7084b0475bf424b7ba27b7b449b6f8c"
+    },
+    {
+      "id": "C22",
+      "group": "rune-20261024",
+      "title": "룬 각인판(부위×소켓 표 + 가문 공명 막대)",
+      "image": "images/rune-a3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "전체 보기 화면(rune-overview)으로 채택. 하단 가문 공명 막대를 룬 선택 화면에도 차용",
+      "sha256": "b4b6757aeb4d2b52b93ff753fd214fd24d33b31db61f6440a2ba2bed9455939f"
+    },
+    {
+      "id": "C23",
+      "group": "blessing-20261024",
+      "title": "슬롯머신 릴 3개",
+      "image": "images/blessing-b1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "대표님이 말한 슬롯머신 연출. 결과 3개가 한 줄로 읽히고 2D 릴이라 2.4초 연출·건너뛰기가 쉽다(대표님 2026-10-24 추천안 승인)",
+      "sha256": "82ba9f9dd96f0652e29c3d69089256fffedc1897c462bd8668e458b4ba1c315e"
+    },
+    {
+      "id": "C24",
+      "group": "blessing-20261024",
+      "title": "3D 크리스털 주사위 트레이",
+      "image": "images/blessing-b2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 3,
+        "feasibility": 3,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "주사위 면에서 각인 이름이 안 읽히고 3D 물리 연출 비용이 크다",
+      "sha256": "4ff5faa9d24f8071ce0919faf7a6570f2c25a3c6310b057875c86861a0f074b1"
+    },
+    {
+      "id": "C25",
+      "group": "blessing-20261024",
+      "title": "룬 석판 뒤집기",
+      "image": "images/blessing-b3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "밝고 정원 배경과 어울리지만 카드 가챠와 느낌이 겹친다",
+      "sha256": "0e44e7d3472c3f4cc3c22fba26512821e10ef1234eb0d01bbdacd05daca4c1f7"
     }
   ],
   "nodes": [
@@ -831,6 +921,328 @@
       "type": "system",
       "group": "community-1",
       "title": "디스코드 웹훅(게시판·명예), 비밀값 없으면 꺼짐"
+    },
+    {
+      "id": "rune-socket-tab",
+      "type": "screen",
+      "group": "rune-20261024",
+      "title": "장비 상세 — 룬 소켓 탭",
+      "image": "images/rune-a1.jpg",
+      "checks": [
+        "기존 장비 상세 팝업(왼쪽 비교·능력치) 그대로, 오른쪽 패널 상단에 강화|룬 소켓 탭(선택 탭 크림·금 밑줄)",
+        "원형 금테 소켓판: 가운데 장비 아이콘, 둘레 육각 소켓(채워진 룬은 가문 색 육각 + 금색 등급 점 1~3 + 이름 라벨)",
+        "잠긴 소켓: 어두운 육각 + 자물쇠 + \"+15 강화 시 개방\"",
+        "가문 4칸: 잿불(주황 불꽃)·물결(파랑 물결)·폭풍(보라·청록 번개)·바위(호박 산) 아이콘 + 개수",
+        "켜진 공명 칩: 금테 리본 + 두 가문 아이콘 + 이름",
+        "하단 크림 \"룬 교체\" · 주황 \"룬 장착\" 버튼, 그 아래 기존 판매·장착하기 줄 유지"
+      ],
+      "risks": [
+        "육각 룬 아이콘 12종×3등급은 Codex 이미지로 가문별 원판 4장 + 등급 점 오버레이로 만든다(36장 개별 생성 금지)",
+        "844x390에서 탭 패널 높이가 기존 강화 패널과 같아야 한다 — 소켓판 지름은 패널 높이의 55%",
+        "룬이 없으면 소켓판 대신 \"첫 개방 선물 받기\"(네 가문 I 룬)"
+      ],
+      "copy": [
+        "강화",
+        "룬 소켓",
+        "잿불 룬 II",
+        "물결 룬 I",
+        "+15 강화 시 개방",
+        "잿불",
+        "물결",
+        "폭풍",
+        "바위",
+        "온천 맥동 발동",
+        "룬 교체",
+        "룬 장착"
+      ],
+      "sha256": "1961f86781aa904c9b75662ac134ddc78d59018d142bc5ff9f25548809087feb"
+    },
+    {
+      "id": "rune-picker",
+      "type": "screen",
+      "group": "rune-20261024",
+      "title": "룬 선택·박기(소켓 탭 → 룬 고르기)",
+      "image": "images/rune-picker.jpg",
+      "checks": [
+        "왼쪽: 소켓판에서 탭한 빈 소켓이 금빛 고리로 강조",
+        "오른쪽 \"룬 선택\": 가문 필터 칩 + 보유 룬 격자(등급 점·보유 수)",
+        "선택 룬 상세 카드: 이름·현재 효과·등급 사다리(I/II/III 값)",
+        "공명 미리보기: 가문 개수 변화(1→2)와 새로 켜질 공명 칩이 빛남",
+        "중복 상한 2를 넘는 룬은 회색 + \"중복 상한 2\" 꼬리표",
+        "하단 가로 가문 공명 막대(C22 차용)",
+        "크림 \"취소\" · 주황 \"박기 (무료)\", 회색 빼기 비용 안내"
+      ],
+      "risks": [
+        "시안의 룬 이름(불타는 힘·밀려오는 파도 등)은 생성 글자다 — 실제 이름은 BOONS 12종",
+        "공명 미리보기는 rune-core 순수 함수로 계산해 화면과 실제 적용이 같게",
+        "보유 룬이 많으면 격자 가로 스크롤(세로 공간 없음)"
+      ],
+      "copy": [
+        "룬 선택",
+        "전체",
+        "잿불",
+        "물결",
+        "폭풍",
+        "바위",
+        "바람 칼끝 II",
+        "공격력 +8%",
+        "I +4% · II +8% · III +12%",
+        "폭풍 1 → 2",
+        "질주하는 불씨 발동 예정",
+        "중복 상한 2",
+        "취소",
+        "박기 (무료)",
+        "빼기 비용 · I 1,000 / II 3,000 / III 8,000 골드",
+        "가문 공명"
+      ],
+      "sha256": "11a6fcf5edb84dcb52f5719821dcbdb170d74418037764615cd05ec2a7fa7efe"
+    },
+    {
+      "id": "rune-bag-merge",
+      "type": "screen",
+      "group": "rune-20261024",
+      "title": "제작 공방 — 룬 가방·합성·제작",
+      "image": "images/rune-bag.jpg",
+      "checks": [
+        "기존 제작 공방 화면 틀(상단 캠페인/던전 탭, 제작 공방 제목, 왼쪽 메뉴, 상단 자원 바) 유지",
+        "왼쪽: 가문 4줄 × 룬 3종 격자, 칸마다 등급별 보유 수(I/II/III), 없는 등급 회색",
+        "오른쪽 합성 패널: 같은 룬 I 3개 → II 1개 금 화살표, 비용 골드, 주황 \"합성 (확정 100%)\"",
+        "횃불 대장간 분위기·육각 룬석 광택(C21 차용)",
+        "룬 가루 보유 수 + \"가문 지정 제작 · 가루 40\" · \"정밀 제작 · 가루 80\"",
+        "하단 획득처 띠"
+      ],
+      "risks": [
+        "시안의 룬 이름(잿불 수호·물결 심장 등)은 생성 글자다 — 실제 이름·순서는 BOONS 12종(copy)",
+        "대장간 배경은 2D 배경 이미지 + CSS 빛 번짐으로(3D 장면 새로 만들지 않음)",
+        "합성 연출 0.8초(빛 모임→새 룬 튐), 건너뛰기 가능"
+      ],
+      "copy": [
+        "제작 공방",
+        "룬 가방",
+        "합성",
+        "잿불 칼날 I",
+        "잿불 칼날 II",
+        "골드 1,000",
+        "합성 (확정 100%)",
+        "룬 가루",
+        "가문 지정 제작 · 가루 40",
+        "정밀 제작 · 가루 80",
+        "획득처: 정예·보스 처치 · 원정 상자 · 장비 분해 · 주간 의뢰",
+        "잿불 칼날",
+        "불씨 사냥",
+        "잔열 회수",
+        "물결 갑주",
+        "깊은 호흡",
+        "돌아오는 물결",
+        "번개 걸음",
+        "폭풍의 눈",
+        "바람 칼끝",
+        "바위 뿌리",
+        "산맥의 결",
+        "광맥 비축"
+      ],
+      "sha256": "ffc5485fb33a222e0aab4277b327bec692f83b031aef3f9512477c429b510512"
+    },
+    {
+      "id": "rune-overview",
+      "type": "screen",
+      "group": "rune-20261024",
+      "title": "룬 전체 보기(각인판·가문 공명)",
+      "image": "images/rune-a3.jpg",
+      "checks": [
+        "왼쪽 3D 영웅 받침대(기존 영웅·장비 화면 영웅 재사용)",
+        "오른쪽 4줄(무기·방어구·반지·신발): 장비 아이콘(등급 테두리·+강화) + 소켓 2~3칸",
+        "빈 소켓 \"+\" 육각, 잠긴 소켓 자물쇠",
+        "하단 가문 공명 막대: 4색 3칸 게이지 + 개수, 켜진 공명 칩·꺼진 공명 칩",
+        "\"총 룬 효과 보기\", 주황 \"자동 장착\""
+      ],
+      "risks": [
+        "시안의 소켓 수는 예시다. 실제 칸 수는 rune-rules(등급·+15) 그대로",
+        "자동 장착은 빈 칸만 채우고 덮어쓰지 않는다(회수 비용 0 보장)"
+      ],
+      "copy": [
+        "룬 각인판",
+        "총 룬 효과 보기",
+        "무기",
+        "방어구",
+        "반지",
+        "신발",
+        "가문 공명",
+        "잿불",
+        "물결",
+        "폭풍",
+        "바위",
+        "질주하는 불씨 · 공격력 +7%",
+        "산울림",
+        "자동 장착"
+      ],
+      "sha256": "b4b6757aeb4d2b52b93ff753fd214fd24d33b31db61f6440a2ba2bed9455939f"
+    },
+    {
+      "id": "rune-rules",
+      "type": "rule",
+      "group": "rune-20261024",
+      "title": "룬 규칙 src/data/runes.js + src/game/rune-core.js (BOONS 재사용·등급 I~III·소켓 N0/S1/E1/U2/L2 +15에 +1·중복 상한 2·공명 각 2개)"
+    },
+    {
+      "id": "rune-economy",
+      "type": "system",
+      "group": "rune-20261024",
+      "title": "룬 저장·경제(장비 인스턴스 sockets, 합성·회수 골드, 파괴·판매·분해 시 자동 회수, 드랍·룬 가루, 서버 정산 같은 함수)"
+    },
+    {
+      "id": "rune-icons",
+      "type": "asset",
+      "group": "rune-20261024",
+      "title": "룬 아이콘(가문 원판 4장 + 등급 점 오버레이, Codex 이미지)"
+    },
+    {
+      "id": "gear-stats",
+      "type": "system",
+      "group": "rune-20261024",
+      "title": "장비 능력치 합산(itemStats/영웅 능력치)에 룬 효과·공명 더하기"
+    },
+    {
+      "id": "blessing-roll",
+      "type": "screen",
+      "group": "blessing-20261024",
+      "title": "원정 준비 창 — 전운 굴리기(슬롯머신 릴)",
+      "image": "images/blessing-b1.jpg",
+      "checks": [
+        "기존 원정 준비 창 틀: 위 배너(던전 그림·이름 카드·닫기)는 낮게, 원정 단계는 배너 오른쪽 작은 알약 2개",
+        "\"전운 굴리기\" 제목 + 금테 슬롯머신(릴 3칸, 칸 사이 금 다이아 장식)",
+        "회전 중 릴은 세로 움직임 흐림, 멈춘 릴은 금빛 테두리·불꽃 입자·이름 라벨·등급 점",
+        "릴 아래 \"탭하여 건너뛰기\"",
+        "오른쪽 기둥: 노란 \"오늘 무료 1회\", 크림 \"다시 굴리기 · 보석 n\", 밑줄 \"확률 보기 >\", \"III 보장까지 n회\" 막대",
+        "하단 기존 \"입장을 확정하면 에너지가 소모됩니다.\" · 크림 돌아가기 · 주황 원정 시작"
+      ],
+      "risks": [
+        "시안의 상단 자원 바(우편·설정)와 왼쪽 메뉴는 실제 게임에 없다 → 구현은 실제 준비 창처럼 어두운 배경 위 창만(전체 화면 덮음)",
+        "844x390에서 배너+단계+릴+버튼이 한 화면에 — 배너 높이 30%로 줄이고 상세 규칙은 기존 접힘(목표·규칙 보기) 유지",
+        "릴은 CSS transform 세로 띠(카드 이미지 반복) + 감속 곡선, WebGL 쓰지 않음",
+        "결과는 회전 시작 전에 정해지고 연출은 보여 주기만"
+      ],
+      "copy": [
+        "원정 준비",
+        "유리 정원",
+        "탐험 Lv.1",
+        "원정 단계",
+        "기본 원정",
+        "심층 원정",
+        "에너지 4",
+        "에너지 6",
+        "전운 굴리기",
+        "잿불 칼날 II",
+        "탭하여 건너뛰기",
+        "오늘 무료 1회",
+        "다시 굴리기 · 보석 30",
+        "확률 보기",
+        "III 보장까지 7회",
+        "입장을 확정하면 에너지가 소모됩니다.",
+        "돌아가기",
+        "원정 시작 · 에너지 4",
+        "닫기"
+      ],
+      "sha256": "82ba9f9dd96f0652e29c3d69089256fffedc1897c462bd8668e458b4ba1c315e"
+    },
+    {
+      "id": "blessing-pick",
+      "type": "screen",
+      "group": "blessing-20261024",
+      "title": "전운 결과 3개 중 1개 선택",
+      "image": "images/blessing-pick.jpg",
+      "checks": [
+        "릴이 모두 멈추면 세 후보 카드가 같은 크기로 나란히(가문 문양·이름·등급 점·효과 한 줄)",
+        "III 후보는 더 강한 금빛과 반짝임",
+        "선택 카드: 살짝 떠오름 + 두꺼운 금테 + 리본 \"선택됨 · 이번 원정만\"",
+        "위 안내 \"하나를 골라 이번 원정에 가져갑니다\"",
+        "오른쪽 기둥: 천장 카운터, 다음 재굴림 가격(30→60→90)",
+        "원정 시작 버튼 안에 가져가는 각인 작은 아이콘"
+      ],
+      "risks": [
+        "시안 뒤쪽에 보이는 로비 자원 바·메뉴는 실제 준비 창에서는 어두운 배경에 가려진다(실제 창 기준)",
+        "고르기 전 원정 시작을 누르면 \"각인 없이 출발할까요?\" 확인을 창 안 띠로(팝업 금지)",
+        "보관 중 각인은 창을 닫아도 다음 출격까지 유지 — 다시 열면 선택 상태로"
+      ],
+      "copy": [
+        "하나를 골라 이번 원정에 가져갑니다",
+        "잿불 칼날 II",
+        "공격력 +10%",
+        "폭풍의 눈 III",
+        "깊은 호흡 I",
+        "최대 체력 +6%",
+        "선택됨 · 이번 원정만",
+        "III 보장까지 10회",
+        "다시 굴리기 · 보석 60",
+        "확률 보기",
+        "돌아가기",
+        "원정 시작 · 에너지 4"
+      ],
+      "sha256": "60b159f5c0666821997cd73edc46ac292ca00f66baf9365c7cc7ac4b0404b193"
+    },
+    {
+      "id": "blessing-odds",
+      "type": "screen",
+      "group": "blessing-20261024",
+      "title": "전운 굴리기 확률 공개 시트",
+      "image": "images/blessing-odds.jpg",
+      "checks": [
+        "준비 창 오른쪽 60%를 덮는 세로 시트(왼쪽 창은 어둡게 보임), 제목 + 닫기",
+        "등급표(후보 1칸): I 70% · II 25% · III 5%",
+        "가문 4줄 × 등급 3칸 확률 격자(가문 안 3종은 같은 확률이라 한 줄, 줄을 탭하면 3종 이름 펼침)",
+        "천장 규칙 상자, \"한 굴림에서 III 1개 이상 14.3%\"",
+        "가격 줄(무료·부적·보석 30/60/90)과 회색 주석(보석 구분 없이 차감)",
+        "숫자 오른쪽 정렬, 표 글자 읽힘"
+      ],
+      "risks": [
+        "시안 왼쪽 메뉴 아이콘은 실제와 다르다 — 시트 뒤는 실제 준비 창이 어둡게 보이기만 하면 된다",
+        "확률 숫자는 src/data/blessing.js에서 생성(손으로 쓰지 않음) — 데이터와 표가 어긋나면 테스트 실패",
+        "세로 공간 부족 시 시트 안 세로 스크롤"
+      ],
+      "copy": [
+        "전운 굴리기 확률",
+        "닫기",
+        "등급 (후보 1칸)",
+        "I 70%",
+        "II 25%",
+        "III 5%",
+        "I 5.83% · II 2.08% · III 0.42%",
+        "천장: III 없이 10회 굴리면 다음 굴림에 III 1개 확정",
+        "한 굴림에서 III 1개 이상 14.3%",
+        "매일 무료 1회 · 전운 부적 1개 = 1회 · 보석 30 → 60 → 90 (같은 원정, 상한 90)",
+        "보석은 유료·무료 구분 없이 차감됩니다"
+      ],
+      "sha256": "d370ac9d4e27540efdec44fbafb2d386dcb78a8c39341610c048d5a065efdcf8"
+    },
+    {
+      "id": "blessing-rules",
+      "type": "rule",
+      "group": "blessing-20261024",
+      "title": "전운 규칙 src/data/blessing.js + src/game/blessing-core.js (후보 3·서로 다름·I70/II25/III5·천장 10·보관 1·일일 무료 1·보석 30/60/90·일일 30회)"
+    },
+    {
+      "id": "blessing-reel-fx",
+      "type": "component",
+      "group": "blessing-20261024",
+      "title": "릴 연출 2.4초(1.2/1.7/2.2s 정지·오버슈트 6%), 탭 건너뛰기, 진동·소리 큐"
+    },
+    {
+      "id": "blessing-sfx",
+      "type": "asset",
+      "group": "blessing-20261024",
+      "title": "전운 효과음(회전 시작·째깍·정지 쿵·III 금빛 종) — Mirelo, PC"
+    },
+    {
+      "id": "pre-run-boons",
+      "type": "api",
+      "group": "blessing-20261024",
+      "title": "출격 시작 preRunBoons: string[] (등급 n이면 같은 id n번) — 각인 효과 엔진 진입점"
+    },
+    {
+      "id": "citadel-prepare-dialog",
+      "type": "component",
+      "group": "blessing-20261024",
+      "title": "기존 원정 준비 창 CitadelHubUI(.citadel-hub-dialog) — 전운 칸 1곳만 추가"
     }
   ],
   "edges": [
@@ -993,6 +1405,111 @@
       "from": "social-hub",
       "to": "discord-bridge",
       "type": "emits"
+    },
+    {
+      "from": "rune-socket-tab",
+      "to": "rune-picker",
+      "type": "navigates"
+    },
+    {
+      "from": "rune-socket-tab",
+      "to": "rune-overview",
+      "type": "navigates"
+    },
+    {
+      "from": "rune-overview",
+      "to": "rune-picker",
+      "type": "navigates"
+    },
+    {
+      "from": "rune-bag-merge",
+      "to": "rune-socket-tab",
+      "type": "navigates"
+    },
+    {
+      "from": "rune-picker",
+      "to": "rune-economy",
+      "type": "writes"
+    },
+    {
+      "from": "rune-bag-merge",
+      "to": "rune-economy",
+      "type": "writes"
+    },
+    {
+      "from": "rune-economy",
+      "to": "rune-rules",
+      "type": "reads"
+    },
+    {
+      "from": "rune-picker",
+      "to": "rune-rules",
+      "type": "reads"
+    },
+    {
+      "from": "gear-stats",
+      "to": "rune-rules",
+      "type": "reads"
+    },
+    {
+      "from": "rune-socket-tab",
+      "to": "rune-icons",
+      "type": "contains"
+    },
+    {
+      "from": "rune-bag-merge",
+      "to": "rune-icons",
+      "type": "contains"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "citadel-prepare-dialog",
+      "type": "navigates"
+    },
+    {
+      "from": "citadel-prepare-dialog",
+      "to": "blessing-roll",
+      "type": "contains"
+    },
+    {
+      "from": "blessing-roll",
+      "to": "blessing-reel-fx",
+      "type": "contains"
+    },
+    {
+      "from": "blessing-roll",
+      "to": "blessing-pick",
+      "type": "navigates"
+    },
+    {
+      "from": "blessing-roll",
+      "to": "blessing-odds",
+      "type": "navigates"
+    },
+    {
+      "from": "blessing-roll",
+      "to": "blessing-rules",
+      "type": "calls"
+    },
+    {
+      "from": "blessing-odds",
+      "to": "blessing-rules",
+      "type": "reads"
+    },
+    {
+      "from": "blessing-reel-fx",
+      "to": "blessing-sfx",
+      "type": "emits"
+    },
+    {
+      "from": "blessing-pick",
+      "to": "pre-run-boons",
+      "type": "writes"
+    },
+    {
+      "from": "blessing-rules",
+      "to": "rune-rules",
+      "type": "reads"
     }
   ],
   "acceptance": [
@@ -1145,6 +1662,72 @@
       "node": "social-hub",
       "criterion": "커뮤니티 서버가 꺼져 있거나 오프라인이어도 게임 시작·전투·정산·보상은 그대로 동작한다",
       "surface": "네트워크 차단 상태 실제 플레이"
+    },
+    {
+      "id": "A33",
+      "node": "rune-socket-tab",
+      "criterion": "레전드리 +12 장비 상세에서 룬 소켓 탭을 누르면 소켓 2칸·잠긴 3번째 칸이 보이고, 룬을 박으면 왼쪽 능력치 비교와 전투력이 즉시 바뀐다",
+      "surface": "Playwright 844x390·800x360 실제 터치 + blueprint shot"
+    },
+    {
+      "id": "A34",
+      "node": "rune-rules",
+      "criterion": "같은 룬 3개 장착 시 3번째는 효과 0·\"중복 상한 2\" 표시, 두 가문 각 2개에서만 공명이 켜진다",
+      "surface": "단위 테스트(rune-core)"
+    },
+    {
+      "id": "A35",
+      "node": "rune-economy",
+      "criterion": "강화 실패 파괴·판매·분해 때 박힌 룬이 모두 가방으로 돌아오고, 빼기는 등급별 골드만 깎는다",
+      "surface": "단위 테스트 + 세이브 왕복(새로고침 뒤 유지)"
+    },
+    {
+      "id": "A36",
+      "node": "rune-bag-merge",
+      "criterion": "같은 룬 I 3개 + 골드 1,000으로 합성하면 항상 II 1개가 생기고 재료가 정확히 줄어든다",
+      "surface": "Playwright 실제 터치 + 단위 테스트"
+    },
+    {
+      "id": "A37",
+      "node": "rune-picker",
+      "criterion": "룬을 고르면 공명 미리보기(가문 개수·새 공명)가 실제 박은 뒤 결과와 같다",
+      "surface": "Playwright 844x390"
+    },
+    {
+      "id": "A38",
+      "node": "rune-overview",
+      "criterion": "4부위 소켓·가문 공명 막대가 실제 장착 상태와 일치하고 자동 장착은 빈 칸만 채운다",
+      "surface": "Playwright 844x390"
+    },
+    {
+      "id": "A39",
+      "node": "blessing-roll",
+      "criterion": "원정 준비 창에서 전운 굴리기를 누르면 릴 3개가 1.2/1.7/2.2초에 멈추고, 아무 데나 탭하면 즉시 같은 결과로 멈춘다. 전투 화면에는 아무것도 뜨지 않는다",
+      "surface": "Playwright 844x390 실제 터치 + 영상 캡처"
+    },
+    {
+      "id": "A40",
+      "node": "blessing-pick",
+      "criterion": "고른 각인이 원정 시작 시 preRunBoons로 들어가 전투 능력치에 반영되고, 시작하지 않고 닫으면 다음 출격까지 보관된다",
+      "surface": "Playwright 실제 출격 + 단위 테스트"
+    },
+    {
+      "id": "A41",
+      "node": "blessing-rules",
+      "criterion": "10만 회 모의 굴림에서 등급 비율이 70/25/5(±0.5%p), 후보 3개가 항상 서로 다르고, III 없이 10회 뒤 11번째에 반드시 III이 나온다",
+      "surface": "단위 테스트(blessing-core, 고정 시드)"
+    },
+    {
+      "id": "A42",
+      "node": "blessing-odds",
+      "criterion": "확률 시트의 모든 숫자가 src/data/blessing.js에서 생성되고 데이터와 일치한다",
+      "surface": "단위 테스트 + Playwright 캡처"
+    },
+    {
+      "id": "A43",
+      "node": "blessing-rules",
+      "criterion": "하루 무료 1회는 05:00 KST에 리셋되고, 보석 굴림은 같은 원정에서 30→60→90, 하루 30회에서 막힌다. 보석 부족 시 차감 없이 막힌다",
+      "surface": "단위 테스트(시계 주입)"
     }
   ],
   "decisions": [
@@ -1217,6 +1800,41 @@
       "id": "D16",
       "text": "커뮤니티 기능은 packages/tll-social 재사용 패키지로 만들어 다른 게임은 GameConfig만 바꿔 붙인다",
       "source": "대표님 2026-10-19 \"다른 게임들도 사용할 수 있으니까\""
+    },
+    {
+      "id": "D17",
+      "text": "룬은 장비 단위 소켓에 박는다(장비에 붙어 다님). 효과는 기존 각인 12종·공명 6종을 그대로 쓴다",
+      "source": "대표님 2026-10-24 \"강화 시스템에 룬 박는 거, 룬이 각인을 대체\""
+    },
+    {
+      "id": "D18",
+      "text": "룬·룬 가루는 보석·현금 판매 없음(출시 초기). 영구 능력치는 플레이로만 얻는다",
+      "source": "대표님 2026-10-24 \"요즘 겜의 슬롭 느낌\" — 유료 확률 영구 성장 회피"
+    },
+    {
+      "id": "D19",
+      "text": "룬 합성은 같은 룬 3개 → 다음 등급, 100% 확정(확률 긴장은 기존 강화가 맡는다)",
+      "source": "디아블로 4 보석 합성 참고, 모바일 피로 감소"
+    },
+    {
+      "id": "D20",
+      "text": "출격 중 각인 보상을 없애고, 보석 굴림 1회용 각인을 원정 준비 창에서 3후보 중 1개 골라 그 원정에만 건다(preRunBoons)",
+      "source": "대표님 2026-10-24 \"유료 다야 굴렸을 때 1회용, 플레이 전에 골라서 들어가는 느낌\""
+    },
+    {
+      "id": "D21",
+      "text": "전운 연출은 슬롯머신 릴(C23). A는 장비 상세 룬 소켓 탭(C20), A3 공명 막대는 전체 보기, A2 공방 분위기는 룬 가방·합성에 차용",
+      "source": "대표님 2026-10-24 시안 6장 확인 후 추천안 승인(지휘 전달)"
+    },
+    {
+      "id": "D22",
+      "text": "전운 확률(등급 70/25/5)·천장 10회·가격을 게임 안 시트와 웹에 공개한다",
+      "source": "게임산업진흥법 확률형 아이템 표시 의무(2024-03-22 시행)·Google Play 정책"
+    },
+    {
+      "id": "D23",
+      "text": "이름은 \"전운 굴리기\"(상점의 축복 주문서와 분리)",
+      "source": "대표님 2026-10-24 이름 확정(지휘 전달)"
     }
   ],
   "outOfScope": [
@@ -1225,7 +1843,13 @@
     "음성 채팅",
     "길드 시스템(다음 단계 후보)",
     "실시간 번역",
-    "결제·보상 지급과 연결된 랭킹 보상"
+    "결제·보상 지급과 연결된 랭킹 보상",
+    "룬 IV(각성) 등급·룬 개별 수치 강화",
+    "룬·룬 가루 유료 판매",
+    "룬워드식 발동 조건 조합",
+    "전투 중 굴림·전투 중 각인 선택 창",
+    "전운 굴리기의 서버 권위 명령(v1 OPS) — 서버 컷오버 덩어리와 함께",
+    "유료/무료 보석 분리 전 전운 보석 굴림 환불 역분개"
   ],
   "changes": [
     {
@@ -1281,6 +1905,12 @@
       "reason": "커뮤니티 묶음 community-1 추가(main 병합 후 재적용): 시안 C17~C19, 화면 4개, 서버·신원·구글 연동·디스코드 노드, 기준 A24~A32, 결정 D13~D16 (대표님 2026-10-19 요청)",
       "from": "edeb0b05b529",
       "to": "9b7c37d26633"
+    },
+    {
+      "at": "2026-10-24T01:44:26.689Z",
+      "reason": "룬 강화·출격 전 축복 굴리기 시안(대표님 2026-10-24 각인 제거 지시)",
+      "from": "9b7c37d26633",
+      "to": "415295aeb03c"
     }
   ],
   "shots": [
@@ -1301,7 +1931,7 @@
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
     }
   ],
-  "lockedDigest": "9b7c37d26633bd57531763195a42d7132b22c18207e5b17222a68a2ade6977d7",
-  "lockedAt": "2026-10-20T07:30:07.480Z",
+  "lockedDigest": "415295aeb03c41392940900cb3ffd60b63b7f7d773f6aa20fd8a878084aea4fb",
+  "lockedAt": "2026-10-24T01:44:26.689Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
