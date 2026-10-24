@@ -382,3 +382,17 @@ test('맞춤 보정: 잘못된 fit·heroFit 은 검증에서 거절', () => {
   const ok = fixtureData(); ok.sets[0].fit = { helm: { scale: 1.9, offset: [0.5, -0.5, 0] } }; ok.heroFit = { knight: { pauldron: { scale: 0.6 } } };
   expect(() => validateGearPartsData(ok)).not.toThrow();
 });
+
+test('맞춤 보정: 영웅×세트 heroSetFit 은 그 영웅·그 세트에만 곱해지고, 없는 세트·잘못된 값은 거절', () => {
+  const data = fixtureData(), h = hero(), id = data.sets[0].id;
+  const base = gauntletBoxes(h, data)[0];
+  data.heroFit = { knight: { gauntlet: { scale: 1.2 } } };
+  data.heroSetFit = { knight: { [id]: { gauntlet: { scale: 1.5 } } } };
+  expect(() => validateGearPartsData(data)).not.toThrow();
+  expect(gauntletBoxes(h, data)[0].size.y / base.size.y).toBeCloseTo(1.8, 2);
+  expect(gauntletBoxes(h, data, 'mage')[0].size.y / base.size.y).toBeCloseTo(1, 2);
+  const bad = (mutate: (d: any) => void) => { const d = fixtureData(); mutate(d); expect(() => validateGearPartsData(d)).toThrow(); };
+  bad((d) => { d.heroSetFit = { knight: { parts_missing: { helm: { scale: 1 } } } }; });
+  bad((d) => { d.heroSetFit = { knight: { [d.sets[0].id]: { helm: { scale: 3 } } } }; });
+  bad((d) => { d.heroSetFit = { knight: { [d.sets[0].id]: { tail: { scale: 1 } } } }; });
+});

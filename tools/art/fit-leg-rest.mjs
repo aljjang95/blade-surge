@@ -6,7 +6,7 @@
 //   허벅지: 뼈 골반 관절은 고정, 메시 무릎 → 뼈 무릎으로 세로 선형 사상.
 // 관절 높이에서 이웃 사상이 같은 값을 내므로 관절 근처 섞인 가중치 정점이 찢어지지 않는다. 세로 배율 때문에 틀어지는 조명을 막으려고 다리 정점 법선만
 // 미리 보정한다(correctNormal). 몸통·팔·머리 역바인드와 정점 위치·가중치·UV·재질은 바이트 그대로다.
-//   node tools/art/fit-leg-rest.mjs <입력.glb> <출력.glb>   (출력 없이 부르면 측정만)
+//   node tools/art/fit-leg-rest.mjs <입력.glb> <출력.glb> [--min-fit=0.1] [--max-ratio=1.0001]   (출력 없이 부르면 측정만. 발목 차이가 min-fit m 미만이거나 허벅지·정강이 배율이 max-ratio 를 넘으면 거절)
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from 'three';
@@ -77,7 +77,7 @@ export function correctNormal(nx, ny, nz, s) {
 }
 
 /** GLB 하나의 다리 관절 높이(뼈 rest·메시 추정)와 새 역바인드를 계산한다. */
-export function planLegRest(bytes) {
+export function planLegRest(bytes, { minFit = 0.1, maxRatio = 1.0001 } = {}) {
   const { json, bin } = readGlb(bytes);
   if (json.skins?.length !== 1 || json.meshes?.length !== 1) throw new Error('expected one skinned body mesh');
   const skin = json.skins[0], prim = json.meshes[0].primitives[0];
@@ -120,11 +120,11 @@ export function planLegRest(bytes) {
       for (let c = 0; c < 4; c++) { const k = joints[i * 4 + c]; if (k === foot || under(k, foot)) w += weights[i * 4 + c]; }
       if (w > 0.5) sole = Math.min(sole, pos[i * 3 + 1]);
     }
-    if (ankle - meshAnkle < 0.1) throw new Error(`${side} foot rest already near mesh ankle (${ankle.toFixed(3)} vs ${meshAnkle.toFixed(3)}); nothing to fit`);
+    if (ankle - meshAnkle < minFit) throw new Error(`${side} foot rest already near mesh ankle (${ankle.toFixed(3)} vs ${meshAnkle.toFixed(3)}); nothing to fit`);
     const lift = floor < -1e-4 ? -sole : 0;          // 발바닥을 몸 바닥 0 으로
     const ankleTarget = meshAnkle + lift;
     const thigh = (hip - knee) / (hip - meshKnee), shin = (knee - ankleTarget) / (meshKnee - meshAnkle);
-    if (!(thigh > 0.3 && thigh <= 1.0001 && shin > 0.3 && shin <= 1.0001)) throw new Error(`${side} leg ratios out of range thigh=${thigh} shin=${shin}`);
+    if (!(thigh > 0.3 && thigh <= maxRatio && shin > 0.3 && shin <= maxRatio)) throw new Error(`${side} leg ratios out of range thigh=${thigh} shin=${shin}`);
     // 세로 사상 y' = a + (y - b) * s 를 4x4 로
     const vertical = (a, b, s) => new THREE.Matrix4().set(1, 0, 0, 0, 0, s, 0, a - b * s, 0, 0, 1, 0, 0, 0, 0, 1);
     maps.set(up, vertical(hip, hip, thigh));
@@ -154,8 +154,8 @@ export function planLegRest(bytes) {
 }
 
 /** 역바인드 accessor 만 다시 쓴 GLB(나머지 바이트 그대로). */
-export function writeLegRest(bytes) {
-  const plan = planLegRest(bytes), { json, binStart } = readGlb(bytes);
+export function writeLegRest(bytes, options) {
+  const plan = planLegRest(bytes, options), { json, binStart } = readGlb(bytes);
   const { start, stride, acc } = accessorView(json, plan.skin.inverseBindMatrices);
   if (acc.componentType !== 5126 || stride !== 64) throw new Error('packed float MAT4 inverse binds expected');
   const out = Buffer.from(bytes);
@@ -169,10 +169,12 @@ export function writeLegRest(bytes) {
 }
 
 if (import.meta.main || process.argv[1]?.endsWith('fit-leg-rest.mjs')) {
-  const [input, output] = process.argv.slice(2);
-  if (!input) throw new Error('Usage: node tools/art/fit-leg-rest.mjs input.glb [output.glb]');
+  const num = (v) => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('number expected: ' + v); return n; };
+  const args = process.argv.slice(2), flag = args.find((a) => a.startsWith('--min-fit=')), ratio = args.find((a) => a.startsWith('--max-ratio='));
+  const [input, output] = args.filter((a) => !a.startsWith('--'));
+  if (!input) throw new Error('Usage: node tools/art/fit-leg-rest.mjs input.glb [output.glb] [--min-fit=0.1] [--max-ratio=1.0001]');
   const bytes = fs.readFileSync(input);
-  const { bytes: out, report } = writeLegRest(bytes);
+  const { bytes: out, report } = writeLegRest(bytes, { ...(flag && { minFit: num(flag.slice(10)) }), ...(ratio && { maxRatio: num(ratio.slice(12)) }) });
   const sha = (b) => createHash('sha256').update(b).digest('hex');
   if (output) fs.writeFileSync(output, out);
   console.log(JSON.stringify({ input, inputSha256: sha(bytes), output: output || null, outputSha256: output ? sha(out) : null, bytes: out.length, ...report }, (k, v) => typeof v === 'number' ? +v.toFixed(4) : v, 2));
