@@ -60,7 +60,8 @@ test('원본 몸 구르기 띠 묶음의 모든 기록이 검증을 통과하고
   }
 });
 
-const REPS = ['hero_knight_t1', 'hero_knight_t2', 'avatar_knight_sakura', 'hero_mage_t2', 'hero_barbarian_t1'];
+// 기록 17종 전부 실제 재생으로 잰다(검증 수치는 자기선언이라 오프셋 수정 회귀를 여기서 막는다).
+const REPS = (BUNDLE as any).bodies.map((body: any) => body.asset);
 for (const id of REPS) {
   test(id + ' 실제 spawn 의 구르기는 교체된 클립이고 골반 수직 성분만 다르며 접지 띠 안이다', async () => {
     const a: any = asset(id), gltf = await loadHeroAsset(a), inst = spawnCharacter(gltf);
