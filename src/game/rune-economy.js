@@ -9,7 +9,7 @@
  * 실패는 { ok: false, reason } 이고 세이브는 그대로다.
  */
 import { ITEM_BY_ID, SLOTS } from '../data/items.js';
-import { RUNES, RUNE_FAMILY_IDS, RUNE_SOURCES } from '../data/runes.js';
+import { RUNES, RUNE_BY_ID, RUNE_FAMILY_IDS, RUNE_GRADE_LABEL, RUNE_SOURCES } from '../data/runes.js';
 import { BLESSING_CHARM_GRANTS } from '../data/blessing.js';
 import {
   normalizeRuneBag, normalizeSockets, maxSocketCount, insertRune, removeRune, replaceRune, mergeRunes,
@@ -216,7 +216,7 @@ export function settleRuneDrops(/** @type {any} */ eco, /** @type {any} */ ledge
   /** @type {any[]} */
   const got = [];
   const bag = { ...runes.bag };
-  for (const d of res.drops) { const c = bag[d.id] ? [...bag[d.id]] : [0, 0, 0]; c[d.grade - 1]++; bag[d.id] = c; got.push({ k: 'rune', id: d.id, grade: d.grade, n: 1 }); }
+  for (const d of res.drops) { const c = bag[d.id] ? [...bag[d.id]] : [0, 0, 0]; c[d.grade - 1]++; bag[d.id] = c; got.push({ k: 'rune', id: d.id, grade: d.grade, n: 1, label: `${RUNE_BY_ID[d.id].name} ${RUNE_GRADE_LABEL[d.grade]}` }); }
   runes.bag = normalizeRuneBag(bag);
   if (res.dust) { runes.dust = Math.min(MAX, runes.dust + res.dust); got.push({ k: 'runeDust', n: res.dust }); }
   return got;
