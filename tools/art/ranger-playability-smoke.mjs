@@ -4,6 +4,7 @@
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { launchOpts } from '../chrome.mjs';
+import { installAutoStarter } from '../qa-starter.mjs';
 const [origin = 'http://127.0.0.1:5761', out = 'work/ranger-smoke'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
 const report = { origin, checks: [], errors: [], samples: {} };
@@ -14,6 +15,7 @@ try {
   const page = await context.newPage();
   page.on('pageerror', (e) => report.errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) report.errors.push(m.text().slice(0, 240)); });
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 });
   await page.locator('#boot-start').click();

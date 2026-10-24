@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import sharp from 'sharp';
 import { launchOpts } from '../chrome.mjs';
+import { installAutoStarter } from '../qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, def) => { const i = args.indexOf(name); return i < 0 ? def : args[i + 1]; };
@@ -82,6 +83,7 @@ try {
     } catch (e) { rec.error = String(e.message || e).slice(0, 300); }
   }
 
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true });

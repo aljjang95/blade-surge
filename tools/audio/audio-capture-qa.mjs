@@ -7,6 +7,7 @@ import { preview } from 'vite';
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { installAutoStarter } from '../qa-starter.mjs';
 
 const arg = (k, d = '') => process.argv.find(a => a.startsWith('--' + k + '='))?.slice(k.length + 3) ?? d;
 const root = path.resolve(arg('root', path.resolve(import.meta.dirname, '../..')));
@@ -61,6 +62,7 @@ await page.addInitScript(() => {
     return r;
   };
 });
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
 if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
 await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

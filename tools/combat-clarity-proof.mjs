@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:5173';
 const out = resolve(process.argv[3] || 'work/combat-clarity');
@@ -19,6 +20,7 @@ try {
   report.build = await (await fetch(origin + '/version.json')).json();
   const page = await browser.newPage({ viewport: { width: 880, height: 400 }, serviceWorkers: 'block' });
   page.on('pageerror', error => errors.push(error.message));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 90000 });
   await page.evaluate(({ hero, quality }) => {

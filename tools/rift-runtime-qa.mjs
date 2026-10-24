@@ -3,12 +3,14 @@ import {createServer} from 'vite';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),out=path.join(root,'work/rift-runtime-qa');await mkdir(out,{recursive:true});
 const report={started:new Date().toISOString(),scope:'Actual app and loaded game models. Isolated browser save; QA assigns each rule, positions player and advances production app.step at fixed 50ms without realtime frame pacing. Real WebGL screenshots, not an organic playthrough, performance claim or paid settlement.',status:'running',errors:[],rules:[]};
 let server,browser;const save=()=>writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 try{
 server=await createServer({root,configFile:false,server:{host:'127.0.0.1',port:0},logLevel:'error'});await server.listen();report.url=`http://127.0.0.1:${server.httpServer.address().port}`;
 browser=await chromium.launch();report.browser=browser.version();const page=await browser.newPage({viewport:{width:1200,height:800}});page.on('pageerror',e=>report.errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(report.url,{waitUntil:'domcontentloaded',timeout:120000});await page.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});await page.locator('#boot-start').click();
 await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:90000});
 console.log('real app booted');

@@ -10,6 +10,7 @@ import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
 // 빌드본에는 /src 경로가 없으므로 세트·부위 목록은 Node 쪽에서 읽어 페이지에 넘긴다.
 import { SETS, SLOTS } from '../src/data/items.js';
+import { installAutoStarter } from './qa-starter.mjs';
 const origin = process.argv[2] || 'http://127.0.0.1:5310/', out = path.resolve(process.argv[3] || 'work/lobby-window-qa');
 await fs.mkdir(out, { recursive: true });
 const PROFILES = [
@@ -35,6 +36,7 @@ for (const spec of PROFILES) {
   const closeVisibleWindows = async () => { for (const win of ['inventory', 'equipment']) if (await visible('.mpl-win[data-win="' + win + '"]')) { await act('.mpl-win[data-win="' + win + '"] .mpl-close'); await settle(120); } };
   const smallTargets = (scope) => page.evaluate((s) => [...document.querySelectorAll(s + ' button')].filter((b) => b.offsetParent !== null).map((b) => { const r = b.getBoundingClientRect(); return { t: (b.getAttribute('aria-label') || b.textContent || '').trim().slice(0, 14), w: Math.round(r.width), h: Math.round(r.height) }; }).filter((b) => b.w > 0 && (b.w < 44 || b.h < 44)), scope);
   try {
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(origin);
     if (await page.locator('#btn-ignore-rotate').isVisible()) await act('#btn-ignore-rotate');
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 }); await act('#boot-start');

@@ -5,6 +5,7 @@ import https from 'node:https';
 import { chromium, firefox, webkit, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const i=a.indexOf('='); return i<0?[a.replace(/^--/,''),true]:[a.slice(2,i),a.slice(i+1)]; }));
 if(args.help){console.log('node tools/mobile-browser-qa.mjs --url=http://127.0.0.1:5224 --engines=chromium,firefox,webkit --viewports=320x568,390x844,412x915,667x375,844x390,1024x768 --max-pixels=1500000 --out=docs/qa/pwa-mobile-20260913.json [--headed]');process.exit(0);}
@@ -59,6 +60,7 @@ async function canvasBudget(page){const d=await page.evaluate(()=>{const a=windo
 async function exercise(page,context,result,id,offlineCase){
   const check=async(name,fn)=>{const item={name,status:'running'};result.checks.push(item);try{item.evidence=await fn();item.status='pass';}catch(e){item.status=e instanceof Unsupported?'unsupported':'fail';item.error=String(e.stack||e);throw e;}finally{await flush();}};
   await check('boot-user-tap',async()=>{
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(url.href,{waitUntil:'domcontentloaded',timeout:bootTimeout});
     if(await visible(page,'#btn-ignore-rotate'))await page.locator('#btn-ignore-rotate').tap();
     await page.locator('#boot-start:not(.hidden)').waitFor({state:'visible',timeout:bootTimeout});

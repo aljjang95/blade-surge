@@ -13,6 +13,7 @@ import { spawn } from 'child_process';
 import { resolve } from 'path';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const argv = process.argv.slice(2), heroFixture = argv.includes('--hero-fixture');
@@ -81,6 +82,7 @@ page.on('console', async (m) => {
 const results = [];
 const check = (name, ok, detail) => { results.push({ name, ok: !!ok, detail }); console.log((ok ? 'OK   ' : 'FAIL ') + name, detail ?? ''); };
 try {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
   await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });

@@ -5,6 +5,7 @@ import path from 'node:path';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),seed=Number(process.argv.find(a=>a.startsWith('--seed='))?.slice(7)||20260914);
 if(!Number.isSafeInteger(seed)||seed<0||seed>0xffffffff)throw Error('Expected uint32 seed');
 const out=path.join(root,`work/mob-role-qa-${seed}`);await mkdir(out,{recursive:true});
@@ -18,6 +19,7 @@ try{
   browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1200,height:800}});
   await page.addInitScript(seed=>{let n=seed;Math.random=()=>{n|=0;n=n+0x6d2b79f5|0;let t=Math.imul(n^n>>>15,1|n);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};},seed);
   page.on('pageerror',e=>report.errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`,{waitUntil:'domcontentloaded',timeout:120000});
   await page.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:90000});

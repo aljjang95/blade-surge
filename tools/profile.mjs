@@ -15,6 +15,7 @@ import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const PROJ = resolve(new URL('..', import.meta.url).pathname);
 const PORT = 4194;
@@ -33,6 +34,7 @@ const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {})
   '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--js-flags=--expose-gc',
 ] });
 const page = await (await br.newContext({ viewport: { width: 880, height: 400 }, hasTouch: true, isMobile: true })).newPage();
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(`http://localhost:${PORT}/`);
 await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 });
 await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.hero().level = 30; e.save(); });

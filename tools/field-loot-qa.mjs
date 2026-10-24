@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { installMetricsDriver } from './metrics-driver.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const arg = (name, fallback) => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=') ?? fallback;
@@ -43,6 +44,7 @@ try {
     await page.waitForTimeout(800);
     await page.evaluate(() => { window.app.testPause = true; window.app.ui.closeModal(); });
   };
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await boot();
   report.initial = await page.evaluate(hero => {

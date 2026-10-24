@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const origin = (process.argv[2] || 'http://127.0.0.1:4173').replace(/\/$/, '');
 const out = path.resolve(process.argv[3] || 'work/crisp-qa');
@@ -24,6 +25,7 @@ for (const { w, h, dsf } of views) {
   const name = `${w}x${h}@${dsf}`;
   const row = { viewport: name, errors };
   try {
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(origin + '/', { waitUntil: 'commit', timeout: 120000 });
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 }); await page.tap('#boot-start');
     await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot').classList.contains('show'), null, { timeout: 120000 });

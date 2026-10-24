@@ -8,6 +8,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { installAutoStarter } from './qa-starter.mjs';
 
 // 수용 기준(brief A2): 단위는 cm. 느슨하게 바꾸지 않는다.
 export const THRESHOLDS = Object.freeze({ handCm: 8, headOverlapCm: 0, torsoCm: 4, armCm: 4 });
@@ -303,6 +304,7 @@ export function installProbe() {
 export async function openPage(browser, origin) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block', reducedMotion: 'no-preference' });
   const page = await context.newPage();
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin + '/');
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 }); await page.click('#boot-start');
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot').classList.contains('show') && app.showcase, null, { timeout: 120000 });

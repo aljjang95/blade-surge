@@ -2,6 +2,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 const origin = process.argv[2] || 'http://127.0.0.1:5182';
 const out = path.resolve(process.argv[3] || 'work/qa-lobby-pose');
 const heroes = (process.argv[4] || 'knight,barbarian,mage,rogue,ranger').split(',');
@@ -9,6 +10,7 @@ await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=d3d11'] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 590 }, deviceScaleFactor: 1.5, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
 const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(origin + '/', { waitUntil: 'domcontentloaded', timeout: 120000 });
 await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 }); await page.click('#boot-start');
 await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot').classList.contains('show') && app.showcase, null, { timeout: 120000 });

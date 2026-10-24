@@ -19,6 +19,7 @@ import { BANDS, REGRESSION, assessMetrics, compareMetrics } from './metrics-cont
 import { reserveSeriesRun } from './metrics-series.mjs';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
@@ -137,6 +138,7 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice
 page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message.slice(0, 200)));
 
 const t0 = Date.now();
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(`http://localhost:${PORT}/`);
 try { await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 }); }
 catch { await bail('부트 실패\n' + errors.slice(0, 10).join('\n'), br); }

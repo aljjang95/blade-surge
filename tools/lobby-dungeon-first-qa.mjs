@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const positional = args.filter((a) => !a.startsWith('--'));
@@ -51,6 +52,7 @@ try {
     const state = () => page.evaluate(() => ({ mode: window.app.mode, tab: window.app.meta.tab, energy: window.app.eco.s.energy, prep: !!window.app.hubUI.opened, prepTitle: document.querySelector('#citadel-destination-title')?.textContent || null, focus: document.activeElement?.id || document.activeElement?.className || null }));
     const dismissRotate = async () => { const b = page.locator('#rotate-hint #btn-ignore-rotate'); if (await b.isVisible().catch(() => false)) { await act('#rotate-hint #btn-ignore-rotate'); await settle(200); } };
     try {
+      await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
       await page.goto(origin);
       await settle(400); await dismissRotate();
       await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });

@@ -14,6 +14,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import sharp from 'sharp';
 import { launchOpts } from '../chrome.mjs';
+import { installAutoStarter } from '../qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, def) => { const i = args.indexOf(name); return i < 0 ? def : args[i + 1]; };
@@ -101,6 +102,7 @@ try {
     } catch (e) { rec.error = String(e.message || e).slice(0, 300); }
   }
 
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true });
@@ -110,6 +112,7 @@ try {
   const equipped = await page.evaluate(async ({ hero, armorId }) => {
     const a = window.app, s = a.eco.s; a.testPause = false;
     a.eco.hero(hero);   // 영웅 상태 보장
+    s.roster.policy = 1; s.roster.starterChosen = true; // 모든 영웅을 소유한 정책 1로 둔다(장착 시험용)
     const inst = { uid: s.invSeq++, id: armorId, enh: 0 }; s.inventory.push(inst);
     a.eco.equip(hero, inst.uid); s.selected = hero; a.eco.emit?.();
     await a.showcaseHero(hero, true);

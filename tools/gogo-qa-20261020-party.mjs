@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : d; };
 const flag = (k) => process.argv.includes('--' + k);
@@ -103,6 +104,7 @@ async function openClient(browser, label, heroId, name) {
     try { const m = JSON.parse(f.payload); if (m.type === 'snapshot') for (const e of m.snapshot.events) if (e.type === 'hit') c.hitFrames.push({ hero: e.hero ?? null, value: e.value }); } catch { /* 비 JSON */ }
   }));
   await page.addInitScript(AUDIO_HOOK);
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

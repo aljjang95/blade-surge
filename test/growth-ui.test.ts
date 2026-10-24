@@ -4,6 +4,7 @@ import { HEROES } from '../src/data/heroes.js';
 import { GRADE_UP_COST } from '../src/data/hero-grades.js';
 import { SkillTreeView, skillDetail, heroSkillPoints } from '../src/ui/skill-tree.js';
 import { TranscendView } from '../src/ui/transcend.js';
+import { grandfather } from './helpers/legacy-roster';
 
 // 최소 DOM: 화면이 만든 노드 트리를 그대로 들고 있고, 버튼 click 은 disabled 면 무시한다(실제 브라우저와 같다).
 class El {
@@ -39,7 +40,7 @@ afterEach(() => {
 
 /** 진짜 Economy 와 meta 대역. confirm 은 답을 미리 정하고, 물어본 내용을 기록한다. */
 function setup(heroId = 'knight', answer = true) {
-  const eco: any = new Economy(), toasts: string[] = [], asked: any[] = [], tabs: any[] = [];
+  const eco: any = grandfather(new Economy()), toasts: string[] = [], asked: any[] = [], tabs: any[] = [];
   eco.s.selected = heroId;
   const meta: any = { eco, tab: 'heroes', toasts, asked, tabs,
     ui: { toast: (m: string) => toasts.push(m), confirm: async (title: string, body: string, opts: any) => { asked.push({ title, body, ok: opts?.ok }); return answer; } },
