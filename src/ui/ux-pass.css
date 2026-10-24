@@ -136,7 +136,7 @@
 .is-3d-toggle[aria-pressed="true"] { background: rgba(255, 216, 112, .22); border-color: #ffd870; }
 .is-preview { flex: none; display: grid; gap: 6px; margin: 4px 0 2px; }
 .is-preview[hidden] { display: none; }
-.is-preview-stage { display: grid; place-items: center; height: clamp(160px, 30vh, 240px); border-radius: 12px; border: 1px solid rgba(255, 216, 112, .35); background: radial-gradient(circle at 50% 35%, #2a5d74 0, #123044 70%); color: #d8e6ee; font-size: var(--type-sm, 14px); text-align: center; overflow: hidden; }
+.is-preview-stage { position: relative; display: grid; place-items: center; height: clamp(200px, 32dvh, 300px); border-radius: 12px; border: 2px solid color-mix(in srgb, var(--rar, #d6aa48) 70%, #000); background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--rar, #d6aa48) 34%, transparent) 0, transparent 55%), radial-gradient(circle at 50% 35%, #2a5d74 0, #123044 70%); color: #d8e6ee; font-size: var(--type-sm, 14px); text-align: center; overflow: hidden; }
 .is-preview-canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 .is-preview-canvas:active { cursor: grabbing; }
 /* 3D 미리보기는 ←/→ 회전 · Home 처음 각도를 받는다(tabIndex 0). */

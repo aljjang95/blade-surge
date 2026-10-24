@@ -310,7 +310,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
     const visual = itemVisual(it, { heroId });
     ui.modal('<div class="item-sheet rar-line-' + it.rarity + '" data-slot="' + it.slot + '">' +
       '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it, '', heroId) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (set ? ' · ' + esc(set.name) : '') + (it.slot === 'weapon' ? ' · <span class="is-form" data-variant="' + visual.variant + '">' + esc(visual.formLabel) + '</span>' : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm is-3d-toggle" id="i-3d" aria-controls="is-preview" aria-pressed="' + previewOpen + '">3D로 보기</button><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
-      '<section class="is-preview" id="is-preview" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
+      '<section class="is-preview" id="is-preview" style="--rar:' + RARITY_COLOR[it.rarity] + '" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
       '<div class="is-body"><div class="is-compare" aria-label="현재 장비와 비교">' +
       '<div class="is-power ' + trendClass(powerDelta) + '"><span>' + HEROES[heroId].name + ' · ' + label + ' 전투력</span><b>' + fmt(p.before.power) + ' → ' + fmt(p.after.power) + '</b><em>' + (powerDelta === 0 ? '변화 없음' : signed(powerDelta)) + '</em></div>' +
       (equipped ? '<div class="is-cards single">' + itemCardHtml(inst, '현재 장비', true, heroId) + '</div>' : '<div class="is-cards">' + itemCardHtml(p.current, '현재 ' + SLOT_NAME[it.slot], p.current && p.current.uid === uid, heroId) + '<span class="is-vs" aria-hidden="true">→</span>' + itemCardHtml(inst, '선택한 장비', false, heroId) + '</div>') +
@@ -353,6 +353,11 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
       b.querySelector('#i-close').onclick = close;
       b.querySelectorAll('[data-side-tab]').forEach((el) => el.onclick = () => { if (side === el.dataset.sideTab) return; side = el.dataset.sideTab; audio.play('ui_click', { vol: 0.4 }); render(); });
       bindRunePane(b, { meta, uid, heroId, state: runeState, back: () => showItemSheet(meta, uid, heroId, { focus: 'rune', socket: runeState.socket }) });
+      // 좁은 세로 화면: 룬 소켓 탭을 열면 판(미리보기 + 소켓)이 보이도록 본문을 그 위치로 올린다.
+      if (side === 'rune' && globalThis.matchMedia?.('(max-width: 600px)').matches) {
+        const body = b.querySelector('.is-body'), panel = b.querySelector('.is-side');
+        if (body && panel) body.scrollTop += panel.getBoundingClientRect().top - body.getBoundingClientRect().top;
+      }
       b.querySelector('#i-eq').onclick = () => {
         if (equipped) eco.unequip(heroId, it.slot); else eco.equip(heroId, uid);
         audio.play('ui_confirm', { vol: 0.5 }); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
