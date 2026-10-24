@@ -36,10 +36,9 @@ export const PERSONAS = Object.freeze({
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
 // 룬 정밀 제작 우선순위: 전투력에 직접 들어가는 효과(공격력·최대 체력)부터. III 를 먼저 완성한다(같은 룬 2개 상한).
-// 출격 중 각인(2026-10-24 제거)과 룬: 시뮬레이터는 숙련·세트·스킬처럼 출격 중 각인도 진행 판정 전투력에서 뺐다(POWER_NEED 는 그 기준으로 맞춤).
-// 룬은 각인의 대체이므로 같은 방식으로 진행 판정에서 빼고, 룬 전투력 몫(runePowerPct)을 따로 재서 공백을 메우는지 밴드로 단언한다.
-// 옛 흐름의 출격 평균 각인 몫(추정, 실측 아님): 출격당 최대 6회 선택, 공격력 4~5%·최대 체력 6~7% → 출격 평균 약 +15%.
-// (실험 2026-10-24: 룬 전투력을 진행 판정에 넣으면 +19%만으로도 미드 D90 무한의 성이 상한 210층에 닿아 D8 밴드를 깬다.)
+// 출격 중 각인(2026-10-24 제거)과 룬: 룬 전투력은 실제 게임처럼 진행 판정 전투력에 들어간다(D8·D9 밴드 그대로).
+// REMOVED_BOON_POWER = 옛 출격 중 각인 평균 몫(추정, 실측 아님: 출격당 최대 6회, 공격력 4~5%·최대 체력 6~7% → 약 +15%).
+// 룬 전투력 몫이 이 값 이상이면 각인 제거 공백을 메운 것으로 본다.
 export const REMOVED_BOON_POWER = 0.15;
 export const RUNE_PRIORITY = Object.freeze(['ember_edge', 'stone_root', 'tide_breath', 'storm_edge']);
 const HARD = DIFFICULTY_ORDER.filter((d) => d !== 'story');
@@ -122,7 +121,7 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
   };
   const basePower = () => heroStats(def, { level: st.level, star: st.star, grade: st.grade }, equipBonus(st.gear));
   const runePower = () => { const b = basePower(), fx = runeFx(); return Object.keys(fx).length ? applyBuildStats(b, fx).power : b.power; };
-  const power = () => basePower().power;
+  const power = () => runePower();
   const gainExp = (n) => { st.exp += n; while (st.level < 80 && st.exp >= levelExp(st.level)) { st.exp -= levelExp(st.level); st.level++; } };
   const earn = (k, n) => { if (!n) return; st[k] += n; if (k === 'gold') totals.goldEarned += n; };
   const mark = (day, kind, label) => milestones.push({ day, kind, label });
