@@ -510,6 +510,48 @@
       "chosen": false,
       "note": "고르지 않은 방향의 짝 화면(참고 보존)",
       "sha256": "ae34b708fcc52e51deab1ca6904276d081426e32eca6532a949cc52563e194c0"
+    },
+    {
+      "id": "C34",
+      "group": "starter-village",
+      "title": "햇살 정원 마을(초보자 구역이 광장 둘레에 모임)",
+      "image": "images/starter-c1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "평지 광장이라 기존 걷기·충돌 계약(±12m) 그대로 구현 가능, 구역이 한눈에 보임"
+    },
+    {
+      "id": "C35",
+      "group": "starter-village",
+      "title": "성채 아래 신병 훈련 기지",
+      "image": "images/starter-c2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "군영 톤이 2지역 이후 마을과 겹치고 '초보자 마을'의 아늑함이 약함"
+    },
+    {
+      "id": "C36",
+      "group": "starter-village",
+      "title": "종지기 정원 언덕(계단식)",
+      "image": "images/starter-c3.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 4,
+        "feasibility": 2,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "계단식 층은 평지 걷기 계약과 충돌(높이 이동·카메라 가림)"
     }
   ],
   "nodes": [
@@ -1509,6 +1551,107 @@
       "type": "api",
       "group": "monetize-1",
       "title": "웹 결제 /api/v1/iap/web/{intent,complete}(포트원 V2 조회 검증·D1 멱등 지급·취소 회수)"
+    },
+    {
+      "id": "starter-village-overview",
+      "type": "screen",
+      "group": "starter-village",
+      "title": "첫 마을 둘러보기 전경(입장 → 안내 → 연습 → 준비 → 출격)",
+      "image": "images/starter-c1.jpg",
+      "checks": [
+        "입구(남) 왼쪽 안내자 NPC, 서쪽 울타리 훈련장과 과녁 허수아비 3개, 중앙 분수, 왼쪽 위 지붕 있는 의뢰 게시판",
+        "동쪽 대장간(화덕 불빛)·줄무늬 차양 상점, 북쪽 영웅 동상과 계단 위 청록 소용돌이 포탈",
+        "회색 조약돌 길, 꽃밭·잔디, 주황 기와 반목조 오두막이 광장을 둘러쌈, 늦은 오후 황금빛 햇살",
+        "파랑·금색 깃발, 등불, 작은 팻말 이름표"
+      ],
+      "risks": [
+        "건물·소품 품질: Tripo 소품 8종(원화 images/starter-props.jpg)으로 교체 예정, 그 전에는 절차 모델",
+        "오두막 가림: 카메라와 건물이 겹치지 않게 경계(±12) 밖에 배치"
+      ],
+      "copy": [
+        "안내자 브람",
+        "훈련장",
+        "첫 의뢰 게시판",
+        "대장장이 도르",
+        "시작 영웅의 비석",
+        "출격 포탈"
+      ]
+    },
+    {
+      "id": "starter-training-yard",
+      "type": "screen",
+      "group": "starter-village",
+      "title": "훈련장 허수아비 연습",
+      "image": "images/starter-s1.jpg",
+      "checks": [
+        "원형 흙 마당 + 나무 울타리(동쪽 입구), 과녁 허수아비 3, 바닥 붉은 표적 원",
+        "치면 허수아비가 뒤로 기울고 금빛 섬광",
+        "입구 옆 목검 걸이"
+      ],
+      "risks": [
+        "허수아비 흔들림은 감쇠 스프링(app.step 결정적)"
+      ],
+      "copy": [
+        "훈련장",
+        "허수아비 연습"
+      ]
+    },
+    {
+      "id": "starter-forge-market",
+      "type": "screen",
+      "group": "starter-village",
+      "title": "대장간·상점 앞마당",
+      "image": "images/starter-s2.jpg",
+      "checks": [
+        "열린 목조 대장간, 화덕 불빛·굴뚝, 모루, 무기 진열대, 대장장이 NPC",
+        "줄무늬 차양 상점 좌판, 물약 병·청록 룬석, 상인 NPC",
+        "흙 앞마당"
+      ],
+      "risks": [
+        "NPC는 기존 KayKit 모델 재사용(리그 신규 제작은 다음 덩어리)"
+      ],
+      "copy": [
+        "대장장이 도르",
+        "장비 강화 · 룬 소켓",
+        "상점"
+      ]
+    },
+    {
+      "id": "starter-portal",
+      "type": "screen",
+      "group": "starter-village",
+      "title": "영웅 동상과 출격 포탈",
+      "image": "images/starter-s3.jpg",
+      "checks": [
+        "분수 너머 영웅 동상(검을 치켜듦, 방패 문장 받침)",
+        "돌 아치 안 청록 소용돌이 포탈, 양옆 깃발·화로",
+        "포탈 양옆 던전 관문(지역 1)"
+      ],
+      "risks": [
+        "포탈 소용돌이는 캔버스 나선 텍스처 회전(가산 혼합)"
+      ],
+      "copy": [
+        "출격 포탈",
+        "관문 선택"
+      ]
+    },
+    {
+      "id": "starter-village-layout",
+      "type": "data",
+      "group": "starter-village",
+      "title": "src/data/starter-village.js 배치·충돌·초보자 상호작용 지점"
+    },
+    {
+      "id": "starter-village-scene",
+      "type": "system",
+      "group": "starter-village",
+      "title": "src/game/starter-village-scene.js 바닥·구역 소품(병합·인스턴싱)"
+    },
+    {
+      "id": "starter-interactions",
+      "type": "flow",
+      "group": "starter-village",
+      "title": "안내자·훈련장·게시판·대장장이·비석·포탈 상호작용(citadel-hub.js)"
     }
   ],
   "edges": [
@@ -1821,6 +1964,36 @@
       "from": "web-billing",
       "to": "hero-roster-policy",
       "type": "writes"
+    },
+    {
+      "from": "starter-village-overview",
+      "to": "starter-training-yard",
+      "type": "navigates"
+    },
+    {
+      "from": "starter-village-overview",
+      "to": "starter-forge-market",
+      "type": "navigates"
+    },
+    {
+      "from": "starter-village-overview",
+      "to": "starter-portal",
+      "type": "navigates"
+    },
+    {
+      "from": "starter-village-scene",
+      "to": "starter-village-layout",
+      "type": "reads"
+    },
+    {
+      "from": "starter-interactions",
+      "to": "starter-village-layout",
+      "type": "reads"
+    },
+    {
+      "from": "starter-portal",
+      "to": "stage-select-screen",
+      "type": "navigates"
     }
   ],
   "acceptance": [
@@ -2090,6 +2263,24 @@
       "node": "web-billing",
       "criterion": "포트원 조회가 PAID·금액·상점·채널·상품 일치일 때만 1회 지급, 취소 시 회수",
       "surface": "test/web-billing.test.ts(가짜 fetch), 실결제는 개방 게이트"
+    },
+    {
+      "id": "A52",
+      "node": "starter-village-overview",
+      "criterion": "새 저장 1지역에서 마을 둘러보기에 들어가면 여섯 구역(안내·훈련장·게시판·대장간/상점·비석·포탈)이 보이고 걸어서 모두 닿는다",
+      "surface": "Playwright 실제 입력 844x390·1280x720·390x844, test/starter-village.test.ts 도달성"
+    },
+    {
+      "id": "A53",
+      "node": "starter-interactions",
+      "criterion": "각 구역 상호작용이 기존 시스템으로 이어진다: 포탈→관문 선택, 게시판→첫 의뢰(관문 1-1·지역 1 던전), 대장장이→장비 강화·룬, 상점·교관 기존 패널, 훈련장→허수아비 연습",
+      "surface": "Playwright 실제 입력, 단위 테스트"
+    },
+    {
+      "id": "A54",
+      "node": "starter-village-scene",
+      "criterion": "초보자 마을 장면 draw call·삼각형을 기록하고 drawCalls ≤ 420(마을 계약) 유지, 2지역 이후 마을은 기존 배치 그대로",
+      "surface": "tools/starter-village-shot.mjs report, test/town-scenes.test.ts"
     }
   ],
   "decisions": [
@@ -2222,6 +2413,11 @@
       "id": "D28",
       "text": "시작 영웅 선택은 비교 목록형(C31)을 고른다: 첫 선택에 필요한 비교 정보가 한 화면이고 가로·데스크톱 확장이 쉽다. 잠긴 상세는 같은 방향의 locked-c3",
       "source": "대표님 2026-10-24 수익화 지시, 시안 점수"
+    },
+    {
+      "id": "D29",
+      "text": "첫 마을 리메이크는 C34(햇살 정원 마을)를 고른다. 평지라 걷기·충돌 계약을 그대로 쓰고, 초보자 구역이 한 화면에 모인다. 1지역(서약의 성채 서비스 마을 + 캠페인 1장)에서만 초보자 배치를 쓰고 2지역 이후 지역 마을은 기존 배치를 유지한다",
+      "source": "대표님 2026-10-24 첫 마을 리메이크 요청, 시안 점수"
     }
   ],
   "outOfScope": [
@@ -2239,7 +2435,8 @@
     "유료/무료 보석 분리 전 전운 보석 굴림 환불 역분개",
     "스테이지 선택 화면의 난이도(숙련·악몽·지옥) 고르기 — 기존 캠페인 탭이 맡는다",
     "던전 목록의 마을 해금 판정 교체 — claude/blade-town-unlock 레인 export 이후",
-    "수익화 1단계: 실결제 개방·Play 영웅 상품 등록·가격 공개(대표님 확인 게이트)"
+    "수익화 1단계: 실결제 개방·Play 영웅 상품 등록·가격 공개(대표님 확인 게이트)",
+    "초보자 마을 Tripo 소품 8종 교체·NPC 새 리그(원화 준비됨, PC Chrome 실행 승인 대기), 실기기 확인"
   ],
   "changes": [
     {

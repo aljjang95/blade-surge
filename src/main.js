@@ -336,8 +336,9 @@ class App {
     const before = activeCampaignTownChapter();
     const next = setActiveCampaignTownChapter(this.eco.campaignTownState().current);
     if (next === before) return false;
+    // 마을(지역)마다 서는 던전 관문과 걷기 배치가 다르다(region-dungeon-gate.js, 1지역은 초보자 마을 배치 starter-village.js).
+    this.townUI?.syncGates();
     if (rebuild && this.arena.lobbyHall) {
-      this.townUI?.syncGates(); // 마을(지역)마다 서는 던전 관문이 다르다(region-dungeon-gate.js)
       this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub(); this.townUI?.renderPlace();
       if (this.mode === 'lobby') audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     } else this.townUI?.renderPlace(); // 전투 복귀·부팅 때도 걷기 HUD 의 마을 이름을 새 마을로 맞춘다

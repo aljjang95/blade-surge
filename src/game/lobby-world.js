@@ -4,7 +4,7 @@ import { buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
 /** Original, runtime-authored citadel surroundings. Six static batches, no textures,
  * lights, particle emitters or combat navigation changes. */
 /** @param {{ quality?: string, townId?: string | null, skin?: any }} [options] */
-export function buildLobbyWorld({ quality = 'high', townId = null, skin = null } = {}) {
+export function buildLobbyWorld({ quality = 'high', townId = null, skin = null, starter = false } = {}) {
  // 캠페인 2~6지역 마을(campaign-towns.js)은 서비스 마을과 무관하게 자기 풍경을 쓴다. 1지역은 아래 원형 성채 숲 마을이다.
  if (skin?.scenery) return buildRegionWorld(skin, { quality });
  // 잿불 항구·별마루 설원은 자기 풍경을 쓰고, 서약의 성채(기본)는 아래 원형을 그대로 만든다.
@@ -32,7 +32,8 @@ export function buildLobbyWorld({ quality = 'high', townId = null, skin = null }
  col(12,.38,0,0,-.68,0,64);col(11.7,.12,1,0,-.45,0,64);
  box(6,.4,25,0,0,-.72,21);box(5.7,.10,25,1,0,-.46,21);
  for(let z=10;z<=32;z+=2){box(5.5,.025,.055,3,0,-.4,z);for(const side of [-1,1]){col(.14,1.1,1,side*2.9,.08,z);box(.22,.18,2.1,3,side*2.9,.68,z+1);}}
- for(const z of [15,24,33]){arch(0,z,6.8,4.2);for(const side of [-1,1]){col(.7,6,0,side*4,2.4,z,8);col(.85,.22,1,side*4,5.5,z,8);add(new THREE.ConeGeometry(.95,1.7,8),2,side*4,6.4,z);}}
+ // 초보자 마을(starter)은 입구 쪽 카메라가 첫 아치(z 15)에 가리지 않게 그 아치만 뺀다.
+ for(const z of starter?[24,33]:[15,24,33]){arch(0,z,6.8,4.2);for(const side of [-1,1]){col(.7,6,0,side*4,2.4,z,8);col(.85,.22,1,side*4,5.5,z,8);add(new THREE.ConeGeometry(.95,1.7,8),2,side*4,6.4,z);}}
  // Repeated terraces recede in actual depth, including the formerly empty front hemisphere.
  for(let i=0;i<24;i++){
   if(i%3!==0)continue;

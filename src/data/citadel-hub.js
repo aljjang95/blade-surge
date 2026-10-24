@@ -1,5 +1,7 @@
 import { ALL_DUNGEONS, DUNGEONS } from './expansion.js';
 import { TOWNS } from './towns.js';
+import { activeCampaignTownChapter } from './campaign-towns.js';
+import { STARTER_HOTSPOTS, STARTER_GATE_SLOTS, STARTER_SERVICE_PLACES, STARTER_PROPS, starterBlockers } from './starter-village.js';
 
 // One spatial contract is shared by the visible plaza and player collision.
 export const CITADEL_HUB_BOUNDS = Object.freeze({ minX: -12, maxX: 12, minZ: -12, maxZ: 12 });
@@ -199,12 +201,32 @@ const dungeonOverrides = new Map(), hubCache = new Map();
 export function setTownDungeonIds(townId, ids) {
   if (!CITADEL_TOWN_IDS.includes(townId) || !Array.isArray(ids)) return;
   const next = ids.filter(id => ALL_DUNGEONS.some(dungeon => dungeon.id === id)).slice(0, 6);
-  if (next.join() !== (dungeonOverrides.get(townId) || []).join()) { dungeonOverrides.set(townId, next); hubCache.delete(townId); }
+  if (next.join() !== (dungeonOverrides.get(townId) || []).join()) { dungeonOverrides.set(townId, next); hubCache.delete(townId); hubCache.delete(townId + ':starter'); }
+}
+
+/**
+ * 첫 마을(1지역 · 서약의 성채 서비스 마을)이면 초보자 구역 배치를 쓴다(src/data/starter-village.js).
+ * 2지역 이후 지역 마을이 로비 마을이면 기존 광장 배치 그대로다.
+ */
+export const isStarterVillage = (townId) => townId === 'oathhold' && activeCampaignTownChapter() === 1;
+
+function starterHub(townId) {
+  const theme = TOWN_THEMES[townId], ids = (dungeonOverrides.get(townId) || defaultTownDungeonIds(townId)).slice(0, STARTER_GATE_SLOTS.length);
+  const gates = ids.map((id, index) => townGate(ALL_DUNGEONS.find(dungeon => dungeon.id === id), ...STARTER_GATE_SLOTS[index]));
+  const place = spot => STARTER_SERVICE_PLACES[spot.id] ? Object.freeze({ ...spot, ...STARTER_SERVICE_PLACES[spot.id] }) : spot;
+  const hotspots = Object.freeze([...gates, ...STARTER_HOTSPOTS, ...townNpcs(townId).map(place), place(WAYSTONE)]);
+  return Object.freeze({ townId, theme, starter: true, bounds: CITADEL_HUB_BOUNDS, spawn: CITADEL_HUB_SPAWN, hotspots,
+    blockers: Object.freeze(starterBlockers(hotspots)), props: STARTER_PROPS, dungeonIds: Object.freeze(ids.slice()) });
 }
 
 /** 마을 하나의 걷기 데이터: 던전 게이트 6개 + 캠페인·결투장 + 상인·교관·안내관 + 이동석. */
 export function townHub(townId) {
   if (!TOWN_THEMES[townId]) townId = 'oathhold';
+  if (isStarterVillage(townId)) {
+    const key = townId + ':starter';
+    if (!hubCache.has(key)) hubCache.set(key, starterHub(townId));
+    return hubCache.get(key);
+  }
   if (hubCache.has(townId)) return hubCache.get(townId);
   const theme = TOWN_THEMES[townId], ids = dungeonOverrides.get(townId) || defaultTownDungeonIds(townId);
   const slots = GATE_SLOTS[theme.gateLayout];
