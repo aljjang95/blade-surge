@@ -117,7 +117,8 @@ export function gachaRates(bannerId = 'hero', now = Date.now()) {
  * SSR 장비는 픽업 세트 몫과 나머지 L 장비 몫으로 나눈다.
  * @returns {Array<{ kind: 'hero'|'gear'|'material', grade: 'SSR'|'SR'|'R', id: string, p: number, slot?: string, rarity?: string, n?: number, featured?: boolean }>}
  */
-export function gachaContents(bannerId = 'hero', now = Date.now()) {
+/** @param {string} [bannerId] @param {number} [now] @param {{ ownsHero?: (id: string) => boolean }} [opts] ownsHero: 초보자 배너의 미보유 우선 규칙을 이 계정 기준 조건부 확률로 공개할 때 */
+export function gachaContents(bannerId = 'hero', now = Date.now(), { ownsHero } = {}) {
   const rates = gachaRates(bannerId, now), base = rates.base, out = [];
   const gear = (grade, p) => {
     if (!(p > 0)) return;
@@ -138,7 +139,9 @@ export function gachaContents(bannerId = 'hero', now = Date.now()) {
     for (const it of rest) out.push({ kind: 'gear', grade: 'SSR', id: it.id, slot: it.slot, rarity: 'L', p: base.SSR * rates.ssrSplit.ssrGear * (1 - share) / rest.length });
   }
   mats('SSR');
-  heroes('SR', heroesOf('SR'), base.SR * rates.srSplit.hero);
+  // 초보자 배너 SR 영웅은 미보유 영웅이 남아 있으면 그 영웅들 사이에서만 뽑는다(rollResult와 같은 규칙). 소유 정보가 있으면 그 기준으로 공개한다.
+  const srAll = heroesOf('SR'), srFresh = rates.bannerId === 'beginner' && typeof ownsHero === 'function' ? srAll.filter((id) => !ownsHero(id)) : [];
+  heroes('SR', srFresh.length ? srFresh : srAll, base.SR * rates.srSplit.hero);
   gear('SR', base.SR * rates.srSplit.gear); mats('SR');
   gear('R', base.R * rates.rSplit.gear); mats('R');
   return out;
@@ -214,6 +217,8 @@ export class Economy {
     return out;
   }
   save() {
+    // 유료 몫 클램프는 저장이 성공할 때만 확정한다(실패하면 되돌려 호출부의 부분 롤백이 어긋나지 않게).
+    const paidBefore = this.s.paidGems;
     try {
       clampPaidGems(this.s);
       const raw = JSON.stringify(this.s);
@@ -221,7 +226,7 @@ export class Economy {
       this.storage.setItem(KEY, raw);
       try { if (this._lastGoodSave) this.storage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
       this._lastGoodSave = raw; this.storageStatus = 'ready'; this.hasStoredSave = true; return true;
-    } catch { this.storageStatus = 'unavailable'; return false; }
+    } catch { this.s.paidGems = paidBefore; this.storageStatus = 'unavailable'; return false; }
   }
   reset() {
     let cleared = true;

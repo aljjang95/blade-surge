@@ -331,7 +331,13 @@ public class StoreBridgePlugin extends Plugin {
     CATALOG_TYPES.put("starter_pack_v1", "inapp");
     CATALOG_TYPES.put("season_pass_s1", "inapp");
     CATALOG_TYPES.put("monthly_card_v1", "subs");
-    // 영웅 직접 판매는 소환 구조(BM 12장)로 내렸다(gate gacha-only). 판매를 다시 열면 hero_<id>_v1·hero_all_v1 을 여기 되돌린다(test/store-bridge-catalog.test.ts).
+    // 영웅 해금(비소모 INAPP): 신규 판매는 내렸지만(gate gacha-only) 기존 구매의 queryOwned 복구·acknowledge를 위해 남긴다(test/store-bridge-catalog.test.ts).
+    CATALOG_TYPES.put("hero_knight_v1", "inapp");
+    CATALOG_TYPES.put("hero_barbarian_v1", "inapp");
+    CATALOG_TYPES.put("hero_mage_v1", "inapp");
+    CATALOG_TYPES.put("hero_rogue_v1", "inapp");
+    CATALOG_TYPES.put("hero_ranger_v1", "inapp");
+    CATALOG_TYPES.put("hero_all_v1", "inapp");
   }
 
   private interface DetailsHandler {

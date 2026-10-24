@@ -93,6 +93,13 @@ export function sellableProduct(id) {
   const p = typeof id === 'string' && Object.hasOwn(IAP_BY_ID, id) ? IAP_BY_ID[id] : null;
   return p && p.enabled ? p : null;
 }
+/** 판매를 내린 상품 중 기존 영수증의 검증·지급·acknowledge는 계속 받는 gate(신규 판매만 막는다). */
+export const VERIFY_ONLY_GATES = Object.freeze(['gacha-only']);
+/** 영수증 검증에 쓰는 상품: 판매 중이거나, 판매만 내리고 기존 구매 복구는 유지하는 상품(영웅 직접 판매 등). */
+export function verifiableProduct(id) {
+  const p = typeof id === 'string' && Object.hasOwn(IAP_BY_ID, id) ? IAP_BY_ID[id] : null;
+  return p && (p.enabled || VERIFY_ONLY_GATES.includes(p.gate)) ? p : null;
+}
 
 /** 권한 키의 유효 종료 시각. null = 무기한. 시즌 패스는 시즌 종료, 구독은 Play expiryTime(서버가 넣는다). */
 export function entitlementEnds(product, now) {

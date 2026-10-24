@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { IAP_PRODUCTS, soldOn } from '../src/shared/iap-catalog.js';
+import { IAP_PRODUCTS, soldOn, VERIFY_ONLY_GATES } from '../src/shared/iap-catalog.js';
 import { createBillingService } from '../src/platform/billing-service.js';
 import { Economy } from '../src/game/economy.js';
 
@@ -12,12 +12,12 @@ const javaTypes = () => {
 const playType = (p: any) => (p.type === 'subscription' ? 'subs' : 'inapp');
 
 test('StoreBridgePlugin CATALOG_TYPES는 서버 카탈로그의 활성·Play 판매 상품 id·타입과 정확히 같다', () => {
-  const expected = new Map(IAP_PRODUCTS.filter((p: any) => p.enabled && soldOn(p, 'play')).map((p: any) => [p.id, playType(p)]));
+  const expected = new Map(IAP_PRODUCTS.filter((p: any) => (p.enabled || VERIFY_ONLY_GATES.includes(p.gate)) && soldOn(p, 'play')).map((p: any) => [p.id, playType(p)]));
   const actual = javaTypes();
   expect([...actual.keys()].sort()).toEqual([...expected.keys()].sort());
   for (const [id, type] of expected) expect(actual.get(id)).toBe(type as string);
-  // 영웅 직접 판매는 소환 구조(BM 12장)로 내렸다: 서버 카탈로그 비활성이면 앱 목록에도 없어야 한다.
-  for (const id of ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1']) expect(actual.has(id)).toBe(false);
+  // 영웅 직접 판매는 신규 판매만 내렸다(gate gacha-only): 기존 구매 복구를 위해 앱 목록에는 남는다.
+  for (const id of ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1']) expect(actual.get(id)).toBe('inapp');
 });
 
 test('billing-service는 Play 판매 상품만 adapter.list()에 넘긴다', async () => {
