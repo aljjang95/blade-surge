@@ -74,8 +74,11 @@ export class BattleReadability {
     const tray = document.getElementById('battle-info-actions');
     const codex = battle?.rpgView?.hudButton, engraving = battle?.chronicle?.hud;
     if (codex && codex.parentElement !== tray) tray.append(codex);
-    // 출격 중 각인 보상 대기열이 없어졌으므로(2026-10-24) 각인 현황 버튼은 늘 정보 묶음 안에 둔다.
-    if (engraving && engraving.parentElement !== tray) tray.prepend(engraving);
+    // 각인 현황 버튼은 출격 전 전운으로 가져온 각인이 있을 때만 보인다(masterworks.refresh 가 hidden 을 정한다).
+    // 일시정지 창의 정보 묶음(#pause-overlay)은 전투 중 display:none 이라 거기 두면 크기가 0이 된다.
+    // 그래서 보이는 HUD 우상단 묶음(.hud-right-top)에 둔다. 예전에 정보 묶음으로 옮겼던 자리에 남은 버튼도 되돌린다.
+    const top = this.hud.querySelector('.hud-right-top');
+    if (engraving && top && engraving.parentElement !== top) top.prepend(engraving);
     const growth = this.hud.querySelector('.oath-run-details');
     if (growth) tray.append(growth);
   }

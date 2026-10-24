@@ -47,3 +47,23 @@ test('지도 열기 실패는 기존 정지를 보존하고 자기 정지와 임
   expect([...f.battle.pauseReasons]).toEqual(['manual']); expect(f.input.enabled).toBe(false);
   expect(f.view.mapBattle).toBeNull(); expect(f.view.mapWorld).toBeNull();
 });
+/** layoutControls 용 가짜 컨테이너: append/prepend 로 자식의 parentElement 를 바꾼다. */
+function fakeBox(name: string) {
+  const box: any = { name, append(el: any) { el.parentElement = box; }, prepend(el: any) { el.parentElement = box; } };
+  return box;
+}
+test('각인 버튼은 일시정지 창 정보 묶음이 아니라 보이는 HUD 우상단 묶음에 남는다(전투 중 크기 0 방지)', () => {
+  const f = fixture();
+  const tray = fakeBox('tray'), top = fakeBox('top');
+  const engraving: any = { parentElement: top }, codex: any = { parentElement: top };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { querySelector: () => null, getElementById: () => tray } });
+  f.view.hud = { querySelector: (sel: string) => (sel === '.hud-right-top' ? top : null) };
+  const battle: any = { rpgView: { hudButton: codex }, chronicle: { hud: engraving } };
+  f.view.layoutControls(battle);
+  expect(engraving.parentElement).toBe(top);
+  expect(codex.parentElement).toBe(tray);
+  // 예전 구조로 정보 묶음에 옮겨져 있던 버튼도 HUD 로 되돌린다.
+  engraving.parentElement = tray;
+  f.view.layoutControls(battle);
+  expect(engraving.parentElement).toBe(top);
+});
