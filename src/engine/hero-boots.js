@@ -234,6 +234,9 @@ export function syncHeroBoots(root, boots, { data = BOOTS_DATA, load, makeMateri
     root.userData.heroBoots = { id: entry.id, entry, source: gltf.scene, mesh, makeMaterial };
     setGearFeetHidden(root, true);
     onChange?.();
-  }).catch((error) => { root.userData.bootsTargetId = null; warn(`hero boots failed: ${entry.id}`, error); });
+  }).catch((error) => {
+    if (root.userData.bootsTargetId === entry.id) root.userData.bootsTargetId = null;   // 지난 요청의 실패가 최신 목표를 지우지 않게
+    warn(`hero boots failed: ${entry.id}`, error);
+  });
   return true;
 }

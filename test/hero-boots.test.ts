@@ -281,3 +281,15 @@ test('잔상(fx.ghost)은 몸 스킨만 굽고 부츠 스킨은 넣지 않는다
     else Reflect.deleteProperty(globalThis, 'document');
   }
 });
+
+test('E 로드 중 L 로 바꾼 뒤 지난 E 요청이 실패해도 L 은 정상 부착된다', async () => {
+  const { root } = hero(); const pending: Record<string, { ok: (v: any) => void; fail: (e: any) => void }> = {};
+  const load = (path: string): Promise<any> => new Promise((ok, fail) => { pending[path.includes('boots_l') ? 'l' : 'e'] = { ok, fail }; });
+  const options = { data: full(), load, warn: () => {} };
+  syncHeroBoots(root, { rarity: 'E' }, options); await tick();
+  syncHeroBoots(root, { rarity: 'L' }, options); await tick();
+  pending.e.fail(new Error('network')); await tick(); await tick();
+  expect(root.userData.bootsTargetId).toBe('boots_l');
+  pending.l.ok(bootsScene()); await tick(); await tick();
+  expect(root.userData.heroBoots.entry.id).toBe('boots_l');
+});

@@ -2,8 +2,8 @@ import { Battle as RpgBattle } from './rpg-battle.js';
 import { MasterworksService } from './masterworks-service.js';
 import { MasterworksView } from '../ui/masterworks.js';
 import { TargetTag } from '../ui/target-tag.js';
-import { BOONS, STORY_EVENTS } from '../data/masterworks.js';
-import { boonChoices, boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory } from './masterworks-core.js';
+import { STORY_EVENTS } from '../data/masterworks.js';
+import { boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory, seedRunBoons } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
 import { audio } from '../engine/audio.js';
 import { applyRiftEnemy } from './journey-rifts.js';
@@ -33,16 +33,17 @@ export class Battle extends RpgBattle {
       : this.masterworks.transact(s => { s.runSeq++; return {ok:true,id:s.runSeq}; }, {duringBattle:true});
     if (!ticket.ok) throw new Error(ticket.error);
     const s = this.masterworks.s;
-    this.run = {id:ticket.id,picked:[],autoPicked:0,round:0,queue:[],storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
-      enabled:!this.stage.party && this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s),
+    const enabled=!this.stage.party && this.stage.expedition?.kind !== 'arena';
+    // 출격 중 각인 보상은 없다(2026-10-24 대표님). 각인은 출격 전에 setPreRunBoons 로 정해진 것만 한 번 소비해 적용한다.
+    const preRunBoons=enabled ? seedRunBoons(this.preRunBoons) : [];this.preRunBoons=null;
+    this.run = {id:ticket.id,picked:[...preRunBoons],preRunBoons,storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
+      enabled, challenges:[...s.challengeIds], permanent:masteryEffects(s),
       historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0,
       personalGoal:!this.stage.party && this.stage.expedition?.kind !== 'arena' ? capturePersonalGoal(s) : null};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
     if(isRiftDungeon(this.stage))this.riftEncounter=new RiftEncounters(this);
-    // The opening reward remains, but it no longer interrupts the first combat input.
-    this.after(1.4, () => { if (this.run?.enabled && this.active) this.grantBoonReward({automatic:true}); });
     this.chronicle.refresh();
   }
   stop() { this.riftEncounter?.dispose();this.riftEncounter=null;this.chronicle?.close(); super.stop(); this.run = null; this.effects = {}; this.chronicle?.refresh(); }
@@ -59,59 +60,29 @@ export class Battle extends RpgBattle {
     this.buildBase={...base}; this.appliedStats=applyBuildStats(base,this.effects);
     return this.appliedStats;
   }
-  currentOffer() {
-    const offer=this.run?.queue[0];
-    if(offer?.kind==='boon') {
-      // Deferred offers are evaluated against the current build, never an old rank snapshot.
-      if(offer.ids.some(id=>this.run.picked.filter(x=>x===id).length>=3))
-        offer.ids=boonChoices(`${this.stage.code}:${this.run.id}`,this.run.picked,offer.round).map(b=>b.id);
-    }
-    return offer;
-  }
-  queueBoon({autoAt=null}={}) {
-    if (!this.run?.enabled || this.run.round >= 6) return;
-    const choices = boonChoices(`${this.stage.code}:${this.run.id}`,this.run.picked,this.run.round++);
-    if (choices.length) {
-      const offer={kind:'boon',ids:choices.map(b=>b.id),round:this.run.round-1};
-      if(Number.isFinite(autoAt))offer.autoAt=autoAt;
-      this.run.queue.push(offer); return offer;
-    }
-  }
-  applyBoonOffer(offer,id,{automatic=false}={}) {
-    if (!offer?.ids?.includes(id) || this.run.picked.filter(x=>x===id).length>=3) return {ok:false,error:'선택할 수 없는 각인입니다.'};
-    const index=this.run.queue.indexOf(offer);if(index>=0)this.run.queue.splice(index,1);
-    this.run.picked.push(id);if(automatic)this.run.autoPicked++;
-    this.applyBuild();audio.play('ui_glass',{vol:automatic?.28:.5});
-    const boon=BOONS.find(b=>b.id===id);
-    if(automatic)this.ui.toast(`각인 보상 자동 적용 · ${boon?.name||id}`,'gold');
-    return {ok:true,id,name:boon?.name||id,automatic};
-  }
-  grantBoonReward({automatic=false,autoDelay=8}={}) {
-    const offer=this.queueBoon({autoAt:automatic?null:this.elapsed+autoDelay});
-    if(!offer)return {ok:false,error:'각인 보상이 모두 적용되었습니다.'};
-    return automatic?this.applyBoonOffer(offer,offer.ids[0],{automatic:true}):{ok:true,offer};
-  }
-  selectBoon(id) {
-    const offer = this.currentOffer();
-    if (!this.active || !this.player?.alive || offer?.kind !== 'boon' || !offer.ids.includes(id) || this.run.picked.filter(x=>x===id).length>=3) return {ok:false,error:'선택할 수 없는 각인입니다.'};
-    const result=this.applyBoonOffer(offer,id);if(result.ok)this.chronicle.selectionDone();return result;
-  }
-  selectStory(choiceId) {
-    const offer = this.run?.queue[0];
-    if (!this.active || !this.player?.alive || offer?.kind !== 'story') return {ok:false,error:'만남이 종료됐습니다.'};
-    const event = STORY_EVENTS.find(e=>e.id===offer.id);
-    const remembered = this.masterworks.s.story[event.id];
+  /** 출격 전 외부(룬·출격 전 1회용 뽑기)가 정한 각인 id 목록. 다음 개인 출격 시작 때 한 번 소비된다.
+   *  파티·AI 결투처럼 개인 각인이 꺼진 출격에서는 적용하지 않고 버린다. 지금은 호출자가 없어 각인 없음이 기본이다. */
+  setPreRunBoons(ids) { this.preRunBoons=seedRunBoons(ids); return [...this.preRunBoons]; }
+  /** 길 위의 만남은 전투를 멈추지 않는다. 예전 선택이 있으면 재방문 회복, 없으면 첫 선택지로 기록하고 가장자리 알림만 띄운다. */
+  resolveStoryEvent(eventId) {
+    const event = STORY_EVENTS.find(e=>e.id===eventId);
+    if (!event || !this.active || !this.player?.alive || !this.run?.enabled || this.run.settled) return {ok:false,error:'만남이 종료됐습니다.'};
+    const remembered = event.choices.find(c=>c.id===this.masterworks.s.story[event.id]);
     let result;
-    if (remembered) {
-      const choice = event.choices.find(c=>c.id===remembered);
-      result = {ok:true,effects:{heal:choice.effects.heal ? .12 : .06},consequence:choice.consequence};
-    } else result = this.masterworks.transact(s=>resolveStory(s,event.id,choiceId),{duringBattle:true});
-    if (!result.ok) return result;
+    if (remembered) result = {ok:true,effects:{heal:remembered.effects.heal ? .12 : .06},renown:0,revisit:true,choiceId:remembered.id};
+    else {
+      const choice=event.choices[0];
+      result = this.masterworks.transact(s=>resolveStory(s,event.id,choice.id),{duringBattle:true});
+      if (result.ok) result.choiceId=choice.id;
+    }
+    if (!result.ok) { this.ui.toast('길 위의 만남 · 기록하지 못했습니다','red'); return result; }
     this.run.renown+=result.renown||0;
     const heal = Math.round(this.player.maxHp*(result.effects?.heal||0));
     this.player.hp = Math.min(this.player.maxHp,this.player.hp+heal);
-    this.run.queue.shift(); this.chronicle.selectionDone();
-    this.ui.toast(result.consequence || '당신의 선택이 기록되었습니다.','gold'); return result;
+    const reward = result.renown ? `명성 +${result.renown}` : heal ? `체력 +${Math.round((result.effects.heal||0)*100)}%` : '';
+    const choiceName = remembered ? '다시 만남' : event.choices.find(c=>c.id===result.choiceId)?.name;
+    this.ui.toast([event.name,choiceName,reward].filter(Boolean).join(' · '),'gold');
+    return {...result,eventId:event.id};
   }
   spawnEnemy(...args) {
     const reinforcement=typeof args[0]==='string'&&args[0].startsWith(RIFT_REINFORCEMENT);
@@ -167,22 +138,14 @@ export class Battle extends RpgBattle {
     this.rpgDirty=true; this.flushRpg();
     if (room.type==='boss' || this.bossDefeated) return;
     const lastApproach=this.stage.expedition?.kind==='dungeon' && this.world.rooms.every(r=>r.cleared || r.type==='start' || r.type==='boss');
-    // Six rewards remain available. Only the third/sixth reward or the final approach asks the player;
-    // routine room rewards take a deterministic default and never pause combat.
-    const checkpoint=lastApproach || (!deep && (this.run.round===2 || this.run.round===5));
-    // The entry boon also uses a slot. Keep the sixth slot for the final
-    // approach instead of exhausting every choice in the earlier rooms.
-    const boon=deep&&!checkpoint&&this.run.round>=5 ? {ok:false} : this.grantBoonReward({automatic:!checkpoint});
+    // 방 클리어·체크포인트·마지막 접근 어디에서도 각인 보상이나 선택 창은 없다(2026-10-24 대표님).
     // Deep missions carry their own route objective; replaying an unrelated base
     // encounter here would interrupt the same short run twice.
     if (!deep && !this.run.storySeen && (room.type==='treasure' || this.roomsCleared>=2 || lastApproach)) {
       const idx=this.stage.expedition ? ['glass_garden','ember_vault','star_archive'].indexOf(this.stage.expedition.id) : (this.stage.ch-1)%3;
-      this.run.queue.push({kind:'story',id:STORY_EVENTS[Math.max(0,idx)].id}); this.run.storySeen=true;
+      this.run.storySeen=true;this.resolveStoryEvent(STORY_EVENTS[Math.max(0,idx)].id);
     }
     this.player.chronicleShield=Math.round(this.player.maxHp*Math.min(.25,this.effects.shield||0));
-    // Wait for the clearing blow to finish; the native pause owner freezes the same simulation.
-    // AUTO 중에는 선택 창을 열지 않는다. update 의 resolveAutoOffers 가 기본 선택으로 이어 간다(AUTO 끝까지 클리어).
-    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&!this.player.auto&&this.currentOffer())this.chronicle.offer(); });
   }
   onPerfectDodge(p) {
     super.onPerfectDodge(p);
@@ -226,7 +189,7 @@ export class Battle extends RpgBattle {
   }
   settleChronicle(outcome) {
     if (!this.run || this.run.settled) return;
-    this.run.settled=true; this.run.queue.length=0; this.chronicle.close();
+    this.run.settled=true; this.chronicle.close();
     this.riftEncounter?.dispose();this.riftEncounter=null;
     const s=this.masterworks.s;
     if (this.run.enabled) {
@@ -255,35 +218,13 @@ export class Battle extends RpgBattle {
   }
   update(realDt) {
     this.observeRunControl(realDt);
-    this.resolveAutoOffers();
     const before=this.elapsed; super.update(realDt);
     const dt=Math.max(0,this.elapsed-before);
     if(dt>0&&this.active&&this.run?.enabled) {
       for(const e of this.enemies)if(e.alive)tickPosture(e,dt);
       this.riftEncounter?.update(dt);
-      // Closing a checkpoint does not throw its reward away. Eight active seconds later,
-      // an untouched boon receives the deterministic first choice and combat continues.
-      for(const offer of [...this.run.queue])if(offer.kind==='boon'&&Number.isFinite(offer.autoAt)&&this.elapsed>=offer.autoAt) {
-        this.currentOffer();this.applyBoonOffer(offer,offer.ids[0],{automatic:true});
-      }
     }
     this.chronicle?.tick(realDt);
     this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
-  }
-  /** AUTO 전투에서 남은 각인·만남 선택을 기본값으로 처리한다. 각인은 기존 8초 자동 적용과 같은 첫 선택지,
-   *  만남은 예전에 고른 선택(없으면 첫 선택지). 전투가 멈춘 동안(직접 연 선택 창·일시정지)은 사용자의 선택을 기다린다. */
-  resolveAutoOffers() {
-    if(!this.active||this.paused||!this.run?.enabled||this.player?.auto!==true||!this.player.alive)return;
-    const offer=this.currentOffer();if(!offer||offer.autoHold)return;
-    if(offer.kind==='boon') {
-      const result=this.applyBoonOffer(offer,offer.ids[0],{automatic:true});
-      if(result.ok)this.chronicle?.selectionDone?.();else this.run.queue.shift();
-    } else if(offer.kind==='story') {
-      const event=STORY_EVENTS.find(e=>e.id===offer.id);
-      const choice=event?.choices.find(c=>c.id===this.masterworks?.s?.story?.[event.id])||event?.choices[0];
-      if(!choice){this.run.queue.shift();return;}
-      // 저장 실패 등으로 확정하지 못하면 만남을 버리지 않고 남겨 두어 각인 버튼에서 직접 다시 고를 수 있게 한다.
-      if(!this.selectStory(choice.id).ok){offer.autoHold=true;this.ui?.toast?.('길 위의 만남을 기록하지 못했습니다 · 각인 버튼에서 다시 선택','red');}
-    } else this.run.queue.shift();
   }
 }
