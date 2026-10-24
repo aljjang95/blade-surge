@@ -4,6 +4,7 @@
 //       하단 탭·영웅 카드·초월/스킬 트리 버튼·상점 상품·모달 버튼·소환 버튼·전투 스킬 버튼은 모두 Playwright 터치(locator.tap())다.
 //       src/ 는 수정하지 않는다. 결과는 <out>/<id>.json 과 캡처 png, summary.json 이다.
 import { chromium } from 'playwright';
+import { installAutoStarter } from './qa-starter.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
@@ -40,6 +41,7 @@ const seedScript = (seed) => '(() => { let a = ' + seed + ' >>> 0; Math.random =
 // ---------- 세션(브라우저 컨텍스트) ----------
 async function open(browser, rec, viewport = VIEW, { seed = null, initScript = null } = {}) {
   const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
+  await installAutoStarter(context); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   if (seed !== null) await context.addInitScript(seedScript(seed));
   if (initScript) await context.addInitScript(initScript);
   const page = await context.newPage();

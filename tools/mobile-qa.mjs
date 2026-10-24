@@ -7,6 +7,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { installConquestMediaObserver } from './conquest-media-observer.mjs';
 import { createMediaCheckpoints, assessMediaObservations } from './qa-media-checkpoints.mjs';
 import { runMobileJourneyChecks } from './mobile-journey-checks.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -159,6 +160,7 @@ try {
     report.profiles.push(r); await save();
     const context = await launchNativeBrowser(dir); r.browserVersion = browser.version();
     r.browserControl = 'Owned isolated Chromium process; public connectOverCDP(noDefaults:true) preserves native tab visibility. Native CDP mobile overrides and touch; service worker network bypass.';
+    await installAutoStarter(context); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await context.addInitScript(installConquestMediaObserver);
     await context.addInitScript(installInputObserver);
     if (flag('empty-fonts-css')) await context.route('https://fonts.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
