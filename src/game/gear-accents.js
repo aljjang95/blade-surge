@@ -19,6 +19,8 @@ export const GRADE_BODY_RIM_SCALE = 0;
 const HOOKED = new WeakSet();
 const FEET_BONES = ['LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'];
 const RING_BONES = ['LeftForeArm', 'LeftHand'];
+// 등급 부츠(hero-boots.js)가 덮는 몸의 원래 발: 발·발끝 가중치가 절반을 넘는 조각을 숨긴다(정강이는 남긴다).
+const FOOT_ONLY_BONES = ['LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'];
 
 /** 등급·강화 → 윤곽광 색(세기를 곱한 선형 색). 없으면 검정. */
 export function gearRimColor(item, enh = 0, target = new THREE.Color()) {
@@ -45,16 +47,18 @@ function hook(material, state) {
   material.onBeforeCompile = function (shader, renderer) {
     original.call(this, shader, renderer);
     if (!shader.vertexShader.includes('#include <skinning_vertex>') || !shader.fragmentShader.includes('#include <emissivemap_fragment>')) return;
-    Object.assign(shader.uniforms, { gearRimBody: state.body, gearRimFeet: state.feet, gearRimRing: state.ring, gearFeetBones: state.feetBones, gearRingBones: state.ringBones });
-    shader.vertexShader = 'uniform float gearFeetBones[8];\nuniform float gearRingBones[8];\nvarying vec2 vGearZone;\n' + shader.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>
+    Object.assign(shader.uniforms, { gearRimBody: state.body, gearRimFeet: state.feet, gearRimRing: state.ring, gearFeetBones: state.feetBones, gearRingBones: state.ringBones, gearFootBones: state.footBones, gearHideFeet: state.hideFeet });
+    shader.vertexShader = 'uniform float gearFeetBones[8];\nuniform float gearRingBones[8];\nuniform float gearFootBones[8];\nvarying vec2 vGearZone;\nvarying float vGearFoot;\n' + shader.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>
 vGearZone = vec2(0.0);
+vGearFoot = 0.0;
 #ifdef USE_SKINNING
 for (int k = 0; k < 8; k++) {
+  vGearFoot += dot(skinWeight, vec4(equal(skinIndex, vec4(gearFootBones[k]))));
   vGearZone.x += dot(skinWeight, vec4(equal(skinIndex, vec4(gearFeetBones[k]))));
   vGearZone.y += dot(skinWeight, vec4(equal(skinIndex, vec4(gearRingBones[k]))));
 }
 #endif`);
-    shader.fragmentShader = 'uniform vec3 gearRimBody;\nuniform vec3 gearRimFeet;\nuniform vec3 gearRimRing;\nvarying vec2 vGearZone;\n' + shader.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    shader.fragmentShader = 'uniform vec3 gearRimBody;\nuniform vec3 gearRimFeet;\nuniform vec3 gearRimRing;\nuniform float gearHideFeet;\nvarying vec2 vGearZone;\nvarying float vGearFoot;\n' + shader.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 {
   float gearFacing = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
   float gearRim = pow(1.0 - gearFacing, 2.6);
@@ -63,9 +67,16 @@ for (int k = 0; k < 8; k++) {
   totalEmissiveRadiance += gearTint * gearRim;
 }`);
   };
-  material.customProgramCacheKey = () => prefix + '|gear-rim-v1';
+  material.customProgramCacheKey = () => prefix + '|gear-rim-v2';
   material.needsUpdate = true;
   HOOKED.add(material);
+}
+
+/** 등급 부츠가 붙었을 때 몸의 원래 발을 숨긴다/되돌린다. 윤곽광 상태가 아직 없으면 만들 때 반영하도록 기억만 해 둔다. */
+export function setGearFeetHidden(model, hidden) {
+  model.userData.gearFeetHidden = !!hidden;
+  const state = model.userData.gearRim;
+  if (state) state.hideFeet.value = hidden ? 1 : 0;
 }
 
 export function removeGearAccents(model) {
@@ -88,9 +99,10 @@ export function applyGearAccents(model, gear = {}, enh = {}) {
   const state = model.userData.gearRim || (model.userData.gearRim = {
     body: { value: new THREE.Color(0) }, feet: { value: new THREE.Color(0) }, ring: { value: new THREE.Color(0) },
     feetBones: { value: new Float32Array(8).fill(-1) }, ringBones: { value: new Float32Array(8).fill(-1) },
+    footBones: { value: new Float32Array(8).fill(-1) }, hideFeet: { value: model.userData.gearFeetHidden ? 1 : 0 },
   });
   const bones = skins[0].skeleton.bones;
-  state.feetBones.value.set(gearBoneMask(bones, FEET_BONES)); state.ringBones.value.set(gearBoneMask(bones, RING_BONES));
+  state.feetBones.value.set(gearBoneMask(bones, FEET_BONES)); state.ringBones.value.set(gearBoneMask(bones, RING_BONES)); state.footBones.value.set(gearBoneMask(bones, FOOT_ONLY_BONES));
   for (const skin of skins) for (const material of Array.isArray(skin.material) ? skin.material : [skin.material]) hook(material, state);
   gearRimColor(gear.armor, enh.armor, state.body.value);
   if (!Number.isInteger(skins[0].userData.libraryBody)) state.body.value.multiplyScalar(GRADE_BODY_RIM_SCALE);

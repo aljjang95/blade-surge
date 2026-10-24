@@ -41,7 +41,7 @@ test('장비 표식은 재질 셰이더를 한 번만 고치고 장비가 바뀌
   const slots = applyGearAccents(root, { armor: ITEM_BY_ID.a_king, boots: ITEM_BY_ID.b_knight, ring: ITEM_BY_ID.r_copper }, { armor: 0 });
   expect(slots).toEqual(['armor', 'boots']);
   const key = material.customProgramCacheKey();
-  expect(key).toContain('gear-rim-v1');
+  expect(key).toContain('gear-rim-v2');
   const shader: any = { uniforms: {}, vertexShader: 'void main(){\n#include <skinning_vertex>\n}', fragmentShader: 'void main(){\n#include <emissivemap_fragment>\n}' };
   material.onBeforeCompile(shader, null as any);
   expect(shader.vertexShader).toContain('vGearZone');
