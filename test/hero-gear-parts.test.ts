@@ -182,7 +182,9 @@ test('buildHeroGearPartMeshes: 테마 틴트(color lerp, emissive)와 틴트 없
   const [m] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'U', 'parts_b'), { data, themeColor: 0xff0000 } as any)!;
   const mat = m.material as THREE.MeshStandardMaterial;
   expect(mat.color.r).toBeCloseTo(1, 5); expect(mat.color.g).toBeCloseTo(0.65, 2);
-  expect(mat.emissive.r).toBeCloseTo(1, 5); expect(mat.emissive.g).toBe(0); expect(mat.emissiveIntensity).toBeCloseTo(0.22, 5);
+  expect(mat.emissive.r).toBeCloseTo(0.22, 5); expect(mat.emissive.g).toBe(0);
+  // 피격 번쩍임·applyLook 이 되돌리는 기준값도 틴트 결과여야 테마 발광이 유지된다.
+  expect(mat.userData.baseEmissive.r).toBeCloseTo(0.22, 5); expect(mat.userData.authoredEmissive.r).toBeCloseTo(0.22, 5);
   const [none] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'E', 'parts_b'), { data, themeColor: 0xff0000 } as any)!;   // E 틴트 없음
   expect((none.material as THREE.MeshStandardMaterial).color.g).toBeCloseTo(1, 5);
   const [plain] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'U', 'parts_b'), { data })!;   // 테마 없음
