@@ -252,7 +252,7 @@ function DungeonRoutes({app, service, launch, controller}) {
         </div>
       </article>;
     })}
-    {!fields && regions?.teaser && <article className="exp-dungeon exp-region-teaser" data-region-teaser={regions.teaser.region} aria-label={`다음 마을 ${regions.teaser.town}, ${regions.teaser.reason}`}>
+    {!fields && regions?.teaser && <article className="exp-dungeon exp-region-teaser" data-region-teaser={regions.teaser.region} style={{'--exp-accent':regions.teaser.accent}} aria-label={`다음 마을 ${regions.teaser.town}, ${regions.teaser.reason}`}>
       <div className="exp-card-body"><small>잠긴 다음 마을 · REGION 0{regions.teaser.region}</small><h3>{regions.teaser.town}</h3>
         <p>{regions.teaser.unlockCode} 클리어 시 새 마을에서 던전 {regions.teaserIds.length}곳이 열립니다.</p>
         <button className="exp-primary" disabled>{regions.teaser.unlockCode} 클리어 시 열림</button></div>

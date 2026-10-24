@@ -91,7 +91,7 @@ export function regionDungeonState(save) {
     entries, byId: Object.fromEntries(entries.map((entry) => [entry.id, entry])),
     visibleIds: ordered,
     teaserIds: entries.filter((entry) => entry.teaser).map((entry) => entry.id),
-    teaser: entries.some((entry) => entry.teaser) ? { region: next, town: campaignTown(next).name, unlockCode: `${next - 1}-10`, reason: lockReason(next) } : null,
+    teaser: entries.some((entry) => entry.teaser) ? { region: next, town: campaignTown(next).name, accent: campaignTown(next).accent, unlockCode: `${next - 1}-10`, reason: lockReason(next) } : null,
     gateIds,
   };
 }
