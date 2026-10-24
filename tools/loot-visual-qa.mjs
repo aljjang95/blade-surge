@@ -15,6 +15,8 @@ const root = path.resolve(import.meta.dirname, '..');
 const arg = (name, fallback) => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=') ?? fallback;
 const tag = arg('tag', 'candidate'), out = path.resolve(arg('out', path.join(root, `work/loot-visual-${tag}`)));
 const quality = arg('quality', 'high'), stageCode = arg('stage', '1-1');
+// 전/후 비교: --app-root 로 다른 체크아웃(예: origin/main 을 빌드한 임시 worktree)의 dist 를 같은 장면으로 찍는다.
+const appRoot = path.resolve(arg('app-root', root));
 const viewports = arg('viewports', '1280x720,844x390').split(',').map(v => v.split('x').map(Number));
 if (!/^[a-z0-9-]{1,40}$/.test(tag) || !['high', 'mid', 'low'].includes(quality) || !/^\d-\d{1,2}$/.test(stageCode)) throw Error('Invalid tag/quality/stage');
 await mkdir(out, { recursive: true });
@@ -23,12 +25,12 @@ const SHOWCASE = [
   ['w_iron', 'N'], ['w_steel', 'S'], ['w_flame', 'E'], ['w_storm', 'U'], ['w_dragon', 'L'],
   ['a_leather', 'N'], ['b_swift', 'S'], ['r_ruby', 'E'], ['arm_aegis_weapon', 'U'], ['a_sun', 'L'],
 ];
-const report = { head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), tag, quality, stage: stageCode, started: new Date().toISOString(), shots: [], errors: [],
+const report = { head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).trim(), appRoot, tag, quality, stage: stageCode, started: new Date().toISOString(), shots: [], errors: [],
   scope: 'Local production build, SwiftShader headless. Showcase = fixture spawns with magnet radius 0. Combat = natural AUTO combat at fixed 1/60s plus injected E/U/L spawns for visibility. Draw calls/triangles from renderer.info over one composed frame (all passes). Not GPU/phone frame-time evidence.' };
 const save = () => writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 let server, browser;
 try {
-  server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
+  server = await preview({ root: appRoot, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
   const url = `http://127.0.0.1:${server.httpServer.address().port}`;
   browser = await chromium.launch({ executablePath: arg('chromium', process.env.LOOT_QA_CHROMIUM) || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   for (const [width, height] of viewports) {
@@ -99,8 +101,9 @@ try {
       const a = window.app, b = a.battle, d = b.drops, T = window.__THREE, cam = a.renderer.camera, p = b.player.pos;
       const right = new T.Vector3().setFromMatrixColumn(cam.matrixWorld, 0).setY(0).normalize();
       const toward = new T.Vector3().subVectors(cam.position, p).setY(0).normalize();
-      [['w_frost', 'E', -2.6], ['r_storm', 'U', 0], ['w_sun', 'L', 2.6], ['b_cloth', 'N', -1.3], ['a_chain', 'S', 1.3]].forEach(([id, rarity, x], i) => {
-        d.spawn(p.clone().addScaledVector(right, x).addScaledVector(toward, i > 2 ? 2.2 : -1.6), 'item', { id, rarity, uid: `qa-c${i}` }, { count: 1, spread: .5 });
+      // 전투 무리와 겹치지 않게 카메라 쪽 앞줄에 둔다(튀어오름 퍼짐은 실제 드랍과 같은 spread).
+      [['w_frost', 'E', -2.4], ['r_storm', 'U', 0], ['w_sun', 'L', 2.4], ['b_cloth', 'N', -1.2], ['a_chain', 'S', 1.2]].forEach(([id, rarity, x], i) => {
+        d.spawn(p.clone().addScaledVector(right, x).addScaledVector(toward, i > 2 ? 3.6 : 2.3), 'item', { id, rarity, uid: `qa-c${i}` }, { count: 1, spread: .3 });
       });
       d.magnetR = 0;
       for (let n = 0; n < 40; n++) window.__metricsDriver.step(1 / 60, false);
