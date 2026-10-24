@@ -1,3 +1,4 @@
+import { kitOf } from '../data/heroes.js';
 import {
   attackSound, skillSound, ultimateSound, heroSoundFiles, heroHitSound, heroForWeapon, HERO_IDS, HERO_HIT_VARIANTS, SWING_VARIANTS,
   FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
@@ -143,13 +144,15 @@ export class AudioSys {
     return false;
   }
   /** 영웅 효과음 세트(휘두름·마무리·타격·궁극기·스킬 8)를 한 번만 불러온다. 아직 없으면 그 순간은 공용 효과로 대신한다. */
-  preloadHero(heroId) {
+  preloadHero(rawHeroId) {
+    const heroId = kitOf(rawHeroId);
     if (!this.ctx || !HERO_IDS.includes(heroId)) return Promise.resolve(false);
     if (!this._heroLoads.has(heroId)) this._heroLoads.set(heroId, Promise.all(heroSoundFiles(heroId).map((n) => this._loadSfx(n))).then(() => true));
     return this._heroLoads.get(heroId);
   }
   /** 파티 게스트용: 원격 타격 재생에 필요한 영웅 타격음 변형만 불러온다(전체 세트 15개 대신 2개). */
-  preloadHeroHits(heroId) {
+  preloadHeroHits(rawHeroId) {
+    const heroId = kitOf(rawHeroId);
     if (!this.ctx || !HERO_IDS.includes(heroId)) return Promise.resolve(false);
     if (this._heroLoads.has(heroId)) return this._heroLoads.get(heroId);
     return Promise.all(Array.from({ length: HERO_HIT_VARIANTS }, (_, v) => this._loadSfx(heroHitSound(heroId, v)))).then(() => true);
