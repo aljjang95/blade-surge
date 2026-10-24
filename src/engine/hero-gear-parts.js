@@ -60,6 +60,9 @@ export function validateGearPartsData(value) {
     && (f.offset === undefined || (Array.isArray(f.offset) && f.offset.length === 3 && f.offset.every((n) => Math.abs(n) <= 0.5))));
   for (const set of value.sets) if (!fitOk(set.fit)) throw new Error(`invalid gear parts fit: ${set.id}`);
   for (const [hero, fit] of Object.entries(value.heroFit || {})) if (!fitOk(fit)) throw new Error(`invalid gear parts hero fit: ${hero}`);
+  for (const [hero, bySet] of Object.entries(value.heroSetFit || {})) {
+    for (const [id, fit] of Object.entries(bySet || {})) if (!ids.has(id) || !fitOk(fit)) throw new Error(`invalid gear parts hero set fit: ${hero}/${id}`);
+  }
   for (const [grade, tint] of Object.entries(value.tint || {})) {
     if (!GEAR_PART_GRADES.includes(grade) || !(tint.color >= 0 && tint.color <= 1) || !(tint.glow >= 0 && tint.glow <= 1)) throw new Error(`invalid gear parts tint: ${grade}`);
   }
@@ -183,8 +186,9 @@ export function buildHeroGearPartMeshes(scene, skin, pick, { data = PARTS_DATA, 
     const rig = SLOT_RIGS[slot], source = partSource(scene, slot);
     const measure = heroSlotMeasure(skin, rig.measure);
     if (!source || !measure) continue;
-    // 맞춤 보정(선택): 세트별 fit[slot] · 영웅별 heroFit[heroId][slot] = { scale 배수, offset [x,y,z] 저작 단위(오른쪽 기준) }.
-    const fits = [pick.set.fit?.[slot], data.heroFit?.[pick.heroId]?.[slot]].filter(Boolean);
+    // 맞춤 보정(선택): 세트별 fit[slot] · 영웅별 heroFit[heroId][slot] · 영웅×세트 heroSetFit[heroId][세트 id][slot]
+    // = { scale 배수, offset [x,y,z] 저작 단위(오른쪽 기준) }. 배율은 곱하고 오프셋은 더한다.
+    const fits = [pick.set.fit?.[slot], data.heroFit?.[pick.heroId]?.[slot], data.heroSetFit?.[pick.heroId]?.[pick.set.id]?.[slot]].filter(Boolean);
     const scale = measure / data.slots[slot].ref * fits.reduce((k, f) => k * (f.scale ?? 1), 1);
     const shift = fits.reduce((v, f) => v.add(new THREE.Vector3().fromArray(f.offset || [0, 0, 0])), new THREE.Vector3());
     if (!(scale >= GEAR_PARTS_SCALE_RANGE[0] && scale <= GEAR_PARTS_SCALE_RANGE[1])) continue;

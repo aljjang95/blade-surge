@@ -143,6 +143,14 @@
     "barbarian": {
       "helm": {
         "scale": 0.85
+      },
+      "gauntlet": {
+        "scale": 1.15,
+        "offset": [
+          0.08,
+          0,
+          0
+        ]
       }
     },
     "mage": {
@@ -153,6 +161,30 @@
     "rogue": {
       "gauntlet": {
         "scale": 1.4
+      }
+    }
+  },
+  "heroSetFit": {
+    "barbarian": {
+      "parts_l": {
+        "helm": {
+          "offset": [
+            0,
+            0.07,
+            0
+          ]
+        }
+      }
+    },
+    "knight": {
+      "parts_l": {
+        "helm": {
+          "offset": [
+            0,
+            0.03,
+            0
+          ]
+        }
       }
     }
   }
