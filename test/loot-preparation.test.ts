@@ -1,105 +1,81 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { DropSystem } from '../src/game/drops.js';
-import { createLootVisual } from '../src/game/loot-visual.js';
-import { ITEM_BY_ID, RARITY_COLOR, SLOTS } from '../src/data/items.js';
+import { ITEM_BY_ID, SLOTS } from '../src/data/items.js';
 import { SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
+import { itemFormHeroIds } from '../src/ui/item-visual-forms.js';
 
-function withSurfaces(run: (cloth: THREE.DataTexture, metal: THREE.DataTexture) => void) {
+function withSurfaces(run: () => void) {
   const keys = ['hero-weave', 'forged-metal'];
   const saved = keys.map(key => SURFACE_TEXTURES[key]);
   const textures = keys.map(() => new THREE.DataTexture(new Uint8Array([128,128,128,255]), 1, 1, THREE.RGBAFormat));
   textures.forEach((texture, i) => { texture.needsUpdate = true; SURFACE_TEXTURES[keys[i]] = texture; });
-  try { run(textures[0], textures[1]); }
+  try { run(); }
   finally {
     keys.forEach((key, i) => { if (saved[i]) SURFACE_TEXTURES[key] = saved[i]; else delete SURFACE_TEXTURES[key]; });
     textures.forEach(texture => texture.dispose());
   }
 }
 
+const meshesOf = (root: THREE.Object3D) => { const list: THREE.Mesh[] = []; root.traverse((o: any) => { if (o.isMesh) list.push(o); }); return list; };
+// 셰이더 프로그램을 가르는 성질(맵 유무 · 정점 속성 · 인스턴싱 · 셰이더 훅 키). 색 · 세기 같은 유니폼은 넣지 않는다.
 function featureKey(mesh: THREE.Mesh) {
-  const material = mesh.material as THREE.MeshStandardMaterial;
-  return JSON.stringify({
+  return [mesh.material].flat().map((material: any) => JSON.stringify({
+    type: material.type, program: material.customProgramCacheKey(), vertexShader: material.vertexShader?.length ?? 0,
     map: !!material.map, bump: !!material.bumpMap, roughness: !!material.roughnessMap,
     normal: !!material.normalMap, metalness: !!material.metalnessMap, emissive: !!material.emissiveMap,
-    alpha: !!material.alphaMap, transparent: material.transparent, vertexColors: material.vertexColors,
+    alpha: !!material.alphaMap, transparent: material.transparent, vertexColors: material.vertexColors, side: material.side, blending: material.blending,
     attributes: Object.keys(mesh.geometry.attributes).sort(), morph: Object.keys(mesh.geometry.morphAttributes).sort(),
     skinned: !!(mesh as THREE.SkinnedMesh).isSkinnedMesh, instanced: !!(mesh as THREE.InstancedMesh).isInstancedMesh,
-  });
+  })).join('+');
 }
 
 function dropFixture() {
   const scene = new THREE.Scene();
   const system: any = Object.create(DropSystem.prototype);
   Object.assign(system, {
-    game: { scene, stage: {}, rollDrop: () => { throw new Error('preparation rolled a reward'); } }, scene,
+    game: { scene, stage: {}, heroId: 'knight', player: { alive: true, pos: new THREE.Vector3(50, 0, 50) }, fx: { groundTex() {}, holyBurst() {}, burst() {} },
+      renderer: { camera: new THREE.PerspectiveCamera(), flashScreen() {} }, rollDrop: () => { throw new Error('preparation rolled a reward'); } }, scene,
     items: [], gold: 19, stones: 3, stones2: 2, stones3: 1, fragments: 7, loot: [{ id: 'r_copper', rarity: 'N' }],
-    _lootMaterials: new Map(), _preparationVisuals: null,
+    _matCache: {}, _preparationVisuals: null,
   });
   return system;
 }
 
-test('two detached preparation templates cover every catalogue slot and summon shader feature class', () => withSurfaces((cloth, metal) => {
+test('detached preparation shells cover every catalogue drop shader and the instanced rarity auras', () => withSurfaces(() => {
   const system = dropFixture();
-  const roots: THREE.Group[] = system.preparationVisuals();
-  expect(roots).toHaveLength(2);
-  expect(roots.map(root => root.name)).toEqual(['loot-boots-b_cloth', 'loot-weapon-w_iron']);
-  expect(roots.flatMap(root => root.children)).toHaveLength(4);
-  expect(roots.every(root => root.parent === null)).toBe(true);
+  const objects: THREE.Object3D[] = system.preparationVisuals();
+  expect(objects.every(object => object.parent === null)).toBe(true);
   expect(system.scene.children).toHaveLength(0);
-  expect(system._lootMaterials.size).toBe(2);
-  const another: THREE.Group[] = system.preparationVisuals();
-  expect(another).not.toBe(roots);
-  another.forEach((root, i) => {
+  const auras = objects.filter((object: any) => object.isInstancedMesh) as THREE.InstancedMesh[];
+  expect(auras.map(mesh => mesh.material)).toEqual([system.auras.groundMaterial, system.auras.beamMaterial]);
+  expect(auras.map(mesh => mesh.geometry)).toEqual([system.auras.ground.geometry, system.auras.beam.geometry]);
+  const roots = objects.filter((object: any) => !object.isInstancedMesh);
+  // 다시 부르면 새 껍데기지만 형상 · 재질은 같다.
+  const again: THREE.Object3D[] = system.preparationVisuals();
+  again.filter((object: any) => !object.isInstancedMesh).forEach((root, i) => {
     expect(root).not.toBe(roots[i]);
-    expect(root.parent).toBeNull();
-    root.children.forEach((child, j) => {
-      expect(child).not.toBe(roots[i].children[j]);
-      expect((child as THREE.Mesh).geometry).toBe((roots[i].children[j] as THREE.Mesh).geometry);
-      expect((child as THREE.Mesh).material).toBe((roots[i].children[j] as THREE.Mesh).material);
-    });
+    meshesOf(root).forEach((mesh, j) => { expect(mesh.geometry).toBe(meshesOf(roots[i])[j].geometry); expect(mesh.material).toBe(meshesOf(roots[i])[j].material); });
   });
-  expect(system._lootMaterials.size).toBe(2);
-  const preparationFeatures = new Set(roots.flatMap(root => root.children.map(mesh => featureKey(mesh as THREE.Mesh))));
-  expect(preparationFeatures.size).toBe(2);
+  const prepared = new Set(objects.flatMap(object => (object as any).isInstancedMesh ? [featureKey(object as THREE.Mesh)] : meshesOf(object).map(featureKey)));
 
-  const catalogueMaterials = new Map();
-  const slots = new Set(), summonShapes = new Set(), catalogueFeatures = new Set();
-  for (const def of Object.values(ITEM_BY_ID) as any[]) {
-    const root = createLootVisual(def, catalogueMaterials);
-    expect(root.userData.lootSlot).toBe(def.slot);
-    expect(root.children).toHaveLength(2);
-    slots.add(def.slot);
-    if (def.summonShape) summonShapes.add(def.summonShape);
-    for (const [index, child] of root.children.entries()) {
-      const mesh = child as THREE.Mesh, material = mesh.material as THREE.MeshStandardMaterial;
-      const isCloth = index === 0 && def.slot === 'boots';
-      expect(material.map).toBe(isCloth ? cloth : metal);
-      expect(material.bumpMap).toBe(isCloth ? cloth : metal);
-      expect(material.roughnessMap).toBe(isCloth ? null : metal);
-      expect(material.bumpScale).toBe(isCloth ? .028 : .018);
-      expect(material.roughness).toBe(index === 1 ? .46 : isCloth ? .88 : .55);
-      expect(material.metalness).toBe(isCloth ? 0 : .35);
-      expect(material.color.getHex()).toBe(new THREE.Color(index === 1 ? RARITY_COLOR[def.rarity as keyof typeof RARITY_COLOR] : isCloth ? 0x80654b : 0xd6e3e9).getHex());
+  // 모든 장비 × 영웅 문맥의 실제 드랍 모델(병기고 GLB 는 비동기 교체 전 폴백)의 셰이더 성질이 준비 집합 안에 있어야 한다.
+  const slots = new Set(), sources = new Set(), catalogue = new Set();
+  for (const def of Object.values(ITEM_BY_ID) as any[]) for (const heroId of [null, ...itemFormHeroIds()]) {
+    const root = system.lootModels.build({ id: def.id, rarity: def.rarity }, { heroId });
+    slots.add(root.userData.lootSlot); sources.add(root.userData.lootSource);
+    for (const mesh of meshesOf(root)) {
       const position = mesh.geometry.getAttribute('position');
       expect(position.count).toBeGreaterThan(0);
-      for (const attribute of ['normal', 'uv']) {
-        const data = mesh.geometry.getAttribute(attribute);
-        expect(data.count).toBe(position.count);
-        expect(Array.from(data.array).every(Number.isFinite)).toBe(true);
-      }
-      expect(Array.from(position.array).every(Number.isFinite)).toBe(true);
-      mesh.geometry.computeBoundingBox();
-      expect(mesh.geometry.boundingBox!.isEmpty()).toBe(false);
-      const features = featureKey(mesh);
-      expect(preparationFeatures.has(features)).toBe(true);
-      catalogueFeatures.add(features);
+      expect(Array.from(position.array as ArrayLike<number>).every(Number.isFinite)).toBe(true);
+      const key = featureKey(mesh); catalogue.add(key);
+      if (!prepared.has(key)) throw new Error(`unprepared drop shader: ${def.id}@${heroId} ${key}`);
     }
   }
   expect([...slots].sort()).toEqual([...SLOTS].sort());
-  expect([...summonShapes].sort()).toEqual(['aegis', 'grimoire', 'lantern', 'prism', 'treads']);
-  expect(catalogueFeatures).toEqual(preparationFeatures);
-  for (const materials of catalogueMaterials.values()) for (const material of materials) material.dispose();
+  expect([...sources].sort()).toEqual(['armor-rig', 'fallback', 'forge']);
+  expect(catalogue.size).toBeGreaterThanOrEqual(4);
+  system.lootModels.dispose();
 }));
 
 test('preparation leaves field and reward authority intact and shared resources survive cleanup', () => withSurfaces(() => {
@@ -107,56 +83,39 @@ test('preparation leaves field and reward authority intact and shared resources 
   const authority = { items: system.items, loot: system.loot, gold: system.gold, stones: system.stones, stones2: system.stones2, stones3: system.stones3, fragments: system.fragments };
   const originalSpawn = system.spawn;
   for (const method of ['spawn', 'collect', 'onKill']) system[method] = () => { throw new Error(`preparation called ${method}`); };
-  const roots: THREE.Group[] = system.preparationVisuals();
+  const objects: THREE.Object3D[] = system.preparationVisuals();
   for (const [key, value] of Object.entries(authority)) expect(system[key]).toBe(value);
   system.spawn = originalSpawn;
 
-  const resources = new Set<THREE.BufferGeometry | THREE.Material>();
-  for (const root of roots) for (const child of root.children) {
-    const mesh = child as THREE.Mesh;
-    resources.add(mesh.geometry); resources.add(mesh.material as THREE.Material);
-  }
+  const resources = new Set<any>();
+  for (const object of objects) for (const mesh of meshesOf(object)) { resources.add(mesh.geometry); for (const material of [mesh.material].flat()) resources.add(material); }
+  resources.add(system.auras.texture);
   let disposed = 0;
   const onDispose = () => disposed++;
   resources.forEach(resource => resource.addEventListener('dispose', onDispose));
   try {
-    system.spawn(new THREE.Vector3(2, 0, 3), 'item', { id: 'b_cloth', rarity: 'N' });
-    const field = system.items[0].mesh as THREE.Group;
-    expect(field.parent).toBe(system.scene);
-    expect(field.children).toHaveLength(2);
-    field.children.forEach((child, i) => {
-      expect((child as THREE.Mesh).geometry).toBe((roots[0].children[i] as THREE.Mesh).geometry);
-      expect((child as THREE.Mesh).material).toBe((roots[0].children[i] as THREE.Mesh).material);
+    system.spawn(new THREE.Vector3(2, 0, 3), 'item', { id: 'w_iron', rarity: 'N' });
+    system.spawn(new THREE.Vector3(4, 0, 3), 'item', { id: 'r_ruby', rarity: 'E' });
+    const field = system.items.map((it: any) => it.mesh as THREE.Group);
+    expect(field.every((root: THREE.Group) => root.parent === system.scene)).toBe(true);
+    const shell = (name: string) => objects.find(object => object.name === name)!;
+    for (const root of field) meshesOf(root).forEach((mesh, i) => {
+      const source = meshesOf(shell(root.name))[i];
+      expect(mesh.geometry).toBe(source.geometry); expect(mesh.material).toBe(source.material);
     });
+    for (let frame = 0; frame < 90; frame++) system.update(1 / 60);
+    expect(system.scene.children).toContain(system.auras.ground);
     system.clear();
     expect(system.items).toHaveLength(0);
     expect(system.scene.children).toHaveLength(0);
+    expect(system.auras.used).toBe(0);
     expect(disposed).toBe(0);
     const preparationScene = new THREE.Scene();
-    preparationScene.add(...roots);
-    const secondRoots: THREE.Group[] = system.preparationVisuals();
-    expect(secondRoots).not.toBe(roots);
-    secondRoots.forEach((root, i) => {
-      expect(root).not.toBe(roots[i]);
-      expect(root.parent).toBeNull();
-      expect(roots[i].parent).toBe(preparationScene);
-      root.children.forEach((child, j) => {
-        expect((child as THREE.Mesh).geometry).toBe((roots[i].children[j] as THREE.Mesh).geometry);
-        expect((child as THREE.Mesh).material).toBe((roots[i].children[j] as THREE.Mesh).material);
-      });
-    });
-    const secondScene = new THREE.Scene();
-    secondScene.add(...secondRoots);
+    preparationScene.add(...objects);
     preparationScene.clear();
-    expect(roots.every(root => root.parent === null)).toBe(true);
-    expect(secondRoots.every(root => root.parent === secondScene)).toBe(true);
-    secondScene.clear();
-    expect(secondRoots.every(root => root.parent === null)).toBe(true);
     expect(disposed).toBe(0);
-    expect(system._lootMaterials.size).toBe(2);
-    for (const root of roots) for (const child of root.children) expect((child as THREE.Mesh).geometry.getAttribute('position').count).toBeGreaterThan(0);
   } finally {
     resources.forEach(resource => resource.removeEventListener('dispose', onDispose));
-    for (const materials of system._lootMaterials.values()) for (const material of materials) material.dispose();
+    system.lootModels.dispose();
   }
 }));
