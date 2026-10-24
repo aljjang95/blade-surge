@@ -1,18 +1,159 @@
 {
   "schema": "blade-surge.hero-gear-parts.v1",
   "slots": {
-    "helm": { "ref": 0.2 },
-    "pauldron": { "ref": 0.18 },
-    "gauntlet": { "ref": 0.25 }
+    "helm": {
+      "ref": 0.55
+    },
+    "pauldron": {
+      "ref": 0.27
+    },
+    "gauntlet": {
+      "ref": 0.25
+    }
   },
-  "grades": { "N": null, "S": null, "E": null, "U": null, "L": null },
+  "grades": {
+    "N": null,
+    "S": "parts_n",
+    "E": "parts_e",
+    "U": "parts_e",
+    "L": "parts_l"
+  },
   "tint": {
-    "S": { "color": 0.08, "glow": 0 },
-    "E": { "color": 0.12, "glow": 0 },
-    "U": { "color": 0.35, "glow": 0.22 },
-    "L": { "color": 0.18, "glow": 0.3 }
+    "S": {
+      "color": 0.08,
+      "glow": 0
+    },
+    "E": {
+      "color": 0.12,
+      "glow": 0
+    },
+    "U": {
+      "color": 0.35,
+      "glow": 0.22
+    },
+    "L": {
+      "color": 0.18,
+      "glow": 0.3
+    }
   },
-  "sets": [],
+  "sets": [
+    {
+      "id": "parts_n",
+      "path": "/models/gear-parts/parts_n.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4400,
+      "sha256": "dd8a15f25f372b4d06177d658eedc189db94d95dd41c2cd7d01efc83911a9c59"
+    },
+    {
+      "id": "parts_e",
+      "path": "/models/gear-parts/parts_e.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4400,
+      "sha256": "39ec3ba1a52f2752b91c89ec64e078b588c54ad42780e60deb3f917898f3ba94",
+      "fit": {
+        "gauntlet": {
+          "offset": [
+            -0.06,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "parts_l",
+      "path": "/models/gear-parts/parts_l.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4399,
+      "sha256": "e98b8c065e498dfbb4c6f9ed6a5a3cd4137556e466f54b2d417e52789e785278",
+      "fit": {
+        "helm": {
+          "offset": [
+            0,
+            0.07,
+            0
+          ]
+        },
+        "gauntlet": {
+          "offset": [
+            -0.03,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ],
   "items": {},
-  "bodyCovers": {}
+  "bodyCovers": {
+    "hero_mage_t1": [
+      "helm"
+    ],
+    "hero_mage_t1s": [
+      "helm"
+    ],
+    "hero_mage_t2": [
+      "helm"
+    ],
+    "hero_mage_t2u": [
+      "helm"
+    ],
+    "hero_mage_t3": [
+      "helm"
+    ],
+    "hero_rogue_t1": [
+      "helm"
+    ],
+    "hero_rogue_t1s": [
+      "helm"
+    ],
+    "hero_rogue_t2": [
+      "helm"
+    ],
+    "hero_rogue_t2u": [
+      "helm"
+    ],
+    "hero_rogue_t3": [
+      "helm"
+    ]
+  },
+  "heroFit": {
+    "ranger": {
+      "helm": {
+        "scale": 0.9,
+        "offset": [
+          0,
+          0.03,
+          0
+        ]
+      }
+    },
+    "barbarian": {
+      "helm": {
+        "scale": 0.85
+      }
+    },
+    "mage": {
+      "gauntlet": {
+        "scale": 0.7
+      }
+    },
+    "rogue": {
+      "gauntlet": {
+        "scale": 1.4
+      }
+    }
+  }
 }
