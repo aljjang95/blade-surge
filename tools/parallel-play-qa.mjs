@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { nativeGameplayFocus } from './expedition-qa-runtime.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const argument = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -54,6 +55,7 @@ try {
     { id: 'growth', viewport: { width: 1280, height: 720 } }].filter(p => !profile || p.id === profile);
   const runs = await Promise.allSettled(profiles.map(async ({ id, ...options }) => {
     const context = await browser.newContext(options), page = await context.newPage();
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     page.setDefaultTimeout(30000);
     const row = { id, status: 'running', steps: [], errors: [], httpErrors: [], requestFailures: [] };
     report.profiles.push(row);

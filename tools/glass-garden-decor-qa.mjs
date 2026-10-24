@@ -5,6 +5,7 @@
 import { chromium, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = name => process.argv.find(a => a.startsWith('--' + name + '='))?.slice(name.length + 3);
 const target = new URL(arg('url') || 'http://127.0.0.1:5186/');
@@ -27,6 +28,7 @@ const frames = n => page.evaluate(k => new Promise(r => { let i = 0; const f = (
 const shot = async name => { if (arg('noshot')) return; await page.screenshot({ path: `${dir}/${name}.png` }); report.shots.push(name + '.png'); };
 
 try {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: 120000 });
   const start = page.locator('#boot-start:not(.hidden)');
   await start.waitFor({ timeout: 180000 });

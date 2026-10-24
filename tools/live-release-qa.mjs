@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { ARMORY_ITEMS } from '../src/data/armory.js';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work','live-release-qa',Date.now().toString());
 const head=process.argv[2];if(!/^[a-f0-9]{40}$/.test(head||''))throw Error('Exact release head required');
 const liveOrigin='https://blade.tllhouse.com';
@@ -35,6 +36,7 @@ try{
  report.browser=browser.version();const page=await browser.newPage({viewport:{width:880,height:400},hasTouch:true});
  page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)report.httpErrors.push({url:r.url(),status:r.status()});});
  await page.route('**/*',route=>{const r=route.request(),u=new URL(r.url());const policy=releaseRequestPolicy(r.url(),r.method(),origin);if(policy==='block'){report.blockedWrites.push({url:r.url(),method:r.method()});return route.abort();}if(policy==='telemetry'){report.telemetryRequests.push({url:r.url(),method:r.method()});return route.continue();}if(u.origin===origin||['data:','blob:'].includes(u.protocol))return route.continue();report.external.push(u.origin);return route.continue();});
+ await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
  await page.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:60000});await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.click('#boot-start');await page.waitForFunction(()=>window.app?.mode==='lobby');
  await page.screenshot({path:path.join(out,'live-lobby.png')});
  report.before=await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let s=20260905;Math.random=()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};return {nextStage:app.eco.nextStage().idx,level:app.eco.hero('knight').level,inventory:app.eco.s.inventory.length,spentKRW:app.eco.s.spentKRW};});

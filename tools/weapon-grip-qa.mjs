@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import { CHROME } from './chrome.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { installAutoStarter } from './qa-starter.mjs';
 const OUT = process.argv[2] || 'work/qa/weapon-grip', PORT = Number(process.argv[3] || 4410);
 mkdirSync(OUT, { recursive: true });
 const srv = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' });
@@ -16,6 +17,7 @@ const page = await (await br.newContext({ viewport: { width: 960, height: 540 } 
 const errors = []; page.on('pageerror', e => errors.push(String(e).slice(0, 200))); page.on('console', m => { if (['warning', 'error'].includes(m.type()) && !/KHR_parallel|deprecated/.test(m.text())) errors.push(m.type() + ': ' + m.text().slice(0, 300)); });
 const report = {};
 try {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto('http://localhost:' + PORT + '/'); await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(2500);
   for (let i = 0; i < 3; i++) { const c = page.locator('#modal.show #m-cancel'); if (await c.isVisible().catch(() => false)) { await c.click(); await page.waitForTimeout(300); } }

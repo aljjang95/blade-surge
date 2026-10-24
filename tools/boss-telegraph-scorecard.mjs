@@ -11,6 +11,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
 import { metrics } from './vfx-metrics.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const root = path.resolve(import.meta.dirname, '..');
@@ -31,6 +32,7 @@ try {
   const context = await browser.newContext({ viewport: VIEW, hasTouch: true, isMobile: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
   const page = await context.newPage();
   page.on('pageerror', e => report.errors.push(String(e).slice(0, 300)));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 180000 });
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });

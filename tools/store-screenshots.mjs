@@ -15,6 +15,7 @@ import sharp from 'sharp';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const arg = (name, fallback = '') => process.argv.find(v => v.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
@@ -102,6 +103,7 @@ async function captureSet(spec) {
   const touch = async target => { await (typeof target === 'string' ? page.locator(target).first() : target).tap(); };
 
   try {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });
   await page.evaluate(({ level }) => {

@@ -9,6 +9,7 @@ import { chromium, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = name => process.argv.find(a => a.startsWith('--' + name + '='))?.slice(name.length + 3);
 const target = new URL(arg('url') || 'http://127.0.0.1:5231/');
@@ -125,6 +126,7 @@ const padState = (page, selector) => page.evaluate(s => { const el = document.qu
 
 /** 부팅 버튼과 자연 모달은 실제 버튼으로만 처리한다. */
 async function boot(page, { tapStart = true } = {}) {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: 120000 });
   const portrait = page.locator('#btn-ignore-rotate');
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

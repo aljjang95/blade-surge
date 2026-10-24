@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { ALL_DUNGEONS } from '../src/data/expansion.js';
 import { citadelHotspot } from '../src/data/citadel-hub.js';
+import { installAutoStarter } from './qa-starter.mjs';
 const root = process.cwd(), out = path.resolve(process.argv[2]), origin = process.argv[4] || 'http://127.0.0.1:4173';
 const assert = (v, m) => { if (!v) throw Error(m); };
 const profile = process.argv[3];
@@ -50,6 +51,7 @@ try {
     const tap = selector => options.hasTouch ? page.locator(selector).tap() : page.locator(selector).click();
     const shot = name => page.screenshot({ path: path.join(out, `${id}-${name}.png`) });
     try {
+      await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
       await page.goto(origin);
       if (await page.locator('#btn-ignore-rotate').isVisible()) await tap('#btn-ignore-rotate');
       await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 }); await tap('#boot-start');

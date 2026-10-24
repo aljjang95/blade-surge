@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const args = Object.fromEntries(process.argv.slice(2).map(a => {
@@ -200,6 +201,7 @@ try {
   });
   page.on('requestfailed', req => report.networkFailures.push({ url: req.url(), resource: req.resourceType(), error: req.failure()?.errorText }));
   page.on('response', res => { if (res.status() >= 400) report.badResponses.push({ url: res.url(), status: res.status() }); });
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
   if (args['font-dir']) await page.evaluate(() => window.__qaFonts);
   await dismissRotate();

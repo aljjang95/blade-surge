@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { installConquestMediaObserver } from './conquest-media-observer.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 import { assessMediaObservations, createMediaCheckpoints } from './qa-media-checkpoints.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -178,6 +179,7 @@ try {
   browser = await chromium.launch(launchOpts());
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, reducedMotion: 'reduce' });
   const page = await context.newPage(); page.setDefaultTimeout(30000); await page.addInitScript(installConquestMediaObserver);
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   page.on('pageerror', e => report.errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
   checkpoints = createMediaCheckpoints(page, report.media, report.mediaCheckpointDiagnostics, report.documents);

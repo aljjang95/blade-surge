@@ -7,6 +7,7 @@
 import { chromium } from 'playwright';
 import { CHROME } from './chrome.mjs';
 import { mkdirSync, writeFileSync } from 'fs';
+import { installAutoStarter } from './qa-starter.mjs';
 const target = new URL(process.argv.find((x) => x.startsWith('--url='))?.slice(6) || 'http://127.0.0.1:5235');
 if (!['localhost', '127.0.0.1'].includes(target.hostname)) throw new Error('localhost only');
 const OUT = process.argv.slice(2).find((x) => !x.startsWith('--')) || 'work/qa/party-avatar';
@@ -22,6 +23,7 @@ try {
     p.setDefaultTimeout(30000); pages.push(p);
     p.on('console', (m) => { if (m.type() === 'error') errors.push(`p${i}: ${m.text().slice(0, 200)}`); if (m.type() === 'warning') warns.push(`p${i}: ${m.text().slice(0, 300)}`); });
     p.on('pageerror', (e) => errors.push(`p${i} PAGEERR ${String(e).slice(0, 200)}`));
+    await installAutoStarter(p); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await p.goto(target.href, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await p.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
     await p.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });

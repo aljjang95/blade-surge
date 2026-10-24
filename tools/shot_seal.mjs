@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
  */
 import { resolve } from 'path';
 import { mkdirSync } from 'fs';
+import { installAutoStarter } from './qa-starter.mjs';
 const PROJ = resolve(new URL('..', import.meta.url).pathname), PORT = 4197, OUT = resolve(PROJ, process.argv[2] || '.rsi/shots');
 mkdirSync(OUT, { recursive: true });
 const srv = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--host'], { cwd: PROJ, stdio: 'ignore' });
@@ -17,6 +18,7 @@ const page = await (await br.newContext({ viewport: { width: 880, height: 400 },
 // 게임이 아니라 CDN 을 재는 셈이라 하네스에선 빈 CSS 로 즉시 응답한다 (실측: 부트 0.9초 → 12.8초)
 await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 const errors = []; page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 200)); }); page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message.slice(0, 200)));
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(`http://localhost:${PORT}/`);
 await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 });
 await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });

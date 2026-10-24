@@ -3,6 +3,7 @@
 import { chromium, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(value => {
   const index = value.indexOf('=');
@@ -61,6 +62,7 @@ try {
   } catch (error) {
     report.safeArea = { supported: false, error: String(error) };
   }
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin.href, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ state: 'visible' });
   await page.locator('#boot-start').tap();

@@ -4,6 +4,7 @@ import {preview} from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {launchOpts} from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),base=process.argv[2];
 if(!base)throw Error('Supply the exact baseline checkout with built dist');
 const out=path.join(root,'work/visual-v1/performance-paired');await fs.mkdir(out,{recursive:true});
@@ -14,6 +15,7 @@ try{
  for(const which of ['baseline','candidate','candidate','baseline']){
   const context=await browser.newContext({viewport:{width:640,height:360},deviceScaleFactor:1,reducedMotion:'reduce',serviceWorkers:'block'}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://127.0.0.1:${servers[which].httpServer.address().port}`,{waitUntil:'domcontentloaded'});
   await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));

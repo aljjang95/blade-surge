@@ -13,6 +13,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { launchOpts } from '../chrome.mjs';
+import { installAutoStarter } from '../qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, def) => { const i = args.indexOf(name); return i < 0 ? def : args[i + 1]; };
@@ -117,6 +118,7 @@ try {
   const saveDataUrl = async (url, file) => { if (!url) return null; writeFileSync(`${OUT}/${file}`, Buffer.from(url.split(',')[1], 'base64')); return file; };
   const waitBoots = (expected) => page.waitForFunction((id) => { const s = window.__bootsQA.state(); return s && (s.boots ?? null) === id && (id === null || s.target === id); }, expected, { timeout: 45000 }).then(() => true, () => false);
 
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true });

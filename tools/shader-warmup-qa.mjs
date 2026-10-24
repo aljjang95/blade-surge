@@ -8,6 +8,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const origin = (process.argv[2] || 'http://127.0.0.1:4173').replace(/\/$/, '');
 const outFile = path.resolve(process.argv[3] || 'work/shader-warmup.json');
@@ -20,6 +21,7 @@ const args = process.platform === 'win32' ? ['--use-angle=d3d11', '--ignore-gpu-
 const browser = await chromium.launch({ executablePath: exe, args });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'ko-KR', serviceWorkers: 'block' });
 const page = await ctx.newPage();
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(origin + '/', { waitUntil: 'commit', timeout: 120000 });
 await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
 // 렌더 호출 감시자는 로딩 전에 건다(준비 단계의 컴파일은 'prepare', 이후는 'late' 로 구분한다).

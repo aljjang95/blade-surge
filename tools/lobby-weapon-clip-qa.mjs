@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { installAutoStarter } from './qa-starter.mjs';
 
 export async function measureLobby({ samples = 12, corrected = true } = {}) {
   if (!Number.isInteger(samples) || samples < 8 || samples > 240) throw new Error('표본 수는 8~240의 정수여야 한다');
@@ -61,6 +62,7 @@ export async function openLobby(origin, reducedMotion = 'reduce') {
   const browser = await chromium.launch({ args: ['--use-angle=d3d11'] });
   const context = await browser.newContext({ viewport: { width: 1280, height: 590 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block', reducedMotion });
   const page = await context.newPage();
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin + '/');
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 }); await page.click('#boot-start');
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot').classList.contains('show') && app.showcase, null, { timeout: 120000 });

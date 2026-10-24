@@ -9,6 +9,7 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { chromium } from 'playwright';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dist = path.join(root, 'dist');
@@ -58,6 +59,7 @@ async function open(context, origin, prepare) {
   const page = await context.newPage();
   page.on('pageerror', e => report.errors.push(String(e).slice(0, 300)));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').click();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });
