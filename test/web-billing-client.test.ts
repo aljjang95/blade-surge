@@ -211,3 +211,51 @@ describe('영웅 권한 시작·복귀 동기화 (syncState)', () => {
     expect(ok.calls()).toBe(2);
   });
 });
+
+describe('상태 응답 순서 (오래된 권한 목록이 방금 산 영웅을 다시 잠그지 않는다)', () => {
+  const { Economy } = require('../src/game/economy.js');
+  const { createMemoryStorage } = require('../src/game/economy-core.js');
+  function lateRig() {
+    const eco = new Economy({ storage: createMemoryStorage() });
+    let release: (v: any) => void = () => {};
+    const held = new Promise<any>((res) => { release = res; });
+    let stateCalls = 0;
+    const api = {
+      async me() { return { flags: { webBilling: true } }; },
+      async request(method: string, path: string, body: any) {
+        if (method === 'GET' && path === '/iap/state') { stateCalls++; return held; }
+        if (path === '/iap/web/intent') return intentOf(body.productId);
+        if (path === '/iap/web/complete') return { state: 'granted', grants: [], entitlements: { heroes: ['mage'] }, serverTime: 2000 };
+        throw new Error('path ' + path);
+      },
+    };
+    const hp = createHeroPurchase({ api, eco, channel: 'web', billing: null, storage: new MemStorage(), now: () => 1000,
+      loadSdk: async () => ({ requestPayment: async (req: any) => ({ paymentId: req.paymentId }) }),
+      location: { origin: 'https://blade.example', search: '', pathname: '/' }, history: { replaceState() {} } });
+    return { eco, hp, release, stateCalls: () => stateCalls };
+  }
+
+  test('지연된 빈 권한 응답을 보류 → mage 구매 완료 → 보류 응답 반환 → mage 계속 열림', async () => {
+    const r = lateRig();
+    await r.hp.init();
+    const sync = r.hp.syncState();
+    await new Promise((res) => setTimeout(res, 0));
+    expect(r.stateCalls()).toBe(1);
+    const bought = await r.hp.buy('hero_mage_v1');
+    expect(bought.ok).toBe(true);
+    expect(r.eco.ownHero('mage')).toBe(true);
+    r.release({ grants: [], reversals: [], entitlements: { heroes: [] }, serverTime: 1000 });
+    expect(await sync).toBe(false); // 더 최근에 시작한 요청이 이미 적용돼 오래된 응답은 버린다
+    expect(r.eco.ownHero('mage')).toBe(true);
+  });
+
+  test('구매보다 먼저 끝난 상태 응답은 그대로 적용된다', async () => {
+    const r = lateRig();
+    await r.hp.init();
+    const sync = r.hp.syncState();
+    await new Promise((res) => setTimeout(res, 0));
+    r.release({ grants: [], reversals: [], entitlements: { heroes: ['rogue'] }, serverTime: 1000 });
+    expect(await sync).toBe(true);
+    expect(r.eco.ownHero('rogue')).toBe(true);
+  });
+});

@@ -36,6 +36,11 @@ export function loadPortOneSdk(doc = globalThis.document) {
 export function createHeroPurchase({ api, eco, billing = null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, storage = defaultStorage(), now = () => Date.now(),
   location = globalThis.location, history = globalThis.history }) {
   let webOn = false, busy = false, syncing = false, lastSyncAt = 0;
+  // 상태 적용 순서: 요청을 시작할 때 단조 증가 번호를 받고, 더 최근에 시작한 요청의 결과가 이미 적용됐으면 오래된 응답은 버린다.
+  // (지연된 권한 목록이 방금 산 영웅을 다시 잠그지 않게.) 서버 응답에 serverTime이 있으면 그것도 되돌아가지 않게 비교한다.
+  let seq = 0, appliedSeq = 0, appliedServerTime = 0;
+  const stale = (mine, state) => mine < appliedSeq || (Number.isFinite(state?.serverTime) && state.serverTime < appliedServerTime);
+  const markApplied = (mine, state) => { appliedSeq = Math.max(appliedSeq, mine); if (Number.isFinite(state?.serverTime)) appliedServerTime = Math.max(appliedServerTime, state.serverTime); };
   const SYNC_GAP_MS = 15000; // 앱 복귀를 연달아 해도 서버 /iap/state 한도(계정당 분당 60회)를 아낀다.
 
   const readPending = () => {
@@ -50,6 +55,7 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
 
   /** 서버 complete를 부르고 granted/already일 때만 로컬에 반영한다. */
   async function complete(paymentId) {
+    const mine = ++seq;
     let r;
     try { r = await api.request('POST', '/iap/web/complete', { paymentId }); }
     catch (error) {
@@ -59,8 +65,10 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
       return { ok: false, reason: code === 'payment-not-found' ? 'payment-not-found' : error?.status === 503 ? 'billing-disabled' : 'verify-failed' };
     }
     if (r?.state === 'granted' || r?.state === 'already') {
+      // 구매 확정 응답은 버리지 않는다(구매 중에는 syncState가 새로 시작하지 못하므로 이보다 최근 요청이 없다).
       const got = typeof eco?.applyIapState === 'function' ? eco.applyIapState(r) : null;
       if (got === null) return { ok: false, reason: 'storage' }; // 지급은 서버에 됐다. 다음 iapState 반영 때 다시 적용된다.
+      markApplied(mine, r);
       clearPending();
       return { ok: true, state: r.state, got };
     }
@@ -84,10 +92,14 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
     async syncState() {
       if (busy || syncing || (lastSyncAt && now() - lastSyncAt < SYNC_GAP_MS)) return false;
       lastSyncAt = now(); syncing = true;
+      const mine = ++seq;
       try {
         const state = typeof api?.iapState === 'function' ? await api.iapState() : await api.request('GET', '/iap/state');
         if (!state || typeof state !== 'object') return false;
-        return typeof eco?.applyIapState === 'function' && eco.applyIapState(state) !== null;
+        if (stale(mine, state)) return false;
+        if (typeof eco?.applyIapState !== 'function' || eco.applyIapState(state) === null) return false;
+        markApplied(mine, state);
+        return true;
       } catch { return false; }
       finally { syncing = false; }
     },
