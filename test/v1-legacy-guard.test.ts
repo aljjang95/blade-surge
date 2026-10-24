@@ -169,7 +169,7 @@ describe('기존 이용자 보호: 서버 증거(소셜 프로필 생성 시각)
     const { handleSocialRequest } = await import('../packages/tll-social/src/server/router');
     const { h, a } = await setup(BEFORE);
     const body = JSON.stringify({ playerId: a.accountId });
-    for (const headers of [{}, { 'x-social-internal': '1' }]) {
+    for (const headers of [{} as Record<string, string>, { 'x-social-internal': '1' }]) {
       const res = await handleSocialRequest(new Request(ORIGIN + '/api/social/internal/evidence', { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json', ...headers }, body }),
         { APP_ORIGIN: ORIGIN, SOCIAL: h.social!.namespace as any }, { gameId: 'blade-surge' } as any);
       expect(res.status).toBe(404);
