@@ -72,7 +72,8 @@ export class DropSystem {
         mesh = new THREE.Mesh(this._geoMaterial, this._mat(kind === 'transcendStone' ? 0xff5a8a : kind === 'heroShard' ? 0xffcf5a : 0x87cbb0, 1.6));
       }
       else { mesh = this.lootModels.build(payload, { heroId: this.game.heroId, prepare: this._compileLate ||= (object) => this.game.renderer?.r?.compileAsync?.(object, this.game.renderer.camera, this.scene) }); }
-      mesh.position.copy(pos); mesh.position.y = 0.6 + Math.random() * 0.3;
+      // 시작 높이는 항상 대기 높이보다 위다(키 큰 무기 rest 높이 ≈1.0 이 0.6~0.9 시작보다 높아 첫 프레임에 착지하던 문제). 난수 소비 횟수는 그대로다.
+      mesh.position.copy(pos); mesh.position.y = Math.max(0.6 + Math.random() * 0.3, (kind === 'item' ? mesh.userData.lootRestY || .72 : .28) + .25);
       mesh.castShadow = false;
       const a = Math.random() * Math.PI * 2, s = (1.5 + Math.random() * 2.5) * spread;
       const it = { mesh, kind, payload, restY: kind === 'item' ? mesh.userData.lootRestY || .72 : .28, vx: Math.cos(a) * s, vy: 4 + Math.random() * 3, vz: Math.sin(a) * s, t: 0, state: 'fly', spin: (Math.random() - 0.5) * 8 };
@@ -106,7 +107,8 @@ export class DropSystem {
         it.vy -= 22 * dt;
         m.position.x += it.vx * dt; m.position.y += it.vy * dt; m.position.z += it.vz * dt;
         it.vx *= Math.pow(0.1, dt); it.vz *= Math.pow(0.1, dt);
-        if (m.position.y <= it.restY) {
+        // 하강 중에만 착지한다: 솟구치는 동안 대기 높이 아래에 있어도 포물선 · 수평 퍼짐을 끝까지 탄다.
+        if (it.vy < 0 && m.position.y <= it.restY) {
           m.position.y = it.restY; it.state = 'idle'; it.vy = 0;
           if (it.kind === 'item') { m.rotation.set(-.42, m.rotation.y, 0); it.land = 0; }
         }
@@ -151,13 +153,14 @@ export class DropSystem {
       } else m.scale.setScalar(1);
     }
     const spec = LOOT_SPARKLE[it.rarity], fx = this.game.fx;
-    if (!spec || !fx?.glow || (fx.lite && it.rarity === 'S')) return;
+    if (!spec || !fx?.glow?.emitIfFree || (fx.lite && it.rarity === 'S')) return;
     it.spark += dt;
     const interval = spec[0] * (fx.lite ? 2 : 1);
     if (it.spark < interval) return;
     it.spark -= interval; const n = ++it.sparks, s = it.serial;
     const angle = hash01(s, n) * 6.2831853, radius = .25 + hash01(n, s) * .45;
-    fx.glow.emit(m.position.x + Math.cos(angle) * radius, m.position.y - .35 + hash01(s + 3, n) * .7, m.position.z + Math.sin(angle) * radius,
+    // 풀이 가득 차면 건너뛴다(emit 의 교체 분기는 Math.random 을 써서 시드 전투 결정성을 깬다).
+    fx.glow.emitIfFree(m.position.x + Math.cos(angle) * radius, m.position.y - .35 + hash01(s + 3, n) * .7, m.position.z + Math.sin(angle) * radius,
       0, .55 + hash01(n + 7, s) * .6, 0, SPARKLE_COLORS[it.rarity], spec[1] * (.7 + hash01(s, n + 11) * .6), spec[2], SPARKLE_OPTIONS);
   }
   _remove(i) {

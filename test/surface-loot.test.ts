@@ -4,6 +4,7 @@ import { createLootVisual } from '../src/game/loot-visual.js';
 import { LootModelLibrary, LOOT_MODEL_SIZE, LOOT_RIM } from '../src/game/loot-models.js';
 import { LootAuras, LOOT_AURA, LOOT_AURA_LITE } from '../src/game/loot-auras.js';
 import { DropSystem } from '../src/game/drops.js';
+import { ParticlePool } from '../src/engine/fx.js';
 import { acquireItemGeometry, itemForgeCacheSize } from '../src/engine/item-forge.js';
 import { armorStyle } from '../src/game/armor-appearance.js';
 import { resolveItemForm, itemFormHeroIds } from '../src/ui/item-visual-forms.js';
@@ -157,7 +158,7 @@ test('rarity auras share two instanced draws and scale from a faint N ring to a 
 test('drop lifecycle: deterministic landing, sparkles and pickup without Math.random in the frame loop', () => {
   const run = () => {
     const scene = new THREE.Scene(), emits: number[][] = [], picked: string[] = [];
-    const fx = { lite: false, glow: { emit: (...args: any[]) => emits.push(args.slice(0, 6).map(Number)) }, groundTex() {}, holyBurst() {}, burst() {}, light() {}, ring() {}, pillar() {} };
+    const fx = { lite: false, glow: { emitIfFree: (...args: any[]) => (emits.push(args.slice(0, 6).map(Number)), true) }, groundTex() {}, holyBurst() {}, burst() {}, light() {}, ring() {}, pillar() {} };
     const system: any = Object.create(DropSystem.prototype);
     const game = { stage: {}, scene, heroId: 'ranger', player: { alive: true, pos: new THREE.Vector3(40, 0, 40) }, fx,
       renderer: { camera: new THREE.PerspectiveCamera(), flashScreen() {} },
@@ -242,4 +243,53 @@ test('mixed imported UV/tangent layouts are never sent to an incompatible skin m
   expect(meshes).toHaveLength(2);
   expect(meshes.map(m=>m.geometry.attributes.position.count).sort((a,b)=>a-b)).toEqual([24,48]);
   for(const mesh of meshes) mesh.geometry.dispose(); material.dispose(); skeleton.dispose();
+});
+
+function liveDrops(glow: any) {
+  const scene = new THREE.Scene(), system: any = Object.create(DropSystem.prototype);
+  const game = { stage: {}, scene, heroId: 'knight', player: { alive: true, pos: new THREE.Vector3(40, 0, 40) },
+    fx: { lite: false, glow, groundTex() {}, holyBurst() {}, burst() {} },
+    renderer: { camera: new THREE.PerspectiveCamera(), flashScreen() {} }, ui: { lootPopup() {}, flyReward() {} }, rollDrop() { return null; } };
+  Object.assign(system, { game, scene, items: [], magnetR: 4.2, pickR: 1.1, _matCache: {} });
+  system.clear(); system.setup(null);
+  return system;
+}
+
+test('idle sparkles skip a saturated real glow pool instead of consuming Math.random', () => {
+  const scene = new THREE.Scene(), texture = new THREE.Texture();
+  const pool = new ParticlePool(scene, { max: 6, texture }), white = new THREE.Color(1, 1, 1);
+  expect(pool.emitIfFree(0, 0, 0, 0, 0, 0, white, 1, 99)).toBe(true);
+  while (pool.n < pool.max) pool.emit(0, 0, 0, 0, 0, 0, white, 1, 99);
+  const system = liveDrops(pool);
+  for (const [id, rarity] of [['w_flame', 'E'], ['w_storm', 'U'], ['w_dragon', 'L']]) system.spawn(new THREE.Vector3(0, 0, 0), 'item', { id, rarity }, { spread: 0 });
+  const before = Array.from(pool.life);
+  const random = Math.random; let calls = 0;
+  Math.random = () => { calls++; return .5; };
+  try {
+    expect(pool.emitIfFree(0, 0, 0, 0, 0, 0, white, 1, 1)).toBe(false);
+    // 풀 입자의 수명이 남아 있는 동안(반짝임 수십 번 분량) 대기 장비를 돌린다.
+    for (let frame = 0; frame < 180; frame++) system.update(1 / 60);
+  } finally { Math.random = random; }
+  expect(calls).toBe(0);
+  expect(system.items.every((it: any) => it.state === 'idle' && it.sparks > 3)).toBe(true);
+  expect(pool.n).toBe(pool.max); expect(Array.from(pool.life)).toEqual(before);
+  system.lootModels.dispose(); pool.geo.dispose(); pool.mat.dispose(); texture.dispose();
+});
+
+test('tall weapon drops arc and spread before landing instead of settling on the first frame', () => {
+  const system = liveDrops({ emitIfFree: () => true });
+  const random = Math.random; let seed = 11;
+  Math.random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  try { system.spawn(new THREE.Vector3(0, 0, 0), 'item', { id: 'w_iron', rarity: 'N' }, { spread: 1.4 }); }
+  finally { Math.random = random; }
+  const it = system.items[0], restY = it.mesh.userData.lootRestY;
+  expect(restY).toBeGreaterThan(.9);   // 키 큰 무기: 예전 시작 높이(0.6~0.9)보다 높다
+  expect(it.mesh.position.y).toBeGreaterThan(restY);
+  let peak = it.mesh.position.y, airborne = 0;
+  for (let frame = 0; frame < 120 && it.state === 'fly'; frame++) { system.update(1 / 60); peak = Math.max(peak, it.mesh.position.y); airborne++; }
+  expect(airborne).toBeGreaterThan(12);
+  expect(peak).toBeGreaterThan(restY + .5);
+  expect(it.state).toBe('idle');
+  expect(Math.hypot(it.mesh.position.x, it.mesh.position.z)).toBeGreaterThan(.3);
+  system.lootModels.dispose();
 });
