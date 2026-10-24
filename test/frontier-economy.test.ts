@@ -13,7 +13,8 @@ const at=(id:string)=>{const date=dates.get(id)!;setSystemTime(date);return week
 const storage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
 beforeEach(()=>{const values=new Map<string,string>();Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)}});});
 afterEach(()=>{setSystemTime();if(storage)Object.defineProperty(globalThis,'localStorage',storage);else Reflect.deleteProperty(globalThis,'localStorage');});
-function make(){const eco=new Economy(),x=new ExpeditionEconomy(eco);x.s.level=20;eco.s.energy=200;eco.s.sweep=20;return {eco,x};}
+// 주간 원정 경로는 어느 지역 던전이든 될 수 있어 지역 마을 6곳을 모두 연 저장을 쓴다(지역 잠금은 region-dungeon-unlock 테스트).
+function make(){const eco=new Economy(),x=new ExpeditionEconomy(eco);x.s.level=20;eco.s.energy=200;eco.s.sweep=20;eco.s.progress.unlocked=60;return {eco,x};}
 
 test('every published weekly effect resolves from valid date snapshots; wrong period/route/effect and prototype keys fail closed',()=>{
  expect([...dates.keys()].sort()).toEqual(Object.keys(FRONTIER_EFFECTS).sort());

@@ -39,3 +39,13 @@
 .boss-intro[data-rank="regionboss"] b { color: #ffb4c0; }
 @keyframes boss-intro { 0% { opacity: 0; transform: translate(-50%, -120%); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -120%); } }
 @media (prefers-reduced-motion: reduce) { .boss-intro { animation: none; } }
+
+/* ---------- 새 마을 도착(지역 X-10 첫 클리어 뒤 로비 복귀): 걷히는 장막 + 위쪽 가장자리 띠. 입력을 막지 않는다. ---------- */
+.town-arrival-veil { --town-accent: #ffd27a; position: fixed; inset: 0; z-index: 59; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 0 18%, color-mix(in srgb, var(--town-accent) 35%, #0d0812) 62%, #0d0812 100%); animation: town-arrival-veil 1.3s ease-out both; }
+@keyframes town-arrival-veil { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+.town-arrival-banner { --town-accent: #ffd27a; position: fixed; z-index: 60; top: calc(6px + var(--sat, 0px)); left: 50%; transform: translateX(-50%); max-width: min(92vw, 560px); display: flex; align-items: baseline; gap: 10px; padding: 4px 18px 5px; color: #fff4d2; white-space: nowrap; pointer-events: none; border: 2px solid var(--town-accent); border-radius: 999px; background: linear-gradient(90deg, #1a1226e8, color-mix(in srgb, var(--town-accent) 32%, #1a1226) 50%, #1a1226e8); box-shadow: 0 6px 22px #000b, 0 0 22px color-mix(in srgb, var(--town-accent) 55%, transparent); animation: region-unlock-in .55s cubic-bezier(.2, .9, .3, 1.2) .35s both, region-unlock-out .5s ease-in 4.6s forwards; }
+.town-arrival-banner small { font-size: 10px; letter-spacing: .08em; color: var(--town-accent); font-weight: 800; }
+.town-arrival-banner b { font-size: 15px; font-weight: 800; }
+.town-arrival-banner em { font-style: normal; font-size: 11px; color: #e4d7b6; }
+@media (max-width: 520px) { .town-arrival-banner { gap: 6px; padding: 3px 12px 4px; } .town-arrival-banner b { font-size: 13px; } .town-arrival-banner em { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .town-arrival-banner { animation: none; } .town-arrival-veil { display: none; } }
