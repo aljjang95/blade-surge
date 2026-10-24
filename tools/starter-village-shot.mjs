@@ -36,7 +36,7 @@ for (let i = 0; i < 300; i++) {
   else { const card = page.locator('.ss-card:visible, [data-hero]:visible').first(); if (await card.count()) await card.click().catch(() => {}); }
   await page.waitForTimeout(1000);
 }
-const tapStart = page.locator('button:visible', { hasText: '터치하여 시작' }).first();
+const tapStart = page.locator('#boot-start:visible, button:visible:has-text("터치하여 시작")').first();
 if (await tapStart.count()) { await tapStart.click().catch(() => {}); await page.waitForTimeout(2000); }
 await page.waitForTimeout(2500);
 const walk = await page.evaluate(() => window.app.setHubWalkMode(true));
