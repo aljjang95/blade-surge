@@ -71,16 +71,11 @@ export class BattleReadability {
     this.intro.hidden = false; this.intro.classList.remove('on'); void this.intro.offsetWidth; this.intro.classList.add('on');
   }
   layoutControls(battle) {
-    const tray = document.getElementById('battle-info-actions'), top = this.hud.querySelector('.hud-right-top');
+    const tray = document.getElementById('battle-info-actions');
     const codex = battle?.rpgView?.hudButton, engraving = battle?.chronicle?.hud;
     if (codex && codex.parentElement !== tray) tray.append(codex);
-    if (engraving) {
-      // currentOffer()는 이연 선택을 변경할 수 있으므로 실제 대기열만 읽는다.
-      const hasOffer = !!battle.active && !!battle.run?.queue?.length;
-      engraving.classList.toggle('battle-earned-offer', hasOffer);
-      const parent = hasOffer ? top : tray;
-      if (engraving.parentElement !== parent) parent.prepend(engraving);
-    }
+    // 출격 중 각인 보상 대기열이 없어졌으므로(2026-10-24) 각인 현황 버튼은 늘 정보 묶음 안에 둔다.
+    if (engraving && engraving.parentElement !== tray) tray.prepend(engraving);
     const growth = this.hud.querySelector('.oath-run-details');
     if (growth) tray.append(growth);
   }
