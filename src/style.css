@@ -312,6 +312,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .avatar-shop-item { min-height: 178px; }
 .avatar-shop-item .si-body { width: 100%; }
 .avatar-shop-item.avatar-pending { filter: saturate(.55); }
+/* 아바타 초상(512² 배경 합성 webp)은 얼굴이 읽히게 크게, 사각 카드 그림으로 보인다. */
+.avatar-shop-item > img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; filter: none; box-shadow: 0 3px 10px rgba(0,0,0,.45); }
 .hero-avatar-row { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.04); }
 .hero-avatar-row > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .hero-avatar-row small { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
@@ -951,6 +953,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .shop-grid { gap:6px; padding:6px 8px 12px; }
   .shop-item { gap:2px; padding:5px 4px; }
   .shop-item img { width:40px; height:40px; }
+  .avatar-shop-item > img { width:64px; height:64px; }
   .shop-item .si-desc { font-size:9px; }
   .shop-item .si-bonus { font-size:10px; }
   .shop-item .btn { margin-top:2px; padding:4px 3px; font-size:11px; }
@@ -974,7 +977,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @media (max-width: 420px) {
   .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 7px; }
   .shop-item.big { grid-column: span 2; }
-  .avatar-shop-item { min-height: 170px; padding: 7px 5px; }
+  .avatar-shop-item { min-height: 210px; padding: 7px 5px; }
+  .avatar-shop-item > img { width: 84px; height: 84px; }
   .avatar-shop-item .si-name { font-size: 11px; }
   .avatar-shop-item .si-desc { font-size: 9px; }
   .avatar-shop-item .btn { font-size: 11px; }

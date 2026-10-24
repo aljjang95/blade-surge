@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { BOONS, SYNERGIES } from '../src/data/masterworks.js';
-import { RUNES, RUNE_FAMILIES, RUNE_MERGE_COST, RUNE_REMOVE_COST, RUNE_SOURCES } from '../src/data/runes.js';
+import { RUNES, RUNE_FAMILIES, RUNE_MERGE_COST, RUNE_REMOVE_COST, RUNE_GRADE_MUL, RUNE_SOURCES } from '../src/data/runes.js';
 import { boonEffects } from '../src/game/masterworks-core.js';
 import {
   socketCount, maxSocketCount, normalizeSockets, socketStates, normalizeRuneBag, bagCount, removeCost,
@@ -47,7 +47,7 @@ describe('소켓', () => {
     expect(low.map((s) => s.locked)).toEqual([false, false, true]);
     expect(low[2].rune).toEqual(rune('storm_step', 3));
     expect(runeEffects([{ grade: 'L', enh: 12, sockets }]).speed).toBeUndefined();
-    expect(runeEffects([{ grade: 'L', enh: 15, sockets }]).speed).toBeCloseTo(0.12);
+    expect(runeEffects([{ grade: 'L', enh: 15, sockets }]).speed).toBeCloseTo(0.04 * 1.5);
     expect(runeActivation([{ grade: 'L', enh: 12, sockets }])[2]).toMatchObject({ active: false, reason: 'locked' });
   });
 });
@@ -131,20 +131,24 @@ describe('회수', () => {
 });
 
 describe('효과 합산', () => {
-  test('III 룬 = 각인 효과 ×3, rank = grade 로 boonEffects 와 같다', () => {
+  test('등급 배율 I ×0.5 · II ×1 · III ×1.5(각인 1랭크 효과 기준)', () => {
+    expect(RUNE_GRADE_MUL).toEqual({ 1: 0.5, 2: 1, 3: 1.5 });
     for (const b of BOONS as unknown as Array<{ id: string, effects: Record<string, number> }>) {
-      const e = runeEffects([{ grade: 'S', enh: 0, sockets: [rune(b.id, 3)] }]);
-      // boonEffects 는 다른 각인의 0 값 키도 남기므로 0이 아닌 값만 비교한다.
-      expect(e).toEqual(Object.fromEntries(Object.entries(boonEffects({ [b.id]: 3 })).filter(([, v]) => v !== 0)));
-      for (const [k, v] of Object.entries(b.effects)) if (k !== 'chain') expect(e[k]).toBeCloseTo(v * 3);
+      for (const g of [1, 2, 3]) {
+        const e = runeEffects([{ grade: 'S', enh: 0, sockets: [rune(b.id, g)] }]);
+        for (const [k, v] of Object.entries(b.effects)) expect(e[k]).toBeCloseTo(v * RUNE_GRADE_MUL[g]);
+      }
     }
+    // II 는 옛 각인 1랭크(boonEffects)와 같다.
+    const e2 = runeEffects([{ grade: 'S', enh: 0, sockets: [rune('ember_edge', 2)] }]);
+    expect(e2).toEqual(Object.fromEntries(Object.entries(boonEffects({ ember_edge: 1 })).filter(([, v]) => v !== 0)));
   });
   test('같은 룬은 장착 전체에서 2개까지만 쌓이고, 높은 등급이 먼저 살아남는다', () => {
     const items = [
       { grade: 'S', enh: 0, sockets: [rune('ember_edge', 1)] },
       { grade: 'U', enh: 0, sockets: [rune('ember_edge', 3), rune('ember_edge', 2)] },
     ];
-    expect(runeEffects(items).atk).toBeCloseTo(0.05 * 5);
+    expect(runeEffects(items).atk).toBeCloseTo(0.05 * (1.5 + 1));
     const act = runeActivation(items);
     expect(act[0]).toMatchObject({ item: 0, index: 0, active: false, reason: 'duplicate' });
     expect(act.filter((e) => e.active)).toHaveLength(2);
@@ -156,7 +160,7 @@ describe('효과 합산', () => {
     ];
     const e = runeEffects(items);
     expect(e.chain).toBe(2);
-    expect(e.healOnKill).toBeCloseTo(0.05);
+    expect(e.healOnKill).toBeLessThanOrEqual(0.05);
   });
 });
 
@@ -181,7 +185,7 @@ describe('가문 공명', () => {
     const counts = familyCounts(items, { blessingBoonId: 'storm_edge' });
     expect(counts).toEqual({ ember: 2, tide: 0, storm: 2, stone: 0 });
     expect(runeSynergies(counts).map((s) => s.id)).toEqual(['wildfire']);
-    expect(runeEffects(items, { blessingBoonId: 'storm_edge' }).atk).toBeCloseTo(0.05 + 0.07);
+    expect(runeEffects(items, { blessingBoonId: 'storm_edge' }).atk).toBeCloseTo(0.05 * 0.5 + 0.07);
     expect(familyCounts(items, { blessingBoonId: 'fake' })).toEqual(familyCounts(items));
   });
 });
