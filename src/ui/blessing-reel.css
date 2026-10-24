@@ -121,7 +121,8 @@
 .blessing-pity-bar i.on{background:linear-gradient(180deg,#ffe28a,#e7a531)}
 .citadel-hub-dialog .blessing-held{margin:0;font-size:10.5px;line-height:1.35;color:#ffe1a6}
 .blessing-held span{display:inline-block;padding:0 5px;border-radius:3px;background:#e8b445;color:#2b1c03;font-weight:800}
-.citadel-hub-dialog .blessing-notice{margin:6px 0 0;padding:6px 10px;border:1px solid #e7b864;border-radius:7px;background:#3a2810ee;color:#ffe6b8;font-size:11px;line-height:1.4}
+.citadel-hub-dialog .blessing-notice{flex:1;min-width:0;margin:0;padding:3px 9px;border:1px solid #e7b864;border-radius:6px;background:#3a2810ee;color:#ffe6b8;font-size:11px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blessing-notice[hidden],.blessing-sub[hidden]{display:none}
 .blessing-notice[data-tone="info"]{border-color:#8fc2c6;background:#0d3346ee;color:#e1f1ee}
 
 /* 원정 시작 버튼 안 가져가는 각인 아이콘(텍스트는 citadel-hub 가 그대로 쓴다). */
@@ -181,7 +182,7 @@
   .blessing-card .blessing-tile{height:auto;width:min(78%,96px)}
   .blessing-card-name{font-size:11px;padding:2px 2px}
   .blessing-card-effect{font-size:9.5px;padding:2px 1px;letter-spacing:-.02em;white-space:normal;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-  .citadel-hub-dialog .blessing-sub{white-space:normal}
+  .citadel-hub-dialog .blessing-sub,.citadel-hub-dialog .blessing-notice{white-space:normal}
   .blessing-head{flex-wrap:wrap}
 }
 @media (prefers-reduced-motion:reduce){

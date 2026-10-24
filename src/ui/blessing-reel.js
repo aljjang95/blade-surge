@@ -47,23 +47,26 @@ export class BlessingSlot {
     this.reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = this.el = document.createElement('section');
     el.className = 'blessing-slot'; el.setAttribute('aria-label', '전운 굴리기');
-    el.innerHTML = `<svg class="blessing-defs" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute"><filter id="blessing-vblur" x="-5%" y="-25%" width="110%" height="150%"><feGaussianBlur stdDeviation="0 6"/></filter></svg><header class="blessing-head"><h3><span aria-hidden="true">✦</span> 전운 굴리기</h3><p class="blessing-sub"></p><label class="blessing-short"><input type="checkbox" data-blessing-short> 연출 짧게</label></header>
+    el.innerHTML = `<svg class="blessing-defs" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute"><filter id="blessing-vblur" x="-5%" y="-25%" width="110%" height="150%"><feGaussianBlur stdDeviation="0 6"/></filter></svg><header class="blessing-head"><h3><span aria-hidden="true">✦</span> 전운 굴리기</h3><p class="blessing-sub"></p><p class="blessing-notice" role="status" aria-live="polite" hidden></p><label class="blessing-short"><input type="checkbox" data-blessing-short> 연출 짧게</label></header>
       <div class="blessing-main"><div class="blessing-stage"><div class="blessing-machine" role="group" aria-label="전운 릴 3개">
         <span class="blessing-gem" style="--x:0"></span><span class="blessing-gem" style="--x:1"></span><span class="blessing-gem" style="--x:2"></span><span class="blessing-gem" style="--x:3"></span>
         ${[0, 1, 2].map(i => `<div class="blessing-reel" data-reel="${i}"><div class="blessing-window"><div class="blessing-strip"><div class="blessing-strip-inner"></div></div><span class="blessing-flash" aria-hidden="true"></span><span class="blessing-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div><button type="button" class="blessing-card" data-blessing-pick="${i}" hidden></button></div>`).join('')}
       </div><p class="blessing-skip" aria-hidden="true">탭하여 건너뛰기</p></div>
       <aside class="blessing-side"><span class="blessing-chip"></span><button type="button" class="blessing-roll" data-blessing-roll><span class="blessing-roll-icon" aria-hidden="true"></span><span data-blessing-roll-label></span></button><button type="button" class="blessing-odds-open" data-blessing-odds>확률 보기 <span aria-hidden="true">›</span></button><div class="blessing-pity"><span data-blessing-pity></span><span class="blessing-pity-bar" aria-hidden="true">${'<i></i>'.repeat(BLESSING_PITY)}</span></div><p class="blessing-held" data-blessing-held hidden></p></aside></div>
-      <p class="blessing-notice" role="status" aria-live="polite" hidden></p>`;
+`;
     this.machine = /** @type {HTMLElement} */ (el.querySelector('.blessing-machine'));
     this.reels = [...el.querySelectorAll('.blessing-reel')].map(reel => ({
       root: /** @type {HTMLElement} */ (reel), win: /** @type {HTMLElement} */ (reel.querySelector('.blessing-window')),
       strip: /** @type {HTMLElement} */ (reel.querySelector('.blessing-strip')), inner: /** @type {HTMLElement} */ (reel.querySelector('.blessing-strip-inner')),
       card: /** @type {HTMLButtonElement} */ (reel.querySelector('.blessing-card')),
     }));
-    this.machine.addEventListener('pointerdown', event => { if (this.spin) { event.preventDefault(); this.skip(); } });
+    // 회전 중 탭 = 건너뛰기. 같은 탭의 click 이 막 나타난 카드를 고르지 않게 잠깐 선택을 막는다.
+    this.skipTapUntil = 0;
+    this.machine.addEventListener('pointerdown', event => { if (this.spin) { event.preventDefault(); this.skipTapUntil = performance.now() + 450; this.skip(); } });
     this.machine.addEventListener('click', event => {
       const button = /** @type {HTMLElement} */ (event.target)?.closest?.('[data-blessing-pick]');
-      if (button && !this.spin) this.pick(Number(/** @type {HTMLElement} */ (button).dataset.blessingPick));
+      if (!button || this.spin || performance.now() < this.skipTapUntil) return;
+      this.pick(Number(/** @type {HTMLElement} */ (button).dataset.blessingPick));
     });
     el.querySelector('[data-blessing-roll]')?.addEventListener('click', () => this.roll());
     el.querySelector('[data-blessing-odds]')?.addEventListener('click', event => this.openOdds(/** @type {HTMLElement} */ (event.currentTarget)));
@@ -82,7 +85,9 @@ export class BlessingSlot {
 
   notice(text, tone = 'info') {
     const n = /** @type {HTMLElement} */ (this.el.querySelector('.blessing-notice'));
-    n.textContent = text || ''; n.hidden = !text; n.dataset.tone = tone;
+    // 알림은 제목 줄(부제 자리)에 띄워 낮은 가로 화면에서도 스크롤 없이 보인다.
+    n.textContent = text || ''; n.title = text || ''; n.hidden = !text; n.dataset.tone = tone;
+    /** @type {HTMLElement} */ (this.el.querySelector('.blessing-sub')).hidden = !!text;
   }
 
   /** 견적·천장·보관 표시를 다시 그린다. restore 면 마지막 결과를 멈춘 카드로 복원한다. */
@@ -311,7 +316,7 @@ export class BlessingSlot {
     if (this.spin) this.skip();
     if (q.offer && q.offer.picked < 0 && !q.held && !this.confirmArmed) {
       this.confirmArmed = true;
-      this.notice('각인을 고르지 않았습니다. 각인 없이 출발하려면 원정 시작을 한 번 더 누르세요.', 'ask');
+      this.notice('각인 없이 출발할까요? 원정 시작을 한 번 더 누르면 출발합니다.', 'ask');
       return false;
     }
     return true;
