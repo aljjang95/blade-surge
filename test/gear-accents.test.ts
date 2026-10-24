@@ -41,11 +41,14 @@ test('장비 표식은 재질 셰이더를 한 번만 고치고 장비가 바뀌
   const slots = applyGearAccents(root, { armor: ITEM_BY_ID.a_king, boots: ITEM_BY_ID.b_knight, ring: ITEM_BY_ID.r_copper }, { armor: 0 });
   expect(slots).toEqual(['armor', 'boots']);
   const key = material.customProgramCacheKey();
-  expect(key).toContain('gear-rim-v1');
-  const shader: any = { uniforms: {}, vertexShader: 'void main(){\n#include <skinning_vertex>\n}', fragmentShader: 'void main(){\n#include <emissivemap_fragment>\n}' };
+  expect(key).toContain('gear-rim-v2');
+  const shader: any = { uniforms: {}, vertexShader: 'void main(){\n#include <skinning_vertex>\n}', fragmentShader: 'void main(){\n#include <clipping_planes_fragment>\n#include <emissivemap_fragment>\n}' };
   material.onBeforeCompile(shader, null as any);
   expect(shader.vertexShader).toContain('vGearZone');
   expect(shader.fragmentShader).toContain('totalEmissiveRadiance += gearTint * gearRim');
+  // 등급 부츠가 붙으면(gearHideFeet) 발·발끝 가중치 절반 넘는 조각을 버린다
+  expect(shader.fragmentShader).toContain('if (gearHideFeet > 0.5 && vGearFoot > 0.5) discard;');
+  expect(shader.vertexShader).toContain('vGearFoot +=');
   expect(shader.uniforms.gearRimBody.value.getHex()).not.toBe(0);
   // 반지는 N 등급이라 왼손 윤곽은 0, 신발은 에픽 파랑
   expect(shader.uniforms.gearRimRing.value.getHex()).toBe(0);
