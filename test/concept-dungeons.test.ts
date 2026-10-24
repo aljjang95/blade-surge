@@ -34,6 +34,11 @@ test('컨셉 던전 2곳은 기존 18곳을 보존한 채 Lv.1 진입 가능한 
   for (const town of TOWNS) expect(town.dungeonIds.some((id: string) => ids.includes(id))).toBe(false);
   const eco = new Economy(); const service = new ExpeditionEconomy(eco);
   expect(service.s.level).toBe(1);
+  // 지역 마을 해금(docs/region-dungeon-unlock.md): 새 저장의 첫 마을에서는 지역 2·4 던전인 두 곳이 아직 보이지 않는다.
+  expect(service.dungeonAccess('sunbrass_quarry')).toEqual({ ok: false, error: '1-10 클리어 시 새 마을 「불씨 용광로 마을」에서 열림' });
+  expect(service.dungeonAccess('glacier_tide_basin')).toEqual({ ok: false, error: '3-10 클리어 시 새 마을 「별잠 등대 마을」에서 열림' });
+  // 지역이 열리면 레벨 조건 없이(Lv.1) 바로 입장할 수 있다.
+  eco.s.progress.unlocked = 60;
   for (const id of ids) {
     const d: any = ALL_DUNGEONS.find((x: any) => x.id === id);
     expect(d.minLevel).toBe(1); expect(d.energy).toBe(4);
@@ -180,6 +185,7 @@ test('새 계정에서 컨셉 던전 출격·패배·재도전·승리 정산이
     for (const id of ids) {
       values.clear();
       const eco = new Economy(), service = new ExpeditionEconomy(eco), d: any = ALL_DUNGEONS.find((x: any) => x.id === id);
+      eco.s.progress.unlocked = 60; // 두 곳의 지역 마을(2·4)을 연 저장
       const energy0 = eco.s.energy, gold0 = eco.s.gold;
       // 패배: 보상·승리 기록 없이 정산, 같은 던전 재도전 가능.
       const lose = service.begin('dungeon', id); expect(lose.ok).toBe(true);

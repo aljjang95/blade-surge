@@ -281,7 +281,7 @@ test('신규 심층: 해금 순서·에너지 6·첫 정복 보상 1회·패배 
   for (const id of ids) withStorage(() => {
     const eco = new Economy(), service = new ExpeditionEconomy(eco), deep: any = expeditionDepth(id);
     // QA 픽스처(명시): 에너지 50과 캠페인 별은 테스트가 직접 넣는다. 기본 원정 클리어는 실제 begin/settle로 만든다.
-    eco.s.energy = 50;
+    eco.s.energy = 50; eco.s.progress.unlocked = 60; // 지역 마을을 모두 연 저장(지역 잠금은 region-dungeon-unlock 테스트)
     expect(service.dungeonAccess(id, { depth: 'deep' }).error).toBe('탐험 레벨 2 필요');
     service.s.level = 2;
     expect(service.dungeonAccess(id, { depth: 'deep' }).error).toBe(`캠페인 ${deep.unlockCode} 클리어 필요`);
