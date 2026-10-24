@@ -764,10 +764,13 @@ export class Economy {
         g[key]++; rar = rollGachaRarity(g[key], rng, banner);
         if (banner.id === GACHA_MILEAGE.banner) g.mileage += GACHA_MILEAGE.perPull;
       }
+      // 초보자 10회의 마지막 칸은 아직 없는 SR 영웅이 있으면 그 영웅 확정(SSR이 나온 칸은 그대로). 2번이면 SR 로스터가 첫날 거의 찬다.
+      const freshSr = banner.id === 'beginner' && n === 10 && i === 9 && rar !== 'SSR' && heroesOf('SR').some((id) => !this.ownHero(id));
+      if (freshSr) rar = 'SR';
       if (n === 10 && i === 9 && !srGuaranteed && rar === 'R') rar = 'SR';
       if (rar !== 'R') srGuaranteed = true;
       if (rar === 'SSR') { if (banner.id === 'gear') g.gearPity = 0; else if (banner.id === 'hero') g.pity = 0; else g.beginnerSsr = true; }
-      results.push(this.rollResult(rar, { banner, featured }));
+      results.push(this.rollResult(rar, { banner, featured, freshSr }));
     }
     s.pity = g.pity; // 기존 UI가 읽는 레거시 미러
     this.recordJourneyAction('pulls', n);
@@ -807,9 +810,9 @@ export class Economy {
   /**
    * 등급이 정해진 한 칸의 결과. 분배는 배너 표(gacha-banners.js)와 gachaRates()가 같은 값이다.
    * 픽업 배너의 SSR은 50:50이며, 픽업이 아니면 같은 배너의 다음 SSR은 픽업 확정이다.
-   * @param {string} rar @param {{ banner?: any, featured?: string|null }} [opts]
+   * @param {string} rar @param {{ banner?: any, featured?: string|null, freshSr?: boolean }} [opts] freshSr: 미보유 SR 영웅 확정(초보자 10회 마지막 칸)
    */
-  rollResult(rar, { banner = GACHA_BANNERS.hero, featured = bannerPickup(banner.id, nowOf(this)) } = {}) {
+  rollResult(rar, { banner = GACHA_BANNERS.hero, featured = bannerPickup(banner.id, nowOf(this)), freshSr = false } = {}) {
     const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
     const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
     const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
@@ -828,6 +831,7 @@ export class Economy {
       g.gearGuarantee = !win;
       return win ? item(pick(inSet), { featured: true }) : item(pick(rest));
     }
+    if (freshSr) { const fresh = heroesOf('SR').filter((id) => !this.ownHero(id)); if (fresh.length) return hero(pick(fresh)); }
     const r = rng(), heroShare = split.hero || 0, gearShare = split.gear || 0;
     if (r < heroShare) {
       // 초보자 배너의 SR 영웅은 아직 없는 영웅을 먼저 준다(첫 주 안에 SR 로스터를 채우는 온보딩 규칙, 문서 12.2).

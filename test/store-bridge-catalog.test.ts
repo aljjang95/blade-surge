@@ -16,7 +16,8 @@ test('StoreBridgePlugin CATALOG_TYPES는 서버 카탈로그의 활성·Play 판
   const actual = javaTypes();
   expect([...actual.keys()].sort()).toEqual([...expected.keys()].sort());
   for (const [id, type] of expected) expect(actual.get(id)).toBe(type as string);
-  for (const id of ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1']) expect(actual.get(id)).toBe('inapp');
+  // 영웅 직접 판매는 소환 구조(BM 12장)로 내렸다: 서버 카탈로그 비활성이면 앱 목록에도 없어야 한다.
+  for (const id of ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1']) expect(actual.has(id)).toBe(false);
 });
 
 test('billing-service는 Play 판매 상품만 adapter.list()에 넘긴다', async () => {

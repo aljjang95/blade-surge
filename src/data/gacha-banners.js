@@ -32,11 +32,11 @@ export const GACHA_BANNERS = Object.freeze({
     rates: Object.freeze({ R: 85, SR: 13, SSR: 2 }),
     // SSR은 전부 영웅: 픽업 50%, 그 밖의 SSR 50%. 픽업이 아니면 다음 SSR은 픽업 확정(guarantee).
     ssr: Object.freeze({ hero: 1, featured: 0.5 }),
-    sr: Object.freeze({ hero: 0.75 }),
+    sr: Object.freeze({ hero: 0.4 }),
     r: Object.freeze({ hero: 0 }),
     materials: Object.freeze({
       SSR: Object.freeze([]),
-      SR: Object.freeze([Object.freeze({ k: 'stones2', n: 5, w: 0.1 }), Object.freeze({ k: 'protect', n: 1, w: 0.1 }), Object.freeze({ k: 'transcendStones', n: 1, w: 0.05 })]),
+      SR: Object.freeze([Object.freeze({ k: 'stones2', n: 5, w: 0.3 }), Object.freeze({ k: 'protect', n: 1, w: 0.15 }), Object.freeze({ k: 'transcendStones', n: 1, w: 0.15 })]),
       R: Object.freeze([Object.freeze({ k: 'stones', n: 10, w: 0.6 }), Object.freeze({ k: 'bless', n: 1, w: 0.25 }), Object.freeze({ k: 'gold', n: 5000, w: 0.15 })]),
     }),
   }),
@@ -61,7 +61,12 @@ export const GACHA_BANNERS = Object.freeze({
     ssr: Object.freeze({ hero: 1, featured: 0 }),
     sr: Object.freeze({ hero: 0.75 }),
     r: Object.freeze({ hero: 0 }),
-    materials: null, // 영웅 배너 재료 표를 쓴다
+    // SR 영웅 몫이 영웅 배너(0.4)보다 커서(0.75, 온보딩) 재료 표를 따로 둔다. R 표는 영웅 배너와 같다.
+    materials: Object.freeze({
+      SSR: Object.freeze([]),
+      SR: Object.freeze([Object.freeze({ k: 'stones2', n: 5, w: 0.1 }), Object.freeze({ k: 'protect', n: 1, w: 0.1 }), Object.freeze({ k: 'transcendStones', n: 1, w: 0.05 })]),
+      R: Object.freeze([Object.freeze({ k: 'stones', n: 10, w: 0.6 }), Object.freeze({ k: 'bless', n: 1, w: 0.25 }), Object.freeze({ k: 'gold', n: 5000, w: 0.15 })]),
+    }),
   }),
 });
 

@@ -46,7 +46,7 @@ describe('성장 흐름 계약', () => {
       expect(label).toContain(`약 ${row.withDays}일`);
       expect(label).toContain('스토리 30분/일·별 승급 제외 예상');
     }
-    expect(paceLabel('ssrTicket')).toContain('픽업 SSR→SSSR');
+    expect(paceLabel('ssrTicket')).toContain('SSR 영웅 SSR→SSSR');
     expect(paceLabel('알수없는상품')).toBeNull();
     expect(paceLabel('constructor')).toBeNull();
     expect(paceLabel('toString')).toBeNull();
