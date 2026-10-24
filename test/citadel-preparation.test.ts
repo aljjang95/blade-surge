@@ -5,6 +5,7 @@ import { citadelPreparation } from '../src/game/citadel-preparation.js';
 import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { frontierForRoute, weeklyFrontier } from '../src/data/seasonal-content.js';
+import { visibleDungeonIds } from '../src/game/region-dungeon-gate.js';
 import { normalizeMasterworks } from '../src/game/masterworks-core.js';
 import { buildExpeditionStage } from '../src/game/expedition-combat.js';
 import { routeObjectiveForStage } from '../src/data/route-objectives.js';
@@ -136,9 +137,10 @@ test('fixed rewards and first deep clear preview do not grant, combine or consum
 
 test('frontier disclosure belongs only to the actual active basic route and does not rewrite its fixed reward hint', () => {
   setSystemTime(new Date('2026-10-04T12:00:00Z'));
-  const app = fixture(), frontier = weeklyFrontier(), route = DUNGEONS.find(d => d.id === frontier.routeId)!;
+  // 새 저장은 지정 던전(사막 환영 분지 등)이 잠겨 있어 열린 던전으로 대신한 프론티어를 쓴다(docs/region-dungeon-unlock.md).
+  const app = fixture(), open = visibleDungeonIds(app.eco.s), frontier = weeklyFrontier(new Date(), open), route = DUNGEONS.find(d => d.id === frontier.routeId)!;
   const active = preparation(app, frontier.routeId);
-  expect(active.frontier).toEqual(frontierForRoute(frontier.routeId));
+  expect(active.frontier).toEqual(frontierForRoute(frontier.routeId, new Date(), open));
   expect(active.frontier.name).toBe(frontier.name); expect(active.frontier.modifier).toBe(frontier.modifier);
   expect(active.rewards.base).toEqual(route.rewards);
   expect(preparation(app, frontier.routeId, 'deep').frontier).toBeNull();

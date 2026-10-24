@@ -8,6 +8,7 @@ import { personalContextLabel, personalControlLabel } from '../ui/personal-goal-
 import { mapTacticsForStage } from '../data/map-tactics.js';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { buildExpeditionStage, EXPEDITION_LAYOUTS } from './expedition-combat.js';
+import { visibleDungeonIds } from './region-dungeon-gate.js';
 import { CHALLENGES } from '../data/masterworks.js';
 import { difficultyEffects } from './masterworks-core.js';
 import { gardenMasteryForStage } from '../data/garden-mastery.js';
@@ -113,6 +114,6 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
     // Authored fixed payout only: field loot, seasonal adjustments and account-level bonuses are separate.
     rewards: { base: structuredClone(definition.rewards), firstClear: depth === 'deep'
       ? { eligible: expedition.depthWins?.[routeId] === 0, rewards: structuredClone(definition.firstRewards) } : null },
-    frontier: depth === 'standard' ? frontierForRoute(routeId) : null,
+    frontier: depth === 'standard' ? frontierForRoute(routeId, new Date(), visibleDungeonIds(state)) : null,
     personalGoal: goalFor(state.masterworks, { route, heroId, heroLevel: hero.level, control }) };
 }

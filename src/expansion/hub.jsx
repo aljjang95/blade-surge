@@ -11,7 +11,7 @@ import { playExpeditionIntro } from './cinematic.js';
 import { uiArt, resourceArt } from '../ui/illustrated.js';
 import { EXPEDITION_DEPTHS, campaignFinished } from '../data/expedition-depths.js';
 import { ENCOUNTER_ART } from '../data/encounter-art.js';
-import { weeklyFrontier } from '../data/seasonal-content.js';
+import { frontierForSave } from '../game/region-dungeon-gate.js';
 import { ConquestRoutes, ConquestResult } from './conquests.jsx';
 import { retryEnergyForResult } from '../game/run-history.js';
 import { personalResultLabel } from '../ui/personal-goal-labels.js';
@@ -201,10 +201,11 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
   </section>;
 }
 
-function DungeonRoutes({app, service, launch, controller}) {
+export function DungeonRoutes({app, service, launch, controller}) {
   const [depth, setDepth] = useState(controller.dungeonDepth || (campaignFinished(app.eco.s.progress) ? 'deep' : 'standard'));
   const deep = depth === 'deep', fields = depth === 'fields', runDepth = deep ? 'deep' : 'standard', s = service.snapshot();
-  const frontier = weeklyFrontier();
+  // 지정 던전이 이 저장에서 잠겼으면 실제 효과가 붙는 열린 던전을 안내한다(economy.begin 과 같은 판정).
+  const frontier = frontierForSave(app.eco.s);
   const frontierDungeon = DUNGEONS.find(d => d.id === frontier.routeId) || DUNGEONS[0];
   const choose = value => { setDepth(value); controller.dungeonDepth = value; };
   // 지역 마을이 열리지 않은 던전은 목록에서 빼고, 바로 다음 마을 하나만 잠금 줄로 예고한다(region-dungeon-gate.js).

@@ -60,18 +60,35 @@ export function seasonForDate(date = new Date()) {
 
 export function frontierEffect(effectId) { return typeof effectId === 'string' && Object.hasOwn(FRONTIER_EFFECTS, effectId) ? FRONTIER_EFFECTS[effectId] : null; }
 
-export function weeklyFrontier(date = new Date()) {
+// 주간 프론티어가 가리킬 던전이 이 저장에서 모두 잠겼을 때의 지역 1 기본 던전.
+export const FRONTIER_FALLBACK_ROUTE = 'glass_garden';
+
+/**
+ * 이번 주 프론티어. 효과는 날짜로만 정해지고, 시즌 목록의 지정 던전이 이 저장에서 아직 열리지 않았으면
+ * (openIds, 지역 마을 미해금) 같은 시즌의 열린 던전 → 지역 1 기본 던전 순으로 대신 가리킨다.
+ * openIds 가 null 이면 모든 던전이 열린 것으로 보아 예전과 똑같다(진행이 끝난 저장).
+ * @param {Date|number|string} [date]
+ * @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
+ */
+export function weeklyFrontier(date = new Date(), openIds = null) {
   const d = asDate(date), year = d.getUTCFullYear(), season = seasonForDate(d);
   const week = Math.max(0, Math.floor((d.getTime() - UTC_YEAR_START(year)) / MS_PER_WEEK));
   const index = week % season.routes.length;
   const effect = frontierEffect(season.effectIds[index]);
+  const authored = season.routes[index];
+  const routeId = !openIds || openIds.has(authored) ? authored : season.routes.find(id => openIds.has(id)) || FRONTIER_FALLBACK_ROUTE;
   return Object.freeze({ year, seasonId: season.id, name: season.name, tagline: season.tagline,
-    routeId: season.routes[index], week, effectId: effect.id, modifier: effect.label, effects: effect });
+    routeId, week, effectId: effect.id, modifier: effect.label, effects: effect });
 }
 
 /** 현재 주간 프론티어 route에서만 활성화한다. 다른 던전은 효과를 빌려 쓰지 않는다. */
-export function frontierForRoute(routeId, date = new Date()) {
-  const frontier = weeklyFrontier(date);
+/**
+ * @param {string} routeId
+ * @param {Date|number|string} [date]
+ * @param {Set<string>|null} [openIds]
+ */
+export function frontierForRoute(routeId, date = new Date(), openIds = null) {
+  const frontier = weeklyFrontier(date, openIds);
   return frontier.routeId === routeId ? frontier : null;
 }
 
@@ -92,7 +109,8 @@ export function frontierFromSnapshot(snapshot) {
   const monthEnd = Date.UTC(snapshot.year, season.months[0] + 1, 1);
   if (weekStart >= monthEnd || weekStart + MS_PER_WEEK <= monthStart) return null;
   const index = snapshot.week % season.routes.length;
-  if (season.routes[index] !== snapshot.routeId || season.effectIds[index] !== snapshot.effectId) return null;
+  // 지정 던전이 잠긴 저장에서는 같은 시즌의 다른 던전이나 지역 1 기본 던전으로 대체될 수 있다(weeklyFrontier). 효과는 항상 그 주의 것이다.
+  if (![...season.routes, FRONTIER_FALLBACK_ROUTE].includes(snapshot.routeId) || season.effectIds[index] !== snapshot.effectId) return null;
   const effect = frontierEffect(snapshot.effectId);
   return Object.freeze({ year: snapshot.year, seasonId: season.id, week: snapshot.week, routeId: snapshot.routeId,
     effectId: effect.id, modifier: effect.label, effects: effect });

@@ -19,6 +19,22 @@ const receiptList=v=>[...new Set(list(v).filter(receiptId))].slice(-256);
 const validPeriod=(day,week)=>Number.isSafeInteger(day)&&day>=0&&Number.isSafeInteger(week)&&week>=0&&week===Math.floor((day+3)/7);
 const fail=error=>({ok:false,error});
 
+// 지역 1 기본 던전: 열린 던전이 하나도 없을 때(이론상 없음) 오늘의 원정지 대체.
+export const ROTATION_FALLBACK_DUNGEON='glass_garden';
+/**
+ * 오늘의 원정지(= 균열 도전 던전). 기본은 DUNGEONS[day%3]이고, 그 던전이 이 저장에서 아직 열리지 않았으면
+ * (지역 마을 미해금, docs/region-dungeon-unlock.md) 열린 던전 목록에서 day 로 결정적으로 고른다.
+ * openIds 가 null 이면 모든 던전이 열린 것으로 보아 예전과 똑같이 고른다(진행이 끝난 저장).
+ * @param {number} day
+ * @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
+ */
+export function rotationDungeon(day,openIds=null) {
+  const base=DUNGEONS[((day%3)+3)%3];
+  if(!openIds||openIds.has(base.id))return base;
+  const open=DUNGEONS.filter(d=>openIds.has(d.id));
+  return open.length?open[((day%open.length)+open.length)%open.length]:(DUNGEONS.find(d=>d.id===ROTATION_FALLBACK_DUNGEON)||DUNGEONS[0]);
+}
+
 export function normalizeJourney(raw) {
   const r=object(raw)?raw:{};
   return {version:VERSION,day:integer(r.day,MAX_DAY),week:integer(r.week,Math.floor((MAX_DAY+3)/7)),
@@ -73,8 +89,8 @@ function progress(def,track,rotation) {
  * 그 임무는 목표 달성으로 보고 보상을 받을 수 있다. 호출자가 표시와 수령에 같은 목록을 넘긴다.
  */
 /** @param {any} state @param {string} kind @param {string[]} [waived] */
-function rows(state,kind,waived=[]) {
-  const defs=kind==='daily'?DAILY_CONTRACTS:WEEKLY_CONTRACTS,track=state[kind],rotation=DUNGEONS[state.day%3];
+function rows(state,kind,waived=[],openIds=null) {
+  const defs=kind==='daily'?DAILY_CONTRACTS:WEEKLY_CONTRACTS,track=state[kind],rotation=rotationDungeon(state.day,openIds);
   return defs.map(def=>{
     const waive=waived.includes(def.stat),cur=waive?Math.max(def.target,progress(def,track,rotation)):progress(def,track,rotation);
     const claimed=track.claimed.includes(def.id),rewards=structuredClone(def.rewards);
@@ -83,10 +99,10 @@ function rows(state,kind,waived=[]) {
   });
 }
 /** Read only: callers refresh state inside their durable transaction before displaying/claiming. */
-/** @param {any} state @param {number} nowMs @param {{waived?:string[]}} [options] */
-export function contractRows(state,nowMs,{waived=[]}={}) {
+/** @param {any} state @param {number} nowMs @param {{waived?:string[],openIds?:Set<string>|null}} [options] */
+export function contractRows(state,nowMs,{waived=[],openIds=null}={}) {
   const view=normalizeJourney(state);const p=refreshPeriods(view,nowMs);
-  return {daily:rows(view,'daily',waived),weekly:rows(view,'weekly',waived),rotationDungeonId:DUNGEONS[view.day%3].id,nextResetAt:p.nextResetAt};
+  return {daily:rows(view,'daily',waived,openIds),weekly:rows(view,'weekly',waived,openIds),rotationDungeonId:rotationDungeon(view.day,openIds).id,nextResetAt:p.nextResetAt};
 }
 export function recordJourneyWin(state,{receiptId:id,dungeonId,day,week}={}) {
   if(!receiptId(id)||!DUNGEONS.some(d=>d.id===dungeonId)||!validPeriod(day,week))return fail('invalid');
@@ -116,10 +132,10 @@ export function recordJourneyAction(state,{receiptId:id,stat,amount=1,day,week}=
   for(const kind of ['daily','weekly'])if(kind==='daily'?daily:weekly){const counts=state[kind].actions;counts[stat]=Math.min(MAX,integer(counts[stat])+amount);}
   return {ok:true,daily,weekly};
 }
-/** @param {any} state @param {string} kind @param {string} id @param {{waived?:string[]}} [options] */
-export function claimContract(state,kind,id,{waived=[]}={}) {
+/** @param {any} state @param {string} kind @param {string} id @param {{waived?:string[],openIds?:Set<string>|null}} [options] */
+export function claimContract(state,kind,id,{waived=[],openIds=null}={}) {
   if(!['daily','weekly'].includes(kind))return fail('unknown');
-  const row=rows(state,kind,waived).find(r=>r.id===id);if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.ready)return fail('incomplete');
+  const row=rows(state,kind,waived,openIds).find(r=>r.id===id);if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.ready)return fail('incomplete');
   state[kind].claimed.push(id);return {ok:true,rewards:row.rewards};
 }
 export function setTargetRecipe(state,id) {if(id!==null&&!validRecipe(id))return fail('unknown');state.targetRecipeId=id;return {ok:true};}

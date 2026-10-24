@@ -8,6 +8,7 @@ import { ALL_DUNGEONS, CONCEPT_DUNGEONS } from '../data/expansion.js';
 import { DUNGEON_REGION, dungeonRegion } from '../data/region-dungeons.js';
 import { campaignTown, latestTownChapter, resolveCampaignTown } from '../data/campaign-towns.js';
 import { normalizeRunRoute } from './run-history.js';
+import { weeklyFrontier } from '../data/seasonal-content.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = (value) => Number.isSafeInteger(value) && value > 0;
@@ -98,3 +99,6 @@ export function regionDungeonState(save) {
 
 /** 이 저장에서 지금 열린(보이는) 던전 id 집합. */
 export const visibleDungeonIds = (save) => new Set(regionDungeonState(save).visibleIds);
+
+/** 이 저장에서 보이는 이번 주 프론티어. 화면 표시와 출격·정산이 같은 판정을 쓰도록 호출부는 이 함수만 쓴다. */
+export const frontierForSave = (save, date = new Date()) => weeklyFrontier(date, visibleDungeonIds(save));
