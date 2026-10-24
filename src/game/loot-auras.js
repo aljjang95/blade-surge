@@ -136,7 +136,7 @@ export class LootAuras {
   /** 슬롯 하나를 빌린다. 꽉 차면 -1(연출 없이 장비만 보인다). */
   acquire(rarity) {
     if (!this.free.length) return -1;
-    const slot = this.free.pop(), spec = LOOT_AURA[rarity] || LOOT_AURA.N;
+    const slot = /** @type {number} */ (this.free.pop()), spec = LOOT_AURA[rarity] || LOOT_AURA.N;
     this.active[slot] = 1; this.used++; this.top = Math.max(this.top, slot + 1);
     _c.set(RARITY_COLOR[rarity] || RARITY_COLOR.N).multiplyScalar(spec.gain);
     this.groundColor.setXYZ(slot, _c.r, _c.g, _c.b);

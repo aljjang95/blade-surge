@@ -17,7 +17,10 @@ const tag = arg('tag', 'candidate'), out = path.resolve(arg('out', path.join(roo
 const quality = arg('quality', 'high'), stageCode = arg('stage', '1-1');
 // 전/후 비교: --app-root 로 다른 체크아웃(예: origin/main 을 빌드한 임시 worktree)의 dist 를 같은 장면으로 찍는다.
 const appRoot = path.resolve(arg('app-root', root));
+// 낮 장면: --expedition=windmeadow 처럼 야외 원정 필드로 시작한다(실제 원정 시작 경로, 입장 연출은 끝까지 기다린다).
+const expedition = arg('expedition', '');
 const viewports = arg('viewports', '1280x720,844x390').split(',').map(v => v.split('x').map(Number));
+if (expedition && !/^[a-z_]{1,40}$/.test(expedition)) throw Error('Invalid expedition');
 if (!/^[a-z0-9-]{1,40}$/.test(tag) || !['high', 'mid', 'low'].includes(quality) || !/^\d-\d{1,2}$/.test(stageCode)) throw Error('Invalid tag/quality/stage');
 await mkdir(out, { recursive: true });
 // 등급별 대표 장비: 1줄 = 같은 부위(무기) 등급 비교, 2줄 = 부위·원본 종류(대장간 · 방어구 리그 · 병기고 GLB) 비교.
@@ -25,7 +28,7 @@ const SHOWCASE = [
   ['w_iron', 'N'], ['w_steel', 'S'], ['w_flame', 'E'], ['w_storm', 'U'], ['w_dragon', 'L'],
   ['a_leather', 'N'], ['b_swift', 'S'], ['r_ruby', 'E'], ['arm_aegis_weapon', 'U'], ['a_sun', 'L'],
 ];
-const report = { head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).trim(), appRoot, tag, quality, stage: stageCode, started: new Date().toISOString(), shots: [], errors: [],
+const report = { expedition, head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).trim(), appRoot, tag, quality, stage: stageCode, started: new Date().toISOString(), shots: [], errors: [],
   scope: 'Local production build, SwiftShader headless. Showcase = fixture spawns with magnet radius 0. Combat = natural AUTO combat at fixed 1/60s plus injected E/U/L spawns for visibility. Draw calls/triangles from renderer.info over one composed frame (all passes). Not GPU/phone frame-time evidence.' };
 const save = () => writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 let server, browser;
@@ -45,14 +48,20 @@ try {
     await page.locator('#boot-start').click();
     await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), null, { timeout: 120000 });
     await page.waitForTimeout(800);
-    const started = await page.evaluate(async ({ quality, stageCode }) => {
+    const started = await page.evaluate(async ({ quality, stageCode, expedition }) => {
       const a = window.app; a.testPause = true; a.ui.closeModal();
       a.eco.s.settings.quality = quality; a.renderer.setQuality(quality); a.fx.setQuality(quality);
+      if (expedition) {
+        a.testPause = false; a.eco.s.energy = Math.max(a.eco.s.energy, 60);
+        const ok = await a.startExpedition('dungeon', expedition);
+        a.testPause = true; a.ui.closeModal();
+        return ok ? expedition : null;
+      }
       const [ch, st] = stageCode.split('-').map(Number);
       let stage = window.__stageDef(ch, st);
       if (!(await a.startStage(stage))) { stage = a.eco.nextStage(); if (!(await a.startStage(stage))) return null; }
       return stage.code || `${stage.ch}-${stage.st}`;
-    }, { quality, stageCode });
+    }, { quality, stageCode, expedition });
     if (!started) throw Error('stage start rejected');
     await page.waitForFunction(() => window.app.battle?.active && !window.app.stageStarting);
     const info = () => page.evaluate(() => {

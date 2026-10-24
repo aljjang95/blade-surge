@@ -75,6 +75,7 @@ test('detached preparation shells cover every catalogue drop shader and the inst
   expect([...slots].sort()).toEqual([...SLOTS].sort());
   expect([...sources].sort()).toEqual(['armor-rig', 'fallback', 'forge']);
   expect(catalogue.size).toBeGreaterThanOrEqual(4);
+  system.lootModels.dispose();
 }));
 
 test('preparation leaves field and reward authority intact and shared resources survive cleanup', () => withSurfaces(() => {
@@ -115,5 +116,6 @@ test('preparation leaves field and reward authority intact and shared resources 
     expect(disposed).toBe(0);
   } finally {
     resources.forEach(resource => resource.removeEventListener('dispose', onDispose));
+    system.lootModels.dispose();
   }
 }));

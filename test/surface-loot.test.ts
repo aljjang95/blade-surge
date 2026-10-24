@@ -4,10 +4,11 @@ import { createLootVisual } from '../src/game/loot-visual.js';
 import { LootModelLibrary, LOOT_MODEL_SIZE, LOOT_RIM } from '../src/game/loot-models.js';
 import { LootAuras, LOOT_AURA, LOOT_AURA_LITE } from '../src/game/loot-auras.js';
 import { DropSystem } from '../src/game/drops.js';
-import { acquireItemGeometry } from '../src/engine/item-forge.js';
+import { acquireItemGeometry, itemForgeCacheSize } from '../src/engine/item-forge.js';
 import { armorStyle } from '../src/game/armor-appearance.js';
 import { resolveItemForm, itemFormHeroIds } from '../src/ui/item-visual-forms.js';
-import { ITEM_BY_ID, RARITIES } from '../src/data/items.js';
+import { ITEM_BY_ID as ITEMS, RARITIES } from '../src/data/items.js';
+const ITEM_BY_ID: Record<string, any> = ITEMS;
 import { projectSurfaceUV, surfaceRole, applyDungeonStoneDetail, applySurfaceDetail, SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
 import { mergeSkinned } from '../src/engine/assets.js';
 
@@ -59,10 +60,11 @@ test('field drops reuse the inventory 3D source of each item id and the battle h
   const colors = meshesOf(armor).map(mesh => (mesh.material as THREE.MeshStandardMaterial).color.getHex());
   expect(colors).toContain(style.body); expect(colors).toContain(style.trim);
   for (const mesh of meshesOf(armor)) { expect(mesh.geometry.getAttribute('skinIndex')).toBeUndefined(); expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(100); }
+  library.dispose();
 });
 
 test('every catalogue drop builds shared, shadowless resources at a readable size', () => {
-  const library = new LootModelLibrary({ load: never });
+  const cached = itemForgeCacheSize(), library = new LootModelLibrary({ load: never });
   const sizes: Record<string, number[]> = {};
   for (const def of Object.values(ITEM_BY_ID) as any[]) {
     const a = library.build({ id: def.id, rarity: def.rarity }), b = library.build({ id: def.id, rarity: def.rarity });
@@ -90,6 +92,9 @@ test('every catalogue drop builds shared, shadowless resources at a readable siz
   expect(LOOT_MODEL_SIZE.weapon).toBeLessThan(2);
   const rims = RARITIES.map(rarity => LOOT_RIM[rarity as keyof typeof LOOT_RIM][0]);
   expect(rims).toEqual([...rims].sort((x, y) => x - y));
+  // 라이브러리를 버리면 인벤과 함께 쓰던 대장간 공유 버퍼 임대도 모두 돌아간다.
+  expect(itemForgeCacheSize()).toBeGreaterThan(cached);
+  library.dispose(); expect(itemForgeCacheSize()).toBe(cached);
 });
 
 test('armory GLB drops show the slot fallback, then swap to the shared original after a prepared load', async () => {
@@ -117,7 +122,7 @@ test('armory GLB drops show the slot fallback, then swap to the shared original 
   expect(meshesOf(next)[0].material).toBe(meshesOf(kept)[0].material);
   // 모르는 id 는 기본 슬롯 형상이다.
   expect(library.build({ id: 'no_such_item', rarity: 'N' }).userData.lootSource).toBe('fallback');
-  geometry.dispose(); material.dispose();
+  library.dispose(); material.dispose();
 });
 
 test('rarity auras share two instanced draws and scale from a faint N ring to a tall L beam', () => {
@@ -186,6 +191,7 @@ test('drop lifecycle: deterministic landing, sparkles and pickup without Math.ra
     game.player.pos.set(12, 0, 0); for (let frame = 0; frame < 60; frame++) system.update(1 / 60);
     expect(system.items).toHaveLength(0); expect(system.auras.used).toBe(0);
     expect(scene.children).toHaveLength(0);
+    system.lootModels.dispose();
     return { emits, picked };
   };
   const first = run(), second = run();

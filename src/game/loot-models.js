@@ -119,7 +119,17 @@ export class LootModelLibrary {
     this.fallbackMaterials = new Map();
     this.pending = new Map();     // 병기고 id → Promise
     this.leases = [];
+    this.owned = new Set();      // 라이브러리가 만든 형상(방어구 굽기 · 병기고 GLB)
     this.load = load;
+  }
+  /** 전부 반납한다(전투 시스템 수명이 끝날 때 · 테스트 정리). 대장간 공유 버퍼는 임대만 돌려준다. */
+  dispose() {
+    for (const lease of this.leases.splice(0)) lease.release();
+    for (const geometry of this.owned) geometry.dispose();
+    for (const material of this.materials.values()) for (const m of [material].flat()) m.dispose();
+    for (const pair of this.fallbackMaterials.values()) for (const m of pair) m.dispose();
+    for (const source of this.sources.values()) if (source.kind === 'armor-rig') for (const part of source.parts) part.material.dispose();
+    this.owned.clear(); this.sources.clear(); this.materials.clear(); this.fallbackMaterials.clear(); this.pending.clear();
   }
   /** 이 장비가 드랍에서 어떤 원본을 쓰는지. 테스트 · QA 가 같은 판정을 읽는다. */
   sourceOf(item, heroId = null) {
@@ -138,7 +148,7 @@ export class LootModelLibrary {
   _source(def, info) {
     if (this.sources.has(info.key)) return this.sources.get(info.key);
     let parts;
-    if (info.kind === 'armor-rig') parts = bakeArmor(def);
+    if (info.kind === 'armor-rig') { parts = bakeArmor(def); for (const part of parts) this.owned.add(part.geometry); }
     else if (info.kind === 'armory-glb') return null;
     else {
       // 인벤 3D 보기와 같은 공유 버퍼를 영구 임대한다(미리보기가 반환해도 드랍 쪽은 남는다).
@@ -174,7 +184,7 @@ export class LootModelLibrary {
       gltf.scene.updateMatrixWorld(true);
       // 다중 재질 메시도 그대로 쓰도록 메시 단위로 묶는다. 형상은 원본 GLB 것을 공유한다.
       const meshes = [];
-      gltf.scene.traverse((node) => { if (node.isMesh) meshes.push({ geometry: node.geometry, material: node.material, matrix: node.matrixWorld.clone() }); });
+      gltf.scene.traverse((node) => { if (node.isMesh) { meshes.push({ geometry: node.geometry, material: node.material, matrix: node.matrixWorld.clone() }); this.owned.add(node.geometry); } });
       if (!meshes.length) throw Error('병기고 드랍 메시 없음: ' + def.id);
       const source = { parts: meshes, slot: def.slot, kind: 'armory-glb', fit: fitTransform(boxOf(meshes), def.slot) };
       this.sources.set(def.id + '|armory', source);
@@ -207,7 +217,7 @@ export class LootModelLibrary {
   }
   /**
    * @param {{ id: string, rarity?: string }} item 드랍 장비(인스턴스)
-   * @param {{ heroId?: string|null, onReady?: (root: THREE.Group) => void }} [options]
+   * @param {{ heroId?: string|null, onReady?: (root: THREE.Group) => void, prepare?: (staged: THREE.Group) => unknown }} [options]
    * @returns {THREE.Group}
    */
   build(item, { heroId = null, onReady, prepare } = {}) {
