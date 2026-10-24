@@ -19,7 +19,9 @@ export function projectionOf(eco: any): Projection {
   const level = Math.max(1, ...Object.values(s.heroes as Record<string, { level: number }>).map(h => Number(h?.level) || 1));
   let power = 0;
   try { power = Math.floor(eco.heroPower(s.selected)) || 0; } catch { power = 0; }
-  return { level, power, stageIdx: Number(s.progress?.unlocked) || 1, gold: Math.floor(Number(s.gold) || 0), gemsFree: Math.floor(Number(s.gems) || 0), gemsPaid: 0 };
+  // 유료/무료 보석 분리(BM 12.4): gems 는 총액, paidGems 는 그 안의 유료 몫(소비는 무료부터).
+  const gems = Math.max(0, Math.floor(Number(s.gems) || 0)), gemsPaid = Math.min(gems, Math.max(0, Math.floor(Number(s.paidGems) || 0)));
+  return { level, power, stageIdx: Number(s.progress?.unlocked) || 1, gold: Math.floor(Number(s.gold) || 0), gemsFree: Math.max(0, gems - gemsPaid), gemsPaid };
 }
 
 export function docOf(eco: any): DocText {

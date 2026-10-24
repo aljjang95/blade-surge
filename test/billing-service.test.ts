@@ -183,3 +183,16 @@ test('sync verify 빈도: 승인된 구독은 상품별 6시간에 한 번, 시�
   await f.billing.init(); await f.billing.sync(); await f.billing.sync();
   expect(verifies(f.calls).length).toBe(2);
 });
+
+test("sync: 판매 내린 gate 'gacha-only' 영웅 상품은 미승인 구매만 verify하고 승인된 구매는 건너뛴다(서버 카탈로그에 없어도)", async () => {
+  const { IAP_PRODUCTS } = await import('../src/shared/iap-catalog.js');
+  const hero = (IAP_PRODUCTS as any[]).find((p) => p.gate === 'gacha-only');
+  expect(hero).toBeTruthy();
+  const verifies = async (owned: any[]) => {
+    const t = setup({ owned }); await t.billing.init(); await t.billing.sync();
+    return t.calls.filter((c: any) => c[0] === 'verify');
+  };
+  expect(await verifies([{ productId: hero.id, type: 'inapp', purchaseToken: 'HERO-UNACKED', status: 'purchased', acknowledged: false }]))
+    .toEqual([['verify', hero.id, 'HERO-UNACKED']]);
+  expect(await verifies([{ productId: hero.id, type: 'inapp', purchaseToken: 'HERO-ACKED', status: 'purchased', acknowledged: true }])).toEqual([]);
+});

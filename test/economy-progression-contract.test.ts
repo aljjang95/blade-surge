@@ -2,7 +2,8 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Economy, gachaRates, gachaContents } from '../src/game/economy.js';
 import { HEROES } from '../src/data/heroes.js';
 import { baselineSkillLevels } from '../src/data/skill-tree.js';
-import { SKUS, DAILY_REWARDS, PASS_TRACK, GACHA } from '../src/data/shop.js';
+import { SKUS, DAILY_REWARDS, PASS_TRACK } from '../src/data/shop.js';
+import { GACHA_BANNERS } from '../src/data/gacha-banners.js';
 import { gradeUpCost } from '../src/data/hero-grades.js';
 import { grandfather } from './helpers/legacy-roster';
 
@@ -119,21 +120,30 @@ test('신규 보석 SKU는 정확 지급·부족/저장 실패 롤백, 모든 �
   expect(PASS_TRACK.some(r => 'skillResets' in r.prem)).toBe(true);
 });
 
-test('SR·SSR의 모든 분배 구간이 공개 확률표와 실지급에 일치한다', () => {
-  const rates = gachaRates(); expect(rates.base).toEqual({ R: .86, SR: .12, SSR: .02 }); expect(rates.hardPity).toBe(80);
-  const table = gachaContents();
-  for (const grade of ['SR', 'SSR'] as const) {
-    const split = grade === 'SR' ? GACHA.srSplit.hero + GACHA.srSplit.gear : GACHA.ssrSplit.featured + GACHA.ssrSplit.pool + GACHA.ssrSplit.gear;
-    let edge = split;
-    for (const material of GACHA.materials[grade]) {
-      for (const r of [edge + .000001, edge + material.w - .000001]) {
-        const eco = new Economy({ gachaRng: () => r }), before = (eco.s as any)[material.k];
-        expect(eco.rollResult(grade)).toMatchObject({ type: 'material', k: material.k, n: material.n });
-        expect((eco.s as any)[material.k]).toBe(before + material.n);
+test('SR·SSR의 모든 분배 구간이 배너별 공개 확률표와 실지급에 일치한다', () => {
+  const expectBase = { hero: { R: .85, SR: .13, SSR: .02 }, gear: { R: .8, SR: .17, SSR: .03 }, beginner: { R: .85, SR: .13, SSR: .02 } } as const;
+  const expectPity = { hero: 80, gear: 60, beginner: 20 } as const;
+  for (const id of ['hero', 'gear', 'beginner'] as const) {
+    const banner = GACHA_BANNERS[id], rates = gachaRates(id);
+    expect(rates.base).toEqual(expectBase[id]); expect(rates.hardPity).toBe(expectPity[id]); expect(banner.pity).toBe(expectPity[id]);
+    const table = gachaContents(id);
+    // SSR은 재료 없이 전부 영웅(영웅·초보자 배너) 또는 전부 L 장비(장비 배너)다.
+    expect(rates.materials.SSR).toHaveLength(0);
+    expect(table.filter(x => x.grade === 'SSR' && x.kind === 'material')).toHaveLength(0);
+    expect((rates.ssrSplit.featuredHero + rates.ssrSplit.otherSsrHero) + rates.ssrSplit.ssrGear).toBeCloseTo(1, 10);
+    for (const grade of ['SR', 'R'] as const) {
+      const split = grade === 'SR' ? banner.sr : banner.r;
+      let edge = ((split as any).hero || 0) + ((split as any).gear || 0);
+      for (const material of rates.materials[grade]) {
+        for (const r of [edge + .000001, edge + material.w - .000001]) {
+          const eco = new Economy({ gachaRng: () => r }), before = (eco.s as any)[material.k];
+          expect(eco.rollResult(grade, { banner })).toMatchObject({ type: 'material', k: material.k, n: material.n });
+          expect((eco.s as any)[material.k]).toBe(before + material.n);
+        }
+        expect(table.find(x => x.grade === grade && x.kind === 'material' && x.id === material.k)!.p).toBeCloseTo(rates.base[grade] * material.w, 10);
+        edge += material.w;
       }
-      expect(table.find(x => x.grade === grade && x.kind === 'material' && x.id === material.k)!.p).toBeCloseTo(rates.base[grade] * material.w, 10);
-      edge += material.w;
+      expect(edge).toBeCloseTo(1, 10);
     }
-    expect(edge).toBeCloseTo(1, 10);
   }
 });

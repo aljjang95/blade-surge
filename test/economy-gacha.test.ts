@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { Economy, createSeededRng, gachaChances, gachaRates, rollGachaRarity } from '../src/game/economy.js';
+import { Economy, createSeededRng, gachaChances, gachaRates, heroPickup, rollGachaRarity } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
 import { SAVE_SCHEMA_VERSION } from '../src/game/save-base.js';
 import { GACHA } from '../src/data/shop.js';
@@ -96,16 +96,18 @@ describe('Economy gacha', () => {
     expect(eco.pullSSR()).toBeNull(); expect(eco.lastGachaError).toBe('no-ssr-ticket');
   });
 
-  test('featured SSR share matches the published split and duplicates convert to shards', () => {
+  test('featured SSR share matches the published split (with pickup guarantee) and duplicates convert to shards', () => {
+    const pickup = heroPickup(); expect(gachaRates().ssrSplit.featuredHero).toBe(0.5);
     const eco = new Economy({ gachaSeed: 99 });
     let featured = 0; const N = 20_000;
-    for (let i = 0; i < N; i++) { const r = eco.rollResult('SSR'); if ('id' in r && r.id === GACHA.featured) featured++; else if ('id' in r) expect(r.id).not.toBe(GACHA.featured); }
-    expect(Math.abs(featured / N - gachaRates().ssrSplit.featuredHero)).toBeLessThan(0.015);
+    for (let i = 0; i < N; i++) { const r = eco.rollResult('SSR'); if ('id' in r && r.id === pickup) featured++; }
+    // 기본 확률은 50:50이지만 픽업이 아니면 다음 SSR은 픽업 확정이라 연속 SSR의 장기 픽업 비율은 2/3다(마르코프 정상 분포).
+    expect(Math.abs(featured / N - 2 / 3)).toBeLessThan(0.015);
     const dup = grandfather(new Economy({ gachaRng: () => 0 }));
-    const before = dup.s.heroes[GACHA.featured].shards;
+    const before = dup.s.heroes[pickup].shards;
     const res = dup.rollResult('SSR');
-    expect(res).toMatchObject({ type: 'hero', id: GACHA.featured, dup: true, shards: GACHA.dupShards });
-    expect(dup.s.heroes[GACHA.featured].shards).toBe(before + GACHA.dupShards);
+    expect(res).toMatchObject({ type: 'hero', id: pickup, dup: true, shards: GACHA.dupShards, featured: true });
+    expect(dup.s.heroes[pickup].shards).toBe(before + GACHA.dupShards);
   });
 });
 

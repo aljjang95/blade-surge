@@ -77,7 +77,7 @@ test('실제 보상·장착·강화·저장 재로딩이 신규 48종의 UID와 
   } });
   try {
     const eco = new Economy(); eco.s.gold = 1_000_000;
-    const contents = gachaContents();
+    const contents = gachaContents('gear'); // 장비는 장비 소환 배너에서만 나온다(영웅 배너는 영웅·재료만)
     for (const item of GEAR_ITEMS) {
       const pool = (ITEM_POOL as any)[item.slot].filter((entry: any) => entry.rarity === item.rarity);
       const inst = eco.addItem(item.rarity, item.slot, () => (pool.findIndex((entry: any) => entry.id === item.id) + .5) / pool.length);

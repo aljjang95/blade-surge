@@ -4,26 +4,26 @@ export const ECONOMY_PACE = {
   "minutesPerDay": 30,
   "freeDays": {
     "SSR": 26,
-    "SSSR": 64
+    "SSSR": 63
   },
   "savings": {
     "ssrTicket": {
       "key": "ssrTicket",
-      "target": "픽업 SSR→SSSR",
+      "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 21,
-      "withDays": 16,
-      "days": 5
+      "freeDays": 31,
+      "withDays": 28,
+      "days": 3
     },
     "starter": {
       "key": "starter",
-      "target": "픽업 SSR→SSSR",
+      "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 21,
-      "withDays": 16,
-      "days": 5
+      "freeDays": 31,
+      "withDays": 28,
+      "days": 3
     },
     "monthly": {
       "key": "monthly",
@@ -31,8 +31,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 24,
-      "days": 2
+      "withDays": 25,
+      "days": 1
     },
     "remove_ads": {
       "key": "remove_ads",
@@ -58,17 +58,17 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 16,
-      "days": 10
+      "withDays": 17,
+      "days": 9
     },
     "transcend_pack": {
       "key": "transcend_pack",
-      "target": "픽업 SSR→SSSR",
+      "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 21,
-      "withDays": 7,
-      "days": 14
+      "freeDays": 31,
+      "withDays": 15,
+      "days": 16
     },
     "vip_pass": {
       "key": "vip_pass",
@@ -121,8 +121,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 20,
-      "days": 6
+      "withDays": 21,
+      "days": 5
     },
     "gem6": {
       "key": "gem6",
@@ -130,8 +130,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 15,
-      "days": 11
+      "withDays": 16,
+      "days": 10
     },
     "skill_reset1": {
       "key": "skill_reset1",
