@@ -50,28 +50,36 @@ export function cellsForReel(plan, i) { return plan.reels[i].final + 2; }
  * @param {{ final: number, speed: number, endSpeed: number, stop: number, decel: number, decelStart: number, settle: number }} reel
  * @param {number} t
  * @param {number|null} [skipAt]
+ * @param {{pos?: number, velocity?: number, phase?: string, stopped?: boolean}} [out] 매 프레임 할당을 줄이려면 같은 객체를 넘긴다.
  */
-export function reelAt(reel, t, skipAt = null) {
+export function reelAt(reel, t, skipAt = null, out = {}) {
+  const r = reelState(reel, t, skipAt);
+  out.pos = r[0]; out.velocity = r[1]; out.phase = r[2]; out.stopped = r[2] === 'settle' || r[2] === 'stopped';
+  return /** @type {{pos: number, velocity: number, phase: string, stopped: boolean}} */ (out);
+}
+
+/** @returns {[number, number, string]} [위치, 속도, 단계] */
+function reelState(reel, t, skipAt) {
   if (skipAt !== null && t >= skipAt && skipAt < reel.stop + reel.settle) {
     // 건너뛴 순간 이미 멈춘 릴은 튕김을 이어 가지 않고 그대로 고정한다.
-    return { pos: reel.final, velocity: 0, phase: 'stopped', stopped: true };
+    return [reel.final, 0, 'stopped'];
   }
-  if (t <= 0) return { pos: 0, velocity: reel.speed, phase: 'spin', stopped: false };
-  if (t < reel.decelStart) return { pos: reel.speed * t, velocity: reel.speed, phase: 'spin', stopped: false };
+  if (t <= 0) return [0, reel.speed, 'spin'];
+  if (t < reel.decelStart) return [reel.speed * t, reel.speed, 'spin'];
   if (t < reel.stop) {
     // 큐빅 에르미트: 시작 위치·속도(v), 끝 위치(final)·속도(endSpeed). 끝이 정수 칸이라 결과 칸에 정확히 선다.
     const d = reel.decel, u = (t - reel.decelStart) / d, p0 = reel.speed * reel.decelStart, p1 = reel.final;
     const m0 = reel.speed * d, m1 = reel.endSpeed * d, u2 = u * u, u3 = u2 * u;
     const pos = (2 * u3 - 3 * u2 + 1) * p0 + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * p1 + (u3 - u2) * m1;
     const vel = ((6 * u2 - 6 * u) * p0 + (3 * u2 - 4 * u + 1) * m0 + (-6 * u2 + 6 * u) * p1 + (3 * u2 - 2 * u) * m1) / d;
-    return { pos, velocity: vel, phase: 'decel', stopped: false };
+    return [pos, vel, 'decel'];
   }
   const tau = (t - reel.stop) / reel.settle;
   if (tau < 1) {
     const amp = REEL_OVERSHOOT / BUMP_PEAK;
-    return { pos: reel.final + amp * bump(tau), velocity: 0, phase: 'settle', stopped: true };
+    return [reel.final + amp * bump(tau), 0, 'settle'];
   }
-  return { pos: reel.final, velocity: 0, phase: 'stopped', stopped: true };
+  return [reel.final, 0, 'stopped'];
 }
 
 /**
@@ -102,7 +110,7 @@ export function eventsBetween(plan, t0, t1, skipAt = null) {
   }
   const readyAt = skipAt !== null && skipAt < plan.ready ? skipAt : plan.ready;
   if (readyAt > t0 && readyAt <= t1) out.push({ type: 'ready', at: readyAt });
-  return out.sort((a, b) => a.at - b.at || (a.type === 'ready' ? 1 : -1));
+  return out.sort((a, b) => a.at - b.at || (a.type === 'ready' ? 1 : 0) - (b.type === 'ready' ? 1 : 0) || (a.reel ?? 0) - (b.reel ?? 0));
 }
 
 /** 멈춘 순서(릴 번호). 기본 0→1→2. */
