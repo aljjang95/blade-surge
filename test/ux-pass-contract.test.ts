@@ -22,3 +22,13 @@ test('영웅 화면은 장비 · 성장 · 스킬 · 세트 탭과 가방 필터
   for (const id of ["'gear'", "'growth'", "'skills'", "'sets'"]) expect(panel).toContain('id: ' + id);
   for (const hook of ['data-bag-slot', 'data-bag-rarity', 'data-bag-sort', 'id="i-eq"', 'id="e-go"']) expect(panel).toContain(hook);
 });
+
+test('장비 시트 3D 토글: hidden이 .btn display를 이기고 룬 탭에서는 클릭도 막으며, 낮은 가로 화면은 본문 최소 높이를 지킨다', () => {
+  const css = read('src/ui/ux-pass.css');
+  expect(css).toMatch(/\.is-3d-toggle\[hidden\][^{]*\{\s*display: none !important/);
+  expect(css).toContain('@media (max-height: 480px) {\n  .is-preview { gap: 2px');
+  expect(css).toContain('.is-preview-stage { height: clamp(88px');
+  expect(css).toMatch(/\.is-body \{ flex: 1 1 auto; min-height: 96px/);
+  const panel = read('src/ui/gear-panel.js');
+  expect(panel).toMatch(/previewToggle\.onclick = \(\) => \{\s*if \(side === 'rune'\) return;/);
+});

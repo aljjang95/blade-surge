@@ -254,3 +254,29 @@
   .ro-foot .btn { min-height: 36px; }
 }
 @media (prefers-reduced-motion: reduce) { .rs-syn.glow, .rp-gain, .rs-notice, .rb-flash .rb-result .rune-hex { animation: none; } }
+
+/* ---- 장비 큰 3D 미리보기 무대(룬 소켓 탭): 판 너비를 꽉 채우고 소켓은 그 아래 줄에 둔다 ---- */
+.rs-stage-board { height: auto; max-width: none; display: flex; flex-direction: column; gap: 6px; }
+.rs-stage { --rar: #d6aa48; position: relative; width: 100%; height: clamp(180px, 26dvh, 300px); border-radius: 14px; overflow: hidden; border: 2px solid color-mix(in srgb, var(--rar) 75%, #000);
+  background: radial-gradient(ellipse at 50% 38%, color-mix(in srgb, var(--rar) 26%, #1d4a63) 0, #123044 62%, #0b1b29 100%); box-shadow: inset 0 0 28px color-mix(in srgb, var(--rar) 30%, transparent); }
+.rs-stage::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, rgba(255, 255, 255, .16) 0, rgba(255, 255, 255, 0) 38%); }
+.rs-stage-floor { position: absolute; left: 50%; bottom: 7%; width: 64%; height: 15%; transform: translateX(-50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--rar) 85%, #fff) 0, color-mix(in srgb, var(--rar) 55%, transparent) 38%, transparent 72%); box-shadow: 0 0 22px 4px color-mix(in srgb, var(--rar) 55%, transparent); animation: rs-floor 3.2s ease-in-out infinite; }
+@keyframes rs-floor { 50% { opacity: .72; } }
+@media (prefers-reduced-motion: reduce) { .rs-stage-floor { animation: none; } }
+.rs-stage-fallback, .rs-stage-gl { position: absolute; inset: 0; display: grid; place-items: center; }
+.rs-stage-fallback img { width: min(68%, 78dvh); max-height: 78%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .65)) drop-shadow(0 0 14px color-mix(in srgb, var(--rar) 60%, transparent)); }
+.rs-stage[data-stage-state="ready"] .rs-stage-fallback { display: none; }
+.rs-stage-gl .is-preview-canvas { width: 100%; height: 100%; }
+.rs-stage-name { position: absolute; left: 8px; right: 8px; bottom: 5px; text-align: center; font-size: 12px; color: var(--rar); text-shadow: 0 1px 3px #000, 0 0 5px #000; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-sockrow { display: flex; justify-content: center; align-items: flex-start; gap: 6px 14px; flex-wrap: wrap; }
+.rs-stage-board .rs-socket, .rs-stage-board .rs-socket[data-pos="bottom"] { position: relative; left: auto; top: auto; transform: none; flex-direction: column; gap: 2px; min-width: 64px; flex: 1 1 0; max-width: 130px; }
+.rs-stage-board .rs-socket small { white-space: normal; text-align: center; max-width: 100%; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .rs-stage-board { display: grid; grid-template-columns: minmax(0, 1fr) 84px; align-items: stretch; gap: 6px; }
+  .rs-stage { height: 204px; }
+  .rs-sockrow { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: space-between; gap: 2px; }
+  .rs-stage-board .rs-socket, .rs-stage-board .rs-socket[data-pos="bottom"] { flex: 1 1 0; min-width: 0; min-height: 0; justify-content: center; }
+  .rs-stage-board .rs-socket small { font-size: 10px; line-height: 1.1; }
+}
+@media (min-width: 1000px) and (min-height: 600px) { .rs-stage { height: clamp(220px, 34dvh, 300px); } .rs-stage-board .rs-socket small { font-size: 13px; } }
