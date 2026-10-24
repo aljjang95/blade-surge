@@ -64,6 +64,22 @@ async function resolvePlayer(env: AuthEnv, keyHash: string): Promise<{ playerId:
   return { playerId: body.playerId, banned: body.banned === true };
 }
 
+/**
+ * 기존 이용자 서버 증거: 이 계정 id(= 소셜 playerId)의 소셜 프로필이 서버에 처음 만들어진 시각. 프로필이 없으면 null.
+ * 허브가 응답하지 않으면 503으로 닫는다(가져오기는 계정당 한 번이라 증거 조회 실패를 '증거 없음'으로 굳히면 안 된다).
+ */
+export async function socialCreatedAt(env: AuthEnv, accountId: string): Promise<number | null> {
+  if (!env.SOCIAL || !/^p_[0-9a-f]{24}$/.test(accountId)) return null;
+  const hub = env.SOCIAL.get(env.SOCIAL.idFromName('hub:' + GAME_ID));
+  const response = await hub.fetch(new Request('https://social.internal/internal/evidence', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-social-internal': '1' }, body: JSON.stringify({ playerId: accountId }),
+  }));
+  if (!response.ok) fail(503, 'social-unavailable');
+  const body = await response.json() as { createdAt?: unknown; banned?: unknown };
+  if (body.banned === true) return null;
+  return Number.isSafeInteger(body.createdAt) && (body.createdAt as number) > 0 ? body.createdAt as number : null;
+}
+
 function assertActive(account: AccountRow): void {
   if (account.status === 'banned') fail(403, 'banned');
   if (account.status === 'deleting' || account.status === 'deleted') fail(403, 'deleted');

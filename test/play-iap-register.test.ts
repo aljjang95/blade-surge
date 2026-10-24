@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { buildDefinition, buildRequests, run, JSON_PATH } from '../tools/play-iap-register.mjs';
+import { EN_LISTINGS, buildDefinition, buildRequests, run, JSON_PATH } from '../tools/play-iap-register.mjs';
 import { IAP_PRODUCTS } from '../src/shared/iap-catalog.js';
 
 const sellable = IAP_PRODUCTS.filter((p: any) => p.enabled);
@@ -85,4 +85,14 @@ test('iap-products.json은 카탈로그와 일치한다', () => {
     expect(jp.currencyCode).toBe('KRW');
     expect(jp.basePlanId).toBe(p.basePlanId);
   }
+});
+
+test('영웅 직접 판매(hero_*)는 dry-run 요청·정의·listing 어디에도 없다(소환 전용, docs/GACHA_HANDOFF.md)', async () => {
+  const lines: string[] = [];
+  const out = await run({ base: 'https://x.test', log: (m: string) => lines.push(m) });
+  expect(JSON.stringify(out.requests)).not.toMatch(/hero_/);
+  expect(lines.join('\n')).not.toMatch(/hero_/);
+  expect(JSON.stringify(buildDefinition())).not.toMatch(/hero_/);
+  expect(Object.keys(EN_LISTINGS).some((k) => k.startsWith('hero_'))).toBe(false);
+  expect(out.requests.length).toBe(8);
 });
