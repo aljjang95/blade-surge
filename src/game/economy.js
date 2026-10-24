@@ -12,6 +12,8 @@ import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionC
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { skuGate } from '../data/shop-gates.js';
+import { THEMED_SETS } from '../data/items.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
@@ -269,7 +271,8 @@ export class Economy {
   setCount() { return this.heroEquipBonus(this.s.selected).active.length; }
   /** 세트 조각으로 테마 세트 장비 제작 */
   craftSetItem(setId, slot) {
-    const def = craftable(setId, slot); if (!def) return { ok: false, reason: 'none' };
+    // 조각 제작은 테마 세트(유니크)만. 등급 세트(레전드리 dragon 등)는 조각 30개로 만들 수 없다(v1 명령 직접 호출 포함).
+    const def = THEMED_SETS.includes(setId) ? craftable(setId, slot) : null; if (!def) return { ok: false, reason: 'none' };
     if ((this.s.fragments || 0) < CRAFT_COST) return { ok: false, reason: 'fragments' };
     this.s.fragments -= CRAFT_COST;
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
@@ -709,6 +712,8 @@ export class Economy {
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
     if (sku.kind === 'gem') {
+      // 진행도 게이트(shop-gates.js): 1레벨이 후반 재료·대량 골드를 시작 보석으로 바로 사지 못한다.
+      const gate = skuGate(sku, s); if (!gate.ok) return { ok: false, reason: 'level', need: gate.need, have: gate.have };
       if (s.gems < sku.price) return { ok: false, reason: 'gems' };
       const before = structuredClone(s); s.gems -= sku.price;
       const got = this.addRewards(sku.rewards, { silent: true });

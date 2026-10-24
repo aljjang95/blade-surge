@@ -1,5 +1,6 @@
 import { DUNGEONS } from './expansion.js';
 import { ITEM_BY_ID } from './items.js';
+import { RARITY_BUY_LEVEL } from './shop-gates.js';
 
 export const TOWNS = Object.freeze([
   Object.freeze({ id: 'oathhold', name: '서약의 성채', subtitle: 'OATHHOLD CITADEL', tier: 1, theme: 'oathhold', fieldId: 'windmeadow', dungeonIds: ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum'], requiredClears: 0, requiredLevel: 1 }),
@@ -32,8 +33,12 @@ export const TOWN_BLACKSMITH = Object.freeze({
 });
 
 // 무기·갑옷 오퍼의 appearanceTier는 아이템 정의 값을 그대로 노출한다(UI 표시용 사본).
+// 장비 오퍼는 등급별 최소 영웅 레벨(shop-gates.js RARITY_BUY_LEVEL)을 requires로 가진다(E 5 · U 10 · L 20).
+// 가격 원칙(docs/balance-audit-2026-10-24.md): 골드 가격 > 판매가(RARITY_INFO.sell) — 사서 되파는 차익이 없다.
+// 등급 곡선 S 1.5~1.8천 < E 6.5~9천 < U 1.5만 < L 5만~5.2만(+마을 재료).
 const offer = (id, townId, itemId, rarity, gold, materials) => ({ id, townId, itemId, rarity,
   ...(ITEM_BY_ID[itemId]?.appearanceTier ? { appearanceTier: ITEM_BY_ID[itemId].appearanceTier } : {}),
+  ...(RARITY_BUY_LEVEL[rarity] > 1 ? { requires: { level: RARITY_BUY_LEVEL[rarity] } } : {}),
   price: { gold, materials } });
 const supply = (id, townId, consumableId, gold, materials) => ({ id, townId, consumableId, price: { gold, materials } });
 
@@ -46,12 +51,12 @@ export const TOWN_SHOP = Object.freeze([
   offer('emberport_blade', 'emberport', 'w_town_ember', 'E', 9000, { ember_core: 8 }),
   offer('emberport_mail', 'emberport', 'a_town_ember', 'E', 9000, { ember_core: 8 }),
   offer('emberport_ruby', 'emberport', 'r_ruby', 'E', 6500, { ember_core: 6 }),
-  offer('emberport_bloodstep', 'emberport', 'b_blood', 'U', 8000, { ember_core: 7 }),
+  offer('emberport_bloodstep', 'emberport', 'b_blood', 'U', 15000, { ember_core: 7 }),
   supply('emberport_overdrive', 'emberport', 'overdrive', 260, { ember_core: 2 }),
-  offer('starcrest_blade', 'starcrest', 'w_town_star', 'L', 24000, { star_dust: 14 }),
-  offer('starcrest_mail', 'starcrest', 'a_town_star', 'L', 24000, { star_dust: 14 }),
-  offer('starcrest_abyss', 'starcrest', 'r_abyss', 'L', 22000, { star_dust: 12 }),
-  offer('starcrest_sky', 'starcrest', 'b_sky', 'L', 22000, { star_dust: 12 }),
+  offer('starcrest_blade', 'starcrest', 'w_town_star', 'L', 52000, { star_dust: 14 }),
+  offer('starcrest_mail', 'starcrest', 'a_town_star', 'L', 52000, { star_dust: 14 }),
+  offer('starcrest_abyss', 'starcrest', 'r_abyss', 'L', 50000, { star_dust: 12 }),
+  offer('starcrest_sky', 'starcrest', 'b_sky', 'L', 50000, { star_dust: 12 }),
   supply('starcrest_aegis', 'starcrest', 'aegis', 420, { star_dust: 3 }),
 ]);
 
