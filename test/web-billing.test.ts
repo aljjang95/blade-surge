@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PortoneApi, PortonePayment } from '../worker/v1/portone';
@@ -319,6 +320,33 @@ describe('웹 결제 취소 회수', () => {
     h.advance(3600000);
     pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
     expect((await reconcileWebPayments(ctx())).reversed).toBe(1);
+  });
+});
+
+describe('임포트: 영웅 소유는 서버 권한이 정본', () => {
+  const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/saves/mid.json', import.meta.url), 'utf8'));
+  test('기준 시각 이전 옛 저장은 정책 1(5명), 이후면 정책 2 + 시작 영웅 1명이고 forged paid는 버린다', async () => {
+    const old = await setup();
+    const r1 = await old.h.send('POST', '/import', { installId: crypto.randomUUID(), save: fixture() }, old.a.token);
+    expect(r1.body.doc.roster.policy).toBe(1);
+    expect(r1.body.doc.roster.owned.length).toBe(5);
+    expect(r1.body.doc.roster.paid).toEqual([]);
+    // 같은 저장이어도 운영이 기준 시각을 앞당기면(= 이 저장은 정책 이후 생성) 정책 2
+    const next = await setup({ HERO_GRANDFATHER_BEFORE_MS: '1700000000000' });
+    const forged = { ...fixture(), selected: 'mage', roster: { policy: 2, owned: ['mage', 'knight'], starter: 'mage', starterChosen: true, paid: ['knight', 'rogue', 'ranger'] } };
+    const r2 = await next.h.send('POST', '/import', { installId: crypto.randomUUID(), save: forged }, next.a.token);
+    expect(r2.body.status).toBe('shadow');
+    expect(r2.body.doc.roster.policy).toBe(2);
+    expect(r2.body.doc.roster.paid).toEqual([]);
+    expect(r2.body.doc.roster.starter).toBe('mage');
+    expect(r2.body.doc.roster.owned).toEqual(['mage']);
+    // 구매하면 서버 권한이 paid가 되고, 그림자 스냅샷(재정화)을 거쳐도 유지된다.
+    const k = (await next.intent(next.a.token, 'hero_knight_v1')).body;
+    next.pn.pay(k);
+    await next.complete(next.a.token, k.paymentId);
+    const snap = await next.h.send('POST', '/shadow/snapshot', { cid: 'snap-0001-abcd', save: forged }, next.a.token);
+    expect(snap.status).toBe(200);
+    expect((await next.me(next.a.token)).doc.roster).toMatchObject({ policy: 2, paid: ['knight'], starter: 'mage', owned: ['mage'] });
   });
 });
 

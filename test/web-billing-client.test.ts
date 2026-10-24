@@ -1,0 +1,152 @@
+import { describe, expect, test } from 'bun:test';
+import { createHeroPurchase, PENDING_KEY } from '../src/platform/hero-purchase.js';
+
+const PID = 'bsw_' + 'a'.repeat(32);
+const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId, storeId: 'store-x', channelKey: 'channel-key-x', orderName: '영웅 해금', totalAmount: 5900, currency: 'KRW', payMethod: 'CARD', customData: '{"productId":"' + productId + '"}' });
+
+class MemStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
+
+function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any } = {}) {
+  const calls: any[] = [], applied: any[] = [], storage = new MemStorage();
+  const api = {
+    async me() { return { flags: { webBilling: opts.webBilling ?? true } }; },
+    async request(method: string, path: string, body: any) {
+      calls.push([method, path, body]);
+      if (path === '/iap/web/intent') { if (opts.intent instanceof Error) throw opts.intent; return opts.intent ?? intentOf(body.productId); }
+      if (path === '/iap/web/complete') { const r = typeof opts.complete === 'function' ? opts.complete(body) : opts.complete; if (r instanceof Error) throw r; return r ?? { state: 'granted', grants: [], entitlements: { heroes: ['knight'] } }; }
+      throw new Error('path');
+    },
+  };
+  const eco = { applyIapState(state: any) { applied.push(state); return []; } };
+  const payCalls: any[] = [];
+  const sdk = opts.sdk === undefined ? { requestPayment: async (req: any) => { payCalls.push(req); return { paymentId: req.paymentId }; } } : opts.sdk;
+  const hp = createHeroPurchase({ api, eco, channel: opts.channel ?? 'web', billing: opts.billing ?? null, loadSdk: async () => sdk, storage, now: () => 1000,
+    location: { origin: 'https://blade.example', search: opts.search ?? '', pathname: '/' }, history: { replaceState() {} } });
+  return { hp, calls, applied, payCalls, storage };
+}
+const apiErr = (status: number, error: string) => Object.assign(new Error(error), { status, body: { error } });
+
+describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
+  test('기본은 사용 불가: init 전·서버가 웹 결제를 알리지 않으면 available=false이고 buy는 서버를 부르지 않는다', async () => {
+    const off = rig({ webBilling: false });
+    expect(off.hp.available()).toBe(false);
+    await off.hp.init();
+    expect(off.hp.available()).toBe(false);
+    expect(await off.hp.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(off.calls).toHaveLength(0);
+    const on = rig();
+    expect(on.hp.available()).toBe(false);
+    await on.hp.init();
+    expect(on.hp.available()).toBe(true);
+  });
+
+  test('정상: intent → 결제창 → complete(granted) → applyIapState(서버 응답) 뒤에만 ok:true', async () => {
+    const t = rig();
+    await t.hp.init();
+    const r = await t.hp.buy('hero_knight_v1');
+    expect(r).toMatchObject({ ok: true, state: 'granted' });
+    expect(t.calls.map((c) => c[1])).toEqual(['/iap/web/intent', '/iap/web/complete']);
+    expect(t.calls[0][2]).toEqual({ productId: 'hero_knight_v1' }); // 금액은 보내지 않는다
+    expect(t.calls[1][2]).toEqual({ paymentId: PID });
+    expect(t.payCalls[0]).toMatchObject({ paymentId: PID, totalAmount: 5900, currency: 'KRW', storeId: 'store-x', channelKey: 'channel-key-x' });
+    expect(t.payCalls[0].redirectUrl).toBe('https://blade.example/?bs_pay=' + PID);
+    expect(t.applied).toHaveLength(1);
+    expect(t.storage.getItem(PENDING_KEY)).toBeNull();
+  });
+
+  test('서버가 granted를 주기 전에는 성공을 내지 않는다: pending·cancelled·failed·verify 오류·저장 실패', async () => {
+    for (const [complete, reason] of [[{ state: 'pending' }, 'pending'], [{ state: 'cancelled' }, 'cancelled'], [{ state: 'failed' }, 'failed'], [{}, 'verify-failed'], [apiErr(502, 'portone-unavailable'), 'verify-failed'], [apiErr(503, 'web-billing-disabled'), 'billing-disabled']] as const) {
+      const t = rig({ complete });
+      await t.hp.init();
+      const r = await t.hp.buy('hero_mage_v1');
+      expect(r.ok).toBe(false);
+      expect(r.reason).toBe(reason);
+      expect(t.applied).toHaveLength(0);
+    }
+    // 지급은 됐지만 로컬 저장이 실패하면 ok가 아니다
+    const t = rig();
+    const failing = createHeroPurchase({ api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string) => (p.endsWith('intent') ? intentOf() : { state: 'granted' }) },
+      eco: { applyIapState: () => null }, channel: 'web', loadSdk: async () => ({ requestPayment: async () => ({}) }), storage: new MemStorage() });
+    await failing.init();
+    expect(await failing.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'storage' });
+  });
+
+  test('결제창 취소·실패·SDK 없음은 ok:false이고 complete를 부르지 않는다', async () => {
+    const cancelled = rig({ sdk: { requestPayment: async () => ({ code: 'PAY_PROCESS_CANCELED', message: 'x' }) } });
+    await cancelled.hp.init();
+    expect(await cancelled.hp.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'cancelled' });
+    expect(cancelled.calls.map((c) => c[1])).toEqual(['/iap/web/intent']);
+    expect(cancelled.storage.getItem(PENDING_KEY)).toBeNull();
+    const failed = rig({ sdk: { requestPayment: async () => ({ code: 'FAILURE_TYPE_PG' }) } });
+    await failed.hp.init();
+    expect((await failed.hp.buy('hero_knight_v1')).reason).toBe('payment-failed');
+    const thrown = rig({ sdk: { requestPayment: async () => { throw new Error('boom'); } } });
+    await thrown.hp.init();
+    expect((await thrown.hp.buy('hero_knight_v1')).reason).toBe('payment-failed');
+    const noSdk = rig({ sdk: null });
+    await noSdk.hp.init();
+    expect((await noSdk.hp.buy('hero_knight_v1')).reason).toBe('sdk-unavailable');
+  });
+
+  test('intent 거부 사유를 그대로 전달하고 잘못된 상품 id는 서버를 부르지 않는다', async () => {
+    const t = rig({ intent: apiErr(409, 'not-eligible') });
+    await t.hp.init();
+    expect((await t.hp.buy('hero_knight_v1')).reason).toBe('not-eligible');
+    expect((await t.hp.buy('starter_pack_v1')).reason).toBe('unknown-product');
+    expect((await t.hp.buy(42 as any)).reason).toBe('unknown-product');
+    expect(t.calls).toHaveLength(1);
+    const off = rig({ intent: apiErr(503, 'web-billing-disabled') });
+    await off.hp.init();
+    expect((await off.hp.buy('hero_knight_v1')).reason).toBe('billing-disabled');
+    // 서버 응답의 상품이 요청과 다르면 결제창을 열지 않는다
+    const wrong = rig({ intent: intentOf('hero_all_v1') });
+    await wrong.hp.init();
+    expect((await wrong.hp.buy('hero_knight_v1')).reason).toBe('intent-failed');
+    expect(wrong.payCalls).toHaveLength(0);
+  });
+
+  test('결제창이 열린 채 끊겨도 보류 paymentId가 남고 resume()이 서버 complete로 확정한다', async () => {
+    const t = rig({ complete: apiErr(502, 'portone-unavailable') });
+    await t.hp.init();
+    expect((await t.hp.buy('hero_knight_v1')).reason).toBe('verify-failed');
+    expect(JSON.parse(t.storage.getItem(PENDING_KEY)!)).toMatchObject({ paymentId: PID, productId: 'hero_knight_v1' });
+    const again = rig({});
+    again.storage.setItem(PENDING_KEY, t.storage.getItem(PENDING_KEY)!);
+    const hp = createHeroPurchase({ api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string, b: any) => { again.calls.push([_m, p, b]); return { state: 'granted' }; } },
+      eco: { applyIapState: (s: any) => { again.applied.push(s); return []; } }, channel: 'web', storage: again.storage, now: () => 2000, location: { origin: 'x', search: '', pathname: '/' } });
+    await hp.init();
+    expect(await hp.resume()).toMatchObject({ ok: true });
+    expect(again.calls[0][2]).toEqual({ paymentId: PID });
+    expect(again.storage.getItem(PENDING_KEY)).toBeNull();
+  });
+
+  test('모바일 리다이렉트 복귀: 주소의 paymentId로 complete, code가 있으면 실패 처리(서버 호출 없음), 사용 불가면 아무것도 안 함', async () => {
+    const back = rig({ search: `?paymentId=${PID}&transactionType=PAYMENT&txId=t1` });
+    await back.hp.init();
+    expect(await back.hp.resume()).toMatchObject({ ok: true });
+    expect(back.calls[0]).toEqual(['POST', '/iap/web/complete', { paymentId: PID }]);
+    const cancelled = rig({ search: `?paymentId=${PID}&code=PAY_PROCESS_CANCELED&message=x` });
+    await cancelled.hp.init();
+    expect(await cancelled.hp.resume()).toEqual({ ok: false, reason: 'cancelled' });
+    expect(cancelled.calls).toHaveLength(0);
+    const off = rig({ webBilling: false, search: `?paymentId=${PID}` });
+    await off.hp.init();
+    expect(await off.hp.resume()).toBeNull();
+    expect(off.calls).toHaveLength(0);
+    // 형식이 틀린 주소 값은 서버로 보내지 않는다
+    const bad = rig({ search: '?paymentId=../x' });
+    await bad.hp.init();
+    expect(await bad.hp.resume()).toBeNull();
+  });
+
+  test('Play 채널: 사용 가능 여부와 구매를 기존 billing-service에 위임한다', async () => {
+    const billing = { available: () => true, buy: async (id: string) => ({ ok: true, state: 'granted', got: [], id }) };
+    const t = rig({ channel: 'googleplay', billing });
+    expect(t.hp.available()).toBe(true);
+    expect(await t.hp.buy('hero_all_v1')).toMatchObject({ ok: true, id: 'hero_all_v1' });
+    expect(t.calls).toHaveLength(0);
+    expect(rig({ channel: 'googleplay', billing: { available: () => false, buy: async () => ({ ok: true }) } }).hp.available()).toBe(false);
+    expect(rig({ channel: 'googleplay' }).hp.available()).toBe(false);
+    expect(rig({ channel: 'onestore' }).hp.available()).toBe(false);
+  });
+});
