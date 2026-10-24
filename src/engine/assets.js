@@ -17,7 +17,7 @@ import { tuneCharacterTextures } from './texture-sampling.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
-import { refitHeroBoots } from './hero-boots.js';
+import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
@@ -596,6 +596,7 @@ function cloneCharacterMaterial(material, authored, oathKnight = false) {
 export function disposeCharacter(root, mixer) {
   root.userData.libraryDisposed = true;
   disposeHeroBodyMotion(root);
+  removeHeroBoots(root);   // 부츠 지오메트리는 인스턴스 소유
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {

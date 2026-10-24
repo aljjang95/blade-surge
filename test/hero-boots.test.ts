@@ -226,3 +226,22 @@ test('영웅 root 를 이동·회전·스케일해도 rest 위치·발목 높이
   expect(pb.count).toBe(pa.count);
   for (let i = 0; i < pa.array.length; i++) expect(pb.array[i]).toBeCloseTo(pa.array[i], 4);
 });
+
+test('캐릭터 해제 시 부츠 지오메트리는 dispose 되고 공유 몸 지오메트리는 보존된다(disposeCharacter·Actor)', async () => {
+  const { disposeCharacter } = await import('../src/engine/assets.js');
+  const { Actor } = await import('../src/game/actor.js');
+  const options = { data: full(), load: () => Promise.resolve(bootsScene()) };
+  for (const kind of ['character', 'actor']) {
+    const h = hero();
+    let target: THREE.Object3D = h.root, actor: any = null;
+    if (kind === 'actor') { actor = new Actor({ scene: new THREE.Scene() }, { scene: h.root, animations: [] }, {}); target = actor.model; }
+    syncHeroBoots(target, { rarity: 'E' }, options); await tick();
+    const mesh = target.userData.heroBoots.mesh as THREE.SkinnedMesh;
+    let bootsDisposed = 0, bodyDisposed = 0;
+    mesh.geometry.addEventListener('dispose', () => bootsDisposed++);
+    h.skin.geometry.addEventListener('dispose', () => bodyDisposed++);
+    if (actor) actor.dispose(); else disposeCharacter(target, new THREE.AnimationMixer(target));
+    expect(bootsDisposed).toBe(1); expect(bodyDisposed).toBe(0);
+    expect(mesh.parent).toBeNull(); expect(target.userData.heroBoots).toBeUndefined();
+  }
+});
