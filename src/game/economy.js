@@ -2,6 +2,7 @@
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
+import { GACHA_BANNERS, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
@@ -50,6 +51,16 @@ export function freshHeroState(id) {
   return { level: 1, exp: 0, star: 1, shards: 0, grade: heroBaseGrade(def), skills: baselineSkillLevels(def), spBonus: 0, skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } };
 }
 // 규칙 시계·난수: 주입값이 없거나 프로토타입 메서드를 일반 객체로 빌려 쓸 때도 호출 시점의 Date.now/Math.random으로 돌아간다.
+/**
+ * 유료/무료 보석 분리(docs/BM_DESIGN.md 12.4). gems 는 총 잔액, paidGems 는 그중 결제로 받은 몫이다.
+ * 소비는 무료 보석부터: 어떤 경로로 gems 가 줄든 paidGems 를 총 잔액 이하로 맞추면 무료 몫이 먼저 줄어든 것과 같다.
+ * 저장(save)마다 clampPaidGems 를 거치므로 개별 소비 코드는 그대로 s.gems 를 줄여도 된다.
+ */
+export function clampPaidGems(s) {
+  const gems = Math.max(0, Math.floor(Number(s.gems) || 0));
+  s.paidGems = Math.max(0, Math.min(Math.floor(Number(s.paidGems) || 0), gems));
+}
+function spendGems(s, n) { s.gems -= n; clampPaidGems(s); }
 const nowOf = (eco) => (typeof eco?.now === 'function' ? eco.now() : Date.now());
 // 엔드게임(무한의 성 상한·주간 보급·시즌 이벤트) 시계. 계정 서버에 연결되면 net/account.js 가 서버 시각을 꽂아
 // 기기 시계를 앞당겨도 상한·보급이 먼저 열리지 않는다. 오프라인 로컬은 기기 시계(되돌림은 endgame-core 가 막는다).
@@ -59,54 +70,74 @@ const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).re
 
 // 가챠 전용 결정적 RNG (mulberry32)는 src/shared/rng.js로 옮겼다. 기존 import 경로를 위해 다시 내보낸다.
 export { createSeededRng };
-/** pity = 마지막 SSR 이후 이번 소환의 순번(1부터). softPity회 연속 미당첨 뒤, 즉 softPity+1번째 소환부터 SSR 가중치가 오른다. */
-export function gachaSsrWeight(pity) { return GACHA.rates.SSR + (pity > GACHA.softPity ? (pity - GACHA.softPity) * GACHA.softPityStep : 0); }
-export function gachaChances(pity) {
-  if (pity >= GACHA.pity) return { R: 0, SR: 0, SSR: 1 };
-  const ssr = gachaSsrWeight(pity), tot = GACHA.rates.R + GACHA.rates.SR + ssr;
-  return { R: GACHA.rates.R / tot, SR: GACHA.rates.SR / tot, SSR: ssr / tot };
-}
-export function rollGachaRarity(pity, rng = Math.random) {
-  return pity >= GACHA.pity ? 'SSR' : pickWeighted({ R: GACHA.rates.R, SR: GACHA.rates.SR, SSR: gachaSsrWeight(pity) }, rng);
+/** pity = 마지막 SSR 이후 이번 소환의 순번(1부터). banner를 생략하면 영웅 소환 배너. */
+export function gachaSsrWeight(pity, banner = GACHA_BANNERS.hero) { return bannerSsrWeight(banner, pity); }
+export function gachaChances(pity, banner = GACHA_BANNERS.hero) { return bannerChances(banner, pity); }
+export function rollGachaRarity(pity, rng = Math.random, banner = GACHA_BANNERS.hero) {
+  return pity >= banner.pity ? 'SSR' : pickWeighted({ R: banner.rates.R, SR: banner.rates.SR, SSR: bannerSsrWeight(banner, pity) }, rng);
 }
 const heroesOf = (r) => HERO_ORDER.filter((h) => HEROES[h].rarity === r);
-/** 픽업을 제외한 SSR 영웅 풀. 'other' 분배는 이 풀에서만 뽑아 픽업 확률이 정확히 ssrSplit.featured가 된다. */
-const otherSsrHeroes = () => heroesOf('SSR').filter((h) => h !== GACHA.featured);
-/** 실제 소환 코드와 같은 식으로 계산한 공개 확률표 (단일 소환 기준, 10연 SR 보장 보정 제외). */
-export function gachaRates() {
-  const ssrByPull = Array.from({ length: GACHA.pity }, (_, i) => gachaChances(i + 1).SSR);
-  let survive = 1, expected = 0;
-  ssrByPull.forEach((p, i) => { expected += (i + 1) * survive * p; survive *= 1 - p; });
-  // 다른 SSR 영웅이 없으면 그 몫은 픽업으로 간다 (rollResult와 같은 규칙).
-  const others = otherSsrHeroes(), { featured, pool, gear } = GACHA.ssrSplit;
+const validSsrHero = (id) => Object.hasOwn(HEROES, id) && HEROES[id].rarity === 'SSR';
+const validPickupSet = (id) => SLOTS.some((slot) => ITEM_POOL[slot].some((x) => x.rarity === 'L' && x.set === id));
+/** 지금 영웅 픽업(교대표에서 유효한 SSR 영웅). 없으면 GACHA.featured. */
+export function heroPickup(now = Date.now()) { return pickupAt(HERO_PICKUP_ROTATION, now, validSsrHero) || GACHA.featured; }
+/** 지금 장비 픽업 세트(L 등급 세트). 없으면 null. */
+export function gearPickup(now = Date.now()) { return pickupAt(GEAR_PICKUP_ROTATION, now, validPickupSet); }
+/** 배너의 지금 픽업 id(영웅 id 또는 세트 id). 초보자는 픽업 없음. */
+export function bannerPickup(bannerId, now = Date.now()) { return bannerId === 'hero' ? heroPickup(now) : bannerId === 'gear' ? gearPickup(now) : null; }
+const otherSsrHeroes = (featured) => heroesOf('SSR').filter((h) => h !== featured);
+const ssrGearPool = () => SLOTS.flatMap((slot) => ITEM_POOL[slot].filter((x) => x.rarity === 'L'));
+/**
+ * 실제 소환 코드와 같은 식으로 계산한 공개 확률표(단일 소환 기준, 10연 SR 보장 보정 제외).
+ * 픽업 몫(ssrSplit.featured)은 50:50 기본 확률이며, 픽업이 아니었던 다음 SSR은 픽업 확정이다(guarantee).
+ * @param {string} [bannerId] hero | gear | beginner
+ * @param {number} [now] 픽업 교대 시각(ms)
+ */
+export function gachaRates(bannerId = 'hero', now = Date.now()) {
+  const banner = GACHA_BANNERS[bannerId] || GACHA_BANNERS.hero;
+  const ssrByPull = Array.from({ length: banner.pity }, (_, i) => bannerChances(banner, i + 1).SSR);
+  const expected = bannerPullsPerSsr(banner), featured = bannerPickup(banner.id, now);
+  const others = banner.ssr.hero ? otherSsrHeroes(featured) : [];
+  // 다른 SSR 영웅이 없으면 그 몫은 픽업으로 간다(rollResult와 같은 규칙). 초보자는 SSR 영웅 균등.
+  const featuredHero = banner.ssr.hero ? (banner.ssr.featured ? (others.length ? banner.ssr.featured : 1) : 0) : 0;
+  const materials = structuredClone(bannerMaterials(banner));
   return {
-    base: gachaChances(1), softPityFrom: GACHA.softPity, hardPity: GACHA.pity, ssrByPull,
-    expectedPullsPerSsr: expected, consolidatedSsr: 1 / expected,
-    ssrSplit: { featuredHero: others.length ? featured : featured + pool, otherSsrHero: others.length ? pool : 0, ssrGear: gear, materials: GACHA.materials.SSR.reduce((sum, m) => sum + m.w, 0), otherHeroes: others },
-    srSplit: { ...GACHA.srSplit }, tenPullSrPlus: 1, dupShards: GACHA.dupShards,
-    rSplit: { ...GACHA.rSplit }, materials: structuredClone(GACHA.materials),
+    bannerId: banner.id, name: banner.name, featured, base: bannerChances(banner, 1), softPityFrom: banner.softPity, hardPity: banner.pity, ssrByPull,
+    expectedPullsPerSsr: expected, consolidatedSsr: 1 / expected, limit: banner.limit || 0,
+    ssrSplit: { featuredHero, otherSsrHero: banner.ssr.hero ? 1 - featuredHero : 0, otherHeroes: banner.ssr.featured ? others : heroesOf('SSR'),
+      ssrGear: banner.ssr.gear || 0, featuredGear: banner.ssr.gear ? banner.ssr.featured : 0, materials: 0 },
+    srSplit: { hero: banner.sr.hero || 0, gear: banner.sr.gear || 0 }, rSplit: { hero: 0, gear: banner.r.gear || 0 },
+    tenPullSrPlus: 1, dupShards: GACHA.dupShards, materials,
   };
 }
 
 /**
- * 소환 구성품 전체와 1회 소환 기준 개별 확률(기본 확률, 61번째 상승·10연 보장 보정 제외).
+ * 배너 구성품 전체와 1회 소환 기준 개별 확률(기본 확률, 천장 상승·10연 보장·픽업 확정 보정 제외).
  * rollResult/addItem과 같은 규칙: 장비는 슬롯 4개 중 하나를 고른 뒤 그 슬롯의 같은 등급 장비 중 하나를 고른다.
- * @returns {Array<{ kind: 'hero'|'gear'|'material', grade: 'SSR'|'SR'|'R', id: string, p: number, slot?: string, rarity?: string, n?: number }>}
+ * SSR 장비는 픽업 세트 몫과 나머지 L 장비 몫으로 나눈다.
+ * @returns {Array<{ kind: 'hero'|'gear'|'material', grade: 'SSR'|'SR'|'R', id: string, p: number, slot?: string, rarity?: string, n?: number, featured?: boolean }>}
  */
-export function gachaContents() {
-  const rates = gachaRates(), base = rates.base, out = [];
+export function gachaContents(bannerId = 'hero', now = Date.now()) {
+  const rates = gachaRates(bannerId, now), base = rates.base, out = [];
   const gear = (grade, p) => {
+    if (!(p > 0)) return;
     const rarity = GACHA_ITEM_RARITY[grade];
     for (const slot of SLOTS) {
       const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
       for (const it of pool) out.push({ kind: 'gear', grade, id: it.id, slot, rarity, p: p / SLOTS.length / pool.length });
     }
   };
-  const heroes = (grade, ids, p) => { for (const id of ids) out.push({ kind: 'hero', grade, id, p: p / ids.length }); };
+  const heroes = (grade, ids, p, featured = false) => { if (!(p > 0) || !ids.length) return; for (const id of ids) out.push({ kind: 'hero', grade, id, p: p / ids.length, ...(featured ? { featured: true } : {}) }); };
   const mats = (grade) => { for (const m of rates.materials[grade] || []) out.push({ kind: 'material', grade, id: m.k, n: m.n, p: base[grade] * m.w }); };
-  heroes('SSR', [GACHA.featured], base.SSR * rates.ssrSplit.featuredHero);
-  if (rates.ssrSplit.otherSsrHero) heroes('SSR', rates.ssrSplit.otherHeroes, base.SSR * rates.ssrSplit.otherSsrHero);
-  gear('SSR', base.SSR * rates.ssrSplit.ssrGear); mats('SSR');
+  if (rates.ssrSplit.featuredHero) heroes('SSR', [rates.featured], base.SSR * rates.ssrSplit.featuredHero, true);
+  heroes('SSR', rates.ssrSplit.otherHeroes, base.SSR * rates.ssrSplit.otherSsrHero);
+  if (rates.ssrSplit.ssrGear) {
+    const pool = ssrGearPool(), set = rates.featured, pick = set ? pool.filter((x) => x.set === set) : [], rest = set ? pool.filter((x) => x.set !== set) : pool;
+    const share = pick.length ? rates.ssrSplit.featuredGear : 0;
+    for (const it of pick) out.push({ kind: 'gear', grade: 'SSR', id: it.id, slot: it.slot, rarity: 'L', p: base.SSR * rates.ssrSplit.ssrGear * share / pick.length, featured: true });
+    for (const it of rest) out.push({ kind: 'gear', grade: 'SSR', id: it.id, slot: it.slot, rarity: 'L', p: base.SSR * rates.ssrSplit.ssrGear * (1 - share) / rest.length });
+  }
+  mats('SSR');
   heroes('SR', heroesOf('SR'), base.SR * rates.srSplit.hero);
   gear('SR', base.SR * rates.srSplit.gear); mats('SR');
   gear('R', base.R * rates.rSplit.gear); mats('R');
@@ -140,7 +171,7 @@ export class Economy {
   fresh() {
     return {
       expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), actionSequence: 0,
-      schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
@@ -149,7 +180,7 @@ export class Economy {
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
       towns: freshTownState(),
-      pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
+      pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
@@ -184,6 +215,7 @@ export class Economy {
   }
   save() {
     try {
+      clampPaidGems(this.s);
       const raw = JSON.stringify(this.s);
       // 현재 진행 저장이 우선이다. 백업 공간 부족이 정상 저장을 막지 않는다.
       this.storage.setItem(KEY, raw);
@@ -449,11 +481,17 @@ export class Economy {
   }
   // 레벨 해금과 SP 습득을 모두 마친 각성 스킬만 Q/E에 넣는다(리뷰 P1: 초기화 뒤 미습득 스킬이 다시 장착되던 경로).
   setSkillLoadout(id, slot, skillIndex) { if (this.heroLocked(id)) return false; const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; if (!skillLearned(h.skills[skillIndex])) return false; const next = normalizeSkillLoadout(def, h.skillLoadout, h.skills, h.level); if (next[slot] === skillIndex) { if (next.every((v, k) => v === h.skillLoadout?.[k])) return false; h.skillLoadout = next; this.emit(); return true; } const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
-  /** 가챠 영웅 지급: 소유 영웅은 조각 +40(중복), 미소유 영웅은 소유를 열지 않고 같은 조각만 쌓는다(locked). */
+  /**
+   * 가챠 영웅 지급. 첫 획득(소유 전)은 해금이며 조각을 주지 않는다. 이미 소유한 영웅은 조각 +dupShards(중복).
+   * roster 가 없는 정책 1 저장은 모두 소유 상태라 항상 중복이다.
+   */
   grantHero(id) {
     const h = this.s.heroes[id]; if (!h) return { dup: false, locked: true, shards: 0 };
-    h.shards += GACHA.dupShards;
-    return this.ownHero(id) ? { dup: true, locked: false, shards: GACHA.dupShards } : { dup: false, locked: true, shards: GACHA.dupShards };
+    if (this.ownHero(id)) { h.shards += GACHA.dupShards; return { dup: true, locked: false, shards: GACHA.dupShards }; }
+    const r = this.s.roster;
+    if (r && r.policy === HERO_POLICY.STARTER && r.starterChosen && Array.isArray(r.owned)) { r.owned = [...r.owned, id]; return { dup: false, locked: false, shards: 0, unlocked: true }; }
+    // 시작 영웅을 고르기 전에는 해금하지 않고 조각만 쌓는다(선택 화면을 건너뛰지 않게).
+    h.shards += GACHA.dupShards; return { dup: false, locked: true, shards: GACHA.dupShards };
   }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
@@ -677,58 +715,106 @@ export class Economy {
   }
   sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------
-  pull(n) {
+  /** 배너 상태(천장·픽업 확정·초보자 사용 횟수). 저장 정화(save-base)와 같은 모양. */
+  gachaState() {
+    const g = this.s.gacha || (this.s.gacha = { pity: 0 });
+    g.pity ??= 0; g.guarantee ??= false; g.gearPity ??= 0; g.gearGuarantee ??= false; g.beginner ??= 0; g.beginnerSsr ??= false;
+    return g;
+  }
+  /** 배너의 남은 초보자 횟수(초보자 배너만 의미). */
+  beginnerLeft() { return Math.max(0, GACHA_BANNERS.beginner.limit - (this.gachaState().beginner || 0)); }
+  /** 소환 견적(UI·서버 공통): 재화·횟수 조건. reason: invalid-count | invalid-banner | beginner-used | insufficient-funds | null */
+  /** @param {number} n @param {string} [bannerId] @returns {any} */
+  pullQuote(n, bannerId = 'hero') {
+    const banner = Object.hasOwn(GACHA_BANNERS, bannerId) ? GACHA_BANNERS[bannerId] : null;
+    if (!banner) return { ok: false, reason: 'invalid-banner' };
+    if (n !== 1 && n !== 10) return { ok: false, reason: 'invalid-count' };
+    if (banner.id === 'beginner' && n !== 10) return { ok: false, reason: 'invalid-count' };
+    if (banner.id === 'beginner' && this.beginnerLeft() < n) return { ok: false, reason: 'beginner-used' };
+    const s = this.s, cost = n === 10 ? banner.ten : banner.single, tickets = n === 10 ? 10 : 1;
+    if (s.tickets >= tickets) return { ok: true, reason: null, banner, currency: 'tickets', tickets, cost: 0 };
+    if (s.gems >= cost) return { ok: true, reason: null, banner, currency: 'gems', tickets: 0, cost };
+    return { ok: false, reason: 'insufficient-funds', banner, need: cost - s.gems, cost };
+  }
+  /**
+   * 소환. 결과·천장·재화는 저장이 성공해야 확정된다(실패하면 전부 되돌린다).
+   * @param {number} n 1 또는 10 @param {string} [bannerId] hero | gear | beginner
+   */
+  pull(n, bannerId = 'hero') {
     this.lastGachaError = null;
-    if (n !== 1 && n !== 10) { this.lastGachaError = 'invalid-count'; return null; }
-    const before = structuredClone(this.s); const s = this.s; const cost = n === 10 ? GACHA.ten : GACHA.single;
-    if (n === 1 && s.tickets > 0) s.tickets--; else if (n === 10 && s.tickets >= 10) s.tickets -= 10; else { if (s.gems < cost) { this.lastGachaError = 'insufficient-funds'; return null; } s.gems -= cost; }
+    const q = this.pullQuote(n, bannerId);
+    if (!q.ok) { this.lastGachaError = q.reason; return null; }
+    const before = structuredClone(this.s), s = this.s, banner = q.banner, g = this.gachaState();
+    if (q.currency === 'tickets') s.tickets -= q.tickets; else spendGems(s, q.cost);
+    const now = nowOf(this), featured = bannerPickup(banner.id, now);
     const results = []; let srGuaranteed = false; const rng = this.gachaRng;
     for (let i = 0; i < n; i++) {
-      s.gacha.pity++; s.totalPulls++; s.quests.pulls++;
-      let rar = rollGachaRarity(s.gacha.pity, rng);
+      s.totalPulls++; s.quests.pulls++;
+      let rar;
+      if (banner.id === 'beginner') {
+        g.beginner++;
+        // 계정당 limit번째까지 SSR이 없으면 마지막 회차는 SSR 확정(g.beginnerSsr로 이미 나왔는지 기억).
+        rar = !g.beginnerSsr && g.beginner >= banner.limit ? 'SSR' : rollGachaRarity(1, rng, banner);
+      } else {
+        const key = banner.id === 'gear' ? 'gearPity' : 'pity';
+        g[key]++; rar = rollGachaRarity(g[key], rng, banner);
+      }
       if (n === 10 && i === 9 && !srGuaranteed && rar === 'R') rar = 'SR';
       if (rar !== 'R') srGuaranteed = true;
-      if (rar === 'SSR') s.gacha.pity = 0;
-      s.pity = s.gacha.pity; // 기존 UI가 읽는 레거시 미러
-      results.push(this.rollResult(rar));
+      if (rar === 'SSR') { if (banner.id === 'gear') g.gearPity = 0; else if (banner.id === 'hero') g.pity = 0; else g.beginnerSsr = true; }
+      results.push(this.rollResult(rar, { banner, featured }));
     }
+    s.pity = g.pity; // 기존 UI가 읽는 레거시 미러
     this.recordJourneyAction('pulls', n);
     if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
     for (const listener of this.listeners) listener(this.s);
     return results;
   }
+  /** SSR 확정 소환권: 영웅 배너 SSR 영웅 중 균등(픽업 확정 아님, 천장·픽업 확정에 영향 없음). */
   pullSSR() {
     this.lastGachaError = null;
     const before = structuredClone(this.s), s = this.s; if (s.ssrTickets <= 0) { this.lastGachaError = 'no-ssr-ticket'; return null; }
-    s.ssrTickets--; const r = this.rollResult('SSR', true); this.recordJourneyAction('pulls');
+    s.ssrTickets--; const r = this.rollResult('SSR', { banner: GACHA_BANNERS.beginner, featured: null }); this.recordJourneyAction('pulls');
     if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
     for (const listener of this.listeners) listener(this.s);
     return [r];
   }
-  rollResult(rar, heroOnly = false) {
-    // 분배 비율은 GACHA.ssrSplit / srSplit (gachaRates()와 같은 값). 중복 영웅은 grantHero에서 조각으로 바뀐다.
-    const rng = this.gachaRng;
-    const hero = (id) => { const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, ...(g.locked ? { locked: true } : {}), shards: g.shards, name: HEROES[id].name, img: HEROES[id].portrait }; };
-    if (rar === 'SSR') {
-      const r = rng(), { featured, pool, gear } = GACHA.ssrSplit;
-      if (heroOnly || r < featured) return hero(GACHA.featured);
-      if (r < featured + pool) { const hs = otherSsrHeroes(); return hero(hs.length ? hs[Math.floor(rng() * hs.length)] : GACHA.featured); }
-      if (r < featured + pool + gear) return { type: 'item', rar, item: this.addItem('SSR', null, rng) };
-      return this.rollMaterial('SSR', r, featured + pool + gear);
+  /**
+   * 등급이 정해진 한 칸의 결과. 분배는 배너 표(gacha-banners.js)와 gachaRates()가 같은 값이다.
+   * 픽업 배너의 SSR은 50:50이며, 픽업이 아니면 같은 배너의 다음 SSR은 픽업 확정이다.
+   * @param {string} rar @param {{ banner?: any, featured?: string|null }} [opts]
+   */
+  rollResult(rar, { banner = GACHA_BANNERS.hero, featured = bannerPickup(banner.id, nowOf(this)) } = {}) {
+    const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
+    const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
+    const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
+    const split = rar === 'SSR' ? banner.ssr : rar === 'SR' ? banner.sr : banner.r;
+    if (rar === 'SSR' && split.hero) {
+      const others = otherSsrHeroes(featured);
+      if (!banner.ssr.featured || !featured) return hero(pick(heroesOf('SSR')));
+      const key = 'guarantee', win = g[key] || !others.length || rng() < banner.ssr.featured;
+      g[key] = !win;
+      return win ? hero(featured, { featured: true }) : hero(pick(others));
     }
-    if (rar === 'SR') {
-      const r = rng(), { hero: heroShare, gear } = GACHA.srSplit;
-      if (r < heroShare) { const hs = heroesOf('SR'); return hero(hs[Math.floor(rng() * hs.length)]); }
-      if (r < heroShare + gear) return { type: 'item', rar, item: this.addItem('SR', null, rng) };
-      return this.rollMaterial('SR', r, heroShare + gear);
+    if (rar === 'SSR' && split.gear) {
+      const pool = ssrGearPool(), inSet = featured ? pool.filter((x) => x.set === featured) : [], rest = pool.filter((x) => !inSet.includes(x));
+      if (!inSet.length) return item(pick(pool));
+      const win = g.gearGuarantee || !rest.length || rng() < banner.ssr.featured;
+      g.gearGuarantee = !win;
+      return win ? item(pick(inSet), { featured: true }) : item(pick(rest));
     }
-    const r = rng();
-    if (r < GACHA.rSplit.gear) return { type: 'item', rar: 'R', item: this.addItem('R', null, rng) };
-    return this.rollMaterial('R', r, GACHA.rSplit.gear);
+    const r = rng(), heroShare = split.hero || 0, gearShare = split.gear || 0;
+    if (r < heroShare) {
+      // 초보자 배너의 SR 영웅은 아직 없는 영웅을 먼저 준다(첫 주 안에 SR 로스터를 채우는 온보딩 규칙, 문서 12.2).
+      const all = heroesOf(rar), fresh = banner.id === 'beginner' ? all.filter((id) => !this.ownHero(id)) : [];
+      return hero(pick(fresh.length ? fresh : all));
+    }
+    if (r < heroShare + gearShare) return { type: 'item', rar, item: this.addItem(rar, null, rng) };
+    return this.rollMaterial(rar, r, heroShare + gearShare, bannerMaterials(banner));
   }
   /** 강화 재료 결과. r은 이미 뽑은 [from, 1) 구간의 값이며 재료 목록의 누적 비율로 고른다. */
-  rollMaterial(rar, r, from) {
-    const list = GACHA.materials[rar] || [];
+  rollMaterial(rar, r, from, table = GACHA.materials) {
+    const list = table[rar] || [];
     let acc = from, pick = list[list.length - 1];
     for (const m of list) { acc += m.w; if (r < acc) { pick = m; break; } }
     this.addRewards({ [pick.k]: pick.n }, { silent: true, applyVip: false });
@@ -755,13 +841,20 @@ export class Economy {
       applied.add(g.opId); s.iapApplied.push(g.opId); changed = true;
       const rewards = iapRewards(g.rewards);
       if (Object.keys(rewards).length) got.push(...this.addRewards(rewards, { silent: true, applyVip: false }));
+      // 결제 지급 보석은 유료 몫이다(환불·청약철회 역분개 대상). 무료 보너스는 카탈로그 grant 에 없다.
+      if (rewards.gems > 0) s.paidGems = (s.paidGems || 0) + rewards.gems;
       const product = typeof g.productId === 'string' && Object.hasOwn(IAP_BY_ID, g.productId) ? IAP_BY_ID[g.productId] : null;
       if (product?.once && product.shopSku && !s.purchases.includes(product.shopSku)) s.purchases.push(product.shopSku);
     }
     for (const r of Array.isArray(state?.reversals) ? state.reversals : []) {
       if (!validOpId(r?.opId) || applied.has(r.opId)) continue;
       applied.add(r.opId); s.iapApplied.push(r.opId); changed = true;
-      for (const [k, n] of Object.entries(iapRewards(r.rewards))) { const f = IAP_REWARD_FIELD[k]; if (f) s[f] = Math.max(0, (s[f] || 0) - n); }
+      for (const [k, n] of Object.entries(iapRewards(r.rewards))) {
+        const f = IAP_REWARD_FIELD[k]; if (!f) continue;
+        if (k === 'gems') s.paidGems = Math.max(0, (s.paidGems || 0) - n);
+        s[f] = Math.max(0, (s[f] || 0) - n);
+      }
+      clampPaidGems(s);
     }
     const e = state?.entitlements;
     if (e && typeof e === 'object') {
