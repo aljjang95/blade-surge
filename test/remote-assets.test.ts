@@ -215,11 +215,11 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
     await new Promise(resolve => setTimeout(resolve, 10));
     return asked;
   };
-  expect(await run({ type: 'cellular' }, 8)).toEqual(['early-music', 'region-2']);   // 셀룰러: 첫 보스 곡 묶음 + X-8 에서 다음 지역만
-  expect(await run({ type: 'cellular' }, 3)).toEqual(['early-music']);               // 아직 X-8 전이면 첫 보스 곡만
-  expect((await run({ type: 'wifi' }, 3)).slice(0, 2)).toEqual(['early-music', 'region-2']);   // 와이파이: 한가할 때 다음 지역부터 순서대로
+  expect(await run({ type: 'cellular' }, 8)).toEqual(['early-music', 'starter-village', 'region-2']);   // 셀룰러: 첫 보스 곡·초보자 마을 소품 묶음 + X-8 에서 다음 지역만
+  expect(await run({ type: 'cellular' }, 3)).toEqual(['early-music', 'starter-village']);               // 아직 X-8 전이면 첫 보스 곡·마을 소품만
+  expect((await run({ type: 'wifi' }, 3)).slice(0, 3)).toEqual(['early-music', 'starter-village', 'region-2']);   // 와이파이: 한가할 때 다음 지역부터 순서대로
   expect((await run({ type: 'wifi' }, 3)).length).toBeGreaterThan(3);
-  expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);   // 데이터 절약 모드는 첫 보스 곡도 받지 않는다
+  expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);   // 데이터 절약 모드는 첫 보스 곡·마을 소품도 받지 않는다
 });
 
 test('assetUrl({ prefetch: false }) 는 호스트 주소만 돌려주고 보관용 내려받기를 시작하지 않는다(BGM 이중 다운로드 방지)', async () => {
@@ -231,13 +231,13 @@ test('assetUrl({ prefetch: false }) 는 호스트 주소만 돌려주고 보관�
 });
 
 test('사전 내려받기: 실패한 묶음은 쉬었다가(30초, 60초, …) 다시 받고 그 사이 로비 재진입은 두드리지 않는다', async () => {
-  let clock = 0, asked = 0;
+  let clock = 0, asked = 0;   // 로비 진입마다 바로 받는 묶음이 둘(early-music, starter-village)이라 시도 횟수는 2의 배수로 센다
   const fake = { enabled: true, groupCached: () => false, prefetchGroup: async () => { asked += 1; return { requested: 1, failed: ['x'] }; } };
   const prefetcher = createPrefetcher(fake as any, { nav: { connection: { type: 'cellular' } } as any, idle: fn => { void fn(); }, now: () => clock });
   const lobby = async () => { prefetcher.onLobby({ unlocked: 3 }); await new Promise(resolve => setTimeout(resolve, 5)); };
-  await lobby(); expect(asked).toBe(1);
-  await lobby(); expect(asked).toBe(1);          // 쉬는 중
-  clock = 31000; await lobby(); expect(asked).toBe(2);
-  clock = 31000 + 59000; await lobby(); expect(asked).toBe(2);   // 두 번째 실패 뒤 60초 쉼
-  clock = 31000 + 61000; await lobby(); expect(asked).toBe(3);
+  await lobby(); expect(asked).toBe(2);
+  await lobby(); expect(asked).toBe(2);          // 쉬는 중
+  clock = 31000; await lobby(); expect(asked).toBe(4);
+  clock = 31000 + 59000; await lobby(); expect(asked).toBe(4);   // 두 번째 실패 뒤 60초 쉼
+  clock = 31000 + 61000; await lobby(); expect(asked).toBe(6);
 });
