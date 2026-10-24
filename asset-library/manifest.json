@@ -766,7 +766,7 @@
       "heightM": 1.8,
       "triangles": 9666,
       "bytes": 1565272,
-      "sha256": "4dcc894590cd7d90c1beb046399da200083b3fa2851af1453f6024ced1a76b37",
+      "sha256": "6185157a59e53992a9f91ce8928219791cc280f1dae07fd138b2fd2833071fea",
       "clips": {},
       "provenance": {
         "tool": "Blender 5.2",
@@ -774,7 +774,7 @@
         "taskId": "c79129bd-30d0-4c5c-b723-4d97928db872",
         "prompt": "[pipeline summary, not the original prompt] cash avatar \"Astral Astronomer\" concept (Codex image_gen from hero tier1 concept) -> Tripo Studio H3.1 image-to-3D -> Tripo retopology triangle 10k -> Tripo auto rig (Mixamo preset) -> rebound to hero_mage_t1 skeleton (mesh-only, shares tier1 clips)",
         "createdAt": "2026-10-13T12:13:28.009Z",
-        "rawSha256": "4dcc894590cd7d90c1beb046399da200083b3fa2851af1453f6024ced1a76b37"
+        "rawSha256": "6185157a59e53992a9f91ce8928219791cc280f1dae07fd138b2fd2833071fea"
       },
       "license": "owner-generated (Tripo subscription)",
       "shared": true,
