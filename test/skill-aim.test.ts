@@ -54,7 +54,7 @@ function player(id = 'ranger_pierce', extra: any = {}) {
 }
 
 test('모든 실제 스킬 ID에 유한한 모양이 있다', () => {
-  expect(Object.keys(SKILLS)).toHaveLength(44)   // 늑대인간 족장 고유 스킬 2종 포함;
+  expect(Object.keys(SKILLS)).toHaveLength(46)   // 늑대인간 족장·검은 고양이 사냥꾼 고유 스킬 각 2종 포함;
   for (const id of Object.keys(SKILLS)) {
     const shape: any = skillAimShape(id);
     expect(shape).toBeTruthy(); expect(['line', 'cone', 'circle', 'self']).toContain(shape.kind);

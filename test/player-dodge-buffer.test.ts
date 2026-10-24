@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Input } from '../src/engine/input.js';
 import { Player } from '../src/game/player.js';
 import { Battle } from '../src/game/battle-base.js';
-import { HEROES } from '../src/data/heroes.js';
+import { HEROES, kitOf } from '../src/data/heroes.js';
 import { DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from '../src/game/progression.js';
 import { ENEMY_BOLT, HOSTILE_PROJECTILE_REACH, enemyImpactIn } from '../src/game/enemies.js';
 import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
@@ -243,7 +243,8 @@ test('회피 중 예약한 반격은 방향 입력을 놓거나 바꾸어도 누
     p.dodge(new THREE.Vector3(1, 0, 0)); advanceUntil(f, () => p.stateT >= .24, dt);
     f.game.input.move.x = -1; f.game.input.press('attack'); p.handleInput(f.game.input, dt);
     // 수동 궁수는 회피 0.16초 뒤 입력을 바로 사격으로 잇는다(회피 중 사격). 방향은 누른 순간의 입력이다.
-    if (hero === 'ranger') { expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(-Math.PI / 2); expect(p.attackBufferYaw).toBeNull(); continue; }
+    // 검은 고양이 사냥꾼(kit ranger)도 같은 수동 궁수 규칙이다.
+    if (kitOf(hero) === 'ranger') { expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(-Math.PI / 2); expect(p.attackBufferYaw).toBeNull(); continue; }
     expect(p.yaw).toBeCloseTo(Math.PI / 2);
     f.game.input.move.x = 0; f.game.input.move.y = 1;
     advanceUntil(f, () => p.state === 'attack', dt);

@@ -60,7 +60,7 @@ test('hero choice updates persisted launch identity, showcased model and reload 
     expect(meta.heroSel).toBe(id);
     expect(new Economy().s.selected).toBe(id);
   }
-  expect(shown).toEqual(['barbarian','mage','rogue','ranger','werewolf']);
+  expect(shown).toEqual(['barbarian','mage','rogue','ranger','blackcat','werewolf']);
   expect(meta.selectHero('missing')).toBe(false);
   expect(eco.s.selected).toBe('werewolf');
 });
