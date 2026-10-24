@@ -2,7 +2,8 @@ import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { Battle } from '../src/game/masterworks-battle.js';
 import { Battle as RpgBattle } from '../src/game/rpg-battle.js';
-import { normalizeMasterworks } from '../src/game/masterworks-core.js';
+import { normalizeMasterworks, boonEffects } from '../src/game/masterworks-core.js';
+import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { KillLedger } from '../src/game/rpg-core.js';
 import { HEROES, heroStats, levelExp } from '../src/data/heroes.js';
 import { ENEMIES } from '../src/data/stages.js';
@@ -12,15 +13,15 @@ const noop=()=>{};
 function fixture() {
   const game:any=Object.create(Battle.prototype),hero:any={level:1,exp:0,star:1,skills:[]};
   const stats=heroStats(HEROES.knight,hero);
-  const state=normalizeMasterworks(null),rpg={bestiary:{},combatXp:0};
+  const state:any=normalizeMasterworks(null),rpg={bestiary:{},combatXp:0};
   Object.assign(game,{
     active:true,paused:false,pauseReasons:new Set(),elapsed:0,kills:0,waveKilled:0,combatXp:0,roomsCleared:0,runKills:new WeakSet(),killLedger:new KillLedger(),enemies:[],pending:[],effects:{},buildBase:stats,
     stage:{idx:1,ch:1,code:'1-1',scale:1},heroId:'knight',world:{rooms:[],remaining:2,bossRoom:{cleared:false}},
-    run:{id:1,enabled:true,settled:false,permanent:{},picked:[],queue:[],round:0,autoPicked:0,renown:0,perfects:0,breaks:0,difficulty:{rewardMul:1}},
+    run:{id:1,enabled:true,settled:false,permanent:{},picked:[],preRunBoons:[],storySeen:false,renown:0,perfects:0,breaks:0,difficulty:{rewardMul:1}},
     player:{stats,maxHp:stats.hp,hp:stats.hp,alive:true,def:HEROES.knight,pos:new THREE.Vector3(),addUlt:noop,forward:(v:any)=>v.set(0,0,1)},
     app:{eco:{s:{quests:{kills:0}},hero:()=>hero,heroEquipBonus:()=>({})}},
     masterworks:{s:state,transact:(fn:any)=>fn(state)},ensureRpg:()=>rpg,flushRpg:()=>true,
-    chronicle:{refresh:noop,close:noop,selectionDone:noop,tick:noop},rpgView:{levelUp:noop,refresh:noop},
+    chronicle:{refresh:noop,close:noop,tick:noop,open:()=>{throw Error('전투 중 각인 창이 자동으로 열렸습니다');}},rpgView:{levelUp:noop,refresh:noop},
     ui:{toast:noop,awakenBanner:noop,setObjective:noop,setFloorLabel:noop},fx:{burst:noop,dustPuff:noop,groundTex:noop},
     drops:{onKill:noop,spawn:noop},after:noop,rollDrop:()=>null,input:{enabled:true,clear:noop},
   });
@@ -40,49 +41,67 @@ test('real death-levelup chain preserves missing HP through permanent and tempor
   game.onEnemyDeath(enemy);expect(hero.level).toBe(2);expect(game.kills).toBe(1);
 });
 
-test('deferred max-rank offers refresh and stale selection cannot consume the next offer',()=>{
-  const {game}=fixture();game.run.picked=['ember_edge','ember_edge'];
-  game.run.queue=[{kind:'boon',ids:['ember_edge','tide_breath','storm_step'],round:0},{kind:'boon',ids:['ember_edge','stone_root','storm_eye'],round:1}];
-  expect(game.selectBoon('ember_edge').ok).toBe(true);
-  expect(game.currentOffer().ids).not.toContain('ember_edge');
-  expect(game.selectBoon('ember_edge').ok).toBe(false);expect(game.run.queue).toHaveLength(1);
-  expect(game.run.picked.filter((id:string)=>id==='ember_edge')).toHaveLength(3);
-  expect(game.selectBoon(game.currentOffer().ids[0]).ok).toBe(true);expect(game.run.queue).toHaveLength(0);
+function personalStart(preRunBoons?:unknown,stageExtra:any={}) {
+  const game:any=Object.create(Battle.prototype),state=normalizeMasterworks(null),scheduled:number[]=[];
+  const stats=heroStats(HEROES.knight,{level:1,exp:0,star:1,skills:[]});
+  Object.assign(game,{stage:{idx:1,ch:1,code:'1-1',...stageExtra},active:true,player:{stats:{...stats},maxHp:stats.hp,hp:stats.hp,alive:true},
+    masterworks:{s:state,transact:(fn:any)=>fn(state)},chronicle:{refresh:noop,close:noop},after:(sec:number)=>scheduled.push(sec)});
+  if(preRunBoons!==undefined)game.setPreRunBoons(preRunBoons);
+  return {game,state,scheduled,stats};
+}
+async function runStart(game:any) {
+  const original=RpgBattle.prototype.start;RpgBattle.prototype.start=async function(){this._startGeneration=(this._startGeneration||0)+1;};
+  try{await Battle.prototype.start.call(game,game.stage,'knight',{level:1});}finally{RpgBattle.prototype.start=original;}
+}
+
+test('출격 시작은 각인 보상을 예약하지 않고, 출격 전 각인이 없으면 각인 효과도 없다',async()=>{
+  const {game,scheduled}=personalStart();await runStart(game);
+  expect(scheduled).toEqual([]);expect(game.run).toMatchObject({id:1,enabled:true,picked:[],preRunBoons:[]});
+  expect(game.run).not.toHaveProperty('queue');expect(Object.values(game.effects).every(v=>v===0)).toBe(true);
 });
 
-test('routine rewards auto-apply while only the third and sixth rewards become choices',()=>{
-  const {game}=fixture();
-  expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
-  expect(game.run).toMatchObject({round:1,autoPicked:1});expect(game.run.queue).toHaveLength(0);
-  expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
-  const checkpoint=game.grantBoonReward({automatic:false});
-  expect(checkpoint.ok).toBe(true);expect(game.currentOffer().kind).toBe('boon');expect(game.run.autoPicked).toBe(2);
-  expect(game.selectBoon(game.currentOffer().ids[0]).ok).toBe(true);
-  for(let i=0;i<2;i++)expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
-  expect(game.grantBoonReward({automatic:false}).ok).toBe(true);expect(game.run.round).toBe(6);
-  expect(game.run.autoPicked).toBe(4);expect(game.run.queue).toHaveLength(1);
+test('setPreRunBoons 진입점은 다음 개인 출격 한 번에만 각인을 적용하고 랭크·조합 계산을 그대로 쓴다',async()=>{
+  const ids=['ember_edge','ember_edge','ember_edge','ember_edge','storm_eye','bad',7,'__proto__'];
+  const {game,stats}=personalStart(ids);
+  expect(game.preRunBoons).toEqual(['ember_edge','ember_edge','ember_edge','storm_eye']);
+  await runStart(game);
+  expect(game.run.picked).toEqual(['ember_edge','ember_edge','ember_edge','storm_eye']);expect(game.run.preRunBoons).toEqual(game.run.picked);
+  const expected=boonEffects(game.run.picked);expect(expected.atk).toBeGreaterThan(.15);
+  for(const [key,value] of Object.entries(expected))expect(game.effects[key]).toBeCloseTo(value as number);
+  expect(game.player.stats.atk).toBeGreaterThan(stats.atk);expect(game.preRunBoons).toBeNull();
+  // 소비된 목록은 다음 출격으로 넘어가지 않는다.
+  game.run=null;await runStart(game);expect(game.run.picked).toEqual([]);
 });
 
-test('deep routes ask once before the boss and discover their own rooms without a base story popup',()=>{
-  for(const id of ['glass_garden','ember_vault','star_archive']){
-    const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon',id,{}, {depth:'deep'});game.world=buildExpeditionWorld(game.stage);
-    game.grantBoonReward({automatic:true}); // The real start schedules this entry reward.
-    state.discoveries.push(`expedition:${id}:1`);
-    const rooms=game.world.rooms.filter((r:any)=>!['start','boss'].includes(r.type));
-    for(const [i,room] of rooms.entries()){
-      room.attuned=true;room.forgeWave=1;game.markCleared(room);
-      expect(game.run.queue).toHaveLength(i===rooms.length-1?1:0);
-    }
-    expect(game.currentOffer().kind).toBe('boon');
-    expect(game.run.autoPicked).toBe(Math.min(5,rooms.length));
-    expect(state.discoveries.filter((key:string)=>key.includes(':deep:'))).toHaveLength(rooms.length);
-    const restored=normalizeMasterworks(state);expect(restored.discoveries).toEqual(state.discoveries);
+test('파티·AI 결투처럼 개인 각인이 꺼진 출격은 출격 전 각인을 적용하지 않고 버린다',async()=>{
+  for(const extra of [{party:{runId:'p'}},{expedition:{kind:'arena'}}]){
+    const {game}=personalStart(['ember_edge'],extra);await runStart(game);
+    expect(game.run.enabled).toBe(false);expect(game.run.picked).toEqual([]);expect(game.effects).toEqual({});expect(game.preRunBoons).toBeNull();
   }
 });
 
-test('party stages disable personal masterworks progression and offers',()=>{
-  const {game}=fixture();game.stage.party={code:'party'};game.run.enabled=!game.stage.party;
-  expect(game.grantBoonReward({automatic:true}).ok).toBe(false);expect(game.run.round).toBe(0);expect(game.run.queue).toHaveLength(0);
+test('짧은·긴·깊은 원정의 모든 방 클리어(3·6번째·마지막 접근 포함)에서 각인 보상·선택 창·일시정지가 없다',()=>{
+  for(const [id,depth] of [['glass_garden','standard'],['ember_vault','standard'],['star_archive','standard'],['glass_garden','deep'],['ember_vault','deep'],['star_archive','deep']] as const)for(const auto of [false,true]){
+    const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon',id,{},{depth});game.world=buildExpeditionWorld(game.stage);
+    game.ui.waveBanner=noop;game.spawnEnemy=noop;game.player.auto=auto;game.unsealBoss=noop;
+    const scheduled:Function[]=[];game.after=(_sec:number,fn:Function)=>scheduled.push(fn);
+    const toasts:string[]=[];game.ui.toast=(text:string)=>toasts.push(text);
+    for(const room of game.world.rooms.filter((r:any)=>!['start','boss'].includes(r.type))){
+      room.attuned=true;room.forgeWave=9;for(let i=0;i<4&&!room.cleared;i++)game.markCleared(room);
+      expect(room.cleared).toBe(true);
+    }
+    for(const fn of scheduled)fn();
+    expect(game.run.picked).toEqual([]);expect(game.paused).toBe(false);expect(game.pauseReasons.size).toBe(0);
+    expect(toasts.some(t=>t.includes('각인'))).toBe(false);
+    if(depth==='deep'){expect(state.story).toEqual({});expect(state.discoveries.filter((key:string)=>key.includes(':deep:')).length).toBeGreaterThan(0);}
+    else expect(Object.keys(state.story)).toHaveLength(1);
+  }
+});
+
+test('party stages disable personal masterworks progression and stories',()=>{
+  const {game,state}=fixture();game.stage.party={code:'party'};game.run.enabled=!game.stage.party;
+  game.world.rooms=[{type:'normal',cleared:false}];game.markCleared(game.world.rooms[0]);
+  expect(game.resolveStoryEvent('lantern').ok).toBe(false);expect(state.story).toEqual({});expect(state.renown).toBe(0);expect(game.run.picked).toEqual([]);
 });
 
 test('party start uses its server run id without mutating or persisting personal masterworks',async()=>{
@@ -91,11 +110,10 @@ test('party start uses its server run id without mutating or persisting personal
   Object.assign(game,{stage:{idx:1,ch:1,code:'1-1',party:{runId:'server-run'}},active:true,
     player:{stats:{hp:100},maxHp:100,hp:100,alive:true},masterworks:{s:state,transact:()=>{transactions++;return {ok:false,error:'save-failed'};}},
     chronicle:{refresh:noop},after:()=>scheduled++});
-  const original=RpgBattle.prototype.start;RpgBattle.prototype.start=async function(){this._startGeneration=(this._startGeneration||0)+1;};
-  try{await Battle.prototype.start.call(game,game.stage,'knight',{level:1});}finally{RpgBattle.prototype.start=original;}
+  await runStart(game);
   expect(transactions).toBe(0);expect(state).toEqual(before);
-  expect(game.run).toMatchObject({id:'server-run',enabled:false,picked:[],queue:[],round:0});
-  expect(game.effects).toEqual({});expect(scheduled).toBe(1);
+  expect(game.run).toMatchObject({id:'server-run',enabled:false,picked:[]});
+  expect(game.effects).toEqual({});expect(scheduled).toBe(0);
 });
 
 test('late deaths after result cannot pay progression and normal kills settle once',()=>{
@@ -109,7 +127,7 @@ test('late deaths after result cannot pay progression and normal kills settle on
 test('late last-enemy death cannot mint a new room discovery after settlement',()=>{
   const {game,state}=fixture();const room={type:'normal',cleared:false};game.world.rooms=[room];
   game.active=false;game.run.settled=true;game.onEnemyDeath(deadEnemy({homeRoom:room}));
-  expect(state.discoveries).toHaveLength(0);expect(state.renown).toBe(0);expect(game.run.queue).toHaveLength(0);
+  expect(state.discoveries).toHaveLength(0);expect(state.renown).toBe(0);expect(state.story).toEqual({});
 });
 
 test('summons and split runs cannot shift or duplicate each fifth eligible lifetime kill reward',()=>{
@@ -128,14 +146,33 @@ test('summons and split runs cannot shift or duplicate each fifth eligible lifet
 });
 
 test('story rewards match run totals and remembered visits give healing without another payment',()=>{
-  const {game,state}=fixture();game.run.queue=[{kind:'story',id:'lantern'}];
-  expect(game.selectStory('guide').ok).toBe(true);expect(state.renown).toBe(6);expect(game.run.renown).toBe(6);
-  expect(game.selectStory('guide').ok).toBe(false);expect(state.renown).toBe(6);
-  game.run.queue=[{kind:'story',id:'lantern'}];game.player.hp=game.player.maxHp-200;
-  const hp=game.player.hp;expect(game.selectStory('guide').ok).toBe(true);
+  const {game,state}=fixture();const toasts:string[]=[];game.ui.toast=(text:string)=>toasts.push(text);
+  const first=game.resolveStoryEvent('lantern');
+  expect(first.ok).toBe(true);expect(first.choiceId).toBe('guide');expect(state.story.lantern).toBe('guide');expect(state.renown).toBe(6);expect(game.run.renown).toBe(6);
+  expect(toasts.at(-1)).toBe('꺼지지 않는 등불 · 길을 밝힌다 · 명성 +6');
+  game.player.hp=game.player.maxHp-200;
+  const hp=game.player.hp;expect(game.resolveStoryEvent('lantern').ok).toBe(true);
   expect(game.player.hp).toBe(hp+Math.round(game.player.maxHp*.06));expect(state.renown).toBe(6);expect(game.run.renown).toBe(6);
+  expect(toasts.at(-1)).toBe('꺼지지 않는 등불 · 다시 만남 · 체력 +6%');
   game.result={};game.settleChronicle('defeat');expect(game.result.masterworks.renown).toBe(6);
   game.settleChronicle('defeat');expect(state.history).toHaveLength(1);
+  expect(game.resolveStoryEvent('lantern').ok).toBe(false);
+});
+
+test('예전 선택이 회복이면 재방문은 12% 회복이고, 저장 실패는 전투를 멈추지 않고 가장자리 알림만 남긴다',()=>{
+  const {game,state}=fixture();state.story.bridge='repair';game.player.hp=10;
+  expect(game.resolveStoryEvent('bridge').ok).toBe(true);expect(game.player.hp).toBe(10+Math.round(game.player.maxHp*.12));expect(state.renown).toBe(0);
+  const failing=fixture();const toasts:string[]=[];failing.game.ui.toast=(text:string,tone:string)=>toasts.push(`${tone}:${text}`);
+  failing.game.masterworks.transact=()=>({ok:false,error:'storage'});
+  expect(failing.game.resolveStoryEvent('archive').ok).toBe(false);expect(failing.state.story).toEqual({});expect(failing.game.paused).toBe(false);
+  expect(toasts).toEqual(['red:길 위의 만남 · 기록하지 못했습니다']);
+});
+
+for(const event of STORY_EVENTS)test(`${event.id} 첫 만남은 첫 선택지(${event.choices[0].id})로 자동 기록되고 보상이 정확히 한 번 들어간다`,()=>{
+  const {game,state}=fixture();game.player.hp=20;
+  const result=game.resolveStoryEvent(event.id),choice=event.choices[0];
+  expect(result.ok).toBe(true);expect(state.story[event.id]).toBe(choice.id);
+  expect(state.renown).toBe(Number(choice.effects.renown||0));expect(game.player.hp).toBe(20+Math.round(game.player.maxHp*Number(choice.effects.heal||0)));
 });
 
 test('active control sampling records mixed AUTO honestly and ignores pauses, dead actors and settled results',()=>{
@@ -168,37 +205,36 @@ test('pause ownership blocks simulation while another panel still holds a pause'
   game.setPaused('catalogue',false);expect(game.paused).toBe(false);expect(game.input.enabled).toBe(true);
 });
 
-test('defeated actors cannot select a queued boon or story, and cooldown is capped',()=>{
-  const {game,state}=fixture();game.player.alive=false;game.run.queue=[{kind:'boon',ids:['ember_edge'],round:0}];
-  expect(game.selectBoon('ember_edge').ok).toBe(false);game.run.queue=[{kind:'story',id:'lantern'}];
-  expect(game.selectStory('guide').ok).toBe(false);expect(state.renown).toBe(0);
+test('defeated actors cannot resolve a story, and cooldown is capped',()=>{
+  const {game,state}=fixture();game.player.alive=false;
+  expect(game.resolveStoryEvent('lantern').ok).toBe(false);expect(state.renown).toBe(0);expect(state.story).toEqual({});
   game.effects={cooldown:100};expect(game.skillCooldown(10)).toBe(6.5);
 });
 
-test('short ember dungeon offers its story once only after both reinforcement waves clear',()=>{
+test('short ember dungeon resolves its story once only after both reinforcement waves clear',()=>{
   const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','ember_vault',{});game.world=buildExpeditionWorld(game.stage);
   game.ui.waveBanner=noop;game.spawnEnemy=noop;
   const room=game.world.rooms.find((r:any)=>r.type==='elite');
   expect(game.world.rooms.map((r:any)=>r.type)).toEqual(['start','elite','boss']);
-  for(let i=0;i<2;i++){game.markCleared(room);expect(room.cleared).toBe(false);expect(game.run.queue).toHaveLength(0);}
+  for(let i=0;i<2;i++){game.markCleared(room);expect(room.cleared).toBe(false);expect(state.story).toEqual({});}
   game.markCleared(room);expect(game.roomsCleared).toBe(1);
-  expect(game.run.queue.filter((q:any)=>q.kind==='story')).toEqual([{kind:'story',id:'bridge'}]);
+  expect(state.story).toEqual({bridge:'rebuild'});expect(game.run.storySeen).toBe(true);
   const renown=state.renown;game.markCleared(room);expect(state.renown).toBe(renown);
-  game.markCleared(game.world.bossRoom);expect(game.run.queue.filter((q:any)=>q.kind==='story')).toHaveLength(1);
+  game.markCleared(game.world.bossRoom);expect(state.story).toEqual({bridge:'rebuild'});
 });
 
 test('longer dungeons keep treasure and two-room story timing before their final approach',()=>{
   for(const trigger of ['treasure','second-room']){
-    const {game}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
+    const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
     const normal=game.world.rooms.filter((r:any)=>r.type==='normal');
     if(trigger==='treasure'){
       const treasure=game.world.rooms.find((r:any)=>r.type==='treasure');treasure.attuned=true;game.markCleared(treasure);
       expect(game.roomsCleared).toBe(1);
     }else{
-      game.markCleared(normal[0]);expect(game.run.queue.filter((q:any)=>q.kind==='story')).toHaveLength(0);
+      game.markCleared(normal[0]);expect(state.story).toEqual({});
       game.markCleared(normal[1]);expect(game.roomsCleared).toBe(2);
     }
-    expect(game.run.queue.filter((q:any)=>q.kind==='story')).toEqual([{kind:'story',id:'lantern'}]);
+    expect(state.story).toEqual({lantern:'guide'});
     expect(game.world.rooms.some((r:any)=>!r.cleared&&r.type!=='start'&&r.type!=='boss')).toBe(true);
   }
 });
@@ -206,53 +242,19 @@ test('longer dungeons keep treasure and two-room story timing before their final
 test('short dungeon final approach does not produce story or discovery after settlement',()=>{
   const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','ember_vault',{});game.world=buildExpeditionWorld(game.stage);
   const room=game.world.rooms.find((r:any)=>r.type==='elite');room.forgeWave=2;game.active=false;game.run.settled=true;
-  game.markCleared(room);expect(game.run.queue).toHaveLength(0);expect(state.discoveries).toHaveLength(0);expect(state.renown).toBe(0);
+  game.markCleared(room);expect(state.story).toEqual({});expect(state.discoveries).toHaveLength(0);expect(state.renown).toBe(0);
 });
 
-test('cleared rooms do not reopen an empty chronicle after all offers are exhausted',()=>{
-  const {game}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
-  game.run.round=6;game.run.storySeen=true;game.ui.waveBanner=noop;game.spawnEnemy=noop;
-  const scheduled:Function[]=[];let opened=0;game.after=(_sec:number,fn:Function)=>scheduled.push(fn);game.chronicle.offer=()=>opened++;
-  const room=game.world.rooms.find((r:any)=>r.type==='normal');game.markCleared(room);
-  expect(game.currentOffer()).toBeUndefined();for(const fn of scheduled)fn();expect(opened).toBe(0);
-});
-
-test('AUTO는 각인·만남 선택 창을 열지 않고 기본 선택으로 이어 가며, 수동 플레이는 그대로 선택 창을 연다',()=>{
-  // 브라우저 AUTO 1회에서 전투가 각인(14.2초)·만남(23.9초) 창에서 멈춰 탭을 기다리던 결함의 재현.
-  const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
-  game.ui.waveBanner=noop;game.spawnEnemy=noop;game.run.round=2;
-  const scheduled:Function[]=[];let opened=0;game.after=(_sec:number,fn:Function)=>scheduled.push(fn);game.chronicle.offer=()=>opened++;
-  game.player.auto=true;
-  const room=game.world.rooms.find((r:any)=>r.type==='normal');game.markCleared(room);
-  expect(game.currentOffer()?.kind).toBe('boon');
-  for(const fn of scheduled)fn();expect(opened).toBe(0);
-  const picked=game.currentOffer().ids[0];
-  game.resolveAutoOffers();
-  expect(game.run.picked.at(-1)).toBe(picked);expect(game.run.autoPicked).toBe(1);
-  // 만남은 예전 선택이 없으면 첫 선택지를 고르고 보상이 한 번만 들어간다.
-  game.run.queue=[{kind:'story',id:'lantern'}];
-  game.resolveAutoOffers();
-  expect(game.run.queue).toHaveLength(0);expect((state.story as any).lantern).toBeTruthy();
-  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(0);
-  // 수동 플레이: 같은 체크포인트에서 선택 창을 연다.
-  const manual=fixture();manual.game.stage=game.stage;manual.game.world=buildExpeditionWorld(game.stage);
-  manual.game.ui.waveBanner=noop;manual.game.spawnEnemy=noop;manual.game.run.round=2;
-  const later:Function[]=[];let shown=0;manual.game.after=(_s:number,fn:Function)=>later.push(fn);manual.game.chronicle.offer=()=>shown++;
-  manual.game.markCleared(manual.game.world.rooms.find((r:any)=>r.type==='normal'));
-  for(const fn of later)fn();expect(shown).toBe(1);
-  manual.game.resolveAutoOffers();expect(manual.game.currentOffer()?.kind).toBe('boon');
-});
-
-test('AUTO라도 전투가 멈춘 동안(직접 연 선택 창·일시정지)은 확정하지 않고, 만남 저장 실패는 다시 고를 수 있게 남긴다',()=>{
-  const {game,state}=fixture();game.player.auto=true;
-  game.run.queue=[{kind:'story',id:'lantern'}];game.paused=true;
-  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(1);expect((state.story as any).lantern).toBeUndefined();
-  game.paused=false;let toasts=0;game.ui.toast=()=>toasts++;
-  game.masterworks.transact=()=>({ok:false,error:'storage'});
-  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(1);expect(game.run.queue[0].autoHold).toBe(true);expect(toasts).toBe(1);
-  game.resolveAutoOffers();expect(toasts).toBe(1);
-  game.masterworks.transact=(fn:any)=>fn(state);
-  expect(game.selectStory('guide').ok).toBe(true);expect(game.run.queue).toHaveLength(0);
+test('수동과 AUTO는 같은 방 클리어에서 같은 결과를 내고, update 는 대기열 없이 전투를 이어 간다',()=>{
+  const results=[false,true].map(auto=>{
+    const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
+    game.ui.waveBanner=noop;game.spawnEnemy=noop;game.player.auto=auto;
+    const scheduled:Function[]=[];game.after=(_sec:number,fn:Function)=>scheduled.push(fn);
+    for(const room of game.world.rooms.filter((r:any)=>r.type==='normal'))game.markCleared(room);
+    for(const fn of scheduled)fn();
+    return {story:state.story,renown:state.renown,picked:game.run.picked,paused:game.paused,scheduled:scheduled.length};
+  });
+  expect(results[0]).toEqual(results[1]);expect(results[0].picked).toEqual([]);expect(results[0].paused).toBe(false);
 });
 
 function damageFixture() {

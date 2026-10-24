@@ -1,5 +1,5 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
-import { difficultyEffects, previewBoon } from '../game/masterworks-core.js';
+import { difficultyEffects } from '../game/masterworks-core.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_SETS } from '../data/expedition-items.js';
 import { uiArt } from './illustrated.js';
@@ -8,15 +8,11 @@ import { GOAL_METRICS, comparableRunContext, normalizePersonalGoal, summarizePer
 import { personalContextLabel, personalDeparture, personalMetricValue, personalTargetLabel, personalResultLabel } from './personal-goal-labels.js';
 import './masterworks.css';
 
-const family = {ember:['잿불','ember_vault'],tide:['물결','glass_garden'],storm:['폭풍','ranger'],stone:['바위','star_archive']};
 const n=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const btn=(text,fn,cls='')=>{const e=n('button',cls,text);e.type='button';e.addEventListener('click',fn);return e;};
 const art=(id)=>{const e=n('img','mw-illustration');e.src=uiArt(id);e.alt='';e.loading='lazy';return e;};
 const details=(text,label='자세히')=>{const e=n('details','mw-details');e.append(n('summary','',label),n('p','',text));return e;};
 const fmt=v=>Math.round(v||0).toLocaleString('ko-KR');
-const boonEffectLabels={atk:'공격력',hp:'최대 체력',def:'방어력',speed:'이동 속도',crit:'치명타 확률',finisher:'마무리 피해',breakPower:'균형 파괴력',cooldown:'재사용 대기',perfectHeal:'정확 회피 회복',healOnKill:'처치 회복',chain:'마무리 연쇄',rewardMul:'완료 명성'};
-const boonEffectValue=(key,value)=>key==='chain'?`${value}명`:`${key==='cooldown'?'-':['perfectHeal','healOnKill'].includes(key)?'':'+'}${Number((value*100).toFixed(1))}%`;
-const boonChangeLabel=change=>`${boonEffectLabels[change.key]} ${boonEffectValue(change.key,change.before)} → ${boonEffectValue(change.key,change.after)}${change.before===change.after?' · 상한, 변화 없음':''}`;
 const err={unknown:'선택을 확인해 주세요.',owned:'이미 배운 숙련입니다.',prerequisite:'앞 단계 숙련을 먼저 배워 주세요.',renown:'명성이 부족합니다.',claimed:'이미 받은 보상입니다.',incomplete:'의뢰 목표를 먼저 달성해 주세요.'};
 
 /** An in-game journal with separate pause ownership; no navigation away from the app. */
@@ -32,9 +28,10 @@ export class MasterworksView {
     this.content=n('div','mw-content');this.notice=n('p','mw-notice');this.notice.setAttribute('role','status');
     this.dialog.append(header,this.nav,this.notice,this.content);document.body.append(this.dialog);
     this.dialog.addEventListener('close',()=>{this.battle.setPaused('masterworks',false);this.trigger?.isConnected&&this.trigger.focus();});
-    this.lobby=btn('성장 · 각인',e=>this.open('build',e.currentTarget),'sq-btn mw-open');
+    this.lobby=btn('성장 · 숙련',e=>this.open('build',e.currentTarget),'sq-btn mw-open');
     document.querySelector('.lobby-left')?.append(this.lobby);
-    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn');document.querySelector('.hud-right-top')?.prepend(this.hud);
+    // 출격 중 각인 보상이 없으므로 이 버튼은 출격 전에 정한 각인이 있을 때만 보인다(refresh). 사용자가 연 창만 일시정지한다.
+    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn');this.hud.hidden=true;document.querySelector('.hud-right-top')?.prepend(this.hud);
     this.strip=n('div','mw-run-strip');this.strip.hidden=true;document.querySelector('.hud-bars')?.append(this.strip);
     this.posture=n('div','mw-posture');this.posture.hidden=true;document.querySelector('.hud-center')?.append(this.posture);
     this.result=n('p','mw-result');this.result.hidden=true;document.querySelector('.result-stats')?.after(this.result);
@@ -64,18 +61,13 @@ export class MasterworksView {
     controller.open(tab);
     return {ok:true};
   }
-  offer(){this.open('run',this.hud);}
-  // One deliberate choice per visit. Further earned rewards remain on the truthful HUD badge.
-  selectionDone(){this.close();this.refresh();}
   act(fn,success='저장되었습니다.'){const r=fn();this.notice.textContent=r?.ok===false?(err[r.error]||r.error):success;this.render();return r;}
   render() {
-    const offer=this.tab==='run'?this.battle.currentOffer():null;
-    const sameView=this.renderedTab===this.tab&&this.renderedOffer===offer;
+    const sameView=this.renderedTab===this.tab;
     const scrollTop=sameView?this.content.scrollTop:0;
-    this.renderedTab=this.tab;this.renderedOffer=offer;
-    this.dialog.dataset.offer=offer?.kind||'';
+    this.renderedTab=this.tab;
     const run=this.tab==='run';this.dialog.dataset.view=this.tab;this.nav.hidden=run;
-    this.title.textContent=!run?'모험가의 길':offer?.kind==='boon'?'원정 각인 선택':offer?.kind==='story'?'길 위의 만남':'원정 각인 현황';
+    this.title.textContent=!run?'모험가의 길':'원정 각인 현황';
     [...this.nav.children].forEach((e,i)=>e.setAttribute('aria-pressed',String(['build','mastery','quests','journal'][i]===this.tab)));
     this.content.replaceChildren();
     if(run)this.renderRun();else if(this.tab==='mastery')this.renderMastery();else if(this.tab==='quests')this.renderQuests();else if(this.tab==='journal')this.renderJournal();else this.renderBuild();
@@ -87,14 +79,18 @@ export class MasterworksView {
   }
   renderBuild() {
     const s=this.state,service=this.battle.masterworks;
-    this.intro('전투 준비','전투 방식은 자유롭게 바꾸고, 발견과 의뢰로 영구 숙련을 쌓으세요. 각인은 출격 중 선택합니다.');
+    this.intro('전투 준비','전투 방식은 자유롭게 바꾸고, 발견과 의뢰로 영구 숙련을 쌓으세요. 출격 중에는 전투를 멈추는 선택 창이 없습니다.');
     this.content.append(n('h3','mw-section-title','전투 방식'));
     const paths=n('div','mw-grid');for(const p of PATHS){const b=btn('',()=>this.act(()=>service.path(p.id)),'mw-card');b.setAttribute('aria-pressed',String(s.path===p.id));b.append(art(`path-${p.id==='hunter'?'stalker':p.id}`),n('small','mw-eyebrow',s.path===p.id?'선택 중':'자유 전환'),n('h4','',p.name),n('p','',p.description));paths.append(b);}this.content.append(paths);
     this.content.append(n('h3','mw-section-title','도전 서약'));
     const d=difficultyEffects(s.challengeIds);this.content.append(n('p','mw-muted',`현재 적 체력 ×${d.enemyHp.toFixed(2)} · 공격력 ×${d.enemyAtk.toFixed(2)} · 완료 명성 ×${d.rewardMul.toFixed(2)}. 원정·캠페인에 적용됩니다.`));
     const challenges=n('div','mw-grid');for(const c of CHALLENGES){const b=btn('',()=>this.act(()=>service.challenge(c.id)),'mw-card');b.setAttribute('aria-pressed',String(s.challengeIds.includes(c.id)));b.append(art(`vow-${c.id==='siege'?'surrounded':c.id}`),n('small','mw-eyebrow',s.challengeIds.includes(c.id)?'서약 활성':'선택 가능한 도전'),n('h4','',c.name),n('p','',c.description));challenges.append(b);}this.content.append(challenges);
     const presets=n('div','mw-presets');s.presets.forEach((p,i)=>{const box=n('div');box.append(art('loadout'),n('strong','',p.name),n('small','',`${PATHS.find(x=>x.id===p.path)?.name} · 서약 ${p.challengeIds.length}`),btn('불러오기',()=>this.act(()=>service.usePreset(i))),btn('현재 설정 저장',()=>this.act(()=>service.savePreset(i))));presets.append(box);});this.content.append(n('h3','mw-section-title','원정 준비 저장'),presets);
-    this.content.append(details('AI 결투장은 기존 공통 규칙을 사용합니다. 각인과 서약은 캠페인·재료 던전에 적용됩니다.','적용되는 전투'));
+    this.content.append(details('AI 결투장은 기존 공통 규칙을 사용합니다. 서약은 캠페인·재료 던전에 적용됩니다.','적용되는 전투'));
+    // 출격 중 각인 보상은 2026-10-24 대표님 지시로 없앴다. 대체(룬·출격 전 1회용 각인 뽑기)가 들어올 자리만 알린다.
+    const soon=n('section','mw-soon');soon.dataset.soon='engraving';
+    soon.append(n('h3','mw-section-title','각인 · 준비 중'),n('p','mw-muted','출격 중 각인 보상은 없어졌습니다. 각인은 장비 강화의 룬과 출격 전에 고르는 1회용 각인으로 다시 찾아옵니다.'));
+    this.content.append(soon);
     this.content.append(btn('재료 던전으로',()=>this.openExpedition('dungeons'),'mw-primary'));
   }
   renderMastery() {
@@ -128,7 +124,7 @@ export class MasterworksView {
     for(const h of [...this.state.history].reverse().slice(0,6)) {
       const card=n('article','mw-history');card.dataset.runHistory=String(h.runId);card.setAttribute('aria-label','최근 출격 기록');
       card.append(n('strong','',`${h.outcome==='victory'?'승리':'패배'} · ${runRouteLabel(h.details?.route)||`${h.floor}층 · 경로 상세 없음`}`),
-        n('p','mw-muted',runDetailsLabel(h.details)),n('small','mw-muted',`획득 각인 종류 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')||'없음'}`));
+        n('p','mw-muted',runDetailsLabel(h.details)),...(h.boonIds.length?[n('small','mw-muted',`획득 각인 종류 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')}`)]:[]));
       if(this.goalRecords().some(record=>record.runId===h.runId)) {
         const preview=btn('이 기록 조건으로 목표 보기',()=>{this.goalPreviewRunId=h.runId;this.render();},'mw-goal-preview');
         preview.dataset.goalRun=String(h.runId);card.append(preview);
@@ -204,60 +200,15 @@ export class MasterworksView {
     } finally {this.goalStarting=false;}
   }
   renderRun() {
-    const run=this.battle.run,offer=this.battle.currentOffer();
+    const run=this.battle.run;
     if(!run||!run.enabled) {
-      this.runIntro(!run?'출격 후 각인이 모입니다':'공용 전투 규칙',!run?'캠페인·재료 던전에서 얻은 각인과 선택할 보상을 이곳에서 확인하세요.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.','원정 안내','nav-journey');
+      this.runIntro(!run?'출격 전 각인 없음':'공용 전투 규칙',!run?'출격 중에는 각인 보상이 없습니다. 출격 전에 정한 각인이 있으면 이곳에서 확인합니다.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.','원정 안내','nav-journey');
       this.content.append(btn(this.battle.active?'전투로 돌아가기':'닫기',()=>this.close(),'mw-primary mw-run-return'));
       return;
     }
-    const pending=n('section','mw-pending');pending.setAttribute('aria-label','선택 대기 중인 보상');
-    if(offer) {
-      const status=n('div','mw-run-status');status.append(n('strong','','선택 대기'),n('span','',`${run.queue.length}건 · 아직 적용 전`));pending.append(status);
-      this.content.append(pending);
-    }
-    if(offer?.kind==='boon') {
-      this.runIntro('이번 싸움을 바꿀 힘',`${offer.ids.length}개 중 하나를 선택하면 이번 출격에 즉시 적용됩니다.`,'각인 보상','loadout',pending);
-      const cards=n('div','mw-grid mw-choices');
-      for(const id of offer.ids) {
-        const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;
-        const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;
-        const illustration=art(`boon-${b.id}`);illustration.className+=' mw-boon-art';
-        card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','mw-choice-effect',b.description));
-        const preview=previewBoon(run.picked,id);
-        if(preview) {
-          const summary=n('span','mw-boon-preview'),visible=preview.changes.slice(0,3),shown=new Set(visible.map(c=>c.key));
-          summary.append(n('span','mw-preview-title','각인 효과 변화'));
-          for(const change of visible)summary.append(n('span','mw-preview-change',boonChangeLabel(change)));
-          if(preview.synergyIds.length) {
-            const combos=preview.synergyIds.map(id=>{
-              const synergy=SYNERGIES.find(s=>s.id===id);
-              const effects=Object.keys(synergy.effects).map(key=>shown.has(key)?boonEffectLabels[key]:boonChangeLabel(preview.changes.find(c=>c.key===key)));
-              return `${synergy.name} (${effects.join(' · ')})`;
-            });
-            summary.append(n('span','mw-preview-synergies',`새 조합 · ${combos.join(' / ')}`));
-          }
-          card.append(summary);
-        }
-        card.append(n('strong','mw-pick',rank?'이 각인 강화':'이 각인 적용'));cards.append(card);
-      }
-      pending.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다. 변화 수치는 이번 출격의 각인 보너스 합계이며, 장비·영구 숙련은 포함하지 않습니다. 회복은 최대 체력 기준이며 치명타는 확률에 더하는 보너스입니다.','각인 조합 규칙'));
-    } else if(offer?.kind==='story') {
-      const event=STORY_EVENTS.find(e=>e.id===offer.id),remembered=event.choices.find(c=>c.id===this.state.story[event.id]);
-      this.runIntro(event.name,remembered?remembered.consequence:event.description,remembered?'다시 만난 인연 · 선택 기록 있음':'길 위의 만남 · 행동 하나 선택','nav-journal',pending,offer.id==='bridge'?'ember_vault':offer.id==='archive'?'star_archive':'glass_garden');
-      const choices=n('div',`mw-story-choices${remembered?' mw-revisit':''}`);
-      for(const c of remembered?[remembered]:event.choices) {
-        const heal=remembered?(c.effects.heal ? .12 : .06):c.effects.heal;
-        const reward=heal?`체력 ${Math.round(heal*100)}% 회복`:`명성 +${fmt(c.effects.renown)}`;
-        const card=btn('',()=>this.act(()=>this.battle.selectStory(c.id),'선택을 기록하고 보상을 적용했습니다.'),'mw-card mw-story-choice');card.dataset.storyChoice=c.id;card.dataset.reward=heal?'heal':'renown';
-        const body=n('span','mw-choice-body');
-        body.append(n('small','mw-eyebrow',remembered?'재방문 보상':heal?'생존을 위한 선택':'성장을 위한 선택'),n('h4','',remembered?'잠시 쉬어 간다':c.name),n('strong','mw-choice-reward',reward),n('p','',remembered?`지난 선택: ${c.name} · 선택 기록은 유지됩니다.`:c.consequence),n('small','mw-reward-scope',heal?'최대 체력 기준 · 선택 즉시 회복':'영구 숙련에 사용할 명성 · 선택 기록 저장'),n('strong','mw-pick',remembered?'회복하고 돌아가기':'이 행동 선택'));
-        card.append(art(heal?'potion-health':'renown'),body);choices.append(card);
-      }
-      pending.append(choices);
-    } else this.runIntro('현재 선택할 보상이 없습니다','지금 적용 중인 힘을 확인하고 전투를 이어가세요. 다음 보상을 얻으면 상단 각인 버튼에서 확인할 수 있습니다.','이번 출격의 기록','loadout');
-    if(offer&&run.queue.length>1)pending.append(n('p','mw-muted',`이번 보상 하나를 고르면 전투로 돌아갑니다. 남은 ${run.queue.length-1}건은 상단 각인 버튼에서 확인하세요.`));
+    this.runIntro('출격 전에 정한 각인','이번 출격에 적용 중인 각인입니다. 출격 중에는 새 각인을 얻지 않으며 전투를 멈추는 선택 창도 없습니다.','이번 출격의 기록','loadout');
     const owned=n('section','mw-owned');owned.setAttribute('aria-label','이미 적용된 원정 각인');
-    const heading=n('div','mw-owned-heading');heading.append(n('h3','mw-section-title','적용 중인 각인'),n('span','mw-applied',`${new Set(run.picked).size}종 · 총 ${run.picked.length}회 획득`));owned.append(heading);
+    const heading=n('div','mw-owned-heading');heading.append(n('h3','mw-section-title','적용 중인 각인'),n('span','mw-applied',`${new Set(run.picked).size}종 · 총 ${run.picked.length}단계`));owned.append(heading);
     const picked=n('div','mw-picked');
     for(const b of BOONS) {
       const rank=run.picked.filter(id=>id===b.id).length;
@@ -267,9 +218,8 @@ export class MasterworksView {
         chip.append(art(`boon-${b.id}`),body);picked.append(chip);
       }
     }
-    if(!run.picked.length)owned.append(n('p','mw-muted',offer?.kind==='boon'?'아직 적용된 각인이 없습니다. 위에서 하나를 고르면 이 출격의 힘이 됩니다.':'아직 획득한 각인이 없습니다. 전투에서 각인 보상을 얻으면 이곳에 표시됩니다.'));
+    if(!run.picked.length)owned.append(n('p','mw-muted','이번 출격에 적용된 각인이 없습니다.'));
     else owned.append(picked);
-    if(run.autoPicked)owned.append(n('p','mw-muted',`획득 내역에 자동 적용 보상 ${run.autoPicked}회 포함`));
     const families=new Set(run.picked.map(id=>BOONS.find(b=>b.id===id)?.family));const combos=SYNERGIES.filter(s=>s.families.every(f=>families.has(f)));
     if(combos.length){owned.append(n('h4','mw-combo-title','조합 효과 적용 중'));for(const s of combos)owned.append(n('p','mw-synergy',`${s.name} · ${s.description}`));}
     this.content.append(owned,details(`길드 명성 ${fmt(this.state.renown)} · 영구 숙련 ${this.state.unlocked.length}개 · 발견 ${this.state.discoveries.length}곳. 각인은 이번 출격에만 유지됩니다. 명성·영구 숙련·도감·선택 기록은 귀환하거나 패배해도 남습니다.`,'귀환 후에도 남는 성장'),btn(this.battle.active?'전투로 돌아가기':'닫기',()=>this.close(),'mw-close mw-run-return'));
@@ -281,11 +231,12 @@ export class MasterworksView {
   }
   refresh() {
     const r=this.battle.run,active=this.battle.active;
-    this.hud.textContent=r?.queue.length?`각인 +${r.queue.length}`:`각인 ${r?.picked.length||0}`;
-    this.hud.setAttribute('aria-label',r?.queue.length?`각인 선택 ${r.queue.length}개 대기`:`원정 각인 ${r?.picked.length||0}개 보기`);
-    this.hud.classList.toggle('mw-ready',!!r?.queue.length);
+    // 획득 대기 뱃지(각인 +N)는 없다. 출격 전에 정한 각인이 있을 때만 현황 버튼을 보인다.
+    const boons=r?.enabled?r.picked.length:0;
+    this.hud.hidden=!boons;this.hud.textContent=`각인 ${boons}`;
+    this.hud.setAttribute('aria-label',`원정 각인 ${boons}개 보기`);
     this.strip.hidden=!active||!r?.enabled;
-    if(r)this.strip.textContent=`명성 +${r.renown} · 각인 ${r.picked.length} · ${this.battle.elapsed<this.battle.counterUntil?'반격 준비':'마무리 공격으로 균형 파괴'}`;
+    if(r)this.strip.textContent=`명성 +${r.renown}${boons?` · 각인 ${boons}`:''} · ${this.battle.elapsed<this.battle.counterUntil?'반격 준비':'마무리 공격으로 균형 파괴'}`;
     const e=this.battle.player?.lockTarget||this.battle.lastTarget;
     this.posture.hidden=!active||!r?.enabled||!e?.alive||e.spawning;
     if(!this.posture.hidden)this.posture.textContent=e.breakT>0?'균형 붕괴 · 받는 피해 +30%':`균형 ${Math.round(e.posture||0)} / ${e.postureMax||80}`;
