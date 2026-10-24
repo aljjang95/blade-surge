@@ -27,6 +27,12 @@ export const HERO_FREE_UNLOCK = Object.freeze([
 ]);
 export const HERO_FREE_UNLOCK_TOTAL_GEMS = HERO_FREE_UNLOCK.reduce((sum, step) => sum + step.gems, 0);
 
+/**
+ * 영웅 획득 경로 스위치(BM 12장, 2026-10-24 대표님 "뽑기 구조"). true 면 시작 영웅 뒤 영웅은 소환으로만 얻고 보석 해금 사다리는 닫힌다.
+ * 사다리 수치(HERO_FREE_UNLOCK)는 되돌릴 때를 위해 남긴다. 결정 근거와 버린 안은 docs/BM_DESIGN.md 12.2.
+ */
+export const HERO_UNLOCK_VIA_GACHA = true;
+
 /** 시작 영웅 선택 화면이 열리기 전 임시 시작 영웅. */
 export const HERO_STARTER_DEFAULT = 'knight';
 

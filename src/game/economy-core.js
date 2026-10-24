@@ -1,5 +1,5 @@
 // 서버(Cloudflare Worker)·bun·브라우저에서 같은 경제 규칙을 돌리는 저장 분리 코어.
-import { Economy } from './economy.js';
+import { Economy, clampPaidGems } from './economy.js';
 
 /**
  * 프로세스 메모리 저장소. localStorage와 같은 getItem/setItem/removeItem 모양이며 전역 저장소를 건드리지 않는다.
@@ -90,6 +90,8 @@ export class EconomyCore extends Economy {
 
   /** 전역 저장소에 쓰지 않는다. 직렬화 비용도 들이지 않고 항상 성공한다. */
   save() {
+    // 브라우저 Economy.save()와 같은 직렬화 보정: 유료 보석 몫은 총액 이하(무료부터 소비, BM 12.4).
+    clampPaidGems(this.s);
     this.storageStatus = 'ready';
     return true;
   }

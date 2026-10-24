@@ -2,6 +2,7 @@
 // 1) 구조·ID 검증은 기존 normalizeSave(EconomyCore.fromState)를 그대로 쓴다.
 // 2) 재화 상한 = 시작 재화 + 일회성 원천 + 일 최대 획득률 × 경과일. 초과분은 절삭하고 보고서에 남긴다.
 // 3) 결제 관련 필드는 가져오지 않는다(결제가 없었다). 4) 상한의 100배를 넘으면 severe(감사·보상 보류).
+import { GACHA_BANNERS } from '../data/gacha-banners.js';
 // 수치는 "가정"이다: 일 최대 획득률은 economy-estimate의 8시간/일 연속 플레이 상한보다 넉넉히(×1.5 이상) 잡아
 // 정당한 헤비 플레이어를 깎지 않는 쪽으로 보수했다. 베타 지표로 보정한다.
 import { EconomyCore } from '../game/economy-core.js';
@@ -68,7 +69,7 @@ export function elapsedDays(created, now) {
  *   serverRoster = 서버 문서의 현재 roster(신뢰값; 정책 1은 이 값에서만 유지된다)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0 }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes });
@@ -115,6 +116,14 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   s.pass = { ...s.pass, premium: !!entitled.passPremium, claimedPrem };
   // 정화가 끝난 상태에서도 paid는 서버 권한과 같다(정규화가 어떤 값을 만들었든 마지막에 한 번 더 덮어쓴다).
   if (isRecord(s.roster)) s.roster.paid = [...roster.paid];
+  // 소환 상태 중 값이 곧 보상인 필드(마일리지·픽업 확정·장비 픽업 확정·초보자 사용 횟수)는 서버 문서 값으로 덮는다.
+  // 없으면 0·false(초보자는 서버 기록이 없을 때만 0). 천장(pity·gearPity)은 기존처럼 정화 범위 안의 저장값을 쓴다.
+  const sg = isRecord(serverGacha) ? serverGacha : {};
+  const int = (v, max) => (Number.isSafeInteger(v) && v > 0 ? Math.min(v, max) : 0);
+  s.gacha = { ...s.gacha, mileage: int(sg.mileage, 100000), guarantee: sg.guarantee === true, gearGuarantee: sg.gearGuarantee === true,
+    beginner: int(sg.beginner, GACHA_BANNERS.beginner.limit), beginnerSsr: sg.beginnerSsr === true };
+  // 유료 보석 몫은 서버가 결제 지급으로 기록한 값만(총액 이하).
+  s.paidGems = Math.min(Math.max(0, Math.floor(Number(serverPaidGems) || 0)), Math.max(0, Math.floor(Number(s.gems) || 0)));
   s.energy = Math.min(Number(s.energy) || 0, fresh.energy + 200);
   s.energyT = now;
   s.created = from;

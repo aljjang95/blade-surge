@@ -14,7 +14,7 @@ import { recordServerMilestone } from './funnel';
 import { heroIdFromEntitlement } from '../../src/data/hero-roster.js';
 import { HERO_ORDER } from '../../src/data/heroes.js';
 import {
-  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, summarizeEntitlements, soldOn,
+  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
   type IapProduct,
 } from '../../src/shared/iap-catalog.js';
 
@@ -167,7 +167,8 @@ export async function verify(c: Ctx, auth: Authed, body: Record<string, unknown>
   onlyKeys(body, ['productId', 'purchaseToken']);
   const reason = await billingReason(c);
   if (reason) fail(503, reason);
-  const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
+  // 판매를 내린 상품(gate gacha-only)도 이미 결제된 영수증은 검증·지급·acknowledge 한다(기존 구매 보존).
+  const product = isId(body.productId, 64) ? verifiableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
   if (typeof body.purchaseToken !== 'string' || !TOKEN.test(body.purchaseToken)) fail(400, 'purchase-token');
   const result = await processPurchase(c, product, body.purchaseToken, { accountId: auth.account.account_id });
@@ -367,6 +368,9 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
     const net: Record<string, number> = {};
     for (const [key, value] of Object.entries(rewards)) if (value - (debt.repaid[key] ?? 0) > 0) net[key] = value - (debt.repaid[key] ?? 0);
+    // 결제 지급 보석은 유료 몫(BM 12.4). 클라이언트는 순 지급량(net)으로 applyIapState 하므로 서버도 net 기준(부채 상계분 제외), 총액 이하.
+    if ((net.gems ?? 0) > 0) eco.s.paidGems = Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)) + net.gems;
+    eco.s.paidGems = Math.min(Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)), Math.max(0, Math.floor(Number(eco.s.gems) || 0)));
     const next = docOf(eco);
     const p = o.purchase;
     const writes: GuardedWrite[] = [
@@ -435,8 +439,11 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
         if (!field) continue;
         const have = Math.max(0, Math.floor(Number(eco.s[field]) || 0)), take = Math.min(have, amount);
         eco.s[field] = have - take;
+        // 환불 역분개는 유료 몫부터 줄인다(BM 12.4). 총액 이하 클램프는 아래에서.
+        if (key === 'gems') eco.s.paidGems = Math.max(0, Math.floor(Number(eco.s.paidGems) || 0) - take);
         if (amount > take) debt[key] = amount - take;
       }
+      eco.s.paidGems = Math.min(Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)), Math.max(0, Math.floor(Number(eco.s.gems) || 0)));
       // 환불된 돈으로 갚았던 부채는 다시 부채가 된다.
       const owed: Record<string, number> = { ...debt };
       try { for (const [k, v] of Object.entries(JSON.parse(g.repaid ?? '{}') as Record<string, number>)) if (Number.isSafeInteger(v) && v > 0) owed[k] = (owed[k] ?? 0) + v; } catch { /* 형식 오류는 무시 */ }

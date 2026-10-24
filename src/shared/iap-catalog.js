@@ -33,8 +33,9 @@ export const HERO_ALL_PRICE_KRW = 17900;
 export const heroProductId = (heroId) => `hero_${heroId}_v1`;
 export const HERO_ALL_PRODUCT_ID = 'hero_all_v1';
 const CHANNELS_ALL = Object.freeze(['web', 'play']);
+// 영웅은 소환으로 얻는다(BM 12장). 영웅 직접 판매 상품은 판매 목록에서 내리고(enabled=false), 서버 권한 경로·이미 산 권한 복원은 그대로 둔다.
 const HERO_PRODUCTS = HERO_ORDER.map((id) => ({
-  id: heroProductId(id), type: 'non_consumable', enabled: true, priceKRW: HERO_PRICE_KRW, shopSku: `hero_${id}`, channels: CHANNELS_ALL,
+  id: heroProductId(id), type: 'non_consumable', enabled: false, gate: 'gacha-only', priceKRW: HERO_PRICE_KRW, shopSku: `hero_${id}`, channels: CHANNELS_ALL,
   title: `영웅 해금 · ${HEROES[id].name}`, description: `${HEROES[id].name}을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원).`,
   grant: { entitlement: { key: heroEntitlementKey(id) } },
 }));
@@ -54,10 +55,10 @@ export const IAP_PRODUCTS = Object.freeze([
     title: '시즌 1 프리미엄 패스', description: '시즌 1 동안 프리미엄 보상 줄을 엽니다(이미 달성한 단계도 받을 수 있음).',
     grant: { entitlement: { key: 'pass:s1' } } },
   ...HERO_PRODUCTS,
-  { id: HERO_ALL_PRODUCT_ID, type: 'non_consumable', enabled: true, priceKRW: HERO_ALL_PRICE_KRW, shopSku: 'hero_all', channels: CHANNELS_ALL,
+  { id: HERO_ALL_PRODUCT_ID, type: 'non_consumable', enabled: false, gate: 'gacha-only', priceKRW: HERO_ALL_PRICE_KRW, shopSku: 'hero_all', channels: CHANNELS_ALL,
     title: '영웅 전원 해금', description: '다섯 영웅을 모두 계정에 영구 해금합니다(개별 구매 대비 약 24% 할인).',
     grant: { entitlements: HERO_ORDER.map((id) => ({ key: heroEntitlementKey(id) })) } },
-  // 보석 팩은 유료/무료 보석 분리 저장(gems_paid)·소비 순서·환불 역분개가 준비될 때까지 판매하지 않는다.
+  // 보석 팩: 유료/무료 분리(paidGems, 무료부터 소비, 환불 역분개)는 BM 12.4로 준비됐다. 판매 시작·가격 공개는 대표님 확인 뒤(gate 유지).
   { id: 'gems_300_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 3900, shopSku: 'gem1',
     title: '보석 300', description: '보석 300', grant: { rewards: { gems: 300 } } },
   { id: 'gems_980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 12000, shopSku: 'gem2',
@@ -91,6 +92,13 @@ export function soldOn(product, channel) {
 export function sellableProduct(id) {
   const p = typeof id === 'string' && Object.hasOwn(IAP_BY_ID, id) ? IAP_BY_ID[id] : null;
   return p && p.enabled ? p : null;
+}
+/** 판매를 내린 상품 중 기존 영수증의 검증·지급·acknowledge는 계속 받는 gate(신규 판매만 막는다). */
+export const VERIFY_ONLY_GATES = Object.freeze(['gacha-only']);
+/** 영수증 검증에 쓰는 상품: 판매 중이거나, 판매만 내리고 기존 구매 복구는 유지하는 상품(영웅 직접 판매 등). */
+export function verifiableProduct(id) {
+  const p = typeof id === 'string' && Object.hasOwn(IAP_BY_ID, id) ? IAP_BY_ID[id] : null;
+  return p && (p.enabled || VERIFY_ONLY_GATES.includes(p.gate)) ? p : null;
 }
 
 /** 권한 키의 유효 종료 시각. null = 무기한. 시즌 패스는 시즌 종료, 구독은 Play expiryTime(서버가 넣는다). */

@@ -1,8 +1,8 @@
 // 소환 구성품·무기 외형 미리보기 화면. Meta가 this로 호출한다 (showGachaContents.call(meta, ...)).
 import { HEROES, HERO_ORDER } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_INFO, RARITY_COLOR } from '../data/items.js';
-import { GACHA } from '../data/shop.js';
-import { REWARD_LABEL, gachaContents } from '../game/economy.js';
+import { SETS } from '../data/items.js';
+import { REWARD_LABEL, gachaContents, gachaRates } from '../game/economy.js';
 import { weaponLook, weaponLookText, ENHANCE_STEPS } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { resourceArt } from './illustrated.js';
@@ -16,16 +16,20 @@ const TABS = [['weapon', '무기'], ['armor', '방어구'], ['ring', '반지'], 
 function labelOf(x) { return x.kind === 'hero' ? HEROES[x.id].name : x.kind === 'material' ? (REWARD_LABEL[x.id]?.[0] || x.id) + ' ×' + x.n : ITEM_BY_ID[x.id].name; }
 function iconOf(x, heroId = null) { return x.kind === 'hero' ? HEROES[x.id].portrait : x.kind === 'material' ? resourceArt(x.id) : itemVisual(ITEM_BY_ID[x.id], { heroId }).iconUrl; }
 function noteOf(x, heroId) {
-  if (x.kind === 'hero') return x.id === GACHA.featured ? '픽업 영웅' : '영웅';
+  if (x.kind === 'hero') return x.featured ? '픽업 영웅' : '영웅';
   if (x.kind === 'material') return MATERIAL_NOTE[x.id] || '';
   const it = ITEM_BY_ID[x.id];
+  if (x.featured) return '픽업 세트 · ' + (SETS[it.set]?.name || '');
   if (x.slot === 'weapon') return itemVisual(it, { heroId }).formLabel;
   return RARITY_INFO[it.rarity].name + (it.summon ? ' · ' + it.summon.name + ' 소환' : '');
 }
 
 /** 소환 구성품 전체: 등급별 영웅·장비·강화 재료와 개별 확률. 무기는 누르면 외형 미리보기로 간다. */
-export function showGachaContents(filter = 'weapon') {
-  const list = gachaContents(), heroId = this.eco.s.selected;
+export function showGachaContents(filter) {
+  const bannerId = this.gachaBanner || 'hero', list = gachaContents(bannerId, Date.now(), { ownsHero: (id) => this.eco.ownHero(id) }), heroId = this.eco.s.selected;
+  const has = (id) => list.some((x) => (id === 'hero' || id === 'material') ? x.kind === id : x.kind === 'gear' && x.slot === id);
+  const tabs = TABS.filter(([id]) => has(id));
+  if (!tabs.some(([id]) => id === filter)) filter = (tabs[0] || TABS[0])[0];
   const shown = list.filter((x) => (filter === 'hero' || filter === 'material') ? x.kind === filter : x.kind === 'gear' && x.slot === filter);
   const rows = ['SSR', 'SR', 'R'].map((g) => {
     const items = shown.filter((x) => x.grade === g); if (!items.length) return '';
@@ -37,9 +41,9 @@ export function showGachaContents(filter = 'weapon') {
         + '<img src="' + iconOf(x, heroId) + '" alt="" onerror="this.remove()"><span class="gc-name">' + esc(labelOf(x)) + '</span><span class="gc-note">' + esc(noteOf(x, heroId)) + '</span><b class="gc-p">' + p + '</b></' + tag + '>';
     }).join('') + '</div>';
   }).join('');
-  const help = '1회 소환 기준 개별 확률 · 61번째 상승과 10회 SR 보장 보정 제외' + (filter === 'weapon' ? ' · 무기를 누르면 착용 모습을 볼 수 있어요' : '');
-  this.ui.modal('<div class="gc-wrap"><h2>소환 구성품</h2><p class="setting-help">' + help + '</p><div class="gc-tabs" role="group" aria-label="구성품 종류">'
-    + TABS.map(([id, n]) => '<button type="button" aria-pressed="' + (id === filter) + '" class="' + (id === filter ? 'on' : '') + '" data-gc="' + id + '">' + n + '</button>').join('')
+  const rt = gachaRates(bannerId), help = '1회 소환 기준 개별 확률 · ' + (rt.hardPity > (rt.limit || 0) && rt.softPityFrom < rt.hardPity ? (rt.softPityFrom + 1) + '번째 상승과 ' : '') + '10회 SR 보장 · 픽업 확정 보정 제외' + (filter === 'weapon' ? ' · 무기를 누르면 착용 모습을 볼 수 있어요' : '');
+  this.ui.modal('<div class="gc-wrap"><h2>소환 구성품</h2><p class="setting-help">' + help + '</p>' + (bannerId === 'beginner' ? '<p class="setting-help">SR 영웅은 아직 없는 영웅 사이에서 균등 · 10회의 마지막 칸은 미보유 SR 영웅 확정(있을 때)</p>' : '') + '<div class="gc-tabs" role="group" aria-label="구성품 종류">'
+    + tabs.map(([id, n]) => '<button type="button" aria-pressed="' + (id === filter) + '" class="' + (id === filter ? 'on' : '') + '" data-gc="' + id + '">' + n + '</button>').join('')
     + '</div>' + rows + '<div class="modal-btns"><button class="btn btn-ghost" id="m-back">확률표</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div></div>', { onOpen: (b) => {
     b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
     b.querySelector('#m-back').onclick = () => this.showRates();
@@ -53,7 +57,7 @@ export function showWeaponPreview(itemId, heroId = this.eco.s.selected, enh = 0)
   const it = ITEM_BY_ID[itemId]; if (!it || it.slot !== 'weapon') return;
   const look = weaponLook(heroId, { id: itemId, enh }, LOOKS);
   const heroes = HERO_ORDER.filter((id) => this.app.models?.[HEROES[id].model]);
-  const p = gachaContents().find((x) => x.id === itemId)?.p || 0;
+  const p = gachaContents(this.gachaBanner || 'gear').find((x) => x.id === itemId)?.p || 0;
   const close = () => this.app.wardrobe?.previewStop?.();
   this.ui.modal('<div class="wp-wrap"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + '</h2><p class="setting-help">' + RARITY_INFO[it.rarity].name + ' 무기 · 소환 확률 ' + pct(p, 3) + '</p>'
     + '<div class="wp-body"><div class="wp-stage" id="wp-stage" role="img" aria-label="' + esc(HEROES[heroId].name + '이(가) ' + it.name + ' +' + enh + '을(를) 든 모습: ' + weaponLookText(look)) + '"></div>'

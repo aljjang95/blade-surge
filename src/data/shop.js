@@ -1,3 +1,4 @@
+import { GACHA_BANNERS } from './gacha-banners.js';
 // 상점 SKU (전부 목업 — 실제 결제 없음)
 export const SHOP_TABS = [
   { id: 'hot', name: '추천' },
@@ -58,24 +59,19 @@ export const SKUS = [
   { id: 'en2', tab: 'energy', kind: 'gem', name: '에너지 120', price: 100, icon: '/img/icon_energy.webp', desc: '즉시 에너지 120 회복', rewards: { energy: 120 }, badge: '+20%' },
 ];
 
-// 가중치 단위. softPity회 연속 미당첨 뒤(softPity+1번째)부터 SSR 가중치가 매 회 softPityStep씩 오르고 pity번째는 SSR 확정.
-// SSR 결과: 픽업 영웅 50% · 다른 SSR 영웅 25% · SSR 장비 20% · 초월석 5개 5%
-// SR 결과: 영웅 40% · 장비 40% · 강화 재료 20% / R 결과: 장비 55% · 강화 재료 45%
-// materials는 등급별 재료 몫(w는 그 등급 안에서의 비율). 등급마다 영웅 + 장비 + 재료 비율의 합은 1이다.
-export const GACHA = { single: 300, ten: 2700, pity: 80, softPity: 60, softPityStep: 6, featured: 'barbarian', rates: { R: 86, SR: 12, SSR: 2 },
-  ssrSplit: { featured: 0.5, pool: 0.25, gear: 0.20 }, srSplit: { hero: 0.4, gear: 0.4 }, rSplit: { gear: 0.55 },
-  materials: {
-    SSR: [{ k: 'transcendStones', n: 5, w: 0.05 }],
-    SR: [{ k: 'stones2', n: 5, w: 0.10 }, { k: 'protect', n: 1, w: 0.05 }, { k: 'transcendStones', n: 1, w: 0.05 }],
-    R: [{ k: 'stones', n: 10, w: 0.35 }, { k: 'bless', n: 1, w: 0.10 }],
-  },
-  // 확정권 중복도 같은 지급 경로를 탄다. 40조각으로 장기 초월 재료의 체감 가치를 보장한다.
-  dupShards: 40 };
+// 영웅 소환 배너 요약(옛 호출부 호환). 정본은 gacha-banners.js의 GACHA_BANNERS.hero이며 픽업은 교대표(heroPickup)로 정한다.
+// featured는 교대표가 비었을 때의 기본 픽업. SSR은 전부 영웅(픽업 50% · 다른 SSR 50%, 픽업 실패 뒤 다음 SSR 픽업 확정).
+// 확정권 중복도 같은 지급 경로를 탄다. 40조각으로 장기 초월 재료의 체감 가치를 보장한다.
+const HERO_BANNER = GACHA_BANNERS.hero;
+export const GACHA = { single: HERO_BANNER.single, ten: HERO_BANNER.ten, pity: HERO_BANNER.pity, softPity: HERO_BANNER.softPity, softPityStep: HERO_BANNER.softPityStep,
+  featured: 'barbarian', rates: HERO_BANNER.rates,
+  ssrSplit: { featured: HERO_BANNER.ssr.featured, pool: 1 - HERO_BANNER.ssr.featured, gear: 0 }, srSplit: { hero: HERO_BANNER.sr.hero, gear: 0 }, rSplit: { gear: 0 },
+  materials: HERO_BANNER.materials, dupShards: 40 };
 export const BATTLE_PASS = { price: 9900, maxLevel: 30, xpPerLevel: 100 };
 export const ENERGY = { max: 100, regenSec: 180 };
 
 export const DAILY_REWARDS = [
-  { gold: 5000 }, { gems: 100 }, { tickets: 1, skillResets: 1 }, { gold: 15000 }, { gems: 200 }, { tickets: 2 }, { ssrTicket: 1 },
+  { gold: 5000 }, { gems: 100 }, { tickets: 1, skillResets: 1 }, { gold: 15000 }, { gems: 200 }, { tickets: 2 }, { tickets: 5 },
 ];
 
 export const PASS_TRACK = Array.from({ length: 30 }, (_, i) => {
