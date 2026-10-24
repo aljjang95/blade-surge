@@ -8,6 +8,7 @@ import { CHROME } from './chrome.mjs';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { AVATARS } from '../src/data/avatars.js';
 
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const PORT = 4297, OUT = resolve(PROJ, process.argv[2] || 'work/qa/avatar');
@@ -34,9 +35,9 @@ try {
   await page.evaluate(() => { window.app.ui.confirm = async () => true; window.app.eco.s.gems = 10000; window.app.eco.emit(); window.app.meta.openTab('shop', 'avatar'); });
   await page.waitForSelector('[data-avatar]');
   const pending = await page.locator('[data-avatar]:disabled').count();
-  check('아바타 카드 5개', await page.locator('[data-avatar]').count() === 5, await page.locator('[data-avatar]').count());
+  check(`아바타 카드 ${AVATARS.length}개`, await page.locator('[data-avatar]').count() === AVATARS.length, await page.locator('[data-avatar]').count());
   if (!avatars.length) {
-    check('자산 없음: 준비 중 표시', pending === 5, pending);
+    check('자산 없음: 준비 중 표시', pending === AVATARS.length, pending);
     await page.screenshot({ path: resolve(OUT, 'avatar-pending.png') });
     console.log('skipped: no avatar assets');
   } else {

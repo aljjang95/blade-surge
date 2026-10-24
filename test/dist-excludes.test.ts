@@ -26,7 +26,9 @@ const RECORD_ONLY: Record<string, string[]> = {
     // 2·3단계 v2 몸은 v4 골격에 재결합한 몸이라 개정 기록(authoring.base)과 띠 곡선 기록(base)에 v4 가 나온다.
     'src/data/ranger-t2-body-revision-v2.json', 'src/data/ranger-t2-body-motion-v2.json', 'src/data/ranger-t3-body-revision-v2.json', 'src/data/ranger-t3-body-motion-v2.json',
     // 등급 몸(S·U)도 v4 골격에 재결합한다(t4-body-revisions 의 authoring.base, 띠 곡선 기록의 base).
-    'src/data/t4-body-revisions-v1.json', 'src/data/ranger-t1s-body-motion-v1.json', 'src/data/ranger-t2u-body-motion-v1.json'],
+    'src/data/t4-body-revisions-v1.json', 'src/data/ranger-t1s-body-motion-v1.json', 'src/data/ranger-t2u-body-motion-v1.json',
+    // 할로윈 아바타 검은 고양이 사냥꾼도 v4 골격에 재결합한다(t5-avatar-body-revisions 의 authoring.base, 띠 곡선 기록의 base).
+    'src/data/t5-avatar-body-revisions-v1.json', 'src/data/ranger-blackcat-body-motion-v1.json'],
   // 철회된 v5 는 자기 기록·1단계 곡선 v1 기록과 v6 의 철회 기록에만 나온다.
   'models/heroes-next/ranger-library-t1-v5.glb': ['src/data/ranger-library-revision-v5.json', 'src/data/ranger-library-revision-v6.json', 'src/data/ranger-t1-body-motion-v1.json'],
   // 2·3단계 궁수 v1 몸은 v2 가 대신한다. 이력 기록 두 개와 v2 개정 기록(재질 마감 비교 사유)에만 나온다.
