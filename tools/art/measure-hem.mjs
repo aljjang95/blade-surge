@@ -45,7 +45,7 @@ export async function measureHem(assetId, { frames = 24 } = {}) {
     const gltf = await loadHeroAsset(asset), inst = spawnCharacter(gltf), legOf = new Map();
     inst.root.traverse((o) => { if (o.isSkinnedMesh && !o.userData?.heroBoots && !o.userData?.heroGearParts) legOf.set(o, groups(o)); });
     inst.mixer.stopAllAction(); inst.root.updateMatrixWorld(true);
-    const bind = minByGroup(inst.root, legOf), out = { asset: assetId, bind: { leg: round4(bind.leg), hem: round4(bind.hem) }, clips: {} };
+    const bind = minByGroup(inst.root, legOf), out = { asset: assetId, bind: { leg: round4(bind.leg), hem: round4(bind.hem) }, clips: /** @type {Record<string, { leg: number, hem: number, hemAt: number }>} */ ({}) };
     for (const name of CLIPS) {
       const clip = gltf.animations.find((c) => c.name === name);
       if (!clip) continue;
