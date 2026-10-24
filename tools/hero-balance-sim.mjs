@@ -179,7 +179,7 @@ export function runHeroBalance(runtime, { heroes = HEROES_ALL, seeds = SEEDS } =
   return { seeds, ssrAvg, results, verdict: judge(results, ssr) };
 }
 
-/** werewolf 판정: barbarian 대비 0.9~1.12배(A·B), SSR 최고치의 1.12배 이하, 고유 두 스킬이 실제 피해를 낸다. */
+/** werewolf 판정: barbarian 대비 0.95~1.06배(A·B), SSR 최고치의 1.06배 이하, 고유 두 스킬이 실제 피해를 낸다. */
 export function judge(results, ssr = SSR_SET) {
   const reasons = [], w = results.werewolf, b = results.barbarian;
   if (!w || !b) return { pass: false, reasons: ['werewolf·barbarian 측정이 필요하다'] };
@@ -187,8 +187,8 @@ export function judge(results, ssr = SSR_SET) {
     const ratio = w.cycle[sit].total / b.cycle[sit].total;
     const top = Math.max(...ssr.filter(id => results[id]).map(id => results[id].cycle[sit].total));
     const vsTop = w.cycle[sit].total / top;
-    if (ratio < 0.9 || ratio > 1.12) reasons.push(`${sit}: werewolf/barbarian 순환 추정 ${ratio.toFixed(3)}배 (허용 0.90~1.12)`);
-    if (vsTop > 1.12) reasons.push(`${sit}: werewolf가 SSR 최고치의 ${vsTop.toFixed(3)}배 (허용 ≤1.12)`);
+    if (ratio < 0.95 || ratio > 1.06) reasons.push(`${sit}: werewolf/barbarian 순환 추정 ${ratio.toFixed(3)}배 (허용 0.95~1.06)`);
+    if (vsTop > 1.06) reasons.push(`${sit}: werewolf가 SSR 최고치의 ${vsTop.toFixed(3)}배 (허용 ≤1.06)`);
   }
   for (const id of ['blood_howl', 'moonlit_hunt']) {
     const row = w.skills.find(s => s.id === id);

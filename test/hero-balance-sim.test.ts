@@ -17,8 +17,8 @@ test('늑대인간 족장은 광전사 대비 순환 추정이 허용 범위이�
   }
   for (const sit of ['A', 'B']) {
     const ratio = w.cycle[sit].total / b.cycle[sit].total;
-    expect(ratio).toBeGreaterThanOrEqual(0.9);
-    expect(ratio).toBeLessThanOrEqual(1.12);
+    expect(ratio).toBeGreaterThanOrEqual(0.95);
+    expect(ratio).toBeLessThanOrEqual(1.06);
   }
   expect(w.buffs.blood_howl.A).toBeGreaterThan(1);
   expect(report.verdict.reasons).toEqual([]);

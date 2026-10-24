@@ -149,13 +149,13 @@ export const HEROES = {
   },
   // 첫 신규 SSR(BM 12.5, 할로윈 픽업). 몸·무기·애니메이션·음성은 광전사 것을 쓴다(kit). 몸 외형은 늑대인간 아바타 몸(bodyAvatar).
   // 고유 스킬: 핏빛 포효(광폭화 자리, 공포 + 사냥 본능 회복) · 월광 사냥(궁극기, 6연속 도약 + 보름달 낙하). 나머지는 광전사 스킬을 공유한다.
-  // 능력치: 광전사보다 체력·방어를 덜고 치명·속도를 더한 공격형(전투력 +2%, sim 확인 tools/hero-balance-sim.mjs).
+  // 능력치: 광전사보다 체력·방어를 덜고 치명·속도를 조금 더한 기동형(sim: 광전사 대비 무리 1.03배·단일 1.00배, tools/hero-balance-sim.mjs --assert).
   werewolf: {
     id: 'werewolf', name: '늑대인간 족장', title: '핏빛 달의 사냥꾼', rarity: 'SSR', model: 'Barbarian', portrait: '/img/tll/avatars/avatar_barbarian_werewolf-v2.webp',
     kit: 'barbarian', voiceId: 'barbarian', bodyAvatar: 'avatar_barbarian_werewolf', gachaOnly: true,
     weapon: '2h', color: '#c81830', accent: '#e8eeff',
     show: ['2H_Axe'],
-    base: { hp: 1650, atk: 158, def: 26, crit: 0.26, critDmg: 1.85, spd: 6.3 },
+    base: { hp: 1650, atk: 150, def: 26, crit: 0.24, critDmg: 1.8, spd: 6.3 },
     combo: BARBARIAN_COMBO,
     // 광폭화·지옥의 도끼 자리를 고유 스킬로 바꾸고 나머지 여섯은 광전사 스킬 그대로(마을 훈련 변형은 영웅 id 기준이라 공유하지 않는다).
     skills: BARBARIAN_SKILLS.map((sk) => WEREWOLF_OWN_SKILLS[sk.id] || sk),
