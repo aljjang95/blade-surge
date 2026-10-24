@@ -23,7 +23,7 @@ test('기억 정규화: 잘못된 값은 버리고 멱등이다', () => {
   expect(ok).toEqual({ introSeen: true, last: { tab: 'dungeon', id: 'glass_garden', depth: 'standard', followed: false } });
   expect(normalizeStageSelectMemory(ok)).toEqual(ok);
   const camp = { introSeen: false, last: { tab: 'campaign', ch: 2, st: 5, followed: true } };
-  expect(normalizeStageSelectMemory(normalizeStageSelectMemory(camp))).toEqual(camp);
+  expect(normalizeStageSelectMemory(normalizeStageSelectMemory(camp))).toEqual(camp as any);
 });
 
 test('기억 읽기·쓰기: 저장 공간 예외·손상 JSON 은 기본값', () => {
