@@ -36,3 +36,9 @@
 @media(max-width:480px){.starter-cards li{flex-wrap:wrap}.starter-cards button{width:100%}}
 @media(max-height:560px) and (orientation:landscape){.starter-dialog-head{padding:8px 16px}.citadel-hub-dialog.starter-village-dialog h2{font-size:17px;margin:2px 0 3px}.starter-dialog-body{padding:8px 16px}.starter-dialog-foot{padding:6px 16px}.starter-steps li,.starter-cards li{padding:7px 10px}}
 @media(prefers-reduced-motion:reduce){.starter-dialog *{animation:none;transition:none}}
+/* 원정 준비창(.citadel-hub-dialog) 규칙이 본문 바탕·글자색을 덮어 어두운 글자가 어두운 칸에 묻혔다(실제 촬영 1280x720, 2026-10-24). 초보자 창 안에서는 이 색을 고정한다. */
+.citadel-hub-dialog.starter-village-dialog .starter-dialog-body{background:#2a2418}
+.citadel-hub-dialog.starter-village-dialog .starter-step-copy b,.citadel-hub-dialog.starter-village-dialog .starter-cards b,.citadel-hub-dialog.starter-village-dialog .starter-stone b{color:#fff3cf}
+.citadel-hub-dialog.starter-village-dialog .starter-step-mark{color:#fff3cf}
+.citadel-hub-dialog.starter-village-dialog .starter-tip,.citadel-hub-dialog.starter-village-dialog .starter-stone p{color:#ece0c2}
+.citadel-hub-dialog.starter-village-dialog .starter-dialog-head p{color:#d9c9a0}
