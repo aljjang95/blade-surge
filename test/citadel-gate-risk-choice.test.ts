@@ -55,7 +55,8 @@ function fixture() {
   const view: any = Object.assign(Object.create(CitadelHubUI.prototype), { app, dialog, dialogSpot: spot as typeof spot | null,
     opened: true, busy: false, selectedDepth: 'standard', challengeNotice: '', reviewedPreparation: null,
     close() { calls.push('close'); this.opened = false; this.dialog.open = false; this.dialogSpot = null; this.reviewedPreparation = null; } });
-  app.startExpedition = async (kind: string, id: string, options: any) => {
+  app.startExpedition = async (kind: string, id: string, options: any, hooks: any = {}) => {
+    hooks.beforeStart?.();
     calls.push({ kind, id, options });
     return expedition.begin(kind, id, options).ok;
   };
@@ -182,7 +183,8 @@ test('Go first displays a changed catalog cost without charging and only an expl
 test('a pending native departure cannot charge a second time while the existing start promise is unresolved', async () => {
   const { app, eco, expedition, view, spot, definition, calls } = fixture(), before = structuredClone(eco.s);
   let finish!: (value: boolean) => void;
-  app.startExpedition = (kind: string, id: string, options: any) => {
+  app.startExpedition = (kind: string, id: string, options: any, hooks: any = {}) => {
+    hooks.beforeStart?.();
     calls.push({ kind, id, options });
     const admitted = expedition.begin(kind, id, options);
     return new Promise<boolean>(resolve => { finish = () => resolve(admitted.ok); });

@@ -358,6 +358,7 @@ export class Economy {
   blessingRoll(now = nowOf(this), seed) { return Runes.blessingRoll(this, now, seed); }
   blessingPick(index) { return Runes.blessingPick(this, index); }
   blessingConsume() { return Runes.blessingConsume(this); }
+  blessingRestore(held) { return Runes.blessingRestore(this, held); }
   addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
   trainingQuote(id) { return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
   levelUpHero(id) {
