@@ -12,6 +12,7 @@ const TO_ARGS = {
   equipAvatar: (heroId, id = null) => [heroId, id ?? null],
   setDifficulty: (id, ch = 1, st = 1) => [id, ch, st],
   claimDaily: () => [], claimMonthly: () => [],
+  pull: (n, banner = 'hero') => [n, banner], pullSSR: () => [], exchangeMileage: () => [],
 };
 
 export class CommandQueue {

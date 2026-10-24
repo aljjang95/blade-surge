@@ -1,12 +1,20 @@
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PortoneApi, PortonePayment } from '../worker/v1/portone';
-import { IAP_BY_ID } from '../src/shared/iap-catalog.js';
+import { IAP_BY_ID, IAP_PRODUCTS } from '../src/shared/iap-catalog.js';
 import { reconcileWebPayments, settleWebPayment, WEB_RECONCILE_MAX } from '../worker/v1/portone';
 
 const DAY = 86400000;
+
+// 영웅 직접 판매 상품은 소환 구조(BM 12장)에서 판매 목록에서 내려갔다(enabled=false, gate 'gacha-only').
+// 이 파일은 웹 결제 기계(의도·검증·멱등·권한 지급·취소 회수)를 영웅 권한 상품으로 검증하므로, 파일 안에서만 켰다가 끝에 원복한다.
+// 판매 중지 자체(카탈로그 제외·의도 거부)는 v1-iap.test.ts가 기본 카탈로그로 검증한다.
+const GACHA_ONLY = IAP_PRODUCTS.filter((p: any) => p.gate === 'gacha-only') as any[];
+beforeAll(() => { for (const p of GACHA_ONLY) p.enabled = true; });
+afterAll(() => { for (const p of GACHA_ONLY) p.enabled = false; });
+
 const STORE = 'store-test-0001', CHANNEL = 'channel-key-real-0001';
 
 /** 포트원 단건 조회 가짜. 테스트가 결제별 응답을 정하고 호출 수를 센다. 실제 포트원은 호출하지 않는다. */

@@ -114,8 +114,6 @@
 :root:root .gacha-wrap { background: radial-gradient(ellipse at 50% 15%, rgba(120, 90, 220, .55), transparent 62%), linear-gradient(180deg, rgba(40, 110, 150, .35), rgba(20, 60, 100, .5)); }
 :root:root .gacha-banner { border: 4px solid transparent; background: linear-gradient(#150d26, #150d26) padding-box, var(--sb-frame) border-box; box-shadow: 0 6px 0 rgba(90, 50, 10, .4), 0 0 34px rgba(255, 200, 90, .35), 0 16px 30px rgba(6, 20, 40, .5); border-radius: 22px; }
 :root:root .banner-kicker { color: #ffe37a; text-shadow: 0 1px 2px #000; }
-:root:root .banner-txt h2 { font-family: var(--disp); font-weight: 400; -webkit-text-stroke: 2px #6a3408; paint-order: stroke fill; color: #fff6cf; text-shadow: 0 3px 0 rgba(106, 52, 8, .6); }
-:root:root .banner-sub { color: #f2e9ff; }
 :root:root .gacha-foot { color: #e4f3fa; }
 :root:root .link { color: #bfe6ff; }
 

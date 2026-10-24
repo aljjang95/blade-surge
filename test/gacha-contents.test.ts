@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Economy, createSeededRng, gachaContents, gachaRates } from '../src/game/economy.js';
-import { GACHA } from '../src/data/shop.js';
+import { GACHA_BANNERS } from '../src/data/gacha-banners.js';
 import { ITEM_BY_ID } from '../src/data/items.js';
 import { weaponLook, weaponLookText, WEAPON_ELEMENT } from '../src/data/weapon-looks.js';
 import { LOOKS } from '../src/game/look.js';
@@ -14,39 +14,59 @@ beforeEach(() => {
 });
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
+const MATS = (b: any, grade: 'SR' | 'R') => (b.materials || GACHA_BANNERS.hero.materials)[grade] as Array<{ k: string; n: number; w: number }>;
+
 describe('gacha contents', () => {
-  test('every grade splits into heroes, gear and materials that sum to its base rate', () => {
-    const rates = gachaRates(), list = gachaContents();
-    expect(list.reduce((a, x) => a + x.p, 0)).toBeCloseTo(1, 10);
-    for (const grade of ['SSR', 'SR', 'R'] as const) expect(list.filter((x) => x.grade === grade).reduce((a, x) => a + x.p, 0)).toBeCloseTo(rates.base[grade], 10);
-    expect(GACHA.srSplit.hero + GACHA.srSplit.gear + GACHA.materials.SR.reduce((a, m) => a + m.w, 0)).toBeCloseTo(1, 10);
-    expect(GACHA.rSplit.gear + GACHA.materials.R.reduce((a, m) => a + m.w, 0)).toBeCloseTo(1, 10);
-    // 모든 장비 항목은 실제 장비 데이터와 등급이 맞다
-    const items = ITEM_BY_ID as Record<string, { rarity: string }>;
-    for (const x of list.filter((x) => x.kind === 'gear')) expect(items[x.id].rarity).toBe(x.rarity!);
-    expect(list.filter((x) => x.kind === 'material').map((x) => x.id).sort()).toEqual(['bless', 'protect', 'stones', 'stones2', 'transcendStones', 'transcendStones']);
+  test('every banner splits each grade into heroes, gear and materials that sum to its base rate', () => {
+    for (const b of Object.values(GACHA_BANNERS) as any[]) {
+      const rates = gachaRates(b.id), list = gachaContents(b.id);
+      expect(list.reduce((a, x) => a + x.p, 0)).toBeCloseTo(1, 10);
+      for (const grade of ['SSR', 'SR', 'R'] as const) expect(list.filter((x) => x.grade === grade).reduce((a, x) => a + x.p, 0)).toBeCloseTo(rates.base[grade], 10);
+      expect((b.sr.hero || 0) + (b.sr.gear || 0) + MATS(b, 'SR').reduce((a, m) => a + m.w, 0)).toBeCloseTo(1, 10);
+      expect((b.r.hero || 0) + (b.r.gear || 0) + MATS(b, 'R').reduce((a, m) => a + m.w, 0)).toBeCloseTo(1, 10);
+      // 모든 장비 항목은 실제 장비 데이터와 등급이 맞다
+      const items = ITEM_BY_ID as Record<string, { rarity: string }>;
+      for (const x of list.filter((x) => x.kind === 'gear')) expect(items[x.id].rarity).toBe(x.rarity!);
+    }
+    // 영웅·초보자 배너는 영웅 재료 표, 장비 배너는 장비 재료 표만 쓴다(SSR 등급 재료 없음).
+    const ids = (id: string) => gachaContents(id).filter((x) => x.kind === 'material').map((x) => x.id).sort();
+    expect(ids('hero')).toEqual(['bless', 'gold', 'protect', 'stones', 'stones2', 'transcendStones']);
+    expect(ids('beginner')).toEqual(ids('hero'));
+    expect(ids('gear')).toEqual(['bless', 'protect', 'stones', 'stones2']);
+  });
+
+  test('hero banner SSR is all heroes with the pickup at half; gear banner SSR is all L gear with the pickup set at half', () => {
+    const hero = gachaContents('hero').filter((x) => x.grade === 'SSR'), r = gachaRates('hero');
+    expect(hero.every((x) => x.kind === 'hero')).toBe(true);
+    expect(hero.filter((x) => x.featured).reduce((a, x) => a + x.p, 0)).toBeCloseTo(r.base.SSR * GACHA_BANNERS.hero.ssr.featured, 10);
+    const gear = gachaContents('gear').filter((x) => x.grade === 'SSR'), g = gachaRates('gear');
+    expect(gear.every((x) => x.kind === 'gear' && x.rarity === 'L')).toBe(true);
+    expect(gear.filter((x) => x.featured).reduce((a, x) => a + x.p, 0)).toBeCloseTo(g.base.SSR * GACHA_BANNERS.gear.ssr.featured, 10);
+    const beginner = gachaContents('beginner').filter((x) => x.grade === 'SSR');
+    expect(beginner.some((x) => x.featured)).toBe(false);
+    expect(beginner.every((x) => x.kind === 'hero')).toBe(true);
   });
 
   test('seeded pulls match the published per-kind shares and materials land in the save', () => {
     const eco = new Economy({ gachaSeed: 20260928 });
-    const before = { stones: eco.s.stones, stones2: eco.s.stones2 || 0, bless: eco.s.bless, protect: eco.s.protect };
-    const N = 40_000; const counts: Record<string, number> = {}; const got = { stones: 0, stones2: 0, bless: 0, protect: 0 } as Record<string, number>;
-    for (let i = 0; i < N; i++) {
-      const r: any = eco.rollResult('R');
-      const key = r.type === 'material' ? 'mat:' + r.k : r.type; counts[key] = (counts[key] || 0) + 1;
-      if (r.type === 'material') got[r.k] += r.n;
+    const N = 40_000;
+    for (const bannerId of ['hero', 'gear'] as const) {
+      const banner = GACHA_BANNERS[bannerId] as any;
+      for (const grade of ['R', 'SR'] as const) {
+        const before = { stones: eco.s.stones, stones2: eco.s.stones2 || 0, bless: eco.s.bless, protect: eco.s.protect } as Record<string, number>;
+        const counts: Record<string, number> = {}; const got = { stones: 0, stones2: 0, bless: 0, protect: 0 } as Record<string, number>;
+        for (let i = 0; i < N; i++) {
+          const r: any = eco.rollResult(grade, { banner, featured: null });
+          const key = r.type === 'material' ? 'mat:' + r.k : r.type; counts[key] = (counts[key] || 0) + 1;
+          if (r.type === 'material' && r.k in got) got[r.k] += r.n;
+        }
+        const split = (grade === 'SR' ? banner.sr : banner.r) as { hero?: number; gear?: number };
+        expect(Math.abs((counts.item || 0) / N - (split.gear || 0))).toBeLessThan(0.01);
+        expect(Math.abs((counts.hero || 0) / N - (split.hero || 0))).toBeLessThan(0.01);
+        for (const m of MATS(banner, grade)) expect(Math.abs((counts['mat:' + m.k] || 0) / N - m.w)).toBeLessThan(0.01);
+        for (const k of Object.keys(got)) expect((eco.s as any)[k] - before[k]).toBe(got[k]);
+      }
     }
-    expect(Math.abs(counts.item / N - GACHA.rSplit.gear)).toBeLessThan(0.01);
-    expect(Math.abs(counts['mat:stones'] / N - GACHA.materials.R[0].w)).toBeLessThan(0.01);
-    expect(Math.abs(counts['mat:bless'] / N - GACHA.materials.R[1].w)).toBeLessThan(0.01);
-    expect(eco.s.stones - before.stones).toBe(got.stones);
-    expect(eco.s.bless - before.bless).toBe(got.bless);
-    const sr: Record<string, number> = {};
-    for (let i = 0; i < N; i++) { const r: any = eco.rollResult('SR'); const k = r.type === 'material' ? 'mat:' + r.k : r.type; sr[k] = (sr[k] || 0) + 1; }
-    expect(Math.abs(sr.hero / N - GACHA.srSplit.hero)).toBeLessThan(0.01);
-    expect(Math.abs(sr.item / N - GACHA.srSplit.gear)).toBeLessThan(0.01);
-    expect(Math.abs(sr['mat:stones2'] / N - GACHA.materials.SR[0].w)).toBeLessThan(0.01);
-    expect(Math.abs(sr['mat:protect'] / N - GACHA.materials.SR[1].w)).toBeLessThan(0.01);
   });
 
   test('a failed save rolls back materials granted by a pull', () => {
