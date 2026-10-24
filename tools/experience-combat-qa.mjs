@@ -1,6 +1,7 @@
 import {validateRuptureEvidence} from './experience-qa-evidence.mjs';
 // Run-input probe on the actual compiled app. No synthetic levels, equipment or damage.
 import {chromium} from 'playwright';import {preview} from 'vite';import fs from 'node:fs/promises';import path from 'node:path';import {launchOpts} from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work/experience-v2/combat-qa');await fs.mkdir(out,{recursive:true});
 const server=await preview({root,configFile:false,preview:{host:'127.0.0.1',port:0},logLevel:'error'}),browser=await chromium.launch(launchOpts({headless:true}));
 const report={status:'running',scope:'Fresh Lv1 empty inventory; actual campaign movement/held-attack input then real skill-button press. Fixed simulation steps, not a human playtest.',runs:[],errors:[]};
@@ -9,6 +10,7 @@ try{
  const cases=[...['rupture','aegis','flow'].map(art=>({hero:'knight',art})),...['barbarian','mage','rogue','ranger'].map(hero=>({hero,art:'flow'}))];
  for(const {hero,art} of cases){
   const context=await browser.newContext({viewport:{width:880,height:400},hasTouch:true,serviceWorkers:'block'}),page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`);await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));await page.waitForTimeout(800);
   await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let seed=20260916;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});

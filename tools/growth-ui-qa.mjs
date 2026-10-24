@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const origin = process.argv[2] || 'http://127.0.0.1:5330/', out = path.resolve(process.argv[3] || 'work/qa/ui-20261020');
 const wantHero = process.argv[4] || null;
 await fs.mkdir(out, { recursive: true });
@@ -21,6 +22,7 @@ for (const viewport of SIZES) {
   page.on('console', (m) => { if (m.type() === 'error') row.errors.push(m.text()); });
   const check = (name, ok, detail) => { row.checks.push({ name, ok: !!ok, ...(detail === undefined ? {} : { detail }) }); if (!ok) failures.push(viewport.width + 'x' + viewport.height + ': ' + name + (detail === undefined ? '' : ' ' + JSON.stringify(detail))); };
   try {
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(origin);
     if (await page.locator('#btn-ignore-rotate').isVisible()) await page.locator('#btn-ignore-rotate').tap();
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 }); await page.locator('#boot-start').tap();

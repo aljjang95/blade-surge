@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { TOWNS, TOWN_SHOP_BY_ID, TOWN_TRAINER_BY_ID } from '../src/data/towns.js';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const out = resolve(root, 'work/qa/town-flow-' + new Date().toISOString().replace(/[:.]/g, '-'));
@@ -138,6 +139,7 @@ try {
   await page.route(/fonts\.(googleapis|gstatic)\.com/, route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(report.origin, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 });
   await page.locator('#boot-start').click();

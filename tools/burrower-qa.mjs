@@ -8,6 +8,7 @@ import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const PORT = 4294, OUT = resolve(PROJ, process.argv[2] || 'work/qa/burrower');
@@ -27,6 +28,7 @@ page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message.slice(0, 240)));
 const results = [];
 const check = (name, ok, detail) => { results.push({ name, ok: !!ok, detail }); console.log((ok ? 'OK   ' : 'FAIL ') + name, typeof detail === 'string' ? detail : JSON.stringify(detail ?? '')); };
 try {
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
   await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });

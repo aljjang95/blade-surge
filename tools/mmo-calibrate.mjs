@@ -14,6 +14,7 @@ import { stageDef } from '../src/data/stages.js';
 import { applyDifficulty, DIFFICULTIES } from '../src/game/difficulty.js';
 import { EconomyCore } from '../src/game/economy-core.js';
 import { heroCombatProfile, plausibility, validateFacts, KILL_RANKS } from '../src/shared/settlement.js';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
@@ -80,6 +81,7 @@ async function runOne(job) {
   page.on('pageerror', (e) => row.errors.push(String(e).slice(0, 200)));
   try {
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
     if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { HEROES, heroStats } from '../src/data/heroes.js';
 import { SLOTS, craftable } from '../src/data/items.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let writes = 0;
@@ -32,7 +33,7 @@ test('세트 1→2→3→4개 및 해제 비교가 실제 적용값과 일치하
 });
 
 test('다른 영웅의 장비 이전을 미리 알리고 기존 영웅의 상태는 비교만으로 바꾸지 않는다', () => {
-  const eco = new Economy(); eco.grantHero('barbarian');
+  const eco = grandfather(new Economy()); eco.grantHero('barbarian');
   const item = eco.addItem('N', 'weapon'); item.enh = 12; eco.equip('barbarian', item.uid);
   const before = JSON.stringify(eco.s), preview = eco.previewItem('knight', item.uid)!;
   expect(preview.owner).toBe('barbarian'); expect(JSON.stringify(eco.s)).toBe(before);

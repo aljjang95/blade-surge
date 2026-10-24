@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, 'work/overhaul-v3/gameplay');
@@ -36,6 +37,7 @@ try {
   });
   const page = await context.newPage();
   page.on('pageerror', error => report.errors.push(error.message));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 90000 });
   await page.locator('#boot-start').click();

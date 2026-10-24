@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const PROJ = resolve(new URL('..', import.meta.url).pathname);
 const PORT = 4195;
@@ -20,6 +21,7 @@ const page = await (await br.newContext({ viewport: { width: 880, height: 400 },
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message.slice(0, 160)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(`http://localhost:${PORT}/`);
 await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 });
 await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.hero().level = 30; e.save(); });

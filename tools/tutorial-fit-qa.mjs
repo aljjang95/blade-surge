@@ -14,6 +14,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4174';
 const out = resolve(process.argv[3] || 'work/tutorial-fit');
@@ -43,6 +44,7 @@ async function boot(width, height) {
   const ctx = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, serviceWorkers: 'block' });
   const page = await ctx.newPage();
   page.on('pageerror', error => report.errors.push(`${width}x${height} ${error.message}`));
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 90000 });
   await page.evaluate(() => { const eco = window.app.eco; eco.reset(); eco.save(); });

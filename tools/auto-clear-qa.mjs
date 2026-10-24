@@ -7,6 +7,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { installMetricsDriver } from './metrics-driver.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = k => process.argv.find(a => a.startsWith('--' + k + '='))?.slice(k.length + 3) || '';
 const taskRoot = path.resolve(import.meta.dirname, '..');
@@ -49,6 +50,7 @@ for (const [index, run] of selected.entries()) {
   try {
 page.on('pageerror', e => report.errors.push(String(e).slice(0, 300)));
 await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
 if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
 await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

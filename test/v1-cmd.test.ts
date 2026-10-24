@@ -5,7 +5,7 @@ import { createSeededRng } from '../src/shared/rng.js';
 import { parityHash } from '../src/shared/state-hash.js';
 import { OPS, validateOp } from '../src/shared/v1-ops.js';
 import { ENERGY } from '../src/data/shop.js';
-import { HERO_ORDER, HEROES } from '../src/data/heroes.js';
+import { HERO_ORDER, HEROES, levelExp } from '../src/data/heroes.js';
 
 /** 테스트용 시작 문서: 장비·재화가 넉넉한 계정. 서버 DB와 클라이언트가 같은 문서에서 출발한다. */
 function richState(now: number) {
@@ -165,5 +165,34 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
     expect(r.status).toBe(200);
     expect(r.body.result.ok).toBe(true);
     expect(r.body.doc.gold).toBeLessThan((start as any).gold);
+  });
+
+  test('미소유 영웅을 지정한 성장·장비·외형 명령은 422로 거절하고 문서를 바꾸지 않는다, 해금 직후에는 허용', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    const start: any = richState(h.now()); // 신규 문서(정책 2): 시작 영웅 knight 만 소유, 나머지는 레벨·조각이 쌓인 미소유
+    start.heroes.mage.exp = Math.ceil(levelExp(start.heroes.mage.level) / 2);
+    start.avatars.owned.push('avatar_mage_astral');
+    start.progress.unlocked = 60; start.roster.starterChosen = true;
+    const uid = start.inventory[0].uid;
+    await withDoc(h, a.accountId, start);
+    const locked: [string, unknown[]][] = [['levelUpHero', ['mage']], ['promoteHero', ['mage']], ['transcend', ['mage']], ['learnSkill', ['mage', 1]],
+      ['resetSkills', ['mage', false]], ['setSkillLoadout', ['mage', 0, 4]], ['equip', ['mage', uid]], ['unequip', ['mage', 'weapon']],
+      ['equipAvatar', ['mage', 'avatar_mage_astral']], ['selectHero', ['mage']]];
+    for (const [op, args] of locked) expect([op, (await h.cmd(a.token, op, args)).status]).toEqual([op, 422]);
+    const me = await h.send('GET', '/me', undefined, a.token);
+    expect(me.body.rev).toBe(1);
+    expect(me.body.doc.heroes.mage).toEqual(start.heroes.mage);
+    // 소유한 시작 영웅은 같은 명령이 통과한다.
+    start.heroes.knight.exp = Math.ceil(levelExp(start.heroes.knight.level) / 2);
+    await withDoc(h, a.accountId, start);
+    expect((await h.cmd(a.token, 'levelUpHero', ['knight'])).status).toBe(200);
+    // 무료 해금(서버 규칙) 직후에는 미소유였던 영웅의 명령이 허용된다.
+    const unlock = await h.cmd(a.token, 'unlockHeroFree', ['mage']);
+    expect(unlock.status).toBe(200);
+    expect((await h.cmd(a.token, 'levelUpHero', ['mage'])).status).toBe(200);
+    expect((await h.cmd(a.token, 'equipAvatar', ['mage', 'avatar_mage_astral'])).status).toBe(200);
+    const after = await h.send('GET', '/me', undefined, a.token);
+    expect(after.body.doc.heroes.mage.level).toBe(start.heroes.mage.level + 1);
   });
 });

@@ -2,6 +2,7 @@
 import { chromium, devices } from 'playwright';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { installAutoStarter } from './qa-starter.mjs';
 const url=new URL(process.argv.find(a=>a.startsWith('--url='))?.slice(6)||'http://127.0.0.1:5225');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!['http:','https:'].includes(url.protocol)||url.username||url.password)throw Error('Credential-free localhost only');
 const out='work/party-presence-final.json',dir='work/party-presence-final.artifacts';await mkdir(dir,{recursive:true});
@@ -28,6 +29,7 @@ async function pair(label){
   });
   const p=await c.newPage();pages.push(p);p.setDefaultTimeout(30000);
   p.on('console',m=>{if(m.type()==='error')r.consoleErrors.push(redact(m.text()));});p.on('pageerror',e=>r.pageErrors.push(redact(e)));
+  await installAutoStarter(p); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await p.goto(url.href,{waitUntil:'domcontentloaded',timeout:120000});await ignore(p);await p.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});await p.locator('#boot-start').tap();await p.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:120000});await p.waitForTimeout(800);
   for(let n=0;n<4;n++){const close=p.locator('#modal.show #m-cancel');if(!await close.isVisible())break;await close.click();}
   await tap(p,p.locator('#party-open'));await p.getByLabel('모험가 이름',{exact:true}).fill(`연결확인긴이름모험가${i+1}`);await p.getByLabel('파티 영웅',{exact:true}).selectOption(i?'mage':'knight');console.log(label+' player '+i+' booted');

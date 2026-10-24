@@ -26,6 +26,7 @@ import { installObserver, setObserverPhase, drainObserver, readBattle, readGrid,
 import { assessManual, MANUAL_THRESHOLDS } from './playability-journey-assess.mjs';
 import { pickResultLoot } from './playability-journey-loot.mjs';
 import { ITEM_BY_ID } from '../src/data/items.js';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -493,6 +494,7 @@ try {
 
   // 2. 부팅 · 자연 팝업
   const boot = await step('fresh profile boot via start button, natural popups closed', async () => {
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(target.href, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await waitFor(() => { const b = document.querySelector('#boot-start'); return !!b && !b.classList.contains('hidden') && !b.disabled; }, null, bootTimeoutSec * 1000, 'boot start button');
     const rotate = [await dismissRotate()];

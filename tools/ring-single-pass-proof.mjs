@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const out = resolve(process.argv[2] || 'work/ring-single-pass');
 const baseline = process.argv.includes('--baseline');
@@ -23,6 +24,7 @@ try {
     await context.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
     const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text().slice(0, 400)); });
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 90000 });
     await page.evaluate(({ hero, quality }) => {

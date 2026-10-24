@@ -4,6 +4,7 @@ import { HEROES } from '../src/data/heroes.js';
 import { baselineSkillLevels } from '../src/data/skill-tree.js';
 import { SKUS, DAILY_REWARDS, PASS_TRACK, GACHA } from '../src/data/shop.js';
 import { gradeUpCost } from '../src/data/hero-grades.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let fail = false;
@@ -79,7 +80,7 @@ test('초기화는 초기화서 없을 때만 명시적으로 보석을 쓰며 �
 });
 
 for (const grade of ['SR', 'SSR'] as const) test(`${grade} 초월 견적·부족 재료 각각·정확 차감·저장 실패 롤백`, () => {
-  const eco = new Economy(), id = Object.keys(HEROES).find(id => HEROES[id as keyof typeof HEROES].rarity === 'SR')!;
+  const eco = grandfather(new Economy()), id = Object.keys(HEROES).find(id => HEROES[id as keyof typeof HEROES].rarity === 'SR')!; // 정책 1(다섯 영웅 소유)로 둬야 미소유 차단에 걸리지 않는다
   const h = eco.hero(id); h.grade = grade;
   const cost = gradeUpCost(grade)!;
   h.shards = cost.shards; eco.s.transcendStones = cost.transcendStones; eco.s.gold = cost.gold;

@@ -1,6 +1,7 @@
 import { chromium, devices } from 'playwright';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { installAutoStarter } from './qa-starter.mjs';
 const target=new URL(process.argv.find(x=>x.startsWith('--url='))?.slice(6)||'http://127.0.0.1:5225');
 if(!['localhost','127.0.0.1'].includes(target.hostname)||!['http:','https:'].includes(target.protocol)||target.username||target.password)throw Error('localhost only');
 const out='work/pwa-party-final.json',dir='work/pwa-party-final.artifacts';await mkdir(dir,{recursive:true});
@@ -15,6 +16,7 @@ try{
   const c=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2,userAgent:devices['Pixel 7'].userAgent});contexts.push(c);const p=await c.newPage();pages.push(p);p.setDefaultTimeout(20000);
   const record={name:`긴이름협동원정모험가테스트${i+1}`,consoleErrors:[],pageErrors:[],webSockets:[]};report.clients.push(record);
   p.on('console',m=>{if(m.type()==='error')record.consoleErrors.push(m.text());});p.on('pageerror',e=>record.pageErrors.push(String(e)));p.on('websocket',ws=>{const w={url:ws.url().replace(/([?&]ticket=)[^&]+/,'$1[redacted]'),sent:0,received:0};record.webSockets.push(w);ws.on('framesent',()=>w.sent++);ws.on('framereceived',()=>w.received++);});
+  await installAutoStarter(p); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await p.goto(target.href,{waitUntil:'domcontentloaded',timeout:120000});await ignore(p);await p.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});await p.locator('#boot-start').tap();await p.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:120000});await p.waitForTimeout(700);
   for(let n=0;n<4;n++){const close=p.locator('#modal.show #m-cancel');if(!await close.isVisible())break;await close.click();}
   await tap(p,p.locator('#party-open'));await p.getByLabel('모험가 이름',{exact:true}).fill(record.name);const select=p.getByLabel('파티 영웅',{exact:true});record.hero=await select.locator('option').nth(i).getAttribute('value');await select.selectOption(record.hero);

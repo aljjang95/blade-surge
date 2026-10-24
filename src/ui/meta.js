@@ -531,8 +531,9 @@ export class Meta {
     const owned = this.eco.s.avatars.owned, equipped = this.eco.s.avatars.equipped;
     for (const avatar of AVATARS) {
       const hero = HEROES[avatar.heroId], ready = !!libraryAssetForAvatar(avatar.id), isOwned = owned.includes(avatar.id), isEquipped = equipped[avatar.heroId] === avatar.id;
+      const heroLocked = !this.eco.ownHero(avatar.heroId); // 미보유 영웅은 입을 수 없으므로 구매·착용 대신 해금 안내만 보인다
       const d = document.createElement('div'); d.className = 'shop-item avatar-shop-item' + (ready ? '' : ' avatar-pending');
-      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready ? '' : 'disabled'}>${ready ? (isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button></div>`;
+      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready && !heroLocked ? '' : 'disabled'}>${ready ? (heroLocked ? '영웅 해금 후 이용' : isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button></div>`;
       d.querySelector('[data-avatar]').onclick = () => this.buyOrEquipAvatar(avatar.id);
       grid.appendChild(d);
     }
@@ -540,6 +541,7 @@ export class Meta {
   async buyOrEquipAvatar(id) {
     const avatar = AVATARS.find((entry) => entry.id === id), s = this.eco.s;
     if (!avatar || !libraryAssetForAvatar(id)) { this.ui.toast('아바타가 아직 준비되지 않았습니다.', 'red'); return; }
+    if (!this.eco.ownHero(avatar.heroId)) { this.ui.toast('영웅을 먼저 해금해 주세요.', 'red'); return; }
     const owned = s.avatars.owned.includes(id), equipped = s.avatars.equipped[avatar.heroId] === id;
     if (!owned) {
       if (s.gems < avatar.price) { this.ui.toast(`보석 부족 · ${fmt(avatar.price)}개 필요`, 'red'); return; }

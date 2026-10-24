@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(process.argv.find(a=>a.startsWith('--root='))?.slice(7)||path.resolve(import.meta.dirname,'..')),live=process.argv.includes('--live'),baseline=process.argv.includes('--baseline');
 const out=path.join(root,'work/supervisor-rsi-20260916',live?'qa-live':baseline?'qa-baseline':'qa-local');await mkdir(out,{recursive:true});
 const sha=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
@@ -19,6 +20,7 @@ try{
  await page.route('**/*',r=>{if(!['GET','HEAD','OPTIONS'].includes(r.request().method())){report.blockedWrites.push(r.request().url());return r.abort();}return r.continue();});
  page.on('pageerror',e=>report.errors.push('PAGE '+e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push('CONSOLE '+m.text());});
  const boot=async()=>{await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();await page.waitForFunction(()=>window.app?.mode==='lobby');};
+ await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
  await page.goto(origin,{waitUntil:'domcontentloaded',timeout:60000});await boot();
  if(live){report.version=await page.evaluate(()=>fetch('/version.json?qa='+Date.now(),{cache:'no-store'}).then(r=>r.json()));check(report.version.sha===sha&&!report.version.dirty,'Live version differs from checkout');}
  report.gpu=await page.evaluate(()=>{const gl=app.renderer.r.getContext(),ex=gl.getExtension('WEBGL_debug_renderer_info');return gl.getParameter(ex?.UNMASKED_RENDERER_WEBGL||gl.RENDERER);});
