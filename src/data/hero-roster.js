@@ -10,6 +10,18 @@ export const HERO_POLICY_CURRENT = HERO_POLICY.STARTER;
  */
 export const HERO_LEGACY_IDS = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger']);
 
+/**
+ * 정책 2(시작 영웅 1명)가 운영에 들어간 시각의 보수적 하한(PR #253 squash 머지 2026-10-24 16:26:22 KST).
+ * 서버가 기록한 소셜 프로필 생성 시각이 이보다 앞서면 그 계정은 정책 1 시절 이용자라는 서버 증거다(BM_DESIGN 11.6-1).
+ * 머지~배포 사이에 프로필을 만든 이용자는 정책 1 클라이언트였을 수 있지만 증거로 치지 않고 보상으로 처리한다(보수적).
+ */
+export const HERO_STARTER_POLICY_SINCE = Date.UTC(2026, 9, 24, 7, 26, 22);
+/**
+ * 서버 증거 없이 정책 1을 주장한 저장(로컬 roster 없음 또는 정책 1)이 서버 정본이 될 때 한 번 주는 보상.
+ * 영웅 4명 대신 영웅 배너 10회분 소환권. 증거가 없으니 영웅을 주지는 않는다(17,900원 전원 해금 우회 차단).
+ */
+export const HERO_LEGACY_COMPENSATION = Object.freeze({ tickets: 10 });
+
 /** 서버 권한 키 'hero:<id>' ↔ 영웅 id. */
 export const HERO_ENTITLEMENT_PREFIX = 'hero:';
 export const heroEntitlementKey = (id) => HERO_ENTITLEMENT_PREFIX + id;

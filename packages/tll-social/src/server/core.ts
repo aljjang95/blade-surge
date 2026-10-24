@@ -440,6 +440,15 @@ export class SocialCore {
       return { playerId: id, adopted: false, banned: false };
     });
   }
+  /**
+   * 게임 서버의 기존 이용자 증거 조회(Worker→DO 내부 전용). 소셜 프로필이 서버에 처음 만들어진 시각을 돌려준다.
+   * 이 시각은 서버가 기록한 값이라 클라이언트가 고칠 수 없다. 프로필이 없으면(예약 id만 있음) createdAt=null.
+   */
+  internalEvidence(playerId: unknown): { createdAt: number | null; banned: boolean } {
+    if (typeof playerId !== 'string' || !/^p_[0-9a-f]{24}$/.test(playerId)) throw new SocialError('bad-player', 400);
+    const p = this.player(playerId);
+    return p ? { createdAt: Number(p.created_at), banned: !!p.banned } : { createdAt: null, banned: false };
+  }
   private reservedId(keyHash: string): string | null {
     if (!this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) return null;
     const row = this.one('SELECT player_id FROM reserved_ids WHERE key_hash = ?', keyHash);

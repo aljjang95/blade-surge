@@ -6,7 +6,7 @@ import { IMPORT_LIMIT, json, readJson } from './http';
 import { createSession, link, logoutAll, recover, requireSession, unlink, type AuthDeps, type AuthEnv, type Ctx } from './auth';
 import { getMe, runCommand } from './cmd';
 import { settleRun, startRun } from './runs';
-import { importLegacy, shadowSnapshot } from './import';
+import { importLegacy, settleLegacyCompensation, shadowSnapshot } from './import';
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
 import { handleRtdn } from './rtdn';
@@ -60,7 +60,13 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     const c: Ctx = { env, db, deps, now: deps.now(), request };
     const method = request.method;
     // 비인증 경로는 요청 IP(해시)로 먼저 제한한다. 본문을 읽거나 DB·제공자를 부르기 전에 거른다.
-    if (method === 'POST' && path === '/auth/session') { await rateLimit(c, 'session', await ipKey(request)); return json(await createSession(c, await readJson(request))); }
+    if (method === 'POST' && path === '/auth/session') {
+      await rateLimit(c, 'session', await ipKey(request));
+      const session = await createSession(c, await readJson(request));
+      // 컷오버된 계정의 기존 이용자 보상(1회). 실패해도 세션은 내준다(다음 세션에서 다시 시도, 원장 op_id로 중복 없음).
+      if (session.authority === 'server') { try { await settleLegacyCompensation(c, session.accountId); } catch { /* 다음 세션에서 재시도 */ } }
+      return json(session);
+    }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
     if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
