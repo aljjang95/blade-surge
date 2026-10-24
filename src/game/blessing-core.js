@@ -12,8 +12,12 @@ import {
  * - 결과는 roll 호출 시점(릴 회전 시작 전)에 정해지고, 연출은 그 결과를 보여 주기만 한다.
  */
 
+/** @typedef {{id: string, grade: number}} BlessingBoon 각인 id와 등급(1~3) */
+
 const DAY_MS = 86400000, MAX = 1000000, VERSION = 1;
-const BOON_IDS = new Set(BOONS.map(b => b.id));
+/** @type {string[]} */
+const BOON_ID_LIST = BOONS.map(b => String(b.id));
+const BOON_IDS = new Set(BOON_ID_LIST);
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const int = (v, max = MAX, min = 0) => Number.isSafeInteger(v) ? Math.min(max, Math.max(min, v)) : min;
 const grade = v => Number.isSafeInteger(v) && v >= 1 && v <= 3 ? v : 0;
@@ -117,9 +121,10 @@ function pickGrade(u) {
  * 후보 3개만 만든다(상태 없음). 각인 id는 12종 중 서로 다른 3개를 균등 추출,
  * 각 칸 등급은 독립 70/25/5. guaranteeIII면 균등하게 고른 1칸을 III으로 고정(그 칸의 각인 종류도 균등 1/12).
  */
+/** @returns {BlessingBoon[]} */
 export function drawCandidates(seed, { guaranteeIII = false } = {}) {
   const next = rng(String(seed).slice(0, 200));
-  const pool = BOONS.map(b => b.id);
+  const pool = BOON_ID_LIST.slice();
   for (let i = 0; i < BLESSING_CANDIDATES; i++) {
     const j = i + Math.floor(next() * (pool.length - i));
     [pool[i], pool[j]] = [pool[j], pool[i]];

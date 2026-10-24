@@ -69,7 +69,7 @@ test('보장 III의 각인 종류는 균등',()=>{
     for(const x of forced) n[x.id]=(n[x.id]||0)+1;
   }
   const total=Object.values(n).reduce((a,b)=>a+b,0);
-  for(const b of BOONS) expect(Math.abs(n[b.id]/total-1/12)).toBeLessThan(.006);
+  for(const b of BOONS as any[]) expect(Math.abs(n[b.id]/total-1/12)).toBeLessThan(.006);
 });
 
 test('비용 순서: 무료 → 부적 → 보석 30/60/90, 보석 차감은 호출자 몫',()=>{
@@ -82,7 +82,7 @@ test('비용 순서: 무료 → 부적 → 보석 30/60/90, 보석 차감은 호
   expect(s.charms).toBe(0);
   // 출격 시작 뒤에는 가격 단계가 처음으로 돌아간다.
   s=consumeOnRunStart(s).state;expect(rollCost(s,RESET+1000)).toEqual({kind:'gem',gems:30,allowed:true});
-  s=roll(s,RESET+1000,'cost').state;expect(rollCost(s,RESET+1000).gems).toBe(60);
+  s=(roll(s,RESET+1000,'cost') as any).state;expect(rollCost(s,RESET+1000).gems).toBe(60);
   expect(resetRunRerolls(s).runGemRolls).toBe(0);
   // 입력 상태는 바뀌지 않는다.
   const before=normalizeBlessing({charms:1});const snap=JSON.stringify(before);roll(before,RESET,'x');pick(before,0);consumeOnRunStart(before);
@@ -106,7 +106,7 @@ test('05:00 KST 경계: 04:59:59는 전날, 05:00은 새날(무료 1회 다시)'
   expect(dayKey(RESET)).toBe(dayKey(RESET-1)+1);
   expect(dayKey(RESET+DAY-1)).toBe(dayKey(RESET));
   expect(dayKey(RESET)).toBe(periodAt(RESET).day);
-  const s=roll(normalizeBlessing(null),RESET-1,'edge').state as any;
+  const s=(roll(normalizeBlessing(null),RESET-1,'edge') as any).state;
   expect(rollCost(s,RESET-1).kind).toBe('gem');
   expect(rollCost(s,RESET).kind).toBe('free');
 });
@@ -120,7 +120,7 @@ test('보관 1개: 고르기·다시 고르기·재굴림 중 유지·소모 후
   expect(p2.state.held).toEqual(r.candidates[2]);expect(p2.state.offer.picked).toBe(2);
   s=p2.state;
   // 다시 굴려도 보관은 새로 고를 때까지 유지.
-  s=roll(addCharms(s,1).state,RESET,'hold2').state;
+  s=(roll(addCharms(s,1).state,RESET,'hold2') as any).state;
   expect(s.held).toEqual(r.candidates[2]);expect(s.offer.picked).toBe(-1);
   // 출격 시작 실패 → consume을 부르지 않으므로 저장 정규화 뒤에도 그대로.
   s=normalizeBlessing(JSON.parse(JSON.stringify(s)));expect(s.held).toEqual(r.candidates[2]);
