@@ -314,6 +314,18 @@ export function blessingConsume(/** @type {any} */ eco) {
   return out.ok ? out : { ...out, preRunBoons: /** @type {string[]} */ ([]), boonId: null };
 }
 
+/**
+ * 출격 시작이 실패했을 때 먼저 소모한 보관 각인을 되돌린다. 이미 다른 각인을 보관 중이면 덮어쓰지 않는다.
+ * 저장에 실패하면 commit 이 세이브를 되돌린다(다른 전운 조작과 같은 방식).
+ */
+export function blessingRestore(/** @type {any} */ eco, /** @type {{ id: string, grade: number }|null} */ held) {
+  const cur = blessingOf(eco);
+  if (!held || cur.held) return fail('held');
+  const next = normalizeBlessing({ ...cur, held: { id: held.id, grade: held.grade } });
+  if (!next.held) return fail('invalid');
+  return commit(eco, () => { eco.s.blessing = next; return { ok: /** @type {const} */ (true), held: { ...next.held } }; });
+}
+
 /** 부적 지급(저장은 호출자 몫). 실제로 더해진 수. */
 export function grantCharms(/** @type {any} */ eco, /** @type {number} */ amount) {
   const res = addCharms(blessingOf(eco), amount);

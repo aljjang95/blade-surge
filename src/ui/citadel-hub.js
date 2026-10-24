@@ -262,10 +262,13 @@ export class CitadelHubUI {
     }
     // 후보를 굴리고 고르지 않았으면 창 안 띠로 한 번 확인한다(팝업 없음).
     if (this.blessing && !this.blessing.confirmDeparture()) return false;
-    this.busy = true; this.close();
-    // 보관 전운 각인은 시작 직전 넘기고, 시작이 성공한 뒤에만 소모한다.
-    try { return (await launchWithBlessing(this.app, () => this.app.startExpedition('dungeon', def.id, { depth }))).started; }
-    finally { this.busy = false; }
+    this.busy = true;
+    // 소모 저장을 먼저 하고(실패하면 창을 닫지 않고 띠로 안내), 그다음 각인을 넘겨 시작한다. 시작이 실패하면 보관 각인을 되돌린다.
+    try {
+      const out = await launchWithBlessing(this.app, () => { this.close(); return this.app.startExpedition('dungeon', def.id, { depth }); });
+      if (out.saveFailed) this.blessing?.notice('저장에 실패했습니다. 각인을 쓰지 않았으니 다시 눌러 주세요.', 'warn');
+      return out.started;
+    } finally { this.busy = false; }
   }
   refreshDestination() {
     const def = DUNGEONS.find(d => d.id === this.dialogSpot?.route); if (!def || !this.opened) return;
