@@ -6,7 +6,8 @@ import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-
 import { ROOM_TYPE, isStarArchive, mulberry32 } from './world.js';
 import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
-import { activeTownId, TOWN_THEMES, takeEmergingGates } from '../data/citadel-hub.js';
+import { activeTownId, TOWN_THEMES, takeEmergingGates, isStarterVillage } from '../data/citadel-hub.js';
+import { STARTER_ATMOSPHERE } from '../data/starter-village.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { activeCampaignSkin } from '../data/campaign-towns.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
@@ -245,7 +246,9 @@ export class Arena {
     const T = THEMES.lobby;
     // 현재 마을의 하늘·안개·조명. 서약의 성채 값은 기존 광장과 같다.
     // 캠페인 지역 마을(2~6지역)이 열려 있으면 그 마을의 하늘·안개·조명을 쓴다. 1지역은 서비스 마을 값 그대로다.
-    const townId = activeTownId(), skin = activeCampaignSkin(), A = (skin || TOWN_THEMES[townId] || TOWN_THEMES.oathhold).atmosphere;
+    const townId = activeTownId(), skin = activeCampaignSkin();
+    // 첫 마을(1지역)은 초보자 마을의 햇살 정원 조명(starter-village.js)을 쓴다.
+    const A = !skin && isStarterVillage(townId) ? STARTER_ATMOSPHERE : (skin || TOWN_THEMES[townId] || TOWN_THEMES.oathhold).atmosphere;
     this.scene.background = new THREE.Color(A.bg); this.scene.fog.color.set(A.fog); this.scene.fog.density = A.density;
     const hemi = new THREE.HemisphereLight(A.hemi[0], A.hemi[1], A.hemiI); this.scene.add(hemi); this.lights.push(hemi);
     const sun = new THREE.DirectionalLight(A.sun, A.sunI); sun.position.set(...A.sunPos); sun.castShadow = true;
