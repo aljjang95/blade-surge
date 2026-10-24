@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import { MasterworksView } from '../src/ui/masterworks.js';
-import { BOONS, STORY_EVENTS } from '../src/data/masterworks.js';
-import { Battle } from '../src/game/masterworks-battle.js';
-import { normalizeMasterworks, previewBoon } from '../src/game/masterworks-core.js';
+import { BOONS } from '../src/data/masterworks.js';
+import { normalizeMasterworks } from '../src/game/masterworks-core.js';
 import { uiArt } from '../src/ui/illustrated.js';
 
 function fixture(result:any=null) {
@@ -63,8 +62,7 @@ class MWElement {
 }
 function renderFixture(run=false){
   const v:any=Object.create(MasterworksView.prototype);v.tab=run?'run':'mastery';v.content=new MWElement('div');v.dialog=new MWElement('dialog');v.nav=new MWElement('nav');v.title=new MWElement('h2');v.app={};
-  const queue=[{kind:'boon',ids:['ember_edge','tide_breath','storm_eye']}];
-  v.battle={active:false,masterworks:{s:{...normalizeMasterworks(null),renown:3}},run:{enabled:true,picked:[],queue},currentOffer:()=>v.battle.run?.queue[0]};return v;
+  v.battle={active:false,masterworks:{s:{...normalizeMasterworks(null),renown:3}},run:{enabled:true,picked:[]}};return v;
 }
 function withMWDOM(fn:()=>void){const descriptor=Object.getOwnPropertyDescriptor(globalThis,'document');Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:(t:string)=>new MWElement(t),body:new MWElement('body'),querySelector:()=>null}});try{fn();}finally{if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');}}
 test('illustrated mastery keeps exact effects, cost and prerequisite while folding introductory rules',()=>withMWDOM(()=>{
@@ -144,158 +142,67 @@ test('campaign goal navigation clears only a saved expedition overlay and uses t
   app.expedition.s.pending={id:1};calls.length=0;expect(await view.departPersonalGoal(context)).toEqual({ok:false});expect(calls).toEqual([]);
   app.expedition.s.pending=null;app.expeditionRefundPending=true;expect(await view.departPersonalGoal(context)).toEqual({ok:false});expect(calls).toEqual([]);
 });
-test('boon choice artwork follows its ID and keeps chain cap directly on choice',()=>withMWDOM(()=>{
- const view=renderFixture(true);view.renderRun();const cards=view.content.all().filter((n:MWElement)=>n.dataset.boon);
- expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/engraving/ember_edge.webp','/img/ui-crafted/engraving/tide_breath.webp','/img/ui-crafted/engraving/storm_eye.webp']);
- expect(cards[2].text()).toContain('최대 2명');expect(cards[0].text()).toContain('공격력 +5%');expect(cards.every((n:MWElement)=>n.tagName==='button')).toBe(true);
-}));
-
-for(const family of new Set(BOONS.map(b=>b.family)))test(`${family} boons have distinct per-ID artwork shared by choices and picked chips`,()=>withMWDOM(()=>{
- const boons=BOONS.filter(b=>b.family===family),view=renderFixture(true),ids=boons.map(b=>b.id);
- view.battle.currentOffer=()=>({kind:'boon',ids});view.battle.run.picked=ids.flatMap((id,i)=>Array(i%2+1).fill(id));
- view.renderRun();const nodes:MWElement[]=view.content.all(),cards=nodes.filter(n=>n.dataset.boon),chips=nodes.filter(n=>n.className.split(' ').includes('mw-chip'));
- const expected=ids.map(id=>`/img/ui-crafted/engraving/${id}.webp`),sources=cards.map(n=>n.children[0].src);
- expect(sources).toEqual(expected);expect(new Set(sources).size).toBe(boons.length);
- expect(chips.map(n=>n.children[0].src)).toEqual(expected);
- boons.forEach((boon,i)=>{
-  const rank=i%2+1;expect(cards[i].dataset.family).toBe(family);expect(cards[i].text()).toContain(String(boon.description));
-  expect(cards[i].text()).toContain(`강화 ${rank} → ${rank+1}`);expect(chips[i].text()).toContain(String(boon.name));expect(chips[i].text()).toContain(`적용 중 · ${rank}단계`);
-  expect(chips[i].text()).toContain(`${rank>1?'단계당 · ':''}${boon.description}`);expect(chips[i].tagName).toBe('article');
-  expect(cards[i].children[0].alt).toBe('');expect(chips[i].children[0].alt).toBe('');
- });
-}));
-
 test('art resolver accepts exact own registry keys and preserves the original fallback',()=>{
  expect(uiArt('boon-ember_edge')).toBe('/img/ui-crafted/engraving/ember_edge.webp');
  for(const id of ['loadout','gold','boon-ember','boon-EMBER_EDGE','boon-missing','constructor','toString','__proto__'])expect(uiArt(id)).toBe(`/img/ui-crafted/${id}.webp`);
 });
 
-function choiceFixture(queue:any[]) {
-  const state={...normalizeMasterworks(null),story:{} as Record<string,string>},storage={fail:false,attempts:0,saved:structuredClone(state)},pauses=new Set<string>();
-  const battle:any=Object.assign(Object.create(Battle.prototype),{
-    active:true,stage:{code:'1-1'},elapsed:0,player:{alive:true,hp:20,maxHp:100},
-    run:{id:1,enabled:true,queue,picked:[],autoPicked:0,renown:0},
-    masterworks:{s:state,transact(fn:any,options:any){expect(options.duringBattle).toBe(true);storage.attempts++;if(storage.fail)return {ok:false,error:'저장 실패 · 다시 선택해 주세요.'};const result=fn(state);storage.saved=structuredClone(state);return result;}},
-    applyBuild(){},ui:{toast(){}},setPaused(reason:string,on:boolean){if(on)pauses.add(reason);else pauses.delete(reason);},
-  });
-  const view:any=new MasterworksView({mode:'battle'},battle),trigger=new MWElement('button');battle.chronicle=view;
-  view.open('run',trigger);
-  return {view,battle,state,storage,pauses,trigger};
-}
-
-test('clicking a boon applies only that choice and restores the trigger while the next offer stays queued',()=>withMWDOM(()=>{
-  const next={kind:'story',id:'lantern'},first={kind:'boon',ids:['ember_edge','tide_breath','storm_eye']};
-  const {view,battle,storage,pauses,trigger}=choiceFixture([first,next]);pauses.add('catalogue');
-  expect(view.dialog.dataset.view).toBe('run');expect(view.title.textContent).toBe('원정 각인 선택');expect(view.nav.hidden).toBe(true);
-  expect(battle.run.picked).toEqual([]);expect(battle.run.queue).toHaveLength(2);
-  const pending=view.content.all().find((n:MWElement)=>n.className==='mw-pending');expect(pending.text()).toContain('2건 · 아직 적용 전');
-  pending.all().find((n:MWElement)=>n.dataset.boon==='tide_breath').click();
-  expect(battle.run.picked).toEqual(['tide_breath']);expect(battle.run.queue).toEqual([next]);expect(storage.attempts).toBe(0);
-  expect(view.dialog.open).toBe(false);expect(pauses).toEqual(new Set(['catalogue']));expect(trigger.focused).toBe(true);
-  expect(view.hud.textContent).toBe('각인 +1');
+for(const family of new Set(BOONS.map(b=>b.family)))test(`${family} pre-run boons show distinct per-ID artwork on applied chips without any choice card`,()=>withMWDOM(()=>{
+ const boons=BOONS.filter(b=>b.family===family),view=renderFixture(true),ids=boons.map(b=>b.id);
+ view.battle.run.picked=ids.flatMap((id,i)=>Array(i%2+1).fill(id));
+ view.renderRun();const nodes:MWElement[]=view.content.all(),chips=nodes.filter(n=>n.className.split(' ').includes('mw-chip'));
+ const expected=ids.map(id=>`/img/ui-crafted/engraving/${id}.webp`);
+ expect(chips.map(n=>n.children[0].src)).toEqual(expected);expect(new Set(expected).size).toBe(boons.length);
+ expect(nodes.filter(n=>n.dataset.boon||n.dataset.storyChoice)).toHaveLength(0);
+ boons.forEach((boon,i)=>{
+  const rank=i%2+1;expect(chips[i].text()).toContain(String(boon.name));expect(chips[i].text()).toContain(`적용 중 · ${rank}단계`);
+  expect(chips[i].text()).toContain(`${rank>1?'단계당 · ':''}${boon.description}`);expect(chips[i].tagName).toBe('article');expect(chips[i].children[0].alt).toBe('');
+ });
 }));
 
-test('rendering a preview leaves the live offer and save untouched, then the native choice applies that same calculation',()=>withMWDOM(()=>{
-  const next={kind:'story',id:'lantern'},first={kind:'boon',ids:['ember_edge','tide_breath','storm_eye'],round:2,autoAt:8};
-  const {view,battle,state,storage,pauses,trigger}=choiceFixture([first,next]);
-  battle.run.picked=['ember_edge'];battle.run.permanent={};battle.run.round=3;
-  battle.buildBase={hp:100,atk:20,def:10,spd:5,crit:.05};battle.applyBuild=Battle.prototype.applyBuild;battle.applyBuild();
-  pauses.add('catalogue');const before=JSON.stringify({run:battle.run,state,player:battle.player,effects:battle.effects,pauses:[...pauses]});
-  view.render();view.render();
-  expect(JSON.stringify({run:battle.run,state,player:battle.player,effects:battle.effects,pauses:[...pauses]})).toBe(before);
-  expect(storage.attempts).toBe(0);
-  const cards:MWElement[]=view.content.all().filter((n:MWElement)=>n.dataset.boon);
-  expect(cards.map(n=>n.dataset.boon)).toEqual(first.ids);expect(cards[0].text()).toContain('공격력 +5% → +10%');
-  const preview=previewBoon(battle.run.picked,'storm_eye');if(!preview)throw Error('Expected native choice preview');
-  expect(cards[2].text()).toContain('질주하는 불씨');expect(cards[2].text()).toContain('공격력 +5% → +12%');
-  expect(battle.selectBoon('storm_edge').ok).toBe(false);expect(battle.run.queue).toEqual([first,next]);
-  cards[2].click();
-  expect(battle.effects).toEqual(preview.after);expect(battle.player.stats.atk).toBeCloseTo(22.4);
-  expect(battle.run.picked).toEqual(['ember_edge','storm_eye']);expect(battle.run.queue).toEqual([next]);expect(storage.attempts).toBe(0);
-  expect(view.dialog.open).toBe(false);expect(pauses).toEqual(new Set(['catalogue']));expect(trigger.focused).toBe(true);
-}));
-
-test('a capped chain preview explicitly preserves two targets and does not invent a new combination',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.battle.run.picked=['storm_eye','storm_eye','ember_edge','tide_guard','stone_plate'];
-  view.battle.currentOffer=()=>({kind:'boon',ids:['storm_eye']});const before=JSON.stringify(view.battle.run);view.renderRun();
-  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='storm_eye');
-  expect(card.text()).toContain('강화 2 → 3');expect(card.text()).toContain('마무리 연쇄 2명 → 2명 · 상한, 변화 없음');
-  expect(card.all().filter(n=>n.className==='mw-preview-synergies')).toHaveLength(0);expect(JSON.stringify(view.battle.run)).toBe(before);
-}));
-
-test('four coefficient changes fit three rows while the new-combination group retains the fourth actual change',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.battle.run.picked=['ember_hunt','ember_hunt','tide_guard','tide_guard','stone_plate'];
-  view.battle.currentOffer=()=>({kind:'boon',ids:['storm_step']});view.renderRun();
-  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='storm_step'),rows=card.all().filter(n=>n.className==='mw-preview-change');
-  expect(rows).toHaveLength(3);expect(rows.map(n=>n.text())).toEqual(['이동 속도 +0% → +4%','공격력 +0% → +7%','재사용 대기 -0% → -8%']);
-  const combo=card.all().find(n=>n.className==='mw-preview-synergies');if(!combo)throw Error('Expected new combination group');
-  for(const name of ['질주하는 불씨','비의 행군','산울림'])expect(combo.text()).toContain(name);
-  expect(combo.text()).toContain('치명타 확률 +0% → +4%');expect(combo.text()).not.toContain('바위샘');
-  expect(card.all().filter(n=>['button','details','input','a'].includes(n.tagName))).toHaveLength(0);
-  expect(view.content.text()).toContain('각인 보너스 합계');expect(view.content.text()).toContain('장비·영구 숙련은 포함하지 않습니다');
-}));
-
-test('preview healing retains fractional percentages and uses the current total rather than the static per-rank amount',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.battle.run.picked=['tide_return'];view.battle.currentOffer=()=>({kind:'boon',ids:['tide_return']});view.renderRun();
-  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='tide_return');
-  expect(card.text()).toContain('처치 회복 0.7% → 1.4%');expect(card.text()).toContain('최대 체력 0.7% 회복');
-  expect(card.all().filter(n=>n.className==='mw-preview-change')).toHaveLength(1);
-}));
-
-for(const event of STORY_EVENTS)for(const choice of event.choices)test(`${event.id}/${choice.id} displays its real reward and routes selection through the durable story transaction`,()=>withMWDOM(()=>{
-  const {view,battle,state,storage}=choiceFixture([{kind:'story',id:event.id}]);
-  expect(view.title.textContent).toBe('길 위의 만남');expect(view.content.text()).toContain(event.description);
-  const card=view.content.all().find((n:MWElement)=>n.dataset.storyChoice===choice.id);
-  const heal=Number(choice.effects.heal||0),renown=Number(choice.effects.renown||0);
-  expect(card.text()).toContain(choice.name);expect(card.text()).toContain(choice.consequence);
-  expect(card.text()).toContain(heal?`체력 ${Math.round(heal*100)}% 회복`:`명성 +${renown}`);
-  expect(card.children[0].src).toBe(uiArt(heal?'potion-health':'renown'));
-  expect(state.story[event.id]).toBeUndefined();expect(storage.attempts).toBe(0);
-  card.click();
-  expect(storage.attempts).toBe(1);expect(storage.saved.story[event.id]).toBe(choice.id);expect(storage.saved.renown).toBe(renown);
-  expect(battle.run.renown).toBe(renown);expect(battle.player.hp).toBe(20+Math.round(100*heal));expect(battle.run.queue).toHaveLength(0);expect(view.dialog.open).toBe(false);
-}));
-
-test('failed story save keeps the choice, health and modal pause intact until a successful retry',()=>withMWDOM(()=>{
-  const offer={kind:'story',id:'lantern'},{view,battle,state,storage,pauses,trigger}=choiceFixture([offer]);storage.fail=true;
-  const choice=()=>view.content.all().find((n:MWElement)=>n.dataset.storyChoice==='mend');choice().click();
-  expect(storage.attempts).toBe(1);expect(view.notice.textContent).toContain('저장 실패');expect(view.dialog.open).toBe(true);
-  expect(battle.run.queue).toEqual([offer]);expect(battle.player.hp).toBe(20);expect(state.story).toEqual({});expect(storage.saved.story).toEqual({});
-  expect(pauses).toEqual(new Set(['masterworks']));expect(trigger.focused).toBe(false);
-  storage.fail=false;choice().click();
-  expect(storage.attempts).toBe(2);expect(storage.saved.story.lantern).toBe('mend');expect(battle.player.hp).toBe(50);expect(battle.run.queue).toHaveLength(0);expect(view.dialog.open).toBe(false);
-}));
-
-for(const id of ['guide','mend'])test(`saved lantern choice ${id} shows only its revisit heal and never repays or rewrites the story`,()=>withMWDOM(()=>{
-  const {view,battle,state,storage}=choiceFixture([{kind:'story',id:'lantern'}]);state.story.lantern=id;state.renown=20;storage.saved=structuredClone(state);view.render();
-  const cards=view.content.all().filter((n:MWElement)=>n.dataset.storyChoice),heal=id==='mend'?12:6;
-  expect(cards).toHaveLength(1);expect(cards[0].text()).toContain(`체력 ${heal}% 회복`);expect(cards[0].text()).toContain('지난 선택');expect(cards[0].text()).not.toContain('명성 +');
-  cards[0].click();expect(storage.attempts).toBe(0);expect(state.story.lantern).toBe(id);expect(state.renown).toBe(20);expect(storage.saved.story.lantern).toBe(id);
-  expect(battle.player.hp).toBe(20+heal);expect(battle.run.renown).toBe(0);expect(battle.run.queue).toHaveLength(0);
-}));
-
-test('no-offer inspection separates applied ranks and combinations from choices and folds permanent growth',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.battle.run.queue=[];view.battle.run.picked=['ember_edge','ember_edge','storm_eye'];view.battle.run.autoPicked=2;
+test('run view only inspects applied pre-run boons and combinations, never offers a choice, and folds permanent growth',()=>withMWDOM(()=>{
+  const view=renderFixture(true);view.battle.run.picked=['ember_edge','ember_edge','storm_eye'];
   const before=structuredClone(view.battle.run);view.render();const nodes:MWElement[]=view.content.all();
-  expect(view.title.textContent).toBe('원정 각인 현황');expect(view.content.text()).toContain('현재 선택할 보상이 없습니다');
+  expect(view.title.textContent).toBe('원정 각인 현황');expect(view.content.text()).toContain('출격 중에는 새 각인을 얻지 않으며');
   expect(nodes.filter(n=>n.dataset.boon||n.dataset.storyChoice)).toHaveLength(0);expect(nodes.some(n=>n.className==='mw-pending')).toBe(false);
-  const owned=nodes.find(n=>n.className==='mw-owned')!;expect(owned.text()).toContain('2종 · 총 3회 획득');expect(owned.text()).toContain('적용 중 · 2단계');expect(owned.text()).toContain('단계당 · 공격력 +5%');
-  expect(owned.text()).toContain('질주하는 불씨');expect(owned.text()).toContain('공격력 +7%');expect(owned.text()).toContain('자동 적용 보상 2회 포함');
+  const owned=nodes.find(n=>n.className==='mw-owned')!;expect(owned.text()).toContain('2종 · 총 3단계');expect(owned.text()).toContain('적용 중 · 2단계');expect(owned.text()).toContain('단계당 · 공격력 +5%');
+  expect(owned.text()).toContain('질주하는 불씨');expect(owned.text()).toContain('공격력 +7%');
   const growth=nodes.find(n=>n.tagName==='details'&&n.text().includes('귀환 후에도 남는 성장'))!;expect(growth.open).toBe(false);expect(growth.text()).toContain('길드 명성 3');
   expect(view.battle.run).toEqual(before);
-}));
-
-test('pending choices never appear as acquired and an empty build explains where its first boon will appear',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.render();const nodes:MWElement[]=view.content.all(),owned=nodes.find(n=>n.className==='mw-owned')!;
-  expect(nodes.filter(n=>n.dataset.boon)).toHaveLength(3);expect(owned.all().filter(n=>n.dataset.ownedBoon)).toHaveLength(0);
-  expect(owned.text()).toContain('아직 적용된 각인이 없습니다');expect(owned.text()).toContain('위에서 하나를 고르면');
-  view.battle.run.queue=[];view.render();expect(view.content.text()).toContain('전투에서 각인 보상을 얻으면');
+  view.battle.run.picked=[];view.render();expect(view.content.text()).toContain('이번 출격에 적용된 각인이 없습니다');
 }));
 
 test('no run and shared-rule battles explain their purpose without presenting personal reward choices',()=>withMWDOM(()=>{
-  const view=renderFixture(true);view.battle.run=null;view.render();expect(view.content.text()).toContain('캠페인·재료 던전');expect(view.content.text()).toContain('출격 후 각인이 모입니다');
-  view.battle.run={enabled:false,picked:[],queue:[]};view.render();expect(view.content.text()).toContain('공용 전투 규칙');
+  const view=renderFixture(true);view.battle.run=null;view.render();expect(view.content.text()).toContain('출격 전 각인 없음');expect(view.content.text()).toContain('출격 중에는 각인 보상이 없습니다');
+  view.battle.run={enabled:false,picked:[]};view.render();expect(view.content.text()).toContain('공용 전투 규칙');
   expect(view.content.all().some((n:MWElement)=>n.dataset.boon||n.dataset.ownedBoon||n.className==='mw-pending')).toBe(false);
   view.tab='mastery';view.render();expect(view.dialog.dataset.view).toBe('mastery');expect(view.nav.hidden).toBe(false);expect(view.content.text()).toContain('영구 숙련');
   view.tab='quests';view.render();expect(view.dialog.dataset.view).toBe('quests');expect(view.nav.hidden).toBe(false);expect(view.content.text()).toContain('길드 의뢰');
+}));
+
+test('HUD 각인 버튼은 출격 전 각인이 있을 때만 보이고 획득 대기 뱃지(+N)는 없다',()=>withMWDOM(()=>{
+  const battle:any={active:true,elapsed:0,counterUntil:0,run:{enabled:true,picked:[],renown:2},masterworks:{s:normalizeMasterworks(null)},setPaused(){}};
+  const view:any=new MasterworksView({mode:'battle'},battle);
+  view.refresh();expect(view.hud.hidden).toBe(true);expect(view.hud.textContent).not.toContain('+');expect(view.strip.textContent).toBe('명성 +2 · 마무리 공격으로 균형 파괴');
+  battle.run.picked=['ember_edge','ember_edge'];view.refresh();
+  expect(view.hud.hidden).toBe(false);expect(view.hud.textContent).toBe('각인 2');expect(view.strip.textContent).toContain('각인 2');
+  battle.run={enabled:false,picked:['ember_edge']};view.refresh();expect(view.hud.hidden).toBe(true);
+  battle.run=null;view.refresh();expect(view.hud.hidden).toBe(true);
+}));
+
+test('사용자가 직접 연 각인 현황만 전투를 멈추고 닫으면 같은 틱에 풀린다',()=>withMWDOM(()=>{
+  const pauses=new Set<string>();
+  const battle:any={active:true,elapsed:0,counterUntil:0,run:{enabled:true,picked:['tide_guard'],renown:0},masterworks:{s:normalizeMasterworks(null)},
+    setPaused(reason:string,on:boolean){if(on)pauses.add(reason);else pauses.delete(reason);}};
+  const view:any=new MasterworksView({mode:'battle'},battle),trigger=new MWElement('button');
+  expect(view.dialog.open).toBe(false);expect(pauses.size).toBe(0);
+  view.open('run',trigger);expect(view.dialog.open).toBe(true);expect(pauses).toEqual(new Set(['masterworks']));
+  view.close();expect(view.dialog.open).toBe(false);expect(pauses.size).toBe(0);expect(trigger.focused).toBe(true);
+}));
+
+test('마을 준비 탭은 출격 중 각인 선택을 약속하지 않고 각인 자리를 준비 중으로 알린다',()=>withMWDOM(()=>{
+  const view=renderFixture();view.tab='build';view.battle.masterworks.path=()=>({ok:true});view.render();
+  const text=view.content.text();
+  expect(text).not.toContain('각인은 출격 중 선택');expect(text).toContain('각인 · 준비 중');expect(text).toContain('출격 전에 고르는 1회용 각인');
+  expect(view.content.all().filter((n:MWElement)=>n.dataset.soon==='engraving')).toHaveLength(1);
 }));
