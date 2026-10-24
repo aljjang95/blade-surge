@@ -7,6 +7,8 @@ import { giftBag, normalizeRunes, rollRuneDrops, contractBonus, passCharms } fro
 import { BLESSING_GEM_PRICES } from '../src/data/blessing.js';
 import { RUNE_SOURCES } from '../src/data/runes.js';
 import { stageDef } from '../src/data/stages.js';
+import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
+import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 
 const T0 = 1_700_000_000_000;
 const DAY = 86_400_000;
@@ -256,5 +258,72 @@ describe('룬 드랍 정산과 전투 효과', () => {
     eco.unequip('knight', 'weapon');
     expect(eco.heroRuneEffects('knight')).toEqual({ hp: 0.035 });
     expect((ITEM_BY_ID as any)[eco.s.inventory[0].id].rarity).toBe('U');
+  });
+});
+
+describe('리뷰 수정(PR #260)', () => {
+  test('장비 비교 미리보기는 룬(공명 포함)을 반영해 heroPower 와 같은 방향이다', () => {
+    const eco = core();
+    eco.s.inventory.push({ uid: 9, id: eco.s.inventory[0].id, enh: 1 }); // 룬 없는 +1 같은 무기
+    eco.s.inventory[0].enh = 0; // 장착 중 +0 무기(유니크, 소켓 2칸)
+    eco.s.runes.bag = { ember_edge: [0, 0, 1] };
+    expect(eco.runeInsert(1, 0, { id: 'ember_edge', grade: 3 }).ok).toBe(true);
+    const p = eco.previewItem('knight', 9);
+    expect(p.before.power).toBe(eco.heroPower('knight'));
+    eco.equip('knight', 9);
+    expect(p.after.power).toBe(eco.heroPower('knight'));
+    expect(p.after.power).toBeLessThan(p.before.power); // 룬 III 몫이 +1 강화보다 크다
+    expect(eco.isUpgrade('knight', eco.s.inventory.find((x: any) => x.uid === 1))).toBe(true);
+  });
+  test('공방 정밀 제작·가문 제작(결정적), 가루 부족·저장 실패는 상태 불변', () => {
+    const a = core(), b = core();
+    a.s.runes.dust = 200; b.s.runes.dust = 200;
+    expect(a.runeCraftExact('storm_eye')).toEqual({ ok: true, created: { id: 'storm_eye', grade: 1 }, cost: RUNE_SOURCES.craftExact.runeDust });
+    expect(a.s.runes.dust).toBe(200 - RUNE_SOURCES.craftExact.runeDust);
+    expect(bag(a, 'storm_eye')).toEqual([1, 0, 0]);
+    b.runeCraftExact('storm_eye');
+    const fa = a.runeCraftFamily('tide'), fb = b.runeCraftFamily('tide');
+    expect(fa).toEqual(fb);
+    expect(fa.cost).toBe(RUNE_SOURCES.craftFamily.runeDust);
+    expect(fa.created.id.startsWith('tide_')).toBe(true);
+    expect(a.s.runes.craftSeq).toBe(1);
+    expect(a.runeCraftFamily('nope')).toEqual({ ok: false, reason: 'unknown' });
+    expect(a.runeCraftExact('nope')).toEqual({ ok: false, reason: 'unknown' });
+    const poor = core(); poor.s.runes.dust = 10;
+    const before = JSON.stringify(poor.s);
+    expect(poor.runeCraftExact('ember_edge')).toEqual({ ok: false, reason: 'dust' });
+    expect(poor.runeCraftFamily('ember')).toEqual({ ok: false, reason: 'dust' });
+    expect(JSON.stringify(poor.s)).toBe(before);
+    const broken = core(); broken.s.runes.dust = 100; broken.save = () => false;
+    const snap = JSON.stringify(broken.s);
+    expect(broken.runeCraftExact('ember_edge')).toEqual({ ok: false, reason: 'storage' });
+    expect(broken.runeCraftFamily('ember')).toEqual({ ok: false, reason: 'storage' });
+    expect(JSON.stringify(broken.s)).toBe(snap);
+    const many = core(); many.s.runes.dust = 4000;
+    const ids = new Set(Array.from({ length: 60 }, () => many.runeCraftFamily('storm').created.id));
+    expect([...ids].sort()).toEqual(['storm_edge', 'storm_eye', 'storm_step']);
+  });
+  test('개수형 효과 chain 은 배율 뒤 올림(I·II → 1, III → 2)', () => {
+    for (const [g, want] of [[1, 1], [2, 1], [3, 2]]) {
+      const e = core(); e.s.runes.bag = { storm_eye: [1, 2, 3].map((x) => (x === g ? 1 : 0)) };
+      expect(e.runeInsert(1, 0, { id: 'storm_eye', grade: g }).ok).toBe(true);
+      expect(e.heroRuneEffects('knight').chain).toBe(want);
+    }
+  });
+  test('첫 심층 원정 승리에만 첫 클리어 가루가 정확히 1회 붙는다', () => {
+    const store = new Map<string, string>();
+    const old = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v), removeItem: (k: string) => store.delete(k) } });
+    try {
+      const eco: any = new Economy(), x: any = new ExpeditionEconomy(eco), def = EXPEDITION_DEPTHS[0];
+      x.s.level = def.minLevel; x.s.stats[def.id] = 1; eco.s.progress.stars[def.unlockCode] = 1;
+      const D = RUNE_SOURCES.expeditionDust, dustOf = () => eco.runeState().dust;
+      const d0 = dustOf();
+      expect(x.settle(x.begin('dungeon', def.id, { depth: 'deep' }).ticket, { win: true }).rewards.firstClear).toBe(true);
+      expect(dustOf() - d0).toBe(D.deep + D.first);
+      const d1 = dustOf();
+      expect(x.settle(x.begin('dungeon', def.id, { depth: 'deep' }).ticket, { win: true }).rewards.firstClear).toBe(false);
+      expect(dustOf() - d1).toBe(D.deep);
+    } finally { if (old) Object.defineProperty(globalThis, 'localStorage', old); else Reflect.deleteProperty(globalThis, 'localStorage'); }
   });
 });

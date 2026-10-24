@@ -68,7 +68,8 @@ export function normalizeSave(raw, fresh) {
     if (!item || ITEM_BY_ID[item.id].slot !== slot || equipped.has(item.uid)) h.equip[slot] = null;
     else equipped.add(item.uid);
   }
-  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), 1);
+  // 순번은 줄지 않는다: 가장 큰 uid를 팔아도 저장된 invSeq를 유지해 uid 재사용과 서버(로드마다 정규화)·클라이언트 순번 차이를 막는다.
+  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), integer(s.invSeq, 1, 1));
   // 이후 드랍에 쓸 순번을 확보하고, 전투 시작 전 장착 참조까지 함께 재배정한다.
   if (s.invSeq > Number.MAX_SAFE_INTEGER - 1000000) {
     const remap = new Map(s.inventory.map((item, index) => [item.uid, index + 1]));

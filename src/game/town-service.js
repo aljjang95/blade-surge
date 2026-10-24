@@ -3,6 +3,14 @@ import { CONSUMABLES } from '../data/expansion.js';
 import { RECIPES } from '../data/expansion.js';
 import { TOWNS, TOWN_SHOP, TOWN_SHOP_BY_ID, TOWN_TRAINER, TOWN_TRAINER_BY_ID, TOWN_REQUESTS, TOWN_REQUEST_BY_ID, TOWN_BLACKSMITH, TOWN_STORY, normalizeTownState } from '../data/towns.js';
 import { fieldForTown } from '../data/open-fields.js';
+import { levelGate } from '../data/shop-gates.js';
+
+/** 상인 오퍼의 레벨 잠금 표시 필드(UI용). 잠기지 않았으면 requires만 그대로 넘긴다. */
+function offerGateFields(item, save) {
+  if (!item.requires?.level) return {};
+  const gate = levelGate(item.requires.level, save);
+  return { requires: { level: gate.need }, ...(gate.ok ? {} : { levelLocked: true, lockText: gate.text }) };
+}
 
 const MATERIAL_NAMES = { glass_leaf: '유리 잎', ember_core: '잿불 핵', star_dust: '별가루' };
 const findTown = id => TOWNS.find(town => town.id === id);
@@ -98,7 +106,7 @@ export class TownService {
         ...(def?.appearanceTier ? { appearanceTier: def.appearanceTier } : {}),
         price: { gold: item.price.gold, ...(item.price.materials ? { materials: { ...item.price.materials } } : {}) },
         stockLeft: purchased ? 0 : 1, owned: item.itemId ? this.eco.s.inventory.some(entry => entry.id === item.itemId) : !!this.eco.s.expedition?.consumables?.[item.consumableId],
-        unlocked };
+        unlocked, ...offerGateFields(item, this.eco.s) };
     });
   }
 
@@ -108,6 +116,9 @@ export class TownService {
     if (!item || item.townId !== townId) return { ok: false, reason: 'unknown-offer' };
     if (!state.unlockedTownIds.includes(townId)) return { ok: false, reason: 'locked' };
     if (state.purchased.includes(offerId)) return { ok: false, reason: 'sold-out' };
+    // 등급별 최소 영웅 레벨(shop-gates.js). 마을이 열려도 레전드리는 Lv.20 전에는 살 수 없다.
+    const gate = levelGate(item.requires?.level, this.eco.s);
+    if (!gate.ok) return { ok: false, reason: 'level', need: gate.need, have: gate.have };
     const expedition = this.eco.s.expedition, price = item.price;
     if ((this.eco.s.gold || 0) < price.gold) return { ok: false, reason: 'gold' };
     if (Object.entries(price.materials || {}).some(([id, amount]) => (expedition.materials?.[id] || 0) < amount)) return { ok: false, reason: 'materials' };

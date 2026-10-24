@@ -12,6 +12,8 @@ import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionC
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { skuGate } from '../data/shop-gates.js';
+import { THEMED_SETS } from '../data/items.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
@@ -263,20 +265,26 @@ export class Economy {
     const afterBonus = this.heroEquipBonus(heroId, { ...h.equip, [slot]: remove ? null : uid });
     const owner = Object.keys(this.s.heroes).find((id) => this.s.heroes[id].equip[slot] === uid);
     return { slot, remove, owner, current: this.s.inventory.find((x) => x.uid === h.equip[slot]) || null,
-      before: heroStats(HEROES[heroId], h, beforeBonus), after: heroStats(HEROES[heroId], h, afterBonus), beforeBonus, afterBonus };
+      before: this.heroBuildStats(heroId), after: this.heroBuildStats(heroId, { ...h.equip, [slot]: remove ? null : uid }), beforeBonus, afterBonus };
   }
   /** 출전 영웅에게 켜진 세트 효과 수 (하네스 setProgress 박자) */
   setCount() { return this.heroEquipBonus(this.s.selected).active.length; }
   /** 세트 조각으로 테마 세트 장비 제작 */
   craftSetItem(setId, slot) {
-    const def = craftable(setId, slot); if (!def) return { ok: false, reason: 'none' };
+    // 조각 제작은 테마 세트(유니크)만. 등급 세트(레전드리 dragon 등)는 조각 30개로 만들 수 없다(v1 명령 직접 호출 포함).
+    const def = THEMED_SETS.includes(setId) ? craftable(setId, slot) : null; if (!def) return { ok: false, reason: 'none' };
     if ((this.s.fragments || 0) < CRAFT_COST) return { ok: false, reason: 'fragments' };
     this.s.fragments -= CRAFT_COST;
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
   }
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
-  heroPower(id) { const st = heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)), fx = this.heroRuneEffects(id); return Object.keys(fx).length ? applyBuildStats(st, fx).power : st.power; }
+  heroPower(id) { return this.heroBuildStats(id).power; }
+  /** 표시용 능력치: 장비 능력치 + 장착 룬 효과(가문 공명 포함). equipment·inventory 를 주면 그 가설 장착으로. */
+  heroBuildStats(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
+    const st = heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id, equipment, inventory)), fx = this.heroRuneEffects(id, { equipment, inventory });
+    return Object.keys(fx).length ? applyBuildStats(st, fx) : st;
+  }
   // ---------- 룬·전운 (규칙은 rune-core·blessing-core, 저장·롤백은 rune-economy) ----------
   /** 룬 상태(가방·가루). 새 계정은 처음 읽을 때 첫 개방 선물과 함께 만든다. 전운 상태도 같은 방식. */
   runeState() { return Runes.runesOf(this); }
@@ -286,6 +294,8 @@ export class Economy {
   runeRemove(uid, index) { return Runes.runeRemove(this, uid, index); }
   runeReplace(uid, index, rune) { return Runes.runeReplace(this, uid, index, rune); }
   runeMerge(id, toGrade) { return Runes.runeMerge(this, id, toGrade); }
+  runeCraftExact(id) { return Runes.runeCraftExact(this, id); }
+  runeCraftFamily(family) { return Runes.runeCraftFamily(this, family); }
   salvageItem(uid) { return Runes.salvageItem(this, uid); }
   recordRuneKill(stage, rank, heroId = this.s.selected) { return Runes.recordRuneKill(this, stage, rank, heroId); }
   settleRuneDrops(ledger, kind = {}) { return Runes.settleRuneDrops(this, ledger, kind); }
@@ -414,10 +424,10 @@ export class Economy {
   isUpgrade(heroId, inst) {
     const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
     if (!h || !item || h.equip[item.slot] === inst.uid) return false;
-    const before = heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId));
+    const before = this.heroBuildStats(heroId);
     // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
     const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
-    return heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory)).power > before.power;
+    return this.heroBuildStats(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory).power > before.power;
   }
   salvage(uids) {
     if (!Array.isArray(uids) || !uids.length) return { ok: false, reason: 'items' };
@@ -702,6 +712,8 @@ export class Economy {
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
     if (sku.kind === 'gem') {
+      // 진행도 게이트(shop-gates.js): 1레벨이 후반 재료·대량 골드를 시작 보석으로 바로 사지 못한다.
+      const gate = skuGate(sku, s); if (!gate.ok) return { ok: false, reason: 'level', need: gate.need, have: gate.have };
       if (s.gems < sku.price) return { ok: false, reason: 'gems' };
       const before = structuredClone(s); s.gems -= sku.price;
       const got = this.addRewards(sku.rewards, { silent: true });

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
 import { GACHA } from '../src/data/shop.js';
+import { normalizeRunes, normalizeBlessing } from '../src/game/rune-economy.js';
 
 const NOW = Date.UTC(2026, 9, 20);
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/saves/${name}`, import.meta.url), 'utf8');
@@ -149,5 +150,25 @@ describe('MMO P1-G 로컬 세이브 임포트·정화 (골든 세이브)', () =>
     expect((await h.send('POST', '/import', { installId: installId(), save: save('mid.json') }, bad.token)).body.status).toBe('rejected');
     const blocked = await h.send('POST', '/shadow/snapshot', { cid: 'snap-rejected-1', save: save('late.json') }, bad.token);
     expect(blocked.body.error).toBe('import-required');
+  });
+});
+
+describe('룬·전운 필드는 임포트에서 기본값으로(서버 소유 명령 전까지)', () => {
+  test('조작된 룬 가방·가루·전운 보관 각인·장비 소켓은 버리고 첫 개방 선물만 남긴다', async () => {
+    const h = await v1Harness();
+    h.setNow(NOW);
+    const a = await h.session();
+    const forged = save('mid.json');
+    forged.runes = { bag: { ember_edge: [1000000, 1000000, 1000000] }, dust: Number.MAX_SAFE_INTEGER, giftClaimed: true, dropSeq: 5, craftSeq: 9 };
+    forged.blessing = { charms: 999, held: { id: 'ember_edge', grade: 3 }, pity: 10, rollSeq: 77 };
+    forged.inventory = forged.inventory.map((it: any) => ({ ...it, sockets: [{ id: 'ember_edge', grade: 3 }, { id: 'ember_edge', grade: 3 }, { id: 'stone_root', grade: 3 }] }));
+    const r = await h.send('POST', '/import', { installId: installId(), save: forged }, a.token);
+    expect(r.status).toBe(200);
+    expect(r.body.doc.runes).toEqual(normalizeRunes(undefined));
+    expect(r.body.doc.runes.dust).toBe(0);
+    expect(r.body.doc.blessing).toEqual(normalizeBlessing(undefined));
+    expect(r.body.doc.blessing.held).toBeNull();
+    expect(r.body.doc.inventory.every((it: any) => !('sockets' in it))).toBe(true);
+    expect(r.body.doc.inventory.map((it: any) => it.uid)).toEqual(forged.inventory.map((it: any) => it.uid));
   });
 });
