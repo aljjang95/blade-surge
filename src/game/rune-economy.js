@@ -3,7 +3,7 @@
  * 여기서는 세이브(eco.s)에 결과를 반영·저장·롤백만 한다. economy.js 의 메서드는 이 함수들을 부르는 얇은 래퍼다.
  *
  * 저장 상태(R2 계약):
- * - save.runes = { bag: RuneBag, dust: 룬 가루(정수), giftClaimed: 첫 개방 선물 수령 여부, dropSeq: 룬 드랍 정산 순번 }
+ * - save.runes = { bag: RuneBag, dust: 룬 가루(정수), giftClaimed: 첫 개방 선물 수령 여부, dropSeq: 룬 드랍 정산 순번, craftSeq: 가문 제작 순번 }
  * - save.blessing = normalizeBlessing(...) (blessing-core 상단 주석)
  * - 인벤토리 인스턴스 inst.sockets: normalizeSockets(등급, raw). 박힌 룬이 하나도 없으면 필드를 두지 않는다(빈 소켓과 같은 뜻).
  * 실패는 { ok: false, reason } 이고 세이브는 그대로다.
@@ -49,7 +49,7 @@ export function normalizeRunes(/** @type {unknown} */ raw) {
     }
     bag = normalizeRuneBag(bag);
   }
-  return { bag, dust: count(r.dust), giftClaimed: true, dropSeq: count(r.dropSeq) };
+  return { bag, dust: count(r.dust), giftClaimed: true, dropSeq: count(r.dropSeq), craftSeq: count(r.craftSeq) };
 }
 
 /** 소켓을 저장 모양으로: 박힌 룬이 없으면 undefined(필드 생략). */
@@ -167,11 +167,65 @@ export function salvageItem(/** @type {any} */ eco, /** @type {number} */ uid) {
 }
 
 /** 장착 장비 4부위의 룬 효과(공명 포함). 출격 시작 때 한 번 계산해 캐시한다. */
-export function heroRuneEffects(/** @type {any} */ eco, /** @type {string} */ heroId, /** @type {{ blessingBoonId?: string|null }} */ options = {}) {
+/** equipment·inventory 를 주면 그 가설 장착으로 계산한다(장비 비교 미리보기). */
+export function heroRuneEffects(/** @type {any} */ eco, /** @type {string} */ heroId, /** @type {{ blessingBoonId?: string|null, equipment?: Record<string, number|null>, inventory?: any[] }} */ options = {}) {
   const h = eco.s.heroes?.[heroId]; if (!h) return {};
+  const equipment = options.equipment || h.equip, inventory = options.inventory || eco.s.inventory;
   const items = [];
-  for (const sl of SLOTS) { const inst = findInst(eco, h.equip[sl]); if (inst?.sockets) items.push(gearRunes(inst)); }
-  return items.length || options.blessingBoonId ? runeEffects(items, options) : {};
+  for (const sl of SLOTS) { const inst = inventory.find((/** @type {any} */ x) => x.uid === equipment[sl]); if (inst?.sockets) items.push(gearRunes(inst)); }
+  return items.length || options.blessingBoonId ? runeEffects(items, { blessingBoonId: options.blessingBoonId }) : {};
+}
+
+// ---------- 공방 룬 제작 ----------
+/** 가방에 룬 1개를 더한 새 가방. */
+function bagPlus(/** @type {unknown} */ bag, /** @type {string} */ id, /** @type {number} */ grade) {
+  const next = normalizeRuneBag(bag), c = next[id] ? [...next[id]] : [0, 0, 0];
+  c[grade - 1] = Math.min(MAX, c[grade - 1] + 1); next[id] = c;
+  return next;
+}
+/**
+ * 정밀 제작 규칙(순수): 룬 가루 craftExact.runeDust → 지정한 I 룬 1개.
+ * @param {{ bag: unknown, runeDust?: number }} state
+ * @param {string} id
+ */
+export function craftRuneExact(state, id) {
+  if (typeof id !== 'string' || !Object.hasOwn(RUNE_BY_ID, id)) return fail('unknown');
+  const cost = RUNE_SOURCES.craftExact, dust = count(state.runeDust);
+  if (dust < cost.runeDust) return fail('dust');
+  return { ok: /** @type {const} */ (true), bag: bagPlus(state.bag, id, cost.grade), runeDust: dust - cost.runeDust, created: { id, grade: cost.grade }, cost: cost.runeDust };
+}
+/**
+ * 가문 제작 규칙(순수): 룬 가루 craftFamily.runeDust → 그 가문 3종 중 균등 무작위 I 룬 1개. seed 가 같으면 결과도 같다.
+ * @param {{ bag: unknown, runeDust?: number }} state
+ * @param {string} family
+ * @param {number} seed
+ */
+export function craftRuneFamily(state, family, seed) {
+  const pool = RUNES.filter((r) => r.family === family);
+  if (!pool.length) return fail('unknown');
+  const cost = RUNE_SOURCES.craftFamily, dust = count(state.runeDust);
+  if (dust < cost.runeDust) return fail('dust');
+  const id = pool[Math.floor(createSeededRng(seed >>> 0)() * pool.length)].id;
+  return { ok: /** @type {const} */ (true), bag: bagPlus(state.bag, id, cost.grade), runeDust: dust - cost.runeDust, created: { id, grade: cost.grade }, cost: cost.runeDust };
+}
+/** 공방 정밀 제작 트랜잭션. */
+export function runeCraftExact(/** @type {any} */ eco, /** @type {string} */ id) {
+  return commit(eco, () => {
+    const runes = runesOf(eco), res = craftRuneExact({ bag: runes.bag, runeDust: runes.dust }, id);
+    if (!res.ok) return res;
+    runes.bag = res.bag; runes.dust = res.runeDust;
+    return { ok: /** @type {const} */ (true), created: res.created, cost: res.cost };
+  });
+}
+/** 공방 가문 제작 트랜잭션. 시드 = 세이브 생성 시각 + 가문 제작 순번(성공할 때만 오른다). */
+export function runeCraftFamily(/** @type {any} */ eco, /** @type {string} */ family) {
+  return commit(eco, () => {
+    const runes = runesOf(eco), seq = runes.craftSeq + 1;
+    const res = craftRuneFamily({ bag: runes.bag, runeDust: runes.dust }, family, hashSeed('rune-craft', count(eco.s.created), seq));
+    if (!res.ok) return res;
+    runes.bag = res.bag; runes.dust = res.runeDust; runes.craftSeq = seq;
+    return { ok: /** @type {const} */ (true), created: res.created, cost: res.cost };
+  });
 }
 
 // ---------- 룬 드랍(출격 정산) ----------

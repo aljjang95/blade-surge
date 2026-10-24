@@ -263,7 +263,7 @@ export class Economy {
     const afterBonus = this.heroEquipBonus(heroId, { ...h.equip, [slot]: remove ? null : uid });
     const owner = Object.keys(this.s.heroes).find((id) => this.s.heroes[id].equip[slot] === uid);
     return { slot, remove, owner, current: this.s.inventory.find((x) => x.uid === h.equip[slot]) || null,
-      before: heroStats(HEROES[heroId], h, beforeBonus), after: heroStats(HEROES[heroId], h, afterBonus), beforeBonus, afterBonus };
+      before: this.heroBuildStats(heroId), after: this.heroBuildStats(heroId, { ...h.equip, [slot]: remove ? null : uid }), beforeBonus, afterBonus };
   }
   /** 출전 영웅에게 켜진 세트 효과 수 (하네스 setProgress 박자) */
   setCount() { return this.heroEquipBonus(this.s.selected).active.length; }
@@ -276,7 +276,12 @@ export class Economy {
   }
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
-  heroPower(id) { const st = heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)), fx = this.heroRuneEffects(id); return Object.keys(fx).length ? applyBuildStats(st, fx).power : st.power; }
+  heroPower(id) { return this.heroBuildStats(id).power; }
+  /** 표시용 능력치: 장비 능력치 + 장착 룬 효과(가문 공명 포함). equipment·inventory 를 주면 그 가설 장착으로. */
+  heroBuildStats(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
+    const st = heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id, equipment, inventory)), fx = this.heroRuneEffects(id, { equipment, inventory });
+    return Object.keys(fx).length ? applyBuildStats(st, fx) : st;
+  }
   // ---------- 룬·전운 (규칙은 rune-core·blessing-core, 저장·롤백은 rune-economy) ----------
   /** 룬 상태(가방·가루). 새 계정은 처음 읽을 때 첫 개방 선물과 함께 만든다. 전운 상태도 같은 방식. */
   runeState() { return Runes.runesOf(this); }
@@ -286,6 +291,8 @@ export class Economy {
   runeRemove(uid, index) { return Runes.runeRemove(this, uid, index); }
   runeReplace(uid, index, rune) { return Runes.runeReplace(this, uid, index, rune); }
   runeMerge(id, toGrade) { return Runes.runeMerge(this, id, toGrade); }
+  runeCraftExact(id) { return Runes.runeCraftExact(this, id); }
+  runeCraftFamily(family) { return Runes.runeCraftFamily(this, family); }
   salvageItem(uid) { return Runes.salvageItem(this, uid); }
   recordRuneKill(stage, rank, heroId = this.s.selected) { return Runes.recordRuneKill(this, stage, rank, heroId); }
   settleRuneDrops(ledger, kind = {}) { return Runes.settleRuneDrops(this, ledger, kind); }
@@ -414,10 +421,10 @@ export class Economy {
   isUpgrade(heroId, inst) {
     const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
     if (!h || !item || h.equip[item.slot] === inst.uid) return false;
-    const before = heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId));
+    const before = this.heroBuildStats(heroId);
     // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
     const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
-    return heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory)).power > before.power;
+    return this.heroBuildStats(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory).power > before.power;
   }
   salvage(uids) {
     if (!Array.isArray(uids) || !uids.length) return { ok: false, reason: 'items' };
