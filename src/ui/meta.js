@@ -13,7 +13,7 @@ import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
-import { GACHA_BANNERS, GACHA_MILEAGE, rotationWindow } from '../data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, PICKUP_THEMES, rotationWindow } from '../data/gacha-banners.js';
 import { heroBannerArt, beginnerBannerArt } from '../data/banner-art.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
@@ -452,7 +452,7 @@ export class Meta {
     const wrap = $('gacha-wrap'); if (!wrap) return;
     const id = Object.hasOwn(GACHA_BANNERS, this.gachaBanner) ? this.gachaBanner : (this.gachaBanner = 'hero'), b = GACHA_BANNERS[id], eco = this.eco, s = eco.s, g = eco.gachaState(), now = Date.now();
     const rates = gachaRates(id, now), pick = bannerPickup(id, now), left = eco.beginnerLeft(), set = (el, v) => { if (el && el.textContent !== v) el.textContent = v; };
-    wrap.dataset.banner = id;
+    wrap.dataset.banner = id; wrap.dataset.theme = '';
     const pityOf = { hero: g.pity, gear: g.gearPity, beginner: g.beginner }, guarOf = { hero: g.guarantee, gear: g.gearGuarantee, beginner: false };
     const usedDone = id === 'beginner' && left <= 0;
     const thumb = { hero: HEROES[bannerPickup('hero', now)]?.portrait || '', gear: SETS[bannerPickup('gear', now)]?.icon || '', beginner: HEROES.mage?.portrait || HEROES.knight?.portrait || '' };
@@ -465,9 +465,9 @@ export class Meta {
     });
     // 중앙: 픽업 이름·일러스트·남은 시간
     const art = $('banner-art'); let artSrc, title, kicker, artKind = 'fallback';
-    if (id === 'hero') { const h = HEROES[pick], ba = heroBannerArt(pick, h?.portrait); artSrc = ba.src; artKind = ba.kind; title = h?.name || '픽업 영웅'; kicker = '픽업 소환 · 확률 UP'; }
+    if (id === 'hero') { const h = HEROES[pick], ba = heroBannerArt(pick, h?.portrait); artSrc = ba.src; artKind = ba.kind; title = h?.name || '픽업 영웅'; kicker = PICKUP_THEMES[pick]?.label || '픽업 소환 · 확률 UP'; wrap.dataset.theme = PICKUP_THEMES[pick]?.id || ''; }
     else if (id === 'gear') { artSrc = SETS[pick]?.icon || '/img/set_dragon.webp'; title = SETS[pick]?.name || '장비 소환'; kicker = '픽업 세트 · 확률 UP'; }
-    else { const ba = beginnerBannerArt(HEROES.knight?.portrait); artSrc = ba.src; artKind = ba.kind; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
+    else { const ba = beginnerBannerArt() /* 사실풍 초상 대신 3D 렌더(그림체 규칙 12.9) */; artSrc = ba.src; artKind = ba.kind; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
     wrap.style.setProperty('--banner-bg', 'url("' + artSrc + '")');
     art.parentElement?.setAttribute('data-art', id === 'gear' ? 'icon' : artKind); art.setAttribute('data-art', id === 'gear' ? 'icon' : artKind);
     if (art.getAttribute('src') !== artSrc) { art.setAttribute('src', artSrc); art.onerror = () => { art.onerror = null; art.dataset.art = 'fallback'; art.parentElement?.setAttribute('data-art', 'fallback'); art.setAttribute('src', HEROES[bannerPickup('hero', now)]?.portrait || ''); }; }
