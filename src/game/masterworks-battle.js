@@ -38,7 +38,7 @@ export class Battle extends RpgBattle {
     const preRunBoons=enabled ? seedRunBoons(this.preRunBoons) : [];this.preRunBoons=null;
     this.run = {id:ticket.id,picked:[...preRunBoons],preRunBoons,storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
       // 영구 효과 = 숙련 + 장착 장비 룬(전운 각인 1개는 가문 공명 수에만 +1). 출격 시작 때 한 번 계산해 캐시한다.
-      enabled, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),enabled?this.app.eco.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
+      enabled, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),enabled?this.app?.eco?.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
       historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0,
       personalGoal:!this.stage.party && this.stage.expedition?.kind !== 'arena' ? capturePersonalGoal(s) : null};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
@@ -122,7 +122,7 @@ export class Battle extends RpgBattle {
     if (earn && !e.summoned && this.run.enabled) {
       const previousKills=this.masterworks.s.bounties.counts.kills;
       const validKills=recordProgress(this.masterworks.s,'kills');
-      if (e.isBoss || e.isElite) { recordProgress(this.masterworks.s,'eliteKills'); this.app.eco.recordRuneKill?.(this.stage,e.isBoss?'boss':'elite',this.heroId); }
+      if (e.isBoss || e.isElite) { recordProgress(this.masterworks.s,'eliteKills'); this.app?.eco?.recordRuneKill?.(this.stage,e.isBoss?'boss':'elite',this.heroId); }
       if (validKills>previousKills && validKills%5===0) { const gained=grantRenown(this.masterworks.s,1); this.run.renown+=gained; }
       this.rpgDirty=true;
       if (this.player.alive && this.effects.healOnKill) this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*Math.min(.05,this.effects.healOnKill));

@@ -424,13 +424,13 @@ export class Economy {
     const ids = new Set(uids), items = this.s.inventory.filter(x => ids.has(x.uid));
     if (items.length !== ids.size || items.some(x => !ITEM_BY_ID[x.id] || !['N', 'S', 'E'].includes(ITEM_BY_ID[x.id].rarity))) return { ok: false, reason: 'items' };
     if (Object.values(this.s.heroes).some(h => Object.values(h.equip).some(uid => ids.has(uid)))) return { ok: false, reason: 'equipped' };
-    const inventory = this.s.inventory, before = { gold: this.s.gold, stones: this.s.stones, stones2: this.s.stones2, runes: structuredClone(Runes.runesOf(this)) };
+    const inventory = this.s.inventory, before = { gold: this.s.gold, stones: this.s.stones, stones2: this.s.stones2, runes: this.s.runes && structuredClone(this.s.runes) };
     const sockets = items.map((x) => x.sockets); for (const item of items) Runes.recoverItemRunes(this, item, 'sell');
     const rewards = {};
     for (const item of items) for (const [key, n] of Object.entries(salvageRewards(item))) rewards[key] = (rewards[key] || 0) + n;
     this.s.inventory = inventory.filter(x => !ids.has(x.uid));
     const got = this.addRewards(rewards, { silent: true, applyVip: false });
-    if (!this.save()) { this.s.inventory = inventory; items.forEach((x, i) => { if (sockets[i]) x.sockets = sockets[i]; }); Object.assign(this.s, before); return { ok: false, reason: 'storage' }; }
+    if (!this.save()) { this.s.inventory = inventory; items.forEach((x, i) => { if (sockets[i]) x.sockets = sockets[i]; }); Object.assign(this.s, before); if (!before.runes) delete this.s.runes; return { ok: false, reason: 'storage' }; }
     for (const f of this.listeners) f(this.s);
     return { ok: true, count: items.length, got };
   }

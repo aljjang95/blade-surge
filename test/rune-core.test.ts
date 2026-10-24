@@ -18,7 +18,8 @@ describe('룬 데이터', () => {
     expect(RUNE_FAMILIES.map((f) => f.id)).toEqual(['ember', 'tide', 'storm', 'stone']);
     expect(RUNE_MERGE_COST).toEqual({ 2: { count: 3, gold: 1000, runeDust: 0 }, 3: { count: 3, gold: 5000, runeDust: 20 } });
     expect(RUNE_REMOVE_COST).toEqual({ 1: 1000, 2: 3000, 3: 8000 });
-    expect(RUNE_SOURCES.eliteDrop.chance).toBe(0.03);
+    // 획득처 수치는 R2(sim:90d 곡선)가 조정한다. 여기서는 확률 범위만 본다.
+    for (const c of [RUNE_SOURCES.eliteDrop.chance, RUNE_SOURCES.bossDrop.chance, RUNE_SOURCES.bossDrop.deepChance]) expect(c > 0 && c < 1).toBe(true);
   });
 });
 
