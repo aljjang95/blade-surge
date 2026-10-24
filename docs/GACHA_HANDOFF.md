@@ -17,7 +17,8 @@
 ## 검증
 - `bun run check` exit 0(5,298 통과) · `sim:90d` 통과 · `gacha-sim --assert` 통과(head `944ad64`; 이후 CSS만 변경, 빌드 재확인).
 - 교차 리뷰 3회(PC OpenCodex gpt-6.1-sol xhigh; GitHub Codex는 사용량 한도로 실패): 1차 P2 7, 2차 P1 1(가져오기 마일리지 위조)+P2 3, 3차 P2 2 — 전부 수정 또는 근거 기록(PR #279 댓글).
-- Playwright: 844x390·1280x720·800x360·390x844·360x800·640x320 로컬, 운영 촬영은 아래.
+- Playwright 로컬: 844x390·1280x720·800x360·390x844·360x800·640x320.
+- 운영 readback·촬영(2026-10-24 22:1x KST): version.json `2b561e0`(dirty=false). 영웅·장비·초보자 배너·확률 모달 × 360x800·390x844·1280x720 겹침·잘림 없음, pageerror 없음. 콘솔의 `POST /api/v1/auth/session` 503(`unavailable`)은 v1 서버가 켜지지 않은 기존 상태(`V1_ENABLED`·스키마 게이트, 운영 D1에 결제 표 없음)이며 이 변경과 무관. `/api/social/me` 401은 비로그인 응답.
 
 ## 결정과 버린 안(요약)
 - 영웅 배너 SR 영웅 몫 0.75 → 0.34: 0.75는 무과금 SR→SSR 14일(대역 3~4주 이탈)·sim:90d 정체 밴드 파손. 0.34에서 26일·SSSR 63일(기존과 동일).
