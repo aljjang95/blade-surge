@@ -8,6 +8,7 @@ import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap, fitStageMapBox } from
 import { cardThumb } from './citadel-command.js';
 import {
   stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
+  selectionSelector,
 } from '../game/stage-select-model.js';
 import './stage-select.css';
 
@@ -246,7 +247,14 @@ export class StageSelectUI {
     this.selection = selection;
     if (selection.tab === 'campaign') this.viewChapter = selection.ch;
     this.model = { ...this.readModel(), tab: selection.tab, selection };
+    // 키보드로 누른 버튼은 목록이 통째로 바뀌며 사라진다. 같은 선택의 버튼으로 초점을 되돌린다(마우스 클릭은 그대로 둔다).
+    const active = document.activeElement;
+    const keyboard = !!active && this.list.contains(active) && (active.matches?.(':focus-visible') ?? false);
     this.paint();
+    if (keyboard && !this.list.contains(document.activeElement)) {
+      const selector = selectionSelector(selection);
+      (selector ? this.list.querySelector(selector) : null)?.focus({ preventScroll: true });
+    }
   }
 
   showChapter(ch) {
@@ -311,6 +319,8 @@ export class StageSelectUI {
       item.dataset.rank = stage.regionBoss ? 'region' : stage.midboss ? 'mid' : stage.boss ? 'warden' : 'captain';
       const pick = button('', () => this.select({ tab: 'campaign', ch: stage.ch, st: stage.st }), 'ss-node');
       pick.dataset.stage = stage.code;
+      pick.dataset.ch = String(stage.ch);
+      pick.dataset.st = String(stage.st);
       pick.dataset.locked = String(!stage.unlocked);
       pick.dataset.cleared = String(stage.cleared);
       pick.dataset.recommended = String(stage.recommended);
