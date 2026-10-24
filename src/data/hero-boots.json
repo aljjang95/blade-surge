@@ -1,4 +1,33 @@
 {
   "schema": "blade-surge.hero-boots.v1",
-  "boots": []
+  "boots": [
+    {
+      "id": "boots_n",
+      "grades": [
+        "S"
+      ],
+      "path": "/models/boots/boots_n.glb",
+      "triangles": 2662,
+      "sha256": "e7df588a69812aa73ff26a97ea492ec4ea9722a13c313abc6a9546c1ebc35071"
+    },
+    {
+      "id": "boots_e",
+      "grades": [
+        "E",
+        "U"
+      ],
+      "path": "/models/boots/boots_e.glb",
+      "triangles": 3000,
+      "sha256": "eab6feb11bc10c710721a330556454cf402abd415629cde0af177b353070aaff"
+    },
+    {
+      "id": "boots_l",
+      "grades": [
+        "L"
+      ],
+      "path": "/models/boots/boots_l.glb",
+      "triangles": 3041,
+      "sha256": "faea1b240ee5b4a2de358cd1e6a84069c38a063870797fef43820471531cbbed"
+    }
+  ]
 }
