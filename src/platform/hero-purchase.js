@@ -35,7 +35,8 @@ export function loadPortOneSdk(doc = globalThis.document) {
  */
 export function createHeroPurchase({ api, eco, billing = null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, storage = defaultStorage(), now = () => Date.now(),
   location = globalThis.location, history = globalThis.history }) {
-  let webOn = false, busy = false;
+  let webOn = false, busy = false, syncing = false, lastSyncAt = 0;
+  const SYNC_GAP_MS = 15000; // 앱 복귀를 연달아 해도 서버 /iap/state 한도(계정당 분당 60회)를 아낀다.
 
   const readPending = () => {
     try {
@@ -74,6 +75,21 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
       if (channel !== 'web') return service.available();
       try { const me = await api.me(); webOn = me?.flags?.webBilling === true; } catch { webOn = false; }
       return webOn;
+    },
+    /**
+     * 시작·앱 복귀 때 서버의 활성 권한·지급·환불을 로컬에 반영한다. 웹 결제 판매 스위치·보류 결제와 무관하다:
+     * 결제 성공 뒤 보류가 지워졌거나 판매가 꺼진 뒤에도, cron이 처리한 환불 회수와 만료 뒤 지급이 열려야 하기 때문이다.
+     * 계정이 없거나(401) 서버가 꺼져 있으면(503)·네트워크 오류는 조용히 false.
+     */
+    async syncState() {
+      if (busy || syncing || (lastSyncAt && now() - lastSyncAt < SYNC_GAP_MS)) return false;
+      lastSyncAt = now(); syncing = true;
+      try {
+        const state = typeof api?.iapState === 'function' ? await api.iapState() : await api.request('GET', '/iap/state');
+        if (!state || typeof state !== 'object') return false;
+        return typeof eco?.applyIapState === 'function' && eco.applyIapState(state) !== null;
+      } catch { return false; }
+      finally { syncing = false; }
     },
     available() {
       if (channel === 'web') return webOn;
