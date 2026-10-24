@@ -56,6 +56,10 @@ export function validateGearPartsData(value) {
   for (const [asset, covers] of Object.entries(value.bodyCovers || {})) {
     if (!Array.isArray(covers) || covers.some((p) => !GEAR_PART_SLOTS.includes(p))) throw new Error(`invalid body covers: ${asset}`);
   }
+  const fitOk = (fit) => !fit || Object.entries(fit).every(([slot, f]) => GEAR_PART_SLOTS.includes(slot) && (f.scale === undefined || (f.scale > 0.5 && f.scale < 2))
+    && (f.offset === undefined || (Array.isArray(f.offset) && f.offset.length === 3 && f.offset.every((n) => Math.abs(n) <= 0.5))));
+  for (const set of value.sets) if (!fitOk(set.fit)) throw new Error(`invalid gear parts fit: ${set.id}`);
+  for (const [hero, fit] of Object.entries(value.heroFit || {})) if (!fitOk(fit)) throw new Error(`invalid gear parts hero fit: ${hero}`);
   for (const [grade, tint] of Object.entries(value.tint || {})) {
     if (!GEAR_PART_GRADES.includes(grade) || !(tint.color >= 0 && tint.color <= 1) || !(tint.glow >= 0 && tint.glow <= 1)) throw new Error(`invalid gear parts tint: ${grade}`);
   }
@@ -66,9 +70,9 @@ validateGearPartsData(PARTS_DATA);
 /**
  * 갑옷 아이템 → 외형 요청 { set, parts, theme }. 파츠가 없으면 null.
  * @param {{id?: string, rarity?: string, set?: string}|null} armor 갑옷 정의
- * @param {{ bodyAssetId?: string, hide?: string[], data?: any }} [options]
+ * @param {{ bodyAssetId?: string, hide?: string[], heroId?: string|null, data?: any }} [options]
  */
-export function pickGearParts(armor, { bodyAssetId = '', hide = [], data = PARTS_DATA } = {}) {
+export function pickGearParts(armor, { bodyAssetId = '', hide = [], heroId = null, data = PARTS_DATA } = {}) {
   if (!armor || (armor.slot && armor.slot !== 'armor')) return null;
   const rule = data.items?.[armor.id] || {};
   const setId = rule.set !== undefined ? rule.set : data.grades[armor.rarity] ?? null;
@@ -77,7 +81,7 @@ export function pickGearParts(armor, { bodyAssetId = '', hide = [], data = PARTS
   const skip = new Set([...(rule.hide || []), ...hide, ...(data.bodyCovers?.[bodyAssetId] || [])]);
   const parts = set.parts.filter((part) => !skip.has(part));
   if (!parts.length) return null;
-  return { set, parts, theme: armor.set || null, grade: armor.rarity };
+  return { set, parts, theme: armor.set || null, grade: armor.rarity, heroId: heroId || null };
 }
 
 /** 몸 지오메트리 공간에서 슬롯 치수. 못 구하면 null. */
@@ -174,7 +178,10 @@ export function buildHeroGearPartMeshes(scene, skin, pick, { data = PARTS_DATA, 
     const rig = SLOT_RIGS[slot], source = partSource(scene, slot);
     const measure = heroSlotMeasure(skin, rig.measure);
     if (!source || !measure) continue;
-    const scale = measure / data.slots[slot].ref;
+    // 맞춤 보정(선택): 세트별 fit[slot] · 영웅별 heroFit[heroId][slot] = { scale 배수, offset [x,y,z] 저작 단위(오른쪽 기준) }.
+    const fits = [pick.set.fit?.[slot], data.heroFit?.[pick.heroId]?.[slot]].filter(Boolean);
+    const scale = measure / data.slots[slot].ref * fits.reduce((k, f) => k * (f.scale ?? 1), 1);
+    const shift = fits.reduce((v, f) => v.add(new THREE.Vector3().fromArray(f.offset || [0, 0, 0])), new THREE.Vector3());
     if (!(scale >= GEAR_PARTS_SCALE_RANGE[0] && scale <= GEAR_PARTS_SCALE_RANGE[1])) continue;
     const sides = rig.mirror ? [false, true] : [false];
     const indices = sides.map((m) => findBoneIndex(skin.skeleton, m ? leftOf(rig.bone) : rig.bone));
@@ -185,9 +192,9 @@ export function buildHeroGearPartMeshes(scene, skin, pick, { data = PARTS_DATA, 
       const geometry = mirrored ? mirrorBootsGeometry(source.geometry) : source.geometry;
       let boneSlot = group.bones.indexOf(indices[k]);
       if (boneSlot < 0) boneSlot = group.bones.push(indices[k]) - 1;
-      group.pieces.push(placePartGeometry(geometry, {
-        scale, rotation: slotRestRotation(skin, rig.axis, rig.authored, mirrored), offset: boneRestPosition(skin, indices[k]), boneSlot,
-      }));
+      const rotation = slotRestRotation(skin, rig.axis, rig.authored, mirrored);
+      const local = shift.clone().multiplyScalar(scale); if (mirrored) local.x = -local.x;
+      group.pieces.push(placePartGeometry(geometry, { scale, rotation, offset: boneRestPosition(skin, indices[k]).add(local.applyQuaternion(rotation)), boneSlot }));
       if (mirrored) geometry.dispose();
     });
   }
@@ -247,7 +254,7 @@ export function refitHeroGearParts(root, makeMaterial) {
  * @returns {boolean} 파츠가 붙어 있거나 붙이는 중이면 true
  */
 export function syncHeroGearParts(root, armor, { data = PARTS_DATA, load, makeMaterial, themeColor = null, hide = [], onChange, warn = console.warn } = {}) {
-  const pick = root.userData.authoredContract?.role === 'hero' ? pickGearParts(armor, { bodyAssetId: root.userData.libraryBodyAssetId, hide, data }) : null;
+  const pick = root.userData.authoredContract?.role === 'hero' ? pickGearParts(armor, { bodyAssetId: root.userData.libraryBodyAssetId, hide, heroId: root.userData.authoredContract.heroId, data }) : null;
   if (!pick) { removeHeroGearParts(root); return false; }
   const key = pickKey(pick, themeColor);
   if (root.userData.heroGearParts?.key === key) { root.userData.gearPartsTarget = key; return true; }   // 대기 중인 다른 목표는 무효화
