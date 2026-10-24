@@ -2,6 +2,7 @@
 // - 가격 표시는 Play가 돌려준 값(formattedPrice)만 쓴다. 카탈로그 priceKRW는 폴백으로 보이지 않는다.
 // - 구매 토큰은 어댑터 → 서버 verify로만 흐른다. 저장·로그·퍼널에 남기지 않는다.
 import { loadPlayCatalogAdapter } from './iap-billing.js';
+import { createHeroPurchase } from './hero-purchase.js';
 
 const validProduct = (p) => p && typeof p.id === 'string' && ['inapp', 'subs'].includes(p.playType);
 
@@ -152,10 +153,15 @@ export function setupBilling(app) {
     onVerified: ({ shopSku }) => { if (shopSku) app.funnel?.track?.('purchase_verified', { sku: shopSku }); },
   });
   app.eco.setBilling(billing); app.billing = billing;
+  // 영웅 해금 구매 트리거(UI는 app.heroPurchase만 안다). 웹 채널은 포트원, Play 채널은 위 billing으로 위임한다.
+  const heroPurchase = createHeroPurchase({ api: client, eco: app.eco, billing });
+  app.heroPurchase = heroPurchase;
   const start = (tries = 0) => {
     const status = app.account?.status;
-    if (status === 'ready') void billing.init().then((ok) => ok && billing.sync()).then(() => app.meta?.refreshTop?.()).catch(() => {});
-    else if (status === 'connecting' && tries < 40) setTimeout(() => start(tries + 1), 1500);
+    if (status === 'ready') {
+      void billing.init().then((ok) => ok && billing.sync()).then(() => app.meta?.refreshTop?.()).catch(() => {});
+      void heroPurchase.init().then(() => heroPurchase.resume()).then((r) => r?.ok && app.meta?.refreshTop?.()).catch(() => {});
+    } else if (status === 'connecting' && tries < 40) setTimeout(() => start(tries + 1), 1500);
   };
   start();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void billing.sync(); });

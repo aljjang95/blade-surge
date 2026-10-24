@@ -262,6 +262,8 @@ export async function reconcileWebPayments(c: Ctx): Promise<{ checked: number; g
       if (r.state === 'cancelled' && row.state !== 'cancelled') out.reversed++;
     } catch (error) {
       out.failed++;
+      // 실패한 항목도 순서를 뒤로 보낸다(계속 실패하는 한 건이 매 시간 앞자리를 차지해 나머지를 굶기지 않게).
+      await c.db.prepare('UPDATE iap_web_payments SET checked_at = ? WHERE payment_id = ?').bind(c.now, row.payment_id).run().catch(() => {});
       console.warn('web payment reconcile item failed', error instanceof V1Error ? error.code : error instanceof Error ? error.name : 'unknown');
     }
   }
