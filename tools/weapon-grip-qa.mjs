@@ -24,6 +24,7 @@ try {
   for (const hero of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) {
     await page.evaluate(async (hero) => {
       const a = window.app, e = a.eco; if (a.battle?.active) { a.battle.stop(); a.toLobby(); }
+      e.s.roster.policy = 1; e.s.roster.starterChosen = true; // 모든 영웅을 소유한 정책 1로 둔다(장착 시험용)
       e.s.selected = hero; e.s.energy = 9999;
       for (const slot of ['weapon', 'armor']) { const it = e.addItem('E', slot); e.equip(hero, it.uid); }
       return { ok: await a.startStage(e.nextStage()), mode: a.mode, starting: a.stageStarting };

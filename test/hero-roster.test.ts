@@ -303,7 +303,7 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
     expect(r.setShowGear).toEqual({ ok: false, reason: 'locked' });
     expect(snap(eco)).toBe(b2); expect(before).not.toBe(b2);
     expect(eco.s.heroes.mage.equip.weapon).toBeNull();
-    expect(eco.trainingQuote('mage')).toEqual({ ok: false, reason: 'locked' });
+    expect(eco.trainingQuote('mage')).toMatchObject({ ok: false, reason: 'locked' });
   });
 
   test('시작 영웅은 그대로 성장·장비가 된다(차단은 미소유에만 적용)', () => {

@@ -112,6 +112,7 @@ try {
   const equipped = await page.evaluate(async ({ hero, armorId }) => {
     const a = window.app, s = a.eco.s; a.testPause = false;
     a.eco.hero(hero);   // 영웅 상태 보장
+    s.roster.policy = 1; s.roster.starterChosen = true; // 모든 영웅을 소유한 정책 1로 둔다(장착 시험용)
     const inst = { uid: s.invSeq++, id: armorId, enh: 0 }; s.inventory.push(inst);
     a.eco.equip(hero, inst.uid); s.selected = hero; a.eco.emit?.();
     await a.showcaseHero(hero, true);

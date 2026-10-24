@@ -39,7 +39,7 @@ try {
     const heroId = await select.locator('option').nth(i).getAttribute('value');
     await select.selectOption(heroId);
     // 게스트만 자기 영웅의 아바타를 사서 착용한다(입장 시 avatar 파라미터로 전달).
-    if (i === 1) guestAvatar = await p.evaluate((hero) => { const e = window.app.eco; e.s.gems += 5000;
+    if (i === 1) guestAvatar = await p.evaluate((hero) => { const e = window.app.eco; e.s.gems += 5000; e.s.roster.policy = 1; e.s.roster.starterChosen = true; // 모든 영웅을 소유한 정책 1로 둔다(아바타 착용 시험용)
       const id = { knight: 'avatar_knight_sakura', barbarian: 'avatar_barbarian_oni', mage: 'avatar_mage_astral', rogue: 'avatar_rogue_crow', ranger: 'avatar_ranger_fox' }[hero];
       return e.buyAvatar(id).ok && e.equipAvatar(hero, id).ok ? id : null; }, heroId);
   }

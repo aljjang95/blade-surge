@@ -5,6 +5,7 @@ import { HEROES, levelExp } from '../src/data/heroes.js';
 import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
 import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 beforeEach(() => {
@@ -18,7 +19,7 @@ beforeEach(() => {
 afterEach(() => { if (prior) Object.defineProperty(globalThis, 'localStorage', prior); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
 function fixture() {
-  const eco = new Economy(), save: any = eco.s;
+  const eco = grandfather(new Economy()), save: any = eco.s;
   save.selected = 'mage'; save.heroes.mage.level = 20;
   save.masterworks = normalizeMasterworks({ earnedRenown: 6, renown: 6 });
   const weapon = Object.values(ITEM_BY_ID).find(item => item.slot === 'weapon')!;
