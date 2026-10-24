@@ -89,9 +89,8 @@ test('정규화 도구: 발끝 방향(yaw)과 발목 원점을 원본에서 다�
   expect(Object.keys(TARGETS)).toEqual(BOOTS_DATA.boots.map((b) => b.id));
 });
 
-// knight 2·3단계 몸(hero_knight_t2/t3)은 원래 발이 몸 지오메트리 바닥보다 약 29cm 아래로 묶여 화면에서도 바닥에 묻혀 보인다(별도 결함).
-// 그 몸은 발목 높이가 0.46m 로 잡혀 배율 상한(3)을 넘으므로 부츠를 거절하고 원래 발을 유지하는 것이 안전한 동작이다.
-const SINKING_BODIES = new Set(['hero_knight_t2', 'hero_knight_t3']);
+// knight 2·3단계 몸(hero_knight_t2/t3)은 원래 발이 바닥보다 약 29cm 아래로 묶여 부츠를 거절했다. t6 에서 다리 역바인드를 고쳐(tools/art/fit-leg-rest.mjs)
+// 이제 다른 몸과 같은 조건(발목 높이 0.163m, 밑창 1.5cm 이내)으로 붙는다.
 
 for (const heroId of HEROES) test(`${heroId}: 실제 단계 몸 GLB 모두에 S·E·U·L 부츠가 실제 로드 경로로 붙고 밑창·발길이가 맞는다`, async () => {
   const boots = new Map<string, any>();
@@ -123,11 +122,6 @@ for (const heroId of HEROES) test(`${heroId}: 실제 단계 몸 GLB 모두에 S�
       syncHeroBoots(gltf.scene, { rarity }, { load: (path: string) => Promise.resolve(boots.get(path)), warn: (m: string) => warns.push(m) });
       await new Promise((r) => setTimeout(r, 0));
       const state = gltf.scene.userData.heroBoots;
-      if (SINKING_BODIES.has(file.id)) {
-        expect(state, `${file.id}`).toBeUndefined(); expect(warns).toHaveLength(1);
-        expect(ankle / 0.14).toBeGreaterThan(BOOTS_SCALE_RANGE[1]);
-        continue;
-      }
       expect(state?.id, `${file.id} ${rarity}`).toBe(pickBootsEntry(rarity)!.id);
       expect(warns).toEqual([]);
       const g = state.mesh.geometry, pos = g.attributes.position, slot = g.attributes.skinIndex;
