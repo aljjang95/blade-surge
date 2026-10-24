@@ -34,7 +34,7 @@ const cache = new Map();
  * 라이브러리 GLB 한 개를 읽는다. 스토어 네이티브 채널에서 APK 밖(remote)인 파일은 보관본 또는 정식 호스트에서 바이트를 받아 파싱한다
  * (실패하면 RemoteAssetError → 라이브러리 로더가 기존 폴백을 쓰고, 다음 요청에서 다시 시도한다). 그 밖의 경로는 평소대로 URL 로더다.
  */
-async function loadLibraryGltf(path) {
+export async function loadLibraryGltf(path) {
   if (!isRemoteAsset(path)) return loader.loadAsync(path);
   const buffer = await readRemoteBuffer(path);
   return loader.parseAsync(buffer, path.slice(0, path.lastIndexOf('/') + 1));

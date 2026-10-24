@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER, FORGE_POSTS, STARTER_LANTERNS } from '../data/starter-village.js';
+import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER, FORGE_POSTS, STARTER_LANTERNS, STARTER_PROPS, STARTER_COTTAGES, STARTER_COTTAGE_SCALE, STARTER_FORGE_BUILDING } from '../data/starter-village.js';
 
 // 첫 마을 초보자 구역 장면(src/data/starter-village.js 배치). citadel-hub-scene 이 바닥·구역 소품을 이 모듈에 맡긴다.
 // 원칙: 재질별 병합(정적 소품) + 인스턴싱(돌길 조약돌·풀·꽃·울타리) — 구역 전체가 수십 개 draw call 안에 든다.
 // 시간 의존 연출(허수아비 흔들림·화로 깜빡임·포탈 소용돌이)은 update(dt)만 쓰며 Math.random 을 프레임에서 부르지 않는다.
+// Tripo 소품 GLB(starter-village-props.js)는 비동기로 도착한다. 교체 대상 소품(오두막·대장간 건물·게시판·허수아비·포탈·영웅상·분수·상점 좌판)의
+// 절차 모델은 소품별 묶음(Starter_Fallback_<이름>)에 병합해 폴백으로 남기고, applyProps(templates) 가 GLB 인스턴스를 세운 뒤에만 그 묶음을 숨긴다.
+// 못 받은 소품은 절차 모델 그대로다. GLB 지오메트리·텍스처는 템플릿 소유라 장면이 해제하지 않고, 재질 복제본만 장면이 소유한다.
 
 /** 결정적 의사난수(배치 전용). */
 function seeded(seed) {
@@ -61,6 +64,15 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
   M.emberCore.userData.bake = 'glow';
   const transform = new THREE.Object3D();
   const bins = new Map();
+  // 교체 대상 소품의 절차 모델은 소품별 병합 묶음에 모은다(GLB 가 오면 묶음째 숨긴다).
+  const fallbackBins = new Map();
+  let activeBins = bins;
+  const inSet = (name, build) => {
+    const previous = activeBins;
+    if (!fallbackBins.has(name)) fallbackBins.set(name, new Map());
+    activeBins = fallbackBins.get(name);
+    try { build(); } finally { activeBins = previous; }
+  };
   // 정적 조각은 재질 색을 정점 색으로 구워 묶음(바닥·무광·금속·발광) 하나로 병합한다. 재질이 수십 개여도 draw call 은 묶음 수만큼이다.
   const bakeKey = material => material.userData.bake || null;
   function bakeColor(geometry, color) {
@@ -78,7 +90,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     transform.position.set(x, y, z); transform.rotation.set(rx, ry, rz); transform.scale.set(sx, sy, sz); transform.updateMatrix();
     const flat = geometry.index ? geometry.toNonIndexed() : geometry; if (flat !== geometry) geometry.dispose();
     flat.applyMatrix4(transform.matrix);
-    if (!bins.has(material)) bins.set(material, []); bins.get(material).push(flat);
+    if (!activeBins.has(material)) activeBins.set(material, []); activeBins.get(material).push(flat);
   };
   const box = (w, h, d, m, x, y, z, ry = 0, rx = 0, rz = 0) => add(new THREE.BoxGeometry(w, h, d), m, x, y, z, rx, ry, rz);
   const cyl = (r, h, m, x, y, z, n = 10, rTop = r, rx = 0, rz = 0) => add(new THREE.CylinderGeometry(rTop, r, h, n), m, x, y, z, rx, 0, rz);
@@ -206,8 +218,8 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     for (const [material, list] of parts) for (const piece of list) pieces.push(bakeColor(piece, material.color));
     const geometry = mergeGeometries(pieces); for (const piece of pieces) piece.dispose(); owned.geometries.add(geometry);
     const mesh = new THREE.Mesh(geometry, bakedMaterials.matte); mesh.castShadow = true; mesh.receiveShadow = true; mesh.name = 'Starter_Dummy'; pivot.add(mesh);
-    cyl(.32, .08, M.woodDark, x, .04, z, 10);
-    return { node, pivot, angle: 0, velocity: 0 };
+    inSet('dummy', () => cyl(.32, .08, M.woodDark, x, .04, z, 10));
+    return { node, pivot, angle: 0, velocity: 0, fallbackMesh: mesh };
   });
   // 훈련장 입구 옆 무기 걸이(연습용 목검).
   { const L = local(yard.x + yard.radius + .2, yard.z - 1.9, -Math.PI / 2);
@@ -215,7 +227,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     for (const sx of [-.4, 0, .4]) L.box(.07, .9, .03, M.wood, sx, .7, .08, 0, 0, .12); }
 
   // ---------------- 첫 의뢰 게시판 ----------------
-  { const b = STARTER_ZONES.board, L = local(b.x, b.z, .35);
+  inSet('board', () => { const b = STARTER_ZONES.board, L = local(b.x, b.z, .35);
     for (const sx of [-.95, .95]) L.box(.14, 2.2, .14, M.woodDark, sx, 1.1, 0);
     L.box(2.1, 1.25, .1, M.wood, 0, 1.45, 0);
     L.box(2.3, .1, .2, M.woodDark, 0, 2.1, 0); L.box(2.3, .1, .2, M.woodDark, 0, .8, 0);
@@ -224,17 +236,17 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     notes.forEach(([x, y, r], i) => L.box(.42, .52, .012, i === 1 ? M.clothWarm : M.paper, x, y, .07, 0, 0, r));
     L.add(new THREE.SphereGeometry(.05, 6, 4), M.red, -.05, 1.92, .09); L.add(new THREE.SphereGeometry(.05, 6, 4), M.red, .55, 1.81, .09);
     // 게시판 옆 걸린 등.
-    L.box(.5, .05, .05, M.woodDark, 1.18, 2.02, 0); L.box(.2, .26, .2, M.ember, 1.36, 1.84, 0); }
+    L.box(.5, .05, .05, M.woodDark, 1.18, 2.02, 0); L.box(.2, .26, .2, M.ember, 1.36, 1.84, 0); });
 
   // ---------------- 대장간: 열린 작업장 지붕 + 화로 + 모루 + 무기 진열대 ----------------
   const forge = STARTER_ZONES.forge;
-  { const L = local(forge.x, forge.z, 0);
+  inSet('forge', () => { const L = local(forge.x, forge.z, 0);
     for (const [px, pz] of FORGE_POSTS) L.box(.22, 2.8, .22, M.woodDark, px, 1.4, pz);
     L.box(5.8, .14, .26, M.woodDark, 0, 2.85, -2.2); L.box(5.8, .14, .26, M.woodDark, 0, 2.85, 1.6);
     L.box(6.2, .12, 4.6, M.roof, 0, 3.15, -.3, 0, -.16); L.box(6.3, .08, .3, M.roofDark, 0, 2.86, 1.85, 0, -.16);
     L.box(5.6, 2.6, .25, M.plaster, 0, 1.3, -2.35); L.box(5.6, .3, .3, M.woodDark, 0, .15, -2.35);
     // 굴뚝.
-    L.box(.9, 4.6, .9, M.stone, 1.7, 2.3, -2.2); L.box(1.05, .2, 1.05, M.stoneDark, 1.7, 4.65, -2.2); }
+    L.box(.9, 4.6, .9, M.stone, 1.7, 2.3, -2.2); L.box(1.05, .2, 1.05, M.stoneDark, 1.7, 4.65, -2.2); });
   { // 화로(hearth): 돌 화덕 + 불빛.
     const h = { x: 9.3, z: -2.6 }, L = local(h.x, h.z, -Math.PI / 2);
     L.box(2.2, 1, 1.6, M.stone, 0, .5, 0); L.box(2.4, .16, 1.8, M.stoneDark, 0, 1.06, 0);
@@ -253,14 +265,14 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     L.cyl(.32, .05, M.cloth, -1.25, .75, .1, 12); }
 
   // ---------------- 상점 앞마당 차양(상인 좌판 위) ----------------
-  { const m = STARTER_ZONES.market, L = local(m.x + .5, m.z + .7, -Math.PI / 2);
+  inSet('stall', () => { const stall = STARTER_PROPS.find(prop => prop.kind === 'stall'), L = local(stall.x + .1, stall.z, stall.yaw);
     for (const sx of [-1.3, 1.3]) for (const sz of [-.8, .8]) L.box(.1, 2.5, .1, M.wood, sx, 1.25, sz);
     for (let i = 0; i < 6; i++) L.box(.46, .05, 1.9, i % 2 ? M.clothWarm : M.plaster, -1.15 + i * .46, 2.55 - Math.abs(i - 2.5) * .04, 0, 0, .12);
     for (const [sx, c] of [[-.8, M.red], [-.3, M.brass], [.3, M.cloth]]) L.cyl(.18, .32, c, sx, 1.05, -.2, 8);
-    L.box(.6, .5, .5, M.wood, 1.7, .25, .9); L.box(.5, .4, .5, M.woodDark, 1.75, .7, .9, .3); }
+    L.box(.6, .5, .5, M.wood, 1.7, .25, .9); L.box(.5, .4, .5, M.woodDark, 1.75, .7, .9, .3); });
 
   // ---------------- 시작 영웅상(팔각 받침 + 검을 든 기사 실루엣) ----------------
-  { const st = STARTER_ZONES.statue, L = local(st.x, st.z, 0);
+  inSet('statue', () => { const st = STARTER_ZONES.statue, L = local(st.x, st.z, 0);
     L.cyl(.95, .3, M.stoneDark, 0, .15, 0, 8); L.cyl(.78, .9, M.stone, 0, .75, 0, 8); L.cyl(.86, .12, M.stoneDark, 0, 1.24, 0, 8);
     L.add(new THREE.CircleGeometry(.28, 6), M.cloth, 0, .8, .78); L.add(new THREE.CircleGeometry(.18, 6), M.brass, 0, .8, .79);
     // 조각상(돌 재질): 다리·몸통·망토·머리·치켜든 검.
@@ -269,30 +281,32 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     L.add(new THREE.SphereGeometry(.26, 10, 8), M.stone, 0, 2.62, 0);
     L.box(.12, .55, .12, M.stone, .32, 2.45, 0, 0, 0, -.5); L.box(.07, 1.1, .03, M.stone, .52, 3.1, 0, 0, 0, -.15); L.box(.26, .06, .08, M.stone, .44, 2.6, 0);
     L.add(new THREE.CylinderGeometry(.24, .24, .06, 10), M.stoneDark, -.32, 2.05, .12, Math.PI / 2, 0, .2);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; L.add(new THREE.IcosahedronGeometry(.12, 0), i % 3 === 0 ? M.red : i % 3 === 1 ? M.straw : M.paper, Math.cos(a) * 1.05, .34, Math.sin(a) * 1.05); } }
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; L.add(new THREE.IcosahedronGeometry(.12, 0), i % 3 === 0 ? M.red : i % 3 === 1 ? M.straw : M.paper, Math.cos(a) * 1.05, .34, Math.sin(a) * 1.05); } });
 
   // ---------------- 광장 분수 ----------------
   const water = mat(0x5fd6d8, { roughness: .15, metalness: .1, transparent: true, opacity: .85 });
-  { const f = STARTER_ZONES.fountain, L = local(f.x, f.z, 0);
+  inSet('fountain', () => { const f = STARTER_ZONES.fountain, L = local(f.x, f.z, 0);
     L.cyl(f.radius, .5, M.stone, 0, .25, 0, 16); L.cyl(f.radius + .08, .1, M.stoneDark, 0, .52, 0, 16);
     // 수반 둘레 낮은 꽃 띠(분수 충돌 원 안).
     for (let i = 0; i < 18; i++) { const t = i / 18 * Math.PI * 2; L.add(new THREE.IcosahedronGeometry(.13, 0), i % 3 === 0 ? M.red : i % 3 === 1 ? M.straw : M.paper, Math.cos(t) * (f.radius + .12), .2, Math.sin(t) * (f.radius + .12)); }
     L.add(new THREE.CircleGeometry(f.radius - .14, 24), water, 0, .44, 0, -Math.PI / 2);
     L.cyl(.24, 1.1, M.stone, 0, .9, 0, 8); L.cyl(.62, .18, M.stone, 0, 1.5, 0, 12, .7); L.add(new THREE.CircleGeometry(.55, 16), water, 0, 1.6, 0, -Math.PI / 2);
-    L.cyl(.1, .5, M.stone, 0, 1.85, 0, 6); L.add(new THREE.SphereGeometry(.14, 8, 6), M.brass, 0, 2.15, 0); }
+    L.cyl(.1, .5, M.stone, 0, 1.85, 0, 6); L.add(new THREE.SphereGeometry(.14, 8, 6), M.brass, 0, 2.15, 0); });
   // 물줄기: 가산 혼합 원뿔(update 에서 살짝 맥동).
   const jetMaterial = new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending });
   owned.materials.add(jetMaterial);
   const jetGeometry = new THREE.ConeGeometry(.58, .62, 16, 1, true); owned.geometries.add(jetGeometry);
-  const jet = new THREE.Mesh(jetGeometry, jetMaterial); jet.position.set(STARTER_ZONES.fountain.x, 1.8, STARTER_ZONES.fountain.z); jet.rotation.x = Math.PI; group.add(jet);
+  let jetScale = 1;   // GLB 분수를 세우면 줄인다(분수가 낮아져 물줄기도 모델 꼭대기에 맞춘다)
+  const jet = new THREE.Mesh(jetGeometry, jetMaterial); jet.position.set(STARTER_ZONES.fountain.x, 1.8, STARTER_ZONES.fountain.z); jet.rotation.x = Math.PI; jet.name = 'Starter_FountainJet'; group.add(jet);
 
   // ---------------- 출격 포탈: 돌 아치 + 계단 + 소용돌이 ----------------
   const portal = STARTER_ZONES.portal;
-  { const L = local(portal.x, portal.z, 0);
+  inSet('portal', () => { const L = local(portal.x, portal.z, 0);
     for (let i = 0; i < 3; i++) L.box(4.8 - i * .5, .14, 1.4 - i * .25, i % 2 ? M.stone : M.stoneDark, 0, .07 + i * .14, .5 - i * .1);
     for (const sx of [-1.75, 1.75]) { L.box(.85, 3.6, .85, M.stone, sx, 1.8, 0); L.box(1.05, .25, 1.05, M.stoneDark, sx, 3.7, 0); L.box(1.05, .3, 1.05, M.stoneDark, sx, .15, 0); }
     L.add(new THREE.TorusGeometry(1.75, .42, 6, 18, Math.PI), M.stone, 0, 3.6, 0);
-    L.box(.55, .7, .5, M.brass, 0, 5.25, 0);
+    L.box(.55, .7, .5, M.brass, 0, 5.25, 0); });
+  { const L = local(portal.x, portal.z, 0);   // 양옆 화로는 GLB 아치(폭 4.8m) 바깥이라 항상 둔다.
     for (const sx of [-2.9, 2.9]) { L.cyl(.12, 1.2, M.iron, sx, .6, .9, 6); L.cyl(.3, .2, M.brass, sx, 1.25, .9, 8, .38); L.add(new THREE.ConeGeometry(.24, .5, 6), M.ember, sx, 1.6, .9); } }
   // 소용돌이 원판(캔버스 나선 텍스처, 가산 혼합). 회전만 update 에서 바꾼다.
   let swirl = null;
@@ -415,26 +429,120 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     L.box(1.3, .18, .5, M.stone, upper ? 0 : w * .2, .09, d / 2 + .4);
   }
   // 서쪽(훈련장 뒤)·동쪽(대장간 뒤)·북쪽 모서리. 광장 담(±12.55) 바깥이라 걷기 경계와 겹치지 않는다.
-  cottage(-15.4, -7.2, Math.PI / 2, { w: 4.6 }); cottage(-15.2, 1.4, Math.PI / 2, { w: 4, upper: false }); cottage(-15.6, 8.8, Math.PI / 2, { w: 4.2 });
-  cottage(15.6, -8.6, -Math.PI / 2, { w: 4.4 }); cottage(15.4, 6.6, -Math.PI / 2, { w: 4.6 });
-  cottage(-8.6, -15.4, 0, { w: 4.4, upper: false }); cottage(8.8, -15.6, 0, { w: 4.8 });
+  // 폴백은 기존 절차 자리(데이터의 Tripo 오두막 자리에서 앞뒤로 .3~.7 안쪽)에 그대로 둔다. GLB 가 오면 이 묶음은 숨는다.
+  inSet('cottage', () => {
+    const [a, b, c, d, e, f, g] = STARTER_COTTAGES;
+    cottage(a[0] + .5, a[1], a[2], { w: 4.6 }); cottage(b[0] + .7, b[1], b[2], { w: 4, upper: false }); cottage(c[0] + .3, c[1], c[2], { w: 4.2 });
+    cottage(d[0] - .3, d[1], d[2], { w: 4.4 }); cottage(e[0] - .5, e[1], e[2], { w: 4.6 });
+    cottage(f[0], f[1] + .5, f[2], { w: 4.4, upper: false }); cottage(g[0], g[1] + .3, g[2], { w: 4.8 });
+  });
 
   // ---------------- 병합 마무리 ----------------
-  const merged = [], baked = new Map();
-  for (const [material, pieces] of bins) {
-    const key = bakeKey(material);
-    if (key) { if (!baked.has(key)) baked.set(key, []); baked.get(key).push(...pieces.map(piece => bakeColor(piece, material.color))); continue; }
-    const geometry = mergeGeometries(pieces); for (const piece of pieces) piece.dispose();
-    if (!geometry) continue; owned.geometries.add(geometry);
-    const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; mesh.castShadow = !material.isMeshBasicMaterial && !material.transparent;
-    mesh.name = 'Starter_Static'; group.add(mesh); merged.push(mesh);
+  const merged = [];
+  /** 재질별 병합 조각을 메시로 만들어 parent 에 붙인다(정점 색을 구운 재질은 묶음 하나로 합친다). */
+  function flush(source, parent) {
+    const baked = new Map();
+    for (const [material, pieces] of source) {
+      const key = bakeKey(material);
+      if (key) { if (!baked.has(key)) baked.set(key, []); baked.get(key).push(...pieces.map(piece => bakeColor(piece, material.color))); continue; }
+      const geometry = mergeGeometries(pieces); for (const piece of pieces) piece.dispose();
+      if (!geometry) continue; owned.geometries.add(geometry);
+      const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = true; mesh.castShadow = !material.isMeshBasicMaterial && !material.transparent;
+      mesh.name = 'Starter_Static'; parent.add(mesh); merged.push(mesh);
+    }
+    for (const [key, pieces] of baked) {
+      const geometry = mergeGeometries(pieces); for (const piece of pieces) piece.dispose();
+      if (!geometry) continue; owned.geometries.add(geometry);
+      const mesh = new THREE.Mesh(geometry, bakedMaterials[key]); mesh.receiveShadow = key !== 'glow'; mesh.castShadow = key === 'matte' || key === 'metal';
+      mesh.name = 'Starter_Baked_' + key; parent.add(mesh); merged.push(mesh);
+    }
   }
-  for (const [key, pieces] of baked) {
-    const geometry = mergeGeometries(pieces); for (const piece of pieces) piece.dispose();
-    if (!geometry) continue; owned.geometries.add(geometry);
-    const mesh = new THREE.Mesh(geometry, bakedMaterials[key]); mesh.receiveShadow = key !== 'glow'; mesh.castShadow = key === 'matte' || key === 'metal';
-    mesh.name = 'Starter_Baked_' + key; group.add(mesh); merged.push(mesh);
+  flush(bins, group);
+  // 교체 대상 소품의 절차 모델: 소품별 폴백 묶음(GLB 가 도착해 세워지면 숨긴다).
+  const fallbackGroups = new Map();
+  for (const [name, source] of fallbackBins) {
+    const holder = new THREE.Group(); holder.name = 'Starter_Fallback_' + name; group.add(holder); fallbackGroups.set(name, holder);
+    flush(source, holder);
   }
+  /** 폴백 메시 수(GLB 가 오기 전 draw call 계산·QA용). */
+  const fallbackMeshCount = () => { let count = 0; for (const holder of fallbackGroups.values()) holder.traverse(node => { if (node.isMesh) count++; }); return count; };
+
+  // ---------------- Tripo 소품 GLB 교체 ----------------
+  const Y_AXIS = new THREE.Vector3(0, 1, 0);
+  const propMaterials = new Map();   // 템플릿 재질 -> 이 장면의 복제본(장면이 소유, 환경맵은 장면 재질 규약 .3)
+  const propMaterial = source => {
+    if (!propMaterials.has(source)) {
+      const copy = source.clone();
+      if (environmentTexture && copy.isMeshStandardMaterial) { copy.envMap = environmentTexture; copy.envMapIntensity = .3; }
+      owned.materials.add(copy); propMaterials.set(source, copy);
+    }
+    return propMaterials.get(source);
+  };
+  /** 템플릿의 메시: 지오메트리(템플릿 소유, 공유)·재질(장면 복제본)·템플릿 루트 기준 행렬. 메시가 없으면 던진다(→ 폴백 유지). */
+  function templateParts(template) {
+    template.updateMatrixWorld(true);
+    const rootInverse = new THREE.Matrix4().copy(template.matrixWorld).invert(), parts = [];
+    template.traverse(node => {
+      if (!node.isMesh || node.isSkinnedMesh || !node.geometry) return;
+      parts.push({ geometry: node.geometry, material: Array.isArray(node.material) ? node.material.map(propMaterial) : propMaterial(node.material),
+        matrix: new THREE.Matrix4().multiplyMatrices(rootInverse, node.matrixWorld) });
+    });
+    if (!parts.length) throw new Error('starter prop template has no mesh');
+    return parts;
+  }
+  const placeMatrix = (x, z, yaw, scale = 1) => new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(Y_AXIS, yaw), new THREE.Vector3(scale, scale, scale));
+  const shadowed = (mesh, cast) => { mesh.castShadow = cast; mesh.receiveShadow = true; return mesh; };
+  /** 같은 GLB 를 여러 자리에 세운다. instanced 면 메시마다 InstancedMesh 하나(지오메트리·재질 공유, draw call 1), 아니면 자리마다 Mesh 하나. */
+  function instantiate(name, template, placements, { cast = true, instanced = false } = {}) {
+    const parts = templateParts(template), holder = new THREE.Group(); holder.name = 'Starter_Props_' + name;
+    for (const part of parts) {
+      if (instanced && placements.length > 1) {
+        const mesh = new THREE.InstancedMesh(part.geometry, part.material, placements.length);
+        placements.forEach((place, i) => mesh.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(place, part.matrix)));
+        mesh.name = 'Starter_Prop_' + name; mesh.computeBoundingSphere(); holder.add(shadowed(mesh, cast));
+      } else for (const place of placements) {
+        const mesh = new THREE.Mesh(part.geometry, part.material);
+        mesh.matrix.multiplyMatrices(place, part.matrix); mesh.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
+        mesh.name = 'Starter_Prop_' + name; holder.add(shadowed(mesh, cast));
+      }
+    }
+    return holder;
+  }
+  const adopted = new Map(), applied = new Set();   // 장면 밖에서 만든 폴백(허브 장면의 상점 좌판 등), 이미 바꾼 소품
+  let retired = false;
+  const hideFallback = name => {
+    const holder = fallbackGroups.get(name); if (holder) holder.visible = false;
+    for (const object of adopted.get(name) || []) object.visible = false;
+  };
+  const stallProp = STARTER_PROPS.find(prop => prop.kind === 'stall'), board = STARTER_ZONES.board, statue = STARTER_ZONES.statue;
+  const forgeBuilding = STARTER_FORGE_BUILDING;
+  // 소품별 교체. 세울 것을 먼저 다 만들고(실패하면 던짐) 성공한 뒤에만 group 에 붙이고 폴백을 숨긴다.
+  const swaps = {
+    cottage: template => ({ holder: instantiate('cottage', template, STARTER_COTTAGES.map(([x, z, yaw]) => placeMatrix(x, z, yaw, STARTER_COTTAGE_SCALE)), { cast: !low, instanced: true }) }),
+    forge: template => ({ holder: instantiate('forge', template, [placeMatrix(forgeBuilding.x, forgeBuilding.z, forgeBuilding.yaw)]) }),
+    board: template => ({ holder: instantiate('board', template, [placeMatrix(board.x, board.z, .35)]) }),
+    statue: template => ({ holder: instantiate('statue', template, [placeMatrix(statue.x, statue.z, 0)]) }),
+    stall: template => ({ holder: instantiate('stall', template, [placeMatrix(stallProp.x, stallProp.z, stallProp.yaw)]) }),
+    fountain: template => ({
+      holder: instantiate('fountain', template, [placeMatrix(STARTER_ZONES.fountain.x, STARTER_ZONES.fountain.z, 0)]),
+      // 분수 높이 2.3m -> 1.74m(윗 수반 y≈1.3, 기둥 끝 1.74): 물줄기를 윗 수반 위로 내리고 수반 폭(반경 .66)에 맞춰 좁힌다.
+      after: () => { jet.position.y = 1.55; jetScale = .85; },
+    }),
+    portal: template => ({
+      holder: instantiate('portal', template, [placeMatrix(portal.x, portal.z, 0)]),
+      // 아치 열린 폭은 실측 약 2.0m(기둥 안쪽 면 ±1.0), 바닥 y≈.5~아치 안쪽 꼭대기 y≈3.4, 열린 면은 z≈-.25.
+      after: () => { if (swirl) { swirl.position.set(portal.x, 1.95, portal.z - .25); swirl.scale.set(.66, 1, 1); } },
+    }),
+    dummy: template => {
+      const parts = templateParts(template);
+      // 흔들리는 pivot 안에 GLB 메시를 넣는다(허수아비마다 Mesh, 지오메트리·재질 공유).
+      const meshes = dummyNodes.map(() => parts.map(part => {
+        const mesh = new THREE.Mesh(part.geometry, part.material);
+        part.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale); mesh.name = 'Starter_Prop_dummy'; return shadowed(mesh, true);
+      }));
+      return { attach: () => dummyNodes.forEach((entry, i) => { for (const mesh of meshes[i]) entry.pivot.add(mesh); entry.fallbackMesh.visible = false; }) };
+    },
+  };
 
   // ---------------- 시간 연출 ----------------
   let time = 0, practiceCount = 0;
@@ -443,6 +551,38 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     version: STARTER_VILLAGE_VERSION,
     group,
     staticBatches: merged.length,
+    /** 폴백(절차) 묶음의 메시 수. GLB 로 모두 바꾸면 이 만큼 draw call 이 줄고 GLB 쪽이 늘어난다. */
+    fallbackMeshCount,
+    /** 바꾼 소품 이름들(QA·테스트). */
+    appliedProps: () => [...applied],
+    /** 허브 장면이 그린 폴백(상점 좌판 등)을 이 소품이 바뀌면 같이 숨기도록 맡긴다. */
+    adoptFallback(name, object) {
+      if (!adopted.has(name)) adopted.set(name, []);
+      adopted.get(name).push(object);
+      if (applied.has(name)) object.visible = false;
+    },
+    /**
+     * 받은 GLB 템플릿({ 이름: Object3D } 또는 Map)으로 해당 소품의 절차 모델을 바꾼다. 소품마다 독립이며 하나가 실패해도(메시 없음 등) 그 소품만 폴백 그대로다.
+     * 이미 바꾼 소품과 장면이 해제된 뒤(retire)는 건너뛴다. 새로 바꾼 소품 이름을 돌려준다.
+     */
+    applyProps(templates) {
+      const done = [];
+      if (retired || !templates) return done;
+      const entries = templates instanceof Map ? [...templates] : Object.entries(templates);
+      for (const [name, template] of entries) {
+        if (!swaps[name] || applied.has(name) || !template) continue;
+        try {
+          const result = swaps[name](template);
+          if (result.holder) group.add(result.holder);
+          result.attach?.();
+          hideFallback(name); result.after?.();
+          applied.add(name); done.push(name);
+        } catch { /* 이 소품은 절차 모델 그대로 둔다 */ }
+      }
+      return done;
+    },
+    /** 장면 해제 뒤 늦게 도착한 GLB 를 무시한다. */
+    retire() { retired = true; },
     /** 훈련장 연습 한 번: 가장 가까운 허수아비가 맞은 방향으로 흔들린다. 맞은 허수아비 id 를 돌려준다. */
     strike(position = null, power = 1) {
       let best = 0, bestDistance = Infinity;
@@ -465,7 +605,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
         entry.pivot.rotation.x = entry.angle * .5;
       }
       if (swirl && !reducedMotion) swirl.rotation.z -= step * 1.4;
-      if (!reducedMotion) jet.scale.set(1, 1 + .08 * Math.sin(time * 5.1), 1);
+      if (!reducedMotion) jet.scale.set(jetScale, jetScale * (1 + .08 * Math.sin(time * 5.1)), jetScale);
       if (!reducedMotion) M.ember.color.copy(emberBase).lerp(emberHot, .5 + .5 * Math.sin(time * 7.3) * Math.sin(time * 3.1));
     },
   };
