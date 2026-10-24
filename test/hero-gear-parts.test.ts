@@ -109,7 +109,7 @@ test('heroSlotMeasure: 머리 위 높이·어깨 반폭·아래팔 길이', () =
 
 test('slotRestRotation: T자세 무회전, A자세는 저작 축이 팔 방향으로, 왼쪽은 반전 축', () => {
   const t = hero(0);
-  const [from, to] = SLOT_RIGS.pauldron.axis;
+  const [from, to] = SLOT_RIGS.pauldron.axis as [string, string];
   expect(slotRestRotation(t.skin, [from, to], [-1, 0, 0], false).angleTo(new THREE.Quaternion())).toBeLessThan(1e-6);
   expect(slotRestRotation(t.skin, [from, to], [-1, 0, 0], true).angleTo(new THREE.Quaternion())).toBeLessThan(1e-6);
   const a = hero(0.2);
@@ -120,7 +120,7 @@ test('slotRestRotation: T자세 무회전, A자세는 저작 축이 팔 방향�
   expect(slotRestRotation(a.skin, ['Nope', 'RightForeArm'], [-1, 0, 0]).angleTo(new THREE.Quaternion())).toBe(0);   // 관절 없음
 });
 
-const pickAll = (data: any, grade = 'S', id = 'parts_a') => ({ set: data.sets.find((s: any) => s.id === id), parts: ['helm', 'pauldron', 'gauntlet'], theme: null, grade });
+const pickAll = (data: any, grade = 'S', id = 'parts_a'): any => ({ set: data.sets.find((s: any) => s.id === id), parts: ['helm', 'pauldron', 'gauntlet'], theme: null, grade });
 
 test('buildHeroGearPartMeshes: 같은 재질이면 SkinnedMesh 하나로 병합, 삼각형 = 투구 + 어깨×2 + 장갑×2', () => {
   const data = fixtureData(), { skin, bones } = hero(), { scene } = partsScene();
@@ -179,11 +179,11 @@ test('buildHeroGearPartMeshes: 양쪽 짝 법선이 모두 파츠 바깥을 향�
 
 test('buildHeroGearPartMeshes: 테마 틴트(color lerp, emissive)와 틴트 없는 등급', () => {
   const data = fixtureData(), { skin } = hero();
-  const [m] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'U', 'parts_b'), { data, themeColor: 0xff0000 })!;
+  const [m] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'U', 'parts_b'), { data, themeColor: 0xff0000 } as any)!;
   const mat = m.material as THREE.MeshStandardMaterial;
   expect(mat.color.r).toBeCloseTo(1, 5); expect(mat.color.g).toBeCloseTo(0.65, 2);
   expect(mat.emissive.r).toBeCloseTo(1, 5); expect(mat.emissive.g).toBe(0); expect(mat.emissiveIntensity).toBeCloseTo(0.22, 5);
-  const [none] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'E', 'parts_b'), { data, themeColor: 0xff0000 })!;   // E 틴트 없음
+  const [none] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'E', 'parts_b'), { data, themeColor: 0xff0000 } as any)!;   // E 틴트 없음
   expect((none.material as THREE.MeshStandardMaterial).color.g).toBeCloseTo(1, 5);
   const [plain] = buildHeroGearPartMeshes(partsScene().scene, skin, pickAll(data, 'U', 'parts_b'), { data })!;   // 테마 없음
   expect((plain.material as THREE.MeshStandardMaterial).color.g).toBeCloseTo(1, 5);
@@ -362,7 +362,7 @@ test('맞춤 보정: 오프셋은 배율·회전 뒤 적용되고 왼쪽은 x �
   // A자세: 오프셋이 슬롯 rest 회전을 따라 돈다(오른쪽 어깨, 배율 0.2/0.18)
   const a = hero(0.2), plain = fixtureData(), fit = fixtureData();
   fit.heroFit = { knight: { pauldron: { offset: [0, 0.1, 0] } } };
-  const rot = slotRestRotation(a.skin, SLOT_RIGS.pauldron.axis, SLOT_RIGS.pauldron.authored, false);
+  const rot = slotRestRotation(a.skin, SLOT_RIGS.pauldron.axis as [string, string], SLOT_RIGS.pauldron.authored, false);
   const expected = new THREE.Vector3(0, 0.1, 0).multiplyScalar(0.2 / 0.18).applyQuaternion(rot);
   expect(gauntletBoxes(a, fit, 'knight', 'pauldron')[0].center.clone().sub(gauntletBoxes(a, plain, 'knight', 'pauldron')[0].center).distanceTo(expected)).toBeLessThan(1e-5);
   expect(expected.x).not.toBeCloseTo(0, 3);   // 실제로 회전이 있었다
