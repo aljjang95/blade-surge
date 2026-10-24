@@ -1,5 +1,7 @@
 # 마을·지역 진행 + 영웅 라이브러리 계약 v1 (2026-10-12)
 
+> 2026-10-24: 광장 던전 관문 배정은 서비스 마을 목록 대신 캠페인 지역 마을(`src/game/region-dungeon-gate.js` gateIds)을 따른다. 상인·교관·이동석·해금 조건은 이 계약 그대로다. [../region-dungeon-unlock.md](../region-dungeon-unlock.md)
+
 ## 1. 지역(마을) 진행 — 소유: Sol-A
 - 마을 3곳. 기존 성채 광장이 1번 마을이다. DUNGEONS 12개를 minLevel 순으로 4개씩 나눠 배정한다.
   - town1 `oathhold` 서약의 성채(기존 테마, 1~4번째 던전)

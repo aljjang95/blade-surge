@@ -12,11 +12,15 @@ import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionC
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { skuGate } from '../data/shop-gates.js';
+import { THEMED_SETS } from '../data/items.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
+import * as Runes from './rune-economy.js';
+import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -139,6 +143,7 @@ export class Economy {
       selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
+      regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
       towns: freshTownState(),
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
@@ -229,6 +234,8 @@ export class Economy {
     if (r.protect) { s.protect += r.protect; got.push({ k: 'protect', n: r.protect }); }
     if (r.bless) { s.bless += r.bless; got.push({ k: 'bless', n: r.bless }); }
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
+    if (r.runeDust) { const runes = Runes.runesOf(this); runes.dust += r.runeDust; got.push({ k: 'runeDust', n: r.runeDust }); }
+    if (r.blessingCharm) { const n = Runes.grantCharms(this, r.blessingCharm); if (n) got.push({ k: 'blessingCharm', n }); }
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
@@ -259,20 +266,44 @@ export class Economy {
     const afterBonus = this.heroEquipBonus(heroId, { ...h.equip, [slot]: remove ? null : uid });
     const owner = Object.keys(this.s.heroes).find((id) => this.s.heroes[id].equip[slot] === uid);
     return { slot, remove, owner, current: this.s.inventory.find((x) => x.uid === h.equip[slot]) || null,
-      before: heroStats(HEROES[heroId], h, beforeBonus), after: heroStats(HEROES[heroId], h, afterBonus), beforeBonus, afterBonus };
+      before: this.heroBuildStats(heroId), after: this.heroBuildStats(heroId, { ...h.equip, [slot]: remove ? null : uid }), beforeBonus, afterBonus };
   }
   /** 출전 영웅에게 켜진 세트 효과 수 (하네스 setProgress 박자) */
   setCount() { return this.heroEquipBonus(this.s.selected).active.length; }
   /** 세트 조각으로 테마 세트 장비 제작 */
   craftSetItem(setId, slot) {
-    const def = craftable(setId, slot); if (!def) return { ok: false, reason: 'none' };
+    // 조각 제작은 테마 세트(유니크)만. 등급 세트(레전드리 dragon 등)는 조각 30개로 만들 수 없다(v1 명령 직접 호출 포함).
+    const def = THEMED_SETS.includes(setId) ? craftable(setId, slot) : null; if (!def) return { ok: false, reason: 'none' };
     if ((this.s.fragments || 0) < CRAFT_COST) return { ok: false, reason: 'fragments' };
     this.s.fragments -= CRAFT_COST;
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
   }
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
-  heroPower(id) { return heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)).power; }
+  heroPower(id) { return this.heroBuildStats(id).power; }
+  /** 표시용 능력치: 장비 능력치 + 장착 룬 효과(가문 공명 포함). equipment·inventory 를 주면 그 가설 장착으로. */
+  heroBuildStats(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
+    const st = heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id, equipment, inventory)), fx = this.heroRuneEffects(id, { equipment, inventory });
+    return Object.keys(fx).length ? applyBuildStats(st, fx) : st;
+  }
+  // ---------- 룬·전운 (규칙은 rune-core·blessing-core, 저장·롤백은 rune-economy) ----------
+  /** 룬 상태(가방·가루). 새 계정은 처음 읽을 때 첫 개방 선물과 함께 만든다. 전운 상태도 같은 방식. */
+  runeState() { return Runes.runesOf(this); }
+  blessingState() { return Runes.blessingOf(this); }
+  heroRuneEffects(heroId = this.s.selected, options = {}) { return Runes.heroRuneEffects(this, heroId, options); }
+  runeInsert(uid, index, rune) { return Runes.runeInsert(this, uid, index, rune); }
+  runeRemove(uid, index) { return Runes.runeRemove(this, uid, index); }
+  runeReplace(uid, index, rune) { return Runes.runeReplace(this, uid, index, rune); }
+  runeMerge(id, toGrade) { return Runes.runeMerge(this, id, toGrade); }
+  runeCraftExact(id) { return Runes.runeCraftExact(this, id); }
+  runeCraftFamily(family) { return Runes.runeCraftFamily(this, family); }
+  salvageItem(uid) { return Runes.salvageItem(this, uid); }
+  recordRuneKill(stage, rank, heroId = this.s.selected) { return Runes.recordRuneKill(this, stage, rank, heroId); }
+  settleRuneDrops(ledger, kind = {}) { return Runes.settleRuneDrops(this, ledger, kind); }
+  blessingQuote(now = nowOf(this)) { return Runes.blessingQuote(this, now); }
+  blessingRoll(now = nowOf(this), seed) { return Runes.blessingRoll(this, now, seed); }
+  blessingPick(index) { return Runes.blessingPick(this, index); }
+  blessingConsume() { return Runes.blessingConsume(this); }
   addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
   trainingQuote(id) { return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
   levelUpHero(id) {
@@ -383,33 +414,34 @@ export class Economy {
     let destroyed = false, down = 0;
     if (success) inst.enh++;
     else {
-      if (!protect && rngOf(this)() < destroyChance(lv)) { destroyed = true; this.s.inventory.splice(this.s.inventory.indexOf(inst), 1); for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } }
+      if (!protect && rngOf(this)() < destroyChance(lv)) { destroyed = true; Runes.recoverItemRunes(this, inst, 'destroy'); this.s.inventory.splice(this.s.inventory.indexOf(inst), 1); for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } }
       else if (enhanceDown(lv)) { down = enhanceDown(lv); inst.enh -= down; }
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.recordJourneyAction('upgrades');
     this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
   }
-  sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
+  sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } Runes.recoverItemRunes(this, inst, 'sell'); this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   isUpgrade(heroId, inst) {
     const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
     if (!h || !item || h.equip[item.slot] === inst.uid) return false;
-    const before = heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId));
+    const before = this.heroBuildStats(heroId);
     // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
     const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
-    return heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory)).power > before.power;
+    return this.heroBuildStats(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory).power > before.power;
   }
   salvage(uids) {
     if (!Array.isArray(uids) || !uids.length) return { ok: false, reason: 'items' };
     const ids = new Set(uids), items = this.s.inventory.filter(x => ids.has(x.uid));
     if (items.length !== ids.size || items.some(x => !ITEM_BY_ID[x.id] || !['N', 'S', 'E'].includes(ITEM_BY_ID[x.id].rarity))) return { ok: false, reason: 'items' };
     if (Object.values(this.s.heroes).some(h => Object.values(h.equip).some(uid => ids.has(uid)))) return { ok: false, reason: 'equipped' };
-    const inventory = this.s.inventory, before = { gold: this.s.gold, stones: this.s.stones, stones2: this.s.stones2 };
+    const inventory = this.s.inventory, before = { gold: this.s.gold, stones: this.s.stones, stones2: this.s.stones2, runes: this.s.runes && structuredClone(this.s.runes) };
+    const sockets = items.map((x) => x.sockets); for (const item of items) Runes.recoverItemRunes(this, item, 'sell');
     const rewards = {};
     for (const item of items) for (const [key, n] of Object.entries(salvageRewards(item))) rewards[key] = (rewards[key] || 0) + n;
     this.s.inventory = inventory.filter(x => !ids.has(x.uid));
     const got = this.addRewards(rewards, { silent: true, applyVip: false });
-    if (!this.save()) { this.s.inventory = inventory; Object.assign(this.s, before); return { ok: false, reason: 'storage' }; }
+    if (!this.save()) { this.s.inventory = inventory; items.forEach((x, i) => { if (sockets[i]) x.sockets = sockets[i]; }); Object.assign(this.s, before); if (!before.runes) delete this.s.runes; return { ok: false, reason: 'storage' }; }
     for (const f of this.listeners) f(this.s);
     return { ok: true, count: items.length, got };
   }
@@ -516,7 +548,7 @@ export class Economy {
     if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
-    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId));
+    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell', first }));
     const prevLv = this.hero(heroId).level;
     const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));
@@ -681,6 +713,8 @@ export class Economy {
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
     if (sku.kind === 'gem') {
+      // 진행도 게이트(shop-gates.js): 1레벨이 후반 재료·대량 골드를 시작 보석으로 바로 사지 못한다.
+      const gate = skuGate(sku, s); if (!gate.ok) return { ok: false, reason: 'level', need: gate.need, have: gate.have };
       if (s.gems < sku.price) return { ok: false, reason: 'gems' };
       const before = structuredClone(s); s.gems -= sku.price;
       const got = this.addRewards(sku.rewards, { silent: true });
@@ -731,7 +765,7 @@ export class Economy {
     if (on) map[heroId] = true; else delete map[heroId];
     this.emit(); return { ok: true };
   }
-  claimMonthly() { const s = this.s; if (s.monthlyUntil < nowOf(this)) return false; const day = Math.floor(nowOf(this) / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
+  claimMonthly() { const s = this.s; if (s.monthlyUntil < nowOf(this)) return false; const day = Math.floor(nowOf(this) / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100, blessingCharm: Runes.BLESSING_MONTHLY_CHARMS }); return true; }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }
@@ -742,7 +776,7 @@ export class Economy {
     if (this.billing) return { ok: false, reason: 'use-billing' };
     this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); return { ok: true };
   }
-  claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
+  claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(prem ? r : { ...r, blessingCharm: Runes.passCharms(lv) }); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
   dailyAvailable() { const d = Math.floor(nowOf(this) / 86400000); return this.s.daily.last !== d; }
@@ -764,4 +798,4 @@ export class Economy {
 
 export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
 // 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
-Object.assign(REWARD_LABEL, { transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
+Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });

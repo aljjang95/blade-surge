@@ -8,6 +8,7 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { resolveCampaignTown } from '../data/campaign-towns.js';
+import { normalizeRegionGate } from './region-dungeon-gate.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
@@ -68,7 +69,8 @@ export function normalizeSave(raw, fresh) {
     if (!item || ITEM_BY_ID[item.id].slot !== slot || equipped.has(item.uid)) h.equip[slot] = null;
     else equipped.add(item.uid);
   }
-  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), 1);
+  // 순번은 줄지 않는다: 가장 큰 uid를 팔아도 저장된 invSeq를 유지해 uid 재사용과 서버(로드마다 정규화)·클라이언트 순번 차이를 막는다.
+  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), integer(s.invSeq, 1, 1));
   // 이후 드랍에 쓸 순번을 확보하고, 전투 시작 전 장착 참조까지 함께 재배정한다.
   if (s.invSeq > Number.MAX_SAFE_INTEGER - 1000000) {
     const remap = new Map(s.inventory.map((item, index) => [item.uid, index + 1]));
@@ -117,6 +119,8 @@ export function normalizeSave(raw, fresh) {
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });
+  // 지역 던전 노출: regionGate 가 없는 기존 저장은 지금 남은 던전 기록을 한 번 보존 목록으로 고정한다(소급 보존).
+  s.regionGate = normalizeRegionGate(raw.regionGate, { expedition: s.expedition, masterworks: raw.masterworks, progress: s.progress });
   // 천장 카운터는 0..pity-1 범위만 의미가 있다. 범위 밖 값은 확정 천장을 건너뛰게 만들 수 있어 보정한다.
   // 스키마 1부터 gacha.pity가 정본이고, 버전 없는 저장은 레거시 pity에서 옮긴다. s.pity는 미러로 남긴다.
   const legacyPity = integer(raw.pity, 0, 0, GACHA.pity - 1);

@@ -6,7 +6,7 @@ import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-
 import { ROOM_TYPE, isStarArchive, mulberry32 } from './world.js';
 import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
-import { activeTownId, TOWN_THEMES } from '../data/citadel-hub.js';
+import { activeTownId, TOWN_THEMES, takeEmergingGates } from '../data/citadel-hub.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { activeCampaignSkin } from '../data/campaign-towns.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
@@ -253,7 +253,7 @@ export class Arena {
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
     this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality, camera: this.renderer.camera,
-      townId, skin, libraryProps: townLibraryProps(townId, this.hubModels) }); this.group.add(this.lobbyHall);
+      townId, skin, libraryProps: townLibraryProps(townId, this.hubModels), emerging: takeEmergingGates() }); this.group.add(this.lobbyHall);
     this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality, townId, skin }); this.group.add(this.lobbyWorld);
     this.renderer.lobbyOccluders = [];this.lobbyHall.traverse(o=>{if(o.isMesh)this.renderer.lobbyOccluders.push(o);});
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });

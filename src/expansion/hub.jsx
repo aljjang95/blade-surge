@@ -200,6 +200,11 @@ function DungeonRoutes({app, service, launch, controller}) {
   const frontier = weeklyFrontier();
   const frontierDungeon = DUNGEONS.find(d => d.id === frontier.routeId) || DUNGEONS[0];
   const choose = value => { setDepth(value); controller.dungeonDepth = value; };
+  // 지역 마을이 열리지 않은 던전은 목록에서 빼고, 바로 다음 마을 하나만 잠금 줄로 예고한다(region-dungeon-gate.js).
+  const regions = service.regionDungeons?.() || null;
+  const shown = regions ? new Set(regions.visibleIds) : null;
+  const standardList = shown ? regions.visibleIds.map(id => DUNGEONS.find(d => d.id === id)).filter(Boolean) : DUNGEONS;
+  const deepList = shown ? EXPEDITION_DEPTHS.filter(d => shown.has(d.id)) : EXPEDITION_DEPTHS;
   // 결과 화면 '다음 도전 · 심층 원정 준비'가 고른 카드로 화면과 초점을 옮긴다(부모 패널의 초점 이동 뒤에 실행).
   useEffect(() => {
     const focus = controller.focusDungeon; if (!focus) return;
@@ -222,13 +227,13 @@ function DungeonRoutes({app, service, launch, controller}) {
     <div className="exp-route-tabs" role="group" aria-label="원정 구분">
       <button aria-pressed={depth==='standard'} onClick={()=>choose('standard')}>기본 원정</button>
       <button aria-pressed={fields} onClick={()=>choose('fields')}>야외 필드</button>
-      <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{EXPEDITION_DEPTHS.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/{EXPEDITION_DEPTHS.length}</small></button>
+      <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{deepList.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/{deepList.length}</small></button>
       <button aria-pressed={depth==='conquests'} onClick={()=>choose('conquests')}>전술 공략 <small>{s.conquests.length}/6</small></button>
     </div>
     {depth==='conquests' ? <ConquestRoutes service={service} launch={launch} starting={app.stageStarting}/> : <>
     {deep && <p className="exp-depth-intro">캠페인에서 구한 지역의 남은 이야기를 이어갑니다. 처음 정복하면 추가 보상을 받고, 다시 도전하면 더 많은 제작 재료를 얻습니다.</p>}
     {fields && <p className="exp-depth-intro">초원 · 해안 · 산길 · 도시를 직접 이동하며 싸웁니다. 전투 구역을 정화하면 보스 봉인이 풀립니다. 모든 필드는 원정 Lv.1부터 입장할 수 있습니다.</p>}
-    <details className="ui-details exp-dungeon-details" open={deep || fields}><summary>{fields ? '야외 필드 · 지역과 보상' : deep ? '심층 원정 · 지역과 보상' : '전체 던전 · 목표와 보상'}</summary><div className="exp-dungeon-grid">{(fields ? FIELD_DUNGEONS : deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
+    <details className="ui-details exp-dungeon-details" open={deep || fields}><summary>{fields ? '야외 필드 · 지역과 보상' : deep ? '심층 원정 · 지역과 보상' : '전체 던전 · 목표와 보상'}</summary><div className="exp-dungeon-grid">{(fields ? FIELD_DUNGEONS : deep ? deepList : standardList).map((d,i)=>{
       const access=service.dungeonAccess(d.id,{depth:runDepth}), locked=!access.ok;
       const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
       const art=deep ? d.art || ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
@@ -246,7 +251,12 @@ function DungeonRoutes({app, service, launch, controller}) {
           <button className="exp-primary" disabled={locked||app.stageStarting} onClick={()=>launch('dungeon',d.id,{depth:runDepth})}>{locked ? access.error : fields ? '필드 출격' : deep ? '심층 원정 출격' : '던전 입장'}</button>
         </div>
       </article>;
-    })}</div></details>
+    })}
+    {!fields && regions?.teaser && <article className="exp-dungeon exp-region-teaser" data-region-teaser={regions.teaser.region} style={{'--exp-accent':regions.teaser.accent}} aria-label={`다음 마을 ${regions.teaser.town}, ${regions.teaser.reason}`}>
+      <div className="exp-card-body"><small>잠긴 다음 마을 · REGION 0{regions.teaser.region}</small><h3>{regions.teaser.town}</h3>
+        <p>{regions.teaser.unlockCode} 클리어 시 새 마을에서 던전 {regions.teaserIds.length}곳이 열립니다.</p>
+        <button className="exp-primary" disabled>{regions.teaser.unlockCode} 클리어 시 열림</button></div>
+    </article>}</div></details>
     </>}
   </>;
 }

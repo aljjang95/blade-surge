@@ -14,6 +14,8 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances } from '../game/economy.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
+import { skuGate } from '../data/shop-gates.js';
+import './shop-gates.css';
 import { revealPlan, tenPullStatus } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
@@ -512,6 +514,9 @@ export class Meta {
       const pace = paceShort(sku.id);
       if (pace) { const line = document.createElement('div'); line.className = 'si-pace'; line.title = pace.full; line.setAttribute('aria-label', pace.full); line.innerHTML = '<b>' + pace.text + '</b> <em>' + pace.saved + '</em><small>' + pace.basis + '</small>'; (d.querySelector('.si-flow') || d.querySelector('.si-name')).after(line); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
+      // 진행도 잠금: 버튼은 막고 언제 열리는지 보여 준다(shop-gates.js).
+      const gate = sku.kind === 'gem' ? skuGate(sku, s) : null;
+      if (gate && !gate.ok) { const btn = d.querySelector('button'); btn.disabled = true; btn.textContent = gate.label; btn.setAttribute('aria-label', sku.name + ' · ' + gate.text); d.classList.add('si-locked'); d.dataset.lockLevel = String(gate.need); const why = document.createElement('div'); why.className = 'si-lock'; why.textContent = gate.text; d.querySelector('.si-desc').after(why); }
       grid.appendChild(d);
     }
   }
@@ -566,12 +571,13 @@ export class Meta {
     if (reason === 'refunded' || reason === 'expired') return '환불·만료된 결제입니다';
     if (reason === 'busy') return '결제 처리 중입니다';
     if (reason === 'gems') return '보석이 부족합니다';
+    if (reason === 'level') return result.need ? `영웅 Lv.${result.need} 달성 후 구매할 수 있습니다` : '아직 구매할 수 없는 단계입니다';
     return '구매하지 못했습니다';
   }
   async buy(id) {
     const sku = this.eco.sku(id); if (!sku) return; const s = this.eco.s;
     if (sku.once && s.purchases.includes(id)) { this.ui.toast('이미 구매한 상품입니다', 'red'); return; }
-    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.shopSkus('gem').length ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.shopSkus('gem').length) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
+    if (sku.kind === 'gem') { const gate = skuGate(sku, s); if (!gate.ok) { audio.play('ui_error'); this.ui.toast(gate.text, 'red'); return; } if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.shopSkus('gem').length ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.shopSkus('gem').length) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
     if (this.billingOn()) { await this.buyWithBilling(sku); return; }

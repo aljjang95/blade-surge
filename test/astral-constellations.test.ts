@@ -309,6 +309,9 @@ test('actual Astral catalog ticket pays once, rejects replay after save/reload, 
     const eco = new Economy(), x = new ExpeditionEconomy(eco); x.claimQuest('first_oath');
     // Progress only through the pre-existing catalog settlement authority.
     for (let i = 0; i < 6; i++) { const run = x.begin('dungeon', 'glass_garden'); expect(run.ok).toBe(true); expect(x.settle(run.ticket, { win: true }).ok).toBe(true); }
+    // 성운 첨탑은 3지역(서리 서고 마을) 던전이다. 캠페인 2-10 까지 클리어해 그 마을을 연 저장으로 본다.
+    expect(x.dungeonAccess('astral_leviathan_spire').ok).toBe(false);
+    eco.s.progress.unlocked = 21;
     expect(x.dungeonAccess('astral_leviathan_spire').ok).toBe(true);
     const f = fixture(); for (let i = 0; i < 4; i++) restore(f, i);
     for (const room of f.world.rooms) if (!['start', 'boss'].includes(room.type) && !room.cleared) defend(f, room.id);

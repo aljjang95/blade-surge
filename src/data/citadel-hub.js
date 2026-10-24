@@ -189,6 +189,11 @@ const townBlockers = (hotspots, props) => {
   return blockers.map(Object.freeze);
 };
 
+// 새 지역 마을이 열려 처음 서는 관문. 다음 광장 장면이 한 번 꺼내 땅에서 솟아오르게 그린다(장면 상태, 저장 아님).
+let emergingGates = new Set();
+export function markEmergingGates(ids) { for (const id of ids || []) if (typeof id === 'string') emergingGates.add(id); }
+export function takeEmergingGates() { const taken = emergingGates; emergingGates = new Set(); return taken; }
+
 const dungeonOverrides = new Map(), hubCache = new Map();
 /** TownService가 정한 마을별 던전 배정을 장면에 알린다(없으면 계약 기본 규칙). */
 export function setTownDungeonIds(townId, ids) {

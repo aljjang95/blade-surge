@@ -1,6 +1,7 @@
 import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJourneyStep, claimContract, setTargetRecipe } from './journey-core.js';
 import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
+import { contractBonus } from './rune-economy.js';
 
 /** New grants share the workshop's save, rollback and recovery receipt boundary. */
 export class JourneyService {
@@ -27,7 +28,15 @@ export class JourneyService {
   claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
   /** 무한의 성이 이번 주 상한에 닿았으면 탑 임무는 채울 방법이 없으므로 달성으로 본다. */
   waivers() { const t = this.app.eco.towerSummary?.(); return { waived: t?.unlocked && t.capped ? ['towerFloors'] : [] }; }
-  claim(kind, id) { const waivers = this.waivers(); return this.transact(s => this.grant(claimContract(s, kind, id, waivers))); }
+  /** 의뢰 수령. 그 기간(일·주)의 첫 수령에는 전운 부적(일일 1·주간 3)과 주간 룬 가루 30이 붙는다. */
+  claim(kind, id) {
+    const waivers = this.waivers();
+    return this.transact(s => {
+      const result = this.grant(claimContract(s, kind, id, waivers));
+      if (result.ok && s[kind]?.claimed?.length === 1) result.bonus = this.app.eco.addRewards(contractBonus(kind), { silent: true, applyVip: false });
+      return result;
+    });
+  }
   track(id) { return this.transact(s => setTargetRecipe(s, id)); }
   setAuto(value) { return this.transact(s => { s.autoBattle = !!value; return { ok: true }; }, true); }
   target() {

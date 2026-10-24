@@ -66,7 +66,7 @@ export function boonChoices(seed,picked,round=0) {
   for (let i=pool.length-1;i>0;i--) { hash=(Math.imul(hash,1664525)+1013904223)>>>0; const j=hash%(i+1); [pool[i],pool[j]]=[pool[j],pool[i]]; }
   return pool.slice(0,3);
 }
-function sumEffects(parts) {
+export function sumEffects(parts) {
   /** @type {Record<string, number>} */
   const out={};
   for (const part of parts) for (const [k,v] of Object.entries(part)) out[k]=(out[k]||0)+v;

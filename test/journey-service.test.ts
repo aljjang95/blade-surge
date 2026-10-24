@@ -64,7 +64,7 @@ test('milestone reward and target/autoplay changes use save boundary and battle 
   fail=true;expect(a.journey.setAuto(false).ok).toBe(false);expect(a.journey.s.autoBattle).toBe(true);
 });
 test('rift ticket is bound to the current rotation; payout includes visible fixed bonus',()=>{
-  const a=make();a.expedition.s.level=10;const rotation=DUNGEONS[periodAt(Date.now()).day%3];
+  const a=make();a.expedition.s.level=10;a.eco.s.progress.unlocked=60;const rotation=DUNGEONS[periodAt(Date.now()).day%3];
   const wrong=DUNGEONS.find(d=>d.id!==rotation.id)!;expect(a.expedition.begin('dungeon',wrong.id,{rift:true}).ok).toBe(false);
   const b=a.expedition.begin('dungeon',rotation.id,{rift:true});expect(b.ok).toBe(true);
   const stage=applyRiftStage(buildExpeditionStage('dungeon',rotation.id,a.eco),b.ticket);expect(stage.riftId).toBe(b.ticket.riftId);
