@@ -72,7 +72,8 @@ export const STARTER_SERVICE_PLACES = Object.freeze({
 
 /** 초보자 마을 소품(충돌 판정과 장면이 같이 읽는다). 걷는 길(중앙 남북 통로·동서 가지)은 비운다. */
 export const STARTER_PROPS = Object.freeze([
-  { id: 'stall:market', kind: 'stall', x: 7.6, z: 5.9, yaw: -Math.PI / 2, asset: `${CITADEL_HUB_ASSET_ROOT}stall.glb` },
+  // 좌판 x 8.05: Tripo 좌판(깊이 2.09)의 앞면(x≈7.0)이 상인(6.4, 반경 .42) 뒤에 오도록 기존 7.6 에서 .45 물렸다.
+  { id: 'stall:market', kind: 'stall', x: 8.05, z: 5.9, yaw: -Math.PI / 2, asset: `${CITADEL_HUB_ASSET_ROOT}stall.glb` },
   { id: 'anvil:forge', kind: 'anvil', x: 7.1, z: -.4, yaw: -.3 },
   { id: 'forge:hearth', kind: 'hearth', x: 9.3, z: -2.6, yaw: -Math.PI / 2 },
   { id: 'rack:weapons', kind: 'rack', x: 5.2, z: -2.9, yaw: 0 },
@@ -94,20 +95,20 @@ export function starterBlockers(hotspots, props = STARTER_PROPS) {
   }
   const fountain = STARTER_ZONES.fountain;
   blockers.push({ type: 'circle', x: fountain.x, z: fountain.z, radius: fountain.radius + .1 });
-  // 포탈 아치 기둥(입구 폭 2.6m).
+  // 포탈 아치 기둥. Tripo 아치의 기둥 안쪽 면이 중심에서 약 1.0m(열린 폭 약 2.0m)라 원 중심 ±1.55 + 반경 .55 로 바깥 면 2.1m 까지 막는다.
   const portal = STARTER_ZONES.portal;
-  for (const side of [-1, 1]) blockers.push({ type: 'circle', x: portal.x + side * 1.75, z: portal.z, radius: .55 });
+  for (const side of [-1, 1]) blockers.push({ type: 'circle', x: portal.x + side * STARTER_PORTAL_PILLAR_X, z: portal.z, radius: .55 });
   for (const prop of props) {
     if (prop.kind === 'bench' || prop.kind === 'planter') blockers.push({ type: 'rect', minX: prop.x - 1, maxX: prop.x + 1, minZ: prop.z - .4, maxZ: prop.z + .4 });
-    else if (prop.kind === 'stall') blockers.push({ type: 'rect', minX: prop.x - .5, maxX: prop.x + .5, minZ: prop.z - 1.3, maxZ: prop.z + 1.3 });
+    // 좌판: yaw -π/2 라 폭 2.6 은 z 방향, 깊이는 x 방향이다. Tripo 좌판 깊이 2.09 에 맞춰 x ±1.05(기존 ±.5).
+    else if (prop.kind === 'stall') blockers.push({ type: 'rect', minX: prop.x - STARTER_STALL_HALF_DEPTH, maxX: prop.x + STARTER_STALL_HALF_DEPTH, minZ: prop.z - 1.3, maxZ: prop.z + 1.3 });
     else if (prop.kind === 'hearth') blockers.push({ type: 'rect', minX: prop.x - 1.3, maxX: prop.x + 1.3, minZ: prop.z - 1.2, maxZ: prop.z + 1.2 });
     else if (prop.kind === 'anvil' || prop.kind === 'rack') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .5 });
     else if (prop.kind === 'lamp') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .19 });
   }
-  // 대장간 작업장(starter-village-scene.js 의 forge 묶음과 같은 치수): 기둥 4개와 뒷벽·굴뚝.
-  const forge = STARTER_ZONES.forge;
-  for (const [px, pz] of FORGE_POSTS) blockers.push({ type: 'circle', x: forge.x + px, z: forge.z + pz, radius: .2 });
-  blockers.push({ type: 'rect', minX: forge.x - 2.9, maxX: forge.x + 2.9, minZ: forge.z - 2.55, maxZ: forge.z - 2.1 });
+  // 대장간: 작업장 뒤(+x)에 선 Tripo 건물 한 채의 바닥 사각형. 작업장 지붕·기둥(FORGE_POSTS)은 GLB 가 없을 때의 폴백 그림일 뿐이라 막지 않는다.
+  const forge = STARTER_FORGE_BUILDING;
+  blockers.push({ type: 'rect', minX: forge.x - forge.halfX, maxX: forge.x + forge.halfX, minZ: forge.z - forge.halfZ, maxZ: forge.z + forge.halfZ });
   for (const dummy of STARTER_DUMMIES) blockers.push({ type: 'circle', x: dummy.x, z: dummy.z, radius: .38 });
   for (const [x, z, w, d] of STARTER_BEDS) blockers.push({ type: 'circle', x, z, radius: Math.hypot(w, d) / 2 * .85 });
   for (const [, x, z, radius] of STARTER_CLUTTER) blockers.push({ type: 'circle', x, z, radius });
@@ -132,6 +133,26 @@ export const STARTER_CLUTTER = Object.freeze([
   ['barrel', -10.4, 3.8, .32], ['crate', -10.6, 4.7, .4], ['crate', -4.6, -1.2, .35],
   ['banner', -3.1, -9.3, .12], ['banner', 3.1, -9.3, .12], ['banner', -4.2, -.2, .12], ['banner', 4.6, 3, .12], ['banner', -2.7, 8.6, .12], ['banner', 2.7, 8.6, .12],
 ].map(Object.freeze));
+
+/**
+ * 대장간 Tripo 건물(닫힌 건물 4.08×4.0m, 높이 4.8m). 작업장(화덕·모루·무기대) 뒤 광장 바깥쪽에 물려 세운다.
+ * yaw -π/2 라 앞면(화덕 개구부, 로컬 +z)이 -x(작업장 쪽)를 본다. 건물 앞면은 x≈11.1 로 화덕 충돌(x≤10.6)과 .5m 떨어져 틈이 막힌다.
+ * halfX 는 월드 x 방향(GLB 깊이/2 = 2.0), halfZ 는 월드 z 방향(GLB 폭/2 = 2.04)이며 0.0x 여유를 둔다.
+ */
+export const STARTER_FORGE_BUILDING = Object.freeze({ x: 13.1, z: -2.2, yaw: -Math.PI / 2, halfX: 2.05, halfZ: 2.1 });
+
+/** 오두막(Tripo 3.54×4.2×4.2m)을 균등 1.3배(높이 약 5.5m, 영웅 1.8m 기준 인형집 비율 보정)로 세운 자리 [x, z, yaw]. 앞면(+z)이 광장을 본다. */
+export const STARTER_COTTAGE_SCALE = 1.3;
+export const STARTER_COTTAGES = Object.freeze([
+  [-15.9, -7.2, Math.PI / 2], [-15.9, 1.4, Math.PI / 2], [-15.9, 8.8, Math.PI / 2],
+  [15.9, -8.6, -Math.PI / 2], [15.9, 6.6, -Math.PI / 2],
+  [-8.6, -15.9, 0], [8.8, -15.9, 0],
+].map(Object.freeze));
+
+/** 상점 좌판 깊이의 절반(Tripo 좌판 깊이 2.09 + 여유). 충돌 사각형이 쓴다. */
+export const STARTER_STALL_HALF_DEPTH = 1.05;
+/** 포탈 아치 기둥 충돌 원의 중심 x(±). */
+export const STARTER_PORTAL_PILLAR_X = 1.55;
 
 /** 대장간 작업장 기둥 자리(대장간 중심 기준). 장면과 충돌이 같이 쓴다. */
 export const FORGE_POSTS = Object.freeze([[-2.6, -2.2], [2.6, -2.2], [-2.6, 1.6], [2.6, 1.6]].map(Object.freeze));
