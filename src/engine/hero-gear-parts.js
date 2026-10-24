@@ -150,7 +150,12 @@ export function applyPartTint(material, themeColor, tint) {
   if (themeColor === null || themeColor === undefined || !tint) return material;
   const color = new THREE.Color(themeColor);
   if (material.color) material.color.lerp(color, tint.color);
-  if (material.emissive) { material.emissive.copy(color); material.emissiveIntensity = tint.glow; }
+  if (material.emissive) {
+    // 세기는 색에 굽는다: 피격 번쩍임(Actor)·applyLook 이 emissive 를 authoredEmissive/baseEmissive 로 되돌리므로 그 기준값도 같이 바꾼다.
+    material.emissive.copy(color).multiplyScalar(tint.glow);
+    material.userData.authoredEmissive = material.emissive.clone();
+    material.userData.baseEmissive = material.emissive.clone();
+  }
   return material;
 }
 
