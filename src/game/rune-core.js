@@ -238,8 +238,10 @@ export function runeSynergies(/** @type {Record<string, number>} */ counts) {
  * @param {GearRunes[]} items
  * @param {{ blessingBoonId?: string|null }} [options]
  */
+/** 개수형 효과 키(연쇄 대상 수 등): 배율 뒤 올림해 정수로 둔다(I·II → 1, III → 2). */
+export const INTEGER_EFFECTS = Object.freeze(['chain']);
 export function runeEffects(items, options = {}) {
   const parts = runeActivation(items).filter((e) => e.active).map((e) =>
-    Object.fromEntries(Object.entries(RUNE_BY_ID[e.rune.id].effects).map(([k, v]) => [k, v * RUNE_GRADE_MUL[e.rune.grade]])));
+    Object.fromEntries(Object.entries(RUNE_BY_ID[e.rune.id].effects).map(([k, v]) => [k, INTEGER_EFFECTS.includes(k) ? Math.ceil(v * RUNE_GRADE_MUL[e.rune.grade]) : v * RUNE_GRADE_MUL[e.rune.grade]])));
   return sumEffects([...parts, ...runeSynergies(familyCounts(items, options)).map((s) => s.effects)]);
 }

@@ -25,7 +25,7 @@ import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../src/data/journey.js';
 import { createSeededRng, hashSeed } from '../src/shared/rng.js';
 import { RUNE_SOURCES, RUNE_MERGE_COST, RUNE_DUPLICATE_CAP } from '../src/data/runes.js';
 import { socketCount, runeEffects } from '../src/game/rune-core.js';
-import { rollRuneDrops, giftBag } from '../src/game/rune-economy.js';
+import { rollRuneDrops, giftBag, craftRuneExact } from '../src/game/rune-economy.js';
 import { applyBuildStats } from '../src/game/masterworks-combat.js';
 
 const DAY_MS = 86400000;
@@ -103,7 +103,11 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
   const craftTarget = () => RUNE_PRIORITY.find((id) => have(id, 3) < RUNE_DUPLICATE_CAP) || RUNE_PRIORITY[0];
   const craftRunes = () => {
     const reserve = RUNE_MERGE_COST[3].runeDust;
-    while (runes.dust >= RUNE_SOURCES.craftExact.runeDust + reserve) { runes.dust -= RUNE_SOURCES.craftExact.runeDust; addRune(craftTarget(), 1); runes.crafted++; mergeAll(); }
+    while (runes.dust >= RUNE_SOURCES.craftExact.runeDust + reserve) {
+      // 게임 공방과 같은 규칙 함수(rune-economy.craftRuneExact)로 정밀 제작한다.
+      const res = craftRuneExact({ bag: runes.bag, runeDust: runes.dust }, craftTarget()); if (!res.ok) break;
+      runes.bag = res.bag; runes.dust = res.runeDust; runes.dirty = true; runes.crafted++; mergeAll();
+    }
   };
   const runeCounts = () => { const out = [0, 0, 0]; for (const c of Object.values(runes.bag)) c.forEach((n, i) => { out[i] += n; }); return out; };
   /** 소켓 배치: 열린 칸 수만큼 높은 등급·우선 룬부터, 같은 룬은 2개까지. 효과는 rune-core.runeEffects 그대로. */
