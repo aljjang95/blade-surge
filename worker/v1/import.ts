@@ -123,7 +123,7 @@ export async function settleLegacyCompensation(c: Ctx, accountId: string): Promi
   if (report?.roster?.legacyClaim !== true || report.compensation) return null;
   if (await ledgerReceipt(c.db, LEGACY_COMP_OP(accountId), accountId)) return null;
   const doc = await loadAccountDoc(c.db, accountId);
-  if (doc.state?.roster?.policy === HERO_POLICY.LEGACY) return null;
+  if ((doc.state as Record<string, any> | undefined)?.roster?.policy === HERO_POLICY.LEGACY) return null;
   const eco = loadEconomy(doc.state, { now: c.now });
   const granted = grantCompensation(eco);
   const next = docOf(eco);
