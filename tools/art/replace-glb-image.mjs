@@ -11,6 +11,10 @@ export function replaceGlbImage(bytes, imageIndex, image) {
   const { json, bin } = readGlb(bytes);
   const target = json.images?.[imageIndex]?.bufferView;
   if (target === undefined) throw new Error('image has no bufferView: ' + imageIndex);
+  const isWebp = image.subarray(0, 4).toString() === 'RIFF' && image.subarray(8, 12).toString() === 'WEBP';
+  const isPng = image.readUInt32BE(0) === 0x89504e47;
+  const mime = isWebp ? 'image/webp' : isPng ? 'image/png' : null;
+  if (mime !== json.images[imageIndex].mimeType) throw new Error(`image format ${mime} differs from ${json.images[imageIndex].mimeType}`);
   const views = json.bufferViews.map((v, i) => ({ i, v, start: v.byteOffset || 0 })).sort((a, b) => a.start - b.start);
   const chunks = [];
   let at = 0;

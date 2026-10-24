@@ -169,11 +169,12 @@ export function writeLegRest(bytes, options) {
 }
 
 if (import.meta.main || process.argv[1]?.endsWith('fit-leg-rest.mjs')) {
+  const num = (v) => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('number expected: ' + v); return n; };
   const args = process.argv.slice(2), flag = args.find((a) => a.startsWith('--min-fit=')), ratio = args.find((a) => a.startsWith('--max-ratio='));
   const [input, output] = args.filter((a) => !a.startsWith('--'));
   if (!input) throw new Error('Usage: node tools/art/fit-leg-rest.mjs input.glb [output.glb] [--min-fit=0.1] [--max-ratio=1.0001]');
   const bytes = fs.readFileSync(input);
-  const { bytes: out, report } = writeLegRest(bytes, { ...(flag && { minFit: Number(flag.slice(10)) }), ...(ratio && { maxRatio: Number(ratio.slice(12)) }) });
+  const { bytes: out, report } = writeLegRest(bytes, { ...(flag && { minFit: num(flag.slice(10)) }), ...(ratio && { maxRatio: num(ratio.slice(12)) }) });
   const sha = (b) => createHash('sha256').update(b).digest('hex');
   if (output) fs.writeFileSync(output, out);
   console.log(JSON.stringify({ input, inputSha256: sha(bytes), output: output || null, outputSha256: output ? sha(out) : null, bytes: out.length, ...report }, (k, v) => typeof v === 'number' ? +v.toFixed(4) : v, 2));
