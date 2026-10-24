@@ -31,7 +31,7 @@ export class MasterworksView {
     this.lobby=btn('성장 · 숙련',e=>this.open('build',e.currentTarget),'sq-btn mw-open');
     document.querySelector('.lobby-left')?.append(this.lobby);
     // 출격 중 각인 보상이 없으므로 이 버튼은 출격 전에 정한 각인이 있을 때만 보인다(refresh). 사용자가 연 창만 일시정지한다.
-    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn');this.hud.hidden=true;document.querySelector('.hud-right-top')?.prepend(this.hud);
+    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn hud-engrave');this.hud.hidden=true;document.querySelector('.hud-right-top')?.prepend(this.hud);
     this.strip=n('div','mw-run-strip');this.strip.hidden=true;document.querySelector('.hud-bars')?.append(this.strip);
     this.posture=n('div','mw-posture');this.posture.hidden=true;document.querySelector('.hud-center')?.append(this.posture);
     this.result=n('p','mw-result');this.result.hidden=true;document.querySelector('.result-stats')?.after(this.result);

@@ -59,6 +59,23 @@ export const synergyChip = (/** @type {any} */ s, { suffix = '', glow = false } 
 
 // ------------------------------------------------------------------ 장비 상세: 룬 소켓 탭
 /**
+ * 룬 소켓 탭 안내 줄. 앱 토스트는 화면 위쪽 가운데에 떠서 장비 상세의 전투력·탭을 가리므로,
+ * 이 탭의 안내는 공명 줄(소켓판 아래·버튼 위) 자리를 잠깐 빌려 쓴다. 줄 높이가 같아 레이아웃이 밀리지 않는다.
+ */
+const NOTICE_MS = 2200;
+/** @type {{ text: string, tone: string, until: number }|null} */
+let paneNotice = null;
+const activeNotice = () => (paneNotice && Date.now() < paneNotice.until ? paneNotice : null);
+/** 다음에 그려지는 룬 소켓 탭(또는 이미 열린 탭)에 보일 안내. text 는 이미 esc 된 문자열. */
+export function setRuneNotice(/** @type {string} */ text, tone = 'gold') { paneNotice = { text, tone, until: Date.now() + NOTICE_MS }; }
+/** 안내를 둘 룬 소켓 탭이 화면에 없으면 앱 토스트로 대신한다(전투력 줄이 없는 화면이라 겹치지 않는다). */
+function noticeFallbackToast(/** @type {any} */ meta) {
+  const n = activeNotice();
+  if (n && !document.querySelector('.rs-pane')) meta.ui.toast(n.text, n.tone);
+}
+
+const noticeHtml = (/** @type {{ text: string, tone: string }} */ n) => '<span class="rs-notice ' + esc(n.tone) + '" role="status" aria-live="polite">' + n.text + '</span>';
+/**
  * 장비 상세 오른쪽 패널의 룬 소켓 탭 내용.
  * @param {any} meta @param {number} uid @param {string} heroId @param {number|null} selected
  */
@@ -67,7 +84,7 @@ export function runePaneHtml(meta, uid, heroId, selected) {
   const sel = selected ?? defaultSocket(board), on = board.synergies.filter((/** @type {any} */ s) => s.active);
   const cur = board.sockets[sel];
   return '<section class="rs-pane" aria-label="룬 소켓">' + stageBoardHtml(board, sel, heroId) + familiesHtml(board.families) +
-    '<div class="rs-syns">' + (on.length ? on.map((/** @type {any} */ s) => synergyChip(s, { suffix: ' 발동' })).join('') : '<span class="rs-syn-none">공명 없음 · 두 가문 각 2개</span>') + '<button type="button" class="rs-overview-link" id="rs-overview" aria-label="룬 각인판 · 전체 보기">각인판 ›</button></div>' +
+    '<div class="rs-syns">' + (activeNotice() ? noticeHtml(/** @type {any} */ (activeNotice())) : on.length ? on.map((/** @type {any} */ s) => synergyChip(s, { suffix: ' 발동' })).join('') : '<span class="rs-syn-none">공명 없음 · 두 가문 각 2개</span>') + '<button type="button" class="rs-overview-link" id="rs-overview" aria-label="룬 각인판 · 전체 보기">각인판 ›</button></div>' +
     '<div class="rs-actions"><button type="button" class="btn rs-btn-cream" id="rs-swap"' + (cur?.rune ? '' : ' disabled') + '>' + (cur?.state === 'locked' && cur.rune ? '룬 빼기' : '룬 교체') + '</button>' +
     '<button type="button" class="btn btn-gold" id="rs-insert"' + (board.sockets.some((/** @type {any} */ s) => s.state === 'empty') ? '' : ' disabled') + '>룬 장착</button></div></section>';
 }
@@ -116,17 +133,21 @@ export function bindRunePane(root, ctx) {
     bindRunePane(root, ctx);
   };
   mountStage(/** @type {HTMLElement|null} */ (pane.querySelector('.rs-stage')), heroId);
+  /** 이 탭 안에서 바로 보이는 안내(토스트 대신). */
+  const notice = (/** @type {string} */ text, tone = 'red') => { setRuneNotice(text, tone); redraw(); };
+  const live = activeNotice();
+  if (live) setTimeout(() => { if (pane.isConnected) redraw(); }, Math.max(0, live.until - Date.now()) + 30);
   pane.querySelectorAll('.rs-socket').forEach((el) => /** @type {HTMLElement} */ (el).onclick = () => {
     const board = socketBoard(meta.eco, heroId, uid), s = board?.sockets[+(/** @type {HTMLElement} */ (el).dataset.socket || 0)];
     if (!s) return;
     state.socket = s.index; audio.play('ui_click', { vol: 0.4 });
-    if (s.state === 'locked' && !s.rune) ui.toast('+15 강화 시 개방되는 칸입니다', 'red');
+    if (s.state === 'locked' && !s.rune) setRuneNotice('+15 강화 시 개방되는 칸입니다', 'red');
     redraw();
   });
   const swap = /** @type {HTMLButtonElement|null} */ (pane.querySelector('#rs-swap'));
   if (swap) swap.onclick = () => {
     const board = socketBoard(meta.eco, heroId, uid), s = board?.sockets[state.socket ?? defaultSocket(board)];
-    if (!s?.rune) { ui.toast('룬이 박힌 칸을 먼저 고르세요', 'red'); return; }
+    if (!s?.rune) { notice('룬이 박힌 칸을 먼저 고르세요'); return; }
     if (s.locked) { confirmRemove(meta, uid, heroId, s.index, ctx.back); return; }
     openRunePicker(meta, { uid, heroId, index: s.index, back: ctx.back });
   };
@@ -135,7 +156,7 @@ export function bindRunePane(root, ctx) {
     const board = socketBoard(meta.eco, heroId, uid); if (!board) return;
     const picked = board.sockets[state.socket ?? -1];
     const target = picked?.state === 'empty' ? picked : board.sockets.find((/** @type {any} */ s) => s.state === 'empty');
-    if (!target) { ui.toast('빈 칸이 없습니다 · 룬 교체를 쓰세요', 'red'); return; }
+    if (!target) { notice('빈 칸이 없습니다 · 룬 교체를 쓰세요'); return; }
     state.socket = target.index;
     openRunePicker(meta, { uid, heroId, index: target.index, back: ctx.back });
   };
@@ -149,10 +170,11 @@ export async function confirmRemove(/** @type {any} */ meta, /** @type {number} 
   const ok = await meta.ui.confirm('룬 빼기', '<b>' + esc(s.label) + '</b>을(를) 빼서 룬 가방으로 돌려보냅니다.<br>비용 <b>골드 ' + fmt(s.removeCost) + '</b> (보유 ' + fmt(meta.eco.s.gold) + ')', { ok: '빼기 · 골드 ' + fmt(s.removeCost), cancel: '취소' });
   if (ok) {
     const r = meta.eco.runeRemove(uid, index);
-    if (r.ok) { audio.play('ui_confirm', { vol: 0.5 }); meta.ui.toast(esc(s.label) + ' 회수 · 골드 -' + fmt(r.cost), 'gold'); meta._sheetDirty = true; meta.refreshTop?.(); }
-    else { meta.ui.toast(runeReasonText(r.reason), 'red'); audio.play('ui_error'); }
+    if (r.ok) { audio.play('ui_confirm', { vol: 0.5 }); setRuneNotice(esc(s.label) + ' 회수 · 골드 -' + fmt(r.cost), 'gold'); meta._sheetDirty = true; meta.refreshTop?.(); }
+    else { setRuneNotice(runeReasonText(r.reason), 'red'); audio.play('ui_error'); }
   }
   back();
+  noticeFallbackToast(meta);
 }
 
 // ------------------------------------------------------------------ 룬 고르기
@@ -210,9 +232,11 @@ export function openRunePicker(meta, { uid, heroId, index, back }) {
       const r = v.mode === 'replace' ? eco.runeReplace(uid, index, rune) : eco.runeInsert(uid, index, rune);
       if (!r.ok) { ui.toast(runeReasonText(r.reason), 'red'); audio.play('ui_error'); if (v.mode === 'replace') openRunePicker(meta, { uid, heroId, index, back }); return; }
       playRuneSound('insert'); audio.vibe?.(20);
-      ui.toast(esc(v.selected.label) + (v.mode === 'replace' ? ' 교체 완료' : ' 박기 완료') + (v.preview?.gained.length ? ' · ' + esc(v.preview.gained.join(', ')) + ' 발동' : ''), 'gold');
+      // 안내는 장비 상세의 전투력·탭을 가리지 않게 룬 소켓 탭 안(공명 줄 자리)에 띄운다.
+      setRuneNotice(esc(v.selected.label) + (v.mode === 'replace' ? ' 교체 완료' : ' 박기 완료') + (v.preview?.gained.length ? ' · ' + esc(v.preview.gained.join(', ')) + ' 발동' : ''), 'gold');
       meta._sheetDirty = true; meta.refreshTop?.();
       back();
+      noticeFallbackToast(meta);
     };
     b.onkeydown = (event) => { if (event.key === 'Escape') { event.preventDefault(); back(); } };
     const picked = /** @type {HTMLElement|null} */ (b.querySelector('.rp-cell[aria-pressed="true"]'));
