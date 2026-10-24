@@ -199,7 +199,9 @@
   box-shadow: 0 6px 0 rgba(90, 50, 10, .4), 0 24px 56px rgba(4, 20, 40, .65), inset 0 0 0 2px rgba(255, 255, 255, .25);
 }
 :root:root #result .result-title {
-  padding: 0 44px 2px; line-height: 1.15; letter-spacing: .08em; color: #fffbe6;
+  padding: 0 clamp(20px, 6vw, 44px) 2px; line-height: 1.15; letter-spacing: .08em; color: #fffbe6;
+  /* 좁은 화면에서 VICTORY가 글자 중간에서 줄바꿈되지 않게 크기를 화면 폭에 맞춘다 */
+  font-size: clamp(20px, 6vw, 48px); overflow-wrap: normal; word-break: keep-all;
   -webkit-text-stroke: 3px #7a410f; paint-order: stroke fill; text-shadow: 0 3px 0 rgba(90, 40, 5, .55);
   background: linear-gradient(180deg, rgba(255,255,255,.4) 0 46%, rgba(255,255,255,0) 47%), linear-gradient(180deg, #ffd24d, #f0961f);
   clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 50%, 100% 100%, 0 100%, 18px 50%);
