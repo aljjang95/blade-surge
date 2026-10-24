@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PortoneApi, PortonePayment } from '../worker/v1/portone';
+import { IAP_BY_ID } from '../src/shared/iap-catalog.js';
 import { reconcileWebPayments, settleWebPayment, WEB_RECONCILE_MAX } from '../worker/v1/portone';
 
 const DAY = 86400000;
@@ -199,6 +200,27 @@ describe('웹 결제 complete — 포트원 조회 검증 후 멱등 지급', ()
     expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-payment-mismatch'")).toBe(cases.length);
     expect((await me(a.token)).doc.roster.paid).toEqual([]);
     void h;
+  });
+
+  test('발급 뒤 카탈로그 가격이 바뀌어도 발급 당시 금액(row.amount_krw)으로 검증·원장 기록 — complete·크론 모두', async () => {
+    const { h, pn, a, intent, complete, me, ctx, count } = await setup();
+    const knight = IAP_BY_ID['hero_knight_v1'] as any, ranger = IAP_BY_ID['hero_ranger_v1'] as any;
+    const old = { k: knight.priceKRW, r: ranger.priceKRW };
+    try {
+      const i1 = (await intent(a.token, 'hero_knight_v1')).body;
+      const i2 = (await intent(a.token, 'hero_ranger_v1')).body;
+      expect(i1.totalAmount).toBe(old.k);
+      knight.priceKRW = old.k + 1000; ranger.priceKRW = old.r + 1000;
+      pn.pay(i1); pn.pay(i2);
+      const r = await complete(a.token, i1.paymentId);
+      expect(r.status).toBe(200);
+      expect(r.body.state).toBe('granted');
+      h.advance(3 * 60000);
+      expect(await reconcileWebPayments(ctx())).toMatchObject({ granted: 1, failed: 0 });
+      expect((await me(a.token)).doc.roster.paid.sort()).toEqual(['knight', 'ranger']);
+      expect(h.db.sqlite.query('SELECT price_krw FROM iap_grants ORDER BY price_krw').all()).toEqual([{ price_krw: Math.min(old.k, old.r) }, { price_krw: Math.max(old.k, old.r) }]);
+      expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-payment-mismatch'")).toBe(0);
+    } finally { knight.priceKRW = old.k; ranger.priceKRW = old.r; }
   });
 
   test('READY·PENDING는 pending, FAILED는 failed — 둘 다 지급 없음', async () => {

@@ -223,7 +223,7 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
   const duplicate = allKeysActive(product, before);
   const grantId = 'iap:' + hash;
   const result = await grantOnce(c, row.account_id, product, hash, grantId, product.grant.rewards ?? {}, {
-    purchase: { state: 'granted', test },
+    purchase: { state: 'granted', test, priceKRW: row.amount_krw },
     entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
   if (result === 'refunded' || result === 'declined') return { ...base, state: 'cancelled', granted: [] };
@@ -236,7 +236,8 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
 /** PAID 결제가 서버 의도와 다른 점(없으면 null). 금액은 브라우저가 정하므로 이 검사가 지급의 핵심이다. */
 function mismatchCode(payment: PortonePayment, row: WebRow, product: IapProduct): string | null {
   const cancelled = payment.amount?.cancelled;
-  if (payment.amount?.total !== product.priceKRW || row.amount_krw !== product.priceKRW || (typeof cancelled === 'number' && cancelled > 0)) return 'amount-mismatch';
+  // 기준은 발급 당시 저장한 금액이다(그 뒤 카탈로그 가격이 바뀌어도 이미 발급된 의도의 정상 결제는 지급한다).
+  if (payment.amount?.total !== row.amount_krw || (typeof cancelled === 'number' && cancelled > 0)) return 'amount-mismatch';
   if (payment.currency !== 'KRW') return 'currency-mismatch';
   if (payment.storeId !== row.store_id) return 'store-mismatch';
   if (payment.channel?.key && payment.channel.key !== row.channel_key) return 'channel-mismatch';

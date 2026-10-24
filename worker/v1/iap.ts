@@ -349,7 +349,7 @@ export async function debtRepayment(db: D1Database, accountId: string, state: Re
  * 문서 경합(다른 명령과 동시)은 최대 3회 다시 읽어 재시도한다.
  */
 export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: string, grantId: string, rewards: Record<string, number>,
-  o: { purchase: { state: string; test: boolean; expiresAt?: number; orderHash?: string }; entitlements: { key: string; expiresAt: number | null }[] }): Promise<GrantResult> {
+  o: { purchase: { state: string; test: boolean; expiresAt?: number; orderHash?: string; priceKRW?: number }; entitlements: { key: string; expiresAt: number | null }[] }): Promise<GrantResult> {
   for (const [key, value] of Object.entries(rewards)) if (!IAP_REWARD_KEYS.includes(key) || !Number.isSafeInteger(value) || value <= 0) fail(500, 'catalog-invalid');
   for (let attempt = 0; attempt < 3; attempt++) {
     const exists = await c.db.prepare('SELECT 1 AS x FROM iap_grants WHERE grant_id = ?').bind(grantId).first();
@@ -381,7 +381,7 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
           updated_at = excluded.updated_at WHERE iap_purchases.account_id = excluded.account_id`,
         values: [hash, accountId, product.id, product.type, p.state, p.orderHash ?? null, p.expiresAt ?? null, p.test ? 1 : 0, c.now, c.now] },
       { sql: `INSERT INTO iap_grants(grant_id, account_id, token_hash, product_id, rewards, price_krw, granted_at, order_hash, once_key, repaid) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${REV_GUARD}`,
-        values: [grantId, accountId, hash, product.id, JSON.stringify(net), p.test ? 0 : product.priceKRW, c.now, p.orderHash ?? null,
+        values: [grantId, accountId, hash, product.id, JSON.stringify(net), p.test ? 0 : (p.priceKRW ?? product.priceKRW), c.now, p.orderHash ?? null,
           product.once ? `${accountId}:${product.id}` : null, Object.keys(debt.repaid).length ? JSON.stringify(debt.repaid) : null] },
     ];
     for (const ent of o.entitlements) writes.push({ sql: `INSERT INTO iap_entitlements(account_id, ent_key, token_hash, starts_at, expires_at) SELECT ?, ?, ?, ?, ? WHERE ${REV_GUARD}
