@@ -6,6 +6,7 @@ import { DropSystem } from '../src/game/drops.js';
 import { CHAPTERS as CHAPTER_DATA, stageDef } from '../src/data/stages.js';
 import { lootTable, levelExperienceMultiplier, pickLootRarity } from '../src/data/loot-tables.js';
 import { HEROES, heroStats, levelExp } from '../src/data/heroes.js';
+import { grandfather } from './helpers/legacy-roster';
 const CHAPTERS: any[] = CHAPTER_DATA;
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -129,7 +130,7 @@ test('장비 비교는 강화·세트 포함 실전 능력치 기준이며 가�
 });
 
 test('분해는 중복 UID를 한 번만 처리하고 장착·희귀 장비를 보호하며 저장 실패 시 원복한다', () => {
-  const eco = new Economy(), n = eco.addItem('N', 'weapon'), s = eco.addItem('S', 'armor'), e = eco.addItem('E', 'boots'), rare = eco.addItem('U', 'ring');
+  const eco = grandfather(new Economy()), n = eco.addItem('N', 'weapon'), s = eco.addItem('S', 'armor'), e = eco.addItem('E', 'boots'), rare = eco.addItem('U', 'ring');
   eco.equip('mage', n.uid);
   expect(eco.salvage([n.uid])).toEqual({ ok: false, reason: 'equipped' });
   for (const uids of [[], [-1], [s.uid, -1], [rare.uid]]) expect(eco.salvage(uids)).toEqual({ ok: false, reason: 'items' });

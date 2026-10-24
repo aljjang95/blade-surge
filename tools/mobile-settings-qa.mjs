@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const root = path.resolve(import.meta.dirname, '..'), out = path.join(root, 'work/mobile-settings-qa');
 const hash = b => crypto.createHash('sha256').update(b).digest('hex');
@@ -76,6 +77,7 @@ try {
     page.on('response', r => { const request = mediaRequests.get(r.request()); if (request) { request.status = r.status(); request.responded = Date.now(); request.contentRange = r.headers()['content-range'] || null; } });
     page.on('response', r => { if (new URL(r.url()).pathname.startsWith('/bgm/')) row.mediaResponses.push({ url: r.url(), status: r.status(), at: Date.now(), range: r.headers()['content-range'] || null }); });
     await page.addInitScript(observeMedia);
+    await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     if (await page.locator('#btn-ignore-rotate').isVisible()) await page.locator('#btn-ignore-rotate').tap();
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
@@ -140,6 +142,7 @@ try {
       const desktop = await browser.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: false });
       const desktopPage = await desktop.newPage();
       try {
+        await installAutoStarter(desktopPage); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
         await desktopPage.goto(origin, { waitUntil: 'domcontentloaded' }); await desktopPage.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
         await desktopPage.locator('#boot-start').click(); await desktopPage.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'));
         await desktopPage.waitForTimeout(800); if (await desktopPage.locator('#modal.show #m-cancel').isVisible()) await desktopPage.locator('#modal.show #m-cancel').click();
@@ -152,6 +155,7 @@ try {
     const offlinePage = await offlineContext.newPage(); row.offline = { status: 'running', failures: [], phase: 'online' };
     offlinePage.on('requestfailed', r => row.offline.failures.push({ url: r.url(), error: r.failure()?.errorText, phase: row.offline.phase }));
     try {
+      await installAutoStarter(offlinePage); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
       await offlinePage.goto(origin, { waitUntil: 'domcontentloaded' });
       await offlinePage.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
       await offlinePage.waitForFunction(async () => { if (!navigator.serviceWorker.controller) return false; for (const name of await caches.keys()) if (await (await caches.open(name)).match('/offline.html')) return true; return false; }, null, { timeout: 60000 });

@@ -3,6 +3,7 @@ import {preview} from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {launchOpts} from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const home=path.resolve(import.meta.dirname,'..'),source=process.argv.find(x=>x.startsWith('--source='))?.slice(9)||home;
 const baseline=process.argv.includes('--baseline'),out=path.join(home,'work/visual-v1',baseline?'baseline-behavior':'candidate-behavior');await fs.mkdir(out,{recursive:true});
 const report={status:'running',scope:'isolated local compiled gameplay and fixed-frame GPU finish timing; not physical-device FPS or human preference',errors:[],navigation:[],cycles:[]};
@@ -12,6 +13,7 @@ const browser=await chromium.launch(launchOpts({headless:true}));
 try{
  const page=await browser.newPage({viewport:{width:640,height:360},hasTouch:true,serviceWorkers:'block'});
  page.on('pageerror',e=>report.errors.push(e.message));
+ await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`,{waitUntil:'domcontentloaded'});
  await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();
  await page.waitForFunction(()=>app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));

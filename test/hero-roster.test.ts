@@ -5,7 +5,8 @@ import { ArsenalService } from '../src/game/arsenal-service.js';
 import { MasterworksService } from '../src/game/masterworks-service.js';
 import { createMemoryStorage } from '../src/game/economy-core.js';
 import { normalizeSave } from '../src/game/save.js';
-import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
+import { HEROES, HERO_ORDER, levelExp } from '../src/data/heroes.js';
+import { JOBS } from '../src/data/expansion.js';
 import { GACHA } from '../src/data/shop.js';
 import { HERO_FREE_UNLOCK, HERO_FREE_UNLOCK_TOTAL_GEMS, HERO_POLICY, rosterOwns } from '../src/data/hero-roster.js';
 import { OPS, validateOp } from '../src/shared/v1-ops.js';
@@ -271,6 +272,124 @@ describe('미소유 영웅 차단', () => {
     const base = JSON.parse(JSON.stringify(fresh().s));
     const s = normalizeSave({ ...base, selected: 'ranger', roster: { policy: 2, owned: ['knight'], starter: 'knight', starterChosen: true, paid: [] } }, base);
     expect(s.selected).toBe('knight');
+  });
+});
+
+describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
+  /** 명령 전후로 영웅 상태·재화가 바뀌지 않았는지 본다(거절은 부작용이 없어야 한다). */
+  const snap = (eco: any, id = 'mage') => JSON.stringify([eco.s.heroes[id], eco.s.gold, eco.s.gems, eco.s.transcendStones, eco.s.skillResets, eco.s.avatars.equipped, eco.s.avatars.showGear]);
+
+  test('신규 저장의 미소유 영웅은 성장·장비·외형 명령을 모두 거절하고 아무것도 바꾸지 않는다', () => {
+    const eco = chosen('knight'); eco.s.gold = 99999999; eco.s.transcendStones = 99; eco.s.heroes.mage.shards = 9999; eco.s.heroes.mage.level = 30;
+    eco.s.skillResets = 5;
+    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    const before = snap(eco);
+    eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2); // 사냥으로 절반을 채워도 미소유면 막힌다
+    const b2 = snap(eco);
+    const r = {
+      levelUpHero: eco.levelUpHero('mage'), promoteHero: eco.promoteHero('mage'), transcend: eco.transcend('mage'),
+      learnSkill: eco.learnSkill('mage', 1), resetSkills: eco.resetSkills('mage', { useGems: true }),
+      setSkillLoadout: eco.setSkillLoadout('mage', 0, 4), equip: eco.equip('mage', uid), unequip: eco.unequip('mage', 'weapon'),
+      equipAvatar: eco.equipAvatar('mage', 'avatar_mage_astral'), setShowGear: eco.setShowGear('mage', true),
+    };
+    expect(r.levelUpHero).toBe(false); expect(eco.lastTrainingError).toBe('locked');
+    expect(r.promoteHero).toBe(false);
+    expect(r.transcend).toEqual({ ok: false, reason: 'locked' });
+    expect(r.learnSkill).toEqual({ ok: false, reason: 'locked' });
+    expect(r.resetSkills).toEqual({ ok: false, reason: 'locked' });
+    expect(r.setSkillLoadout).toBe(false);
+    expect(r.equip).toBe(false); expect(r.unequip).toBe(false);
+    expect(r.equipAvatar).toEqual({ ok: false, reason: 'locked' });
+    expect(r.setShowGear).toEqual({ ok: false, reason: 'locked' });
+    expect(snap(eco)).toBe(b2); expect(before).not.toBe(b2);
+    expect(eco.s.heroes.mage.equip.weapon).toBeNull();
+    expect(eco.trainingQuote('mage')).toMatchObject({ ok: false, reason: 'locked' });
+  });
+
+  test('시작 영웅은 그대로 성장·장비가 된다(차단은 미소유에만 적용)', () => {
+    const eco = chosen('knight'); const hero = eco.s.heroes.knight;
+    hero.level = 30; hero.exp = Math.ceil(levelExp(30) / 2); eco.s.gold = 99999999; hero.shards = 9999;
+    expect(eco.levelUpHero('knight')).toBe(true); expect(hero.level).toBe(31);
+    expect(eco.promoteHero('knight')).toBe(true);
+    const uid = eco.addItem('N', 'weapon').uid;
+    eco.equip('knight', uid); expect(hero.equip.weapon).toBe(uid);
+    expect(eco.unequip('knight', 'weapon') !== false).toBe(true); expect(hero.equip.weapon).toBeNull();
+    eco.s.avatars.owned.push('avatar_knight_sakura');
+    expect(eco.equipAvatar('knight', 'avatar_knight_sakura').ok).toBe(true);
+  });
+
+  test('무료 해금 직후에는 같은 명령이 허용된다', () => {
+    const eco = chosen('knight'); eco.s.heroes.mage.level = 30; eco.s.gold = 99999999; eco.s.heroes.mage.shards = 9999;
+    eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
+    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    expect(eco.levelUpHero('mage')).toBe(false); expect(eco.equipAvatar('mage', 'avatar_mage_astral').ok).toBe(false);
+    expect(eco.unlockHeroFree('mage').ok).toBe(true);
+    eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
+    expect(eco.levelUpHero('mage')).toBe(true); expect(eco.s.heroes.mage.level).toBe(31);
+    expect(eco.promoteHero('mage')).toBe(true);
+    eco.equip('mage', uid); expect(eco.s.heroes.mage.equip.weapon).toBe(uid);
+    expect(eco.equipAvatar('mage', 'avatar_mage_astral').ok).toBe(true);
+    expect(eco.setShowGear('mage', true).ok).toBe(true);
+  });
+
+  test('결제 권한(entitlements.heroes)으로 열린 영웅도 허용되고 회수되면 다시 거절한다', () => {
+    const eco = chosen('knight'); eco.s.gold = 99999999; eco.s.heroes.rogue.level = 30;
+    eco.applyIapState({ entitlements: { heroes: ['rogue'] } });
+    eco.s.heroes.rogue.exp = Math.ceil(levelExp(30) / 2);
+    expect(eco.levelUpHero('rogue')).toBe(true);
+    eco.applyIapState({ entitlements: { heroes: [] } });
+    eco.s.heroes.rogue.exp = Math.ceil(levelExp(31) / 2);
+    expect(eco.levelUpHero('rogue')).toBe(false); expect(eco.s.heroes.rogue.level).toBe(31);
+  });
+
+  test('기존 저장(정책 1)의 다섯 영웅은 전부 그대로 성장·장비가 된다', () => {
+    const eco = withStore(legacyRaw((r) => { r.gold = 99999999; r.gems = 5000; }));
+    const out: Record<string, boolean[]> = {};
+    for (const id of IDS) {
+      const h = eco.s.heroes[id]; h.level = 20; h.exp = Math.ceil(levelExp(20) / 2); h.shards = 9999;
+      const uid = eco.addItem('N', 'weapon').uid;
+      out[id] = [eco.levelUpHero(id) === true, eco.promoteHero(id) === true, eco.equip(id, uid) !== false && h.equip.weapon === uid,
+        eco.unequip(id, 'weapon') !== false && h.equip.weapon === null, eco.setShowGear(id, true).ok === true, eco.learnSkill(id, 1).reason !== 'locked'];
+    }
+    for (const id of IDS) expect(out[id]).toEqual([true, true, true, true, true, true]);
+    expect(eco.s.roster.policy).toBe(HERO_POLICY.LEGACY);
+  });
+
+  test('상점 아바타는 미소유 영웅이면 구매 전에 막아 보석을 쓰지 않는다', async () => {
+    const eco = chosen('knight'); eco.s.gems = 99999; const toasts: string[] = [];
+    const meta: any = Object.create(Meta.prototype);
+    Object.assign(meta, { eco, app: { showcaseHero: () => {} }, ui: { toast: (m: string) => toasts.push(m), confirm: async () => true }, renderShop: () => {}, refreshTop: () => {} });
+    await meta.buyOrEquipAvatar('avatar_mage_astral');
+    expect(eco.s.gems).toBe(99999); expect(eco.s.avatars.owned).not.toContain('avatar_mage_astral'); expect(toasts.at(-1)).toContain('영웅을 먼저 해금');
+    eco.applyIapState({ entitlements: { heroes: ['mage'] } });
+    await meta.buyOrEquipAvatar('avatar_mage_astral');
+    expect(eco.s.avatars.owned).toContain('avatar_mage_astral'); expect(eco.s.avatars.equipped.mage).toBe('avatar_mage_astral');
+  });
+
+  test('원정 직업(전직)은 미소유 영웅이면 열지도 고르지도 못한다', () => {
+    const eco = chosen('knight'); const ex = new ExpeditionEconomy(eco);
+    const job = JOBS.find((j: any) => j.heroId !== 'knight')!;
+    expect(ex.selectJob(job.id).ok).toBe(false); expect(ex.unlockJob(job.id).ok).toBe(false);
+    expect(eco.s.selected).toBe('knight');
+  });
+
+  test('v1-ops 영웅 지정 명령은 미소유에 실패하고 해금 뒤에는 성공한다', () => {
+    const eco = chosen('knight'); eco.s.gold = 99999999; eco.s.heroes.mage.level = 30; eco.s.heroes.mage.shards = 9999;
+    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
+    const calls: [string, unknown[]][] = [['levelUpHero', ['mage']], ['promoteHero', ['mage']], ['transcend', ['mage']], ['learnSkill', ['mage', 1]],
+      ['resetSkills', ['mage', true]], ['setSkillLoadout', ['mage', 0, 4]], ['selectHero', ['mage']], ['equip', ['mage', uid]], ['unequip', ['mage', 'weapon']],
+      ['equipAvatar', ['mage', 'avatar_mage_astral']]];
+    for (const [op, args] of calls) {
+      const def = validateOp(op, args)!; expect(def).toBe((OPS as any)[op]);
+      expect(def.ok(def.run(eco, ...args))).toBe(false);
+    }
+    expect(eco.s.heroes.mage.level).toBe(30);
+    eco.applyIapState({ entitlements: { heroes: ['mage'] } });
+    for (const op of ['levelUpHero', 'promoteHero', 'equip', 'equipAvatar']) {
+      const [, args] = calls.find(([name]) => name === op)!; const def = (OPS as any)[op];
+      expect(def.ok(def.run(eco, ...args))).toBe(true);
+    }
   });
 });
 

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { ARMORY_ITEMS } from '../src/data/armory.js';
+import { installAutoStarter } from './qa-starter.mjs';
 const phase=process.argv[2]||'candidate', out=process.env.ARMORY_QA_OUT||'work/owner-expansion-20260914';
 if(!/^work\/[a-zA-Z0-9/_-]+$/.test(out))throw new Error('Evidence output must stay under work/');
 await fs.mkdir(out,{recursive:true});
@@ -14,6 +15,7 @@ try{
  page.on('pageerror',e=>report.errors.push(e.message));
  page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});
  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.hostname==='127.0.0.1'||['data:','blob:'].includes(u.protocol))return route.continue();report.externalBlocked.push(u.origin);return route.fulfill({status:200,body:'',contentType:'text/css'});});
+ await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
  await page.goto(`http://127.0.0.1:5196/${process.argv[3]||''}`,{waitUntil:'domcontentloaded'});
  await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});
  await page.click('#boot-start');await page.waitForFunction(()=>window.app?.mode==='lobby');

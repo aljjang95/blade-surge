@@ -4,6 +4,7 @@ import {preview} from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {launchOpts} from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..');
 const out=path.join(root,'work/visual-v1/captures');await fs.mkdir(out,{recursive:true});
 const server=await preview({root,configFile:false,preview:{host:'127.0.0.1',port:0},logLevel:'error'});
@@ -12,6 +13,7 @@ const report={errors:[],layouts:[],scope:'Fresh local Chromium visual inspection
 try{
  const page=await browser.newPage({viewport:{width:880,height:400},hasTouch:true,serviceWorkers:'block'});
  page.on('pageerror',e=>report.errors.push(e.message));
+ await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`,{waitUntil:'domcontentloaded'});
  await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();
  await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));

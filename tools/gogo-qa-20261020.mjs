@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const origin = arg('origin', 'http://127.0.0.1:5342/');
@@ -57,6 +58,7 @@ async function closeModals(page) {
 // 부팅: #btn-ignore-rotate → #boot-start → 로비. 출석 등 모달은 실제 탭으로 닫는다.
 async function boot(s) {
   const { page } = s;
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });

@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work/encounter-runtime-qa');await mkdir(out,{recursive:true});
 const report={started:new Date().toISOString(),status:'running',scope:'Real app, original character loader, campaign boss-room spawn, actual fixed 50ms app.step. QA opens the seal and relocates player; not natural completion, rewards, mobile GPU or FPS proof.',errors:[],bosses:[]};
 let server,browser;
@@ -9,6 +10,7 @@ try{
   server=await createServer({root,configFile:false,server:{host:'127.0.0.1',port:0},logLevel:'error'});await server.listen();
   browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1200,height:800}});
   page.on('pageerror',e=>report.errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`,{waitUntil:'domcontentloaded',timeout:120000});
   await page.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:90000});

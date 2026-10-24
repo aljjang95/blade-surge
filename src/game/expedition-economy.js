@@ -2,14 +2,14 @@ import { ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES,
 import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';
+import { normalizeJourney, refreshPeriods, recordJourneyWin, rotationDungeon } from './journey-core.js';
 import { riftForDay, riftBonus } from './journey-rifts.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
 import { CITADEL_POTIONS } from '../data/citadel-shop.js';
 import { rosterOwns } from '../data/hero-roster.js';
-import { dungeonVisibility, regionDungeonState } from './region-dungeon-gate.js';
+import { dungeonVisibility, regionDungeonState, visibleDungeonIds } from './region-dungeon-gate.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -114,13 +114,13 @@ export class ExpeditionEconomy {
     if (kind === 'dungeon') { const access = this.dungeonAccess(id, { depth }); if (!access.ok) return access; }
     if (this.s.level < d.minLevel) return { ok: false, error: `탐험 레벨 ${d.minLevel} 필요` };
     const started = this.transact(() => {
-      const frontier = kind === 'dungeon' && depth === 'standard' && !rift ? frontierForRoute(id) : null;
+      const frontier = kind === 'dungeon' && depth === 'standard' && !rift ? frontierForRoute(id, new Date(), visibleDungeonIds(this.eco.s)) : null;
       if (expectedFrontier !== undefined && (!frontier || !frontierSnapshot(expectedFrontier) ||
           JSON.stringify(frontierSnapshot(expectedFrontier)) !== JSON.stringify(frontierSnapshot(frontier)))) {
         return { ok: false, error: '주간 원정이 갱신됐습니다. 새 지역과 효과를 확인한 뒤 출격해 주세요.' };
       }
       const period = refreshPeriods(this.eco.s.journey, Date.now());
-      const rotation = DUNGEONS[((period.day % 3) + 3) % 3].id;
+      const rotation = rotationDungeon(period.day, visibleDungeonIds(this.eco.s)).id;
       if (rift && (kind !== 'dungeon' || id !== rotation)) return { ok: false, error: '오늘의 회전 던전에서 균열에 도전해 주세요.' };
       this.eco.tickEnergy();
       if (this.eco.s.energy < d.energy) return { ok: false, error: '에너지가 부족합니다.' };
@@ -236,7 +236,7 @@ export class ExpeditionEconomy {
     if (!d || !Number.isInteger(count) || count < 1 || count > 3) return { ok: false, error: '소탕 횟수는 1~3회입니다.' };
     if (!this.s.stats[id]) return { ok: false, error: '이 던전을 실전에서 먼저 클리어해 주세요.' };
     if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
-    const frontier = frontierForRoute(id);
+    const frontier = frontierForRoute(id, new Date(), visibleDungeonIds(this.eco.s));
     // A supply run earns completion bonuses once per run, but never claims rooms
     // that were not played. Treasure-room and combat bonuses are live-run only.
     const one = applyFrontierRewards(d.rewards, frontier);

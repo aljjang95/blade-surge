@@ -1,6 +1,7 @@
 // Local project regression, not physical mobile browser/OS certification.
 import { chromium, firefox, webkit, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { installAutoStarter } from './qa-starter.mjs';
 const target = new URL(process.argv.find(a=>a.startsWith('--url='))?.slice(6)||'http://127.0.0.1:5225/');
 if (!['localhost','127.0.0.1'].includes(target.hostname)||target.username||target.password) throw Error('localhost only');
 const out='work/app-screen-qa.json',dir='work/app-screen-qa.artifacts'; await mkdir(dir,{recursive:true});
@@ -11,6 +12,7 @@ for(const [engine,launcher] of Object.entries({chromium,firefox,webkit})){
  try{
   const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:engine!=='firefox',deviceScaleFactor:2,userAgent:engine==='webkit'?devices['iPhone 13'].userAgent:devices['Pixel 7'].userAgent});
   const page=await context.newPage();page.setDefaultTimeout(30000);page.on('pageerror',e=>r.errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')r.errors.push(m.text());});
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:120000});
   if(await page.locator('#btn-ignore-rotate').isVisible())await page.locator('#btn-ignore-rotate').tap();
   await page.locator('#boot-start:not(.hidden)').waitFor({timeout:180000});

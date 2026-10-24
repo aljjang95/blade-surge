@@ -136,3 +136,22 @@ for (const { id, HERO, MOTION, ASSET, REV } of CASES) {
     } finally { disposeCharacter(inst.root, inst.mixer); }
   }, 60_000);
 }
+
+// 옷장 미리보기(미보유 아바타 시착)는 root 위에 화면 맞춤 배율·회전 그룹을 두고 몸을 비동기로 바꾼다.
+// 골반 부모 배율은 root 부모 기준으로 재므로 그 그룹 아래에서도 같은 계획(같은 클립 객체)이 나와야 하고, root 자체 배율이 틀리면 여전히 거절한다.
+for (const id of [...CASES.map((c) => c.id), 'avatar_rogue_crow']) test(id + ' 옷장 배율 그룹 아래에서도 몸 동작 계획이 같고, root 배율 오류는 거절한다', async () => {
+  const asset = manifest.assets.find((a: any) => a.id === id)!;
+  const inst = spawnCharacter(await loadHeroAsset(asset));
+  try {
+    const identity = selectedBodyMotionIdentity(asset);
+    const plain = prepareHeroBodyMotion(inst.root, identity)!;
+    expect(plain.changes.some((c: any) => c.next !== c.entry.base)).toBe(true);
+    const frame = new THREE.Group(), offset = new THREE.Group();
+    frame.scale.setScalar(1.734); frame.rotation.y = .8; offset.position.set(.2, -.1, .3);
+    frame.add(offset); offset.add(inst.root); frame.updateMatrixWorld(true);
+    const framed = prepareHeroBodyMotion(inst.root, identity)!;
+    expect(framed.changes.map((c: any) => c.next)).toEqual(plain.changes.map((c: any) => c.next));
+    inst.root.scale.multiplyScalar(1.1);
+    expect(() => prepareHeroBodyMotion(inst.root, identity)).toThrow('배율');
+  } finally { inst.root.removeFromParent(); disposeCharacter(inst.root, inst.mixer); }
+}, 60_000);

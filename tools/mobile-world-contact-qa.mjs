@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {launchOpts} from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work/mobile-world-contact/qa');await fs.mkdir(out,{recursive:true});
 const live=process.argv.includes('--live');
 const server=live?null:await preview({root,configFile:false,preview:{host:'127.0.0.1',port:0},logLevel:'error'});
@@ -14,6 +15,7 @@ try{
  for(let pick=0;pick<3;pick++){
   const context=await browser.newContext({viewport:{width:640,height:320},deviceScaleFactor:2,hasTouch:true,serviceWorkers:'block'}),page=await context.newPage();
   page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(60000);page.on('pageerror',e=>{report.errors.push(e.message);console.log('pageerror',e.message);});page.on('console',m=>{if(m.type()==='error')report.consoleErrors.push(m.text());});page.on('response',r=>{if(r.status()>=400)report.httpErrors.push({url:r.url(),status:r.status()});});console.log('case',pick,'goto',origin);
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(origin);await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));await page.waitForTimeout(800);
   console.log('booted',pick);await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let seed=98317;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, devices } from 'playwright';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = process.argv.slice(2), get = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
 const url = get('--url', 'http://127.0.0.1:5291/'), out = path.resolve(get('--out', 'crowd-combat-qa')), hero = get('--hero', 'ranger');
@@ -58,6 +59,7 @@ try {
   page = await ctx.newPage(); page.setDefaultTimeout(120000);
   page.on('pageerror', e => report.errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') report.console.push(m.text().slice(0, 300)); });
+  await installAutoStarter(page); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.locator('#boot-start:not(.hidden)').waitFor(); await page.locator('#boot-start').tap();
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'));

@@ -5,6 +5,7 @@ import { TownUI } from './town-ui.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
+import { mountBlessingSlot } from './blessing-reel.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용' };
@@ -227,6 +228,9 @@ export class CitadelHubUI {
       chronicle.open('journal', trigger);
     });
     this.dialog.querySelector('.citadel-hub-go').addEventListener('click', () => this.startDestination(def, spot));
+    // 전운 굴리기 칸(원정 단계 바로 아래 1곳). 경제에 전운 API 가 없으면 붙지 않는다.
+    this.blessing?.dispose(); this.blessing = mountBlessingSlot(this.app, this.dialog, this.dialog.querySelector('.citadel-hub-depths'));
+    if (this.blessing) this.dialog.dataset.blessing = ''; else delete this.dialog.dataset.blessing;
     this.refreshDestination();
   }
   toggleFury(spot = this.dialogSpot) {
@@ -255,9 +259,16 @@ export class CitadelHubUI {
       this.challengeNotice = '입장 비용이나 서약이 바뀌었습니다. 새 준비 내용을 확인한 뒤 입장해 주세요.';
       this.refreshDestination(); return false;
     }
-    this.busy = true; this.close();
-    try { return await this.app.startExpedition('dungeon', def.id, { depth }); }
-    finally { this.busy = false; }
+    // 후보를 굴리고 고르지 않았으면 창 안 띠로 한 번 확인한다(팝업 없음).
+    if (this.blessing && !this.blessing.confirmDeparture()) return false;
+    this.busy = true;
+    // 전운 각인 소모·적용·실패 복원은 App.startExpedition 공통 경로가 맡는다(저장 실패면 창을 닫지 않고 띠로 안내).
+    try {
+      return await this.app.startExpedition('dungeon', def.id, { depth }, {
+        beforeStart: () => this.close(),
+        onBlessingSaveFailed: () => this.blessing?.notice('저장에 실패했습니다. 각인을 쓰지 않았으니 다시 눌러 주세요.', 'warn'),
+      });
+    } finally { this.busy = false; }
   }
   refreshDestination() {
     const def = DUNGEONS.find(d => d.id === this.dialogSpot?.route); if (!def || !this.opened) return;
@@ -337,6 +348,8 @@ export class CitadelHubUI {
     if (!this.opened && !this.dialog.open) return;
     // Finish state/input cleanup before the native dialog becomes walkable.
     this.opened = false; this.dialogSpot = null; this.reviewedPreparation = null;
+    // 회전 중 닫혀도 결과는 이미 저장돼 있다. 연출 루프만 멈춘다(보관 각인은 유지).
+    this.blessing?.stopLoop();
     this.app.hubControls?.clear(); this.app.citadelControls?.clear();
     if (this.dialog.open) this.dialog.close();
     this.app.syncHub?.();

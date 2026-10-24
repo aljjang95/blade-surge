@@ -201,6 +201,9 @@ export const EVENT_SOUNDS = Object.freeze({
   stingerFinale: EVENT_PREFIX + 'stinger_finale', stingerMidboss: EVENT_PREFIX + 'stinger_midboss', bossWarning: EVENT_PREFIX + 'boss_warning',
   gachaCharge: EVENT_PREFIX + 'gacha_charge', gachaRevealSr: EVENT_PREFIX + 'gacha_reveal_sr',
   lootRare: EVENT_PREFIX + 'loot_rare', lootEpic: EVENT_PREFIX + 'loot_epic', lootLegend: EVENT_PREFIX + 'loot_legend',
+  // 전운 굴리기 릴(설계 3.5): 레버(회전 시작)·째깍(문양 1칸)·쿵(릴 멈춤)·금빛 종(III)·선택.
+  blessingLever: EVENT_PREFIX + 'blessing_lever', blessingTick: EVENT_PREFIX + 'blessing_tick', blessingStop: EVENT_PREFIX + 'blessing_stop',
+  blessingGold: EVENT_PREFIX + 'blessing_gold', blessingPick: EVENT_PREFIX + 'blessing_pick',
 });
 export const EVENT_SOUND_FILES = Object.freeze(Object.values(EVENT_SOUNDS));
 /** 룬 박기·합성(R3, Mirelo SFX). 시작 때 미리 받지 않고 룬 화면을 열 때 한 번만 불러온다(src/ui/rune-sound.js). 파일이 없으면 대체음. */
