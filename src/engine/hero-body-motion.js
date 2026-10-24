@@ -13,6 +13,7 @@ import RANGER_T1S_MOTION from '../data/ranger-t1s-body-motion-v1.json';
 import RANGER_T2U_MOTION from '../data/ranger-t2u-body-motion-v1.json';
 import ROGUE_VAMPIRE_MOTION from '../data/rogue-vampire-body-motion-v1.json';
 import RANGER_BLACKCAT_MOTION from '../data/ranger-blackcat-body-motion-v1.json';
+import ORIGINAL_DODGE_BAND from '../data/original-dodge-band-v1.json';
 import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, tierRebindBodyRevisions, validateHigherBodyRevisions } from './library-assets.js';
 
 // 게임이 쓰는 상위 몸체 기록(v1 번들 + 대신 쓰는 개정, 예: 3단계 궁수 body-fit-v2).
@@ -202,6 +203,62 @@ export function validateTierBandMotion(motion, revision) {
   return freezeTree(structuredClone(motion));
 }
 
+// ---- 기사·야만전사·마법사 원본 몸(교정 기록 없음) 구르기 접지 띠(original-dodge-band-v1, tools/art/author-original-dodge-band.mjs) ----
+// 2026-10-25 t8: 공유 Dodge_Forward(영웅 1단계 GLB) 그대로면 기사 1단계 -0.20m, 2·3단계 -0.29~-0.30m, 벚꽃 무사 -0.35m 까지 몸이 바닥을 판다.
+// 오프셋은 올리기만 한다(0 ≤ o ≤ 0.35m, 시작·끝 0). 원래 바닥에 닿던 순간만 바닥 위 ±2cm 띠로 올리고 원래 공중(도약)인 순간은 그대로다.
+// 수평 이동·다른 트랙·길이(속도·무적·착지 시간)는 원본 그대로다. 몸 개정 id 가 없는 원본 몸에만 쓰고 경로·SHA 가 정확히 같아야 한다.
+// KayKit 원본 골반 부모(Armature)는 Z-up 이라 world Y 축은 기록의 parentWorldYAxis(local 성분)·parentWorldYGain 으로 적는다.
+const ORIGINAL_BAND_HEROES = Object.freeze(['knight', 'barbarian', 'mage']);
+const originalBandGrid = (base, samples) => {
+  const n = samples - 1;
+  return Array.from({ length: samples }, (_, i) => { const t = Math.fround(base.duration * i / n); return base.times.find(k => Math.abs(k - t) < 1e-5) ?? t; });
+};
+export function validateOriginalDodgeBand(bundle) {
+  requireMotion(bundle?.schema === 'blade-surge.original-dodge-band.v1' && bundle.bases && Array.isArray(bundle.bodies), '원본 몸 구르기 띠 묶음 형식');
+  for (const [id, base] of Object.entries(bundle.bases)) {
+    requireMotion(ORIGINAL_BAND_HEROES.some(hero => id === 'hero_' + hero + '_t1') && base.asset === id && base.clip === 'dodge'
+      && base.hipsTrack === 'mixamorigHips.position' && SHA.test(base.sha256) && SHA.test(base.sourceTrackSha256)
+      && Number.isFinite(base.duration) && base.duration > 0 && finiteArray(base.times) && finiteArray(base.values)
+      && base.values.length === base.times.length * 3, '원본 몸 구르기 띠 원본 트랙 snapshot');
+  }
+  const seen = new Set();
+  for (const body of bundle.bodies) {
+    const base = bundle.bases[body.base], a = body.authoring, v = body.validation, o = body.offsetsMeters;
+    requireMotion(ORIGINAL_BAND_HEROES.includes(body.heroId) && body.base === 'hero_' + body.heroId + '_t1' && base && !seen.has(body.asset)
+      && (body.asset.startsWith('hero_' + body.heroId + '_') || body.asset.startsWith('avatar_' + body.heroId + '_'))
+      && typeof body.body?.path === 'string' && SHA.test(body.body.sha256), '원본 몸 구르기 띠 몸 출처');
+    seen.add(body.asset);
+    requireMotion(a?.interpolation === 'LINEAR' && [0, 1, 2].includes(a.parentWorldYAxis) && Number.isFinite(a.parentWorldYGain) && a.parentWorldYGain !== 0
+      && Number.isInteger(a.samples) && a.samples >= Math.ceil(base.duration * 120) + 1 && a.samples <= 1000
+      && finiteArray(o) && o.length === a.samples && o[0] === 0 && o.at(-1) === 0
+      && o.every(x => x >= 0 && x <= HIGHER_BAND_LIMIT_METERS) && a.maxOffsetMeters === Math.max(...o) && a.maxOffsetMeters > 0, '원본 몸 구르기 띠 오프셋');
+    const grid = originalBandGrid(base, a.samples);
+    requireMotion(grid.every((t, i) => !i || t > grid[i - 1]) && grid.at(-1) === base.duration && base.times.every(t => grid.some(g => Object.is(g, t))), '원본 몸 구르기 띠 격자');
+    requireMotion(v?.pass === true && v.densePenetrationMinMeters > -.03 && v.denseLiftedMaxMeters < .03, '원본 몸 구르기 띠 검증 기록');
+  }
+  return freezeTree(structuredClone(bundle));
+}
+
+/** 원본 몸 구르기 띠: 공유 원본 Hips 위치 트랙의 수직 성분에만 오프셋을 더한 클립. 수평·다른 트랙·길이는 원본 그대로다. */
+export function createOriginalDodgeBandClip(baseClip, record, bundle = originalDodgeBand) {
+  const base = bundle.bases[record?.base];
+  requireMotion(base && baseClip?.name === 'dodge' && baseClip.duration === base.duration, '원본 몸 구르기 띠 클립 이름·길이 불일치');
+  const matches = baseClip.tracks.filter(track => track.name === base.hipsTrack);
+  requireMotion(matches.length === 1, '원본 몸 구르기 띠 골반 트랙 개수 불일치');
+  const original = matches[0];
+  requireMotion(original.ValueTypeName === 'vector' && original.getValueSize() === 3 && original.getInterpolation() === THREE.InterpolateLinear
+    && original.times.length === base.times.length && original.values.length === base.values.length
+    && base.times.every((value, index) => Object.is(value, original.times[index]))
+    && base.values.every((value, index) => Object.is(value, original.values[index])), '원본 몸 구르기 띠 decoded 원본 트랙 snapshot 불일치');
+  const a = record.authoring, times = originalBandGrid(base, a.samples), values = new Float32Array(times.length * 3), interpolant = original.createInterpolant();
+  times.forEach((time, index) => {
+    const reference = interpolant.evaluate(time);
+    for (let c = 0; c < 3; c++) values[index * 3 + c] = c === a.parentWorldYAxis ? reference[c] + record.offsetsMeters[index] / a.parentWorldYGain : reference[c];
+  });
+  const replacement = new THREE.VectorKeyframeTrack(original.name, times, values, THREE.InterpolateLinear);
+  return new THREE.AnimationClip(baseClip.name, baseClip.duration, baseClip.tracks.map(track => track === original ? replacement : track), baseClip.blendMode);
+}
+
 /** 1단계 v6(·3단계 v2) 몸 전용 Hips 높이 트랙으로 바꾼 클립. 수평 이동·다른 트랙·길이는 원본 그대로다. */
 export function createRangerT1BodyMotionClip(baseClip, motion) {
   const entry = motion.clipOverrides.find(item => item.base.clip === baseClip?.name);
@@ -335,6 +392,9 @@ const RANGER_BAND_MOTIONS = new Map([
 const TIER_BAND_SOURCES = [ROGUE_T1S_MOTION, ROGUE_T2U_MOTION, RANGER_T1S_MOTION, RANGER_T2U_MOTION, ROGUE_VAMPIRE_MOTION, RANGER_BLACKCAT_MOTION];
 const TIER_BAND_MOTIONS = new Map(TIER_BAND_SOURCES.map(motion => [motion.asset,
   validateTierBandMotion(motion, tierRebindBodyRevisions().find(revision => revision.asset === motion.asset))]));
+// 원본 몸 구르기 띠(위 validateOriginalDodgeBand). 같은 이유로 상수 검사 도구 뒤에서 만든다.
+const originalDodgeBand = validateOriginalDodgeBand(ORIGINAL_DODGE_BAND);
+const ORIGINAL_DODGE_BANDS = new Map(originalDodgeBand.bodies.map(body => [body.asset, body]));
 // v1 번들 위에 자산별 새 패킷을 얹는다. 띠 곡선으로 옮긴 자산(3단계 궁수 v2 몸)의 v1 패킷은 이력으로만 남고 등록하지 않는다.
 const HIGHER_MOTION_REPLACEMENTS = [R2_BODY_MOTION_V2];
 const higherMotionRegistry = createHigherBodyMotionRegistry({schema:'blade-surge.higher-body-motion.v2',
@@ -394,7 +454,7 @@ export function createHigherBodyMotionClip(baseClip, body) {
 /** spawn에서 canonical reference와 당시 별칭만 캡처한다. 사용자 추가 key는 소유하지 않는다. */
 export function registerHeroBodyMotion(root, clips, registry = higherMotionRegistry) {
   const heroId = root.userData.authoredContract?.heroId;
-  if (!['ranger', 'rogue'].includes(heroId) || states.has(root)) return;
+  if (!['ranger', 'rogue', ...ORIGINAL_BAND_HEROES].includes(heroId) || states.has(root)) return;
   const entries = [];
   for (const name of [...Object.keys(DURATIONS), ...(heroId==='rogue'?['stab']:[])]) {
     const installed = clips[name]; if (!installed) continue;
@@ -436,6 +496,16 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     requireMotion(Math.abs(matrix[1]) < 1e-7 && Math.abs(matrix[9]) < 1e-7 && matrix[5] > 0
       && band.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '1단계 골반 부모 world/native 축·배율 불일치');
   }
+  // 원본 몸(개정 id 없음) 구르기 띠: 등록부·띠 곡선 기록이 없는 기사·야만전사·마법사 몸만.
+  const original = identity.revisionId == null && !body && !band && ORIGINAL_DODGE_BANDS.get(identity.asset) || null;
+  if (original) {
+    requireMotion(identity.heroId === state.heroId && original.heroId === state.heroId
+      && identity.path === original.body.path && identity.sha256 === original.body.sha256, '실제 선택 원본 몸체와 구르기 띠 불일치');
+    requireMotion(state.entries.some(item => item.base.name === 'dodge'), '원본 몸 구르기 띠 공유 원본 클립 누락');
+    const matrix = hipsParentGain(root), row = [matrix[1], matrix[5], matrix[9]], axis = original.authoring.parentWorldYAxis, gain = original.authoring.parentWorldYGain;
+    requireMotion(Math.abs(row[axis] - gain) <= 1e-7 * Math.max(1, Math.abs(gain))
+      && row.every((value, index) => index === axis || Math.abs(value) <= 1e-5 * Math.abs(gain)), '원본 몸 골반 부모 world/native 축·배율 불일치');
+  }
   if(identity.asset===R2)requireMotion(isR2V2(body)&&body.authoringMethod===REPAIRED_METHOD,'R2 reviewed repaired v2 required; no legacy fallback');
   if (body) requireMotion(body.heroId === state.heroId && identity.heroId === state.heroId && identity.revisionId === body.revisionId
     && identity.path === body.body.path && identity.sha256 === body.body.sha256, '실제 선택 몸체와 모션 불일치');
@@ -450,15 +520,15 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     requireMotion(Math.abs(matrix[4])<1e-7&&Math.abs(matrix[6])<1e-7,'signed STAB actual parent localY world axis');
   }
   const changes = state.entries.map(entry => {
-    const active = fox || (t1 && band.clipOverrides.some(item => item.base.clip === entry.base.name))
+    const active = fox || (t1 && band.clipOverrides.some(item => item.base.clip === entry.base.name)) || (original && entry.base.name === 'dodge')
       || body?.clipOverrides.some(item => item.base.clip === entry.base.name);
     let next = entry.base;
     if (active) {
       let cache = bodyClips.get(entry.base);
       if (!cache) { cache = new Map(); bodyClips.set(entry.base, cache); }
-      const key = fox ? FOX_BODY_MOTION : t1 ? band : body;
+      const key = fox ? FOX_BODY_MOTION : t1 ? band : original || body;
       next = cache.get(key);
-      if (!next) { next = fox ? createBodyMotionClip(entry.base) : t1 ? createRangerT1BodyMotionClip(entry.base, band) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); overlayBases.set(next, entry.base); }
+      if (!next) { next = fox ? createBodyMotionClip(entry.base) : t1 ? createRangerT1BodyMotionClip(entry.base, band) : original ? createOriginalDodgeBandClip(entry.base, original) : createHigherBodyMotionClip(entry.base, body); cache.set(key, next); overlayBases.set(next, entry.base); }
     }
     return { entry, next };
   });
