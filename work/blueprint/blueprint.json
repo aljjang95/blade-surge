@@ -300,6 +300,81 @@
       "chosen": false,
       "note": "자부심 구조의 핵심 화면으로 명예의 전당 탭에 채택(community-fame 노드)",
       "sha256": "f7a06a3af9ec99b2736dda44cf06b482013d7129c48ac387eeac84bd571c428e"
+    },
+    {
+      "id": "C20",
+      "group": "monetize-1",
+      "title": "큰 전신 쇼케이스 + 하단 초상 탭",
+      "image": "images/monetize-starter-c1.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "전신 일러스트 5장 필요, 가로 화면에서 축소 어려움",
+      "sha256": "91eeef6af259498454a205339f532639308f937513d0ffcfe1b8fa3c1238e78a"
+    },
+    {
+      "id": "C21",
+      "group": "monetize-1",
+      "title": "타로 카드 부채꼴",
+      "image": "images/monetize-starter-c2.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 3,
+        "feasibility": 2,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "인상은 강하나 카드 5장 겹침이 390px·가로 화면에서 터치 판정·가독성 위험",
+      "sha256": "882a410ec84218c27b6f441e9e4b6244c21151a705c1c66d1a4ed34bdbf08698"
+    },
+    {
+      "id": "C22",
+      "group": "monetize-1",
+      "title": "상단 상세 + 비교 목록(공격·생존·난이도)",
+      "image": "images/monetize-starter-c3.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": true,
+      "note": "첫 선택에 필요한 비교 정보가 한 화면, 기존 초상 재사용, 가로·데스크톱에서 2열로 그대로 확장",
+      "sha256": "9d4dedb148a95803e5975f750f185db2dbe8d3b7a7f273c77024fd7c4f1b00db"
+    },
+    {
+      "id": "C23",
+      "group": "monetize-1",
+      "title": "잠긴 영웅 상세 시안(c1 방향 짝)",
+      "image": "images/monetize-locked-c1.jpg",
+      "scores": {
+        "fit": 3,
+        "clarity": 3,
+        "feasibility": 3,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "고르지 않은 방향의 짝 화면(참고 보존)",
+      "sha256": "4327d034caf094ee7332053236af7568440770aede62fb659ed35e5dfb4a9888"
+    },
+    {
+      "id": "C24",
+      "group": "monetize-1",
+      "title": "잠긴 영웅 상세 시안(c2 방향 짝)",
+      "image": "images/monetize-locked-c2.jpg",
+      "scores": {
+        "fit": 3,
+        "clarity": 3,
+        "feasibility": 3,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "고르지 않은 방향의 짝 화면(참고 보존)",
+      "sha256": "ae34b708fcc52e51deab1ca6904276d081426e32eca6532a949cc52563e194c0"
     }
   ],
   "nodes": [
@@ -831,6 +906,76 @@
       "type": "system",
       "group": "community-1",
       "title": "디스코드 웹훅(게시판·명예), 비밀값 없으면 꺼짐"
+    },
+    {
+      "id": "starter-select",
+      "type": "screen",
+      "group": "monetize-1",
+      "title": "첫 실행 시작 영웅 선택(정책 2 새 저장만)",
+      "image": "images/monetize-starter-c3.jpg",
+      "checks": [
+        "상단 남색 판에 금색 장식 제목 \"시작 영웅 선택\"과 안내 두 줄",
+        "상단 상세 판: 고른 영웅 큰 초상, 이름(금색), 역할, 한 줄 특징",
+        "5줄 목록: 직업색 문양 칸, 초상, 이름·역할, 난이도 별 3개, 공격·생존·난이도 막대",
+        "고른 줄은 금색 테두리 발광",
+        "하단 큰 금색 버튼 \"이 영웅으로 시작\"과 \"시작 영웅 1명 무료 선택\"",
+        "가로 844x390·데스크톱은 상세 왼쪽 + 목록 오른쪽 2열"
+      ],
+      "risks": [
+        "막대 수치는 HEROES base 스탯에서 정규화해 계산(임의 숫자 금지)",
+        "배경 로비 3D는 그대로 두고 판만 반투명",
+        "현재 구현(d3eeee4)은 3열 카드 격자 → 이 시안으로 바꾸는 후속 작업 필요"
+      ],
+      "copy": [
+        "시작 영웅 선택",
+        "처음 함께할 영웅 한 명을 고르세요. 나머지 영웅은 나중에 해금할 수 있어요.",
+        "이 영웅으로 시작",
+        "시작 영웅 1명 무료 선택",
+        "공격",
+        "생존",
+        "난이도"
+      ],
+      "sha256": "9d4dedb148a95803e5975f750f185db2dbe8d3b7a7f273c77024fd7c4f1b00db"
+    },
+    {
+      "id": "hero-locked-detail",
+      "type": "screen",
+      "group": "monetize-1",
+      "title": "영웅 탭: 잠긴 영웅 상세·해금",
+      "image": "images/monetize-locked-c3.jpg",
+      "checks": [
+        "상세 판: 회색조 초상 + 자물쇠 \"미보유\" 배지, 이름·역할·소개·막대 3개",
+        "초상 줄 5칸, 미보유는 회색 + 자물쇠",
+        "\"무료 해금\" 판: 조건 줄(진행 막대·n/m·체크), 보석 줄(보유/필요), 버튼(미충족이면 회색 \"조건 달성 후 해금\")",
+        "\"바로 해금\" 판: 큰 금색 가격 버튼(결제 켜짐일 때만 가격 표시, 아니면 \"준비 중\")",
+        "\"전원 해금 17,900원\" 보조 판(결제 켜짐일 때만)",
+        "하단 안내 \"결제는 서버 확인 후 지급됩니다.\""
+      ],
+      "risks": [
+        "가격 문구는 app.heroPurchase.available()일 때만 노출(가격 공개 전 대표님 확인)",
+        "회색조는 CSS filter grayscale로"
+      ],
+      "copy": [
+        "미보유",
+        "무료 해금",
+        "바로 해금",
+        "전원 해금",
+        "조건 달성 후 해금",
+        "결제는 서버 확인 후 지급됩니다."
+      ],
+      "sha256": "0b12d6b632deaada82f1f9886e338bc5166250a740dde1d064aa41fdf0539cc1"
+    },
+    {
+      "id": "hero-roster-policy",
+      "type": "rule",
+      "group": "monetize-1",
+      "title": "영웅 소유 정책(s.roster): 옛 저장 5명 유지, 새 저장 1명 + 해금"
+    },
+    {
+      "id": "web-billing",
+      "type": "api",
+      "group": "monetize-1",
+      "title": "웹 결제 /api/v1/iap/web/{intent,complete}(포트원 V2 조회 검증·D1 멱등 지급·취소 회수)"
     }
   ],
   "edges": [
@@ -993,6 +1138,26 @@
       "from": "social-hub",
       "to": "discord-bridge",
       "type": "emits"
+    },
+    {
+      "from": "starter-select",
+      "to": "hero-roster-policy",
+      "type": "writes"
+    },
+    {
+      "from": "hero-locked-detail",
+      "to": "hero-roster-policy",
+      "type": "reads"
+    },
+    {
+      "from": "hero-locked-detail",
+      "to": "web-billing",
+      "type": "calls"
+    },
+    {
+      "from": "web-billing",
+      "to": "hero-roster-policy",
+      "type": "writes"
     }
   ],
   "acceptance": [
@@ -1145,6 +1310,30 @@
       "node": "social-hub",
       "criterion": "커뮤니티 서버가 꺼져 있거나 오프라인이어도 게임 시작·전투·정산·보상은 그대로 동작한다",
       "surface": "네트워크 차단 상태 실제 플레이"
+    },
+    {
+      "id": "A33",
+      "node": "starter-select",
+      "criterion": "localStorage를 비운 새 저장에서 튜토리얼 전에 시작 영웅 선택이 한 번 뜨고, 고른 영웅 1명만 소유한다",
+      "surface": "Playwright 390x844·844x390·1280x800"
+    },
+    {
+      "id": "A34",
+      "node": "hero-roster-policy",
+      "criterion": "roster 없는 기존 저장은 5명 모두 소유·레벨 보존, 선택 화면이 뜨지 않는다",
+      "surface": "옛 저장 주입 Playwright + test/hero-roster.test.ts"
+    },
+    {
+      "id": "A35",
+      "node": "hero-locked-detail",
+      "criterion": "미보유 영웅은 출격·선택 불가, 무료 해금 조건 충족 시 보석으로 열리고 결제 꺼짐 상태에서 가격이 보이지 않는다",
+      "surface": "Playwright 390x844"
+    },
+    {
+      "id": "A36",
+      "node": "web-billing",
+      "criterion": "포트원 조회가 PAID·금액·상점·채널·상품 일치일 때만 1회 지급, 취소 시 회수",
+      "surface": "test/web-billing.test.ts(가짜 fetch), 실결제는 개방 게이트"
     }
   ],
   "decisions": [
@@ -1217,6 +1406,11 @@
       "id": "D16",
       "text": "커뮤니티 기능은 packages/tll-social 재사용 패키지로 만들어 다른 게임은 GameConfig만 바꿔 붙인다",
       "source": "대표님 2026-10-19 \"다른 게임들도 사용할 수 있으니까\""
+    },
+    {
+      "id": "D17",
+      "text": "시작 영웅 선택은 비교 목록형(C22)을 고른다: 첫 선택에 필요한 비교 정보가 한 화면이고 가로·데스크톱 확장이 쉽다. 잠긴 상세는 같은 방향의 locked-c3",
+      "source": "대표님 2026-10-24 수익화 지시, 시안 점수"
     }
   ],
   "outOfScope": [
@@ -1225,7 +1419,8 @@
     "음성 채팅",
     "길드 시스템(다음 단계 후보)",
     "실시간 번역",
-    "결제·보상 지급과 연결된 랭킹 보상"
+    "결제·보상 지급과 연결된 랭킹 보상",
+    "수익화 1단계: 실결제 개방·Play 영웅 상품 등록·가격 공개(대표님 확인 게이트)"
   ],
   "changes": [
     {
@@ -1281,6 +1476,12 @@
       "reason": "커뮤니티 묶음 community-1 추가(main 병합 후 재적용): 시안 C17~C19, 화면 4개, 서버·신원·구글 연동·디스코드 노드, 기준 A24~A32, 결정 D13~D16 (대표님 2026-10-19 요청)",
       "from": "edeb0b05b529",
       "to": "9b7c37d26633"
+    },
+    {
+      "at": "2026-10-24T02:06:06.847Z",
+      "reason": "수익화 1단계: 시작 영웅 선택·잠긴 영웅 상세 시안(monetize-1) 추가",
+      "from": "9b7c37d26633",
+      "to": "5a2d35d81cc3"
     }
   ],
   "shots": [
@@ -1301,7 +1502,7 @@
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
     }
   ],
-  "lockedDigest": "9b7c37d26633bd57531763195a42d7132b22c18207e5b17222a68a2ade6977d7",
-  "lockedAt": "2026-10-20T07:30:07.480Z",
+  "lockedDigest": "5a2d35d81cc3c647a3eb306ade95b45ebc452ecee1fa11af5f7dbe7317afc227",
+  "lockedAt": "2026-10-24T02:06:06.847Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
