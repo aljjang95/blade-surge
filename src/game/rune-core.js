@@ -22,6 +22,8 @@ import {
 
 const MAX = 1000000;
 const int = (/** @type {unknown} */ v, max = MAX) => (Number.isSafeInteger(v) ? Math.min(max, Math.max(0, /** @type {number} */ (v))) : 0);
+// 재화(골드·룬 가루)는 save-base처럼 안전 정수 전체를 허용한다. MAX는 룬 개수 상한에만 쓴다.
+const coin = (/** @type {unknown} */ v) => int(v, Number.MAX_SAFE_INTEGER);
 const obj = (/** @type {unknown} */ v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const err = (/** @type {string} */ error) => /** @type {{ ok: false, error: string }} */ ({ ok: false, error });
 
@@ -114,7 +116,7 @@ export function insertRune(state, index, rune) {
   if (t.sockets[index]) return err('occupied');
   const bag = bagAdd(normalizeRuneBag(state.bag), r, -1); if (!bag) return err('bag');
   const sockets = [...t.sockets]; sockets[index] = r;
-  return { ok: /** @type {const} */ (true), sockets, bag, gold: int(state.gold), cost: 0 };
+  return { ok: /** @type {const} */ (true), sockets, bag, gold: coin(state.gold), cost: 0 };
 }
 
 /**
@@ -125,7 +127,7 @@ export function insertRune(state, index, rune) {
 export function removeRune(state, index) {
   const t = socketTarget(state.item, index); if (!t) return err('index');
   const old = t.sockets[index]; if (!old) return err('empty');
-  const cost = RUNE_REMOVE_COST[old.grade], gold = int(state.gold);
+  const cost = RUNE_REMOVE_COST[old.grade], gold = coin(state.gold);
   if (gold < cost) return err('gold');
   const bag = /** @type {RuneBag} */ (bagAdd(normalizeRuneBag(state.bag), old, 1));
   const sockets = [...t.sockets]; sockets[index] = null;
@@ -144,7 +146,7 @@ export function replaceRune(state, index, rune) {
   if (t.locked) return err('locked');
   const old = t.sockets[index]; if (!old) return err('empty');
   if (old.id === r.id && old.grade === r.grade) return err('same');
-  const cost = RUNE_REMOVE_COST[old.grade], gold = int(state.gold);
+  const cost = RUNE_REMOVE_COST[old.grade], gold = coin(state.gold);
   if (gold < cost) return err('gold');
   const taken = bagAdd(normalizeRuneBag(state.bag), r, -1); if (!taken) return err('bag');
   const bag = /** @type {RuneBag} */ (bagAdd(taken, old, 1));
@@ -161,7 +163,7 @@ export function replaceRune(state, index, rune) {
 export function mergeRunes(state, id, toGrade) {
   if (typeof id !== 'string' || !Object.hasOwn(RUNE_BY_ID, id)) return err('unknown');
   if (!Object.hasOwn(RUNE_MERGE_COST, toGrade)) return err('grade');
-  const cost = RUNE_MERGE_COST[toGrade], gold = int(state.gold), runeDust = int(state.runeDust);
+  const cost = RUNE_MERGE_COST[toGrade], gold = coin(state.gold), runeDust = coin(state.runeDust);
   const taken = bagAdd(normalizeRuneBag(state.bag), { id, grade: toGrade - 1 }, -cost.count);
   if (!taken) return err('materials');
   if (gold < cost.gold) return err('gold');

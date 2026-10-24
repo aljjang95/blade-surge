@@ -184,3 +184,12 @@ describe('가문 공명', () => {
     expect(familyCounts(items, { blessingBoonId: 'fake' })).toEqual(familyCounts(items));
   });
 });
+
+test('100만 넘는 골드·룬 가루도 잘리지 않는다', () => {
+  const item = { grade: 'U', enh: 0, sockets: [] };
+  const ins = insertRune({ item, bag: { ember_edge: [1, 0, 0] }, gold: 2500000 }, 0, { id: 'ember_edge', grade: 1 });
+  expect(ins.ok && ins.gold).toBe(2500000);
+  const m = mergeRunes({ bag: { ember_edge: [0, 3, 0] }, gold: 2500000, runeDust: 1500000 }, 'ember_edge', 3);
+  expect(m.ok && m.gold).toBe(2495000);
+  expect(m.ok && m.runeDust).toBe(1499980);
+});
