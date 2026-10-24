@@ -5,7 +5,7 @@ import { V1Error } from '../worker/v1/db';
 import type { PlayApi, ProductPurchase } from '../worker/v1/play';
 import { reconcileVoided } from '../worker/v1/iap';
 import { Economy, gachaRates, gachaContents } from '../src/game/economy.js';
-import { createMemoryStorage } from '../src/game/economy-core.js';
+import { createMemoryStorage, EconomyCore } from '../src/game/economy-core.js';
 import { mergeServerOwned, parityHash, PARITY_KEYS } from '../src/shared/state-hash.js';
 import { IAP_PRODUCTS } from '../src/shared/iap-catalog.js';
 import { BANNER_EPOCH } from '../src/data/gacha-banners.js';
@@ -129,5 +129,68 @@ describe('초보자 배너 SR 영웅 조건부 확률', () => {
     expect(of('rogue')).toBeCloseTo(total / 2, 12);
     expect(of('ranger')).toBeCloseTo(total / 2, 12);
     expect(sr.reduce((a: number, x: any) => a + x.p, 0)).toBeCloseTo(total, 12);
+  });
+});
+
+describe('2차 교차 리뷰 회귀', () => {
+  test('(7) [P1] /import: 저장의 마일리지·픽업 확정·초보자 횟수·유료 보석은 서버 문서 값만 쓰고, 이어 exchangeMileage는 거부', async () => {
+    const h = await v1Harness({ env: { IAP_ENABLED: 'true' } as any });
+    const a = await h.session();
+    const row = h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(a.accountId) as { doc: string };
+    const serverDoc = JSON.parse(row.doc);
+    serverDoc.gacha = { ...serverDoc.gacha, beginner: 20, mileage: 0, guarantee: false, gearGuarantee: false };
+    serverDoc.paidGems = 0;
+    h.db.sqlite.query('UPDATE account_docs SET doc = ? WHERE account_id = ?').run(JSON.stringify(serverDoc), a.accountId);
+    const forged = JSON.parse(JSON.stringify(serverDoc));
+    forged.gacha = { ...forged.gacha, mileage: 100000, guarantee: true, gearGuarantee: true, beginner: 0 };
+    forged.paidGems = 99999; forged.gems = 99999;
+    const r = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: forged }, a.token);
+    expect(r.status).toBe(200);
+    expect(r.body.report.reason).toBeNull();
+    const g = r.body.doc.gacha;
+    expect(g.mileage).toBe(0); expect(g.guarantee).toBe(false); expect(g.gearGuarantee).toBe(false); expect(g.beginner).toBe(20);
+    expect(r.body.doc.paidGems || 0).toBeLessThanOrEqual(0);
+    expect(r.body.doc.paidGems || 0).toBeLessThanOrEqual(r.body.doc.gems);
+    const ex = await h.cmd(a.token, 'exchangeMileage', []);
+    expect(ex.status).not.toBe(200);
+    expect(((await h.send('GET', '/me', undefined, a.token)).body.doc.gacha).mileage).toBe(0);
+  });
+
+  test('(8) 전액 유료 4,000 보석에서 2,980 아바타 구매: /cmd 서버 문서와 클라이언트 EconomyCore의 paidGems·parityHash 일치(=1,020)', async () => {
+    const s = await setup();
+    s.setDoc({ gems: 4000, paidGems: 4000 });
+    const start = (await s.me()).doc;
+    const client: any = EconomyCore.fromState(start, { now: () => s.h.now() });
+    expect(client.s.paidGems).toBe(4000);
+    const id = 'avatar_knight_sakura';
+    expect(client.buyAvatar(id)).toEqual({ ok: true });
+    client.save();
+    expect(client.s.gems).toBe(1020); expect(client.s.paidGems).toBe(1020);
+    const r = await s.h.cmd(s.a.token, 'buyAvatar', [id], { clientHash: parityHash(client.s) });
+    expect(r.status).toBe(200);
+    expect(r.body.doc.gems).toBe(1020); expect(r.body.doc.paidGems).toBe(1020);
+    expect(r.body.doc.paidGems).toBe(client.s.paidGems);
+    expect(r.body.stateHash).toBe(parityHash(client.s));
+    expect(r.body.match).toBe(true);
+    expect(s.dbPaid()).toBe(1020);
+  });
+
+  test('(9) 부채 상계: 무료 1,500·부채 1,000에서 스타터 팩(1,000) → 서버 paidGems=순 지급량 0, 클라이언트 applyIapState와 일치', async () => {
+    const s = await setup();
+    s.setDoc({ gems: 1500, paidGems: 0 });
+    s.h.db.sqlite.query("INSERT INTO iap_debt(account_id, reward_key, amount, updated_at) VALUES (?, 'gems', 1000, 1)").run(s.a.accountId);
+    const before = (await s.me()).doc;
+    const client: any = EconomyCore.fromState(before, { now: () => s.h.now() });
+    const r = await buyStarter(s, 'p9');
+    expect(r.body.state).toBe('granted');
+    const grant = r.body.grants.find((g: any) => g.productId === 'starter_pack_v1');
+    expect(grant.rewards.gems ?? 0).toBe(0); // 순 지급량: 1,000 - 상환 1,000
+    const doc = (await s.me()).doc;
+    expect(doc.gems).toBe(1500);
+    expect(doc.paidGems || 0).toBe(0);
+    expect(r.body.debt).toEqual({});
+    expect(client.applyIapState({ grants: r.body.grants, reversals: [], entitlements: r.body.entitlements })).not.toBeNull();
+    expect(client.s.gems).toBe(doc.gems);
+    expect(client.s.paidGems || 0).toBe(doc.paidGems || 0);
   });
 });
