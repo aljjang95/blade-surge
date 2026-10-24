@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER } from '../data/starter-village.js';
+import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER, FORGE_POSTS } from '../data/starter-village.js';
 
 // 첫 마을 초보자 구역 장면(src/data/starter-village.js 배치). citadel-hub-scene 이 바닥·구역 소품을 이 모듈에 맡긴다.
 // 원칙: 재질별 병합(정적 소품) + 인스턴싱(돌길 조약돌·풀·꽃·울타리) — 구역 전체가 수십 개 draw call 안에 든다.
@@ -229,7 +229,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
   // ---------------- 대장간: 열린 작업장 지붕 + 화로 + 모루 + 무기 진열대 ----------------
   const forge = STARTER_ZONES.forge;
   { const L = local(forge.x, forge.z, 0);
-    for (const [px, pz] of [[-2.6, -2.2], [2.6, -2.2], [-2.6, 1.6], [2.6, 1.6]]) L.box(.22, 2.8, .22, M.woodDark, px, 1.4, pz);
+    for (const [px, pz] of FORGE_POSTS) L.box(.22, 2.8, .22, M.woodDark, px, 1.4, pz);
     L.box(5.8, .14, .26, M.woodDark, 0, 2.85, -2.2); L.box(5.8, .14, .26, M.woodDark, 0, 2.85, 1.6);
     L.box(6.2, .12, 4.6, M.roof, 0, 3.15, -.3, 0, -.16); L.box(6.3, .08, .3, M.roofDark, 0, 2.86, 1.85, 0, -.16);
     L.box(5.6, 2.6, .25, M.plaster, 0, 1.3, -2.35); L.box(5.6, .3, .3, M.woodDark, 0, .15, -2.35);

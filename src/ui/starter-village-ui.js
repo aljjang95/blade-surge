@@ -139,6 +139,8 @@ export class StarterVillageUI {
     // 연타로 소리·동작이 겹치지 않게 짧게 쉰다. 쉬는 동안 누른 것은 세지 않는다.
     if (now - this.lastPractice < 380) return true;
     this.lastPractice = now;
+    // 걷던 중에 누르면 다음 프레임의 이동 종료 전환이 공격 동작을 Idle 로 덮는다. 이동 종료를 먼저 끝낸다.
+    if (app.hubMovement?.moving) app.hubMovement._setMoving(false);
     this.faceDummy(show);
     this.playAttack(show);
     app.arena?.lobbyHall?.userData?.starter?.strike(app.hubMovement?.position);

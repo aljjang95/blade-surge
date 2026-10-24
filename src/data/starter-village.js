@@ -106,6 +106,10 @@ export function starterBlockers(hotspots, props = STARTER_PROPS) {
     else if (prop.kind === 'anvil' || prop.kind === 'rack') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .5 });
     else if (prop.kind === 'lamp') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .19 });
   }
+  // 대장간 작업장(starter-village-scene.js 의 forge 묶음과 같은 치수): 기둥 4개와 뒷벽·굴뚝.
+  const forge = STARTER_ZONES.forge;
+  for (const [px, pz] of FORGE_POSTS) blockers.push({ type: 'circle', x: forge.x + px, z: forge.z + pz, radius: .2 });
+  blockers.push({ type: 'rect', minX: forge.x - 2.9, maxX: forge.x + 2.9, minZ: forge.z - 2.55, maxZ: forge.z - 2.1 });
   for (const dummy of STARTER_DUMMIES) blockers.push({ type: 'circle', x: dummy.x, z: dummy.z, radius: .38 });
   for (const [x, z, w, d] of STARTER_BEDS) blockers.push({ type: 'circle', x, z, radius: Math.hypot(w, d) / 2 * .85 });
   for (const [, x, z, radius] of STARTER_CLUTTER) blockers.push({ type: 'circle', x, z, radius });
@@ -127,6 +131,9 @@ export const STARTER_CLUTTER = Object.freeze([
   ['barrel', -10.4, 3.8, .32], ['crate', -10.6, 4.7, .4], ['crate', -4.6, -1.2, .35],
   ['banner', -3.1, -9.3, .12], ['banner', 3.1, -9.3, .12], ['banner', -4.2, -.2, .12], ['banner', 4.6, 3, .12], ['banner', -2.7, 8.6, .12], ['banner', 2.7, 8.6, .12],
 ].map(Object.freeze));
+
+/** 대장간 작업장 기둥 자리(대장간 중심 기준). 장면과 충돌이 같이 쓴다. */
+export const FORGE_POSTS = Object.freeze([[-2.6, -2.2], [2.6, -2.2], [-2.6, 1.6], [2.6, 1.6]].map(Object.freeze));
 
 /** 훈련장 울타리 말뚝 각도(라디안). 동쪽 입구(0 근처)는 비운다. 장면이 같은 값으로 울타리를 세운다. */
 export const STARTER_FENCE_ARC = Object.freeze({ from: .62, to: Math.PI * 2 - .62 });

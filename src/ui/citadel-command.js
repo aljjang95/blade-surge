@@ -294,7 +294,8 @@ export class CitadelCommand {
     // 스테이지 선택 화면(캠페인 관문 / 던전·단계)을 먼저 연다. 입장만 아래와 같은 기존 서비스를 부른다(docs/stage-select.md).
     // 카드로 직접 고른 던전이 있으면 던전 탭의 그 던전으로, 아니면 기억한 마지막 선택 → 다음 관문(추천)으로 연다.
     if (app.stageSelect) {
-      const returnTo = trigger?.isConnected && trigger.closest?.('#tab-home') ? trigger : this.prepare;
+      // 마을 걷기 HUD(초보자 마을 출격 포탈)의 상호작용 버튼도 실제 호출 버튼이므로 초점 복귀 대상으로 둔다.
+      const returnTo = trigger?.isConnected && trigger.closest?.('#tab-home, .citadel-hub-ui') ? trigger : this.prepare;
       const recommended = model.reason === 'campaign' ? (model.recommendedId ? { id: model.recommendedId, depth: 'standard' } : null)
         : model.dungeon && model.unlocked && model.reason !== 'selected' ? { id: model.dungeon.id, depth: model.depth } : model.recommendedId ? { id: model.recommendedId, depth: 'standard' } : null;
       const prefer = landingPrefer(model.dungeon ? model : null, this.selectedId);
