@@ -161,7 +161,8 @@ try {
     await t.shot('01-lobby-arrival');
     const lobby = await readLobby(t.page); report.observations.arrived = { lobby };
     check('도착: 결과 화면을 못 본 저장도 로비에서 새 관문 5곳을 솟아오르게 다시 짓는다', lobby.emerging.length === 5, { emerging: lobby.emerging, rising: lobby.rising });
-    await t.page.waitForTimeout(600);
+    // 상승 중간 프레임(시작 0.9초 + 약 1.6초): 앱 프레임 75개를 진행하고 한 번 그린다.
+    await t.page.evaluate(() => { for (let i = 0; i < 75; i++) window.app.step(1 / 30, i === 74); });
     await t.shot('01b-lobby-gates-rising');
     const left = await settleRise(t.page);
     check('도착: 앱 프레임 7초 뒤 새 관문이 모두 선다', left === 0, left);
