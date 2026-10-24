@@ -53,8 +53,11 @@ async function open(name, seed) {
     await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), undefined, { timeout: 180000 });
     await page.waitForTimeout(1500);
     for (let n = 0; n < 5; n++) { if (!await page.locator('#modal.show #m-cancel').isVisible().catch(() => false)) break; await tap('#modal.show #m-cancel'); await page.waitForTimeout(300); }
+    await dismissRotate();
   };
-  return { context, page, shot, tap, boot };
+  // 세로 화면 안내('가로로 돌려주세요')는 로비에서 다시 뜬다. '세로로 계속하기'를 실제로 눌러 닫는다.
+  const dismissRotate = async () => { const b = page.locator('#rotate-hint #btn-ignore-rotate'); if (await b.isVisible().catch(() => false)) { await tap('#rotate-hint #btn-ignore-rotate'); await page.waitForTimeout(300); } };
+  return { context, page, shot, tap, boot, dismissRotate };
 }
 
 // 로비가 지금 보여 주는 것: 카드 줄, '다른 던전' 링크, 3D 관문(걷기 판정과 같은 핫스팟), 마을 칩.
@@ -84,6 +87,7 @@ async function holdBanners(page) {
 const release = (page) => page.evaluate(() => document.querySelectorAll('[data-qa-held]').forEach((n) => n.remove()));
 // '다른 던전' 목록(기존 원정 목록)의 기본 원정 카드와 예고 줄.
 async function readList(t) {
+  await t.dismissRotate();
   await t.tap('#citadel-other-dungeons'); await t.page.waitForTimeout(1200);
   await t.page.evaluate(() => { const d = document.querySelector('.exp-dungeon-details'); if (d) d.open = true; document.querySelector('.exp-region-teaser')?.scrollIntoView({ block: 'center' }); });
   await t.page.waitForTimeout(500);
@@ -95,6 +99,7 @@ async function readList(t) {
 }
 async function closeList(t) { await t.page.evaluate(() => window.app.expeditionUI.close?.()); await t.page.waitForTimeout(600); }
 async function explore(t, label) {
+  await t.dismissRotate();
   await t.tap('#citadel-explore'); await t.page.waitForTimeout(1500);
   await t.shot(label);
   const walk = await t.page.evaluate(() => (window.app.hubMovement?.hotspots || []).filter((s) => s.kind === 'dungeon').map((s) => s.route));
@@ -120,6 +125,8 @@ async function fight(page) {
   return { timeout: true };
 }
 
+// 관문 상승 연출을 실제 앱 프레임(app.step)으로 7초 진행한다. 렌더는 마지막 한 번만.
+const settleRise = (page) => page.evaluate(() => { for (let i = 0; i < 210; i++) window.app.step(1 / 30, i === 209); return window.app.arena.lobbyHall?.userData.risingGates?.(); });
 const REGION1 = ['glass_garden', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum'];
 try {
   if (only.includes('fresh')) {
@@ -153,6 +160,11 @@ try {
     await t.page.waitForTimeout(400);
     await t.shot('01-lobby-arrival');
     const lobby = await readLobby(t.page); report.observations.arrived = { lobby };
+    check('도착: 결과 화면을 못 본 저장도 로비에서 새 관문 5곳을 솟아오르게 다시 짓는다', lobby.emerging.length === 5, { emerging: lobby.emerging, rising: lobby.rising });
+    await t.page.waitForTimeout(600);
+    await t.shot('01b-lobby-gates-rising');
+    const left = await settleRise(t.page);
+    check('도착: 앱 프레임 7초 뒤 새 관문이 모두 선다', left === 0, left);
     const region2 = ['ember_vault', 'cinder_tide_lock', 'ashforge_catacomb', 'slagwater_foundry', 'emberwake_drydock', 'sunbrass_quarry'];
     check('도착: 마을 칩이 REGION 02 불씨 용광로 마을', lobby.town.current === 2 && /불씨 용광로 마을/.test(lobby.chip || ''), lobby.chip);
     check('도착: 위쪽 가장자리 새 마을 도착 띠(새 던전 6곳)', /새 마을 도착/.test(lobby.arrival || '') && /새 던전 6곳/.test(lobby.arrival || '') && lobby.arrivalBox && lobby.arrivalBox.top <= 14 && lobby.arrivalBox.bottom <= 64, { text: lobby.arrival, box: lobby.arrivalBox });
@@ -210,7 +222,8 @@ try {
     await t.page.waitForTimeout(1300);
     await t.shot('04-lobby-gates-rising');
     const mid = await readLobby(t.page);
-    await t.page.waitForTimeout(4500);
+    // 상승 연출은 실제 시간(약 5초) 기준이다. SwiftShader 헤드리스는 로비 프레임이 몇 초에 한 번이라, 전투처럼 app.step(1/30) 으로 7초를 가속한다.
+    await settleRise(t.page);
     await t.shot('05-lobby-new-town');
     const after = await readLobby(t.page);
     report.observations.clear = { before, arrive, mid, after };

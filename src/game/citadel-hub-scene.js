@@ -559,7 +559,8 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       gateDesigns.update(dt, reducedMotion);
       for (const entry of rising) {
         if (entry.done) continue;
-        entry.t += reducedMotion ? 99 : Math.min(dt, .05);
+        // 느린 기기에서도 실제 시간에 맞춰 끝나도록 프레임당 0.25초까지 진행한다(탭 전환 같은 긴 정지만 자른다).
+        entry.t += reducedMotion ? 99 : Math.min(dt, .25);
         const p = Math.max(0, Math.min(1, (entry.t - entry.delay) / 1.5)), ease = 1 - (1 - p) ** 3;
         entry.node.position.y = -4.6 * (1 - ease); entry.node.scale.setScalar(.35 + .65 * ease);
         // 빛기둥: 오르는 동안 밝아졌다가 다 서면 0.8초에 걸쳐 사라진다.

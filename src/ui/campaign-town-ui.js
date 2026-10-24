@@ -1,4 +1,5 @@
 import { audio } from '../engine/audio.js';
+import { markEmergingGates } from '../data/citadel-hub.js';
 
 const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -74,7 +75,7 @@ export class CampaignTownUI {
    * 새 지역 해금 축하. 화면 위쪽 가장자리 띠로 보여 전투·결과 화면을 가리지 않는다.
    * 보여 준 뒤 한 번만 저장하므로 같은 해금을 다시 축하하지 않는다.
    */
-  celebrate(unlock, { markSeen = true } = {}) {
+  celebrate(unlock, { markSeen = true, fromLobby = false } = {}) {
     if (!unlock) return false;
     document.querySelector('.region-unlock-banner')?.remove();
     const node = document.createElement('div');
@@ -86,7 +87,7 @@ export class CampaignTownUI {
     if (markSeen) this.eco.markTownCelebrated(unlock.chapter);
     // 로비로 돌아갈 때 한 번 '새 마을 도착' 연출을 보인다(세션 상태, 저장 아님).
     this.pendingArrival = unlock;
-    if (this.app.mode === 'lobby') this.arrive();
+    if (this.app.mode === 'lobby') this.arrive(unlock, { raise: fromLobby });
     return true;
   }
 
@@ -94,9 +95,17 @@ export class CampaignTownUI {
    * 새 마을 도착 연출. 짧은 이동 전환(가장자리에서 걷히는 마을 색 장막, 입력을 막지 않음)과 위쪽 가장자리 띠.
    * 새 던전 관문은 광장 장면이 땅에서 솟아오르게 그린다(citadel-hub-scene emerging). 플레이 영역에 창을 띄우지 않는다.
    */
-  arrive(unlock = this.pendingArrival) {
+  arrive(unlock = this.pendingArrival, { raise = false } = {}) {
     if (!unlock) return false;
     this.pendingArrival = null;
+    // 결과 화면을 거치지 않고 로비에서 처음 알게 된 해금(앱이 결과 전에 닫힌 경우)은 이미 지어진 광장을 한 번 다시 지어 새 관문을 솟아오르게 한다.
+    if (raise && this.app.arena?.lobbyHall && this.eco.campaignTownState().current === unlock.chapter) {
+      try {
+        const state = this.app.expedition?.regionDungeons?.();
+        const fresh = (state?.gateIds || []).filter((id) => state.byId[id]?.region === unlock.chapter);
+        if (fresh.length) { markEmergingGates(fresh); this.app.arena.buildLobby(); }
+      } catch (error) { console.warn('town arrival rebuild failed', error); }
+    }
     const opened = (() => { try { return this.app.expedition?.regionDungeons?.().entries.filter((entry) => entry.region === unlock.chapter && entry.open).length || 0; } catch { return 0; } })();
     document.querySelector('.town-arrival-veil')?.remove(); document.querySelector('.town-arrival-banner')?.remove(); document.querySelector('.region-unlock-banner:not([data-qa-held])')?.remove();
     const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -121,7 +130,7 @@ export class CampaignTownUI {
     const state = this.eco.campaignTownState();
     if (state.celebrated >= state.latest) return false;
     const town = this.eco.campaignTownList()[state.latest - 1];
-    return this.celebrate({ chapter: state.latest, name: town.name, accent: town.accent });
+    return this.celebrate({ chapter: state.latest, name: town.name, accent: town.accent }, { fromLobby: true });
   }
 
   destroy() {

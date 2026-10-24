@@ -28,7 +28,7 @@ test('Lv.1 지도는 실제 첫 던전을 추천하고 탐색만으로 자원·�
   for (const id of ['ember_vault', 'glacier_tide_basin', 'sunbrass_quarry']) expect(journey.nodes.some(node => node.dungeon.id === id)).toBe(false);
   // 다음 지역(불씨 용광로 마을)만 잠금 줄로 예고한다.
   expect(journey.teaser).toMatchObject({ region: 2, town: '불씨 용광로 마을', unlockCode: '1-10' });
-  expect(journey.teaser?.dungeons.map(dungeon => dungeon.id)).toContain('ember_vault');
+  expect(journey.teaser?.dungeons.map((dungeon: any) => dungeon.id)).toContain('ember_vault');
   expect(journey.cleared).toBe(0);
   expect(JSON.stringify(economy.s)).toBe(before);
   expect(dungeonContinuation(service, result)).toBeNull();
