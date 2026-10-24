@@ -25,16 +25,17 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     expect(session.authority).toBe('shadow');
     const eco = EconomyCore.fromState(null, { now: () => h.now() });
     eco.s.gold = 1_000_000;
+    // 서버는 가져올 때 원본 selected를 시작 영웅으로 확정(starterChosen)하므로, 시작 영웅 선택은 가져오기 전 로컬에서 끝내 둔다.
+    expect(eco.chooseStarter('ranger').ok).toBe(true);
     const imported = await importLocalSave(client, crypto.randomUUID(), eco);
     expect(imported.status).toBe('shadow');
     let authority = 'shadow';
     const q = new CommandQueue(eco, client, { authority: () => authority, adopt: () => { throw new Error('shadow never adopts'); } });
     expect(eco.claimMail(1)).toBeTruthy();
-    eco.addItem('N'); q.snapshot(); eco.equip('knight', eco.s.inventory[0].uid);
-    expect(eco.chooseStarter('ranger').ok).toBe(true); // 시작 영웅 선택도 /cmd 로 가고, 선택 변화가 selectHero 를 따로 보내지 않는다
+    eco.addItem('N'); q.snapshot(); eco.equip('ranger', eco.s.inventory[0].uid);
     eco.claimMail(1); // 실패한 명령은 보내지 않는다
     await settle(q);
-    expect(q.stats).toEqual({ sent: 4, matched: 4, mismatched: 0, rejected: 0 });
+    expect(q.stats).toEqual({ sent: 3, matched: 3, mismatched: 0, rejected: 0 });
     const me = await client.me();
     expect(me.stateHash).toBe(parityHash(eco.s));
     expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM parity_log WHERE match = 0').get()).toEqual({ n: 0 });
