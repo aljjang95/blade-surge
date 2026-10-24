@@ -26,3 +26,4 @@
 | 대상 | 원화 | 워크스페이스 id | 재시도 | 크레딧 | rigged.glb | 삼각형/관절 | 검사 | 비고 |
 |---|---|---|---|---|---|---|---|---|
 | avatar_mage_pumpkin | b(concept.png=b) | e88671c8-13c8-4abc-8825-588c20f55c8b | 0 | 110 (55+35+20) | 10,757,312 B · ed159778aede06dc835e9326db7919b0b5e11adac94c30f7210fef9fa9b8e634 | 10,580 / 65 | check-weights ok=true, v16267, multiInfluence 11303 / joints 65, withTranslation 65 | 정면·3/4·위 모두 두 눈 보임(모자챙이 눈썹 위). 걷기 미리보기 정상. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
+| avatar_rogue_vampire | a | 5f243e66-ac72-4f72-b064-6fbeb9697d6d | 0 | 110 (55+35+20) | 9,159,144 B · e471fbe211cfe6c8003758907ed67cf1f67c88407764f408a8e30404f977c38c | 10,700 / 65 | check-weights ok=true, v15796, multiInfluence 15101 / joints 65, withTranslation 65 | 정면·3/4 두 눈·붉은 눈 보임, 위 미리보기도 두 눈 보임(앞머리가 이마만 덮음). 걷기 미리보기 정상, 목도리 없음. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
