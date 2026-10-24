@@ -30,7 +30,7 @@ function fakePortone() {
 
 const paidOf = (h: any, accountId: string): string[] => JSON.parse((h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(accountId) as any).doc).roster.paid;
 async function setup(env: Record<string, string> = {}) {
-  const h = await v1Harness({ env: { WEB_BILLING_ENABLED: 'true', PORTONE_STORE_ID: STORE, PORTONE_CHANNEL_KEY: CHANNEL, ...env } as any });
+  const h = await v1Harness({ env: { WEB_BILLING_ENABLED: 'true', PORTONE_STORE_ID: STORE, PORTONE_CHANNEL_KEY: CHANNEL, V1_SERVER_AUTHORITY_PERCENT: '100', ...env } as any });
   const pn = fakePortone();
   (h.deps as any).portoneApi = pn.api;
   const a = await h.session();
@@ -44,7 +44,7 @@ async function setup(env: Record<string, string> = {}) {
 
 describe('웹 결제 스위치·채널 설정', () => {
   test('WEB_BILLING_ENABLED가 꺼져 있으면 intent·complete 모두 503이고 flags.webBilling=false', async () => {
-    const h = await v1Harness({ env: { PORTONE_STORE_ID: STORE, PORTONE_CHANNEL_KEY: CHANNEL } as any });
+    const h = await v1Harness({ env: { PORTONE_STORE_ID: STORE, PORTONE_CHANNEL_KEY: CHANNEL, V1_SERVER_AUTHORITY_PERCENT: '100' } as any });
     (h.deps as any).portoneApi = fakePortone().api;
     const a = await h.session();
     expect((await h.send('GET', '/me', undefined, a.token)).body.flags.webBilling).toBe(false);
@@ -108,6 +108,18 @@ describe('웹 결제 스위치·채널 설정', () => {
 });
 
 describe('웹 결제 intent', () => {
+  test('그림자(로컬 모드) 계정은 intent 403 server-authority-required, flags.webBilling=false. 권위 계정은 200', async () => {
+    const shadow = await setup({ V1_SERVER_AUTHORITY_PERCENT: '0' });
+    expect((await shadow.me(shadow.a.token)).flags.webBilling).toBe(false);
+    const r = await shadow.intent(shadow.a.token, 'hero_knight_v1');
+    expect(r.status).toBe(403);
+    expect(r.body.error).toBe('server-authority-required');
+    expect(shadow.count('SELECT COUNT(*) AS n FROM iap_web_payments')).toBe(0);
+    const auth = await setup();
+    expect((await auth.me(auth.a.token)).flags.webBilling).toBe(true);
+    expect((await auth.intent(auth.a.token, 'hero_knight_v1')).status).toBe(200);
+  });
+
   test('서버가 paymentId·금액(카탈로그 정본)·storeId·channelKey를 낸다. 클라이언트 금액 필드는 거부', async () => {
     const { h, a, intent, count } = await setup();
     const r = await intent(a.token, 'hero_mage_v1');
@@ -431,7 +443,7 @@ describe('임포트: 영웅 소유는 서버 권한이 정본', () => {
     expect(r1.body.doc.roster.owned.length).toBe(1);
     expect(r1.body.doc.roster.starterChosen).toBe(true);
     expect(r1.body.doc.roster.paid).toEqual([]);
-    const next = await setup();
+    const next = await setup({ V1_SERVER_AUTHORITY_PERCENT: '0' });
     const forged = { ...fixture(), selected: 'mage', roster: { policy: 2, owned: ['mage', 'knight'], starter: 'mage', starterChosen: true, paid: ['knight', 'rogue', 'ranger'] } };
     const r2 = await next.h.send('POST', '/import', { installId: crypto.randomUUID(), save: forged }, next.a.token);
     expect(r2.body.status).toBe('shadow');
@@ -439,13 +451,11 @@ describe('임포트: 영웅 소유는 서버 권한이 정본', () => {
     expect(r2.body.doc.roster.paid).toEqual([]);
     expect(r2.body.doc.roster.starter).toBe('mage');
     expect(r2.body.doc.roster.owned).toEqual(['mage']);
-    // 구매하면 서버 권한이 paid가 되고, 그림자 스냅샷(재정화)을 거쳐도 유지된다.
-    const k = (await next.intent(next.a.token, 'hero_knight_v1')).body;
-    next.pn.pay(k);
-    await next.complete(next.a.token, k.paymentId);
+    // 그림자 계정은 현금 판매 대상이 아니다(intent 403). 재정화 스냅샷을 거쳐도 forged paid는 들어오지 않는다.
+    expect((await next.intent(next.a.token, 'hero_knight_v1')).status).toBe(403);
     const snap = await next.h.send('POST', '/shadow/snapshot', { cid: 'snap-0001-abcd', save: forged }, next.a.token);
     expect(snap.status).toBe(200);
-    expect((await next.me(next.a.token)).doc.roster).toMatchObject({ policy: 2, paid: ['knight'], starter: 'mage', owned: ['mage'] });
+    expect((await next.me(next.a.token)).doc.roster).toMatchObject({ policy: 2, paid: [], starter: 'mage', owned: ['mage'] });
   });
 });
 
@@ -460,7 +470,14 @@ describe('Play 흐름 하위호환', () => {
     expect(byId.hero_knight_v1.priceKRW).toBe(5900);
     expect(byId.hero_all_v1.priceKRW).toBe(17900);
     expect(byId.starter_pack_v1.channels).toEqual(['play']);
-    const it = await h.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, a.token);
+    // 그림자 계정은 영웅 상품 Play intent가 거부되고 다른 상품은 기존대로 열린다.
+    expect((await h.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, a.token)).body.error).toBe('server-authority-required');
+    expect((await h.send('POST', '/iap/intent', { productId: 'hero_all_v1' }, a.token)).status).toBe(403);
+    expect((await h.send('POST', '/iap/intent', { productId: 'remove_ads_v1' }, a.token)).status).toBe(200);
+    const hs = await v1Harness({ env: { IAP_ENABLED: 'true', V1_SERVER_AUTHORITY_PERCENT: '100' } as any });
+    (hs.deps as any).playApi = {};
+    const sa = await hs.session();
+    const it = await hs.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, sa.token);
     expect(it.body.playType).toBe('inapp');
     expect(it.body.obfuscatedAccountId).toMatch(/^[0-9a-f]{48}$/);
   });

@@ -144,6 +144,8 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
+  // 영웅 상품(권한 hero:*)은 서버 권위 계정에게만 판다. 다른 상품은 기존 동작 그대로.
+  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k))) fail(403, 'server-authority-required');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
   const owned = await ownedProducts(c.db, accountId);

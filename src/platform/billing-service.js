@@ -155,7 +155,7 @@ export function setupBilling(app) {
   });
   app.eco.setBilling(billing); app.billing = billing;
   // 영웅 해금 구매 트리거(UI는 app.heroPurchase만 안다). 웹 채널은 포트원, Play 채널은 위 billing으로 위임한다.
-  const heroPurchase = createHeroPurchase({ api: client, eco: app.eco, billing });
+  const heroPurchase = createHeroPurchase({ api: client, eco: app.eco, billing, authority: () => app.account?.authority ?? null });
   app.heroPurchase = heroPurchase;
   const start = (tries = 0) => {
     const status = app.account?.status;

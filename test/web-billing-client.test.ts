@@ -6,7 +6,7 @@ const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId,
 
 class MemStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
 
-function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any } = {}) {
+function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any; authority?: string | null } = {}) {
   const calls: any[] = [], applied: any[] = [], storage = new MemStorage();
   const api = {
     async me() { return { flags: { webBilling: opts.webBilling ?? true } }; },
@@ -20,13 +20,25 @@ function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: a
   const eco = { applyIapState(state: any) { applied.push(state); return []; } };
   const payCalls: any[] = [];
   const sdk = opts.sdk === undefined ? { requestPayment: async (req: any) => { payCalls.push(req); return { paymentId: req.paymentId }; } } : opts.sdk;
-  const hp = createHeroPurchase({ api, eco, channel: opts.channel ?? 'web', billing: opts.billing ?? null, loadSdk: async () => sdk, storage, now: () => 1000,
+  const hp = createHeroPurchase({ api, eco, channel: opts.channel ?? 'web', billing: opts.billing ?? null, authority: () => opts.authority === undefined ? 'server' : opts.authority, loadSdk: async () => sdk, storage, now: () => 1000,
     location: { origin: 'https://blade.example', search: opts.search ?? '', pathname: '/' }, history: { replaceState() {} } });
   return { hp, calls, applied, payCalls, storage };
 }
 const apiErr = (status: number, error: string) => Object.assign(new Error(error), { status, body: { error } });
 
 describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
+  test('그림자·로컬 모드 계정은 서버가 웹 결제를 알려도 available=false이고 buy는 서버를 부르지 않는다', async () => {
+    for (const authority of ['shadow', 'off', null]) {
+      const { hp, calls } = rig({ authority });
+      await hp.init();
+      expect(hp.available()).toBe(false);
+      expect(await hp.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'unavailable' });
+      expect(calls).toEqual([]);
+    }
+    const server = rig({ authority: 'server' });
+    expect(await server.hp.init()).toBe(true);
+  });
+
   test('기본은 사용 불가: init 전·서버가 웹 결제를 알리지 않으면 available=false이고 buy는 서버를 부르지 않는다', async () => {
     const off = rig({ webBilling: false });
     expect(off.hp.available()).toBe(false);
@@ -65,7 +77,7 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     }
     // 지급은 됐지만 로컬 저장이 실패하면 ok가 아니다
     const t = rig();
-    const failing = createHeroPurchase({ api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string) => (p.endsWith('intent') ? intentOf() : { state: 'granted' }) },
+    const failing = createHeroPurchase({ authority: () => 'server', api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string) => (p.endsWith('intent') ? intentOf() : { state: 'granted' }) },
       eco: { applyIapState: () => null }, channel: 'web', loadSdk: async () => ({ requestPayment: async () => ({}) }), storage: new MemStorage() });
     await failing.init();
     expect(await failing.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'storage' });
@@ -112,7 +124,7 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     expect(JSON.parse(t.storage.getItem(PENDING_KEY)!)).toMatchObject({ paymentId: PID, productId: 'hero_knight_v1' });
     const again = rig({});
     again.storage.setItem(PENDING_KEY, t.storage.getItem(PENDING_KEY)!);
-    const hp = createHeroPurchase({ api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string, b: any) => { again.calls.push([_m, p, b]); return { state: 'granted' }; } },
+    const hp = createHeroPurchase({ authority: () => 'server', api: { me: async () => ({ flags: { webBilling: true } }), request: async (_m: string, p: string, b: any) => { again.calls.push([_m, p, b]); return { state: 'granted' }; } },
       eco: { applyIapState: (s: any) => { again.applied.push(s); return []; } }, channel: 'web', storage: again.storage, now: () => 2000, location: { origin: 'x', search: '', pathname: '/' } });
     await hp.init();
     expect(await hp.resume()).toMatchObject({ ok: true });
@@ -175,7 +187,7 @@ describe('영웅 권한 시작·복귀 동기화 (syncState)', () => {
         throw new Error('path ' + path);
       },
     };
-    const hp = createHeroPurchase({ api, eco, channel: 'web', billing: null, loadSdk: async () => null, storage: new MemStorage(), now: () => t,
+    const hp = createHeroPurchase({ authority: () => 'server', api, eco, channel: 'web', billing: null, loadSdk: async () => null, storage: new MemStorage(), now: () => t,
       location: { origin: 'https://blade.example', search: '', pathname: '/' }, history: { replaceState() {} } });
     return { eco, hp, calls: () => calls, setServer: (h: string[]) => { current = h; }, advance: (ms: number) => { t += ms; } };
   };
@@ -229,7 +241,7 @@ describe('상태 응답 순서 (오래된 권한 목록이 방금 산 영웅을 
         throw new Error('path ' + path);
       },
     };
-    const hp = createHeroPurchase({ api, eco, channel: 'web', billing: null, storage: new MemStorage(), now: () => 1000,
+    const hp = createHeroPurchase({ authority: () => 'server', api, eco, channel: 'web', billing: null, storage: new MemStorage(), now: () => 1000,
       loadSdk: async () => ({ requestPayment: async (req: any) => ({ paymentId: req.paymentId }) }),
       location: { origin: 'https://blade.example', search: '', pathname: '/' }, history: { replaceState() {} } });
     return { eco, hp, release, stateCalls: () => stateCalls };

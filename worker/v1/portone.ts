@@ -154,6 +154,8 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   const channel = webChannel(env, auth.account.account_id, body.test === true);
   if (!env.PORTONE_STORE_ID || !channel) fail(503, 'web-not-configured');
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
+  // 서버가 roster를 강제하는 계정(authority=server)에만 현금 판매를 연다. 그림자·로컬은 저장 편집으로 소유를 늘릴 수 있다.
+  if (auth.account.authority !== 'server') fail(403, 'server-authority-required');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product || !soldOn(product, 'web') || product.type === 'subscription' || product.type === 'consumable' && !product.once) fail(400, 'unknown-product');
   const accountId = auth.account.account_id;

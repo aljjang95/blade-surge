@@ -29,8 +29,9 @@ export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
   verifyIdToken: (provider, token, clientIds) => (googleVerifier ??= createGoogleVerifier()).verify(token, clientIds, provider === 'pubsub' ? 3600000 : 600000),
 };
 
-export function v1Flags(env: V1Env, accountId?: string | null): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: webBillingOn(env, accountId) };
+/** webBilling은 서버 권위 계정에게만 켠다(그림자·로컬 계정은 roster를 서버가 강제하지 못해 현금 판매를 열지 않는다). */
+export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null): Record<string, boolean> {
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId) };
 }
 
 export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps & PortoneDeps = defaultDeps): Promise<Response> {
@@ -61,7 +62,7 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     // 비인증 경로는 요청 IP(해시)로 먼저 제한한다. 본문을 읽거나 DB·제공자를 부르기 전에 거른다.
     if (method === 'POST' && path === '/auth/session') { await rateLimit(c, 'session', await ipKey(request)); return json(await createSession(c, await readJson(request))); }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
-    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id))); }
+    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
       const auth = await requireSession(c);
       await rateLimit(c, 'iapRead', auth.account.account_id);

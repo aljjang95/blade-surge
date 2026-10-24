@@ -31,9 +31,9 @@ export function loadPortOneSdk(doc = globalThis.document) {
 
 /**
  * @param {{ api: any, eco: any, billing?: any, channel?: string, loadSdk?: () => Promise<any>, storage?: any, now?: () => number,
- *   location?: { origin?: string, search?: string, pathname?: string }, history?: any }} options
+ *   authority?: () => string | null, location?: { origin?: string, search?: string, pathname?: string }, history?: any }} options
  */
-export function createHeroPurchase({ api, eco, billing = null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, storage = defaultStorage(), now = () => Date.now(),
+export function createHeroPurchase({ api, eco, billing = null, authority = () => null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, storage = defaultStorage(), now = () => Date.now(),
   location = globalThis.location, history = globalThis.history }) {
   let webOn = false, busy = false, syncing = false, lastSyncAt = 0;
   // 상태 적용 순서: 요청을 시작할 때 단조 증가 번호를 받고, 더 최근에 시작한 요청의 결과가 이미 적용됐으면 오래된 응답은 버린다.
@@ -104,6 +104,8 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
       finally { syncing = false; }
     },
     available() {
+      // 서버 권위 계정에서만 연다(그림자·로컬은 저장 편집으로 소유를 늘릴 수 있어 현금 판매 대상이 아니다).
+      if (authority() !== 'server') return false;
       if (channel === 'web') return webOn;
       if (channel === 'googleplay') return !!billing && typeof billing.available === 'function' && billing.available();
       return false;
