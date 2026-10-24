@@ -2,15 +2,24 @@ import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { ALL_DUNGEONS } from '../src/data/expansion.js';
 import { CITADEL_TOWN_IDS, townHub, defaultTownDungeonIds, townOfDungeon, setActiveTownId, activeTownHub, findHotspot } from '../src/data/citadel-hub.js';
+import { setActiveCampaignTownChapter } from '../src/data/campaign-towns.js';
 import { buildCitadelHubScene, libraryRoleOf } from '../src/game/citadel-hub-scene.js';
 import { buildLobbyWorld } from '../src/game/lobby-world.js';
 import { buildTownDecor, townDecorFor, townDecorPlacements } from '../src/game/region-architecture.js';
 import { ProvisionalTownService } from '../src/ui/town-service-adapter.js';
 import { normalizePrice } from '../src/ui/town-ui.js';
+import { hubReach } from './helpers/hub-walk';
 import { Floor } from '../src/game/world.js';
 import { buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
 
-test('three towns split the eighteen dungeons into six each with only their own gates', () => {
+// 첫 마을(1지역)은 초보자 마을 배치(src/data/starter-village.js)를 쓰고, 2지역 이상은 기존 성채 광장 배치를 쓴다.
+// 아래 두 테스트의 기존 기준(마을마다 arena 관문·중앙 통로 비움)은 기존 배치의 계약이므로 2지역 상태에서 그대로 검증하고,
+// 초보자 마을은 별도 기준(안내관 존재·분수/동상은 중앙 통로 위에 서 있고 우회 가능)으로 따로 검증한다. 기준을 약하게 만든 것이 아니라 대상 배치를 나눈 것이다.
+const withChapter = (chapter: number, run: () => void) => {
+  try { setActiveCampaignTownChapter(chapter); run(); } finally { setActiveCampaignTownChapter(1); }
+};
+
+test('three towns split the eighteen dungeons into six each with only their own gates', () => withChapter(2, () => {
   const all = CITADEL_TOWN_IDS.flatMap(id => defaultTownDungeonIds(id));
   // 컨셉 던전 2곳은 마을 관문 없이 던전 목록으로 노출한다.
   expect(all.sort()).toEqual(ALL_DUNGEONS.filter((d: any) => !d.layout?.concept).map(d => d.id).sort());
@@ -22,9 +31,9 @@ test('three towns split the eighteen dungeons into six each with only their own 
   }
   expect(townOfDungeon('glass_garden')).toBe('oathhold');
   expect(townOfDungeon('comet_bastion')).toBe('starcrest');
-});
+}));
 
-test('every town leaves the central walking route clear and gates stay inside the plaza', () => {
+test('every town leaves the central walking route clear and gates stay inside the plaza', () => withChapter(2, () => {
   for (const id of CITADEL_TOWN_IDS) {
     const hub = townHub(id);
     for (const z of [-9, -6, -3, 0, 3, 6, 9]) for (const blocker of hub.blockers as any[]) {
@@ -32,6 +41,21 @@ test('every town leaves the central walking route clear and gates stay inside th
       else expect(0 < blocker.minX - .34 || 0 > blocker.maxX + .34 || z < blocker.minZ - .34 || z > blocker.maxZ + .34).toBe(true);
     }
     for (const spot of hub.hotspots as any[]) { expect(Math.abs(spot.x)).toBeLessThanOrEqual(12); expect(Math.abs(spot.z)).toBeLessThanOrEqual(12); }
+  }
+}));
+
+// 초보자 마을(1지역)의 별도 기준. 기존 기준과 달리 arena 관문은 없고(안내관 steward 가 결투를 맡는다),
+// 분수·영웅 비석이 중앙선(x=0) 위에 서 있으므로 '중앙 통로 비움' 대신 spawn 에서 모든 상호작용 지점에 걸어서 닿는지를 본다.
+test('starter village keeps its steward, has no arena gate and every hotspot is reachable on foot', () => {
+  const hub = townHub('oathhold') as any;
+  expect(hub.starter).toBe(true);
+  for (const kind of ['merchant', 'trainer', 'campaign', 'steward', 'waystone']) expect(hub.hotspots.some((s: any) => s.kind === kind)).toBe(true);
+  expect(hub.hotspots.some((s: any) => s.kind === 'arena')).toBe(false);
+  expect(hub.hotspots.filter((s: any) => s.kind === 'waystone')).toHaveLength(1);
+  const reach = hubReach(hub);
+  for (const spot of hub.hotspots as any[]) {
+    expect(Math.abs(spot.x)).toBeLessThanOrEqual(12); expect(Math.abs(spot.z)).toBeLessThanOrEqual(12);
+    expect(reach.reaches(spot)).toBe(true);
   }
 });
 
