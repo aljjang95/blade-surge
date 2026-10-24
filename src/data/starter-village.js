@@ -44,7 +44,7 @@ export const STARTER_GATE_SLOTS = Object.freeze([
 export const STARTER_HOTSPOTS = Object.freeze([
   { id: 'npc:guide', kind: 'guide', route: 'guide', label: '안내자 브람', subtitle: '처음 오셨나요?',
     description: '초보자 마을 둘러보기와 첫 목표를 알려 드려요.', accent: '#ffd27a', x: -2.9, z: 6.2, yaw: 2.4,
-    interactionRadius: 2, blockerRadius: .42, model: 'Knight' },
+    interactionRadius: 2, blockerRadius: .42, model: 'Mage' },
   { id: 'sign:story', kind: 'story', route: 'story', label: '시작 영웅의 비석', subtitle: '영웅 이야기',
     description: '이 마을에서 처음 검을 든 영웅의 이야기.', accent: '#e8d3a2', x: 0, z: -5.6, yaw: 0,
     interactionRadius: 2, blockerRadius: .95 },
@@ -107,8 +107,26 @@ export function starterBlockers(hotspots, props = STARTER_PROPS) {
     else if (prop.kind === 'lamp') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .19 });
   }
   for (const dummy of STARTER_DUMMIES) blockers.push({ type: 'circle', x: dummy.x, z: dummy.z, radius: .38 });
+  for (const [x, z, w, d] of STARTER_BEDS) blockers.push({ type: 'circle', x, z, radius: Math.hypot(w, d) / 2 * .85 });
+  for (const [, x, z, radius] of STARTER_CLUTTER) blockers.push({ type: 'circle', x, z, radius });
+  // 훈련장 울타리: 말뚝 원호를 작은 원 여러 개로 막는다(동쪽 입구는 비움).
+  const yard = STARTER_ZONES.training;
+  for (let a = STARTER_FENCE_ARC.from; a <= STARTER_FENCE_ARC.to + 1e-6; a += .2) blockers.push({ type: 'circle', x: yard.x + Math.cos(a) * (yard.radius + .1), z: yard.z + Math.sin(a) * (yard.radius + .1), radius: .16 });
   return blockers.map(Object.freeze);
 }
+
+/** 꽃밭 [x, z, 폭, 깊이, yaw] — 장면이 그리고 충돌은 회전을 무시한 외접 원으로 막는다. */
+export const STARTER_BEDS = Object.freeze([
+  [-4.3, 9.9, 2.6, .9, 0], [4.3, 9.9, 2.6, .9, 0], [-4.1, 4.4, 1.8, .8, .3],
+  ...[.25, .75, 1.25, 1.75].map(t => [Math.cos(Math.PI * t) * 3.85, -1.4 + Math.sin(Math.PI * t) * 3.85, 1.6, .7, -Math.PI * t + Math.PI / 2]),
+  [-2.6, -7.6, 1.6, .8, 0], [2.6, -7.6, 1.6, .8, 0], [-6.2, -5.6, 1.8, .8, .4],
+].map(Object.freeze));
+/** 작은 소품 [종류, x, z, 반경] — 통·상자·깃발 기둥. */
+export const STARTER_CLUTTER = Object.freeze([
+  ['barrel', 9.9, .9, .32], ['barrel', 10.4, .2, .32], ['crate', 10.6, 1.5, .4], ['crate', 9.2, -4.3, .45], ['barrel', 4.9, 7.9, .32], ['crate', 5.6, 8.3, .38],
+  ['barrel', -10.4, 3.8, .32], ['crate', -10.6, 4.7, .4], ['crate', -4.6, -1.2, .35],
+  ['banner', -3.1, -9.3, .12], ['banner', 3.1, -9.3, .12], ['banner', -4.2, -.2, .12], ['banner', 4.6, 3, .12], ['banner', -2.7, 8.6, .12], ['banner', 2.7, 8.6, .12],
+].map(Object.freeze));
 
 /** 훈련장 울타리 말뚝 각도(라디안). 동쪽 입구(0 근처)는 비운다. 장면이 같은 값으로 울타리를 세운다. */
 export const STARTER_FENCE_ARC = Object.freeze({ from: .62, to: Math.PI * 2 - .62 });

@@ -47,7 +47,13 @@ for (const id of only) {
   await page.waitForTimeout(1800);
   const file = `${VW}x${VH}-${id}.png`;
   await page.screenshot({ path: path.join(out, file), timeout: 120000 });
-  const info = await page.evaluate(() => { const r = window.app.renderer.r.info.render; return { calls: r.calls, triangles: r.triangles, nearest: window.app.hubMovement.nearest?.id || null, starter: !!window.app.arena.lobbyHall?.userData?.starter }; });
+  const info = await page.evaluate(async () => {
+    // 한 프레임의 모든 패스를 합산한다(후처리 패스가 info 를 매번 지우지 않게 잠시 autoReset 을 끈다).
+    const gl = window.app.renderer.r; gl.info.autoReset = false; gl.info.reset();
+    let ticks = 0; await new Promise(resolve => { const t0 = performance.now(); const tick = () => { ticks++; if (performance.now() - t0 > 1500) resolve(); else requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+    const r = { ...gl.info.render }; gl.info.autoReset = true;
+    // 화면 프레임(rAF) 하나당 평균. 그림자·후처리 패스까지 합한 값이다.
+    return { calls: Math.round(r.calls / ticks), triangles: Math.round(r.triangles / ticks), frames: ticks, nearest: window.app.hubMovement.nearest?.id || null, starter: !!window.app.arena.lobbyHall?.userData?.starter }; });
   report.shots.push({ id, file, ...info });
   console.log(id, JSON.stringify(info));
 }

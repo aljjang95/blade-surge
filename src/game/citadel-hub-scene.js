@@ -471,12 +471,9 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   if (starter) {
     // 담 바깥 나무 띠와 오두막(마을 안쪽을 향함). 걷는 경계(±12) 밖이다.
     for (const side of [-1, 1]) {
-      for (const z of [-9.5, -4, 1.5, 7]) grove.push({ asset: z === -4 || z === 7 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 14.6, z, y: -.42, yaw: side * .7 + z, scale: .95 });
-      grove.push({ asset: 'timber-cottage', x: side * 15.2, z: -13.8, y: -.4, yaw: side > 0 ? -Math.PI * .75 : Math.PI * .75, scale: .8 });
-      grove.push({ asset: 'timber-cottage', x: side * 15.6, z: 11.8, y: -.4, yaw: side > 0 ? -Math.PI * .3 : Math.PI * .3, scale: .74 });
+      for (const z of [-11.8, -2.6, 4.4, 11.6]) grove.push({ asset: z === -2.6 || z === 11.6 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 14.2, z, y: -.42, yaw: side * .7 + z, scale: .95 });
       grove.push({ asset: 'broadleaf-tree', x: side * 6.5, z: -15, y: -.4, yaw: side, scale: 1.05 });
     }
-    grove.push({ asset: 'village-gate', x: 0, z: 12.7, y: -.36, yaw: 0, scale: .9 });
     grove.push({ asset: 'mossy-rock-cluster', x: -11, z: -2.6, y: -.1, yaw: 1, scale: .4 });
   } else if (legacyPlaza) {
     for (const side of [-1, 1]) {
