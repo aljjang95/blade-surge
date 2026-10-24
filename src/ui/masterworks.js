@@ -112,7 +112,7 @@ export class MasterworksView {
     const list=n('div','mw-grid');for(const q of BOUNTIES){const cur=this.state.bounties.counts[q.stat],claimed=this.state.bounties.claimed.includes(q.id);const card=n('article','mw-card');const p=n('progress');p.max=q.target;p.value=cur;p.setAttribute('aria-label',q.name);
       card.append(art('quest-daily'),n('small','mw-eyebrow',`명성 +${q.reward}`),n('h4','',q.name),n('p','',q.description),p,n('p','',`${Math.min(cur,q.target)} / ${q.target}`));
       const b=btn(claimed?'보상 수령 완료':cur>=q.target?'보상 받기':'도전 중',()=>this.act(()=>this.battle.masterworks.claim(q.id)),'mw-primary');b.disabled=claimed||cur<q.target||this.battle.active;card.append(b);list.append(card);}this.content.append(list);
-    const routes=DUNGEONS.map(d=>`${d.name} → ${EXPEDITION_SETS.filter(s=>Object.hasOwn(d.rewards.materials,s.material)).map(s=>s.name).join(' · ')}`).join(' · ');
+    const routes=DUNGEONS.filter(d=>this.app.expedition?.dungeonVisibility?.(d.id).visible!==false).map(d=>`${d.name} → ${EXPEDITION_SETS.filter(s=>Object.hasOwn(d.rewards.materials,s.material)).map(s=>s.name).join(' · ')}`).join(' · ');
     this.content.append(n('h3','mw-section-title','원하는 장비에 가까워지는 길'),details(`${routes}. 재료를 모아 공방에서 원하는 부위를 직접 제작하세요.`,'재료 획득처'),btn('공방에서 목표 장비 확인',()=>this.openExpedition('forge'),'mw-primary'));
   }
   renderJournal() {

@@ -2,6 +2,7 @@ import { ALL_DUNGEONS as DUNGEONS, RECIPES, MATERIALS, CONSUMABLES } from '../da
 import { ITEM_BY_ID, SETS } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';
 import { riftForDay } from '../game/journey-rifts.js';
+import { visibleDungeonIds } from '../game/region-dungeon-gate.js';
 import { weeklyFrontier, frontierSnapshot } from '../data/seasonal-content.js';
 import { audio } from '../engine/audio.js';
 import './journey.css';
@@ -75,9 +76,11 @@ export class JourneyView {
     this.close();if(this.app.expeditionUI?.result){this.app.expeditionUI.result=null;this.app.toLobby();}else if(this.app.mode==='battle')this.app.toLobby();
     return this.app.startExpedition('dungeon',id,{rift:true});
   }
-  async launchFrontier(id, shown = frontierSnapshot(weeklyFrontier())) {
+  /** 이번 주 프론티어. 지정 던전이 이 저장에서 잠겼으면 열린 던전으로 대신한다(표시와 출격이 같은 판정). */
+  frontier() { return weeklyFrontier(new Date(), visibleDungeonIds(this.app.eco.s)); }
+  async launchFrontier(id, shown = frontierSnapshot(this.frontier())) {
     if(this.blockNotice())return false;
-    const current=frontierSnapshot(weeklyFrontier());
+    const current=frontierSnapshot(this.frontier());
     if(!shown||id!==current.routeId||JSON.stringify(frontierSnapshot(shown))!==JSON.stringify(current)){
       this.notice.textContent='주간 원정이 갱신됐습니다. 새 지역과 효과를 확인한 뒤 출격해 주세요.';this.refresh(true);return false;
     }
@@ -88,7 +91,7 @@ export class JourneyView {
     const snap=this.app.journey.snapshot(),next=snap.steps.find(s=>!s.claimed);
     this.strip.textContent=next?`${next.ready?'보상 받기':'다음 목표'} · ${next.name}`:'성장 여정 완주 · 오늘의 의뢰 확인';
     this.nextTab=next?'journey':'contracts';
-    const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(weeklyFrontier())]);
+    const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(this.frontier())]);
     if(this.dialog.open&&(force||signature!==this.signature))this.render(snap);
     this.signature=signature;
   }
@@ -110,7 +113,7 @@ export class JourneyView {
       if(!s.claimed&&!s.ready)card.append(node('small','journey-muted','앞 단계 보상과 목표 완료 필요'));actions.append(claim);if(!s.claimed){const go=button('목표로 이동',()=>this.navigate(s.action),`go-step-${s.id}`,'journey-secondary');go.disabled=this.blocked;actions.append(go);}card.append(actions);list.append(card);});this.content.append(list);
   }
   renderContracts(snap) {
-    const c=snap.contracts,d=DUNGEONS.find(d=>d.id===c.rotationDungeonId),rift=riftForDay(this.app.journey.s.day),frontier=weeklyFrontier(),frontierDungeon=DUNGEONS.find(item=>item.id===frontier.routeId);
+    const c=snap.contracts,d=DUNGEONS.find(d=>d.id===c.rotationDungeonId),rift=riftForDay(this.app.journey.s.day),frontier=this.frontier(),frontierDungeon=DUNGEONS.find(item=>item.id===frontier.routeId);
     this.banner(`${d.name} · ${rift.name}`,`${rift.description} 균열 실전 승리 추가 보상: 골드 200 · 해당 재료 2. 일반 던전 승리도 의뢰에 집계됩니다.`,d.id);
     const frontierCard=node('section','journey-card');frontierCard.append(node('small','journey-eyebrow','이번 주의 프론티어'),node('h3','',`${frontierDungeon?.name||frontier.routeId} · ${frontier.modifier}`),node('p','',frontier.tagline),node('p','journey-muted','해당 지역의 기본 원정에 적용됩니다. 시작한 효과는 귀환까지 유지됩니다. 소탕은 완료 보상 효과만 적용되며, 전투·보물방 효과는 실전에서만 발동합니다.'));
     const frontierLaunch=button('주간 원정 출격',()=>this.launchFrontier(frontier.routeId,frontierSnapshot(frontier)),'launch-frontier'),frontierAccess=this.app.expedition.dungeonAccess(frontier.routeId);
@@ -165,6 +168,7 @@ export class JourneyView {
     const set=SETS[t.item.set];if(set)card.append(node('p','journey-rewards',set.name),detail(`2개: ${set.two?.text||'세트 능력치 강화'} · 4개: ${set.four?.text||'세트 능력치 강화'}`,'세트 효과'));
     card.append(illustration('gold'),node('p','',`골드 ${fmt(this.app.eco.s.gold)} / ${fmt(t.recipe.gold)}${t.goldMissing?' · '+fmt(t.goldMissing)+' 부족':' · 준비 완료'}`));
     for(const m of t.materials){card.append(illustration(resourceArt[m.id]||'treasure-chest'),node('p','',`${name(m.id)} ${fmt(m.have)} / ${fmt(m.need)}${m.missing?' · '+fmt(m.missing)+' 부족':' · 준비 완료'}`));
+      if(m.locked&&m.missing)card.append(node('p','journey-muted','이 재료를 주는 던전은 다음 지역 마을이 열리면 나타납니다.'));
       const d=DUNGEONS.find(d=>d.id===m.dungeonId);if(d){const access=this.app.expedition.dungeonAccess(d.id),go=button(access.ok?`${d.name} · 기본 보상 기준 ${m.runs}회`:`${d.name} · 탐험 레벨 ${d.minLevel} 필요`,()=>this.navigate('dungeons'),`target-dungeon-${d.id}`,'journey-secondary');go.disabled=this.blocked||!access.ok;card.append(go);}}
     if(t.owned){card.append(node('p','journey-rewards',`보유 장비 +${t.owned.enh} · ${t.owner?(HEROES[t.owner]?.name||t.owner)+' 착용 중':'미장착'}`));const equip=button(t.equipped?'현재 영웅 착용 중':'보유한 이 장비 장착',()=>this.equipTarget(),'equip-target');equip.disabled=this.blocked||t.equipped;card.append(equip);}
     const craft=button(t.owned?'같은 장비 추가 제작':'목표 장비 제작',()=>this.craftTarget(),'craft-target');craft.disabled=this.blocked||!t.ready;card.append(craft);this.content.append(card);
@@ -173,7 +177,7 @@ export class JourneyView {
     this.banner('빠른 보급','실전에서 한 번 완료한 던전만 소탕할 수 있습니다. 고정 골드·재료·원정 EXP·물약을 받으며 영웅 EXP·장비·실전 의뢰 진척은 지급하지 않습니다.','glass_garden');
     const auto=node('label','journey-auto'),check=node('input');check.type='checkbox';check.checked=snap.autoBattle;check.dataset.control='auto-battle';check.disabled=this.blocked;check.addEventListener('change',()=>this.act(()=>this.app.journey.setAuto(check.checked),'다음 출격의 자동 전투 설정을 저장했습니다.'));auto.append(check,node('span','','출격할 때 자동 전투 켜기'));this.content.append(auto);
     this.content.append(node('p','journey-rewards',`에너지 ${fmt(this.app.eco.s.energy)} · 소탕권 ${fmt(this.app.eco.s.sweep)}`));
-    const list=node('div','journey-grid');for(const d of DUNGEONS){const card=node('article','journey-card');card.append(illustration('nav-dungeon'),node('h3','',d.name));const choices=node('div','journey-actions');
+    const list=node('div','journey-grid');for(const d of DUNGEONS.filter(d=>this.app.expedition.dungeonVisibility(d.id).visible)){const card=node('article','journey-card');card.append(illustration('nav-dungeon'),node('h3','',d.name));const choices=node('div','journey-actions');
       for(const count of [1,3]){const b=button(`${count}회`,()=>{this.counts[d.id]=count;this.render();},`count-${d.id}-${count}`,'journey-secondary');b.setAttribute('aria-pressed',String((this.counts[d.id]||1)===count));choices.append(b);}card.append(choices);
       const preview=this.app.expedition.sweepPreview(d.id,this.counts[d.id]||1);
       if(preview.ok)card.append(node('p','',`사용: 에너지 ${preview.energy} · 소탕권 ${preview.tickets}`),rewardIcons(preview.rewards),node('p','journey-muted','원정 레벨업 보너스 별도'));else card.append(node('p','journey-muted',preview.error));
