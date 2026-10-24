@@ -41,7 +41,8 @@ const HUD_BUTTONS = '#hud button, #lobby-camera-toggle, #lobby-camera-pad > span
 
 /** 영웅 정보가 없는 기존 공개 신원에만 id 해시 초상을 쓴다. */
 function portraitPool() {
-  return Object.values(HEROES).filter(hero => hero && typeof hero.portrait === 'string');
+  // 초상 정보가 없는 상대의 대체 초상은 기존 id 해시 그대로 두려고 소환 전용 영웅(gachaOnly)은 뺀다(모르는 영웅이 무작위로 보이지 않게).
+  return Object.values(HEROES).filter(hero => hero && !hero.gachaOnly && typeof hero.portrait === 'string');
 }
 
 /** 게임의 선택 영웅을 프로필 생성·변경과 초상 조회에 연결한다. */
