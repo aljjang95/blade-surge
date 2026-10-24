@@ -4,6 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
+import { WEREWOLF_HOWL } from './werewolf-kit.js';
 import { FEEL, KillChain, cinematicBeat, killSlowmo, slowAccentFor, slowAccentLevel } from './feel.js';
 import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
@@ -608,6 +609,8 @@ export class Battle {
     // 단계 알림은 콤보 옆 연속 처치 알약이 직접 빛나며 보여 준다. 전투 중앙에 알림을 띄우지 않는다.
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
+    // 늑대인간 족장 핏빛 포효(사냥 본능): 지속 중 처치마다 최대 체력의 WEREWOLF_HOWL.killHeal 회복.
+    if (this.player.howlT > 0 && this.player.alive) { const heal = Math.floor(this.player.maxHp * WEREWOLF_HOWL.killHeal); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); }
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
     if (!this.stage.party && !e.packFollower) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);

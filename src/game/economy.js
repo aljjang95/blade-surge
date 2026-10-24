@@ -496,7 +496,8 @@ export class Economy {
     const h = this.s.heroes[id]; if (!h) return { dup: false, locked: true, shards: 0 };
     if (this.ownHero(id)) { h.shards += GACHA.dupShards; return { dup: true, locked: false, shards: GACHA.dupShards }; }
     const r = this.s.roster;
-    if (r && r.policy === HERO_POLICY.STARTER && r.starterChosen && Array.isArray(r.owned)) { r.owned = [...r.owned, id]; return { dup: false, locked: false, shards: 0, unlocked: true }; }
+    // 정책 1 도 소환 전용 영웅(원래 다섯 밖)은 첫 획득이 해금이다.
+    if (r && (r.policy === HERO_POLICY.LEGACY || (r.policy === HERO_POLICY.STARTER && r.starterChosen)) && Array.isArray(r.owned)) { r.owned = [...r.owned, id]; return { dup: false, locked: false, shards: 0, unlocked: true }; }
     // 시작 영웅을 고르기 전에는 해금하지 않고 조각만 쌓는다(선택 화면을 건너뛰지 않게).
     h.shards += GACHA.dupShards; return { dup: false, locked: true, shards: GACHA.dupShards };
   }

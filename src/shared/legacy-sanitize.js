@@ -7,7 +7,7 @@ import { GACHA_BANNERS } from '../data/gacha-banners.js';
 // 정당한 헤비 플레이어를 깎지 않는 쪽으로 보수했다. 베타 지표로 보정한다.
 import { EconomyCore } from '../game/economy-core.js';
 import { HEROES } from '../data/heroes.js';
-import { HERO_POLICY } from '../data/hero-roster.js';
+import { HERO_LEGACY_IDS, HERO_POLICY } from '../data/hero-roster.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 
 export const LEGACY_EPOCH = Date.UTC(2026, 6, 1);
@@ -45,7 +45,9 @@ export function trustedRoster(raw, { serverRoster, entitledHeroes }) {
   const paid = known(entitledHeroes);
   const rr = isRecord(raw?.roster) ? raw.roster : null;
   if (serverRoster?.policy === HERO_POLICY.LEGACY) {
-    return { grandfathered: true, roster: { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid } };
+    // 정책 1: 원래 다섯 영웅 + 서버 문서가 이미 기록한 소환 전용 영웅(가져오기 원본의 owned 는 믿지 않는다).
+    const owned = [...new Set([...ids.filter((id) => HERO_LEGACY_IDS.includes(id)), ...known(serverRoster.owned)])];
+    return { grandfathered: true, roster: { policy: HERO_POLICY.LEGACY, owned, starter: null, starterChosen: true, paid } };
   }
   const server = isRecord(serverRoster) ? serverRoster : null;
   const pick = (v) => (typeof v === 'string' && ids.includes(v) ? v : null);

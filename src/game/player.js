@@ -99,7 +99,7 @@ export class Player extends Actor {
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
-    this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
+    this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0; this.howlT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1; this._autoHubCounts = [];
     this._autoEnemies = []; this._autoOut = { x: 0, y: 0 };
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
@@ -946,6 +946,7 @@ export class Player extends Actor {
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
     for (let i = 0; i < this.cds.length; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);   // 4로 박아두면 각성 슬롯(4·5)이 영원히 안 돌아온다
+    if (this.howlT > 0) this.howlT = Math.max(0, this.howlT - dt);
     if (this.buffs.t > 0) { this.buffs.t -= dt; this.game.fx.aura(this.pos, 0xff3030, 2); if (this.buffs.t <= 0) { this.buffs.atk = 1; this.buffs.spd = 1; this.buffs.atkSpd = 1; this.tintEmissive = null; } }
     if (!this.alive) return;
     this.stateT += dt;

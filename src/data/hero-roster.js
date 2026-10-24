@@ -4,6 +4,11 @@
 
 export const HERO_POLICY = Object.freeze({ LEGACY: 1, STARTER: 2 });
 export const HERO_POLICY_CURRENT = HERO_POLICY.STARTER;
+/**
+ * 정책 1 이 무료로 소유하는 원래 다섯 영웅이자 영웅 직접 판매 상품(hero_<id>_v1)·시작 영웅 후보의 범위.
+ * 이 뒤에 들어온 소환 전용 SSR(늑대인간 족장 등)은 정책 1 이용자도 소환으로 얻는다(공짜 지급 없음, 판매 상품 없음).
+ */
+export const HERO_LEGACY_IDS = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger']);
 
 /** 서버 권한 키 'hero:<id>' ↔ 영웅 id. */
 export const HERO_ENTITLEMENT_PREFIX = 'hero:';
@@ -44,7 +49,7 @@ export function stageLabelFromUnlocked(unlocked, perChapter = 10) {
 
 /** roster 상태 하나로 소유 여부를 판단한다. roster 가 없는 상태(옛 저장 원본·테스트 픽스처)는 정책 1 로 본다. */
 export function rosterOwns(roster, id) {
-  if (!roster || typeof roster !== 'object') return true;
-  if (roster.policy === HERO_POLICY.LEGACY) return true;
+  if (!roster || typeof roster !== 'object') return HERO_LEGACY_IDS.includes(id);
+  if (roster.policy === HERO_POLICY.LEGACY && HERO_LEGACY_IDS.includes(id)) return true;
   return (Array.isArray(roster.owned) && roster.owned.includes(id)) || (Array.isArray(roster.paid) && roster.paid.includes(id));
 }
