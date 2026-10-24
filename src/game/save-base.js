@@ -4,12 +4,13 @@ import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeCameraInvert } from '../engine/camera-invert.js';
-import { normalizeExpedition } from './expedition-economy.js';
+import { normalizeExpedition, dropUnownedJob } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { resolveCampaignTown } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
+import { HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -31,6 +32,30 @@ function fill(template, source) {
     if (typeof fallback === 'boolean') return [key, typeof value === 'boolean' ? value : fallback];
     return [key, value ?? fallback];
   }));
+}
+
+/**
+ * 영웅 소유 정책 정화. roster 가 없는 원본(이 정책 전 저장)은 정책 1 로 다섯 영웅을 모두 소유한 채 둔다(기존 이용자 보호).
+ * 정책 2 는 owned(시작·무료 해금)와 paid(서버 권한) 중 HEROES 에 있는 id 만 남긴다. 여러 번 적용해도 결과가 같다.
+ */
+export function normalizeRoster(rawRoster, ids) {
+  const known = (list) => [...new Set((Array.isArray(list) ? list : []).filter((id) => typeof id === 'string' && ids.includes(id)))];
+  if (!record(rawRoster)) return { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid: [] };
+  if (rawRoster.policy === HERO_POLICY.LEGACY) return { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid: known(rawRoster.paid) };
+  const starterChosen = rawRoster.starterChosen === true;
+  const starter = typeof rawRoster.starter === 'string' && ids.includes(rawRoster.starter) ? rawRoster.starter : null;
+  let owned = known(rawRoster.owned);
+  // 시작 영웅을 고르기 전에는 시작 영웅 하나만 소유할 수 있다(무료 해금은 선택 뒤에만 열린다).
+  if (!starterChosen) owned = [starter || (ids.includes(HERO_STARTER_DEFAULT) ? HERO_STARTER_DEFAULT : ids[0])];
+  else if (!owned.length) owned = [starter || (ids.includes(HERO_STARTER_DEFAULT) ? HERO_STARTER_DEFAULT : ids[0])];
+  return { policy: HERO_POLICY.STARTER, owned, starter: starter || owned[0], starterChosen, paid: known(rawRoster.paid) };
+}
+
+/** 선택 영웅이 미소유면 시작 영웅(없으면 첫 소유 영웅)으로 되돌린다. 원정 직업 선택도 그 영웅 것이 아니면 푼다. */
+export function reconcileSelectedHero(s) {
+  const r = s.roster, owns = (id) => rosterOwns(r, id);
+  if (!owns(s.selected)) s.selected = r.starter && owns(r.starter) ? r.starter : (r.owned[0] || r.paid[0] || HERO_STARTER_DEFAULT);
+  return s.selected;
 }
 
 export function normalizeSave(raw, fresh) {
@@ -56,6 +81,8 @@ export function normalizeSave(raw, fresh) {
     s.heroes[id] = h;
   }
   if (!Object.hasOwn(s.heroes, s.selected)) s.selected = 'knight';
+  s.roster = normalizeRoster(raw.roster, Object.keys(HEROES));
+  reconcileSelectedHero(s);
   const seen = new Set();
   s.inventory = s.inventory.filter((item) => {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
@@ -116,6 +143,7 @@ export function normalizeSave(raw, fresh) {
   s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
+  dropUnownedJob(s);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });
   // 천장 카운터는 0..pity-1 범위만 의미가 있다. 범위 밖 값은 확정 천장을 건너뛰게 만들 수 있어 보정한다.
   // 스키마 1부터 gacha.pity가 정본이고, 버전 없는 저장은 레거시 pity에서 옮긴다. s.pity는 미러로 남긴다.

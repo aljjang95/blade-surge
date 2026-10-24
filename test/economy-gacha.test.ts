@@ -4,6 +4,7 @@ import { normalizeSave } from '../src/game/save.js';
 import { SAVE_SCHEMA_VERSION } from '../src/game/save-base.js';
 import { GACHA } from '../src/data/shop.js';
 import { stageDef } from '../src/data/stages.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 beforeEach(() => {
@@ -100,7 +101,7 @@ describe('Economy gacha', () => {
     let featured = 0; const N = 20_000;
     for (let i = 0; i < N; i++) { const r = eco.rollResult('SSR'); if ('id' in r && r.id === GACHA.featured) featured++; else if ('id' in r) expect(r.id).not.toBe(GACHA.featured); }
     expect(Math.abs(featured / N - gachaRates().ssrSplit.featuredHero)).toBeLessThan(0.015);
-    const dup = new Economy({ gachaRng: () => 0 });
+    const dup = grandfather(new Economy({ gachaRng: () => 0 }));
     const before = dup.s.heroes[GACHA.featured].shards;
     const res = dup.rollResult('SSR');
     expect(res).toMatchObject({ type: 'hero', id: GACHA.featured, dup: true, shards: GACHA.dupShards });

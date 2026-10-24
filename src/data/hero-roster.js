@@ -11,3 +11,34 @@ export const heroEntitlementKey = (id) => HERO_ENTITLEMENT_PREFIX + id;
 export function heroIdFromEntitlement(key) {
   return typeof key === 'string' && key.startsWith(HERO_ENTITLEMENT_PREFIX) ? key.slice(HERO_ENTITLEMENT_PREFIX.length) : null;
 }
+
+/**
+ * 무과금 영웅 해금 사다리. 시작 영웅 뒤로 열리는 순서(0부터)마다 캠페인 진행(progress.unlocked, 다음 열릴 관문 번호)과 보석 비용을 정한다.
+ * 근거(bun run sim:90d 페르소나 중앙값 + shop 무료 수입):
+ *  - 시작 보석 1,500 + 환영 우편 500 = 2,000. 캠페인 첫 클리어 보석(스토리 60관문 합 약 6,700), 출석 주 300(일 약 43), 패스·임무 약 1,000, 탑·이벤트 약 20/일.
+ *  - 누적 보석(시작 포함): 일반 D30 약 11.0k · D45 약 12.1k, 라이트 D30 약 10.1k · D45 약 11.7k, 하드코어 D30 약 11.5k.
+ *  - 비용 합계 11,000 = 일반 약 30일 · 라이트 약 40~45일(소환·다른 소비가 없을 때). 둘째 영웅은 3-5 클리어(일반 3일·라이트 5일·하드코어 1일) 뒤 1,500으로 연다.
+ */
+export const HERO_FREE_UNLOCK = Object.freeze([
+  Object.freeze({ need: 26, gems: 1500 }),
+  Object.freeze({ need: 36, gems: 2500 }),
+  Object.freeze({ need: 46, gems: 3000 }),
+  Object.freeze({ need: 56, gems: 4000 }),
+]);
+export const HERO_FREE_UNLOCK_TOTAL_GEMS = HERO_FREE_UNLOCK.reduce((sum, step) => sum + step.gems, 0);
+
+/** 시작 영웅 선택 화면이 열리기 전 임시 시작 영웅. */
+export const HERO_STARTER_DEFAULT = 'knight';
+
+/** 진행 조건 문구용: 다음 열릴 관문 번호(1부터) → '2장 5관문'. */
+export function stageLabelFromUnlocked(unlocked, perChapter = 10) {
+  const cleared = Math.max(1, unlocked - 1);
+  return Math.ceil(cleared / perChapter) + '-' + (((cleared - 1) % perChapter) + 1);
+}
+
+/** roster 상태 하나로 소유 여부를 판단한다. roster 가 없는 상태(옛 저장 원본·테스트 픽스처)는 정책 1 로 본다. */
+export function rosterOwns(roster, id) {
+  if (!roster || typeof roster !== 'object') return true;
+  if (roster.policy === HERO_POLICY.LEGACY) return true;
+  return (Array.isArray(roster.owned) && roster.owned.includes(id)) || (Array.isArray(roster.paid) && roster.paid.includes(id));
+}

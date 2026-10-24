@@ -5,6 +5,7 @@ import { DUNGEONS, RECIPES, ARENA_RIVALS } from '../src/data/expansion.js';
 import { EXPEDITION_ITEMS } from '../src/data/expedition-items.js';
 import { ITEM_BY_ID, SETS } from '../src/data/items.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
+import { grandfather } from './helpers/legacy-roster';
 const old = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
 beforeEach(() => { values = new Map(); Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k:string) => values.get(k) ?? null, setItem: (k:string,v:string) => values.set(k,v), removeItem: (k:string) => values.delete(k) } }); });
@@ -33,7 +34,7 @@ test('reload cancels unfinished start and refunds only once', () => {
   const z=make(); expect(z.eco.s.energy).toBe(energy); const next=z.x.begin('dungeon','glass_garden'); expect(next.ticket?.id).not.toBe(b.ticket?.id);
 });
 test('tutorial and dungeon quests unlock real base heroes and persisted jobs', () => {
-  const {eco,x}=make(); expect(x.unlockJob('guardian').ok).toBe(false); x.claimQuest('first_oath');
+  const {eco,x}=make(); grandfather(eco); expect(x.unlockJob('guardian').ok).toBe(false); x.claimQuest('first_oath');
   expect(x.unlockJob('guardian').ok).toBe(true); expect(x.selectJob('guardian').ok).toBe(true);
   x.settle(x.begin('dungeon','glass_garden').ticket,{win:true}); x.claimQuest('garden_scout');
   expect(x.unlockJob('ranger').ok).toBe(true); expect(x.selectJob('ranger').ok).toBe(true); expect(eco.s.selected).toBe('rogue');

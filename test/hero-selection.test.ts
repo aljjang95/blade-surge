@@ -3,6 +3,7 @@ import { Economy } from '../src/game/economy.js';
 import { HEROES } from '../src/data/heroes.js';
 import { Meta } from '../src/ui/meta.js';
 import { audio } from '../src/engine/audio.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 const voice = audio.voice;
@@ -21,16 +22,24 @@ afterEach(() => {
   else Reflect.deleteProperty(globalThis,'localStorage');
 });
 
-test('all five base classes can be chosen on a fresh save without currency changes', () => {
+test('a fresh save keeps all five hero records but owns only the chosen starter, and choosing changes no currency', () => {
   const eco = new Economy();
   expect(Object.keys(eco.s.heroes)).toEqual(Object.keys(HEROES));
   expect([eco.s.gold,eco.s.gems,eco.s.tickets]).toEqual([12000,1500,5]);
   expect(Object.values(eco.s.heroes).every((h:any)=>h.level===1&&h.star===1&&h.shards===0)).toBe(true);
+  expect(eco.ownedHeroIds()).toEqual(['knight']);
+  // 다섯 직업 모두 시작 영웅으로 고를 수 있다(저장을 새로 만들어 하나씩).
+  for (const id of Object.keys(HEROES)) {
+    const e = new Economy(); e.s.roster.starterChosen = false;
+    expect(e.chooseStarter(id).ok).toBe(true);
+    expect(e.ownedHeroIds()).toEqual([id]); expect(e.s.selected).toBe(id);
+    expect([e.s.gold,e.s.gems,e.s.tickets]).toEqual([12000,1500,5]);
+  }
 });
 
 test('legacy roster migration adds missing classes and preserves trained hero and selected mage', () => {
   const eco = new Economy(), raw = eco.fresh();
-  delete raw.heroes.barbarian; delete raw.heroes.rogue;
+  delete raw.heroes.barbarian; delete raw.heroes.rogue; delete (raw as any).roster;
   raw.selected = 'mage'; Object.assign(raw.heroes.mage,{level:24,exp:83,star:3,shards:17,skills:[4,3,2,1,2,1]});
   raw.gold=321; raw.gems=87; raw.tickets=2;
   const result=eco.migrate(raw);
@@ -42,7 +51,7 @@ test('legacy roster migration adds missing classes and preserves trained hero an
 });
 
 test('hero choice updates persisted launch identity, showcased model and reload selection', () => {
-  const eco = new Economy(), shown:string[]=[];
+  const eco = grandfather(new Economy()), shown:string[]=[];
   const meta=Object.create(Meta.prototype);
   Object.assign(meta,{eco,app:{showcaseHero:(id:string)=>shown.push(id)},ui:{toast:()=>{}},renderHeroes:()=>{}});
   for (const id of Object.keys(HEROES)) {
@@ -67,7 +76,7 @@ test('keyboard selection restores focus to the replacement card, pointer selecti
   const events:string[]=[];
   let replacement:{focus:(options:{preventScroll:boolean})=>void};
   const meta=Object.create(Meta.prototype);
-  Object.assign(meta,{eco:new Economy(),app:{showcaseHero:()=>{}},ui:{toast:()=>{}},renderHeroes:()=>{
+  Object.assign(meta,{eco:grandfather(new Economy()),app:{showcaseHero:()=>{}},ui:{toast:()=>{}},renderHeroes:()=>{
     events.push('render');
     replacement={focus:options=>{expect(options.preventScroll).toBe(true);events.push('focus');}};
   }});

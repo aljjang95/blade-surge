@@ -8,6 +8,7 @@ import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
 import { CITADEL_POTIONS } from '../data/citadel-shop.js';
+import { rosterOwns } from '../data/hero-roster.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -44,6 +45,11 @@ export function normalizeExpedition(raw) {
     selectedJob: unlockedJobs.includes(r.selectedJob) ? r.selectedJob : null, seq: num(r.seq),
     campaignReceipts: [...new Set((Array.isArray(r.campaignReceipts) ? r.campaignReceipts : []).filter(x => typeof x === 'string' && x.length <= 120))],
     pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) && (p.conquestId == null || conquestForRun(p.target, depth, p.conquestId)) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy, ...(p.conquestId ? { conquestId: p.conquestId } : {}), ...(frontierFromSnapshot(p.frontier) ? { frontier: frontierSnapshot(p.frontier) } : {}) } : null };
+}
+/** 미소유 영웅의 직업을 선택한 채로 두지 않는다(환불·회수 뒤 잠금). 직업 해금 기록과 데이터는 그대로 둔다. */
+export function dropUnownedJob(s) {
+  const job = find(JOBS, s.expedition?.selectedJob);
+  if (job && !rosterOwns(s.roster, job.heroId)) s.expedition.selectedJob = null;
 }
 export class ExpeditionEconomy {
   constructor(eco) {
@@ -251,10 +257,13 @@ export class ExpeditionEconomy {
   unlockJob(id) {
     const job = find(JOBS, id);
     if (!job || this.s.unlockedJobs.includes(id) || !this.s.claimed.includes(job.questId)) return { ok: false, error: '직업 해금 퀘스트 보상을 먼저 받아 주세요.' };
-    return this.transact(() => { this.s.unlockedJobs.push(id); if (!this.eco.s.heroes[job.heroId]) this.eco.grantHero(job.heroId); return { ok: true }; });
+    // 직업 해금은 영웅 소유를 열어 주지 않는다. 영웅을 먼저 해금해야 직업을 열 수 있다.
+    if (!this.eco.ownHero(job.heroId)) return { ok: false, error: '영웅을 먼저 해금해 주세요.' };
+    return this.transact(() => { this.s.unlockedJobs.push(id); return { ok: true }; });
   }
   selectJob(id) {
     if (id !== null && !this.s.unlockedJobs.includes(id)) return { ok: false, error: '잠긴 직업입니다.' };
+    if (id !== null && !this.eco.ownHero(find(JOBS, id)?.heroId)) return { ok: false, error: '영웅을 먼저 해금해 주세요.' };
     return this.transact(() => { this.s.selectedJob = id; if (id) this.eco.s.selected = find(JOBS, id).heroId; return { ok: true }; });
   }
   craft(id) {
