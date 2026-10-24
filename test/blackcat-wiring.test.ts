@@ -142,3 +142,34 @@ describe('배너 그림', () => {
     expect(heroBannerArt('blackcat', HEROES.blackcat.portrait)).toEqual({ src: '/img/tll/avatars/avatar_ranger_blackcat-v1.webp', kind: 'fallback' });
   });
 });
+
+describe('소환 전용 영웅은 시작 영웅이 될 수 없다 (리뷰 P1)', () => {
+  const PRE = Date.UTC(2026, 9, 27);
+  test('chooseStarter 는 blackcat·werewolf 를 거절하고 원래 영웅은 받는다', () => {
+    for (const id of ['blackcat', 'werewolf']) {
+      const eco = EconomyCore.fromState(null, { now: () => PRE, rng: () => 0.5 }) as any;
+      expect(eco.chooseStarter(id)).toEqual({ ok: false, reason: 'unknown' });
+      expect(eco.ownHero(id)).toBe(false);
+    }
+    const ok = EconomyCore.fromState(null, { now: () => PRE, rng: () => 0.5 }) as any;
+    expect(ok.chooseStarter('ranger')).toMatchObject({ ok: true, id: 'ranger' });
+  });
+  test('가져오기 selected 조작으로 소환 전용 영웅을 시작 영웅으로 얻지 못한다', async () => {
+    const { trustedRoster } = await import('../src/shared/legacy-sanitize.js');
+    for (const id of ['blackcat', 'werewolf']) {
+      const r = trustedRoster({ selected: id, roster: { policy: 2, starterChosen: true, starter: id } } as any, {} as any).roster;
+      expect(r.owned).not.toContain(id); expect(r.starter).toBe('knight');
+    }
+  });
+});
+
+describe('데뷔 시각은 교대 칸 시작과 같아야 한다', () => {
+  test('HERO_DEBUT 의 모든 시각이 회차 경계이고 그 칸의 픽업이 그 영웅이다', async () => {
+    const { HERO_DEBUT, BANNER_EPOCH, BANNER_PERIOD_MS } = await import('../src/data/gacha-banners.js');
+    const { heroPickup } = await import('../src/game/economy.js');
+    for (const [id, at] of Object.entries(HERO_DEBUT) as [string, number][]) {
+      expect((at - BANNER_EPOCH) % BANNER_PERIOD_MS).toBe(0);
+      expect(heroPickup(at)).toBe(id);
+    }
+  });
+});

@@ -816,8 +816,10 @@ export const SKILLS = {
       if (c.data.tick > 0 || c.data.n >= BLACKCAT_NIGHT.shots) return;
       c.data.tick = BLACKCAT_NIGHT.step;
       const i = c.data.n++;
-      const list = blackcatTargets(game, p, c.data.origin, BLACKCAT_NIGHT.reach, BLACKCAT_NIGHT.shots, true);
-      const e = list[i % (list.length || 1)];
+      // 순서는 첫 발에 한 번 정한다(표식이 붙을 때마다 다시 정렬하면 같은 적을 건너뛰거나 겹친다). 죽은 표적 자리만 새로 고른다.
+      if (!c.data.order) c.data.order = blackcatTargets(game, p, c.data.origin, BLACKCAT_NIGHT.reach, BLACKCAT_NIGHT.shots, true);
+      let e = c.data.order[i];
+      if (!e?.alive || e.spawning) e = c.data.order[i] = blackcatTargets(game, p, c.data.origin, BLACKCAT_NIGHT.reach, 1, true)[0];
       if (!e) return;
       p.face(e.pos.x, e.pos.z);
       p.playTimed?.('Bow_Shoot', BLACKCAT_NIGHT.step * 1.6, { fade: .03 });
@@ -825,10 +827,10 @@ export const SKILLS = {
       audio.whoosh({ vol: .32, pitch: 1.2 + i * .06, dur: .12 });
     },
     end(game, p, c) {
-      p.vel.set(0, 0, 0); game.renderer.desat = 0;
+      p.vel.set(0, 0, 0); game.renderer.desat = 0; game.renderer.aberr = 0;
       const origin = c.data.origin || p.pos, now = game.elapsed || 0, mul = BLACKCAT_NIGHT.burstMul * (c.data.empowered ? 1.5 : 1);
-      // 마지막 화살이 닿을 시간을 두고 터뜨린다(표식이 붙은 뒤).
-      game.after(.18, () => {
+      // 마지막 화살이 닿을 시간(사거리 18m ÷ 속도 34 ≈ 0.53초)을 두고 터뜨린다(표식이 붙은 뒤).
+      game.after(.55, () => {
         if (game.active === false) return;
         const marked = game.enemies.filter((e) => e.alive && !e.spawning && e.omenBy === p && e.omenUntil > (game.elapsed || now) && Math.hypot(e.pos.x - origin.x, e.pos.z - origin.z) < BLACKCAT_NIGHT.reach);
         for (const e of marked) {

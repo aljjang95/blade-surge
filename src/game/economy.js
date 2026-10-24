@@ -304,7 +304,8 @@ export class Economy {
     const r = this.s.roster;
     if (!r || r.policy !== HERO_POLICY.STARTER) return { ok: false, reason: 'policy' };
     if (r.starterChosen) return { ok: false, reason: 'chosen' };
-    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !this.s.heroes[id]) return { ok: false, reason: 'unknown' };
+    // 소환 전용(gachaOnly) 영웅은 시작 영웅 후보가 아니다(starterChoices 와 같은 규칙, 데뷔 전 SSR 무료 획득 차단).
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || HEROES[id].gachaOnly || !this.s.heroes[id]) return { ok: false, reason: 'unknown' };
     const before = structuredClone(this.s);
     r.owned = [id]; r.starter = id; r.starterChosen = true; this.s.selected = id;
     reconcileSelectedHero(this.s); dropUnownedJob(this.s);
