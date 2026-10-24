@@ -1,0 +1,5 @@
+.apex/
+*.local.json
+*.dpapi
+.env*
+work/
