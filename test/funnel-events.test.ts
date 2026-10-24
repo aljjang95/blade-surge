@@ -240,3 +240,16 @@ test('hero purchase screen skus (derived from iap-catalog) and hero_unlock_free 
   expect(validateFunnelEvent('hero_unlock_free', { hero: 'nobody', step: 1 }).ok).toBe(false);
   expect(validateFunnelEvent('hero_unlock_free', { hero: HERO_ORDER[0] }).ok).toBe(false);
 });
+
+test('모든 IAP 상품: 서버 검증 완료 이벤트의 sku가 스키마를 통과한다(Play 영웅 구매 포함)', async () => {
+  const { funnelSkuFor } = await import('../src/game/funnel-events.js');
+  const { IAP_PRODUCTS } = await import('../src/shared/iap-catalog.js');
+  for (const p of IAP_PRODUCTS) {
+    const sku = funnelSkuFor({ productId: p.id, shopSku: p.shopSku ?? null });
+    expect(validateFunnelEvent('purchase_verified', { sku })).toEqual({ ok: true, payload: { sku } });
+  }
+  // 영웅 상품은 진입(paysheet_open)에서 쓰는 상품 id로 완료 이벤트와 통일한다.
+  expect(funnelSkuFor({ productId: 'hero_mage_v1', shopSku: 'hero_mage' })).toBe('hero_mage_v1');
+  expect(funnelSkuFor({ productId: 'hero_all_v1', shopSku: 'hero_all' })).toBe('hero_all_v1');
+  expect(validateFunnelEvent('paysheet_open', { sku: 'hero_mage_v1' }).ok).toBe(true);
+});

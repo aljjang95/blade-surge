@@ -59,6 +59,14 @@ const SCHEMA = Object.freeze({
   return_session: { required: { gapDays: int(0, 3650) }, optional: {} },
 });
 
+/**
+ * 서버 검증 완료 이벤트(purchase_verified)의 sku. 영웅 상품은 진입 이벤트(paysheet_open)와 같은 상품 id(hero_<id>_v1)를 쓰고,
+ * 나머지는 상점 sku(shopSku)를 쓴다. 카탈로그 shopSku(hero_mage·hero_all)는 스키마가 받지 않아 완료 이벤트가 버려졌다.
+ */
+export function funnelSkuFor({ productId, shopSku }) {
+  return HERO_SKU_IDS.includes(productId) ? productId : (shopSku ?? productId ?? null);
+}
+
 export const FUNNEL_EVENTS = Object.freeze(Object.keys(SCHEMA));
 
 const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
