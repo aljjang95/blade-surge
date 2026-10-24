@@ -114,23 +114,29 @@
 
     <!-- gacha -->
     <div id="tab-gacha" class="tab">
-      <div class="gacha-wrap">
+      <div class="gacha-wrap" id="gacha-wrap" data-banner="hero">
         <div class="gacha-banner" id="gacha-banner">
           <div class="banner-art"><img id="banner-art" src="/img/banner_featured.webp" alt="" /></div>
-          <div class="banner-txt">
-            <div class="banner-kicker">픽업 소환 · 확률 UP</div>
-            <h2 id="banner-title">광전사 드라칸</h2>
-            <div class="banner-sub">SSR <b id="banner-ssr">2.0%</b> · SSR 중 픽업 <b id="banner-pickup">50%</b> · <b id="banner-soft">61</b>번째부터 확률 상승 · <b id="pity-left">80</b>회 안에 SSR 확정</div>
-            <div class="banner-timer">남은 시간 <b id="banner-timer">2일 13:22:10</b></div>
-          </div>
         </div>
-        <div class="gacha-btns">
-          <button class="btn btn-blue" id="btn-pull1"><span>1회 소환</span><small><i class="ic ic-gem"></i> 300 <em>또는 티켓 ×1</em></small></button>
-          <button class="btn btn-gold" id="btn-pull10"><span>10회 소환</span><small><i class="ic ic-gem"></i> <s>3000</s> 2700 <em>SR 1장 보장</em></small></button>
+        <div class="gacha-tabs" id="gacha-tabs" role="tablist" aria-label="소환 배너">
+          <button type="button" role="tab" class="gz-tab" data-banner="hero"><img alt="" /><span class="gz-tn">영웅 소환</span><small class="gz-ts"></small></button>
+          <button type="button" role="tab" class="gz-tab" data-banner="gear"><img alt="" /><span class="gz-tn">장비 소환</span><small class="gz-ts"></small></button>
+          <button type="button" role="tab" class="gz-tab" data-banner="beginner"><img alt="" /><span class="gz-tn">초보자</span><small class="gz-ts"></small></button>
+        </div>
+        <div class="gz-pick banner-txt" id="gz-pick">
+          <div class="gz-gear" id="gz-gear" hidden></div>
+          <div class="gz-plate"><span class="gz-ssr">SSR</span><div class="gz-pn"><div class="banner-kicker" id="banner-kicker">픽업 소환 · 확률 UP</div><h2 id="banner-title">광전사 드라칸</h2><div class="banner-timer" id="banner-timer-wrap">남은 시간 <b id="banner-timer">2일 13:22:10</b></div></div></div>
+        </div>
+        <div class="gz-panel" id="gz-panel">
+          <div class="gz-pity"><div class="gz-pity-t" id="gz-pity-t">SSR 확정까지 <b id="pity-left">80</b>회</div><div class="gz-bar" role="progressbar" aria-label="천장 진행" aria-valuemin="0" aria-valuemax="100" id="gz-bar"><i id="gz-bar-fill"></i></div><div class="gz-pity-s" id="gz-pity-s">픽업 실패 시 다음 SSR 픽업 확정</div><span class="gz-guar" id="gz-guar" hidden>다음 SSR 픽업 확정</span></div>
+          <div class="gacha-btns">
+            <button class="btn btn-blue" id="btn-pull1"><span>1회</span><small></small></button>
+            <button class="btn btn-gold" id="btn-pull10"><span>10회</span><small></small></button>
+          </div>
           <button class="btn btn-red hidden" id="btn-pull-ssr"><span>SSR 확정 소환</span><small><i class="ic ic-ticket"></i> 확정권 ×<b id="v-ssr-ticket">0</b> <em>중복이면 조각</em></small><small class="pace-ssr" id="pace-ssr" hidden></small></button>
         </div>
-        <div class="gacha-foot"><button class="link" id="btn-rates">확률 정보</button><span>보유 티켓 <b id="v-ticket">0</b> · 누적 <b id="v-pity">0</b>회</span></div>
-        <p class="gacha-odds" id="gacha-odds" aria-live="off" style="margin:6px 0 0;font-size:12px;text-align:center;color:var(--muted)"></p>
+        <div class="gacha-foot"><button class="link" id="btn-rates"><i aria-hidden="true">i</i>확률 정보</button><span>보유 티켓 <b id="v-ticket">0</b> · 누적 <b id="v-pity">0</b>회</span></div>
+        <p class="gacha-odds" id="gacha-odds" aria-live="off"></p>
         <p class="gacha-pace" id="gacha-pace" hidden></p>
       </div>
     </div>

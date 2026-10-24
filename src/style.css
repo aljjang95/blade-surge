@@ -263,18 +263,6 @@ b { font-weight: 900; }
 button.loot-item { font-family: inherit; cursor: pointer; }
 
 /* gacha */
-.gacha-wrap { position: absolute; left: 0; right: 0; top: calc(64px + var(--sat)); bottom: calc(64px + var(--sab)); display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; gap: 10px; background: radial-gradient(ellipse at 50% 20%, rgba(80,30,140,.6), transparent 60%); }
-.gacha-banner { flex: 1; position: relative; border-radius: 18px; overflow: hidden; border: 2px solid rgba(255,207,90,.5); box-shadow: 0 0 30px rgba(178,107,255,.4); background: #150d26; }
-.banner-art { position: absolute; inset: 0; }
-.banner-art img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-.banner-txt { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; background: linear-gradient(180deg, transparent, rgba(10,5,20,.95) 60%); }
-.banner-kicker { color: var(--gold); font-size: 12px; font-weight: 900; letter-spacing: .1em; }
-.banner-txt h2 { font-family: var(--disp); font-size: 32px; margin: 2px 0; }
-.banner-sub { font-size: 12px; color: var(--muted); }
-.banner-timer { font-size: 12px; color: var(--red); margin-top: 4px; }
-.gacha-btns { display: flex; gap: 10px; }
-.gacha-btns .btn { flex: 1; }
-.gacha-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
 
 /* shop */
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; padding-bottom: 20px; }
@@ -963,20 +951,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .shop-item .badge { font-size:8px; }
 }
 /* 가챠: 오스 셸이 이미 탭을 위아래 58px 안쪽으로 두므로 wrap의 64px 여백이 겹치면 픽업 배너가 접힌다. */
-.oath-visual #tab-gacha .gacha-wrap { inset: 0; padding: 10px 12px; }
 /* 짧은 가로 화면: 배너는 왼쪽 전체 높이, 소환 버튼·천장·확률은 오른쪽 패널에 모은다. */
-@media (orientation: landscape) and (max-height: 500px) {
-  #tab-gacha .gacha-wrap { display: grid; grid-template-columns: minmax(0, 1fr) clamp(236px, 34%, 300px); grid-template-rows: minmax(0, 1fr) auto auto auto auto; column-gap: 12px; row-gap: 8px; }
-  #tab-gacha .gacha-wrap::before { content: ''; grid-column: 2; grid-row: 1 / -1; margin: 0 -8px; border-radius: 14px; background: rgba(12, 8, 24, .78); border: 1px solid rgba(255, 207, 90, .22); }
-  #tab-gacha .gacha-banner { grid-column: 1; grid-row: 1 / -1; min-height: 0; }
-  #tab-gacha .gacha-btns { grid-column: 2; grid-row: 2; flex-direction: column; gap: 8px; }
-  #tab-gacha .gacha-btns .btn { padding: 9px 12px; font-size: 16px; }
-  #tab-gacha .gacha-foot { grid-column: 2; grid-row: 3; align-items: center; gap: 8px; }
-  #tab-gacha .gacha-pace { grid-column: 2; grid-row: 5; }
-  #tab-gacha .gacha-odds { grid-column: 2; grid-row: 4; margin: 0 0 4px !important; line-height: 1.35; color: #cfc6e6 !important; }
-  #tab-gacha .banner-txt { padding: 10px 12px; }
-  #tab-gacha .banner-txt h2 { font-size: 26px; }
-}
 @media (max-width: 420px) {
   .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 7px; }
   .shop-item.big { grid-column: span 2; }
@@ -989,15 +964,6 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .hero-avatar-row > div { flex: 0 0 auto; }
   .hero-avatar-row .btn, .hero-avatar-buttons { width: 100%; }
   .hero-avatar-buttons .btn { flex: 1 1 0; }
-}
-@media (orientation: landscape) and (max-height: 380px) {
-  #tab-gacha .gacha-btns .btn { padding: 7px 10px; font-size: 15px; }
-  #tab-gacha .gacha-btns .btn small { font-size: 11px; }
-  #tab-gacha .gacha-btns { gap: 5px; }
-  #tab-gacha #btn-pull-ssr { padding: 5px 10px; font-size: 13px; }
-  #tab-gacha .gacha-odds { font-size: 11px !important; }
-  #tab-gacha .banner-txt h2 { font-size: 22px; }
-  #tab-gacha .banner-sub, #tab-gacha .banner-timer { font-size: 11px; }
 }
 /* 영웅 상세: 첫 강화 버튼(성장 훈련·승급)을 스크롤 없이 이름 바로 아래에 둔다. */
 .hero-actions-top { margin: 4px 0 2px; }
