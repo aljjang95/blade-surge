@@ -161,3 +161,53 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     expect(off.hp.price('hero_knight_v1')).toBeNull();
   });
 });
+
+describe('영웅 권한 시작·복귀 동기화 (syncState)', () => {
+  const { Economy } = require('../src/game/economy.js');
+  const { createMemoryStorage } = require('../src/game/economy-core.js');
+  const stateRig = (heroes: string[], opts: { fail?: boolean; webBilling?: boolean } = {}) => {
+    const eco = new Economy({ storage: createMemoryStorage() });
+    let t = 1000, calls = 0, current = heroes;
+    const api = {
+      async me() { return { flags: { webBilling: opts.webBilling ?? false } }; },
+      async request(method: string, path: string) {
+        if (method === 'GET' && path === '/iap/state') { calls++; if (opts.fail) throw new Error('offline'); return { grants: [], reversals: [], entitlements: { heroes: current } }; }
+        throw new Error('path ' + path);
+      },
+    };
+    const hp = createHeroPurchase({ api, eco, channel: 'web', billing: null, loadSdk: async () => null, storage: new MemStorage(), now: () => t,
+      location: { origin: 'https://blade.example', search: '', pathname: '/' }, history: { replaceState() {} } });
+    return { eco, hp, calls: () => calls, setServer: (h: string[]) => { current = h; }, advance: (ms: number) => { t += ms; } };
+  };
+
+  test('pending 없이 cron이 지급한 결제도 시작 때 열린다(웹 판매 스위치가 꺼져 있어도)', async () => {
+    const r = stateRig(['mage'], { webBilling: false });
+    await r.hp.init();
+    expect(r.hp.available()).toBe(false);
+    expect(r.eco.ownHero('mage')).toBe(false);
+    expect(await r.hp.syncState()).toBe(true);
+    expect(r.eco.ownHero('mage')).toBe(true);
+  });
+
+  test('환불 뒤 시작하면 회수가 반영된다(데이터는 보존, 잠금만)', async () => {
+    const r = stateRig(['mage']);
+    await r.hp.syncState();
+    r.eco.s.heroes.mage.level = 12;
+    r.setServer([]); r.advance(60000);
+    expect(await r.hp.syncState()).toBe(true);
+    expect(r.eco.ownHero('mage')).toBe(false);
+    expect(r.eco.s.heroes.mage.level).toBe(12);
+  });
+
+  test('실패는 조용히 false이고 연속 복귀는 간격으로 묶인다', async () => {
+    const bad = stateRig(['mage'], { fail: true });
+    expect(await bad.hp.syncState()).toBe(false);
+    const ok = stateRig(['mage']);
+    expect(await ok.hp.syncState()).toBe(true);
+    expect(await ok.hp.syncState()).toBe(false);
+    expect(ok.calls()).toBe(1);
+    ok.advance(20000);
+    await ok.hp.syncState();
+    expect(ok.calls()).toBe(2);
+  });
+});

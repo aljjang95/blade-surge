@@ -160,10 +160,16 @@ export function setupBilling(app) {
     const status = app.account?.status;
     if (status === 'ready') {
       void billing.init().then((ok) => ok && billing.sync()).then(() => app.meta?.refreshTop?.()).catch(() => {});
-      void heroPurchase.init().then(() => heroPurchase.resume()).then((r) => r?.ok && app.meta?.refreshTop?.()).catch(() => {});
+      void heroPurchase.init().then(() => heroPurchase.resume()).then((r) => r?.ok && app.meta?.refreshTop?.())
+        .then(() => heroPurchase.syncState()).then((ok) => ok && app.meta?.refreshTop?.()).catch(() => {});
     } else if (status === 'connecting' && tries < 40) setTimeout(() => start(tries + 1), 1500);
   };
   start();
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void billing.sync(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    void billing.sync();
+    // 웹 그림자 모드는 Play 어댑터가 없어 billing.sync()가 비어 있다: 영웅 권한(환불 회수·늦은 지급)은 여기서 따로 맞춘다.
+    if (app.account?.status === 'ready') void heroPurchase.syncState().then((ok) => ok && app.meta?.refreshTop?.()).catch(() => {});
+  });
   return billing;
 }
