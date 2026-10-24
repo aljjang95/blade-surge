@@ -246,15 +246,15 @@ describe('룬 드랍 정산과 전투 효과', () => {
     const base = eco.heroPower('knight');
     expect(eco.heroRuneEffects('knight')).toEqual({});
     eco.runeInsert(1, 0, { id: 'ember_edge', grade: 1 });
-    expect(eco.heroRuneEffects('knight')).toEqual({ atk: 0.05 });
+    expect(eco.heroRuneEffects('knight')).toEqual({ atk: 0.025 });
     expect(eco.heroPower('knight')).toBeGreaterThan(base);
     eco.runeInsert(2, 0, { id: 'stone_root', grade: 1 });
-    expect(eco.heroRuneEffects('knight')).toEqual({ atk: 0.05, hp: 0.07 });
+    expect(eco.heroRuneEffects('knight')).toEqual({ atk: 0.025, hp: 0.035 });
     // 전운 각인 1개는 가문 공명 수에만 +1(잿불 2 + 바위 2 → 공명)
     const withBless = eco.heroRuneEffects('knight', { blessingBoonId: 'ember_hunt' });
     expect(Object.keys(withBless).length).toBeGreaterThanOrEqual(2);
     eco.unequip('knight', 'weapon');
-    expect(eco.heroRuneEffects('knight')).toEqual({ hp: 0.07 });
+    expect(eco.heroRuneEffects('knight')).toEqual({ hp: 0.035 });
     expect((ITEM_BY_ID as any)[eco.s.inventory[0].id].rarity).toBe('U');
   });
 });
