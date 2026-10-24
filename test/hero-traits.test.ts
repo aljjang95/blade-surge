@@ -20,6 +20,6 @@ describe('영웅 비교 막대', () => {
   test('난이도 막대는 별 개수에 비례하고 모르는 영웅은 null', () => {
     expect(heroCompare('rogue')!.difficultyBar).toBe(1); expect(heroCompare('knight')!.difficultyBar).toBeCloseTo(1 / 3);
     expect(heroCompare('nobody')).toBeNull();
-    expect(Object.keys(HEROES).length).toBe(6);   // 원래 다섯 + 소환 전용 SSR 늑대인간 족장
+    expect(Object.keys(HEROES).length).toBe(7);   // 원래 다섯 + 소환 전용 SSR 늑대인간 족장·검은 고양이 사냥꾼
   });
 });

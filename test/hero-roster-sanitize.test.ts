@@ -77,7 +77,7 @@ describe('영웅 상품 카탈로그', () => {
   test('hero_<id>_v1 5종 + hero_all_v1: 영웅 id가 HEROES와 일치, 웹·Play 동일가, 권한은 hero:<id>', () => {
     // 상품은 원래 다섯만(HERO_LEGACY_IDS). 소환 전용 SSR(늑대인간 족장)은 상품·권한이 없다.
     expect(HERO_LEGACY_IDS.length).toBe(5);
-    expect(HERO_ORDER.length).toBe(6);
+    expect(HERO_ORDER.length).toBe(7);
     expect(IAP_BY_ID.hero_werewolf_v1).toBeUndefined();
     for (const id of HERO_LEGACY_IDS) {
       const p = IAP_BY_ID[`hero_${id}_v1`];

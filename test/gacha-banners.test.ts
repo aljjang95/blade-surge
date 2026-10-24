@@ -6,7 +6,7 @@ import { EconomyCore } from '../src/game/economy-core.js';
 import { createMemoryStorage } from '../src/game/economy-core.js';
 import { normalizeSave } from '../src/game/save.js';
 import { createSeededRng } from '../src/shared/rng.js';
-import { GACHA_BANNERS, GACHA_MILEAGE, BANNER_EPOCH } from '../src/data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, BANNER_EPOCH, heroReleased } from '../src/data/gacha-banners.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
 import { GACHA } from '../src/data/shop.js';
 import { OPS, validateOp } from '../src/shared/v1-ops.js';
@@ -77,7 +77,9 @@ describe('(a) 픽업 실패 뒤 다음 SSR은 반드시 픽업', () => {
     // 균등: 시드 고정 대량에서 SSR 영웅 둘이 모두 나오고 편차가 작다.
     const e2 = mk({ gachaSeed: 7 }), n = 4000, cnt: Record<string, number> = {};
     for (let i = 0; i < n; i++) { const id = e2.rollResult('SSR', { banner: GACHA_BANNERS.beginner, featured: null }).id; cnt[id] = (cnt[id] || 0) + 1; }
-    const ssrIds = HERO_ORDER.filter((id) => (HEROES as any)[id].rarity === 'SSR');
+    // 풀은 이 시계(NOW) 기준으로 데뷔한 SSR 영웅뿐이다(검은 고양이는 11-09 데뷔라 아직 없다).
+    const ssrIds = HERO_ORDER.filter((id) => (HEROES as any)[id].rarity === 'SSR' && heroReleased(id, NOW));
+    expect(cnt.blackcat || 0).toBe(0);
     for (const id of ssrIds) expect(Math.abs((cnt[id] || 0) / n - 1 / ssrIds.length)).toBeLessThan(0.03);
   });
 });
@@ -308,8 +310,8 @@ describe('소환 마일리지', () => {
   test('픽업이 바뀌어도 점수는 이어지고(소멸 없음) 새 픽업으로 교환된다', () => {
     let t = NOW; const eco = mk({ gachaRng: () => 0, now: () => t });
     eco.gachaState().mileage = 200; t += 14 * 86400000;
-    expect(heroPickup(t)).toBe('knight'); expect(eco.mileageQuote()).toMatchObject({ ok: true, id: 'knight', have: 200 });
-    expect(eco.exchangeMileage()[0]).toMatchObject({ id: 'knight', dup: false, unlocked: true, shards: 0, mileage: true }); // 시작 영웅은 mage라 knight는 첫 획득(해금)이다
+    expect(heroPickup(t)).toBe('blackcat'); expect(eco.mileageQuote()).toMatchObject({ ok: true, id: 'blackcat', have: 200 });
+    expect(eco.exchangeMileage()[0]).toMatchObject({ id: 'blackcat', dup: false, unlocked: true, shards: 0, mileage: true }); // 시작 영웅은 mage라 첫 획득(해금)이다. 이 칸(NOW+14일)은 11-09 데뷔 칸이다
   });
 });
 

@@ -14,11 +14,26 @@ export const BANNER_PERIOD_MS = 14 * 86400000;
  * 영웅 픽업 교대표(SSR 영웅 id). 없는 영웅·SSR이 아닌 영웅은 건너뛴다(신규 SSR이 들어오면 여기 한 줄 추가).
  * 3개월 로드맵(문서 12.5)의 신규 SSR은 영웅 정의가 머지된 뒤에만 이 표에 넣는다.
  * 일정(KST): ~10-26 광전사(배포 직후 첫 칸, 회차 -1) → 10-26~11-09 늑대인간 족장(할로윈 픽업, 회차 0)
- *   → 11-09~11-23 검성 → 11-23~12-07 광전사 → 이후 같은 순서 반복. 서버(EconomyCore)·클라이언트가 이 표와 BANNER_EPOCH 하나만 읽는다.
+ *   → 11-09~11-23 검은 고양이 사냥꾼(그믐밤 픽업) → 11-23~12-07 검성 → 12-07~12-21 광전사 → 12-21~ 늑대인간(이후 같은 순서 반복).
+ * 서버(EconomyCore)·클라이언트가 이 표와 BANNER_EPOCH 하나만 읽는다.
  */
-export const HERO_PICKUP_ROTATION = Object.freeze(['werewolf', 'knight', 'barbarian']);
+export const HERO_PICKUP_ROTATION = Object.freeze(['werewolf', 'blackcat', 'knight', 'barbarian']);
 /** 픽업 기간 주제(배너 띠 문구). 없으면 일반 픽업. */
-export const PICKUP_THEMES = Object.freeze({ werewolf: Object.freeze({ id: 'halloween', label: '기간 한정 · 할로윈 픽업' }) });
+export const PICKUP_THEMES = Object.freeze({
+  werewolf: Object.freeze({ id: 'halloween', label: '기간 한정 · 할로윈 픽업' }),
+  blackcat: Object.freeze({ id: 'newmoon', label: '신규 SSR · 그믐밤 픽업' }),
+});
+/**
+ * 영웅 데뷔 시각(ms). 이 시각 전에는 어떤 소환 풀(영웅 배너 비픽업 SSR·초보자·SSR 확정권·마일리지 교환·확률/구성품 표)에도 나오지 않는다.
+ * 표에 없는 영웅은 처음부터 풀에 있다. 검은 고양이는 자기 픽업 칸이 시작하는 2026-11-09 00:00 KST.
+ */
+export const HERO_DEBUT = Object.freeze({ blackcat: Date.UTC(2026, 10, 8, 15) });
+/** 영웅이 now 시점에 소환 풀에 들어 있는가. 데뷔 표에 없는 id(없는 영웅 포함)는 항상 true. 서버·클라이언트가 같은 함수를 쓴다. */
+export function heroReleased(id, now) {
+  if (!Object.hasOwn(HERO_DEBUT, id)) return true;
+  const t = Number(now);
+  return Number.isFinite(t) && t >= HERO_DEBUT[id];
+}
 /** 장비 픽업 세트 교대표(SSR=L 등급 세트 id). */
 export const GEAR_PICKUP_ROTATION = Object.freeze(['dragon']);
 

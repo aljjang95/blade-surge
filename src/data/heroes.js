@@ -29,6 +29,31 @@ const BARBARIAN_SKILLS = [
   { id: 'cataclysm', name: '종말 · 화산심장', icon: '/img/sk_bb_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Jump_Full_Short', castAt: 0.55, dmg: 6.8, desc: '도약 후 전장을 뒤엎는 화산 폭발을 일으킨다' },
 ];
 
+const RANGER_COMBO = [
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .85, range: 12, arc: 20, kb: 1, dur: .46, projectile: 'arrow', jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .95, range: 12, arc: 20, kb: 1, dur: .43, projectile: 'arrow', jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .65, range: 12, arc: 40, kb: 1.5, dur: .60, projectile: 'arrow', arrowCount: 3, jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: 1.45, range: 14, arc: 20, kb: 3, dur: .62, projectile: 'arrow', pierce: true, jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: 2.1, range: 14, arc: 20, kb: 5, dur: .78, projectile: 'arrow', pierce: true, finisher: true, jobGain: 1 },
+];
+
+const RANGER_SKILLS = [
+    { id: 'ranger_pierce', name: '바람 관통화살', icon: '/img/skills-crafted/ranger-pierce.webp', cd: 4, mp: 16, anim: 'Bow_Shoot', castAt: .42, dmg: 2.8, desc: '관통 화살. 집중 3을 소비하면 피해 2배와 판정 확대' },
+    { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/skills-crafted/ranger-volley.webp', cd: 8, mp: 20, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
+    { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/skills-crafted/ranger-retreat.webp', cd: 10, mp: 24, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
+    { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/skills-crafted/ranger-tempest.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 1.9, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
+    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 12, mp: 26, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
+    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/skills-crafted/ranger-binding.webp', cd: 20, mp: 34, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
+    { id: 'gale_hunt', name: '질풍 · 사냥각인', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: 'Bow_Shoot', castAt: .42, dmg: 5.4, desc: '관통 화살을 연속 발사해 전방 무리를 꿰뚫는다' },
+    { id: 'skyfall_arrows', name: '천궁 · 유성화살비', icon: '/img/skills-crafted/ranger-binding.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 6.2, desc: '유성처럼 낙하하는 화살이 넓은 지역을 연속 폭격한다' },
+];
+
+/** 검은 고양이 사냥꾼 고유 스킬(명사수 스킬 id → 바꿔 넣을 스킬). */
+const BLACKCAT_OWN_SKILLS = {
+  ranger_volley: { id: 'cat_omen', name: '불길한 징조', icon: '/img/skills-crafted/ranger-volley.webp', cd: 8, mp: 20, anim: 'Bow_Shoot', castAt: .3, dmg: 1.9, desc: '위협이 큰 적 셋(정예·보스 우선)에게 저주 화살을 겨눠 쏜다. 맞은 적은 6초간 내게 받는 피해 +15%. 집중 +1' },
+  ranger_tempest: { id: 'nine_lives', name: '궁극 · 아홉 목숨의 밤', icon: '/img/skills-crafted/ranger-tempest.webp', ult: true, anim: 'Bow_Shoot', castAt: .1, dmg: 4.0, desc: '무적으로 물러나며 그림자 화살 9발을 표적마다 돌려 쏘고, 저주 표식이 붙은 적마다 그믐 폭발. 집중 3을 소비하면 폭발 50% 증가' },
+};
+
 /** 늑대인간 족장 고유 스킬(광전사 스킬 id → 바꿔 넣을 스킬). */
 const WEREWOLF_OWN_SKILLS = {
   berserk: { id: 'blood_howl', name: '핏빛 포효', icon: '/img/sk_barb_3.webp', cd: 15, mp: 24, anim: 'Cheer', castAt: 0.25, dmg: 1.2, desc: '포효로 주변 적을 1초간 공포에 빠뜨리고, 7초간 공격력 +40%·공격속도 +35%·이동속도 +25%, 처치할 때마다 체력 2% 회복' },
@@ -129,23 +154,20 @@ export const HEROES = {
   portrait: '/img/tll/ranger-render-v2.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
   color: '#7feac0', accent: '#d4ffdb', show: ['Bow'],
   base: { hp: 1120, atk: 145, def: 24, crit: .25, critDmg: 1.8, spd: 6.6 },
-  combo: [
-    { anim: 'Bow_Shoot', hitAt: .42, dmg: .85, range: 12, arc: 20, kb: 1, dur: .46, projectile: 'arrow', jobGain: 1 },
-    { anim: 'Bow_Shoot', hitAt: .42, dmg: .95, range: 12, arc: 20, kb: 1, dur: .43, projectile: 'arrow', jobGain: 1 },
-    { anim: 'Bow_Shoot', hitAt: .42, dmg: .65, range: 12, arc: 40, kb: 1.5, dur: .60, projectile: 'arrow', arrowCount: 3, jobGain: 1 },
-    { anim: 'Bow_Shoot', hitAt: .42, dmg: 1.45, range: 14, arc: 20, kb: 3, dur: .62, projectile: 'arrow', pierce: true, jobGain: 1 },
-    { anim: 'Bow_Shoot', hitAt: .42, dmg: 2.1, range: 14, arc: 20, kb: 5, dur: .78, projectile: 'arrow', pierce: true, finisher: true, jobGain: 1 },
-  ],
-  skills: [
-    { id: 'ranger_pierce', name: '바람 관통화살', icon: '/img/skills-crafted/ranger-pierce.webp', cd: 4, mp: 16, anim: 'Bow_Shoot', castAt: .42, dmg: 2.8, desc: '관통 화살. 집중 3을 소비하면 피해 2배와 판정 확대' },
-    { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/skills-crafted/ranger-volley.webp', cd: 8, mp: 20, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
-    { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/skills-crafted/ranger-retreat.webp', cd: 10, mp: 24, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
-    { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/skills-crafted/ranger-tempest.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 1.9, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
-    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 12, mp: 26, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
-    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/skills-crafted/ranger-binding.webp', cd: 20, mp: 34, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
-    { id: 'gale_hunt', name: '질풍 · 사냥각인', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: 'Bow_Shoot', castAt: .42, dmg: 5.4, desc: '관통 화살을 연속 발사해 전방 무리를 꿰뚫는다' },
-    { id: 'skyfall_arrows', name: '천궁 · 유성화살비', icon: '/img/skills-crafted/ranger-binding.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 6.2, desc: '유성처럼 낙하하는 화살이 넓은 지역을 연속 폭격한다' },
-  ],
+  combo: RANGER_COMBO,
+  skills: RANGER_SKILLS,
+  },
+  // 두 번째 신규 SSR(BM 12.5, 11-09 픽업). 원거리 저주 사냥꾼 — 근접 돌격형 늑대인간과 겹치지 않는 표식·집중 화력 역할.
+  // 몸·무기·애니메이션·음성은 명사수 것을 쓴다(kit). 몸 외형은 검은 고양이 아바타 몸(bodyAvatar).
+  // 고유 스킬: 불길한 징조(삼중 추적화살 자리, 표적 화살 + 받는 피해 표식) · 아홉 목숨의 밤(궁극기, 9연사 + 표식 폭발). 나머지는 명사수 스킬을 공유한다.
+  // 능력치: 같은 SSR 등급의 명사수와 같은 화력(tools/hero-balance-sim.mjs --assert, 무리·단일 0.95~1.05배).
+  blackcat: {
+    id: 'blackcat', name: '검은 고양이 사냥꾼', title: '그믐밤의 저주 사수', rarity: 'SSR', model: 'Ranger', portrait: '/img/tll/avatars/avatar_ranger_blackcat-v1.webp',
+    kit: 'ranger', voiceId: 'ranger', bodyAvatar: 'avatar_ranger_blackcat', gachaOnly: true,
+    weapon: 'bow', ranged: true, jobId: 'ranger', color: '#b070ff', accent: '#f0e0ff', show: ['Bow'],
+    base: { hp: 1080, atk: 140, def: 22, crit: .25, critDmg: 1.8, spd: 6.7 },
+    combo: RANGER_COMBO,
+    skills: RANGER_SKILLS.map((sk) => BLACKCAT_OWN_SKILLS[sk.id] || sk),
   },
   // 첫 신규 SSR(BM 12.5, 할로윈 픽업). 몸·무기·애니메이션·음성은 광전사 것을 쓴다(kit). 몸 외형은 늑대인간 아바타 몸(bodyAvatar).
   // 고유 스킬: 핏빛 포효(광폭화 자리, 공포 + 사냥 본능 회복) · 월광 사냥(궁극기, 6연속 도약 + 보름달 낙하). 나머지는 광전사 스킬을 공유한다.
@@ -162,8 +184,8 @@ export const HEROES = {
   },
 };
 
-// 늑대인간 족장(소환 전용 SSR)은 맨 뒤: 모델 이름으로 영웅을 찾는 조회(heroIdForModel)가 광전사를 먼저 만난다.
-export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue', 'ranger', 'werewolf'];
+// 소환 전용 SSR(늑대인간 족장·검은 고양이 사냥꾼)은 맨 뒤: 모델 이름으로 영웅을 찾는 조회(heroIdForModel)가 광전사를 먼저 만난다.
+export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue', 'ranger', 'werewolf', 'blackcat'];
 /** 영웅의 장비·외형·소리 표를 찾을 때 쓰는 기준 영웅 id(kit 이 없으면 자기 id). @param {string | {id?: string} | null | undefined} hero */
 export function kitOf(hero) {
   const id = typeof hero === 'string' ? hero : hero?.id;

@@ -13,7 +13,7 @@ import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
-import { GACHA_BANNERS, GACHA_MILEAGE, PICKUP_THEMES, rotationWindow } from '../data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, PICKUP_THEMES, rotationWindow, heroReleased } from '../data/gacha-banners.js';
 import { heroBannerArt, beginnerBannerArt } from '../data/banner-art.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
@@ -308,6 +308,7 @@ export class Meta {
     const lockView = !this.eco.ownHero(this.heroSel); // 미보유 상세에서는 초상 줄이 시안처럼 일러스트 초상을 쓴다
     for (const id of HERO_ORDER) {
       const def = HEROES[id]; const own = this.eco.ownHero(id); const h = this.eco.hero(id);
+      if (!own && !heroReleased(id, this.eco.now?.() ?? Date.now())) continue; // 데뷔 전 신규 SSR(HERO_DEBUT)은 영웅 목록에도 숨긴다
       const grade = own ? heroGrade(def, h) : def.rarity;
       const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${grade}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
       c.dataset.heroId = id;
@@ -338,7 +339,7 @@ export class Meta {
     const def = HEROES[id], q = this.eco.heroUnlockQuote(id), payOn = this.heroPurchaseOn(), cmp = heroCompare(id);
     // 가격 문구는 app.heroPurchase.price(): 웹은 서버 intent 와 같은 카탈로그 금액, Play 는 스토어가 확인한 판매 가능 가격만. 없으면 null.
     const price = (productId) => { try { return payOn ? this.app.heroPurchase.price?.(productId) || null : null; } catch { return null; } };
-    const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid)).length;
+    const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid) && heroReleased(hid, this.eco.now?.() ?? Date.now())).length;
     const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
     const viaGacha = q.reason === 'gacha';
     const hasFree = !viaGacha && !(q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' || q.reason === 'starter-pending');

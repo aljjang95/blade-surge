@@ -28,8 +28,8 @@ test('a fresh save keeps all five hero records but owns only the chosen starter,
   expect([eco.s.gold,eco.s.gems,eco.s.tickets]).toEqual([12000,1500,5]);
   expect(Object.values(eco.s.heroes).every((h:any)=>h.level===1&&h.star===1&&h.shards===0)).toBe(true);
   expect(eco.ownedHeroIds()).toEqual(['knight']);
-  // 다섯 직업 모두 시작 영웅으로 고를 수 있다(저장을 새로 만들어 하나씩).
-  for (const id of Object.keys(HEROES)) {
+  // 다섯 직업 모두 시작 영웅으로 고를 수 있다(저장을 새로 만들어 하나씩). 소환 전용(gachaOnly)은 시작 영웅이 아니다 — 거절은 blackcat-wiring 시험.
+  for (const id of Object.keys(HEROES).filter((h) => !(HEROES as any)[h].gachaOnly)) {
     const e = new Economy(); e.s.roster.starterChosen = false;
     expect(e.chooseStarter(id).ok).toBe(true);
     expect(e.ownedHeroIds()).toEqual([id]); expect(e.s.selected).toBe(id);
@@ -60,7 +60,7 @@ test('hero choice updates persisted launch identity, showcased model and reload 
     expect(meta.heroSel).toBe(id);
     expect(new Economy().s.selected).toBe(id);
   }
-  expect(shown).toEqual(['barbarian','mage','rogue','ranger','werewolf']);
+  expect(shown).toEqual(['barbarian','mage','rogue','ranger','blackcat','werewolf']);
   expect(meta.selectHero('missing')).toBe(false);
   expect(eco.s.selected).toBe('werewolf');
 });

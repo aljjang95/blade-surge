@@ -110,7 +110,7 @@ export class Player extends Actor {
     // 수동 궁수 조준 보조와 사격 중 이동용 상·하체 층. 다른 영웅과 AUTO 경로는 쓰지 않는다.
     this.rangerAim = def.weapon === 'bow' ? new RangerAim() : null;
     this.bowLayers = this.rangerAim ? rangerBowLayers(this.clips) : null;
-    const headBone = def.id === 'ranger' ? this.model.getObjectByName('mixamorigHead') : null;
+    const headBone = kitOf(def) === 'ranger' ? this.model.getObjectByName('mixamorigHead') : null;
     this.headLift = headBone?.isBone ? { bone: headBone, base: new THREE.Quaternion(), applied: false } : null;
     if (this.bowLayers) this.clips.RangerBowUpper = this.bowLayers.upper;
     if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
@@ -559,7 +559,7 @@ export class Player extends Actor {
       ? (RANGER_RAPID_SKILLS.has(sk.id) && this.clips.RangerBowUpperRapid ? 'RangerBowUpperRapid' : 'RangerBowUpper') : null;
     if (sk.anim) this.playTimed(bowSkillClip || sk.anim, impl.dur || 0.8, { fade: 0.06 });
     if (bowSkillClip) this.startBowLegs();
-    if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
+    if (!sk.ult && kitOf(this.def) === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
     if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }

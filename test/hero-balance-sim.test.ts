@@ -30,3 +30,23 @@ test('같은 설정으로 두 번 재면 결과가 완전히 같다(결정성)',
   const second = JSON.stringify(runHeroBalance(runtime, options));
   expect(second).toBe(first);
 });
+
+// 검은 고양이 사냥꾼: 같은 kit 의 명사수를 SSR 등급으로 올린 가상 영웅('ranger@SSR')과 잰다(등급 배율을 빼고 스킬 설계만 비교).
+test('검은 고양이 사냥꾼은 명사수@SSR 대비 순환 추정이 허용 범위이고 고유 두 스킬이 실제 피해를 낸다', () => {
+  const report: any = runHeroBalance(runtime, { heroes: ['blackcat', 'ranger@SSR'], seeds: 4 });
+  const c = report.results.blackcat, r = report.results['ranger@SSR'];
+  for (const id of ['cat_omen', 'nine_lives']) {
+    const row = c.skills.find((s: any) => s.id === id);
+    expect(row.cast).toBe(true);
+    expect(row.A).toBeGreaterThan(0);
+    expect(row.B).toBeGreaterThan(0);
+  }
+  for (const sit of ['A', 'B']) {
+    const ratio = c.cycle[sit].total / r.cycle[sit].total;
+    expect(ratio).toBeGreaterThanOrEqual(0.95);
+    expect(ratio).toBeLessThanOrEqual(1.06);
+  }
+  expect(c.buffs.cat_omen.A).toBeGreaterThan(1);
+  expect(report.verdict.reasons).toEqual([]);
+  expect(report.verdict.pass).toBe(true);
+});

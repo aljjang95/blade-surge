@@ -53,7 +53,8 @@ export function trustedRoster(raw, { serverRoster, entitledHeroes, legacyProof =
     const owned = [...new Set([...ids.filter((id) => HERO_LEGACY_IDS.includes(id)), ...known(server?.owned)])];
     return { grandfathered: true, legacyClaim: false, roster: { policy: HERO_POLICY.LEGACY, owned, starter: null, starterChosen: true, paid } };
   }
-  const pick = (v) => (typeof v === 'string' && ids.includes(v) ? v : null);
+  // 시작 영웅은 소환 전용(gachaOnly)일 수 없다: 가져오기 selected 조작으로 소환 전용 SSR을 얻는 길을 막는다.
+  const pick = (v) => (typeof v === 'string' && ids.includes(v) && !HEROES[v].gachaOnly ? v : null);
   const starter = (server?.starterChosen === true ? pick(server.starter) : null)
     ?? (rr?.starterChosen === true ? pick(rr.starter) : null) ?? pick(raw?.selected) ?? 'knight';
   // 시작 영웅을 아직 고르지 않은 서버 문서(새 계정의 기본값)의 owned는 신뢰하지 않는다(기본 영웅이 덤으로 붙는 것을 막는다).

@@ -32,6 +32,6 @@ test('an ultimate cannot refill itself during its active presentation window',()
 
 test('room-clear ultimate data is bounded below the old one-button values',()=>{
   const values=Object.values(HEROES).map((hero:any)=>hero.skills.find((s:any)=>s.ult)?.dmg ?? 0);
-  expect(values).toEqual([8,9,2.8,.95,1.9,4]);   // 마지막은 늑대인간 족장(월광 사냥)
+  expect(values).toEqual([8,9,2.8,.95,1.9,4,4]);   // 뒤의 둘은 늑대인간 족장(월광 사냥)·검은 고양이 사냥꾼(아홉 목숨의 밤)
   expect(Math.max(...values)).toBeLessThanOrEqual(9);
 });
