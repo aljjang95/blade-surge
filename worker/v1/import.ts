@@ -15,19 +15,12 @@ const HOLD_MS = 30 * 24 * 3600 * 1000;
 
 /** 서버가 지급한 유료 보상만큼 정화 상한을 넓히고, 유효한 결제 권한(패스 프리미엄 수령 기록·월정액 수령일)은 보존한다. */
 async function paidContext(c: Ctx, accountId: string, serverState?: Record<string, any>) {
-  // 영웅 소유 기준(정책 1 인정 시각)은 결제 스키마와 무관하게 항상 준다. 서버 문서의 roster는 신뢰값이다.
-  const hero = { grandfatherBeforeMs: grandfatherCutoff(c), serverRoster: serverState?.roster as Record<string, unknown> | undefined };
+  // 서버 문서의 roster는 신뢰값이다(정책 1은 이 값에서만 유지된다). 결제 스키마와 무관하게 항상 준다.
+  const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined };
   if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
   return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };
 }
-/** wrangler var HERO_GRANDFATHER_BEFORE_MS(정수 ms). 없거나 잘못되면 정화 모듈의 기본값(이번 배포 예정일)을 쓴다. */
-function grandfatherCutoff(c: Ctx): number | undefined {
-  const raw = (c.env as unknown as { HERO_GRANDFATHER_BEFORE_MS?: string }).HERO_GRANDFATHER_BEFORE_MS;
-  const n = typeof raw === 'string' && /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
-  return Number.isSafeInteger(n) ? n : undefined;
-}
-
 /** 정화 상한의 경과일 기준: 클라이언트 세이브의 created가 아니라 서버가 계정을 만든 시각. */
 async function accountCreatedAt(c: Ctx, accountId: string): Promise<number> {
   const row = await c.db.prepare('SELECT created_at FROM accounts WHERE account_id = ?').bind(accountId).first<{ created_at: number }>();

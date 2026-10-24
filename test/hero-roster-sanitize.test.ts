@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { sanitizeLegacySave, HERO_GRANDFATHER_DEFAULT_MS, trustedRoster } from '../src/shared/legacy-sanitize.js';
+import { sanitizeLegacySave, trustedRoster } from '../src/shared/legacy-sanitize.js';
 import { EconomyCore } from '../src/game/economy-core.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementKeys, summarizeEntitlements, soldOn } from '../src/shared/iap-catalog.js';
 import { heroEntitlementKey, heroIdFromEntitlement } from '../src/data/hero-roster.js';
 
 const NOW = Date.UTC(2026, 10, 3);
-const BEFORE = HERO_GRANDFATHER_DEFAULT_MS - 86400000, AFTER = HERO_GRANDFATHER_DEFAULT_MS + 86400000;
+const BEFORE = Date.UTC(2020, 0, 1), AFTER = NOW - 86400000;
 const base = () => EconomyCore.fromState(null, { now: () => NOW, rng: () => 0.5 }).snapshot() as any;
 const save = (patch: Record<string, unknown>, drop: string[] = []) => { const s = { ...base(), ...patch }; for (const k of drop) delete s[k]; return s; };
 const run = (raw: any, opts: Record<string, unknown> = {}) => {
@@ -29,29 +29,31 @@ describe('영웅 소유 서버 권위 정화', () => {
     expect(Object.keys(some.state.heroes).sort()).toEqual([...HERO_ORDER].sort());
   });
 
-  test('정책 1(5명 소유)은 roster가 없는 옛 저장 + created가 기준 시각 이전일 때만', () => {
-    const old = run(save({ created: BEFORE }, ['roster']));
-    expect(old.state.roster.policy).toBe(1);
-    expect([...old.state.roster.owned].sort()).toEqual([...HERO_ORDER].sort());
-    expect(old.report.roster).toEqual({ policy: 1, grandfathered: true });
-    // 정책 전 클라이언트가 이미 roster(정책 1)를 붙여 저장한 경우도 같은 기준
-    expect(run(save({ created: BEFORE, roster: { policy: 1, owned: [...HERO_ORDER], starter: null, starterChosen: true, paid: [] } })).state.roster.policy).toBe(1);
-    // 기준 시각 이후 created, 정확히 기준 시각, 미래, 숫자 아님 → 모두 정책 2 + 시작 영웅 1명(selected)
-    for (const created of [AFTER, HERO_GRANDFATHER_DEFAULT_MS, NOW + 1, 'x' as any, null as any]) {
+  test('클라이언트 데이터만으로는 정책 1을 받지 못한다: roster 없음 + 옛 created도 정책 2 + 시작 영웅 1명', () => {
+    for (const created of [BEFORE, AFTER, NOW + 1, 0, 'x' as any, null as any]) {
       const r = run(save({ created, selected: 'ranger' }, ['roster']));
       expect(r.state.roster.policy).toBe(2);
       expect(r.state.roster.owned).toEqual(['ranger']);
       expect(r.state.roster.starter).toBe('ranger');
+      expect(r.state.roster.starterChosen).toBe(true);
+      expect(r.state.roster.paid).toEqual([]);
+      expect(r.report.roster).toEqual({ policy: 2, grandfathered: false });
     }
-    // 정책 2를 주장하는 저장은 created가 옛날이어도 정책 2로 존중한다
-    expect(run(save({ created: BEFORE, roster: { policy: 2, owned: ['knight'], starter: 'knight', starterChosen: true, paid: [] } })).state.roster.policy).toBe(2);
+    // 선택 영웅이 유효하지 않으면 knight
+    expect(run(save({ created: BEFORE, selected: 'ghost' }, ['roster'])).state.roster.owned).toEqual(['knight']);
+    // 정책 1을 주장하는 roster도 같다
+    const claim = run(save({ created: BEFORE, roster: { policy: 1, owned: [...HERO_ORDER], starter: null, starterChosen: true, paid: [...HERO_ORDER] } }));
+    expect(claim.state.roster.policy).toBe(2);
+    expect(claim.state.roster.owned.length).toBe(1);
+    expect(claim.state.roster.paid).toEqual([]);
+    // 영웅 상태(레벨·장비)는 보존된다
+    expect(Object.keys(claim.state.heroes).sort()).toEqual([...HERO_ORDER].sort());
   });
 
-  test('기준 시각은 매개변수(wrangler var)로 바꾼다', () => {
-    const raw = save({ created: AFTER }, ['roster']);
-    expect(run(raw).state.roster.policy).toBe(2);
-    expect(run(raw, { grandfatherBeforeMs: AFTER + 86400000 }).state.roster.policy).toBe(1);
-    expect(run(save({ created: BEFORE }, ['roster']), { grandfatherBeforeMs: BEFORE - 1 }).state.roster.policy).toBe(2);
+  test('paid는 항상 서버 권한이다 (정책 1 서버 문서여도)', () => {
+    const r = run(save({ created: BEFORE }, ['roster']), { serverRoster: { policy: 1, owned: [...HERO_ORDER], starter: null, starterChosen: true, paid: ['mage'] }, entitled: { heroes: ['rogue'] } });
+    expect(r.state.roster.policy).toBe(1);
+    expect(r.state.roster.paid).toEqual(['rogue']);
   });
 
   test('서버 문서의 roster는 신뢰값: 정책 1 유지, 선택한 시작 영웅·owned 유지(고르기 전 기본값 owned는 무시)', () => {

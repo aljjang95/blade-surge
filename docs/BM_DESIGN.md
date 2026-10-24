@@ -166,8 +166,7 @@
 - 서버는 권한이 바뀔 때마다 계정 문서의 `roster.paid`를 권한 목록으로 맞춘다: 지급 커밋 안에서(원자), 철회 직후 `syncRosterPaid`, 그리고 매 `/cmd`·`/me` 직전 `overlayEntitlements`.
 - 로컬 편집으로 서버 모드의 소유가 늘지 않는다: `legacy-sanitize`(`/import`·`/shadow/snapshot`)는 클라이언트가 보낸 `roster.paid`·`owned`를 버린다.
   - `paid` = 서버 권한 그대로.
-  - 정책 1(5명 소유, 기존 이용자 보호)은 서버 문서가 이미 정책 1이거나, 원본에 roster가 없고(또는 정책 1이고) `save.created < HERO_GRANDFATHER_BEFORE_MS`일 때만. 그 밖에는 정책 2 + 시작 영웅 1명(서버가 기억하는 선택 > 원본 시작 영웅 > 원본 selected > knight) + 서버 문서가 이미 가진 owned.
-  - `HERO_GRANDFATHER_BEFORE_MS`(wrangler var) 기본값 `1792886400000` = `Date.UTC(2026, 9, 25)`(이번 배포 예정일 추정). **개방(배포) 시점에 실제 배포 시각으로 갱신한다.** 값이 없거나 잘못되면 정화 모듈의 같은 기본값을 쓴다.
+  - **서버는 클라이언트 데이터만으로 정책 1(5명 소유)을 절대 주지 않는다.** 정책 1은 서버 문서가 이미 정책 1일 때(서버 기록)만 유지된다. 가져오기(`/import`·`/shadow/snapshot`)는 roster 유무·`save.created`와 무관하게 정책 2 + `owned`=[시작 영웅 1명] + `starterChosen=true`(시작 영웅 우선순위: 서버가 기억하는 선택 > 원본 시작 영웅 > 원본 selected(유효한 영웅) > knight) + 서버 문서가 이미 가진 owned. 클라이언트 시각은 저장 나이를 증명하지 못해 `save.created` 기준은 17,900원 전원 해금을 우회하는 통로가 된다(Codex 보안 리뷰 지적). 기존 `HERO_GRANDFATHER_BEFORE_MS` 설정은 제거했다.
 - 환불·취소로 권한이 빠지면 `paid`에서 빠지고 영웅 데이터(레벨·장비)는 그대로 둔다(잠금만 다시 걸림, 레인 A가 선택 영웅을 시작 영웅으로 되돌림).
 
 ### 11.3 웹 결제 채널 (포트원 V2)
@@ -185,7 +184,7 @@
 - **지급 근거는 서버의 포트원 조회뿐**이다. 결제 금액은 브라우저가 결제창에 넘기므로 PAID여도 금액·통화·storeId·채널이 서버 의도와 한 글자라도 다르면 지급하지 않고 의도를 `failed`로 만들고 `audit_flags`(`web-payment-mismatch`)를 남긴다(돈이 나갔으므로 사람이 취소해야 한다. 취소 API는 코드에 없다).
 - 멱등: 같은 paymentId를 몇 번·동시에 보내도 `wallet_ledger.op_id` 유일성과 `iap_grants` 선검사로 한 번만 지급(동시 3건 테스트). 남의 paymentId·서버가 발급하지 않은 paymentId는 같은 404(`payment-unknown`).
 - 저장: 새 표 `iap_web_payments`(마이그레이션 `0004_web_payments.sql`, 스키마 v4)가 paymentId ↔ 계정·상품·금액·storeId·채널을 결박한다. 지급·권한·원장은 Play와 같은 `iap_purchases`/`iap_grants`/`iap_entitlements`/`wallet_ledger`를 재사용한다(키 접두사 `portone:`).
-- **취소 회수:** `complete` 때 CANCELLED/PARTIAL_CANCELLED가 보이면 권한 철회·지급 역분개·`roster.paid` 회수. 시간당 크론(`17 * * * *`)이 최근 30일 지급분을 다시 조회해 취소를 회수하고, 최근 48시간의 미완료 의도(결제창에서 결제했지만 `complete`가 안 온 경우: 탭 종료·리다이렉트 실패)가 PAID면 지급한다. 한 번에 최대 25건만 조회(호출 수 상한, 가장 오래 안 본 건부터, 실패 항목도 순서를 뒤로 보낸다). 판매 스위치를 꺼도 회수는 계속 돈다. 취소된 결제는 이후 조회가 PAID로 보여도 다시 지급하지 않는다.
+- **취소 회수:** `complete` 때 CANCELLED/PARTIAL_CANCELLED가 보이면 권한 철회·지급 역분개·`roster.paid` 회수. 시간당 크론(`17 * * * *`)이 최근 400일(카드 취소는 포트원 문서상 보통 1년까지 가능) 지급분을 다시 조회해 취소를 회수한다. 재조회 간격은 `checked_at` 기준 지급 30일 이내 6시간, 그 이후 7일이다. 최근 48시간의 미완료 의도(결제창에서 결제했지만 `complete`가 안 온 경우: 탭 종료·리다이렉트 실패)가 PAID면 지급한다. 한 번에 최대 25건만 조회(호출 수 상한, 가장 오래 안 본 건부터, 실패 항목도 순서를 뒤로 보낸다). 판매 스위치를 꺼도 회수는 계속 돈다. 취소된 결제는 이후 조회가 PAID로 보여도 다시 지급하지 않는다.
 - 남용 방어: 계정당 시간당 열린 의도 10건, `/iap/*` 속도 제한 공유(10분 30회), 지급 보류(`payout_hold`) 계정은 intent 거부, 환불 남용 감지는 Play와 같은 `abuseCheck`.
 - 중복 결제(동시 의도 두 건 결제 등)는 지급·회수는 정상이지만 `audit_flags`(`web-duplicate-payment`)로 표시해 사람이 환불하게 한다.
 - 클라이언트: `src/platform/hero-purchase.js`가 `app.heroPurchase = { available(), buy(productId) }`를 제공한다. 웹 채널에서 서버가 `/me` flags.`webBilling`을 알렸을 때만 `available()`=true(기본 false). 성공(`ok:true`)은 서버 complete가 granted/already였고 `applyIapState` 저장이 성공한 뒤에만. Play 채널은 기존 `billing-service`로 위임. SDK는 `https://cdn.portone.io/v2/browser-sdk.js`를 동적으로 불러온다(npm·lock 변경 없음). 모바일 리다이렉트 복귀·끊긴 결제는 `resume()`이 보류 paymentId로 `complete`를 다시 보낸다(보류는 localStorage, 48시간).
@@ -202,7 +201,6 @@
 | `PORTONE_CHANNEL_KEY` | `""` | 실결제 채널 키(비밀 아님). **비어 있으면 intent 거부**(`web-not-configured`) |
 | `PORTONE_TEST_CHANNEL_KEY` | `channel-key-2ec7…` | `IAP_ALLOW_TEST=true`일 때만 사용. 이름이 '신기충만 - KG이니시스 테스트'라 실결제 채널로 쓰지 않는다. 테스트 지급은 매출 0·퍼널 '첫 결제' 제외 |
 | `PORTONE_API_SECRET` | Secrets Store | `apex-shared-apis/APEX_CLOUD_PLAY…`와 같은 스토어의 `APEX_CLOUD_PORTONE_API_SECRET`. 조회(GET)에만 사용, 값은 로그·응답에 나가지 않는다 |
-| `HERO_GRANDFATHER_BEFORE_MS` | `1792886400000` | 11.2. 개방 시점에 갱신 |
 
 닫히는 순서(fail-closed): 스위치 → D1 스키마 v4 → 시크릿 바인딩 → storeId·채널 키.
 
@@ -214,11 +212,11 @@
 
 ### 11.6 남는 위험 (정직하게)
 
-1. **`save.created` 위조로 정책 1(5명 무료) 주장 가능.** 기준은 클라이언트가 보내는 로컬 세이브의 `created`뿐이고, 서버가 계정을 만든 시각은 V1 개방 전이라 모든 계정이 기준 시각 이후여서 쓸 수 없다. 완화: 계정당·설치당 1회 임포트, 서버 문서가 이미 진행됐으면(rev>1) 임포트 거부, 서버 문서가 한 번 정책 2로 확정되면 정책 1로 돌아가지 못함, 기준 시각을 배포 시각에 맞춰 앞으로 갈수록 의미가 줄어듦. 완전한 차단은 불가능하며(웹 로컬 세이브는 조작 가능) 영향은 "무료로 영웅 4명 추가"에 한정된다. 필요하면 개방 시점에 로컬 세이브에 서버 서명 기한 토큰을 심는 후속 안을 검토한다.
+1. **기존 이용자 보호는 서버 증거 경로가 생기기 전까지 서버에서 되지 않는다(V1 개방 게이트).** 현재 운영은 100% 로컬 저장이라 기존 이용자는 로컬에서 5명을 그대로 유지한다. 그러나 V1 서버 권위를 열면 서버 가져오기는 항상 정책 2(시작 영웅 1명)로 만든다(클라이언트가 보낸 `save.created`·roster로는 정책 1을 줄 수 없다). 따라서 V1 개방 전에 컷오버 이전에 서버가 만든 기록(예: tll-social 게스트 신원 생성 시각, 또는 서버가 서명한 이관 증명)을 근거로 정책 1을 주는 경로를 별도로 만들어야 한다. 그 전에는 V1 서버 권위 개방을 하지 않거나, 기존 이용자가 서버 계정으로 넘어올 때 영웅 4명을 잃는다는 점을 대표님이 인지한 상태에서만 연다.
 2. 그림자 모드(로컬이 정본) 동안 로컬 `paid`·무료 해금은 서버 문서에 반영되지 않는다. 컷오버 시 서버 `unlockHeroFree`로 다시 열거나 보석을 환급해야 할 수 있다(레인 A와 합의 필요).
 3. 웹 결제 금액 변조는 지급 단계에서 막지만 PG에서는 이미 결제가 끝나 있다. 사람이 취소해야 한다(`audit_flags` 확인). 취소 API 자동화는 이번에 만들지 않았다.
 4. 포트원 조회 API 장애 시 `complete`는 502, 크론은 건너뛰고 다음 시간에 다시 시도한다. 그동안 취소 회수가 늦는다(최대 ~1시간 + 장애 시간).
-5. 크론 상한(25건/시간)보다 30일 지급분이 많아지면 한 건을 다시 보는 간격이 길어진다. 매출이 늘면 상한·간격을 조정한다.
+5. 크론 처리량 한계는 25건/시간 = 600건/일이다. 대사 창(400일) 안의 재조회 대상이 이 한도를 넘으면 오래 안 본 건의 간격이 길어져 취소 회수가 늦는다. 규모가 커지면 포트원 웹훅(서명 검증)을 도입해 취소 이벤트를 즉시 받고 크론은 안전망으로 낮춘다.
 6. 포트원 웹훅은 이번에 넣지 않았다(웹훅 시크릿 없음). 크론 + `complete`로 대신한다.
 7. 가격·수수료 근거는 공개 정보 기반 추정이다. 실제 계약 수수료와 대표님 최종 금액으로 교체한다.
 
@@ -226,7 +224,7 @@
 
 1. D1 `blade-surge-commerce-production`에 `0004_web_payments.sql` 원격 적용(스키마 v4). 미적용이면 웹 결제만 `web-schema-missing`으로 닫힘(Play·나머지 v1은 그대로).
 2. 포트원 콘솔에서 **실결제 채널**(KG이니시스 실연동)을 만들고 채널 키를 `PORTONE_CHANNEL_KEY`에 설정. 시크릿 `APEX_CLOUD_PORTONE_API_SECRET` 바인딩이 배포에 포함됐는지 확인.
-3. `HERO_GRANDFATHER_BEFORE_MS`를 실제 배포 시각으로 갱신.
+3. **[게이트] 기존 이용자 보호용 서버 증거 경로**(11.6 1번)가 없으면 V1 서버 권위 개방을 하지 않는다. 그 경로 전에는 서버 가져오기에서 grandfather가 되지 않는다.
 4. 테스트 채널 + `IAP_ALLOW_TEST=true`로 내부 결제(구매→지급→포트원 콘솔 취소→회수) 한 번 확인.
 5. `WEB_BILLING_ENABLED=true`. 단, **가격(₩5,900 / ₩17,900)과 상품 문구를 대표님이 확인한 뒤에만 공개.**
 6. 이후 Play: `tools/play-iap-register.mjs`가 영웅 6종도 등록 대상에 포함한다(dry-run으로 확인 → 대표님 확인 후 `--apply`).

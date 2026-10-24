@@ -44,8 +44,6 @@
     "PORTONE_STORE_ID": "store-75d3b0fa-c6c8-4e9e-b848-8025e4bb7503",
     "PORTONE_CHANNEL_KEY": "",
     "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
-    // 영웅 소유 정책 1(기존 이용자 5명 유지) 인정 기준: 로컬 save.created가 이 시각(ms) 이전일 때만. 값 = 이번 배포 예정일 Date.UTC(2026, 9, 25). 개방(배포) 시점에 실제 시각으로 갱신한다.
-    "HERO_GRANDFATHER_BEFORE_MS": "1792886400000",
     "RTDN_AUDIENCE": "",
     "RTDN_PUSH_SUBJECT": "",
     "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"

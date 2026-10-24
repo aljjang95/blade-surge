@@ -28,6 +28,7 @@ function fakePortone() {
   return { api, payments, calls, state, pay };
 }
 
+const paidOf = (h: any, accountId: string): string[] => JSON.parse((h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(accountId) as any).doc).roster.paid;
 async function setup(env: Record<string, string> = {}) {
   const h = await v1Harness({ env: { WEB_BILLING_ENABLED: 'true', PORTONE_STORE_ID: STORE, PORTONE_CHANNEL_KEY: CHANNEL, ...env } as any });
   const pn = fakePortone();
@@ -242,26 +243,58 @@ describe('웹 결제 취소 회수', () => {
   });
 
   test('시간당 크론: 최근 30일 지급분의 취소를 회수하고, 오래된 지급분·호출 상한을 지킨다', async () => {
-    const { h, pn, a, intent, complete, me, ctx, count } = await setup();
+    const { h, pn, a, intent, complete, ctx, count } = await setup();
     const it = (await intent(a.token, 'hero_barbarian_v1')).body;
     pn.pay(it);
     await complete(a.token, it.paymentId);
-    h.advance(50 * 60000);
+    h.advance(7 * 3600000);
     pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
     const r = await reconcileWebPayments(ctx());
     expect(r).toMatchObject({ checked: 1, reversed: 1, failed: 0 });
-    expect((await me(a.token)).doc.roster.paid).toEqual([]);
+    expect(paidOf(h, a.accountId)).toEqual([]);
     expect(count('SELECT COUNT(*) AS n FROM iap_entitlements WHERE revoked_at IS NULL')).toBe(0);
     // 취소 처리된 건은 더 조회하지 않는다.
     pn.calls.length = 0;
     await reconcileWebPayments(ctx());
     expect(pn.calls).toHaveLength(0);
-    // 30일이 지난 지급분은 대사 대상이 아니다.
+  });
+
+  test('크론 나이별 간격: 30일 이내 6시간, 그 뒤 7일, 400일까지 취소 회수, 400일 밖은 제외', async () => {
+    const { h, pn, a, intent, complete, ctx } = await setup();
+    const it = (await intent(a.token, 'hero_mage_v1')).body;
+    pn.pay(it);
+    await complete(a.token, it.paymentId);
+    // 30일 이내: 6시간 전에는 건너뛰고 6시간 뒤에는 다시 조회한다.
+    h.advance(5 * 3600000 + 59 * 60000);
+    pn.calls.length = 0;
+    await reconcileWebPayments(ctx());
+    expect(pn.calls).toHaveLength(0);
+    h.advance(2 * 60000);
+    await reconcileWebPayments(ctx());
+    expect(pn.calls).toEqual([it.paymentId]);
+    // 30일을 넘기면 7일 간격: 6일 뒤에는 건너뛰고 7일 뒤에는 조회한다.
+    h.advance(31 * DAY);
+    await reconcileWebPayments(ctx());
+    pn.calls.length = 0;
+    h.advance(6 * DAY);
+    await reconcileWebPayments(ctx());
+    expect(pn.calls).toHaveLength(0);
+    h.advance(1 * DAY + 60000);
+    await reconcileWebPayments(ctx());
+    expect(pn.calls).toEqual([it.paymentId]);
+    // 지급 200일 뒤 카드 취소 → 회수된다.
+    h.advance(163 * DAY);
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
+    expect(h.now() - (h.db.sqlite.query('SELECT granted_at FROM iap_web_payments').get() as any).granted_at).toBeGreaterThan(200 * DAY);
+    const r = await reconcileWebPayments(ctx());
+    expect(r).toMatchObject({ checked: 1, reversed: 1 });
+    expect(paidOf(h, a.accountId)).toEqual([]);
+    // 400일을 넘긴 지급분은 대상이 아니다.
     const b = await h.session();
-    const old = (await intent(b.token, 'hero_mage_v1')).body;
+    const old = (await intent(b.token, 'hero_rogue_v1')).body;
     pn.pay(old);
     await complete(b.token, old.paymentId);
-    h.advance(31 * DAY);
+    h.advance(401 * DAY);
     pn.calls.length = 0;
     await reconcileWebPayments(ctx());
     expect(pn.calls).toHaveLength(0);
@@ -280,11 +313,11 @@ describe('웹 결제 취소 회수', () => {
     const r = await reconcileWebPayments(ctx());
     expect(r.checked).toBe(WEB_RECONCILE_MAX);
     expect(pn.calls).toHaveLength(WEB_RECONCILE_MAX);
-    // 다음 시간에는 아직 안 본 건부터 돈다(가장 오래 안 본 순서).
+    // 다음 크론에는 아직 안 본 건부터 돈다(가장 오래 안 본 순서). 본 건은 6시간 간격이라 제외된다.
     h.advance(3600000);
     pn.calls.length = 0;
     await reconcileWebPayments(ctx());
-    expect(new Set(pn.calls).size).toBe(WEB_RECONCILE_MAX);
+    expect(new Set(pn.calls).size).toBe(5);
     expect(pn.calls.some((id) => id === 'bsw_' + (WEB_RECONCILE_MAX + 4).toString(16).padStart(32, '0'))).toBe(true);
     pn.state.fail = true;
     const warn = console.warn; console.warn = () => {};
@@ -317,7 +350,7 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     await complete(a.token, it.paymentId);
     (h.env as any).WEB_BILLING_ENABLED = 'false';
-    h.advance(3600000);
+    h.advance(7 * 3600000);
     pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
     expect((await reconcileWebPayments(ctx())).reversed).toBe(1);
   });
@@ -325,14 +358,17 @@ describe('웹 결제 취소 회수', () => {
 
 describe('임포트: 영웅 소유는 서버 권한이 정본', () => {
   const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/saves/mid.json', import.meta.url), 'utf8'));
-  test('기준 시각 이전 옛 저장은 정책 1(5명), 이후면 정책 2 + 시작 영웅 1명이고 forged paid는 버린다', async () => {
+  test('가져오기는 roster 유무·created와 무관하게 정책 2 + 시작 영웅 1명이고 forged paid는 버린다', async () => {
     const old = await setup();
-    const r1 = await old.h.send('POST', '/import', { installId: crypto.randomUUID(), save: fixture() }, old.a.token);
-    expect(r1.body.doc.roster.policy).toBe(1);
-    expect(r1.body.doc.roster.owned.length).toBe(5);
+    const legacy = fixture();
+    delete legacy.roster;
+    legacy.created = Date.UTC(2020, 0, 1);
+    const r1 = await old.h.send('POST', '/import', { installId: crypto.randomUUID(), save: legacy }, old.a.token);
+    expect(r1.body.doc.roster.policy).toBe(2);
+    expect(r1.body.doc.roster.owned.length).toBe(1);
+    expect(r1.body.doc.roster.starterChosen).toBe(true);
     expect(r1.body.doc.roster.paid).toEqual([]);
-    // 같은 저장이어도 운영이 기준 시각을 앞당기면(= 이 저장은 정책 이후 생성) 정책 2
-    const next = await setup({ HERO_GRANDFATHER_BEFORE_MS: '1700000000000' });
+    const next = await setup();
     const forged = { ...fixture(), selected: 'mage', roster: { policy: 2, owned: ['mage', 'knight'], starter: 'mage', starterChosen: true, paid: ['knight', 'rogue', 'ranger'] } };
     const r2 = await next.h.send('POST', '/import', { installId: crypto.randomUUID(), save: forged }, next.a.token);
     expect(r2.body.status).toBe('shadow');

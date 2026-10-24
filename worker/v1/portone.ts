@@ -17,7 +17,12 @@ const API_BASE = 'https://api.portone.io';
 const TIMEOUT_MS = 6000;
 const DAY = 86400000;
 const PAYMENT_ID = /^[A-Za-z0-9_-]{16,64}$/;
-const RECONCILE_WINDOW_MS = 30 * DAY;
+/** 취소 회수 대사 창: 카드 취소는 포트원 문서상 보통 1년까지 가능하므로 400일을 본다. */
+const RECONCILE_WINDOW_MS = 400 * DAY;
+/** 지급 후 이 기간 안의 건은 자주(6시간), 그 뒤는 드물게(7일) 다시 조회한다(checked_at 기준). */
+const RECENT_GRANT_MS = 30 * DAY;
+const RECENT_RECHECK_MS = 6 * 3600000;
+const OLD_RECHECK_MS = 7 * DAY;
 /** 크론 한 번에 포트원을 조회하는 최대 건수(호출 수 상한). */
 export const WEB_RECONCILE_MAX = 25;
 const INTENT_RECHECK_MS = 10 * 60000;
@@ -241,16 +246,16 @@ export async function webComplete(c: Ctx, auth: Authed, body: Record<string, unk
 }
 
 /**
- * 시간당 대사: ① 지급된 최근 30일 웹 결제를 다시 조회해 취소된 건을 회수 ② 결제창에서 결제됐지만 complete가 오지 않은(탭 종료·모바일 리다이렉트 실패)
+ * 시간당 대사: ① 지급된 최근 400일 웹 결제를 다시 조회해 취소된 건을 회수(지급 30일 이내는 6시간, 그 이후는 7일 간격, checked_at 기준) ② 결제창에서 결제됐지만 complete가 오지 않은(탭 종료·모바일 리다이렉트 실패)
  * 최근 48시간의 의도를 조회해 PAID면 지급. 한 번에 포트원을 WEB_RECONCILE_MAX건까지만 조회하고, 가장 오래 안 본 건부터 돈다. 항목별로 실패를 격리한다.
  */
 export async function reconcileWebPayments(c: Ctx): Promise<{ checked: number; granted: number; reversed: number; failed: number }> {
   const out = { checked: 0, granted: 0, reversed: 0, failed: 0 };
   if (await webReconcileReason(c)) return out;
   const rows = await c.db.prepare(`SELECT ${ROW_COLUMNS} FROM iap_web_payments
-    WHERE (state = 'granted' AND granted_at > ?) OR (state = 'intent' AND created_at > ? AND created_at < ? AND COALESCE(checked_at, 0) < ?)
+    WHERE (state = 'granted' AND granted_at > ? AND COALESCE(checked_at, 0) < CASE WHEN granted_at > ? THEN ? ELSE ? END) OR (state = 'intent' AND created_at > ? AND created_at < ? AND COALESCE(checked_at, 0) < ?)
     ORDER BY COALESCE(checked_at, 0) ASC LIMIT ?`)
-    .bind(c.now - RECONCILE_WINDOW_MS, c.now - INTENT_WINDOW_MS, c.now - 120000, c.now - INTENT_RECHECK_MS, WEB_RECONCILE_MAX).all<WebRow>();
+    .bind(c.now - RECONCILE_WINDOW_MS, c.now - RECENT_GRANT_MS, c.now - RECENT_RECHECK_MS, c.now - OLD_RECHECK_MS, c.now - INTENT_WINDOW_MS, c.now - 120000, c.now - INTENT_RECHECK_MS, WEB_RECONCILE_MAX).all<WebRow>();
   const api = portoneApi(c);
   for (const row of rows.results ?? []) {
     out.checked++;
