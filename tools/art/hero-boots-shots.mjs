@@ -120,7 +120,11 @@ try {
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true });
+  // 새 저장은 로비 전에 시작 영웅 선택(정책 2, #253)이 뜬다. 첫 카드로 시작하고, 촬영 컨텍스트 안에서만 다섯 영웅을 소유로 둔다.
+  await page.waitForFunction(() => window.app?.mode === 'lobby' || !!document.querySelector('#starter-select .ss-go:not([disabled])'), null, { timeout: 120000 });
+  if (await page.$('#starter-select .ss-go')) await page.click('#starter-select .ss-go', { force: true });
   await page.waitForFunction(() => window.app?.mode === 'lobby', null, { timeout: 120000 });
+  await page.evaluate((heroes) => { const r = window.app.eco.s.roster; if (r) for (const h of heroes) if (!r.owned.includes(h)) r.owned.push(h); }, HEROES);
   await page.waitForTimeout(1200); await closePopups();
   await page.evaluate(installHelpers);
 
