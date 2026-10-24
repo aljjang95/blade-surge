@@ -2,7 +2,7 @@
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
-import { GACHA_BANNERS, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt } from '../data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
@@ -180,7 +180,7 @@ export class Economy {
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
       towns: freshTownState(),
-      pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
+      pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
@@ -720,7 +720,7 @@ export class Economy {
   /** 배너 상태(천장·픽업 확정·초보자 사용 횟수). 저장 정화(save-base)와 같은 모양. */
   gachaState() {
     const g = this.s.gacha || (this.s.gacha = { pity: 0 });
-    g.pity ??= 0; g.guarantee ??= false; g.gearPity ??= 0; g.gearGuarantee ??= false; g.beginner ??= 0; g.beginnerSsr ??= false;
+    g.pity ??= 0; g.guarantee ??= false; g.gearPity ??= 0; g.gearGuarantee ??= false; g.beginner ??= 0; g.beginnerSsr ??= false; g.mileage ??= 0;
     return g;
   }
   /** 배너의 남은 초보자 횟수(초보자 배너만 의미). */
@@ -762,6 +762,7 @@ export class Economy {
       } else {
         const key = banner.id === 'gear' ? 'gearPity' : 'pity';
         g[key]++; rar = rollGachaRarity(g[key], rng, banner);
+        if (banner.id === GACHA_MILEAGE.banner) g.mileage += GACHA_MILEAGE.perPull;
       }
       if (n === 10 && i === 9 && !srGuaranteed && rar === 'R') rar = 'SR';
       if (rar !== 'R') srGuaranteed = true;
@@ -773,6 +774,26 @@ export class Economy {
     if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
     for (const listener of this.listeners) listener(this.s);
     return results;
+  }
+  /** 마일리지 교환 견적. reason: points | no-pickup | null */
+  mileageQuote() {
+    const g = this.gachaState(), id = heroPickup(nowOf(this)), have = g.mileage || 0;
+    const base = { id, have, cost: GACHA_MILEAGE.cost, ok: false, reason: null };
+    if (!validSsrHero(id)) return { ...base, reason: 'no-pickup' };
+    if (have < GACHA_MILEAGE.cost) return { ...base, reason: 'points' };
+    return { ...base, ok: true };
+  }
+  /** 마일리지로 지금 픽업 SSR 영웅을 받는다(첫 획득은 해금, 중복은 조각). 저장 실패면 되돌린다. */
+  exchangeMileage() {
+    this.lastGachaError = null;
+    const q = this.mileageQuote(); if (!q.ok) { this.lastGachaError = q.reason; return null; }
+    const before = structuredClone(this.s), g = this.gachaState();
+    g.mileage -= GACHA_MILEAGE.cost;
+    const got = this.grantHero(q.id);
+    const r = { type: 'hero', rar: 'SSR', id: q.id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[q.id].name, img: HEROES[q.id].portrait, featured: true, mileage: true };
+    if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
+    for (const listener of this.listeners) listener(this.s);
+    return [r];
   }
   /** SSR 확정 소환권: 영웅 배너 SSR 영웅 중 균등(픽업 확정 아님, 천장·픽업 확정에 영향 없음). */
   pullSSR() {
@@ -790,7 +811,7 @@ export class Economy {
    */
   rollResult(rar, { banner = GACHA_BANNERS.hero, featured = bannerPickup(banner.id, nowOf(this)) } = {}) {
     const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
-    const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
+    const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
     const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
     const split = rar === 'SSR' ? banner.ssr : rar === 'SR' ? banner.sr : banner.r;
     if (rar === 'SSR' && split.hero) {

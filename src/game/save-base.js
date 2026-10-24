@@ -157,7 +157,7 @@ export function normalizeSave(raw, fresh) {
   // 배너 분리(BM 12장): 장비 천장·픽업 확정·초보자 사용 횟수. 옛 저장은 0·false로 시작한다.
   const g = record(raw.gacha) ? raw.gacha : {};
   s.gacha = { pity, guarantee: g.guarantee === true, gearPity: integer(g.gearPity, 0, 0, GACHA_BANNERS.gear.pity - 1), gearGuarantee: g.gearGuarantee === true,
-    beginner: integer(g.beginner, 0, 0, GACHA_BANNERS.beginner.limit), beginnerSsr: g.beginnerSsr === true };
+    beginner: integer(g.beginner, 0, 0, GACHA_BANNERS.beginner.limit), beginnerSsr: g.beginnerSsr === true, mileage: integer(g.mileage, 0, 0, 100000) };
   s.pity = pity;
   // 유료 보석 몫은 총 잔액을 넘지 않는다(소비는 무료부터).
   s.paidGems = Math.min(integer(raw.paidGems, 0, 0, Number.MAX_SAFE_INTEGER), Math.max(0, Math.floor(Number(s.gems) || 0)));

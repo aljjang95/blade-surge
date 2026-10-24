@@ -18,6 +18,12 @@ export const HERO_PICKUP_ROTATION = Object.freeze(['barbarian', 'knight']);
 /** 장비 픽업 세트 교대표(SSR=L 등급 세트 id). */
 export const GEAR_PICKUP_ROTATION = Object.freeze(['dragon']);
 
+/**
+ * 소환 마일리지(니케 골드 마일리지·에픽세븐 신비 교환과 같은 구조). 영웅 배너 1회당 1점, cost점이면 지금 픽업 SSR 영웅 1명(또는 중복 조각)과 교환.
+ * 교환은 천장·픽업 확정을 바꾸지 않는다. 픽업이 바뀌어도 점수는 이어진다(소멸 없음 — 이용자 신뢰).
+ */
+export const GACHA_MILEAGE = Object.freeze({ banner: 'hero', perPull: 1, cost: 200 });
+
 export const BANNER_IDS = Object.freeze(['hero', 'gear', 'beginner']);
 
 export const GACHA_BANNERS = Object.freeze({
