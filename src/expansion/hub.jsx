@@ -134,7 +134,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
   const useAction=result.win&&!result.saveError?currentRewardAction(app,result.kind==='arena'?'arena':'dungeon',gotOf()):null;
   const useReward=()=>depart(()=>{
     const live=currentRewardAction(app,result.kind==='arena'?'arena':'dungeon',gotOf());
-    if(!live||live.id!==useAction.id){controller.render();return;}
+    if(!live||live.id!==useAction.id){controller.render();app.ui?.toast?.('보유 재화를 다시 확인했습니다.');return;}
     controller.result=null;app.toLobby();if(app.mode!=='lobby')return;openRewardTarget(app,live.target);
   });
   const retrySave=()=>{if(controller.result===result && result.saveError && !app.stageStarting)controller.showResult(app.battle,result.win);};

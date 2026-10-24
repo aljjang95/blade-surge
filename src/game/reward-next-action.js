@@ -22,8 +22,11 @@ function enhanceable(eco) {
   const s = eco.s, owned = s.roster?.owned;
   const ids = [s.selected, ...Object.keys(s.heroes || {}).filter(id => id !== s.selected)]
     .filter(id => s.heroes?.[id] && (!owned || owned.includes(id)));
+  // 빈 슬롯용 예비 장비가 있으면 growthOptions가 '장착'만 내고 강화를 건너뛰므로 장착 중인 장비만 넘긴다.
+  const worn = new Set(Object.values(s.heroes || {}).flatMap(h => Object.values(h?.equip || {})));
+  const inventory = (s.inventory || []).filter(i => i && worn.has(i.uid));
   for (const heroId of ids) {
-    const o = growthOptions({ ...s, selected: heroId }).find(x => x.kind === 'equipment' && x.mode !== 'equip');
+    const o = growthOptions({ ...s, selected: heroId, inventory }).find(x => x.kind === 'equipment' && x.mode !== 'equip');
     if (o) return { heroId, uid: o.uid, name: o.name, from: o.from, to: o.to };
   }
   return null;

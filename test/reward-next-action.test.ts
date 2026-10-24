@@ -50,6 +50,14 @@ test('던전: 강화석을 벌고 착용 장비를 강화할 수 있으면 강�
   expect(a.target).toEqual({ tab: 'heroes', heroId, uid: inst.uid });
 });
 
+test('던전: 빈 슬롯에 낄 예비 장비가 있어도 착용 장비 강화를 고른다', () => {
+  const eco = fresh(); eco.s.gold = 100000; eco.s.stones = 5;
+  const { inst } = wear(eco, 3); eco.addItem('R', 'armor');
+  const a = run('dungeon', [{ k: 'stones', n: 5 }], eco)!;
+  expect(a.id).toBe('enhance');
+  expect(a.target.uid).toBe(inst.uid);
+});
+
 test('던전: 강화석이 부족하면 강화 대신 다른 갈래, 없으면 null', () => {
   const eco = fresh(); eco.s.gold = 100000; wear(eco, 3);
   expect(run('dungeon', [{ k: 'stones', n: 5 }], eco)).toBeNull();
