@@ -64,7 +64,7 @@ describe('늑대인간 족장 외형·소리 조회는 kit(광전사) 표를 쓴
   });
 
   test('LOOKS·무기 외형 조회가 예외 없이 광전사 표를 돌려준다', () => {
-    expect(LOOKS[kitOf(HEROES.werewolf)]).toBe(LOOKS.barbarian);
+    expect((LOOKS as any)[kitOf(HEROES.werewolf)]).toBe(LOOKS.barbarian);
     const inst = { id: 'w_town_oath', enh: 0 };
     expect(() => weaponLook('werewolf', inst, LOOKS)).not.toThrow();
   });
@@ -92,10 +92,10 @@ describe('늑대인간 족장 고유 스킬 표', () => {
     const ids = HEROES.werewolf.skills.filter((s: any) => ['blood_howl', 'moonlit_hunt'].includes(s.id)).map((s: any) => s.id);
     expect(ids).toEqual(['blood_howl', 'moonlit_hunt']);
     for (const id of ids) {
-      expect(SKILLS[id]).toBeTruthy();
-      expect(SKILL_AIM_SHAPES[id]).toBeTruthy();
-      expect(SKILL_VFX[id]).toBeTruthy();
-      expect(SKILL_SIGNATURES[id]).toBeInstanceOf(Function);
+      expect((SKILLS as any)[id]).toBeTruthy();
+      expect((SKILL_AIM_SHAPES as any)[id]).toBeTruthy();
+      expect((SKILL_VFX as any)[id]).toBeTruthy();
+      expect((SKILL_SIGNATURES as any)[id]).toBeInstanceOf(Function);
       expect(skillSound(id, 'werewolf')).toContain('/barbarian/skill_');
     }
     expect(SKILL_PRELUDES.moonlit_hunt).toBeInstanceOf(Function);
