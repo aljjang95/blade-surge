@@ -8,6 +8,7 @@ import { heroStats,HEROES } from '../src/data/heroes.js';
 import { resolveJobHero } from '../src/data/jobs.js';
 import { applyBuildStats } from '../src/game/masterworks-combat.js';
 import { masteryEffects } from '../src/game/masterworks-core.js';
+import { grandfather } from './helpers/legacy-roster';
 const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');let values:Map<string,string>,fail=false;
 beforeEach(()=>{values=new Map();fail=false;Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{if(fail)throw new Error('quota');values.set(k,v);},removeItem:(k:string)=>values.delete(k)}});});
 afterEach(()=>{if(old)Object.defineProperty(globalThis,'localStorage',old);else Reflect.deleteProperty(globalThis,'localStorage');});
@@ -44,7 +45,7 @@ test('locked job, invalid slots and battle or unsaved settlement cannot change l
  a.battle.active=false;a.expeditionUI.result={saveError:true};expect(a.arsenal.applyPreset(0).ok).toBe(false);
 });
 test('three per-hero configurations are isolated and empty equipment slots intentionally unequip',()=>{
- const a=make();gear(a);a.arsenal.savePreset(0,'전투');a.eco.s.heroes.knight.equip={weapon:null,armor:null,ring:null,boots:null};a.arsenal.setArt('flow');a.arsenal.savePreset(1,'기동');a.arsenal.savePreset(0,'실바 구성','ranger');
+ const a=make();grandfather(a.eco);gear(a);a.arsenal.savePreset(0,'전투');a.eco.s.heroes.knight.equip={weapon:null,armor:null,ring:null,boots:null};a.arsenal.setArt('flow');a.arsenal.savePreset(1,'기동');a.arsenal.savePreset(0,'실바 구성','ranger');
  expect(a.arsenal.s.heroes.ranger.presets[0].name).toBe('실바 구성');expect(a.arsenal.s.heroes.knight.presets[0].name).toBe('전투');expect(a.arsenal.applyPreset(0).ok).toBe(true);expect(a.eco.hero().equip.armor).toBe(31);expect(a.arsenal.applyPreset(1).ok).toBe(true);expect(Object.values(a.eco.hero().equip)).toEqual([null,null,null,null]);expect(a.arsenal.artForHero()).toBe('flow');
 });
 test('mix controls persist fractional values and return detached snapshots',()=>{

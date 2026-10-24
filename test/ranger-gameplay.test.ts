@@ -7,6 +7,7 @@ import { resolveJobHero } from '../src/data/jobs.js';
 import { Player } from '../src/game/player.js';
 import { SKILLS } from '../src/game/skills.js';
 import { applyLook } from '../src/game/look.js';
+import { grandfather } from './helpers/legacy-roster';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
@@ -25,13 +26,15 @@ afterEach(() => {
 
 test('new and legacy saves receive Ranger once without altering existing progression', () => {
   const eco = new Economy();
-  expect(eco.ownHero('ranger')).toBe(true);
+  // 새 저장은 영웅 상태 다섯을 만들되 소유는 시작 영웅 하나뿐이다. 소유 정책 이전 저장(roster 없음)만 다섯을 모두 소유한다.
+  expect(eco.ownHero('ranger')).toBe(false);
   expect(eco.hero('ranger').shards).toBe(0);
   const legacy = structuredClone(eco.s);
-  delete legacy.heroes.ranger;
+  delete legacy.heroes.ranger; delete legacy.roster;
   legacy.heroes.knight.level = 19; legacy.gold = 4321;
   const migrated = normalizeSave(legacy, eco.fresh());
   expect(migrated.heroes.ranger.level).toBe(1);
+  expect(migrated.roster).toMatchObject({ policy: 1, owned: Object.keys(HEROES) });
   expect(migrated.heroes.knight.level).toBe(19);
   expect(migrated.gold).toBe(4321);
   migrated.heroes.ranger.star = 4; migrated.heroes.ranger.shards = 37;

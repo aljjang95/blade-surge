@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const origin = arg('origin', 'http://127.0.0.1:5371/');
@@ -64,6 +65,7 @@ function newRec(id, title) {
 // ---------- 세션 ----------
 async function open(browser, rec, viewport = VIEW) {
   const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
+  await installAutoStarter(context); // 빈 저장 부팅 시 시작 영웅 선택 화면 자동 통과
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
   const s = { context, page, rec, viewport };
@@ -114,7 +116,7 @@ async function prepareState(s, o = {}) {
   const info = await s.page.evaluate((p) => {
     const e = window.app.eco;
     if (p.tutorial) e.s.tutorial = { completed: true };
-    if (!e.ownHero(p.hero)) e.grantHero(p.hero);
+    (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
     e.s.selected = p.hero;
     const h = e.hero(p.hero);
     if (p.level) { h.level = p.level; h.exp = 0; }

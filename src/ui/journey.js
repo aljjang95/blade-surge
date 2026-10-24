@@ -2,7 +2,7 @@ import { ALL_DUNGEONS as DUNGEONS, RECIPES, MATERIALS, CONSUMABLES } from '../da
 import { ITEM_BY_ID, SETS } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';
 import { riftForDay } from '../game/journey-rifts.js';
-import { visibleDungeonIds } from '../game/region-dungeon-gate.js';
+import { frontierForSave } from '../game/region-dungeon-gate.js';
 import { weeklyFrontier, frontierSnapshot } from '../data/seasonal-content.js';
 import { audio } from '../engine/audio.js';
 import './journey.css';
@@ -77,7 +77,7 @@ export class JourneyView {
     return this.app.startExpedition('dungeon',id,{rift:true});
   }
   /** 이번 주 프론티어. 지정 던전이 이 저장에서 잠겼으면 열린 던전으로 대신한다(표시와 출격이 같은 판정). */
-  frontier() { const save=this.app.eco?.s;return weeklyFrontier(new Date(),save?visibleDungeonIds(save):null); }
+  frontier() { const save=this.app.eco?.s;return save?frontierForSave(save):weeklyFrontier(); }
   async launchFrontier(id, shown = frontierSnapshot(this.frontier())) {
     if(this.blockNotice())return false;
     const current=frontierSnapshot(this.frontier());

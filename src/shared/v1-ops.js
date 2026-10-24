@@ -23,6 +23,9 @@ export const OPS = {
   learnSkill: { args: [str, (v) => int(v, 0, 32)], run: (e, h, i) => e.learnSkill(h, i), ok: okResult },
   resetSkills: { args: [str, bool], run: (e, h, useGems) => e.resetSkills(h, { useGems }), ok: okResult },
   setSkillLoadout: { args: [str, (v) => int(v, 0, 1), (v) => int(v, 0, 32)], run: (e, h, slot, i) => e.setSkillLoadout(h, slot, i), ok: okBool, offline: true },
+  // 소유 정책(수익화 1단계): 시작 영웅 선택과 무료 해금. 서버 규칙 엔진이 같은 Economy 메서드를 부른다(유료 권한은 결제 검증만 연다).
+  chooseStarter: { args: [str], run: (e, h) => e.chooseStarter(h), ok: okResult },
+  unlockHeroFree: { args: [str], run: (e, h) => e.unlockHeroFree(h), ok: okResult },
   selectHero: { args: [str], run: (e, h) => { if (!e.ownHero(h) || e.s.selected === h) return false; e.s.selected = h; e.emit(); return true; }, ok: okBool, offline: true },
   // 장비 (난수 없음)
   equip: { args: [str, (v) => int(v, 1)], run: (e, h, uid) => { if (!e.ownHero(h) || !e.s.inventory.some((x) => x.uid === uid)) return false; e.equip(h, uid); return true; }, ok: okBool, offline: true },

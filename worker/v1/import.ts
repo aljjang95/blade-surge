@@ -14,12 +14,13 @@ const INSTALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const HOLD_MS = 30 * 24 * 3600 * 1000;
 
 /** 서버가 지급한 유료 보상만큼 정화 상한을 넓히고, 유효한 결제 권한(패스 프리미엄 수령 기록·월정액 수령일)은 보존한다. */
-async function paidContext(c: Ctx, accountId: string) {
-  if (!await iapSchemaReady(c.db)) return {};
+async function paidContext(c: Ctx, accountId: string, serverState?: Record<string, any>) {
+  // 서버 문서의 roster는 신뢰값이다(정책 1은 이 값에서만 유지된다). 결제 스키마와 무관하게 항상 준다.
+  const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined };
+  if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
-  return { allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil } };
+  return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };
 }
-
 /** 정화 상한의 경과일 기준: 클라이언트 세이브의 created가 아니라 서버가 계정을 만든 시각. */
 async function accountCreatedAt(c: Ctx, accountId: string): Promise<number> {
   const row = await c.db.prepare('SELECT created_at FROM accounts WHERE account_id = ?').bind(accountId).first<{ created_at: number }>();
@@ -38,7 +39,7 @@ export async function importLegacy(c: Ctx, auth: Authed, body: Record<string, un
   if (prior) fail(409, prior.account_id === accountId ? 'already-imported' : 'install-imported', { status: prior.status });
   const doc = await loadAccountDoc(c.db, accountId);
   const raw = JSON.stringify(body.save);
-  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId), ...await paidContext(c, accountId) });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId), ...await paidContext(c, accountId, doc.state) });
   // 서버에서 이미 진행한 계정(rev>1: 명령·정산 이력)은 덮어쓰지 않는다. 원문만 'rejected'로 보관한다.
   const untouched = doc.rev === 1;
   const status = !result.ok ? 'rejected' : untouched ? (auth.account.authority === 'server' ? 'imported' : 'shadow') : 'rejected';
@@ -79,7 +80,7 @@ export async function shadowSnapshot(c: Ctx, auth: Authed, body: Record<string, 
   const imported = await c.db.prepare('SELECT status FROM legacy_saves WHERE account_id = ?').bind(accountId).first<{ status: string }>();
   if (!imported || (imported.status !== 'shadow' && imported.status !== 'imported')) fail(409, 'import-required');
   const doc = await loadAccountDoc(c.db, accountId);
-  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId), ...await paidContext(c, accountId) });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId), ...await paidContext(c, accountId, doc.state) });
   if (!result.ok) fail(400, 'save');
   const eco = loadEconomy(result.state, { now: c.now });
   const next = docOf(eco), hash = parityHash(eco.s);

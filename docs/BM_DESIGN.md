@@ -1,7 +1,7 @@
 # Blade Surge BM 설계 — Google Play 결제·상품·지급·환불·퍼널 (D10a·D10b·D11)
 
 > 2026-10-22 · 브랜치 `claude/blade-bm-billing` · 기준 `docs/MMO_DESIGN.md` 3.4.4·6장, `docs/COMMERCE-SERVER-CONTRACT-20260923.md` 8개 요구.
-> 이 문서는 **설계와 구현 경계**다. Play 콘솔 상품 등록·가격 공개·실제 구매·운영 활성화(`IAP_ENABLED=true`)는 하지 않았다(대표님 확인 사항).
+> 이 문서는 **설계와 구현 경계**다(11장: 영웅 해금·웹 결제 포트원). Play 콘솔 상품 등록·가격 공개·실제 구매·운영 활성화(`IAP_ENABLED=true`)는 하지 않았다(대표님 확인 사항).
 
 ## 0. 결정 요약
 
@@ -38,6 +38,8 @@
 | `starter_pack_v1` | 일회성·소모(지급 뒤 consume) | ₩1,200 | SSR 확정권 1·보석 1,000·골드 50,000, **계정당 1회** | 켬 |
 | `monthly_card_v1` | 구독, 기본 요금제 `monthly`(P1M) | ₩5,900/월 | 결제 주기(성공 주문)마다 보석 1,200 + 기간 중 매일 보석 100(수령 명령) | 켬 |
 | `season_pass_s1` | 일회성·비소모 | ₩9,900 | 권한 `pass:s1`, 시즌 종료(2027-01-25 00:00 KST)까지 프리미엄 줄 | 켬 |
+| `hero_<id>_v1` 5종 (knight·barbarian·mage·rogue·ranger) | 일회성·비소모 (웹·Play) | ₩5,900 | 권한 `hero:<id>`(영구, 11장) | 켬(웹은 `WEB_BILLING_ENABLED` 별도) |
+| `hero_all_v1` | 일회성·비소모 (웹·Play) | ₩17,900 | 권한 `hero:*` 5개 한 번에 | 켬(웹은 별도) |
 | `gems_300_v1` 외 2종 | 일회성·소모 | ₩3,900~₩25,000 | 보석 | **끔**(유료 보석 분리 전) |
 
 가격은 후보다. 근거: 스타터 ₩1,200·월정액 ₩5,900·패스 ₩9,900은 기존 `shop.js` 목업과 MMO_DESIGN 6.2 가정이고, 광고 제거 ₩4,900은 국내 캐주얼·ARPG 광고 제거 단독 상품의 흔한 구간(₩3,900~₩6,500) 중간값이다. 판매가 정본은 Play 콘솔 등록값이며, 클라이언트는 **Play가 돌려준 현지화 가격 문자열만** 표시한다(카탈로그 가격으로 대체 표시하지 않는다).
@@ -129,7 +131,7 @@
 3. **대표님 확인 후** Play 콘솔 상품 등록: `NODE_USE_ENV_PROXY=1 node tools/play-iap-register.mjs`(dry-run으로 본문 확인) → `--apply --i-have-owner-approval`. 2026-10-22 현재 Play 등록 상품 0개(`oneTimeProducts`·`subscriptions` 204).
 4. 내부 테스트 트랙에 이 브랜치 AAB 업로드, 라이선스 테스터로 `IAP_ENABLED=true`·`IAP_ALLOW_TEST=true` 검증(구매→지급→환불→역분개).
 5. RTDN: GCP Pub/Sub 토픽 + push 구독(엔드포인트 6장, OIDC 서비스 계정) → Play 콘솔 수익 창출 설정에 토픽 등록 → `RTDN_AUDIENCE`·`RTDN_PUSH_SUBJECT` 설정 → 콘솔 "테스트 알림"으로 `test` 기록 확인.
-6. 운영 개방: `IAP_ALLOW_TEST=false`, `IAP_ENABLED=true`. 가격 공개·판매 시작은 대표님 확인.
+6. 운영 개방: `IAP_ALLOW_TEST=false`, `IAP_TEST_ACCOUNTS=""`(test=1 결제는 테스트 모드를 끄거나 허용 목록에서 빠지면 complete·크론에서 지급 거부), `IAP_ENABLED=true`. 가격 공개·판매 시작은 대표님 확인.
 
 ## 10. 남은 것
 
@@ -140,3 +142,92 @@
 - 매출 집계 `price_krw`는 카탈로그 후보가(KRW)다. 실결제 금액·통화는 Play 주문 API(orders) 연동 뒤 교체한다(테스트 구매는 0).
 - 블레이드 전용 Play 서비스 계정 분리(현재 apex 공용 `APEX_CLOUD_PLAY_SA_JSON`).
 - 원스토어·앱인토스 채널은 기존 `/api/store`(광고 제거) 그대로. 다상품 결제는 Google Play만.
+
+## 11. 영웅 해금 (시작 영웅 1명 + 해금) — 수익화 1단계 레인 B
+
+> 2026-10-24 대표님 지시: 첫 실행은 영웅 1명으로 시작, 나머지는 과금으로 열린다. **웹에서 먼저 매출, 이후 Play 출시.** 아래 가격·스위치는 모두 **후보/꺼짐**이며 **공개 전 대표님 확인**이 필요하다.
+> 클라이언트의 소유 규칙·시작 영웅 선택·무료 해금 UI는 레인 A(`src/data/hero-roster.js`, 경제). 이 장은 서버 권한·결제 채널(레인 B).
+
+### 11.1 상품과 가격 후보
+
+| 상품 | 가격 후보 | 근거 |
+|---|---|---|
+| `hero_<id>_v1` (영웅 1명) | ₩5,900 | 국내 모바일 RPG 캐릭터/영웅 단품 패키지는 ₩5,000~₩12,000대가 흔하고, 기존 월정액 ₩5,900(한 달 구독)과 같은 가격대로 두어 "영구 소유 1명 = 한 달 구독 값"으로 설명된다. 시즌 패스 ₩9,900보다 낮아 첫 결제 문턱을 넘기기 쉽다 |
+| `hero_all_v1` (다섯 전원) | ₩17,900 | 시작 영웅 1명은 무료이므로 실제로는 4명을 사는 상품이다. 4명 개별 합 ₩23,600 대비 **약 24% 할인**(₩5,700 절약). 패스(₩9,900)·월정액(₩5,900)과 합쳐도 단일 결제로 부담스럽지 않은 상한 |
+
+- **웹·Play 동일가.** 가격표는 `src/shared/iap-catalog.js` 한 곳이며 서버는 클라이언트가 보낸 금액을 받지 않는다. 클라이언트는 웹에서 intent가 돌려준 서버 금액, Play에서 Play가 돌려준 현지화 가격 문자열을 표시한다.
+- **수수료 차이(순매출이 다르다, 가격은 같게 둔다):** 웹은 포트원 + KG이니시스 결제 수수료(카드 대략 3% 안팎, 계약 조건 확인 필요) 뿐이고 Google Play는 연 매출 100만 달러까지 15%, 초과분 30%(구독은 15%). 같은 ₩5,900에서 웹이 순매출이 더 높으므로 "웹 먼저"가 매출에 유리하다. 가격을 달리하면(웹 할인) 스토어 정책·형평 문제가 생길 수 있어 동일가를 기본으로 한다.
+- **무과금 경로:** 보석 + 캠페인 진행으로 영웅을 여는 `unlockHeroFree`는 레인 A 수치 참조(`src/data/hero-roster.js`, `docs/CONTENT_90D.md`). 이 장은 그 수치를 정하지 않는다. 유료 상품은 "시간 단축" 성격으로 유지하고, 무과금도 전원을 열 수 있어야 한다는 전제를 지킨다.
+- 상품은 비소모(non_consumable) 권한이라 `hero_all_v1`을 사도 이미 가진 개별 영웅 권한이 중복 행으로 남을 뿐 문제가 없다. 전원을 가진 계정은 모든 영웅 상품이 `not-eligible`이다(웹 intent·Play intent·카탈로그 `eligible`).
+
+### 11.2 서버 권위
+
+- 영웅 소유의 정본은 `iap_entitlements`의 `hero:<id>` 권한이다(`summarizeEntitlements().heroes`). `grant.entitlement` 하나만 받던 구조를 `grant.entitlements`(배열)도 받도록 확장했고 기존 상품·Play 흐름은 그대로다.
+- 서버는 권한이 바뀔 때마다 계정 문서의 `roster.paid`를 권한 목록으로 맞춘다: 지급 커밋 안에서(원자), 철회 직후 `syncRosterPaid`, 그리고 매 `/cmd`·`/me` 직전 `overlayEntitlements`.
+- 로컬 편집으로 서버 모드의 소유가 늘지 않는다: `legacy-sanitize`(`/import`·`/shadow/snapshot`)는 클라이언트가 보낸 `roster.paid`·`owned`를 버린다.
+  - `paid` = 서버 권한 그대로.
+  - **서버는 클라이언트 데이터만으로 정책 1(5명 소유)을 절대 주지 않는다.** 정책 1은 서버 문서가 이미 정책 1일 때(서버 기록)만 유지된다. 가져오기(`/import`·`/shadow/snapshot`)는 roster 유무·`save.created`와 무관하게 정책 2 + `owned`=[시작 영웅 1명] + `starterChosen=true`(시작 영웅 우선순위: 서버가 기억하는 선택 > 원본 시작 영웅 > 원본 selected(유효한 영웅) > knight) + 서버 문서가 이미 가진 owned. 클라이언트 시각은 저장 나이를 증명하지 못해 `save.created` 기준은 17,900원 전원 해금을 우회하는 통로가 된다(Codex 보안 리뷰 지적). 기존 `HERO_GRANDFATHER_BEFORE_MS` 설정은 제거했다.
+- 환불·취소로 권한이 빠지면 `paid`에서 빠지고 영웅 데이터(레벨·장비)는 그대로 둔다(잠금만 다시 걸림, 레인 A가 선택 영웅을 시작 영웅으로 되돌림).
+
+### 11.3 웹 결제 채널 (포트원 V2)
+
+```
+브라우저                           서버 /api/v1/iap/web                      포트원
+ POST /intent {productId} ───────▶ 판매·채널·미보유·보류 검사
+                         ◀─────── paymentId(서버 생성)·금액(카탈로그)·storeId·channelKey·orderName·customData
+ requestPayment(SDK, redirectUrl)  ───────────────────────────────────────────▶ 결제창
+ POST /complete {paymentId} ─────▶ GET /payments/{id}  (Authorization: PortOne <시크릿>) ─▶ 단건 조회
+                                   status=PAID · amount.total=카탈로그가 · KRW · storeId · 채널 · customData · 내 의도
+                                   → grantOnce(원장 op_id 'iap:<sha256(portone:paymentId)>', 권한, roster.paid) ──▶ 응답(grants·entitlements)
+```
+
+- **지급 근거는 서버의 포트원 조회뿐**이다. 결제 금액은 브라우저가 결제창에 넘기므로 PAID여도 금액·통화·storeId·채널이 서버 의도와 한 글자라도 다르면 지급하지 않고 의도를 `failed`로 만들고 `audit_flags`(`web-payment-mismatch`)를 남긴다(돈이 나갔으므로 사람이 취소해야 한다. 취소 API는 코드에 없다).
+- 멱등: 같은 paymentId를 몇 번·동시에 보내도 `wallet_ledger.op_id` 유일성과 `iap_grants` 선검사로 한 번만 지급(동시 3건 테스트). 남의 paymentId·서버가 발급하지 않은 paymentId는 같은 404(`payment-unknown`).
+- 저장: 새 표 `iap_web_payments`(마이그레이션 `0004_web_payments.sql`, 스키마 v4)가 paymentId ↔ 계정·상품·금액·storeId·채널을 결박한다. 지급·권한·원장은 Play와 같은 `iap_purchases`/`iap_grants`/`iap_entitlements`/`wallet_ledger`를 재사용한다(키 접두사 `portone:`).
+- **취소 회수:** `complete` 때 CANCELLED/PARTIAL_CANCELLED가 보이면 권한 철회·지급 역분개·`roster.paid` 회수. 시간당 크론(`17 * * * *`)이 최근 400일(카드 취소는 포트원 문서상 보통 1년까지 가능) 지급분을 다시 조회해 취소를 회수한다. 재조회 간격은 `checked_at` 기준 지급 30일 이내 6시간, 그 이후 7일이다. 최근 48시간의 미완료 의도(결제창에서 결제했지만 `complete`가 안 온 경우: 탭 종료·리다이렉트 실패)가 PAID면 지급한다. 한 번에 최대 25건만 조회(호출 수 상한, 가장 오래 안 본 건부터, 실패 항목도 순서를 뒤로 보낸다). 판매 스위치를 꺼도 회수는 계속 돈다. 취소된 결제는 이후 조회가 PAID로 보여도 다시 지급하지 않는다.
+- 남용 방어: 계정당 시간당 열린 의도 10건, `/iap/*` 속도 제한 공유(10분 30회), 지급 보류(`payout_hold`) 계정은 intent 거부, 환불 남용 감지는 Play와 같은 `abuseCheck`.
+- 중복 결제(동시 의도 두 건 결제 등)는 지급·회수는 정상이지만 `audit_flags`(`web-duplicate-payment`)로 표시해 사람이 환불하게 한다.
+- 클라이언트: `src/platform/hero-purchase.js`가 `app.heroPurchase = { available(), buy(productId) }`를 제공한다. 웹 채널에서 서버가 `/me` flags.`webBilling`을 알렸을 때만 `available()`=true(기본 false). 성공(`ok:true`)은 서버 complete가 granted/already였고 `applyIapState` 저장이 성공한 뒤에만. Play 채널은 기존 `billing-service`로 위임. SDK는 `https://cdn.portone.io/v2/browser-sdk.js`를 동적으로 불러온다(npm·lock 변경 없음). 모바일 리다이렉트 복귀·끊긴 결제는 `resume()`이 보류 paymentId로 `complete`를 다시 보낸다(보류는 localStorage, 48시간).
+- CSP: 지금 배포에는 CSP 헤더가 없다. 도입한다면 `script-src https://cdn.portone.io`와 포트원 결제창 iframe/PG 도메인 허용이 필요하다.
+
+### 11.4 서버 스위치·설정 (모두 기본 꺼짐)
+
+| 이름 | 값 | 의미 |
+|---|---|---|
+| `V1_ENABLED` | `false` | 기존. 꺼지면 `/api/v1` 전체 503 |
+| `IAP_ENABLED` | `false` | 기존. Play 결제 판매. **웹 결제와 독립** |
+| `WEB_BILLING_ENABLED` | `false` | 웹 결제 스위치. 꺼지면 `/iap/web/*` 전부 503(`web-billing-disabled`), `flags.webBilling=false` |
+| `PORTONE_STORE_ID` | `store-75d3b0fa-…` | 비밀 아님 |
+| `PORTONE_CHANNEL_KEY` | `""` | 실결제 채널 키(비밀 아님). **비어 있으면 intent 거부**(`web-not-configured`) |
+| `PORTONE_TEST_CHANNEL_KEY` | `channel-key-2ec7…` | `IAP_ALLOW_TEST=true`이고 `IAP_TEST_ACCOUNTS`(쉼표 구분 account_id, 기본 비어 있음)에 든 계정에게만 쓴다. 일반 게스트는 받지 못한다. 이름이 '신기충만 - KG이니시스 테스트'라 실결제 채널로 쓰지 않는다. 테스트 지급은 매출 0·퍼널 '첫 결제' 제외 |
+| `PORTONE_API_SECRET` | Secrets Store | `apex-shared-apis/APEX_CLOUD_PLAY…`와 같은 스토어의 `APEX_CLOUD_PORTONE_API_SECRET`. 조회(GET)에만 사용, 값은 로그·응답에 나가지 않는다 |
+
+닫히는 순서(fail-closed): 스위치 → D1 스키마 v4 → 시크릿 바인딩 → storeId·채널 키.
+
+### 11.5 환불·회수 정책
+
+- 웹: 포트원 콘솔/PG에서 사람이 취소하면(코드는 취소를 호출하지 않는다) 다음 `complete` 또는 시간당 크론이 CANCELLED/PARTIAL_CANCELLED를 보고 영웅 권한을 회수한다. 부분 취소도 전체 회수(보수적).
+- Play: 기존 환불 대사(`voidedpurchases`·RTDN)가 그대로 `hero:*` 권한을 철회한다(`reverseToken`이 `roster.paid`도 맞춘다).
+- 회수는 잠금만 다시 건다. 성장 데이터는 지우지 않으므로 재구매하면 그대로 복원된다.
+
+### 11.6 남는 위험 (정직하게)
+
+1. **기존 이용자 보호는 서버 증거 경로가 생기기 전까지 서버에서 되지 않는다(V1 개방 게이트).** 현재 운영은 100% 로컬 저장이라 기존 이용자는 로컬에서 5명을 그대로 유지한다. 그러나 V1 서버 권위를 열면 서버 가져오기는 항상 정책 2(시작 영웅 1명)로 만든다(클라이언트가 보낸 `save.created`·roster로는 정책 1을 줄 수 없다). 따라서 V1 개방 전에 컷오버 이전에 서버가 만든 기록(예: tll-social 게스트 신원 생성 시각, 또는 서버가 서명한 이관 증명)을 근거로 정책 1을 주는 경로를 별도로 만들어야 한다. 그 전에는 V1 서버 권위 개방을 하지 않거나, 기존 이용자가 서버 계정으로 넘어올 때 영웅 4명을 잃는다는 점을 대표님이 인지한 상태에서만 연다.
+2. 그림자 모드(로컬이 정본) 동안 로컬 `paid`·무료 해금은 서버 문서에 반영되지 않는다. 컷오버 시 서버 `unlockHeroFree`로 다시 열거나 보석을 환급해야 할 수 있다(레인 A와 합의 필요).
+   - **현금 판매는 서버 권위 계정(`authority=server`)에만 연다.** 서버는 그림자·로컬 계정의 `/iap/web/intent`와 영웅 상품(`hero:*` 권한) Play `/iap/intent`를 403 `server-authority-required`로 거절하고, `/me`의 `flags.webBilling`도 서버 권위 계정에서만 true다. 클라이언트 `heroPurchase.available()`도 계정이 서버 권위일 때만 true다. 이유: 로컬 저장은 클라이언트가 정본이라 roster를 지우거나 정책 1로 바꿔 5명 소유(17,900원 전원 해금 효과)를 만들 수 있고, 그림자 모드는 서버 정화 문서를 채택하지 않아 서버가 roster를 강제하지 못한다.
+   - **로컬 모드의 무료 해금 우회는 막지 않는다.** 로컬에서는 보석을 포함한 모든 값을 클라이언트가 고칠 수 있으므로 무료 해금 비용(진행+보석) 우회는 보석 편집과 같은 수준의 기존 한계다. 현금이 걸린 경로(결제 판매)만 서버 권위로 보호한다.
+3. 웹 결제 금액 변조는 지급 단계에서 막지만 PG에서는 이미 결제가 끝나 있다. 사람이 취소해야 한다(`audit_flags` 확인). 취소 API 자동화는 이번에 만들지 않았다.
+4. 포트원 조회 API 장애 시 `complete`는 502, 크론은 건너뛰고 다음 시간에 다시 시도한다. 그동안 취소 회수가 늦는다(최대 ~1시간 + 장애 시간).
+5. 크론 처리량 한계는 25건/시간 = 600건/일이다. 대사 창(400일) 안의 재조회 대상이 이 한도를 넘으면 오래 안 본 건의 간격이 길어져 취소 회수가 늦는다. 규모가 커지면 포트원 웹훅(서명 검증)을 도입해 취소 이벤트를 즉시 받고 크론은 안전망으로 낮춘다.
+6. 포트원 웹훅은 이번에 넣지 않았다(웹훅 시크릿 없음). 크론 + `complete`로 대신한다.
+7. 가격·수수료 근거는 공개 정보 기반 추정이다. 실제 계약 수수료와 대표님 최종 금액으로 교체한다.
+
+### 11.7 개방 순서 (코디네이터·대표님)
+
+1. D1 `blade-surge-commerce-production`에 `0004_web_payments.sql` 원격 적용(스키마 v4). 미적용이면 웹 결제만 `web-schema-missing`으로 닫힘(Play·나머지 v1은 그대로).
+2. 포트원 콘솔에서 **실결제 채널**(KG이니시스 실연동)을 만들고 채널 키를 `PORTONE_CHANNEL_KEY`에 설정. 시크릿 `APEX_CLOUD_PORTONE_API_SECRET` 바인딩이 배포에 포함됐는지 확인.
+3. **[게이트] 서버 권위 롤아웃(`V1_SERVER_AUTHORITY_PERCENT`>0, 계정 코호트)이 판매 개방의 선행 조건이다.** 서버 권위가 아닌 계정에는 영웅 판매가 열리지 않으므로(11.6 2번), 롤아웃 범위가 곧 판매 가능 범위다. 롤아웃 전에 `WEB_BILLING_ENABLED=true`로 켜도 로컬·그림자 계정에는 아무 일도 일어나지 않는다.
+3-1. **[게이트] 기존 이용자 보호용 서버 증거 경로**(11.6 1번)가 없으면 V1 서버 권위 개방을 하지 않는다. 그 경로 전에는 서버 가져오기에서 grandfather가 되지 않는다.
+4. 테스트 채널 + `IAP_ALLOW_TEST=true` + 테스터 계정만 `IAP_TEST_ACCOUNTS`에 넣어(실채널이 있으면 intent에 `test:true`) 내부 결제(구매→지급→포트원 콘솔 취소→회수) 한 번 확인.
+5. `WEB_BILLING_ENABLED=true`. 단, **가격(₩5,900 / ₩17,900)과 상품 문구를 대표님이 확인한 뒤에만 공개.**
+6. 이후 Play: `tools/play-iap-register.mjs`가 영웅 6종도 등록 대상에 포함한다(dry-run으로 확인 → 대표님 확인 후 `--apply`).

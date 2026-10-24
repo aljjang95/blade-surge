@@ -2,8 +2,12 @@
 // - 가격 표시는 Play가 돌려준 값(formattedPrice)만 쓴다. 카탈로그 priceKRW는 폴백으로 보이지 않는다.
 // - 구매 토큰은 어댑터 → 서버 verify로만 흐른다. 저장·로그·퍼널에 남기지 않는다.
 import { loadPlayCatalogAdapter } from './iap-billing.js';
+import { soldOn } from '../shared/iap-catalog.js';
+import { funnelSkuFor } from '../game/funnel-events.js';
+import { askCustomerInfo } from '../ui/customer-info.js';
+import { createHeroPurchase } from './hero-purchase.js';
 
-const validProduct = (p) => p && typeof p.id === 'string' && ['inapp', 'subs'].includes(p.playType);
+const validProduct = (p) => p && typeof p.id === 'string' && soldOn(p, 'play') && ['inapp', 'subs'].includes(p.playType);
 
 // 서버 /iap/* 한도(계정당 10분 30회)를 아끼려고 sync가 verify하는 대상을 줄인다.
 // 미승인(acknowledged=false) 토큰은 항상, 승인된 구독은 상품별 6시간에 한 번만 확인한다(승인된 일회성 상품은 서버가 이미 처리).
@@ -149,15 +153,27 @@ export function setupBilling(app) {
   if (!client || !app.eco) return null;
   const billing = createBillingService({
     account: client, economy: app.eco,
-    onVerified: ({ shopSku }) => { if (shopSku) app.funnel?.track?.('purchase_verified', { sku: shopSku }); },
+    onVerified: ({ productId, shopSku }) => { const sku = funnelSkuFor({ productId, shopSku }); if (sku) app.funnel?.track?.('purchase_verified', { sku }); },
   });
   app.eco.setBilling(billing); app.billing = billing;
+  // 영웅 해금 구매 트리거(UI는 app.heroPurchase만 안다). 웹 채널은 포트원, Play 채널은 위 billing으로 위임한다.
+  const heroPurchase = createHeroPurchase({ api: client, eco: app.eco, billing, authority: () => app.account?.authority ?? null,
+    askCustomer: () => askCustomerInfo(app.ui) });
+  app.heroPurchase = heroPurchase;
   const start = (tries = 0) => {
     const status = app.account?.status;
-    if (status === 'ready') void billing.init().then((ok) => ok && billing.sync()).then(() => app.meta?.refreshTop?.()).catch(() => {});
-    else if (status === 'connecting' && tries < 40) setTimeout(() => start(tries + 1), 1500);
+    if (status === 'ready') {
+      void billing.init().then((ok) => ok && billing.sync()).then(() => app.meta?.refreshTop?.()).catch(() => {});
+      void heroPurchase.init().then(() => heroPurchase.resume()).then((r) => r?.ok && app.meta?.refreshTop?.())
+        .then(() => heroPurchase.syncState()).then((ok) => ok && app.meta?.refreshTop?.()).catch(() => {});
+    } else if (status === 'connecting' && tries < 40) setTimeout(() => start(tries + 1), 1500);
   };
   start();
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void billing.sync(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    void billing.sync();
+    // 웹 그림자 모드는 Play 어댑터가 없어 billing.sync()가 비어 있다: 영웅 권한(환불 회수·늦은 지급)은 여기서 따로 맞춘다.
+    if (app.account?.status === 'ready') void heroPurchase.syncState().then((ok) => ok && app.meta?.refreshTop?.()).catch(() => {});
+  });
   return billing;
 }
