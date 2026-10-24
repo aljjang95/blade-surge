@@ -46,6 +46,12 @@
 .hero-card .lockt { flex-direction: column; gap: 2px; font-weight: 900; background: rgba(5, 3, 14, .35); }
 .hero-card .lockt::before { content: '🔒'; font-size: 20px; filter: drop-shadow(0 1px 2px #000); }
 @media (orientation: landscape) and (max-height: 520px) {
-  .hero-lock .hl-box { padding: 8px; }
-  .hero-lock .hl-box p { font-size: 11px; }
+  /* 낮은 가로 화면: 무료·바로 해금 상자를 나란히 두어 두 버튼이 스크롤 없이 한 화면에 들어온다. */
+  .hs-locked.hero-lock { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 8px; align-content: start; padding: 8px 10px; }
+  .hero-lock h2, .hero-lock .sub, .hero-lock .hl-skills { grid-column: 1 / -1; }
+  .hero-lock h2 { font-size: 20px; }
+  .hero-lock .sub { margin-bottom: 0; }
+  .hero-lock .hl-skills { font-size: 11px; line-height: 1.3; }
+  .hero-lock .hl-box { padding: 8px; gap: 4px; }
+  .hero-lock .hl-box p { font-size: 11px; line-height: 1.3; }
 }

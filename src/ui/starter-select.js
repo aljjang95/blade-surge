@@ -47,7 +47,7 @@ export function runStarterSelect(app, { root = document } = {}) {
     const select = (id, focus = false) => {
       picked = id;
       for (const card of cards) { const on = card.dataset.hero === id; card.classList.toggle('on', on); card.setAttribute('aria-checked', String(on)); card.tabIndex = on ? 0 : -1; if (on && focus) card.focus({ preventScroll: true }); }
-      go.disabled = false; go.textContent = `${HEROES[id].name}(으)로 시작`; note.textContent = '';
+      go.disabled = false; go.textContent = `${HEROES[id].name} 선택하고 시작`; note.textContent = '';
     };
     cards.forEach((card, i) => {
       card.tabIndex = i === 0 ? 0 : -1;
