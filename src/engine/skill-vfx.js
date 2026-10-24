@@ -40,6 +40,9 @@ export const SKILL_VFX = Object.freeze({
   quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),
   berserk: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff3030, 6, { noRune: true, sig: true }),
   hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 4, seek: [13, 4], noRune: true, sig: true }),
+  // 늑대인간 족장 고유 스킬: 핏빛 진홍·분홍(포효), 월광 은백 + 진홍(사냥). 모양은 sig-barbarian.js 서명이 맡는다.
+  blood_howl: R(VIOLET, 'lava-crack', 'self', 'ground', 0xc81830, 6, { noRune: true, sig: true }),
+  moonlit_hunt: R(VIOLET, 'meteor', 'self', 'flash', 0xd8e4ff, 8, { noRune: true, sig: true }),
   bull_rush: R(GOLD, 'lava-crack', 'front', 'ground', 0xff6a30, 6, { dist: 5, noRune: true, sig: true }),
   magma_zone: R(GOLD, 'lava-crack', 'self', 'ground', 0xff5a20, 8),
   bloodquake: R(VIOLET, 'lava-crack', 'self', 'ground', 0xd02020, 9, { noRune: true, sig: true }),
@@ -79,7 +82,7 @@ export const SKILL_VFX = Object.freeze({
 
 // 궁극기(인덱스 3)와 고위 각성(6·7)만 전장 장악 링 + 카메라 펀치 1회를 쓴다.
 export const MAJOR_SKILL_INDEXES = Object.freeze([3, 6, 7]);
-export const MAJOR_SKILL_IDS = Object.freeze(new Set(Object.values(HERO_SKILLS).flatMap((ids) => MAJOR_SKILL_INDEXES.map((i) => ids[i]))));
+export const MAJOR_SKILL_IDS = Object.freeze(new Set([...Object.values(HERO_SKILLS).flatMap((ids) => MAJOR_SKILL_INDEXES.map((i) => ids[i])), 'moonlit_hunt']));
 
 /** 등급 없는 레거시 영웅은 def.rarity, 그것도 없으면 SR 로 내려간다. */
 export function resolveHeroGrade(player) {

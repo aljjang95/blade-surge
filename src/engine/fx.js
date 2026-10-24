@@ -6,6 +6,7 @@ import { ImpactVfx, HERO_IMPACT_PALETTE, IMPACT_KIND, MARK_STYLE } from './impac
 import { spawnSanctum } from './sanctum-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
+import { kitOf } from '../data/heroes.js';
 import { bossSignatureFragmentShader, bossWarnVertexShader } from './boss-warn-shader.js';
 import { bloomLoadFor, compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
@@ -782,10 +783,10 @@ export class FX {
     const clock = this.impact.clock;
     if (this._comboSwing === t.current && clock >= this._comboSwingAt && clock - this._comboSwingAt < .25) return 0;
     this._comboSwing = t.current; this._comboSwingAt = clock;
-    return this.impact.combo(pos, dir, { hero: t.def.id, step, steps: combo.length, finisher: !!t.current.finisher || tier === 'finisher', reduced });
+    return this.impact.combo(pos, dir, { hero: kitOf(t.def), step, steps: combo.length, finisher: !!t.current.finisher || tier === 'finisher', reduced });
   }
   /** 현재 조종 중인 영웅 id(타격 색 언어용). 초점 대상이 없으면 빈 값. */
-  _heroId() { const t = this.focus?.target; return t?.alive ? (t.def?.id || '') : ''; }
+  _heroId() { const t = this.focus?.target; return t?.alive ? kitOf(t.def) : ''; }
   /** 묶음 처치 단계(0~3) 충격파 + 방사형 빛줄기. 기존 shockTex 링 자리를 대신한다(반지름은 FEEL.kill.multiSteps[].ring). */
   multiKillWave(pos, step, { reduced = false } = {}) { return !!this.vfx?.wave(pos, step, { reduced }); }
 

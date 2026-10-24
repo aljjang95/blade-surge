@@ -27,11 +27,19 @@
 
 ## 남은 것(우선순위)
 1. 서버 권위 모드 전에 소환을 "서버 결과 먼저 받고 연출"로(지금은 클라이언트 선굴림 + 서버 재실행 패리티).
-2. 신규 SSR 5명(늑대인간 족장·용암 오니 군주·벚꽃 무사·밤까마귀·검은 고양이) 영웅 정의·스킬·초상 → `HERO_PICKUP_ROTATION`에 추가(BM 12.5).
+2. 신규 SSR 4명(늑대인간 족장은 2차에서 완료 — 용암 오니 군주·벚꽃 무사·밤까마귀·검은 고양이) 영웅 정의·스킬·초상 → `HERO_PICKUP_ROTATION`에 추가(BM 12.5).
 3. 설계만 된 상품 SKU(성장 펀드·스텝업·첫 충전 2배·픽업 기간 패키지·복귀·초대·선택권) 구현 — 판매·가격 공개는 대표님 확인.
 4. 월정액 일일 100 보석 유료/무료 분류 법무 확인, 운영 사이트 확률 공개 페이지(`/odds`).
 5. 등급분류 초안의 '확인 필요' 항목(웹 게임 직접 신청 대상, 수수료, 중소기업 확률 공개 예외), 보석 팩 구성(카탈로그 3종 vs 목업 6종) 정리.
 6. 초보자 배너 전용 일러스트(지금 검성 아르카 초상 임시).
+
+## 소환 2차 (2026-10-24, gogo-chunk:summon-2, PR #282)
+- 소환 화면 결함: 개발용 경제 추정치 줄(소환 배너 아래·상점 카드 `.si-pace`) 제거, 배너 일러스트 규칙 `src/data/banner-art.js`(치비가 있으면 그것, 없으면 3D 렌더), 초보자 배너 사실풍 초상 → 3D 렌더, 장비 배너 1280 좌우 여백 채움, 간격 8px.
+- 늑대인간 족장(SSR, 소환 전용, `kit:'barbarian'`·`bodyAvatar`) + 고유 스킬 핏빛 포효·월광 사냥(`src/game/werewolf-kit.js`), 균형 `bun tools/hero-balance-sim.mjs --assert`(광전사 대비 무리 1.03·단일 1.00).
+- 소유 정책: 정책 1 무료 범위·영웅 상품·시작 후보 = `HERO_LEGACY_IDS`(원래 다섯).
+- 교대: `['werewolf','knight','barbarian']`, 기준 시각 전 회차 -1 = 광전사, 10-26~11-09 늑대인간 할로윈 픽업(`PICKUP_THEMES`). 경계 테스트 `test/gacha-rotation.test.ts`.
+- 리뷰: GitHub Codex 한도 소진, PC OpenCodex 풀 OpenAI 계정 재인증 필요 → Sonnet 독립 리뷰 1회(P0/P1 없음, P2 2건 수정: 정책 1 해금 견적·로비 자세 kit). 남긴 P2: 사냥 본능 처치 회복이 파티원 처치에도 걸릴 수 있음(기존 blood_leech·궁극기 충전과 같은 규칙, 처치자 추적 없음).
+- **남은 것**: 치비 배너 4장(늑대인간·초보자·광전사·검성) — PC `C:\Work\tasks\summon2-art-src\gen.ps1` 준비됨, 대표님 `ocx account reauth openai` 뒤 생성 → `public/img/tll/banners/<id>-chibi-v1.webp` → `HERO_BANNER_ART`/`BEGINNER_BANNER_ART`에 한 줄. 검성 픽업(11-09) 전에 필요(검성 대체 이미지는 사실풍 초상). 늑대인간 전용 스킬 아이콘·음성(지금 광전사 것 빌림), 옛 QA 도구 `tools/gogo-qa-20261020-drops.mjs`의 `.si-pace` 항목.
 
 ## 대표님 확인 사항(집행 안 함)
 가격 공개·판매 시작(`IAP_ENABLED`, `webBilling`), 포트원 채널, 등급분류 제출·수수료.

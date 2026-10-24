@@ -134,7 +134,7 @@ if (import.meta.main) {
       const s = S[id], q = (k) => (s[k] ? `${s[k].p10}/${s[k].p50}/${s[k].p90}` : '-');
       console.log(`## ${PERSONAS[id].name} · ${days}일 · 시드 ${seeds} (p10/p50/p90)`);
       console.log(`  수입 보석 ${q('gems')} · 소환권 ${q('tickets')} · 소환 영웅 ${Math.round(s.pulls.hero)}회 / 장비 ${Math.round(s.pulls.gear)}회`);
-      console.log(`  SSR 영웅 사본 ${q('ssrHeroCopies')} · 서로 다른 SSR ${q('ssrHeroDistinct')} · 픽업 ${q('featuredHero')} · 첫 SSR ${q('firstSsrHeroDay')}일 · SR 전원 ${q('allSrDay')}일 · 영웅 5명 ${q('allHeroesDay')}일`);
+      console.log(`  SSR 영웅 사본 ${q('ssrHeroCopies')} · 서로 다른 SSR ${q('ssrHeroDistinct')} · 픽업 ${q('featuredHero')} · 첫 SSR ${q('firstSsrHeroDay')}일 · SR 전원 ${q('allSrDay')}일 · 영웅 전원(${HERO_ORDER.length}명) ${q('allHeroesDay')}일`);
       console.log(`  SSR 장비 ${q('ssrGear')} · 픽업 세트 ${q('featuredGear')} · 세트 서로 다른 부위 ${q('featuredSetPieces')} · 최다 SSR 조각 ${q('bestSsrShards')} · SSSR 조각 충족 ${(s.sssrShardReadyShare * 100).toFixed(0)}%`);
     }
     if (failures.length) { console.log('\n밴드 실패:'); for (const f of failures) console.log('  - ' + f); }

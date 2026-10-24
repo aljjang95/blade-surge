@@ -319,6 +319,8 @@ export class Economy {
     const base = { id, owned: false, step: 0, need: 0, needLabel: '', gems: 0, have, progress: s.progress?.unlocked || 1, canFree: false, reason: null };
     if (typeof id !== 'string' || !Object.hasOwn(HEROES, id)) return { ...base, reason: 'unknown' };
     if (this.ownHero(id)) return { ...base, owned: true, reason: 'owned' };
+    // 소환 전용 영웅(원래 다섯 밖)은 정책과 관계없이 소환으로만 얻는다(상품·무료 해금 없음).
+    if (HEROES[id].gachaOnly) return { ...base, reason: r && r.policy === HERO_POLICY.STARTER && !r.starterChosen ? 'starter-pending' : 'gacha' };
     if (!r || r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
     if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
     // 영웅은 소환으로 얻는다(BM 12장). 보석 해금 사다리(HERO_FREE_UNLOCK)는 초보자 배너·진행 소환권으로 대체해 닫았다.
@@ -496,7 +498,8 @@ export class Economy {
     const h = this.s.heroes[id]; if (!h) return { dup: false, locked: true, shards: 0 };
     if (this.ownHero(id)) { h.shards += GACHA.dupShards; return { dup: true, locked: false, shards: GACHA.dupShards }; }
     const r = this.s.roster;
-    if (r && r.policy === HERO_POLICY.STARTER && r.starterChosen && Array.isArray(r.owned)) { r.owned = [...r.owned, id]; return { dup: false, locked: false, shards: 0, unlocked: true }; }
+    // 정책 1 도 소환 전용 영웅(원래 다섯 밖)은 첫 획득이 해금이다.
+    if (r && (r.policy === HERO_POLICY.LEGACY || (r.policy === HERO_POLICY.STARTER && r.starterChosen)) && Array.isArray(r.owned)) { r.owned = [...r.owned, id]; return { dup: false, locked: false, shards: 0, unlocked: true }; }
     // 시작 영웅을 고르기 전에는 해금하지 않고 조각만 쌓는다(선택 화면을 건너뛰지 않게).
     h.shards += GACHA.dupShards; return { dup: false, locked: true, shards: GACHA.dupShards };
   }

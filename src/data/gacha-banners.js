@@ -6,15 +6,19 @@
 // SSR 가중치가 매 회 softPityStep씩 오르고 pity번째는 SSR 확정. 10회 소환은 마지막 칸 SR 이상 보장.
 // 등급 안 분배: hero(영웅 몫) · gear(장비 몫) · materials(재료, w는 그 등급 안의 비율). 등급마다 합이 1이다.
 
-/** 2주 교대의 기준 시각(2026-10-26 월 00:00 KST). 이 시각 전은 첫 픽업을 보여 준다. */
+/** 2주 교대의 기준 시각(2026-10-26 월 00:00 KST). 회차 0 이 이 시각에 시작하고, 이 시각 전(회차 -1)은 교대표의 마지막 칸을 보여 준다. */
 export const BANNER_EPOCH = Date.UTC(2026, 9, 25, 15);
 export const BANNER_PERIOD_MS = 14 * 86400000;
 
 /**
  * 영웅 픽업 교대표(SSR 영웅 id). 없는 영웅·SSR이 아닌 영웅은 건너뛴다(신규 SSR이 들어오면 여기 한 줄 추가).
  * 3개월 로드맵(문서 12.5)의 신규 SSR은 영웅 정의가 머지된 뒤에만 이 표에 넣는다.
+ * 일정(KST): ~10-26 광전사(배포 직후 첫 칸, 회차 -1) → 10-26~11-09 늑대인간 족장(할로윈 픽업, 회차 0)
+ *   → 11-09~11-23 검성 → 11-23~12-07 광전사 → 이후 같은 순서 반복. 서버(EconomyCore)·클라이언트가 이 표와 BANNER_EPOCH 하나만 읽는다.
  */
-export const HERO_PICKUP_ROTATION = Object.freeze(['barbarian', 'knight']);
+export const HERO_PICKUP_ROTATION = Object.freeze(['werewolf', 'knight', 'barbarian']);
+/** 픽업 기간 주제(배너 띠 문구). 없으면 일반 픽업. */
+export const PICKUP_THEMES = Object.freeze({ werewolf: Object.freeze({ id: 'halloween', label: '기간 한정 · 할로윈 픽업' }) });
 /** 장비 픽업 세트 교대표(SSR=L 등급 세트 id). */
 export const GEAR_PICKUP_ROTATION = Object.freeze(['dragon']);
 
@@ -73,10 +77,11 @@ export const GACHA_BANNERS = Object.freeze({
 /** 배너 재료 표(초보자는 영웅 배너 표). */
 export const bannerMaterials = (banner) => banner.materials || GACHA_BANNERS.hero.materials;
 
-/** 교대 회차(0부터). 기준 시각 전은 0. */
+/** 교대 회차. 기준 시각에 0 이 시작하고 기준 시각 전은 -1(첫 배포 칸). 숫자가 아닌 시계는 0. */
 export function rotationIndex(now) {
   const t = Number(now);
-  return Number.isFinite(t) && t > BANNER_EPOCH ? Math.floor((t - BANNER_EPOCH) / BANNER_PERIOD_MS) : 0;
+  if (!Number.isFinite(t)) return 0;
+  return t >= BANNER_EPOCH ? Math.floor((t - BANNER_EPOCH) / BANNER_PERIOD_MS) : -1;
 }
 
 /** 교대 회차의 시작·끝(ms). */
@@ -91,7 +96,8 @@ export function rotationWindow(now) {
  */
 export function pickupAt(rotation, now, valid) {
   const list = rotation.filter(valid);
-  return list.length ? list[rotationIndex(now) % list.length] : null;
+  const n = list.length;
+  return n ? list[((rotationIndex(now) % n) + n) % n] : null;
 }
 
 /** pity회째(1부터) SSR 가중치. */

@@ -10,6 +10,8 @@ import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
  */
 export const BARB_COLORS = Object.freeze({ ember: 0xff5a1e, flame: 0xff8a26, crimson: 0xe0221a, blood: 0xb81410, molten: 0xffa83a });
 const { ember: EMBER, flame: FLAME, crimson: CRIMSON, blood: BLOOD, molten: MOLTEN } = BARB_COLORS;
+/** 늑대인간 족장(고유 스킬 2종) 팔레트: 핏빛 진홍·분홍, 월광 은백. 광전사 주황과 한눈에 갈린다. */
+const WOLF_RED = 0xc81830, WOLF_PINK = 0xff5a6a, MOON = 0xd8e4ff, DEEP_WOLF = 0x8a1020, DEEP_MOON = 0x6a78a8;
 const TAU = Math.PI * 2;
 /** 큰 지면 표식(6m 이상)은 가산이라 원색 그대로면 바닥이 분홍·크림으로 바랜다. 같은 색상을 어둡게 낮춰 채도를 지킨다. */
 const DEEP_EMBER = 0xb8380e, DEEP_CRIMSON = 0xa0140e;
@@ -109,6 +111,14 @@ export const PRELUDES = {
     earthSpikes(impact, player.pos, lite ? 3 : 6, 1.2, 1.9, CRIMSON, { h: 3.2, width: .34, out: .2, fade: .3, delay: .2, phase: .5 });
     risingEmbers(impact, player.pos, lite ? 5 : 12, 2, FLAME, { rise: 10, life: .7 });
   },
+  // 월광 사냥: 도약 전 발밑에 은빛 고리 두 겹이 잡히고, 은백 입자가 위로 솟는다(달빛을 받는다).
+  moonlit_hunt(ctx) {
+    const { impact, player, lite } = ctx;
+    impact.mark(player.pos, DEEP_MOON, { radius: 3.2, life: .9, style: MARK_STYLE.thorn });
+    impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 3.6, MOON, .5, { grow: 1 });
+    risingEmbers(impact, player.pos, lite ? 6 : 14, 2.2, MOON, { rise: 11, life: .8 });
+    risingEmbers(impact, player.pos, lite ? 3 : 6, 1.6, WOLF_PINK, { rise: 8, life: .6, delay: .1 });
+  },
 };
 
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
@@ -157,6 +167,24 @@ export const SIGNATURES = {
       _a.set(t.x + Math.cos(a) * r, 0, t.z + Math.sin(a) * r);
       impact.beam(_a, _d, i === 0 ? 11 : 7, i === 0 ? FLAME : EMBER, { speed: 50, tail: 5, width: i === 0 ? .4 : .22, delay: FALL + i * .03 });
     }
+  },
+  // 핏빛 포효: 진홍 가시 고리 두 겹(반대 회전) + 분홍·진홍 공포 충격파 세 겹이 판정 반경(7m)까지 퍼지고, 핏빛 불씨가 솟는다.
+  blood_howl(ctx) {
+    const { impact, player, lite } = ctx;
+    impact.mark(player.pos, WOLF_RED, { radius: 2.8, life: .9, style: MARK_STYLE.thorn });
+    impact.mark(player.pos, DEEP_WOLF, { radius: THORN_MAX, life: .7, style: MARK_STYLE.thorn, angle: .31, delay: .1 });
+    for (const [i, d] of [0, .1, .2].entries()) impact._emit(IMPACT_KIND.ring, player.pos.x, .6, player.pos.z, 3 + i * 1.6, i === 1 ? WOLF_PINK : WOLF_RED, .34, { grow: 1, delay: d });
+    for (let w = 0; w < 2; w++) risingEmbers(impact, player.pos, lite ? 5 : 11, 1.2, w ? WOLF_PINK : WOLF_RED, { delay: w * .16, rise: 9, life: .6, size: .26 });
+  },
+  // 월광 사냥 착지(도약 6번 뒤 1.4초): 착지점 은백 큰 고리 두 겹 + 진홍 고리 + 은빛 균열 + 불똥.
+  moonlit_hunt(ctx) {
+    const { impact, at: t, lite } = ctx; const LAND = 1.4;
+    impact.mark(t, DEEP_MOON, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn, delay: LAND });
+    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 6.4, MOON, .4, { grow: 1, delay: LAND });
+    impact._emit(IMPACT_KIND.ring, t.x, .5, t.z, 4.2, WOLF_RED, .34, { grow: 1, delay: LAND + .08 });
+    lavaFissures(impact, t, lite ? 6 : 12, .8, 7.5, MOON, { delay: LAND, speed: 60, width: .12 });
+    risingEmbers(impact, t, lite ? 7 : 16, 4, MOON, { delay: LAND, rise: 9 });
+    sparks(impact, t, lite ? 4 : 8, 13, WOLF_PINK, { delay: LAND });
   },
   // 광란의 돌진: 돌진 길을 따라 용암 균열이 영웅과 같은 속도(21m/s)로 그어지고, 길가에 불씨가 차례로 솟는다. 끝 폭발은 barbRushEnd.
   bull_rush(ctx) {

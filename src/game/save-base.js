@@ -12,7 +12,7 @@ import { resolveCampaignTown } from '../data/campaign-towns.js';
 import { normalizeRegionGate } from './region-dungeon-gate.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
-import { HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
+import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -42,8 +42,10 @@ function fill(template, source) {
  */
 export function normalizeRoster(rawRoster, ids) {
   const known = (list) => [...new Set((Array.isArray(list) ? list : []).filter((id) => typeof id === 'string' && ids.includes(id)))];
-  if (!record(rawRoster)) return { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid: [] };
-  if (rawRoster.policy === HERO_POLICY.LEGACY) return { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid: known(rawRoster.paid) };
+  // 정책 1 은 원래 다섯 영웅 + 소환으로 얻은 소환 전용 영웅(owned 에 남은 것)만 소유한다.
+  const legacyOwned = (list) => [...new Set([...ids.filter((id) => HERO_LEGACY_IDS.includes(id)), ...known(list)])];
+  if (!record(rawRoster)) return { policy: HERO_POLICY.LEGACY, owned: legacyOwned([]), starter: null, starterChosen: true, paid: [] };
+  if (rawRoster.policy === HERO_POLICY.LEGACY) return { policy: HERO_POLICY.LEGACY, owned: legacyOwned(rawRoster.owned), starter: null, starterChosen: true, paid: known(rawRoster.paid) };
   const starterChosen = rawRoster.starterChosen === true;
   const starter = typeof rawRoster.starter === 'string' && ids.includes(rawRoster.starter) ? rawRoster.starter : null;
   let owned = known(rawRoster.owned);

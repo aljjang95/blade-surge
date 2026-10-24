@@ -24,7 +24,7 @@ import { MONSTER_ROSTER } from './data/monster-roster.js';
 import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
-import { HEROES } from './data/heroes.js';
+import { HEROES, kitOf } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
@@ -356,9 +356,9 @@ class App {
     const a = mixer.clipAction(clips['Idle']); a.play();
     // 감소된 움직임에서도 교정된 정지 자세를 첫 프레임부터 적용한다.
     mixer.update(0);
-    const pose = createLobbyPose(root, id);
+    const pose = createLobbyPose(root, kitOf(id));
     pose?.apply();
-    const combatPose = createCombatPose(root, id, mixer, clips);
+    const combatPose = createCombatPose(root, kitOf(id), mixer, clips);
     this.scene.add(root);
     this.showcase = { root, mixer, clips, def, look, pose, combatPose, idleAction: a, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.hubMovement.attach(this.showcase);

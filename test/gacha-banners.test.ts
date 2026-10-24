@@ -1,5 +1,5 @@
 // 소환 구조 회귀(docs/BM_DESIGN.md 12장): 배너 분리·픽업 확정·천장·초보자 20회·유료/무료 보석·마일리지·서버 명령.
-// 모든 난수는 시드 고정이거나 주입한 수열이다. 시계는 첫 교대 시각 직후(영웅 픽업 barbarian, 장비 픽업 dragon)로 고정한다.
+// 모든 난수는 시드 고정이거나 주입한 수열이다. 시계는 첫 교대 시각 직후(영웅 픽업 werewolf — 할로윈 픽업, 장비 픽업 dragon)로 고정한다.
 import { describe, expect, test } from 'bun:test';
 import { Economy, gachaRates, gachaContents, heroPickup, gearPickup } from '../src/game/economy.js';
 import { EconomyCore } from '../src/game/economy-core.js';
@@ -13,7 +13,7 @@ import { OPS, validateOp } from '../src/shared/v1-ops.js';
 import { assertBands, simulate, summarize, PERSONAS } from '../tools/gacha-sim.mjs';
 
 const NOW = BANNER_EPOCH + 3_600_000;
-const PICKUP = 'barbarian', GEAR_SET = 'dragon';
+const PICKUP = 'werewolf', GEAR_SET = 'dragon';
 /** 수열 난수: 값을 차례로 돌려주고 끝나면 마지막 값을 반복한다. */
 const seq = (...v: number[]) => { let i = 0; return () => v[Math.min(i++, v.length - 1)]; };
 /** 메모리 저장소 Economy(시작 영웅 mage, 보석 넉넉, 소환권 0). */
@@ -30,7 +30,7 @@ function core(opts: Record<string, unknown> = {}) {
   return eco;
 }
 
-test('시계 고정: 영웅 픽업은 barbarian, 장비 픽업은 dragon 세트다', () => {
+test('시계 고정: 영웅 픽업은 werewolf, 장비 픽업은 dragon 세트다', () => {
   expect(heroPickup(NOW)).toBe(PICKUP); expect(gearPickup(NOW)).toBe(GEAR_SET);
   expect(gachaRates('hero', NOW).featured).toBe(PICKUP); expect(gachaRates('gear', NOW).featured).toBe(GEAR_SET);
 });

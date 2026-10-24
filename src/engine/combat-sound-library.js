@@ -1,6 +1,7 @@
 // 모든 효과음은 Mirelo SFX 1.5(Runware mirelo:1@1)로 만든 public/sfx/mirelo-v1/ 라이브러리다.
 // 작업 목록은 tools/audio/mirelo-sfx-jobs.mjs, 후처리는 tools/audio/mirelo-postprocess.py, 출처·SHA 는 manifest.json.
 // 원본 기합·음성(TTS)은 별도 버스를 유지한다. 이벤트 → 파일 매핑은 여기 한 곳에서만 정한다.
+import { kitOf } from '../data/heroes.js';
 export const SFX_LIBRARY = 'mirelo-v1/';
 const PREFIX = SFX_LIBRARY + 'hero/';
 export const HERO_IDS = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger']);
@@ -13,7 +14,8 @@ export const WEAPON_BY_HERO = Object.freeze(Object.fromEntries(Object.entries(HE
 const PARTY_HIT_KIND = Object.freeze({ knight: 'slash', barbarian: 'slash', mage: 'magic', rogue: 'slash', ranger: 'slash' });
 /** 원격 타격 재생 인자 { kind, weapon }. 알 수 없는 영웅이면 null(호출 쪽이 기존 slash 로 내려간다). */
 export function partyHitProfile(heroId) {
-  return Object.hasOwn(WEAPON_BY_HERO, heroId) ? { kind: PARTY_HIT_KIND[heroId], weapon: WEAPON_BY_HERO[heroId] } : null;
+  const kit = kitOf(heroId);   // 늑대인간 족장은 광전사 무기·타격음
+  return Object.hasOwn(WEAPON_BY_HERO, kit) ? { kind: PARTY_HIT_KIND[kit], weapon: WEAPON_BY_HERO[kit] } : null;
 }
 export const HERO_HIT_VARIANTS = 2;
 export const HERO_SKILLS = Object.freeze({
@@ -25,7 +27,10 @@ export const HERO_SKILLS = Object.freeze({
 });
 const SKILL_OWNER = Object.freeze(Object.fromEntries(Object.entries(HERO_SKILLS).flatMap(([hero, ids]) => ids.map(id => [id, hero]))));
 export const heroForWeapon = (weapon) => Object.hasOwn(HERO_BY_WEAPON, weapon) ? HERO_BY_WEAPON[weapon] : 'knight';
-const heroOr = (heroId, weapon) => HERO_IDS.includes(heroId) ? heroId : heroForWeapon(weapon);
+// 늑대인간 족장처럼 kit 이 있는 영웅은 기준 영웅(광전사)의 소리 세트를 쓴다.
+const heroOr = (heroId, weapon) => { const kit = kitOf(heroId); return HERO_IDS.includes(kit) ? kit : heroForWeapon(weapon); };
+/** 고유 스킬이 빌려 쓰는 광전사 스킬 소리(핏빛 포효 = 광폭화, 월광 사냥 = 지옥의 도끼). */
+export const SKILL_SOUND_ALIAS = Object.freeze({ blood_howl: 'berserk', moonlit_hunt: 'hell_axe' });
 /** 영웅 한 명이 쓰는 파일 전체(휘두름·마무리·타격·궁극기 충격·스킬 8). 영웅을 고를 때 지연 로드한다. */
 export function heroSoundFiles(heroId) {
   const h = heroOr(heroId, '');
@@ -46,7 +51,8 @@ export function attackSound(weapon, ranged = false, { finisher = false, variant 
 }
 /** 스킬 시전음: 40개 스킬마다 고유. 모르는 스킬은 그 영웅의 마무리음으로 내려간다. */
 export function skillSound(skillId, heroId = '') {
-  if (Object.hasOwn(SKILL_OWNER, skillId)) return `${PREFIX}${SKILL_OWNER[skillId]}/skill_${skillId}`;
+  const sound = Object.hasOwn(SKILL_SOUND_ALIAS, skillId) ? SKILL_SOUND_ALIAS[skillId] : skillId;
+  if (Object.hasOwn(SKILL_OWNER, sound)) return `${PREFIX}${SKILL_OWNER[sound]}/skill_${sound}`;
   return `${PREFIX}${heroOr(heroId, '')}/finisher`;
 }
 /** 궁극기 충격음: 영웅별 전용. */

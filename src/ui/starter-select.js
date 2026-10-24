@@ -21,7 +21,8 @@ const SIGIL = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3l4.6 15
 
 /** 선택 화면에 올릴 카드 모델. 순수 함수라 DOM 없이 시험한다. */
 export function starterChoices() {
-  return HERO_ORDER.filter((id) => HEROES[id]).map((id) => /** @type {NonNullable<ReturnType<typeof heroCompare>>} */ (heroCompare(id)));
+  // 소환 전용 영웅(gachaOnly)은 시작 영웅 후보가 아니다.
+  return HERO_ORDER.filter((id) => HEROES[id] && !HEROES[id].gachaOnly).map((id) => /** @type {NonNullable<ReturnType<typeof heroCompare>>} */ (heroCompare(id)));
 }
 
 /** 정책 2 이고 아직 시작 영웅을 고르지 않았으면 true. */

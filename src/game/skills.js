@@ -4,6 +4,7 @@ import { applyKnightSlashVariant, knightSlashVariantForBattle } from './knight-b
 import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
+import { WEREWOLF_HOWL, WEREWOLF_HUNT } from './werewolf-kit.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
@@ -42,6 +43,19 @@ function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
 }
 /** void_step 표시 범위(자기 중심 18m). 점멸 표적과 피해를 시전 지점에서 이 안으로 제한한다. */
 const VOID_STEP_REACH = 18;
+/** 월광 사냥 다음 표적: 시전 지점 reach 안에서 직전 표적이 아닌 가장 가까운 적(하나뿐이면 같은 적). */
+function werewolfHuntTarget(game, origin, last) {
+  let best = null, bestD = Infinity, fallback = null;
+  for (const e of game.enemies) {
+    if (!e.alive || e.spawning) continue;
+    const d = Math.hypot(e.pos.x - origin.x, e.pos.z - origin.z);
+    if (d >= WEREWOLF_HUNT.reach) continue;
+    if (e === last) { fallback = e; continue; }
+    const w = d - (e.isBoss ? 3 : e.isElite ? 1.5 : 0);
+    if (w < bestD) { bestD = w; best = e; }
+  }
+  return best || fallback;
+}
 /** fn 실행 동안 center에서 limit m 밖 적을 판정 대상에서 뺀다(hitArea·hitRadius가 spawning 적을 건너뛰는 규칙을 이용, 끝나면 원복). */
 function onlyWithin(game, center, limit, fn) {
   const hidden = [];
@@ -107,6 +121,8 @@ export const SKILL_AIM_SHAPES = Object.freeze({
   whirlwind: { kind: 'self', range: 3.8, radius: 3.8 },
   quake: { kind: 'circle', range: 1.5, radius: 8 },
   berserk: { kind: 'self', range: 0 },
+  blood_howl: { kind: 'self', range: 0, radius: WEREWOLF_HOWL.radius },
+  moonlit_hunt: { kind: 'self', range: WEREWOLF_HUNT.reach, radius: WEREWOLF_HUNT.moonRadius },
   hell_axe: { kind: 'circle', range: 13, radius: 6 },
   fireball: { kind: 'line', range: SKILL_PROJECTILES.fire.speed * SKILL_PROJECTILES.fire.life, width: 2, radius: 4.2, origin: 1 },
   chain: { kind: 'self', range: 12 },
@@ -665,6 +681,76 @@ export const SKILLS = {
         game.after(0.5, tick);
       }; tick();
       game.ui.toast('성역 전개 — 받는 피해 35% 감소', 'gold');
+    },
+  },
+
+  // ================= 늑대인간 족장 (광전사 몸 · 핏빛 달 사냥) =================
+  // 핏빛 포효: 주변 적을 공포(기절)에 빠뜨리고 짧은 충격 피해, 7초간 사냥 본능(공격력·공격속도·이동속도 + 처치마다 체력 2% 회복).
+  // 광폭화(+60%/8초, 회복 없음)보다 공격력은 낮고(+40%) 대신 군중 제어·생존을 얻는다. 처치 회복은 battle-base onKill 이 howlT 를 읽는다.
+  blood_howl: {
+    dur: 0.85,
+    start(game, p) { game.fx.castCircle(p.pos, 0xd0203a, { radius: WEREWOLF_HOWL.radius, life: 0.9, demon: true }); audio.dark({ vol: 0.5, base: 110, dur: 0.8 }); },
+    cast(game, p, c) {
+      const at = p.pos.clone();
+      game.hitRadius(at, WEREWOLF_HOWL.radius, c.dmg, { kb: 4, kind: 'blunt', stun: WEREWOLF_HOWL.fear, source: p, dirFrom: at });
+      p.buffs.atk = WEREWOLF_HOWL.atk; p.buffs.atkSpd = WEREWOLF_HOWL.atkSpd; p.buffs.spd = WEREWOLF_HOWL.spd; p.buffs.t = WEREWOLF_HOWL.time;
+      p.howlT = WEREWOLF_HOWL.time; p.tintEmissive = new THREE.Color(0.3, 0.02, 0.06);
+      [0, 0.12, 0.24].forEach((d, i) => game.after(d, () => game.fx.shockTex(at, i === 1 ? 0xff5a6a : 0xc81830, { r1: 4 + i * 2.2, life: 0.45 })));
+      game.fx.embers(at, 0xff3a5a, { n: 36, radius: 1.4, life: 1.4, rise: 5 });
+      game.fx.light(at, 0xd0203a, 12, 12, 0.7);
+      game.renderer.flashScreen(0.3, 0xb01830); game.renderer.shake(0.6); game.renderer.aberr = 0.7;
+      audio.boom({ vol: 0.6, dur: 0.7, low: 70 }); audio.dark({ vol: 0.6, base: 140, dur: 1.1 }); audio.vibe([40, 30, 40, 30, 120]);
+      game.ui.toast('핏빛 포효! 공포 · 사냥 본능', 'red');
+    },
+  },
+  // 궁극기 월광 사냥: 무적 상태로 적 사이를 6번 도약하며 발톱으로 베고(타격마다 c.dmg×.21), 마지막에 하늘로 뛰어 보름달 낙하로
+  // 착지점을 분쇄한다(c.dmg). 표적이 하나뿐이어도 총 피해는 지옥의 도끼와 같은 9배 근처(6×0.84+4.0).
+  // 도약 표적·착지 피해는 시전 지점 REACH m 안으로 묶는다(void_step 과 같은 규칙: 이어 뛰며 표시 밖까지 닿지 않게).
+  moonlit_hunt: {
+    dur: 0.4, total: WEREWOLF_HUNT.total,
+    start(game, p, c) {
+      skillPrelude(game, p, 'moonlit_hunt');
+      c.data.n = 0; c.data.tick = 0.12; c.data.last = null; c.data.origin = p.pos.clone();
+      p.invuln = WEREWOLF_HUNT.total + 0.1; p.startTrail();
+      game.fx.castCircle(p.pos, 0xd8e4ff, { radius: 4.5, life: 0.8, demon: true });
+      game.renderer.aberr = 0.5; game.renderer.desat = 0.18;
+      audio.dark({ vol: 0.55, base: 90, dur: 1.6 }); audio.whoosh({ vol: 0.5, pitch: 0.6, dur: 0.5 }); audio.vibe([50, 30, 50]);
+    },
+    update(game, p, c, dt) {
+      p.vel.set(0, 0, 0);
+      c.data.tick -= dt;
+      if (c.data.tick > 0 || c.data.n >= WEREWOLF_HUNT.leaps) return;
+      c.data.tick = WEREWOLF_HUNT.step;
+      const e = werewolfHuntTarget(game, c.data.origin, c.data.last);
+      const i = c.data.n++;
+      if (!e) return;
+      // 결정적 측면 각(난수 없음): 표적 둘레를 시계 방향으로 돌며 덮친다.
+      const a = i * 2.4 + 0.6, at = _v.set(e.pos.x + Math.cos(a) * 1.3, 0, e.pos.z + Math.sin(a) * 1.3);
+      const W = game.world;
+      if (W && !W.walkable(at.x, at.z)) { at.set(e.pos.x, 0, e.pos.z); if (!W.walkable(at.x, at.z)) return; }
+      const from = p.pos.clone();
+      game.fx.boltTex(from.clone().setY(.6), at.clone().setY(.6), 0xc8d8ff, { width: .7, life: .14 });
+      p.pos.set(at.x, 0, at.z); p.face(e.pos.x, e.pos.z);
+      p.playTimed(i % 2 ? '2H_Melee_Attack_Slice' : '2H_Melee_Attack_Stab', WEREWOLF_HUNT.step, { fade: 0.03 });
+      game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xe8f0ff, { size: 3.4, life: 0.18, tilt: i % 2 ? 0.9 : -1.4, flip: i % 2 === 1 });
+      game.fx.slashSprite(e.pos.clone().setY(1.3), p.forward(new THREE.Vector3()), 0xc81830, { size: 2.6, life: 0.16, tilt: i % 2 ? 0.5 : -1.0, flip: i % 2 === 0 });
+      onlyWithin(game, c.data.origin, WEREWOLF_HUNT.reach, () => game.hitRadius(e.pos, WEREWOLF_HUNT.clawRadius, c.dmg * WEREWOLF_HUNT.clawMul, { kb: 1.2, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 3 !== 0 }));
+      audio.whoosh({ vol: 0.38, pitch: 1.1 + i * 0.07, dur: 0.14 }); game.renderer.shake(0.18);
+      c.data.last = e;
+    },
+    end(game, p, c) {
+      p.stopTrail(); game.renderer.desat = 0;
+      const at = p.pos.clone();
+      onlyWithin(game, c.data.origin || at, WEREWOLF_HUNT.reach, () => game.hitRadius(at, WEREWOLF_HUNT.moonRadius, c.dmg, { kb: 12, kind: 'blunt', up: true, stun: .6, finisher: true, skillCast: c, source: p, dirFrom: at }));
+      const orb = game.fx.orb(0xe8eeff, 1.4); orb.position.copy(at).setY(12); game.scene.add(orb);
+      game.fx.add(orb, 0.22, (k) => { orb.position.y = 12 * (1 - k); });
+      game.fx.explosion(at, { size: 11, color: 0xd8e4ff, life: 0.7 });
+      [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(at, i === 1 ? 0xff4a5a : 0xd8e4ff, { r1: 5 + i * 3, life: 0.55 })));
+      game.fx.scorch(at, { radius: 5, life: 6 }); game.fx.dustPuff(at, { size: 9, life: 1.2 });
+      game.fx.burst(at.clone().setY(0.6), 0xe8f0ff, { n: 60, speed: 15, size: 0.5, up: 1.2, grav: 18 });
+      game.fx.light(at, 0xc8d8ff, 18, 20, 0.9);
+      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xd8e4ff); game.renderer.aberr = 1.1; game.timeCtl.slowmo(0.3, 0.55);
+      audio.boom({ vol: 1, dur: 0.9, low: 48 }); audio.play('hit_mining', { vol: 1, rate: 0.6 }); audio.vibe([90, 40, 140]);
     },
   },
 

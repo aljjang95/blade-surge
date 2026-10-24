@@ -3,6 +3,7 @@ import { RARITY_INFO, ITEM_BY_ID, SETS } from '../data/items.js';
 import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier, loadBootsModel, createBootsMaterial } from '../engine/assets.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { heroAppearance } from '../data/hero-library.js';
+import { kitOf } from '../data/heroes.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
@@ -62,9 +63,12 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
  * @returns { trailColor, aura }  — 무기 궤적 색, 오라 색(없으면 null)
  */
 export function applyLook(model, def, equip = {}, opts = {}) {
-  const L = LOOKS[def.id];
+  // 외형 표는 기준 영웅(kit) 것을 쓴다(늑대인간 족장은 광전사 표).
+  const L = LOOKS[kitOf(def)];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
-  const avatarAsset = opts.avatarId ? libraryAssetForAvatar(opts.avatarId) : null;
+  // 기본 몸이 따로 있는 영웅(늑대인간 족장)은 아바타 지정이 없어도 그 몸을 입는다.
+  const bodyAvatarId = opts.avatarId || def.bodyAvatar;
+  const avatarAsset = bodyAvatarId ? libraryAssetForAvatar(bodyAvatarId) : null;
   const hasAvatar = !!avatarAsset;
   // 라이브러리 영웅: 갑옷 단계 몸체로 교체. 아직 받지 않은 단계는 비동기로 받은 뒤 외형을 다시 적용한다.
   if (model.userData.authoredContract?.role === 'hero') {
@@ -99,7 +103,7 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   }
   applyItemWeapons(model, L, w);
   for (const n of [...ALL_WEAPON_NODES, 'Bow', 'Arrow']) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
-  if (w?.modelNode && ['knight', 'barbarian'].includes(def.id) && model.userData.armoryAppearance?.includes(w.id)) {
+  if (w?.modelNode && ['knight', 'barbarian'].includes(kitOf(def)) && model.userData.armoryAppearance?.includes(w.id)) {
     for (const n of L.weaponNodes) { const o = model.getObjectByName(n); if (o) o.visible = false; }
   }
   // 발광 — 무기 메시는 등급색, 몸통은 방어구 등급색을 아주 약하게. Actor.update 가 flash 뒤에 baseEmissive 로 되돌린다
@@ -185,7 +189,7 @@ function applyItemWeapons(model, looks, item) {
 
 function applyLibraryArmoryAppearance(model, equip, def) {
   const contract = model.userData.authoredContract;
-  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); return; }
+  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, { id: kitOf(def) }); return; }
   // 병기고 장식은 이름이 handslot.* 인 스킨 본을 찾으므로 Mixamo 손 본 이름을 잠시 바꾼다.
   const renamed = [];
   for (const side of ['r', 'l']) {
@@ -193,7 +197,7 @@ function applyLibraryArmoryAppearance(model, equip, def) {
     if (!bone) continue;
     renamed.push([bone, bone.name, `handslot.${side}`]); bone.name = `handslot.${side}`;
   }
-  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); }
+  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, { id: kitOf(def) }); }
   finally {
     for (const [bone, name, key] of renamed) {
       bone.name = name;

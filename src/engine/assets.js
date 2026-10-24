@@ -151,7 +151,7 @@ export function preloadAvatarBody(avatarId) {
  */
 /** @param {string} heroId @param {number|{ tier: number, theme?: string|null }} [tier] @param {string|null} [avatarId] */
 export function preloadHeroBody(heroId, tier = 1, avatarId = null) {
-  const avatar = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  const avatar = (avatarId || HEROES[heroId]?.bodyAvatar) ? libraryLoader.assetForAvatar(avatarId || HEROES[heroId].bodyAvatar) : null;
   return preloadLibraryBody(avatar || libraryLoader.assetForHero(heroId, tier));
 }
 

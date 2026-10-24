@@ -3,7 +3,7 @@ import { sanitizeLegacySave, trustedRoster } from '../src/shared/legacy-sanitize
 import { EconomyCore } from '../src/game/economy-core.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementKeys, summarizeEntitlements, soldOn } from '../src/shared/iap-catalog.js';
-import { heroEntitlementKey, heroIdFromEntitlement } from '../src/data/hero-roster.js';
+import { heroEntitlementKey, heroIdFromEntitlement, HERO_LEGACY_IDS } from '../src/data/hero-roster.js';
 
 const NOW = Date.UTC(2026, 10, 3);
 const BEFORE = Date.UTC(2020, 0, 1), AFTER = NOW - 86400000;
@@ -75,8 +75,11 @@ describe('영웅 소유 서버 권위 정화', () => {
 
 describe('영웅 상품 카탈로그', () => {
   test('hero_<id>_v1 5종 + hero_all_v1: 영웅 id가 HEROES와 일치, 웹·Play 동일가, 권한은 hero:<id>', () => {
-    expect(HERO_ORDER.length).toBe(5);
-    for (const id of HERO_ORDER) {
+    // 상품은 원래 다섯만(HERO_LEGACY_IDS). 소환 전용 SSR(늑대인간 족장)은 상품·권한이 없다.
+    expect(HERO_LEGACY_IDS.length).toBe(5);
+    expect(HERO_ORDER.length).toBe(6);
+    expect(IAP_BY_ID.hero_werewolf_v1).toBeUndefined();
+    for (const id of HERO_LEGACY_IDS) {
       const p = IAP_BY_ID[`hero_${id}_v1`];
       expect(Object.hasOwn(HEROES, id)).toBe(true);
       expect(p.type).toBe('non_consumable');
@@ -88,7 +91,7 @@ describe('영웅 상품 카탈로그', () => {
     }
     const all = IAP_BY_ID.hero_all_v1;
     expect(all.priceKRW).toBe(17900);
-    expect(entitlementKeys(all).sort()).toEqual(HERO_ORDER.map((id) => 'hero:' + id).sort());
+    expect(entitlementKeys(all).sort()).toEqual(HERO_LEGACY_IDS.map((id) => 'hero:' + id).sort());
     expect(all.priceKRW).toBeLessThan(5900 * 4); // 4명 개별 대비 할인
     // 기존 상품은 Play 전용 그대로, 보석 팩 구조는 건드리지 않았다
     expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(false);

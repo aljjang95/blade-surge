@@ -3,6 +3,7 @@
 // 강화 단계는 발광 세기와 오라로 보인다: +5 은은한 광, +10 속성색 오라, +15 금빛 오라, +20 신화 오라.
 import { ITEM_BY_ID, RARITY_INFO } from './items.js';
 import { GEAR_ITEMS } from './gear-catalog.js';
+import { kitOf } from './heroes.js';
 
 /** 영웅별 무기 모양 이름. key는 모델 안의 무기 노드. 드라칸 도끼는 한손·양손 메시가 같아 이름도 같다. */
 export const WEAPON_FORMS = {
@@ -40,7 +41,8 @@ export const WEAPON_GLOW = { N: 0, S: 0.45, E: 0.75, U: 0.95, L: 1.15 };
  * @param {{id: string, enh?: number} | null | undefined} inst
  * @param {Record<string, {weapon: Record<string, string[]>}>} looks look.js LOOKS (영웅→등급→보일 무기 노드)
  */
-export function weaponLook(heroId, inst, looks) {
+export function weaponLook(rawHeroId, inst, looks) {
+  const heroId = kitOf(rawHeroId); // 외형 표는 기준 영웅(kit) 것
   const it = inst ? ITEM_BY_ID[inst.id] : null;
   if (!it || it.slot !== 'weapon') return null;
   const enh = Math.max(0, Math.min(20, Math.floor(inst.enh || 0)));

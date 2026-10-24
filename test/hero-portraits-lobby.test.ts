@@ -29,7 +29,7 @@ const result = (snapshot: any) => ({ url: 'data:image/webp;base64,' + snapshot.i
 test('초상 키는 실제 영웅·장비·아바타·정본 모델을 구분하고 진행 상태를 쓰지 않는다', () => {
   const { app, gear, avatar } = fixture();
   const keys = Object.keys(HEROES).map(id => heroPortraitSnapshot(app, id)!.key);
-  expect(new Set(keys).size).toBe(5);
+  expect(new Set(keys).size).toBe(Object.keys(HEROES).length);   // 영웅 수(다섯 + 소환 전용 SSR)만큼 서로 다르다
   const first = heroPortraitSnapshot(app, 'ranger')!;
   expect(first.body.id).toContain('ranger');
   expect(first.key).toContain('/models/heroes-next/ranger-library-t1-v6.glb');

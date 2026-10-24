@@ -9,6 +9,32 @@ export const RARITY = {
   SSSR: { name: 'SSSR', color: '#ff5a8a', mult: 2.6 },
 };
 
+const BARBARIAN_COMBO = [
+  { anim: '2H_Melee_Attack_Slice',    hitAt: 0.45, dmg: 1.1, range: 3.0, arc: 160, kb: 2.0, dur: 0.6 },
+  { anim: '2H_Melee_Attack_Stab',     hitAt: 0.40, dmg: 1.2, range: 3.4, arc: 80,  kb: 3.0, dur: 0.55, move: 'lunge', lunge: 4 },
+  { anim: '2H_Melee_Attack_Spinning', hitAt: 0.30, dmg: 0.6, range: 3.4, arc: 360, kb: 1.5, dur: 0.85, move: 'spin', ticks: 3 },
+  { anim: '2H_Melee_Attack_Chop',     hitAt: 0.5,  dmg: 1.6, range: 3.0, arc: 170, kb: 3.0, dur: 0.7 },
+  { anim: 'Jump_Full_Short',          hitAt: 0.62, dmg: 2.4, range: 4.5, arc: 360, kb: 7.0, dur: 0.9, move: 'slam', finisher: true },
+];
+
+const BARBARIAN_SKILLS = [
+  { id: 'whirlwind',  name: '회오리 참격', icon: '/img/sk_barb_1.webp', cd: 7, mp: 16,  anim: '2H_Melee_Attack_Spin', castAt: 0.3, dmg: 0.9, ticks: 5, desc: '도끼를 휘돌려 주변 적을 연속으로 베어냄' },
+  { id: 'quake',      name: '대지 분쇄', icon: '/img/sk_barb_2.webp', cd: 10, mp: 20, anim: '2H_Melee_Attack_Chop', castAt: 0.5, dmg: 4.0, desc: '땅을 내리쳐 충격파로 광역 피해와 넉백' },
+  { id: 'berserk',    name: '광폭화',   icon: '/img/sk_barb_3.webp', cd: 16, mp: 24, anim: 'Cheer', castAt: 0.2, dmg: 0, desc: '8초간 공격력 +60%, 공격속도 +30%' },
+  { id: 'hell_axe',   name: '지옥의 도끼', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.5, dmg: 9.0, desc: '불타는 거대 도끼를 낙하시켜 전장을 불태움' },
+  // ── 각성 (레벨 구간 해금) ──
+  { id: 'bull_rush',   name: '광란의 돌진', icon: '/img/sk_bb_a1.webp', cd: 9, mp: 26,  unlock: 10, awaken: 1, anim: '2H_Melee_Attack_Stab', castAt: 0.1, dmg: 2.4, desc: '적을 앞으로 밀어 모으며 돌진하고, 벽처럼 뭉친 적을 끝에서 폭발시킨다' },
+  { id: 'magma_zone',  name: '용암 분출 · 진', icon: '/img/sk_bb_a2.webp', cd: 24, mp: 34, unlock: 20, awaken: 2, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 1.8, desc: '주변에 용암 기둥이 차례로 솟아 적을 띄우고, 갈라진 균열이 9초간 남아 지진다' },
+  { id: 'bloodquake', name: '혈왕 · 대지붕괴', icon: '/img/sk_bb_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.42, dmg: 6.2, desc: '적을 끌어당기고 대지를 두 번 붕괴시킨다' },
+  { id: 'cataclysm', name: '종말 · 화산심장', icon: '/img/sk_bb_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Jump_Full_Short', castAt: 0.55, dmg: 6.8, desc: '도약 후 전장을 뒤엎는 화산 폭발을 일으킨다' },
+];
+
+/** 늑대인간 족장 고유 스킬(광전사 스킬 id → 바꿔 넣을 스킬). */
+const WEREWOLF_OWN_SKILLS = {
+  berserk: { id: 'blood_howl', name: '핏빛 포효', icon: '/img/sk_barb_3.webp', cd: 15, mp: 24, anim: 'Cheer', castAt: 0.25, dmg: 1.2, desc: '포효로 주변 적을 1초간 공포에 빠뜨리고, 7초간 공격력 +40%·공격속도 +35%·이동속도 +25%, 처치할 때마다 체력 2% 회복' },
+  hell_axe: { id: 'moonlit_hunt', name: '월광 사냥', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.1, dmg: 4.0, desc: '무적 상태로 적 사이를 6번 도약하며 발톱으로 베고, 보름달처럼 낙하해 착지점을 분쇄' },
+};
+
 export const HEROES = {
   knight: {
     id: 'knight', name: '검성 아르카', title: '성검의 계승자', rarity: 'SSR', model: 'Knight', portrait: '/img/tll/knight-original-v1.webp',
@@ -42,24 +68,8 @@ export const HEROES = {
     show: ['2H_Axe'],
     base: { hp: 1800, atk: 150, def: 30, crit: 0.20, critDmg: 1.8, spd: 5.8 },
     // 5타: 베기 → 찌르기(돌진) → 회오리(3연타·진공) → 내려찍기 → 도약 강타(마무리·충격파)
-    combo: [
-      { anim: '2H_Melee_Attack_Slice',    hitAt: 0.45, dmg: 1.1, range: 3.0, arc: 160, kb: 2.0, dur: 0.6 },
-      { anim: '2H_Melee_Attack_Stab',     hitAt: 0.40, dmg: 1.2, range: 3.4, arc: 80,  kb: 3.0, dur: 0.55, move: 'lunge', lunge: 4 },
-      { anim: '2H_Melee_Attack_Spinning', hitAt: 0.30, dmg: 0.6, range: 3.4, arc: 360, kb: 1.5, dur: 0.85, move: 'spin', ticks: 3 },
-      { anim: '2H_Melee_Attack_Chop',     hitAt: 0.5,  dmg: 1.6, range: 3.0, arc: 170, kb: 3.0, dur: 0.7 },
-      { anim: 'Jump_Full_Short',          hitAt: 0.62, dmg: 2.4, range: 4.5, arc: 360, kb: 7.0, dur: 0.9, move: 'slam', finisher: true },
-    ],
-    skills: [
-      { id: 'whirlwind',  name: '회오리 참격', icon: '/img/sk_barb_1.webp', cd: 7, mp: 16,  anim: '2H_Melee_Attack_Spin', castAt: 0.3, dmg: 0.9, ticks: 5, desc: '도끼를 휘돌려 주변 적을 연속으로 베어냄' },
-      { id: 'quake',      name: '대지 분쇄', icon: '/img/sk_barb_2.webp', cd: 10, mp: 20, anim: '2H_Melee_Attack_Chop', castAt: 0.5, dmg: 4.0, desc: '땅을 내리쳐 충격파로 광역 피해와 넉백' },
-      { id: 'berserk',    name: '광폭화',   icon: '/img/sk_barb_3.webp', cd: 16, mp: 24, anim: 'Cheer', castAt: 0.2, dmg: 0, desc: '8초간 공격력 +60%, 공격속도 +30%' },
-      { id: 'hell_axe',   name: '지옥의 도끼', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.5, dmg: 9.0, desc: '불타는 거대 도끼를 낙하시켜 전장을 불태움' },
-      // ── 각성 (레벨 구간 해금) ──
-      { id: 'bull_rush',   name: '광란의 돌진', icon: '/img/sk_bb_a1.webp', cd: 9, mp: 26,  unlock: 10, awaken: 1, anim: '2H_Melee_Attack_Stab', castAt: 0.1, dmg: 2.4, desc: '적을 앞으로 밀어 모으며 돌진하고, 벽처럼 뭉친 적을 끝에서 폭발시킨다' },
-      { id: 'magma_zone',  name: '용암 분출 · 진', icon: '/img/sk_bb_a2.webp', cd: 24, mp: 34, unlock: 20, awaken: 2, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 1.8, desc: '주변에 용암 기둥이 차례로 솟아 적을 띄우고, 갈라진 균열이 9초간 남아 지진다' },
-      { id: 'bloodquake', name: '혈왕 · 대지붕괴', icon: '/img/sk_bb_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.42, dmg: 6.2, desc: '적을 끌어당기고 대지를 두 번 붕괴시킨다' },
-      { id: 'cataclysm', name: '종말 · 화산심장', icon: '/img/sk_bb_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Jump_Full_Short', castAt: 0.55, dmg: 6.8, desc: '도약 후 전장을 뒤엎는 화산 폭발을 일으킨다' },
-    ],
+    combo: BARBARIAN_COMBO,
+    skills: BARBARIAN_SKILLS,
   },
   mage: {
     id: 'mage', name: '대마도사 리아', title: '별을 부르는 자', rarity: 'SR', model: 'Mage', portrait: '/img/tll/mage-original-v1.webp',
@@ -137,9 +147,28 @@ export const HEROES = {
     { id: 'skyfall_arrows', name: '천궁 · 유성화살비', icon: '/img/skills-crafted/ranger-binding.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 6.2, desc: '유성처럼 낙하하는 화살이 넓은 지역을 연속 폭격한다' },
   ],
   },
+  // 첫 신규 SSR(BM 12.5, 할로윈 픽업). 몸·무기·애니메이션·음성은 광전사 것을 쓴다(kit). 몸 외형은 늑대인간 아바타 몸(bodyAvatar).
+  // 고유 스킬: 핏빛 포효(광폭화 자리, 공포 + 사냥 본능 회복) · 월광 사냥(궁극기, 6연속 도약 + 보름달 낙하). 나머지는 광전사 스킬을 공유한다.
+  // 능력치: 광전사보다 체력·방어를 덜고 치명·속도를 조금 더한 기동형(sim: 광전사 대비 무리 1.03배·단일 1.00배, tools/hero-balance-sim.mjs --assert).
+  werewolf: {
+    id: 'werewolf', name: '늑대인간 족장', title: '핏빛 달의 사냥꾼', rarity: 'SSR', model: 'Barbarian', portrait: '/img/tll/avatars/avatar_barbarian_werewolf-v2.webp',
+    kit: 'barbarian', voiceId: 'barbarian', bodyAvatar: 'avatar_barbarian_werewolf', gachaOnly: true,
+    weapon: '2h', color: '#c81830', accent: '#e8eeff',
+    show: ['2H_Axe'],
+    base: { hp: 1650, atk: 150, def: 26, crit: 0.24, critDmg: 1.8, spd: 6.3 },
+    combo: BARBARIAN_COMBO,
+    // 광폭화·지옥의 도끼 자리를 고유 스킬로 바꾸고 나머지 여섯은 광전사 스킬 그대로(마을 훈련 변형은 영웅 id 기준이라 공유하지 않는다).
+    skills: BARBARIAN_SKILLS.map((sk) => WEREWOLF_OWN_SKILLS[sk.id] || sk),
+  },
 };
 
-export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue', 'ranger'];
+// 늑대인간 족장(소환 전용 SSR)은 맨 뒤: 모델 이름으로 영웅을 찾는 조회(heroIdForModel)가 광전사를 먼저 만난다.
+export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue', 'ranger', 'werewolf'];
+/** 영웅의 장비·외형·소리 표를 찾을 때 쓰는 기준 영웅 id(kit 이 없으면 자기 id). @param {string | {id?: string} | null | undefined} hero */
+export function kitOf(hero) {
+  const id = typeof hero === 'string' ? hero : hero?.id;
+  return (id && HEROES[id]?.kit) || id || '';
+}
 
 // 레벨업 필요 EXP / 골드
 export const levelExp = (lv) => Math.floor(100 * Math.pow(1.18, lv - 1));

@@ -1,5 +1,6 @@
 // 핵앤슬래시 타격감 튜닝 표와 순수 계산. 난수·DOM·시간(Date) 없이 step 의 시뮬레이션 시각(elapsed)만 쓴다.
 // 화면 흔들림·FOV 펀치는 오너 결정으로 쓰지 않는다(renderer.shake/punch 는 의도적 no-op) — 무게는 정지·섬광·슬로우로 전한다.
+import { kitOf } from '../data/heroes.js';
 
 export const FEEL = Object.freeze({
   // 히트스탑: base 는 타격 등급별 기본 정지(초). 실제 정지 = base * (1 + 무게 합), 상한 max.
@@ -142,7 +143,7 @@ export function weightedHitstop(base, weight) {
 
 /** 영웅 달리기 클립 재생 배율. speed 는 실제 이동 속도(m/s, 질주·버프·둔화 반영). 실측 보폭이 없는 영웅은 예전 배율을 쓴다. */
 export function heroRunTempo(heroId, speed, sprint = 0) {
-  const L = FEEL.locomotion, stride = L.heroRunStride[heroId];
+  const L = FEEL.locomotion, stride = L.heroRunStride[kitOf(heroId)];
   if (!(stride > 0) || !(speed > 0)) return 1.1 + Math.max(0, num(sprint)) * .35;
   return clamp(speed / (stride * L.targetSlide), L.min, L.max);
 }
