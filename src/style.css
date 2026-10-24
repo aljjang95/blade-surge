@@ -333,6 +333,19 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .gz-gear span { flex-basis: 34px; }
 }
 
+/* 좁은 폭(세로 화면): 배너 탭은 위쪽 가로 줄, 픽업 정보는 가운데, 천장·버튼 패널은 아래로 쌓는다(가로 3열 최소 폭 합이 390px를 넘어 가운데 열이 0이 되던 겹침 방지). */
+@media (max-width: 600px) {
+  .gacha-wrap { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; column-gap: 0; padding: 8px 12px; }
+  .gacha-tabs { grid-column: 1; grid-row: 1; flex-direction: row; }
+  .gacha-tabs .gz-tab { flex: 1 1 0; min-width: 0; }
+  .gz-tn { font-size: 13px; }
+  .gz-pick { grid-column: 1; grid-row: 2; }
+  .gz-panel { grid-column: 1; grid-row: 3; }
+  .gacha-foot { grid-column: 1; grid-row: 4; }
+  .gacha-odds { grid-column: 1; grid-row: 5; }
+  .gacha-pace { grid-column: 1; grid-row: 6; }
+}
+
 /* shop */
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; padding-bottom: 20px; }
 /* 성장 흐름 줄(보석 → 소환 → 중복 조각 → 초월 → 더 강한 전투)과 상품별 용도 표시. growth-flow.js 가 문구를 정한다. */

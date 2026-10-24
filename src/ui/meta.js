@@ -116,6 +116,14 @@ export class Meta {
     $('btn-pull1').addEventListener('click', () => this.pull(1));
     $('btn-pull10').addEventListener('click', () => this.pull(10));
     document.querySelectorAll('#gacha-tabs .gz-tab').forEach((b) => b.addEventListener('click', () => this.selectBanner(b.dataset.banner)));
+    // role=tablist 패턴: 방향키·Home·End로 초점과 선택을 함께 옮긴다(선택 안 된 탭은 tabIndex=-1).
+    $('gacha-tabs').addEventListener('keydown', (e) => {
+      const tabs = [...document.querySelectorAll('#gacha-tabs .gz-tab')], i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      const to = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+      if (to < 0) return;
+      e.preventDefault(); this.selectBanner(tabs[to].dataset.banner); tabs[to].focus();
+    });
     $('btn-pull-ssr').addEventListener('click', () => this.pullSSR());
     $('btn-mileage').addEventListener('click', () => this.exchangeMileage());
     $('btn-rates').addEventListener('click', () => this.showRates());
@@ -579,7 +587,7 @@ export class Meta {
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
   showRates() {
-    const id = Object.hasOwn(GACHA_BANNERS, this.gachaBanner) ? this.gachaBanner : 'hero', b = GACHA_BANNERS[id], rates = gachaRates(id), list = gachaContents(id), g = this.eco.gachaState();
+    const id = Object.hasOwn(GACHA_BANNERS, this.gachaBanner) ? this.gachaBanner : 'hero', b = GACHA_BANNERS[id], rates = gachaRates(id), list = gachaContents(id, Date.now(), { ownsHero: (h) => this.eco.ownHero(h) }), g = this.eco.gachaState();
     const sp = rates.ssrSplit, hard = rates.hardPity, soft = softStart(rates), rises = soft < hard, at = (k) => pct(rates.ssrByPull[k - 1], 1);
     const row = (label, p, color = '') => `<tr><th scope="row">${label}</th><td${color ? ` style="color:var(${color})"` : ''}>${pct(p, 2)}</td></tr>`;
     const sum = (f) => list.filter(f).reduce((a, x) => a + x.p, 0), nameList = (xs) => xs.map((x) => HEROES[x.id]?.name).filter(Boolean).join(', ');
@@ -602,7 +610,7 @@ export class Meta {
       : `<br>${rises ? `${soft}번째 소환부터 SSR 확률이 오릅니다 (${soft}번째 ${at(soft)} · ${Math.min(hard - 1, soft + 9)}번째 ${at(Math.min(hard - 1, soft + 9))} · ${hard - 1}번째 ${at(hard - 1)}). ` : ''}${hard}번째 소환은 SSR 확정입니다.<br>천장을 포함한 평균은 SSR 1회당 약 ${rates.expectedPullsPerSsr.toFixed(1)}회 (통합 SSR ${pct(rates.consolidatedSsr, 2)})입니다.${id === 'hero' ? `<br>이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.` : ''}`;
     const status = id === 'beginner' ? `<b>남은 ${this.eco.beginnerLeft()}/${b.limit}회</b>${g.beginnerSsr ? ' · SSR 영웅 획득 완료' : ''}`
       : `<b>현재 누적 ${id === 'gear' ? g.gearPity : g.pity}회</b> · 다음 소환 SSR ${pct(gachaChances((id === 'gear' ? g.gearPity : g.pity) + 1, b).SSR, 1)} · ${Math.max(1, hard - (id === 'gear' ? g.gearPity : g.pity))}회 안에 SSR 확정${(id === 'gear' ? g.gearGuarantee : g.guarantee) ? ' · 다음 SSR 픽업 확정' : ''}`;
-    this.ui.modal(`<h2>${esc(rates.name)} 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기${id === 'gear' ? ' · 무기 외형 미리보기' : ''}</button><table class="rates-table" aria-label="소환 등급별 확률">${rows}</table>
+    this.ui.modal(`<h2>${esc(rates.name)} 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기${id === 'gear' ? ' · 무기 외형 미리보기' : ''}</button>${id === 'beginner' ? '<p class="setting-help">SR 영웅은 아직 없는 영웅 사이에서 균등 · 10회의 마지막 칸은 미보유 SR 영웅 확정(있을 때)</p>' : ''}<table class="rates-table" aria-label="소환 등급별 확률">${rows}</table>
       <p><b>${ssrLine}</b>${detail}<br>10회 소환은 SR 이상 1장을 보장합니다.</p>
       <p>${status}</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<p class="gz-rates-foot">유료 보석과 무료 보석은 구분해 기록되며 무료 보석부터 사용됩니다.</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (bx) => { bx.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); bx.querySelector('#m-contents').onclick = () => this.showGachaContents(); const sb = bx.querySelector('#m-ssr'); if (sb) sb.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } });
   }

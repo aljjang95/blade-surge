@@ -26,7 +26,7 @@ function noteOf(x, heroId) {
 
 /** 소환 구성품 전체: 등급별 영웅·장비·강화 재료와 개별 확률. 무기는 누르면 외형 미리보기로 간다. */
 export function showGachaContents(filter) {
-  const bannerId = this.gachaBanner || 'hero', list = gachaContents(bannerId), heroId = this.eco.s.selected;
+  const bannerId = this.gachaBanner || 'hero', list = gachaContents(bannerId, Date.now(), { ownsHero: (id) => this.eco.ownHero(id) }), heroId = this.eco.s.selected;
   const has = (id) => list.some((x) => (id === 'hero' || id === 'material') ? x.kind === id : x.kind === 'gear' && x.slot === id);
   const tabs = TABS.filter(([id]) => has(id));
   if (!tabs.some(([id]) => id === filter)) filter = (tabs[0] || TABS[0])[0];
@@ -42,7 +42,7 @@ export function showGachaContents(filter) {
     }).join('') + '</div>';
   }).join('');
   const rt = gachaRates(bannerId), help = '1회 소환 기준 개별 확률 · ' + (rt.hardPity > (rt.limit || 0) && rt.softPityFrom < rt.hardPity ? (rt.softPityFrom + 1) + '번째 상승과 ' : '') + '10회 SR 보장 · 픽업 확정 보정 제외' + (filter === 'weapon' ? ' · 무기를 누르면 착용 모습을 볼 수 있어요' : '');
-  this.ui.modal('<div class="gc-wrap"><h2>소환 구성품</h2><p class="setting-help">' + help + '</p><div class="gc-tabs" role="group" aria-label="구성품 종류">'
+  this.ui.modal('<div class="gc-wrap"><h2>소환 구성품</h2><p class="setting-help">' + help + '</p>' + (bannerId === 'beginner' ? '<p class="setting-help">SR 영웅은 아직 없는 영웅 사이에서 균등 · 10회의 마지막 칸은 미보유 SR 영웅 확정(있을 때)</p>' : '') + '<div class="gc-tabs" role="group" aria-label="구성품 종류">'
     + tabs.map(([id, n]) => '<button type="button" aria-pressed="' + (id === filter) + '" class="' + (id === filter ? 'on' : '') + '" data-gc="' + id + '">' + n + '</button>').join('')
     + '</div>' + rows + '<div class="modal-btns"><button class="btn btn-ghost" id="m-back">확률표</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div></div>', { onOpen: (b) => {
     b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
