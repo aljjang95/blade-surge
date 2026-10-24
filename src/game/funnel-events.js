@@ -4,6 +4,7 @@
 // 구매 토큰·주문 ID는 어떤 이벤트에도 넣지 않는다.
 import { SKUS, SHOP_TABS } from '../data/shop.js';
 import { HERO_ORDER } from '../data/heroes.js';
+import { HERO_LEGACY_IDS } from '../data/hero-roster.js';
 import { IAP_PRODUCTS, HERO_ALL_PRODUCT_ID, heroProductId } from '../shared/iap-catalog.js';
 
 export const FUNNEL_STORAGE_KEY = 'bladesurge_funnel_v1';
@@ -55,7 +56,7 @@ const SCHEMA = Object.freeze({
   // 서버가 영수증을 검증하고 지급(granted)했을 때만 기록한다. 토큰·금액은 넣지 않는다.
   purchase_verified: { required: { sku: oneOf([...SKU_IDS, 'pass']) }, optional: {} },
   // 보석으로 영웅을 무료 해금한 순간(서버 결제 아님). step 은 지금까지 무료로 연 영웅 수.
-  hero_unlock_free: { required: { hero: oneOf(HERO_ORDER), step: int(0, 50) }, optional: {} },
+  hero_unlock_free: { required: { hero: oneOf(HERO_LEGACY_IDS), step: int(0, 50) }, optional: {} },
   return_session: { required: { gapDays: int(0, 3650) }, optional: {} },
 });
 

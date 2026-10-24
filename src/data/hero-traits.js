@@ -9,10 +9,11 @@ export const HERO_TRAITS = Object.freeze({
   mage: { role: '원거리 · 마법', line: '넓은 폭발로 전장을 지배', intro: '별의 지식을 다루는 고귀한 마도사. 광대한 마력으로 전장을 지배합니다.' },
   rogue: { role: '근접 · 치명', line: '빠른 단검으로 급소를 노림', intro: '그림자처럼 움직이는 암살자. 한 번의 급소 공격으로 승부를 가릅니다.' },
   ranger: { role: '원거리 · 기동', line: '거리를 두고 안전하게 사냥', intro: '바람을 따라 달리는 추적자. 멀리서 정확하게 적을 꿰뚫습니다.' },
+  werewolf: { role: '근접 돌격 · 생존형 딜러', line: '포효로 적을 얼리고 달빛 아래 사냥', intro: '핏빛 달 아래 깨어난 늑대인간 족장. 공포로 무리를 무너뜨리고 쓰러뜨릴 때마다 되살아납니다.' },
 });
 
 /** 조작 난이도 1~3(별 개수). 스탯으로 계산되지 않는 값이라 데이터 상수 하나로만 둔다. */
-export const HERO_DIFFICULTY = Object.freeze({ knight: 1, barbarian: 2, mage: 2, rogue: 3, ranger: 2 });
+export const HERO_DIFFICULTY = Object.freeze({ knight: 1, barbarian: 2, mage: 2, rogue: 3, ranger: 2, werewolf: 3 });
 export const DIFFICULTY_MAX = 3;
 /** 생존 막대에서 방어 1점이 체력 몇 점에 해당하는지. */
 export const SURVIVAL_DEF_WEIGHT = 10;
