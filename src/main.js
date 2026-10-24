@@ -355,7 +355,7 @@ class App {
     const a = mixer.clipAction(clips['Idle']); a.play();
     // 감소된 움직임에서도 교정된 정지 자세를 첫 프레임부터 적용한다.
     mixer.update(0);
-    const pose = createLobbyPose(root, id);
+    const pose = createLobbyPose(root, kitOf(id));
     pose?.apply();
     const combatPose = createCombatPose(root, kitOf(id), mixer, clips);
     this.scene.add(root);

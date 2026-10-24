@@ -101,3 +101,16 @@ describe('늑대인간 족장 고유 스킬 표', () => {
     expect(SKILL_PRELUDES.moonlit_hunt).toBeInstanceOf(Function);
   });
 });
+
+describe('리뷰 반영: 소환 전용 영웅 해금 견적', () => {
+  test('정책 1·정책 2 모두 미보유 늑대인간은 소환 안내(gacha)이고 무료 해금·구매가 없다', async () => {
+    const { Economy } = await import('../src/game/economy.js');
+    const { createMemoryStorage } = await import('../src/game/economy-core.js');
+    const legacy: any = new Economy({ storage: createMemoryStorage() });
+    legacy.s.roster = { policy: 1, owned: ['knight', 'barbarian', 'mage', 'rogue', 'ranger'], starter: null, starterChosen: true, paid: [] };
+    expect(legacy.heroUnlockQuote('werewolf')).toMatchObject({ reason: 'gacha', canFree: false, owned: false });
+    const fresh: any = new Economy({ storage: createMemoryStorage() });
+    expect(fresh.chooseStarter('mage').ok).toBe(true);
+    expect(fresh.heroUnlockQuote('werewolf')).toMatchObject({ reason: 'gacha', canFree: false });
+  });
+});
