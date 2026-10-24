@@ -31,7 +31,7 @@ function enhanceable(eco) {
 
 /**
  * @param {{mode:'campaign'|'tower'|'dungeon'|'arena', got?:{k:string,n:number}[], eco:any}} input
- * @returns {null|{id:'summon'|'enhance'|'chest'|'pass', label:string, hint:string, target:object}}
+ * @returns {null|{id:'summon'|'enhance'|'chest'|'pass', label:string, hint:string, target:{tab:string, banner?:string, heroId?:string, uid?:number, journeyTab?:string}}}
  */
 export function rewardNextAction({ mode, got, eco }) {
   if (!eco?.s) return null;

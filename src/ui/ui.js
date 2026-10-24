@@ -21,6 +21,7 @@ import './campaign.css';
 import './combo-feedback.css';
 import './skill-feedback.css';
 import { itemIconHtml } from './item-presentation.js';
+import { currentRewardAction, openRewardTarget } from './reward-next.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -136,6 +137,7 @@ export class UI {
     });
     $('btn-result-next').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData) && this.resultData.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });
     $('btn-result-double').addEventListener('click', () => this.watchAd());
+    $('btn-result-use').addEventListener('click', () => this.useResultReward());
   }
   show(el, on) { el.classList.toggle('show', on); }
   observeCombatNoticeHeaders() {
@@ -649,6 +651,29 @@ export class UI {
     }
     for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
     renderGrowthPreparation($('result-growth'), this.app, result);
+    this.refreshResultUse(result);
+  }
+  /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */
+  refreshResultUse(result) {
+    const button = $('btn-result-use'), b = this.app.battle;
+    const action = result.win && result.reward?.ok !== false && !result.reward?.rejected
+      ? currentRewardAction(this.app, b.stage?.tower ? 'tower' : 'campaign', result.reward?.got) : null;
+    button.hidden = !action; button.dataset.action = action?.id || '';
+    if (!action) return;
+    $('result-use-label').textContent = action.label;
+    $('result-use-hint').textContent = action.hint;
+    button.disabled = !canPrepareGrowth(this.app, result);
+  }
+  useResultReward() {
+    const result = this.resultData, app = this.app;
+    if (!canPrepareGrowth(app, result) || !result.win) return;
+    const shown = $('btn-result-use').dataset.action;
+    // 누르는 순간의 재화로 다시 고른다. 화면에 보인 행동과 달라졌으면 목적지로 가지 않고 다시 그린다.
+    const live = currentRewardAction(app, app.battle.stage?.tower ? 'tower' : 'campaign', result.reward?.got);
+    if (!live || live.id !== shown) { this.refreshResultUse(result); this.toast('보유 재화를 다시 확인했습니다.'); return; }
+    app.toLobby();
+    if (app.mode !== 'lobby') return;
+    openRewardTarget(app, live.target);
   }
   retryResultSave(result) {
     const b = this.app.battle;
@@ -675,14 +700,14 @@ export class UI {
     if (box.querySelector('.result-scroll')) return;
     const scroll = document.createElement('div'); scroll.className = 'result-scroll';
     scroll.tabIndex = 0; scroll.setAttribute('aria-label', '사냥 결과와 성장 준비');
-    const buttons = box.querySelector('.result-btns');
+    const buttons = box.querySelector('.result-btns'), use = box.querySelector('#btn-result-use');
     const fold = (id, title) => {
       const details = document.createElement('details'); details.id = id; details.className = 'result-details';
       const summary = document.createElement('summary'); summary.textContent = title;
       details.append(summary); return details;
     };
     for (const child of [...box.children]) {
-      if (child === buttons) continue;
+      if (child === buttons || child === use) continue;
       if (child.id === 'result-story') {
         const details = fold('result-story-details', '되찾은 이야기'); details.append(child); scroll.append(details);
       } else if (child.id === 'result-loot') {
@@ -691,7 +716,7 @@ export class UI {
     }
     // Growth stays ahead of optional story and loot, with one independently scrolling body.
     scroll.insertBefore(scroll.querySelector('#result-growth'), scroll.querySelector('#result-stats'));
-    box.replaceChildren(scroll, buttons);
+    box.replaceChildren(...[scroll, use, buttons].filter(Boolean));
   }
   showResult(b, win) {
     if (b.stage?.expedition) { this.app.expeditionUI.showResult(b, win); return; }
@@ -703,7 +728,7 @@ export class UI {
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
-    const growth = $('result-growth'); growth.hidden = true; growth.replaceChildren();
+    const growth = $('result-growth'); growth.hidden = true; growth.replaceChildren(); $('btn-result-use').hidden = true;
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
     const t = $('result-title'); t.textContent = win ? b.stage.finale ? '새벽의 귀환' : 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
     const story = $('result-story'); story.hidden = !win; story.innerHTML = win ? resultStoryHtml(b.stage) : '';
