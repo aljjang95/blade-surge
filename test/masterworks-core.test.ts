@@ -3,7 +3,7 @@ import { BOONS, MASTERY_NODES } from '../src/data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
 import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
-import { normalizeMasterworks, boonChoices, boonEffects, previewBoon, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory } from '../src/game/masterworks-core.js';
+import { normalizeMasterworks, boonChoices, boonEffects, previewBoon, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory, seedRunBoons } from '../src/game/masterworks-core.js';
 
 describe('masterworks progression contracts',()=>{
   test('legacy and malicious input produce bounded whitelisted state without free unlocks',()=>{
@@ -22,6 +22,15 @@ describe('masterworks progression contracts',()=>{
   test('draft is deterministic and unique, excludes maximum rank, and exhausts cleanly',()=>{
     const a=boonChoices(42,{},2);expect(boonChoices(42,{},2)).toEqual(a);expect(new Set(a.map(b=>b.id)).size).toBe(3);
     const picked=Object.fromEntries(BOONS.map(b=>[b.id,3]));expect(boonChoices(42,picked,2)).toEqual([]);picked.ember_edge=2;expect(boonChoices(42,picked,2).map(b=>b.id)).toEqual(['ember_edge']);
+  });
+  test('출격 전 각인 진입점은 알려진 id만 순서대로 maxRank 까지 남기고 입력을 바꾸지 않는다',()=>{
+    expect(seedRunBoons(undefined)).toEqual([]);expect(seedRunBoons('ember_edge')).toEqual([]);expect(seedRunBoons([])).toEqual([]);
+    const input=Object.freeze(['storm_eye','bad',null,{id:'ember_edge'},'ember_edge','storm_eye','storm_eye','storm_eye','constructor','__proto__']);
+    const out=seedRunBoons(input);
+    expect(out).toEqual(['storm_eye','ember_edge','storm_eye','storm_eye']);expect(out).not.toBe(input);
+    for(const b of BOONS)expect(seedRunBoons(Array(9).fill(b.id))).toHaveLength(b.maxRank);
+    expect(boonEffects(out)).toEqual(boonEffects(['ember_edge','storm_eye','storm_eye','storm_eye']));
+    expect(seedRunBoons(Array(500).fill('bad').concat(['ember_edge']))).toEqual([]);
   });
   test('ranks add, duo requires two families, and behavior caps hold',()=>{
     expect(boonEffects({ember_edge:2}).atk).toBeCloseTo(.1);

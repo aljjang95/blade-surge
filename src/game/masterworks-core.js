@@ -84,6 +84,19 @@ export function boonEffects(picked) {
   const rank=ranks(picked);
   return sumEffects([...BOONS.map(b=>Object.fromEntries(Object.entries(b.effects).map(([k,v])=>[k,v*rank[b.id]]))),...boonSynergies(rank).map(s=>s.effects)]);
 }
+/** 출격 전에 외부(룬·출격 전 1회용 뽑기)가 정한 각인 목록을 이번 출격의 picked 로 정리한다.
+ *  출격 중 각인 보상은 2026-10-24 대표님 지시로 없어졌고, 각인 효과는 이 진입점으로만 들어온다.
+ *  알 수 없는 id·문자열이 아닌 값은 버리고, 같은 각인은 maxRank 까지만 남긴다. 순서는 보존한다. */
+export function seedRunBoons(ids) {
+  const out=[],count={};
+  if(!Array.isArray(ids))return out;
+  for(const id of ids.slice(0,64)) {
+    const boon=typeof id==='string'?BOONS.find(b=>b.id===id):null;
+    if(!boon||(count[id]||0)>=boon.maxRank)continue;
+    count[id]=(count[id]||0)+1;out.push(id);
+  }
+  return out;
+}
 /** 선택 권한은 전투가 소유하며, 여기서는 각인 효과만 부작용 없이 비교한다. */
 export function previewBoon(picked,id) {
   const boon=BOONS.find(b=>b.id===id);
