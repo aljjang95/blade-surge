@@ -68,9 +68,13 @@
 - 단위: `test/region-dungeon-unlock.test.ts`(배정표, 새 저장, 1-10 클리어 저장, 3지역 진행 저장, 별 기록만 있는 옛 저장, 던전만 깨고 캠페인 안 한 저장, kept 검증, 심층·입장권 기록, 입장 차단·에너지 미소비, 로비 추천 · 카드 · 선택, 관문 등장 표시 1회). 기존 테스트 중 '새 저장에서 2~6지역 던전에 들어가는' 픽스처는 지역을 모두 연 저장(`progress.unlocked = 60`)으로 고정했고, 여정 · 컨셉 던전 테스트는 새 규칙(첫 마을 4곳, 다음 마을 예고, 다음 던전 = 종락의 지하 회랑)으로 바꿨다.
 - 실제 입력: `node tools/region-town-qa.mjs <origin> <out> --vp=<WxH> [--only=fresh,arrived,legacy,clear]`. 결과는 viewport/터치 에뮬과 SwiftShader 관측이며 실기기 · GPU 프레임 검증이 아니다. 실행 기록은 아래 '이번 실행'.
 
-## 이번 실행
+## 이번 실행 (2026-10-24, 클라우드 세션 · Playwright Chromium SwiftShader · `bun run dev` 같은 Vite)
 
-(아래에 채움)
+- 수정 전(origin/main 6b12c8bd 사본, 새 저장 Lv.1): 1280×720 · 390×844 · 844×390 세 화면 모두 카드 20장, `다른 던전 4/20`, 관문 6곳에 `ember_vault`·`eclipse_hydra_vault` 포함으로 재현. 사본 환경은 node_modules 링크로 React 가 두 벌 잡혀 '다른 던전' 목록이 열리지 않았다(제품 결함이 아닌 사본 환경 문제라 목록 비교는 1280 화면 캡처로 대신).
+- 수정 후: 1280×720 21/21(fresh · arrived · legacy · clear), 390×844 15/15, 844×390 15/15(fresh · arrived · legacy). clear 는 1-9 시드에서 실제 터치로 1-10 출격 → AUTO 가속 전투 승리 → 결과 띠 → 로비 복귀 → 도착 띠 · 관문 5곳 상승(앱 프레임 7초 가속 뒤 0곳 남음) → 카드 줄 지역 2 먼저 · 추천 석양 황동 채석장.
+- 증거(커밋하지 않음): 세션 scratchpad `town/after/*.png`, `town/before/*.png`, `report-<화면>.json`.
+- 단위 · 전체: `bun run check` 통과(typecheck · bun test 4,925 pass / 5 skip / 0 fail · vite build).
+- SwiftShader 헤드리스는 로비 프레임이 수 초에 한 번이라 상승 연출은 `app.step(1/30)` 로 진행했다. 실제 시간 · GPU 프레임 · 실기기 터치 증거가 아니다.
 
 ## 남은 것
 
