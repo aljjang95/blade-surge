@@ -194,6 +194,8 @@ export class ExpeditionEconomy {
       // 새 성장 재화는 장부에서만 지급한다. 결과 객체의 숫자는 믿지 않는다(리뷰 P2).
       const extras = p.kind === 'dungeon' ? ledger : null;
       if (extras) got.push(...this.eco.applyFieldExtras(extras, heroId));
+      // 룬: 정예·보스 처치 장부로 룬 드랍, 완료 상자 룬 가루(기본 5·심층 12). 결투는 없다.
+      if (p.kind === 'dungeon' && typeof this.eco.settleRuneDrops === 'function') got.push(...this.eco.settleRuneDrops(ledger || { runeKills: {} }, { deep, first: firstClear }));
       const combatExp = p.kind === 'dungeon' ? ledger?.exp ?? Math.min(num(field.fieldExp), 100000000) : 0;
       const heroExp = applyFrontierRewards(def.rewards, frontier).xp + combatExp;
       const ups = this.eco.addHeroExp(heroId, heroExp, { silent: true });
