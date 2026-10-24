@@ -29,6 +29,8 @@ import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { itemVisual, itemIconHtml } from './item-presentation.js';
 import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js';
 import { heroGrade } from '../data/hero-grades.js';
+import { heroCompare } from '../data/hero-traits.js';
+import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { paceShort } from './pace-short.js';
 import { campaignTown } from '../data/campaign-towns.js';
@@ -299,13 +301,14 @@ export class Meta {
       c.dataset.heroId = id;
       c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 잠금 · 해금 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">잠금</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">잠금</span>'}<span class="hc-name">${esc(def.name)}</span>`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
       bindHeroPortrait(c.querySelector('img'), this.app, id);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
     this.app.wardrobe?.show(id);
+    $('tab-heroes').classList.toggle('lock-view', !own); // 미보유 영웅 상세는 설계도 시안 배치(착용 모습 칸 없음)
     if (!own) { this.renderLockedHero(id, det); return; }
     renderOwnedHero(this, id, det);
     // 성장 진입: 스킬 트리(SP)와 초월(SR→SSR→SSSR). 이름 줄 아래에 작게 둔다.
@@ -320,15 +323,30 @@ export class Meta {
   heroPurchaseOn() { try { return this.app?.heroPurchase?.available?.() === true; } catch { return false; } }
   /** 미보유 영웅 상세: 무료 해금(진행 + 보석) 과 바로 해금(결제). 사유는 숨기지 않고 보여 준다. */
   renderLockedHero(id, det) {
-    const def = HEROES[id], q = this.eco.heroUnlockQuote(id), payOn = this.heroPurchaseOn();
-    const price = (productId) => { const krw = IAP_BY_ID[productId]?.priceKRW; return Number.isFinite(krw) ? '₩' + fmt(krw) : ''; };
+    const def = HEROES[id], q = this.eco.heroUnlockQuote(id), payOn = this.heroPurchaseOn(), cmp = heroCompare(id);
+    // 가격 문구는 app.heroPurchase.price(): 웹은 서버 intent 와 같은 카탈로그 금액, Play 는 스토어가 확인한 판매 가능 가격만. 없으면 null.
+    const price = (productId) => { try { return payOn ? this.app.heroPurchase.price?.(productId) || null : null; } catch { return null; } };
     const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid)).length;
-    const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다 (보유 ${fmt(q.have)} / 필요 ${fmt(q.gems)})`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
-    const freeCond = q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' ? '' : `<p>조건: 캠페인 <b>${q.needLabel}</b> 클리어 · 보석 <b>${fmt(q.gems)}</b> (영웅 ${q.step + 2}번째 해금)</p>`;
-    det.innerHTML = `<div class="hs-locked hero-lock" data-hero-lock="${id}"><h2>${esc(def.name)}</h2><div class="sub">${esc(def.title)} · ${def.rarity} · 잠금</div>
-      <p class="hl-skills">${def.skills.slice(0, 4).map((s) => esc(s.name)).join(' · ')}</p>
-      <div class="hl-box" data-lock="free"><h3>무료 해금</h3>${freeCond}${why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}<button type="button" class="btn btn-gold" id="h-free" ${q.canFree ? '' : 'disabled'} aria-describedby="hl-why">${q.canFree ? `보석 ${fmt(q.gems)}개로 해금` : '아직 해금할 수 없음'}</button></div>
-      <div class="hl-box" data-lock="paid"><h3>바로 해금</h3><p>${payOn ? `조건 없이 지금 열립니다 · ${price(heroProductId(id))}` : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p><button type="button" class="btn btn-ghost" id="h-buy">${payOn ? `${esc(def.name)} 바로 해금 ${price(heroProductId(id))}` : '바로 해금 (준비 중)'}</button>${payOn && lockedLeft > 1 && IAP_BY_ID[HERO_ALL_PRODUCT_ID] ? `<button type="button" class="btn btn-ghost" id="h-buy-all">전원 해금 ${price(HERO_ALL_PRODUCT_ID)}</button>` : ''}</div></div>`;
+    const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
+    const hasFree = !(q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' || q.reason === 'starter-pending');
+    const need = Math.max(1, q.need - 1), done = Math.max(0, Math.min(need, q.progress - 1)), stageOk = done >= need, gemOk = q.have >= q.gems;
+    const ratio = (n, m) => `${Math.round(Math.max(0, Math.min(1, m ? n / m : 0)) * 100)}%`;
+    const freeRows = hasFree ? `<div class="hl-row ${stageOk ? 'ok' : ''}" data-cond="progress"><i class="hl-ico hl-ico-book" aria-hidden="true"></i><span class="hl-lab">${q.needLabel} 클리어</span><b class="hl-meter"><u style="width:${ratio(done, need)}"></u></b><span class="hl-val">${done} / ${need}</span><i class="hl-check" aria-label="${stageOk ? '조건 충족' : '조건 미충족'}">${stageOk ? '✓' : ''}</i></div>
+      <div class="hl-row hl-gem ${gemOk ? 'ok' : ''}" data-cond="gems"><i class="hl-ico hl-ico-gem" aria-hidden="true"></i><span class="hl-lab">보석 ${fmt(q.gems)}</span><b class="hl-meter"><u style="width:${ratio(q.have, q.gems)}"></u></b><span class="hl-val">${fmt(q.have)} / ${fmt(q.gems)}</span><i class="hl-check" aria-label="${gemOk ? '조건 충족' : '조건 미충족'}">${gemOk ? '✓' : ''}</i></div>` : '';
+    const freeBtn = q.canFree ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">보석 ${fmt(q.gems)}개로 해금</button>` : `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">조건 달성 후 해금</button>`;
+    const heroPrice = price(heroProductId(id)), allPrice = lockedLeft > 1 && IAP_BY_ID[HERO_ALL_PRODUCT_ID] ? price(HERO_ALL_PRODUCT_ID) : null;
+    const buyBtn = payOn
+      ? (heroPrice ? `<button type="button" class="hl-btn hl-gold hl-buy" id="h-buy" aria-label="${esc(def.name)} 바로 해금 ${esc(heroPrice)}"><i class="hl-pile" aria-hidden="true"></i><span>${esc(heroPrice)}</span><em aria-hidden="true">›</em></button>` : `<button type="button" class="hl-btn hl-gray hl-buy" id="h-buy" disabled>가격 확인 중</button>`)
+      : `<button type="button" class="hl-btn hl-gray hl-buy" id="h-buy">준비 중</button>`;
+    det.innerHTML = `<div class="hs-locked hero-lock" data-hero-lock="${id}">
+      <section class="hl-card"><div class="hl-art"><img class="hl-portrait" src="${esc(def.portrait || '')}" alt="${esc(def.name)}" onerror="this.style.visibility='hidden'"><span class="hl-badge"><i aria-hidden="true">🔒</i>미보유</span></div>
+        <div class="hl-info"><h2>${esc(def.name)}</h2><div class="sub">${esc(cmp.role)}</div><p class="hl-intro">${esc(cmp.intro)}</p>${compareBarsHtml(cmp)}</div></section>
+      <div class="hl-boards">
+        <section class="hl-box" data-lock="free"><h3>무료 해금</h3><p class="hl-lead">특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.</p>${freeRows}${why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
+        <section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>
+        ${allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
+        <p class="hl-note"><i aria-hidden="true">!</i>결제는 서버 확인 후 지급됩니다.</p>
+      </div></div>`;
     det.querySelector('#h-free').onclick = () => this.unlockHeroFree(id);
     det.querySelector('#h-buy').onclick = () => this.buyHero(heroProductId(id), id);
     const all = det.querySelector('#h-buy-all'); if (all) all.onclick = () => this.buyHero(HERO_ALL_PRODUCT_ID, id);
