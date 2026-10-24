@@ -176,12 +176,13 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
   if (!payment) return { ...base, state: 'pending', granted: [] };
   const status = payment.status;
   if (status === 'CANCELLED' || status === 'PARTIAL_CANCELLED') {
-    // 지급된 적이 있으면 권한 철회 + 지급 역분개(이미 취소 처리된 건은 reverseToken이 지급 0건이라 무해하다).
+    // 환불 차단 기록을 먼저 남긴다: 취소 전에 PAID를 본 다른 요청의 grantOnce는 같은 배치의 원자 가드(iap_refund_guard)에 막힌다(Play 경로와 같은 방식).
+    // 그 뒤 지급된 적이 있으면 권한 철회 + 지급 역분개(이미 취소 처리된 건은 reverseToken이 지급 0건이라 무해하다).
+    await c.db.prepare("INSERT INTO iap_purchases(token_hash, account_id, product_id, kind, state, test, created_at, updated_at) VALUES (?, ?, ?, ?, 'refunded', ?, ?, ?) ON CONFLICT(token_hash) DO UPDATE SET state = 'refunded', updated_at = excluded.updated_at WHERE iap_purchases.account_id = excluded.account_id")
+      .bind(hash, row.account_id, product.id, product.type, row.test, c.now, c.now).run();
     await reverseToken(c, row.account_id, hash, 'portone-cancelled');
     await c.db.prepare("UPDATE iap_web_payments SET state = 'cancelled', updated_at = ?, checked_at = ?, cancelled_at = COALESCE(cancelled_at, ?), token_hash = ? WHERE payment_id = ?")
       .bind(c.now, c.now, c.now, hash, row.payment_id).run();
-    await c.db.prepare("INSERT INTO iap_purchases(token_hash, account_id, product_id, kind, state, test, created_at, updated_at) VALUES (?, ?, ?, ?, 'refunded', ?, ?, ?) ON CONFLICT(token_hash) DO UPDATE SET state = 'refunded', updated_at = excluded.updated_at WHERE iap_purchases.account_id = excluded.account_id")
-      .bind(hash, row.account_id, product.id, product.type, row.test, c.now, c.now).run();
     return { ...base, state: 'cancelled', granted: [] };
   }
   if (row.state === 'cancelled') return { ...base, state: 'cancelled', granted: [] };

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PortoneApi, PortonePayment } from '../worker/v1/portone';
-import { reconcileWebPayments, WEB_RECONCILE_MAX } from '../worker/v1/portone';
+import { reconcileWebPayments, settleWebPayment, WEB_RECONCILE_MAX } from '../worker/v1/portone';
 
 const DAY = 86400000;
 const STORE = 'store-test-0001', CHANNEL = 'channel-key-real-0001';
@@ -225,6 +225,38 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     expect((await complete(a.token, it.paymentId)).body.state).toBe('cancelled');
     expect(count('SELECT COUNT(*) AS n FROM iap_entitlements WHERE revoked_at IS NULL')).toBe(0);
+  });
+
+  test('경합: 취소 처리 도중 PAID 응답을 받은 다른 요청이 끼어들어도 지급은 환불 기록에 막히고 권한은 비활성', async () => {
+    const { h, pn, a, intent, count, ctx } = await setup();
+    const it = (await intent(a.token, 'hero_knight_v1')).body;
+    pn.pay(it);
+    const row = h.db.sqlite.query('SELECT * FROM iap_web_payments WHERE payment_id = ?').get(it.paymentId) as any;
+    const paid = structuredClone(pn.payments.get(it.paymentId)!);
+    const cancelled = { ...paid, status: 'CANCELLED' as const, amount: { total: 5900, paid: 0, cancelled: 5900 } };
+    // 취소 처리가 결제 행을 cancelled로 쓰는 시점(역분개 이후)에 PAID를 본 다른 요청이 지급을 시도한다.
+    let racer: Promise<unknown> | null = null;
+    const base = ctx();
+    const db = new Proxy(base.db, { get(target: any, prop) {
+      if (prop !== 'prepare') return target[prop].bind ? target[prop].bind(target) : target[prop];
+      return (sql: string) => {
+        if (sql.startsWith("UPDATE iap_web_payments SET state = 'cancelled'") && !racer) {
+          racer = settleWebPayment({ ...base, db: target }, row, paid);
+          // 끼어든 지급이 끝난 뒤에야 취소 쪽 후속 쓰기가 이어지게 순서를 고정한다.
+          return { bind: (...args: unknown[]) => ({ run: async () => { await racer; return target.prepare(sql).bind(...args).run(); } }) };
+        }
+        return target.prepare(sql);
+      };
+    } });
+    await settleWebPayment({ ...base, db }, row, cancelled);
+    await racer;
+    expect(count('SELECT COUNT(*) AS n FROM iap_entitlements WHERE revoked_at IS NULL')).toBe(0);
+    expect(count('SELECT COUNT(*) AS n FROM iap_grants WHERE reversed_at IS NULL')).toBe(0);
+    expect(h.db.sqlite.query('SELECT state FROM iap_purchases').get()).toEqual({ state: 'refunded' });
+    expect(h.db.sqlite.query('SELECT state FROM iap_web_payments').get()).toEqual({ state: 'cancelled' });
+    // 이후 PAID 재조회(complete·크론)도 재지급하지 않는다.
+    expect((await settleWebPayment(ctx(), { ...row, state: 'cancelled' }, paid)).state).toBe('cancelled');
+    expect(count('SELECT COUNT(*) AS n FROM iap_grants WHERE reversed_at IS NULL')).toBe(0);
   });
 
   test('PARTIAL_CANCELLED도 회수한다. 개별 영웅 + 전원 중 전원만 취소되면 개별 권한은 남는다', async () => {
