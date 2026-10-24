@@ -136,7 +136,7 @@ describe('효과 합산', () => {
     for (const b of BOONS as unknown as Array<{ id: string, effects: Record<string, number> }>) {
       for (const g of [1, 2, 3]) {
         const e = runeEffects([{ grade: 'S', enh: 0, sockets: [rune(b.id, g)] }]);
-        for (const [k, v] of Object.entries(b.effects)) expect(e[k]).toBeCloseTo(v * RUNE_GRADE_MUL[g]);
+        for (const [k, v] of Object.entries(b.effects)) expect(e[k]).toBeCloseTo(k === 'chain' ? Math.ceil(v * RUNE_GRADE_MUL[g]) : v * RUNE_GRADE_MUL[g]);
       }
     }
     // II 는 옛 각인 1랭크(boonEffects)와 같다.
