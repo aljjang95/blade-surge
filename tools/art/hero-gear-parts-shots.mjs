@@ -4,7 +4,7 @@
  *   ① 로비 기본 카메라 390x844·844x390·1280x800 ② 전투 기본 카메라 같은 크기 3종
  *   ③ 파츠 근접(머리·어깨 한 쌍·오른손 세 시점을 한 장): 로비 대기, 전투 대기·달리기·기본 공격·회피 중간 프레임
  * 을 찍고, 부착 상태(root.userData.heroGearParts)와 드로우콜·삼각형(renderer.info)을 파츠 보임/숨김으로 전후 비교해 잰다.
- *   bun run build && node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,mage,rogue,barbarian,ranger] [--cases N,S,E,U1,U2,L] [--poses] [--dist dist]
+ *   bun run build && node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,mage,rogue,barbarian,ranger] [--cases N,S,E,U1,U2,L] [--poses] [--quick] [--dev] [--dist dist]
  * 출력: <hero>_<case>_<장면>.png, report.json(부착 세트·삼각형·드로우콜 전후, 콘솔 경고·오류, 기대와 다른 부착).
  * 기대(등급 → 세트): N 없음 · S → parts_n · E·U → parts_e · L → parts_l. 다르면 exit 1. SwiftShader 화면이며 실기기 증거가 아니다.
  * 결과 폴더는 저장소에 커밋하지 않는다.
@@ -30,8 +30,11 @@ const CASES = {
 };
 const CASE_IDS = flag('--cases', 'N,S,E,U1,U2,L').split(',');
 const POSES = args.includes('--poses');
+// --quick: 로비 1280x800 + 근접만(맞춤 반복용). --dev: dist 대신 vite 개발 서버(데이터 JSON 수정이 바로 반영).
+const MEASURE = args.includes('--measure');   // 촬영 없이 부착 상태·몸 치수만(--dev 와 함께)
+const QUICK = args.includes('--quick') || MEASURE, DEV = args.includes('--dev');
 if (!outArg || HEROES.some((h) => !['knight', 'barbarian', 'mage', 'ranger', 'rogue'].includes(h)) || CASE_IDS.some((c) => !CASES[c])) {
-  console.error('사용: node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,...] [--cases N,S,E,U1,U2,L] [--poses] [--dist dist]'); process.exit(2);
+  console.error('사용: node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,...] [--cases N,S,E,U1,U2,L] [--poses] [--quick] [--dev] [--dist dist]'); process.exit(2);
 }
 const PROJ = resolve(decodeURIComponent(new URL('../..', import.meta.url).pathname));
 const OUT = resolve(outArg), DIST = resolve(PROJ, flag('--dist', 'dist')), PORT = 4297 + Math.floor(Math.random() * 400);
@@ -39,7 +42,8 @@ const SIZES = [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width
 mkdirSync(OUT, { recursive: true });
 const report = { at: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: PROJ }).toString().trim(), dist: DIST, errors: [], warnings: [], cases: [], mismatches: [] };
 
-const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--outDir', DIST, '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
+const viteArgs = DEV ? ['--port', String(PORT), '--strictPort'] : ['preview', '--outDir', DIST, '--port', String(PORT), '--strictPort'];
+const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), ...viteArgs], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
 for (let i = 0; i < 80 && !up; i++) { try { up = (await fetch(`http://localhost:${PORT}/`)).ok; } catch {} if (!up) await new Promise((r) => setTimeout(r, 500)); }
 if (!up) { srv.kill(); throw new Error('preview server did not start'); }
@@ -50,6 +54,15 @@ function installHelpers() {
   const rootOf = () => app.mode === 'battle' ? app.battle?.player?.model : app.showcase?.root;
   const norm = (n) => String(n || '').replace(/[^A-Za-z0-9]/g, '').replace(/^mixamorig/i, '');
   const bone = (root, name) => { let found = null; root.traverse((o) => { if (!found && o.isBone && norm(o.name) === name) found = o; }); return found; };
+  // 개발 서버 전용: 몸 치수 → 배율(= 치수 ÷ ref)을 읽는다(dist 번들에서는 모듈을 다시 가져올 수 없다).
+  q.measures = async () => {
+    try {
+      const mod = await import('/src/engine/hero-gear-parts.js'), root = rootOf(); let skin = null;
+      root.traverse((o) => { if (!skin && o.isSkinnedMesh && o.userData.libraryBody) skin = o; });
+      const ref = { headTop: 0.2, shoulderSpan: 0.18, forearm: 0.25 };
+      return Object.fromEntries(Object.entries(ref).map(([k, r]) => { const m = mod.heroSlotMeasure(skin, k); return [k, m && { measure: +m.toFixed(4), scale: +(m / r).toFixed(3) }]; }));
+    } catch { return null; }
+  };
   q.state = () => {
     const root = rootOf(); if (!root) return null;
     const st = root.userData.heroGearParts || null;
@@ -61,7 +74,7 @@ function installHelpers() {
   q.stats = () => {
     const root = rootOf(); if (!root) return null;
     const meshes = root.userData.heroGearParts?.meshes || [], r = app.renderer.r;
-    const read = () => { app.renderer.render(); return { calls: r.info.render.calls, triangles: r.info.render.triangles }; };
+    const read = () => { r.info.autoReset = false; r.info.reset(); app.renderer.render(); r.info.autoReset = true; return { calls: r.info.render.calls, triangles: r.info.render.triangles }; };
     const withParts = read();
     for (const m of meshes) m.visible = false;
     const without = read();
@@ -82,14 +95,20 @@ function installHelpers() {
     const right = new T.Vector3().crossVectors(front, new T.Vector3(0, 1, 0)).normalize();
     const spot = (center, d, side, up) => ({ center, pos: center.clone().addScaledVector(front, d).addScaledVector(right, side * d).add(new T.Vector3(0, up * d, 0)) });
     const chest = P(ra).add(P(la)).multiplyScalar(0.5);
-    const views = [spot(P(head).add(new T.Vector3(0, H * 0.12, 0)), H * 1.1, 0.45, 0.15), spot(chest, H * 1.5, 0.3, 0.2), spot(P(rh), H * 0.9, 0.55, 0.3)];
+    const views = [spot(P(head).add(new T.Vector3(0, H * 0.25, 0)), H * 2.4, 0.4, 0.1), spot(chest, H * 3.2, 0.25, 0.15), spot(P(rh), H * 1.6, 0.5, 0.35)];
     const saved = { p: cam.position.clone(), q: cam.quaternion.clone() };
-    const out = document.createElement('canvas'); out.width = 1536; out.height = 512; const ctx = out.getContext('2d');
-    views.forEach(({ center, pos }, i) => {
-      cam.position.copy(pos); cam.lookAt(center); cam.updateMatrixWorld(true);
-      app.renderer.render();
-      const side = Math.min(canvas.width, canvas.height); ctx.drawImage(canvas, (canvas.width - side) / 2, (canvas.height - side) / 2, side, side, i * 512, 0, 512, 512);
-    });
+    const out = document.createElement('canvas'); const base = q.base === true; out.width = 1536; out.height = base ? 1024 : 512; const ctx = out.getContext('2d');
+    const meshes = root.userData.heroGearParts?.meshes || [];
+    // base 이면 두 번째 줄에 파츠를 숨긴 같은 시점(몸 원래 모습)을 찍어 무엇이 파츠이고 무엇이 몸인지 구분한다.
+    for (const row of base ? [0, 1] : [0]) {
+      for (const m of meshes) m.visible = row === 0;
+      views.forEach(({ center, pos }, i) => {
+        cam.position.copy(pos); cam.lookAt(center); cam.updateMatrixWorld(true);
+        app.renderer.render();
+        const side = Math.min(canvas.width, canvas.height); ctx.drawImage(canvas, (canvas.width - side) / 2, (canvas.height - side) / 2, side, side, i * 512, row * 512, 512, 512);
+      });
+    }
+    for (const m of meshes) m.visible = true;
     cam.position.copy(saved.p); cam.quaternion.copy(saved.q); cam.updateMatrixWorld(true);
     return out.toDataURL('image/png');
   };
@@ -149,16 +168,17 @@ try {
       await page.waitForFunction((h) => window.app.showcase?.def?.id === h, hero, { timeout: 60000 });
       rec.scenes.lobbyAttached = await waitParts(expect);
       await closePopups(); await settle();
-      const lobby = rec.scenes.lobby = { state: await page.evaluate(() => window.__gpQA.state()) };
+      const lobby = rec.scenes.lobby = { state: await page.evaluate(() => window.__gpQA.state()), measures: DEV ? await page.evaluate(() => window.__gpQA.measures()) : undefined };
       check('lobby', lobby.state);
-      for (const size of SIZES) {
+      for (const size of MEASURE ? [] : QUICK ? [SIZES[2]] : SIZES) {
         const file = `${id}_lobby_${size.width}x${size.height}.png`;
         await shot(size, file, () => window.app.renderer.render()); rec.shots.push(file);
       }
       lobby.stats = await page.evaluate(() => window.__gpQA.stats());
-      await page.setViewportSize(SIZES[2]); await page.waitForTimeout(300);
-      rec.shots.push(await saveDataUrl(await page.evaluate(() => window.__gpQA.closeup()), `${id}_lobby_zoom.png`));
+      if (!MEASURE) { await page.setViewportSize(SIZES[2]); await page.waitForTimeout(300);
+        rec.shots.push(await saveDataUrl(await page.evaluate((b) => { window.__gpQA.base = b; return window.__gpQA.closeup(); }, QUICK), `${id}_lobby_zoom.png`)); }
 
+      if (QUICK) { console.log(JSON.stringify({ case: id, lobby: lobby.state?.parts ?? null, body: lobby.state?.body, partList: lobby.state?.partList, measures: lobby.measures })); continue; }
       await page.setViewportSize(SIZES[0]);
       await page.evaluate(async (h) => { const a = window.app; a.ui.closeModal?.(); a.eco.s.energy = 9999; a.eco.s.selected = h; await a.startStage(a.eco.nextStage()); }, hero);
       await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle?.active && !window.app.stageStarting, null, { timeout: 90000 });

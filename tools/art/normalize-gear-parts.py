@@ -44,12 +44,15 @@ ROTATION = {
     'gauntlet_n': (-32.5, -3.5, -52.5), 'gauntlet_e': (-46, -9, -61), 'gauntlet_l': (-29.5, 25.5, -26.5),
 }
 # ── 크기·원점 규칙(회전 뒤 정점 기준, Blender 좌표). 런타임이 영웅마다 배율을 다시 맞추므로 여기선 "기준값 ref" 에 맞춘다. ──
-REF = {'helm': 0.2, 'pauldron': 0.18, 'gauntlet': 0.25}
-HELM_ORIGIN_Z = 0.22      # 투구 높이의 이 비율 = 머리 관절(아래 얼굴 보호판이 관절 아래로 내려온다)
+# 값은 실제 영웅 5명 몸의 슬롯 치수 중간값(투구 머리 관절→머리 꼭대기 약 0.55, 반 어깨폭 약 0.27, 아래팔 약 0.25)이다.
+# 처음 문서값(0.2·0.18)이면 배율이 2.5~3.6 이 돼 런타임 범위(0.3~3)를 넘어 투구가 빠졌다.
+REF = {'helm': 0.55, 'pauldron': 0.27, 'gauntlet': 0.25}
+HELM_ORIGIN_Z = 0.18      # 투구 높이의 이 비율 = 머리 관절(아래 얼굴 보호판이 관절 아래로 내려온다)
+HELM_FIT = 1.20          # 영웅 머리(머리카락 포함)가 투구 껍질을 뚫지 않게 투구를 ref 보다 이만큼 크게
 HELM_SHELL = 0.07         # 윗면 껍질 두께(투구 높이 비율): 안쪽 꼭대기 = 맨 위 - 껍질
 PAULDRON_WIDTH = 1.10     # 어깨 보호대 가로 폭 = ref x 이 값
 PAULDRON_ORIGIN_Z = 0.35  # 돔 꼭대기에서 아래로 이 비율(높이) = 위팔 관절
-GAUNTLET_LENGTH = 0.70    # 손목→손끝 = ref x 이 값
+GAUNTLET_LENGTH = 1.15    # 손목→손끝 = ref x 이 값
 GAUNTLET_WRIST = 0.20     # 소매 끝에서 손끝 쪽으로 가로 길이의 이 비율 = 손목
 
 
@@ -112,7 +115,7 @@ def frame(slot, grade, v):
         cy = (lo[1] + hi[1]) / 2
         origin = np.array([cx, cy, lo[2] + HELM_ORIGIN_Z * height])
         inner_top = hi[2] - HELM_SHELL * height
-        scale = REF['helm'] / (inner_top - origin[2])
+        scale = REF['helm'] * HELM_FIT / (inner_top - origin[2])
         return origin, scale, {'innerTopAbove': REF['helm']}
     if slot == 'pauldron':
         top = v[np.argmax(v[:, 2])]
@@ -288,6 +291,8 @@ def main():
         with open(args.data, encoding='utf-8') as f:
             data = json.load(f)
         data['sets'] = [{'id': r['id'], 'path': f"/models/gear-parts/{r['id']}.glb", 'parts': list(SLOTS), 'triangles': r['triangles'], 'sha256': r['sha256']} for r in reports]
+        for slot in SLOTS:
+            data['slots'][slot]['ref'] = REF[slot]
         data['grades'] = {'N': None, 'S': 'parts_n', 'E': 'parts_e', 'U': 'parts_e', 'L': 'parts_l'}
         with open(args.data, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)

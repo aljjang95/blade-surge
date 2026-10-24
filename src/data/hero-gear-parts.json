@@ -2,10 +2,10 @@
   "schema": "blade-surge.hero-gear-parts.v1",
   "slots": {
     "helm": {
-      "ref": 0.2
+      "ref": 0.55
     },
     "pauldron": {
-      "ref": 0.18
+      "ref": 0.27
     },
     "gauntlet": {
       "ref": 0.25
@@ -46,7 +46,7 @@
         "gauntlet"
       ],
       "triangles": 4400,
-      "sha256": "3814f1e65d272e74dacfac03fc93a071305f7dceb85dbb4ae7761ec29ef9ac69"
+      "sha256": "dd8a15f25f372b4d06177d658eedc189db94d95dd41c2cd7d01efc83911a9c59"
     },
     {
       "id": "parts_e",
@@ -57,7 +57,7 @@
         "gauntlet"
       ],
       "triangles": 4400,
-      "sha256": "e117afc50ffad3ea26578a61ae8bf354dbca2f352cb75b3381db36801d6c02b9"
+      "sha256": "39ec3ba1a52f2752b91c89ec64e078b588c54ad42780e60deb3f917898f3ba94"
     },
     {
       "id": "parts_l",
@@ -68,9 +68,25 @@
         "gauntlet"
       ],
       "triangles": 4399,
-      "sha256": "f4a30abeef67d2884507beee7e99f56fcb0cac36be7e31d93330b5abe577fe2e"
+      "sha256": "e98b8c065e498dfbb4c6f9ed6a5a3cd4137556e466f54b2d417e52789e785278"
     }
   ],
   "items": {},
-  "bodyCovers": {}
+  "bodyCovers": {
+    "hero_mage_t1": [
+      "helm"
+    ],
+    "hero_mage_t1s": [
+      "helm"
+    ],
+    "hero_mage_t2": [
+      "helm"
+    ],
+    "hero_mage_t2u": [
+      "helm"
+    ],
+    "hero_mage_t3": [
+      "helm"
+    ]
+  }
 }
