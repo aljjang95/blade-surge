@@ -263,7 +263,7 @@ b { font-weight: 900; }
 button.loot-item { font-family: inherit; cursor: pointer; }
 
 /* gacha — 시안 A(옥좌의 문): 왼쪽 세로 배너 탭 · 가운데 픽업 · 오른쪽 아래 천장 바와 소환 버튼 */
-.gacha-wrap { position: absolute; left: 0; right: 0; top: calc(64px + var(--sat)); bottom: calc(64px + var(--sab)); display: grid; grid-template-columns: clamp(118px, 19%, 172px) minmax(0, 1fr) clamp(240px, 36%, 340px); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 6px; padding: 8px 12px; overflow: hidden; background: radial-gradient(ellipse at 50% 20%, rgba(80,30,140,.6), transparent 60%); }
+.gacha-wrap { position: absolute; left: 0; right: 0; top: calc(64px + var(--sat)); bottom: calc(64px + var(--sab)); display: grid; grid-template-columns: clamp(118px, 19%, 172px) minmax(0, 1fr) clamp(240px, 36%, 340px); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 8px; padding: 8px 12px; overflow: hidden; background: radial-gradient(ellipse at 50% 20%, rgba(80,30,140,.6), transparent 60%); }
 .oath-visual #tab-gacha .gacha-wrap { inset: 0; }
 .gacha-banner { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #150d26; }
 .gacha-banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,5,20,.82) 0, transparent 28%, transparent 62%, rgba(10,5,20,.78) 100%), linear-gradient(0deg, rgba(10,5,20,.85), transparent 38%); }
@@ -317,8 +317,12 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .gacha-foot .link { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; }
 .gacha-foot .link i { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; align-items: center; justify-content: center; font-style: normal; font-weight: 900; background: rgba(255,255,255,.18); }
 .gacha-odds { grid-column: 3; grid-row: 2; margin: 0; font-size: 10px; line-height: 1.3; text-align: center; color: #cfc6e6; }
-.gacha-pace { grid-column: 1 / -1; grid-row: 3; }
-.gacha-wrap[data-banner="gear"] .banner-art img { object-fit: contain; object-position: center; }
+/* 치비 배너(16:9, 캐릭터는 가운데 40% 띠): 가로 화면은 좌우를 꽉 채우고, 세로 화면은 가운데를 잘라 얼굴·무기를 남긴다. */
+.banner-art[data-art="chibi"] img { object-fit: cover; object-position: 50% 45%; }
+/* 장비 배너: 정사각 아이콘은 가운데에 크게 두고, 같은 이미지를 흐리게 키운 배경과 세트 빛 장식으로 좌우 빈자리를 채운다. */
+.gacha-wrap[data-banner="gear"] .banner-art img { position: absolute; left: 50%; top: 0; width: auto; max-width: none; height: 100%; aspect-ratio: 1; transform: translateX(-50%); object-fit: contain; object-position: center; -webkit-mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); }
+.gacha-wrap[data-banner="gear"] .banner-art::before { content: ''; position: absolute; inset: -12%; background: var(--banner-bg) center / cover no-repeat; filter: blur(28px) saturate(1.6) brightness(1.15); }
+.gacha-wrap[data-banner="gear"] .banner-art::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(255, 226, 140, .38), transparent 60%); pointer-events: none; }
 .gz-rates-foot { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
 @media (max-height: 340px) { /* 높이 360 이하 가로 */
   .gacha-wrap { row-gap: 3px; padding: 5px 10px; }
@@ -345,7 +349,6 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .gz-panel { grid-column: 1; grid-row: 3; }
   .gacha-foot { grid-column: 1; grid-row: 4; }
   .gacha-odds { grid-column: 1; grid-row: 5; }
-  .gacha-pace { grid-column: 1; grid-row: 6; }
 }
 
 /* shop */
@@ -1142,3 +1145,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .cust-row span { flex: 0 0 52px; color: var(--muted); }
 .cust-row input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; font-size: 16px; color: inherit; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 10px; }
 @media (max-height: 460px) { .modal-box:has(.cust-row) { max-height: 100dvh; padding-bottom: 40vh; } }
+/* 세로 화면 장비 배너: 정사각 아이콘이 폭에 맞게 들어오도록 폭 기준으로 둔다. */
+@media (max-width: 600px) {
+  .gacha-wrap[data-banner="gear"] .banner-art img { width: 100%; height: auto; top: 38%; transform: translate(-50%, -50%); }
+}
