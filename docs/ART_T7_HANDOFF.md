@@ -1,5 +1,7 @@
 # 아트 t7 인계 (2026-10-25, gogo-chunk:blade-art-t7)
 
+운영 배포: `7517d86`(#289). PC 깨끗한 워크트리 `node tools/deploy.mjs --auth=wrangler`, deployment `dc03fcda…`, version `13267041…`, readback `version-verified`(2026-10-24T17:14Z). 첫 시도는 다른 배포가 잠금을 쥐고 있어 거절됐고, 잠금이 풀린 뒤 같은 명령으로 성공. 운영 `version.json` sha 7517d86, 첫 화면 360·390·1280 콘솔 오류 0.
+
 ## 끝난 것
 | 항목 | 결과(측정은 `tools/art/measure-hem.mjs`, 실제 게임 경로) |
 |---|---|
