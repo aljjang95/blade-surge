@@ -13,6 +13,7 @@ import { chromium } from 'playwright';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { launchOpts } from '../chrome.mjs';
 
 const args = process.argv.slice(2);
@@ -36,7 +37,7 @@ const QUICK = args.includes('--quick') || MEASURE, DEV = args.includes('--dev');
 if (!outArg || HEROES.some((h) => !['knight', 'barbarian', 'mage', 'ranger', 'rogue'].includes(h)) || CASE_IDS.some((c) => !CASES[c])) {
   console.error('사용: node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,...] [--cases N,S,E,U1,U2,L] [--poses] [--quick] [--dev] [--dist dist]'); process.exit(2);
 }
-const PROJ = resolve(decodeURIComponent(new URL('../..', import.meta.url).pathname));
+const PROJ = fileURLToPath(new URL('../..', import.meta.url));   // Windows 경로(C:\...)도 맞게
 const OUT = resolve(outArg), DIST = resolve(PROJ, flag('--dist', 'dist')), PORT = 4297 + Math.floor(Math.random() * 400);
 const SIZES = [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1280, height: 800 }];
 mkdirSync(OUT, { recursive: true });
@@ -59,7 +60,8 @@ function installHelpers() {
     try {
       const mod = await import('/src/engine/hero-gear-parts.js'), root = rootOf(); let skin = null;
       root.traverse((o) => { if (!skin && o.isSkinnedMesh && o.userData.libraryBody) skin = o; });
-      const ref = { headTop: 0.2, shoulderSpan: 0.18, forearm: 0.25 };
+      const slots = (await import('/src/data/hero-gear-parts.json')).default.slots;   // 현행 기준값(slots.ref)
+      const ref = { headTop: slots.helm.ref, shoulderSpan: slots.pauldron.ref, forearm: slots.gauntlet.ref };
       return Object.fromEntries(Object.entries(ref).map(([k, r]) => { const m = mod.heroSlotMeasure(skin, k); return [k, m && { measure: +m.toFixed(4), scale: +(m / r).toFixed(3) }]; }));
     } catch { return null; }
   };
@@ -67,7 +69,7 @@ function installHelpers() {
     const root = rootOf(); if (!root) return null;
     const st = root.userData.heroGearParts || null;
     return { mode: app.mode, hero: root.userData.heroId ?? app.showcase?.def?.id ?? null, body: root.userData.libraryBodyAssetId ?? null,
-      parts: st?.pick?.set?.id ?? null, partList: st?.pick?.parts ?? null, target: root.userData.gearPartsTarget ?? null,
+      parts: st?.pick?.set?.id ?? null, key: st?.key ?? null, partList: st?.pick?.parts ?? null, target: root.userData.gearPartsTarget ?? null,
       meshes: st ? st.meshes.map((m) => ({ name: m.name, vertices: m.geometry.attributes.position.count, triangles: (m.geometry.index?.count ?? 0) / 3, parent: m.parent?.name })) : [] };
   };
   // 드로우콜·삼각형: 같은 프레임에서 파츠 메시를 숨겼다 보였다 하며 renderer.info 를 읽는다.
@@ -130,7 +132,8 @@ try {
   const closePopups = async () => { const stop = page.getByRole('button', { name: '그만 보기' }).first(); if (await stop.isVisible().catch(() => false)) await stop.click().catch(() => {}); for (let i = 0; i < 4; i++) { const c = page.getByRole('button', { name: '닫기' }).first(); if (await c.isVisible().catch(() => false)) { await c.click().catch(() => {}); await page.waitForTimeout(250); } } await page.evaluate(() => window.app.ui?.closeModal?.()).catch(() => {}); };
   const settle = async (frames = 60) => { await page.waitForTimeout(400); await page.evaluate((n) => { for (let i = 0; i < n; i++) window.app.step?.(1 / 60, false); window.app.renderer.render(); }, frames).catch(() => {}); await page.waitForTimeout(150); };
   const saveDataUrl = async (url, file) => { if (!url) return null; writeFileSync(`${OUT}/${file}`, Buffer.from(url.split(',')[1], 'base64')); return file; };
-  const waitParts = (expected) => page.waitForFunction((id) => { const s = window.__gpQA.state(); return s && (s.parts ?? null) === id && (id === null || s.target === id); }, expected, { timeout: 60000 }).then(() => true, () => false);
+  // target 은 복합 키(세트|파츠|등급|테마)라 세트 id 가 아니라 부착 상태의 key 와 비교한다.
+  const waitParts = (expected) => page.waitForFunction((id) => { const s = window.__gpQA.state(); return s && (s.parts ?? null) === id && (id === null || s.target === s.key); }, expected, { timeout: 60000 }).then(() => true, () => false);
   const shot = async (size, file, fn) => {
     await page.setViewportSize(size); await page.waitForTimeout(500);
     if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').click().catch(() => {});
