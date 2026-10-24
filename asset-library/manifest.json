@@ -1626,8 +1626,8 @@
       "file": "/models/library/avatar_barbarian_werewolf.glb",
       "heightM": 1.8,
       "triangles": 10875,
-      "bytes": 2273840,
-      "sha256": "84c526d2ecd171822c09c2472d20a1d812905abcb2c2b60ce76944b196f3c1a5",
+      "bytes": 2292956,
+      "sha256": "7bead11685f8f28f72e0ba4a2b3f9f48c9b0e9277d7180b7407ab3a657da0a88",
       "clips": {},
       "provenance": {
         "tool": "Tripo Studio H3.1 + Blender 5.2 (blender_clean_weights.py --decor-hue 0-360 --decor-sat 0 --decor-val 0 --braid-hue 300-301 --head-min 0.6 --smooth-cape 8) + rebind-library-body.mjs --no-clips --scale=fit --lift=0.018 --collapse=(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)",
