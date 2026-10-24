@@ -31,7 +31,7 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     const q = new CommandQueue(eco, client, { authority: () => authority, adopt: () => { throw new Error('shadow never adopts'); } });
     expect(eco.claimMail(1)).toBeTruthy();
     eco.addItem('N'); q.snapshot(); eco.equip('knight', eco.s.inventory[0].uid);
-    eco.s.selected = 'ranger'; eco.emit();
+    expect(eco.chooseStarter('ranger').ok).toBe(true); // 시작 영웅 선택도 /cmd 로 가고, 선택 변화가 selectHero 를 따로 보내지 않는다
     eco.claimMail(1); // 실패한 명령은 보내지 않는다
     await settle(q);
     expect(q.stats).toEqual({ sent: 4, matched: 4, mismatched: 0, rejected: 0 });

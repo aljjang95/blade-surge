@@ -32,6 +32,7 @@ export class CommandQueue {
       let result;
       try { result = original.apply(eco, args); }
       finally { this.depth--; }
+      if (outer) this.lastSelected = eco.s.selected;
       // 다른 명령 안에서 불린 호출과 서버 문서 적용 중의 호출은 보내지 않는다.
       // 반환값이 없는 기존 메서드(equip·unequip)는 상태가 바뀌었을 때만 성공으로 본다.
       const ok = result === undefined ? before !== parityHash(eco.s) : OPS[op].ok(result);
@@ -40,7 +41,8 @@ export class CommandQueue {
     };
   }
   watchSelection() {
-    if (this.suspended || this.eco.s.selected === this.lastSelected) return;
+    // 감싼 명령 안에서 바뀐 선택(chooseStarter)은 그 명령이 서버에서 같이 바꾼다. 따로 selectHero 를 보내지 않는다.
+    if (this.suspended || this.depth > 0 || this.eco.s.selected === this.lastSelected) return;
     this.lastSelected = this.eco.s.selected;
     this.push('selectHero', [this.lastSelected]);
   }
