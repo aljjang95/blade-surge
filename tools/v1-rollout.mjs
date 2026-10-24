@@ -182,7 +182,7 @@ export const STAGES = Object.freeze([
       ]),
       section('3. 되돌리기 SQL(집행: 사람이, 계정 목록을 <ids>에 채운 뒤. 이 도구는 실행하지 않는다)', [
         cmd('권위 복귀', d1(`UPDATE accounts SET authority = 'shadow' WHERE authority = 'server' AND account_id IN (<ids>)`), '쓰기. 전체 되돌림이면 account_id 조건 대신 `AND shard < <되돌릴 퍼센트>`를 쓴다. 먼저 SELECT COUNT(*)로 대상 수를 확인.'),
-        cmd('가져오기 기록 복원 표시', d1(`UPDATE legacy_saves SET status = 'restored' WHERE status IN ('imported') AND account_id IN (<ids>)`), '쓰기. 원문 doc은 그대로 보존된다(지원 복구용). 로컬 세이브는 서버가 지운 적이 없다.'),
+        cmd('가져오기 기록을 그림자로 되돌림', d1(`UPDATE legacy_saves SET status = 'shadow' WHERE status IN ('imported') AND account_id IN (<ids>)`), '쓰기. restored가 아니라 shadow로 둬서 그림자 동기화(/shadow/snapshot)가 계속 돈다. 원문 doc은 보존된다.'),
       ]),
     ],
     pass: ['대상 계정의 authority가 shadow, 신규 server 계정 증가 0.'],

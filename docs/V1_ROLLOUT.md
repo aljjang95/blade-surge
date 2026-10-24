@@ -176,14 +176,14 @@ npx wrangler d1 execute <DB> --remote --command "<SQL>"
 3. **운영자 SQL(사람이, `<ids>`를 채운 뒤. 먼저 `SELECT COUNT(*)`로 대상 수 확인)**:
    ```sql
    UPDATE accounts SET authority = 'shadow' WHERE authority = 'server' AND account_id IN (<ids>);
-   UPDATE legacy_saves SET status = 'restored' WHERE status = 'imported' AND account_id IN (<ids>);
+   UPDATE legacy_saves SET status = 'shadow' WHERE status = 'imported' AND account_id IN (<ids>);
    ```
    전체 되돌림이면 `account_id IN (...)` 대신 `shard < <되돌릴 퍼센트>`(예: 5% 코호트 `shard < 5`). 이 도구는 이 SQL을 **실행하지 않는다**(출력만).
 
 ### 6.3 영향(정직하게)
 
 - 서버 문서(`account_docs`)와 원장은 그대로 남는다. 되돌린 계정의 클라이언트는 다시 **로컬이 정본**이 되므로 server 기간에 서버에서만 쌓인 진행(명령·정산·소환 결과)은 로컬에 없을 수 있다. 서버 기간이 짧을수록(5%/1~2일) 손실이 작다 -> 큰 퍼센트로 올리기 전에 롤백 훈련으로 클라이언트 동작을 실기기에서 확인한다.
-- `legacy_saves`의 원문 `doc`은 보존된다(지원 복구용). 로컬 세이브는 서버가 지운 적이 없다(import.ts 주석). `status='restored'`가 되면 `shadowSnapshot`은 `import-required`(409)로 거절하고 `importLegacy`도 `already-imported`라서 **그 계정의 그림자 동기화는 멈춘다**(로컬 정본으로만 돈다). 그림자 동기화를 이어가야 하면 `restored` 대신 `shadow`로 두는 것을 검토한다(정책 판단, 대표님 확인).
+- `legacy_saves`의 원문 `doc`은 보존된다(지원 복구용). 로컬 세이브는 서버가 지운 적이 없다(import.ts 주석). 상태는 `restored`가 아니라 `shadow`로 되돌린다(결정 2026-10-25): `restored`면 `shadowSnapshot`이 `import-required`(409)로 거절해 그 계정의 그림자 동기화가 멈추기 때문이다. `shadow`면 계정이 다시 그림자 계정과 같은 상태가 되어 동기화가 이어지고, 퍼센트를 다시 올릴 때 그대로 컷오버된다(기존 이용자 보상은 원장 `legacy-comp`로 이미 받았으면 다시 주지 않는다). MMO_DESIGN M2의 `restored` 표기는 이 결정으로 대체한다.
 - 결제로 지급된 재화·권한(`iap_*`)은 서버 기록이라 권위와 무관하게 유지된다.
 - 되돌린 계정이 다음에 `percent`가 다시 오르면 같은 shard 규칙으로 다시 server가 된다(5% 코호트는 항상 같은 계정들).
 - D1 Time Travel 전체 복원은 마지막 수단이다(3장 5번): 컷오버 이후 모든 계정의 모든 쓰기가 되돌려진다.

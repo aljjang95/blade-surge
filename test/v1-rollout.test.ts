@@ -52,7 +52,7 @@ test('컷오버 단계는 wrangler.jsonc 수정 -> deploy.mjs 배포를 안내�
 test('롤백은 신규 컷오버 중지(percent 0) 다음에 SQL 순서이고 shadow 복귀를 적는다', () => {
   const text = renderStage(STAGES.find((x: any) => x.id === 'rollback')!);
   expect(text.indexOf('"V1_SERVER_AUTHORITY_PERCENT": "0"')).toBeLessThan(text.indexOf("SET authority = 'shadow'"));
-  expect(text).toContain("status = 'restored'");
+  expect(text).toContain("SET status = 'shadow'");
 });
 
 test('기대 표 목록이 마이그레이션 파일(0001~0004)과 같고 문서에도 있다', () => {
