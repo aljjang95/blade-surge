@@ -248,7 +248,7 @@ test('캐릭터 해제 시 부츠 지오메트리는 dispose 되고 공유 몸 �
 
 test('E 부착 중 L 요청 후 L 로드 전에 E 로 되돌리면 늦게 온 L 이 E 를 교체하지 않는다', async () => {
   const { root } = hero(); const releases: Record<string, (v: any) => void> = {};
-  const load = (path: string) => (path.includes('boots_l') ? new Promise((r) => { releases.l = r; }) : Promise.resolve(bootsScene()));
+  const load = (path: string): Promise<any> => (path.includes('boots_l') ? new Promise((r) => { releases.l = r; }) : Promise.resolve(bootsScene()));
   const options = { data: full(), load };
   syncHeroBoots(root, { rarity: 'E' }, options); await tick();
   expect(root.userData.heroBoots.entry.id).toBe('boots_e');
