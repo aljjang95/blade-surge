@@ -77,7 +77,7 @@ describe('(a) 픽업 실패 뒤 다음 SSR은 반드시 픽업', () => {
     // 균등: 시드 고정 대량에서 SSR 영웅 둘이 모두 나오고 편차가 작다.
     const e2 = mk({ gachaSeed: 7 }), n = 4000, cnt: Record<string, number> = {};
     for (let i = 0; i < n; i++) { const id = e2.rollResult('SSR', { banner: GACHA_BANNERS.beginner, featured: null }).id; cnt[id] = (cnt[id] || 0) + 1; }
-    const ssrIds = HERO_ORDER.filter((id) => HEROES[id].rarity === 'SSR');
+    const ssrIds = HERO_ORDER.filter((id) => (HEROES as any)[id].rarity === 'SSR');
     for (const id of ssrIds) expect(Math.abs((cnt[id] || 0) / n - 1 / ssrIds.length)).toBeLessThan(0.03);
   });
 });
