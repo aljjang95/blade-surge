@@ -137,7 +137,8 @@
 
 - 후보 3개는 서로 다른 각인 id다(같은 굴림 안 중복 없음).
 - 후보마다 등급: **I 70% · II 25% · III 5%**. 가문은 각 25%, 가문 안 3종은 균등(각인 1종당 1/12).
-- 한 굴림에서 III이 하나 이상 나올 확률 = 1 − 0.95³ ≈ **14.3%**.
+- 한 굴림에서 III이 하나 이상 나올 기본 확률 = 1 − 0.95³ ≈ **14.3%**(천장 제외).
+- 천장 포함 실효 확률(고정 시드 200만 회 모의 기준, 구현 후 같은 방식으로 재계산해 확정): III 후보 비율 약 **6.2~6.3%**, 굴림당 III 1개 이상 약 **17.9%**. 공개 시트는 기본 확률과 천장 포함 실효 확률을 둘 다 적는다.
 - **천장**: III 없이 10번 굴리면 다음(11번째) 굴림의 후보 1개는 III 확정. 무료·부적·보석 굴림을 모두 센다. III이 나오면 0으로 돌아간다. 화면에 "III 보장까지 n회".
 - 보장 굴림의 III 후보도 각인 종류는 균등(1/12).
 - 공개: 준비 창의 `확률 보기` 시트에 위 숫자 전부, 각인 12종 각각의 등급별 확률(I 5.83% · II 2.08% · III 0.42%, 후보 1칸 기준), 천장 규칙, "보석 사용 시 무료·유료 보석 구분 없이 차감" 문구. 상점 페이지와 웹 공지에도 같은 표.
@@ -188,7 +189,7 @@
 | R1 룬 데이터·규칙(Sonnet) | `src/data/runes.js`(신규), `src/game/rune-core.js`(신규), `test/rune-core.test.*` | 룬 정의(BOONS 재사용), 소켓 수, 합성, 회수 비용, 중복 상한, 공명 계산(전운 1개 포함) — 순수 함수 | 단위 테스트, `bun run check` |
 | R2 룬 저장·경제(Sonnet) | `src/game/economy.js`의 장비 인스턴스(`sockets`)·`enhance`/판매/분해 경로, `src/game/save.js` 마이그레이션, `src/data/loot-tables.js`·`shared/settlement.js` 룬 열 | 소켓 저장, 파괴·판매 시 회수, 드랍·가루, 장비 능력치 합산에 룬 효과 | 단위 + `sim:90d` 곡선 |
 | R3 룬 화면(Sonnet) | `src/ui/gear-panel.js`(룬 소켓 탭), `src/ui/rune-*.js/.css`(신규), 공방 탭(`town-content.js` forge 탭에 룬 합성 칸만) | 설계도 `rune-socket-tab`·`rune-bag`·`rune-resonance` 화면 | Playwright 844×390·800×360 캡처 + `blueprint shot` |
-| R4 전운 규칙·경제(Sonnet) | `src/game/blessing-core.js`(신규), `src/data/blessing.js`(신규, 가격·확률·천장), economy의 보석 차감·부적 | 굴림·천장·보관·소모·일일 상한·확률표 생성 | 확률 분포 테스트(10만 회), 천장 테스트 |
+| R4 전운 규칙·경제(Sonnet) | `src/game/blessing-core.js`(신규), `src/data/blessing.js`(신규, 가격·확률·천장), economy의 보석 차감·부적 | 굴림·천장·보관·소모·일일 상한·확률표 생성 | 확률 분포 테스트(10만 회, 천장 끔), 천장 보장·실효 확률 테스트(천장 켬) |
 | R5 전운 화면·연출(Opus — 게임 손맛 레인) | `src/ui/citadel-hub.js`(전운 칸 1곳), `src/ui/blessing-reel.js/.css`(신규), 오디오 큐 | 릴 연출 2.4s·건너뛰기·진동·확률 시트, `preRunBoons` 전달 | 실제 터치 Playwright, 영상 캡처 |
 | R6 SFX(PC) | `public/audio/blessing/*` | Mirelo로 회전·멈춤·III 종소리 | 대표님 청취 |
 
