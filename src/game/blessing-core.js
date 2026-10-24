@@ -206,9 +206,12 @@ export function oddsTable() {
   return {
     candidates: BLESSING_CANDIDATES,
     grades: BLESSING_GRADE_RATES.map(g => ({ grade: g.grade, label: g.label, rate: g.rate, text: pctText(g.rate, 0) })),
-    families: families.map(f => ({ family: f, boonIds: BOONS.filter(b => b.family === f).map(b => b.id),
-      rate: BOONS.filter(b => b.family === f).length / kinds,
-      grades: BLESSING_GRADE_RATES.map(g => ({ grade: g.grade, label: g.label, rate: g.rate / kinds, text: pctText(g.rate / kinds) })) })),
+    // 가문 행은 그 가문 각인 전체를 합친 확률이다(예: 잿불 I = 0.25 × 0.70 = 17.5%). 등급 합이 가문 rate와 같다.
+    families: families.map(f => {
+      const share = BOONS.filter(b => b.family === f).length / kinds;
+      return { family: f, boonIds: BOONS.filter(b => b.family === f).map(b => b.id), rate: share,
+        grades: BLESSING_GRADE_RATES.map(g => ({ grade: g.grade, label: g.label, rate: g.rate * share, text: pctText(g.rate * share) })) };
+    }),
     perBoon,
     baseAtLeastOneIII: { rate: 1 - noIII, text: pctText(1 - noIII, 1) },
     effective: {
