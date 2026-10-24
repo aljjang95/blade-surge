@@ -14,6 +14,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, rotationWindow } from '../data/gacha-banners.js';
+import { heroBannerArt, beginnerBannerArt } from '../data/banner-art.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
@@ -35,7 +36,6 @@ import { heroGrade } from '../data/hero-grades.js';
 import { heroCompare } from '../data/hero-traits.js';
 import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
-import { paceShort } from './pace-short.js';
 import { campaignTown } from '../data/campaign-towns.js';
 import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
@@ -189,7 +189,7 @@ export class Meta {
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     this.refreshMenuBadge();
-    this.refreshGachaOdds(); this.refreshGachaPace();
+    this.refreshGachaOdds();
     // 홈 프로모션 버튼은 부트 때 결제가 없으면 DOM에서 치워진다(나중에 결제가 연결돼도 상점 탭으로만 판매).
     const promoStarter = $('promo-starter'), promoMonthly = $('promo-monthly');
     if (this.billingOn()) {
@@ -446,12 +446,6 @@ export class Meta {
   /** 로컬 퍼널 기록. 계측 실패가 화면 흐름을 막지 않는다. */
   trackFunnel(name, payload) { try { return funnelFor(this.app).track(name, payload); } catch { return { ok: false, reason: 'unavailable' }; } }
   /** 배너·하단 카운터를 실제 확률식으로 채운다. s.pity는 마지막 SSR 이후 누적 횟수라 다음 소환 순번은 s.pity + 1이다. */
-  /** SSR 확정권 1장이 초월 일수를 며칠 줄이는지(economy-pace). 없으면 줄을 숨긴다. */
-  refreshGachaPace() {
-    const pace = paceShort('ssrTicket'), line = $('gacha-pace'), tag = $('pace-ssr');
-    if (line) { line.hidden = !pace; line.textContent = pace ? 'SSR 확정권 1장 · ' + pace.text + ' (' + pace.saved + ') · ' + pace.basis : ''; if (pace) line.title = pace.full; }
-    if (tag) { tag.hidden = !pace; tag.textContent = pace ? pace.saved + ' 단축' : ''; }
-  }
   refreshGachaOdds() { this.renderGacha(); }
   /** 소환 탭 전체를 현재 배너(영웅·장비·초보자)로 다시 그린다. 숫자는 배너 표·견적 함수 값만 쓴다. */
   renderGacha() {
@@ -470,11 +464,13 @@ export class Meta {
       if (img && thumb[bid] && img.getAttribute('src') !== thumb[bid]) img.setAttribute('src', thumb[bid]);
     });
     // 중앙: 픽업 이름·일러스트·남은 시간
-    const art = $('banner-art'); let artSrc, title, kicker;
-    if (id === 'hero') { const h = HEROES[pick]; artSrc = pick === 'barbarian' ? '/img/banner_featured.webp' : (h?.portrait || '/img/banner_featured.webp'); title = h?.name || '픽업 영웅'; kicker = '픽업 소환 · 확률 UP'; }
+    const art = $('banner-art'); let artSrc, title, kicker, artKind = 'fallback';
+    if (id === 'hero') { const h = HEROES[pick], ba = heroBannerArt(pick, h?.portrait); artSrc = ba.src; artKind = ba.kind; title = h?.name || '픽업 영웅'; kicker = '픽업 소환 · 확률 UP'; }
     else if (id === 'gear') { artSrc = SETS[pick]?.icon || '/img/set_dragon.webp'; title = SETS[pick]?.name || '장비 소환'; kicker = '픽업 세트 · 확률 UP'; }
-    else { artSrc = HEROES.knight?.portrait || '/img/banner_featured.webp'; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
-    if (art.getAttribute('src') !== artSrc) { art.setAttribute('src', artSrc); art.onerror = () => { art.onerror = null; art.setAttribute('src', HEROES[bannerPickup('hero', now)]?.portrait || ''); }; }
+    else { const ba = beginnerBannerArt(HEROES.knight?.portrait); artSrc = ba.src; artKind = ba.kind; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
+    wrap.style.setProperty('--banner-bg', 'url("' + artSrc + '")');
+    art.parentElement?.setAttribute('data-art', id === 'gear' ? 'icon' : artKind); art.setAttribute('data-art', id === 'gear' ? 'icon' : artKind);
+    if (art.getAttribute('src') !== artSrc) { art.setAttribute('src', artSrc); art.onerror = () => { art.onerror = null; art.dataset.art = 'fallback'; art.parentElement?.setAttribute('data-art', 'fallback'); art.setAttribute('src', HEROES[bannerPickup('hero', now)]?.portrait || ''); }; }
     set($('banner-title'), title); set($('banner-kicker'), kicker); $('banner-timer-wrap').hidden = id === 'beginner';
     const gear = $('gz-gear'), feat = id === 'gear' ? gachaContents('gear', now).filter((x) => x.featured && x.kind === 'gear') : [];
     gear.hidden = !feat.length; gear.innerHTML = feat.map((x) => { const it = ITEM_BY_ID[x.id]; return `<span title="${esc(it.name)}"><img src="${esc(itemVisual(it, { heroId: s.selected }).iconUrl)}" alt="${esc(it.name)}" onerror="this.remove()"></span>`; }).join('');
@@ -667,8 +663,6 @@ export class Meta {
       d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
-      const pace = paceShort(sku.id);
-      if (pace) { const line = document.createElement('div'); line.className = 'si-pace'; line.title = pace.full; line.setAttribute('aria-label', pace.full); line.innerHTML = '<b>' + pace.text + '</b> <em>' + pace.saved + '</em><small>' + pace.basis + '</small>'; (d.querySelector('.si-flow') || d.querySelector('.si-name')).after(line); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
       // 진행도 잠금: 버튼은 막고 언제 열리는지 보여 준다(shop-gates.js).
       const gate = sku.kind === 'gem' ? skuGate(sku, s) : null;
