@@ -78,8 +78,6 @@ export const STARTER_PROPS = Object.freeze([
   { id: 'rack:weapons', kind: 'rack', x: 5.2, z: -2.9, yaw: 0 },
   ...[-1, 1].flatMap(xSide => [-1, 1].map(zSide => ({ id: `lamp:${xSide}:${zSide}`, kind: 'lamp',
     x: xSide * 11.4, z: zSide * 11.2, yaw: 0, asset: `${CITADEL_HUB_ASSET_ROOT}lamp.glb` }))),
-  { id: 'lamp:path:w', kind: 'lamp', x: -1.6, z: -6.6, yaw: 0, asset: `${CITADEL_HUB_ASSET_ROOT}lamp.glb` },
-  { id: 'lamp:path:e', kind: 'lamp', x: 1.6, z: -6.6, yaw: 0, asset: `${CITADEL_HUB_ASSET_ROOT}lamp.glb` },
   { id: 'bench:fountain', kind: 'bench', x: 3.9, z: -4.4, yaw: -.5, asset: `${CITADEL_HUB_ASSET_ROOT}bench.glb` },
   { id: 'planter:entry:w', kind: 'planter', x: -4.6, z: 8.8, yaw: 0, asset: `${CITADEL_HUB_ASSET_ROOT}planter.glb` },
   { id: 'planter:entry:e', kind: 'planter', x: 4.6, z: 8.8, yaw: 0, asset: `${CITADEL_HUB_ASSET_ROOT}planter.glb` },
@@ -113,6 +111,7 @@ export function starterBlockers(hotspots, props = STARTER_PROPS) {
   for (const dummy of STARTER_DUMMIES) blockers.push({ type: 'circle', x: dummy.x, z: dummy.z, radius: .38 });
   for (const [x, z, w, d] of STARTER_BEDS) blockers.push({ type: 'circle', x, z, radius: Math.hypot(w, d) / 2 * .85 });
   for (const [, x, z, radius] of STARTER_CLUTTER) blockers.push({ type: 'circle', x, z, radius });
+  for (const [x, z] of STARTER_LANTERNS) blockers.push({ type: 'circle', x, z, radius: .14 });
   // 훈련장 울타리: 말뚝 원호를 작은 원 여러 개로 막는다(동쪽 입구는 비움).
   const yard = STARTER_ZONES.training;
   for (let a = STARTER_FENCE_ARC.from; a <= STARTER_FENCE_ARC.to + 1e-6; a += .2) blockers.push({ type: 'circle', x: yard.x + Math.cos(a) * (yard.radius + .1), z: yard.z + Math.sin(a) * (yard.radius + .1), radius: .16 });
@@ -122,9 +121,11 @@ export function starterBlockers(hotspots, props = STARTER_PROPS) {
 /** 꽃밭 [x, z, 폭, 깊이, yaw] — 장면이 그리고 충돌은 회전을 무시한 외접 원으로 막는다. */
 export const STARTER_BEDS = Object.freeze([
   [-4.3, 9.9, 2.6, .9, 0], [4.3, 9.9, 2.6, .9, 0], [-4.1, 4.4, 1.8, .8, .3],
-  ...[.25, .75, 1.25, 1.75].map(t => [Math.cos(Math.PI * t) * 3.85, -1.4 + Math.sin(Math.PI * t) * 3.85, 1.6, .7, -Math.PI * t + Math.PI / 2]),
-  [-2.6, -7.6, 1.6, .8, 0], [2.6, -7.6, 1.6, .8, 0], [-6.2, -5.6, 1.8, .8, .4],
+  // 분수 둘레에는 꽃밭을 두지 않는다(분수를 돌아 걷는 둥근 길과 동서 가지 길을 막지 않게, 실제 터치 QA 2026-10-24).
+  [-4.4, -7.9, 1.6, .8, 0], [4.4, -7.9, 1.6, .8, 0], [-6.2, -5.6, 1.8, .8, .4],
 ].map(Object.freeze));
+/** 길가 등불 기둥 [x, z, 등이 걸린 쪽(+1 동, -1 서)]. 영웅상 옆 길이 좁아지지 않게 길 바깥(|x| ≥ 2.25)에 둔다. */
+export const STARTER_LANTERNS = Object.freeze([[-2.25, 10.8, 1], [2.25, 10.8, -1], [-2.25, 6.6, 1], [2.25, 6.6, -1], [-2.3, -7.4, 1], [2.3, -7.4, -1]].map(Object.freeze));
 /** 작은 소품 [종류, x, z, 반경] — 통·상자·깃발 기둥. */
 export const STARTER_CLUTTER = Object.freeze([
   ['barrel', 9.9, .9, .32], ['barrel', 10.4, .2, .32], ['crate', 10.6, 1.5, .4], ['crate', 9.2, -4.3, .45], ['barrel', 4.9, 7.9, .32], ['crate', 5.6, 8.3, .38],

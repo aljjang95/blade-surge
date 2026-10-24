@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER, FORGE_POSTS } from '../data/starter-village.js';
+import { STARTER_ZONES, STARTER_DUMMIES, STARTER_FENCE_ARC, STARTER_VILLAGE_VERSION, STARTER_BEDS, STARTER_CLUTTER, FORGE_POSTS, STARTER_LANTERNS } from '../data/starter-village.js';
 
 // 첫 마을 초보자 구역 장면(src/data/starter-village.js 배치). citadel-hub-scene 이 바닥·구역 소품을 이 모듈에 맡긴다.
 // 원칙: 재질별 병합(정적 소품) + 인스턴싱(돌길 조약돌·풀·꽃·울타리) — 구역 전체가 수십 개 draw call 안에 든다.
@@ -275,6 +275,8 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
   const water = mat(0x5fd6d8, { roughness: .15, metalness: .1, transparent: true, opacity: .85 });
   { const f = STARTER_ZONES.fountain, L = local(f.x, f.z, 0);
     L.cyl(f.radius, .5, M.stone, 0, .25, 0, 16); L.cyl(f.radius + .08, .1, M.stoneDark, 0, .52, 0, 16);
+    // 수반 둘레 낮은 꽃 띠(분수 충돌 원 안).
+    for (let i = 0; i < 18; i++) { const t = i / 18 * Math.PI * 2; L.add(new THREE.IcosahedronGeometry(.13, 0), i % 3 === 0 ? M.red : i % 3 === 1 ? M.straw : M.paper, Math.cos(t) * (f.radius + .12), .2, Math.sin(t) * (f.radius + .12)); }
     L.add(new THREE.CircleGeometry(f.radius - .14, 24), water, 0, .44, 0, -Math.PI / 2);
     L.cyl(.24, 1.1, M.stone, 0, .9, 0, 8); L.cyl(.62, .18, M.stone, 0, 1.5, 0, 12, .7); L.add(new THREE.CircleGeometry(.55, 16), water, 0, 1.6, 0, -Math.PI / 2);
     L.cyl(.1, .5, M.stone, 0, 1.85, 0, 6); L.add(new THREE.SphereGeometry(.14, 8, 6), M.brass, 0, 2.15, 0); }
@@ -320,7 +322,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     const lx = x + face * .48; box(.26, .32, .26, lanternGlass, lx, 1.92, z); box(.32, .05, .32, M.iron, lx, 2.1, z); box(.32, .05, .32, M.iron, lx, 1.75, z);
     add(new THREE.ConeGeometry(.2, .16, 4), M.iron, lx, 2.2, z, 0, Math.PI / 4);
   };
-  for (const side of [-1, 1]) { for (const z of [10.8, 6.6]) lanternPost(side * 2.25, z, -side); lanternPost(side * 2.3, -7.4, -side); }
+  for (const [x, z, face] of STARTER_LANTERNS) lanternPost(x, z, face);
 
   // ---------------- 꽃밭(돌 테두리 + 촘촘한 꽃) ----------------
   const bedFlowers = [], soil = mat(0x5e4330, { roughness: 1 });
