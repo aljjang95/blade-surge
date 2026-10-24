@@ -38,6 +38,8 @@ export interface PortoneEnv {
   /** 테스트 채널 키. IAP_ALLOW_TEST가 'true'일 때만 쓴다. */
   PORTONE_TEST_CHANNEL_KEY?: string;
   IAP_ALLOW_TEST?: string;
+  /** 테스트 채널을 쓸 수 있는 account_id 허용 목록(쉼표 구분, 기본 비어 있음). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제를 받는다. */
+  IAP_TEST_ACCOUNTS?: string;
   /** 포트원 API 시크릿(Secrets Store 바인딩). 값은 어디에도 출력하지 않는다. */
   PORTONE_API_SECRET?: string | { get(): Promise<string> };
 }
@@ -56,14 +58,24 @@ export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request:
 type WebCtx = Ctx & { deps: Ctx['deps'] & PortoneDeps };
 const penv = (c: Ctx) => c.env as unknown as PortoneEnv;
 
-export function webChannel(env: PortoneEnv): { key: string; test: boolean } | null {
-  if (env.PORTONE_CHANNEL_KEY) return { key: env.PORTONE_CHANNEL_KEY, test: false };
-  if (env.IAP_ALLOW_TEST === 'true' && env.PORTONE_TEST_CHANNEL_KEY) return { key: env.PORTONE_TEST_CHANNEL_KEY, test: true };
+/** 테스트 모드가 켜져 있고 이 계정이 허용 목록에 있는가. 일반 게스트는 테스트 채널·테스트 지급을 받을 수 없다. */
+export function testAllowed(env: PortoneEnv, accountId: string | null | undefined): boolean {
+  if (env.IAP_ALLOW_TEST !== 'true' || !accountId) return false;
+  return (env.IAP_TEST_ACCOUNTS ?? '').split(',').map((v) => v.trim()).filter(Boolean).includes(accountId);
+}
+/**
+ * 이 계정에 줄 결제 채널. 실채널이 있으면 일반 계정은 실채널이고, 허용 테스터만 wantTest일 때 테스트 채널을 고른다.
+ * 실채널이 없으면 허용 테스터만 테스트 채널을 받고 나머지는 null(intent 거부).
+ */
+export function webChannel(env: PortoneEnv, accountId?: string | null, wantTest = false): { key: string; test: boolean } | null {
+  const tester = !!env.PORTONE_TEST_CHANNEL_KEY && testAllowed(env, accountId);
+  if (env.PORTONE_CHANNEL_KEY && !(tester && wantTest)) return { key: env.PORTONE_CHANNEL_KEY, test: false };
+  if (tester) return { key: env.PORTONE_TEST_CHANNEL_KEY as string, test: true };
   return null;
 }
-/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). */
-export function webBillingOn(env: PortoneEnv): boolean {
-  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!webChannel(env);
+/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
+export function webBillingOn(env: PortoneEnv, accountId?: string | null): boolean {
+  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!webChannel(env, accountId);
 }
 
 async function webSchemaReady(db: D1Database): Promise<boolean> {
@@ -134,11 +146,12 @@ const ROW_COLUMNS = 'payment_id, account_id, product_id, amount_krw, store_id, c
 
 // ── 의도: 서버가 paymentId·금액을 정한다 ─────────────────────────
 export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['productId']);
+  onlyKeys(body, ['productId', 'test']);
+  if (body.test !== undefined && typeof body.test !== 'boolean') fail(400, 'test');
   const reason = await webReason(c);
   if (reason) fail(503, reason);
   const env = penv(c);
-  const channel = webChannel(env);
+  const channel = webChannel(env, auth.account.account_id, body.test === true);
   if (!env.PORTONE_STORE_ID || !channel) fail(503, 'web-not-configured');
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
@@ -194,6 +207,8 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
     await c.db.prepare("UPDATE iap_web_payments SET checked_at = ? WHERE payment_id = ?").bind(c.now, row.payment_id).run();
     return { ...base, state: 'pending', granted: [] };
   }
+  // 테스트 결제(test=1)는 지금 테스트 모드가 켜져 있고 그 계정이 허용 목록에 있을 때만 지급한다(모드를 끄거나 목록에서 빼면 거부, 이미 지급된 권한은 그대로).
+  if (row.test === 1 && !testAllowed(penv(c), row.account_id)) fail(422, 'test-purchase-not-allowed');
   // PAID: 서버가 낸 의도와 한 글자도 다르면 지급하지 않는다. 돈은 나갔으므로 감사 플래그를 남겨 사람이 취소하게 한다.
   const bad = mismatchCode(payment, row, product);
   if (bad) {

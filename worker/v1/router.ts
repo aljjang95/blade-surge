@@ -29,8 +29,8 @@ export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
   verifyIdToken: (provider, token, clientIds) => (googleVerifier ??= createGoogleVerifier()).verify(token, clientIds, provider === 'pubsub' ? 3600000 : 600000),
 };
 
-export function v1Flags(env: V1Env): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: webBillingOn(env) };
+export function v1Flags(env: V1Env, accountId?: string | null): Record<string, boolean> {
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: webBillingOn(env, accountId) };
 }
 
 export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps & PortoneDeps = defaultDeps): Promise<Response> {
