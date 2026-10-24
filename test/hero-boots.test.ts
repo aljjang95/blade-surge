@@ -212,3 +212,17 @@ test('비색인 지오메트리도 왼발 면 법선이 바깥을 향한다(감�
   expect(faceOutward(source)).toBe(true);
   expect(faceOutward(mirrorBootsGeometry(source))).toBe(true);
 });
+
+test('영웅 root 를 이동·회전·스케일해도 rest 위치·발목 높이·부츠 크기는 원점 기준과 같다', () => {
+  const ref = hero();
+  const moved = hero();
+  moved.root.position.set(5, 2, -3); moved.root.rotation.set(0.4, 1.1, 0.2); moved.root.scale.setScalar(1.7);
+  moved.root.updateMatrixWorld(true);
+  for (const i of [1, 2]) expect(boneRestPosition(moved.skin, i).distanceTo(boneRestPosition(ref.skin, i))).toBeLessThan(1e-5);
+  expect(heroAnkleHeight(moved.skin)).toBeCloseTo(heroAnkleHeight(ref.skin)!, 5);
+  const a = buildHeroBootsMesh(bootsScene().scene, ref.skin, { id: 'boots_e' })!;
+  const b = buildHeroBootsMesh(bootsScene().scene, moved.skin, { id: 'boots_e' })!;
+  const pa = a.geometry.attributes.position, pb = b.geometry.attributes.position;
+  expect(pb.count).toBe(pa.count);
+  for (let i = 0; i < pa.array.length; i++) expect(pb.array[i]).toBeCloseTo(pa.array[i], 4);
+});

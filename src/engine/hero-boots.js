@@ -59,7 +59,7 @@ export function findBoneIndex(skeleton, name) {
 
 /** 몸 지오메트리 공간(메시 로컬)에서 본의 rest 위치. bindMatrix·boneInverse 로 계산한다. */
 export function boneRestPosition(skin, index, target = new THREE.Vector3()) {
-  const rest = new THREE.Matrix4().copy(skin.skeleton.boneInverses[index]).invert().premultiply(skin.bindMatrixInverse);
+  const rest = new THREE.Matrix4().copy(skin.skeleton.boneInverses[index]).invert().premultiply(new THREE.Matrix4().copy(skin.bindMatrix).invert());
   return target.setFromMatrixPosition(rest);
 }
 
