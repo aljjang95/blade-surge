@@ -56,7 +56,7 @@
 
 ## 남은 것
 
-- **Tripo 소품 장면 연결(2026-10-25, 코드 완료)**: GLB 8종(`public/models/starter-village-v1/`, 정규화 기록은 `docs/starter-village-props.md`)이 `starter-village-scene.js` 의 절차 모델을 바꾼다. 남은 것은 실제 화면 확인(촬영·실제 입력 QA)과 오두막 문(앞면에 문이 없음), 상점 앞 장식 깃발 구멍.
+- **Tripo 소품 교체(2026-10-25, 운영 반영)**: GLB 8종(`public/models/starter-village-v1/`, 정규화 기록은 `docs/starter-village-props.md`)이 절차 모델을 바꾼다. 남은 것: 오두막 앞면에 문이 없음, 상점 앞 장식 깃발 구멍(Tripo 원본 결함 — 고치려면 리토폴 값을 올려 재생성), 실기기(Android) 확인.
 - NPC(안내자·대장장이) 전용 모델·리그: 지금은 KayKit Mage·Barbarian.
 - 실기기(Android) 터치 확인.
 - 안내자 '그곳으로 안내'(경로 표시)는 넣지 않았다.
@@ -73,3 +73,12 @@
 - **허수아비·게시판·영웅상**: 기존 자리·yaw 그대로. 허수아비 GLB 는 흔들리는 pivot 안에 들어가 `strike`·`dummyAngles` 동작이 같다.
 - draw call(메시 수, 장면 모듈 기준 실측): 이전 14 → GLB 8종 성공 때 보이는 메시 20(폴백 숨김 23개 대신 GLB 10개: 오두막 인스턴싱 1, 대장간·게시판·분수·영웅상·포탈·상점 각 1, 허수아비 3), 순증 +6. 모두 못 받은 폴백 상태는 소품별로 병합을 나눈 탓에 33(+19)까지 늘고, 그림자 패스도 같은 만큼 는다. 숨은 묶음은 렌더하지 않는다.
 - 테스트: `test/starter-village-props.test.ts`(GLB 8종 존재·remote 분류·EARLY 묶음·로더 재시도·applyProps 폴백/공유/흔들림/retire).
+
+## Tripo 소품 운영 반영 (2026-10-25)
+
+- #292 squash `ee0817c` 머지, PC 깨끗한 worktree 에서 `node tools/deploy.mjs --auth=wrangler` 로 배포(Worker 버전 `e298218d`, 롤백 `103f9080`). `version.json` sha `ee0817c` readback, GLB 8종 HTTP 200.
+- 운영 촬영(SwiftShader, GLB 적용 8/8 대기 후 8시점): 360x780·390x844·1280x720. entry 시점 draw call/삼각형 121/38만 · 118/38만 · 160/41만.
+- 교체 전후 같은 카메라 비교(개발 서버, main vs 브랜치): draw call 1280x720 140~181 → 149~170, 844x390 108~180 → 163~187, 390x844 96~111 → 87~117. 삼각형은 시점에 따라 약 25만~28만 → 37만~42만(Tripo 모델이 더 세밀하다).
+- 실제 입력 QA(개발 서버, 여섯 구역 도달·상호작용): main·브랜치 모두 1280x720 키보드·844x390 터치·390x844 터치 6/6, 출격 포탈 → 관문 선택 열림.
+- 리뷰: Codex 사용량 한도로 Sonnet 독립 리뷰 대체. P1(라이브러리 좌판이 폴백 숨김에서 빠짐)·P2 2건 수정.
+- 운영 콘솔에 리소스 로드 오류 2건(503·401)이 뜬다. 소품 GLB 는 아니며(8종 200) URL 은 기록하지 못했다.
