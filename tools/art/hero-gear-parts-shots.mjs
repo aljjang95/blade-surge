@@ -4,7 +4,7 @@
  *   ① 로비 기본 카메라 390x844·844x390·1280x800 ② 전투 기본 카메라 같은 크기 3종
  *   ③ 파츠 근접(머리·어깨 한 쌍·오른손 세 시점을 한 장): 로비 대기, 전투 대기·달리기·기본 공격·회피 중간 프레임
  * 을 찍고, 부착 상태(root.userData.heroGearParts)와 드로우콜·삼각형(renderer.info)을 파츠 보임/숨김으로 전후 비교해 잰다.
- *   bun run build && node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,mage,rogue,barbarian,ranger] [--cases N,S,E,U1,U2,L] [--poses] [--quick] [--dev] [--dist dist]
+ *   bun run build && node tools/art/hero-gear-parts-shots.mjs <outDir> [--heroes knight,mage,rogue,barbarian,ranger] [--cases N,S,E,U1,U2,L] [--poses [--dodge-frames]] [--quick] [--dev] [--dist dist]
  * 출력: <hero>_<case>_<장면>.png, report.json(부착 세트·삼각형·드로우콜 전후, 콘솔 경고·오류, 기대와 다른 부착).
  * 기대(등급 → 세트): N 없음 · S → parts_n · E·U → parts_e · L → parts_l. 다르면 exit 1. SwiftShader 화면이며 실기기 증거가 아니다.
  * 결과 폴더는 저장소에 커밋하지 않는다.
@@ -30,7 +30,7 @@ const CASES = {
   L: { armor: 'a_titan', expect: 'parts_l' },
 };
 const CASE_IDS = flag('--cases', 'N,S,E,U1,U2,L').split(',');
-const POSES = args.includes('--poses');
+const POSES = args.includes('--poses'), DODGE_FRAMES = args.includes('--dodge-frames');
 // --quick: 로비 1280x800 + 근접만(맞춤 반복용). --dev: dist 대신 vite 개발 서버(데이터 JSON 수정이 바로 반영).
 const MEASURE = args.includes('--measure');   // 촬영 없이 부착 상태·몸 치수만(--dev 와 함께)
 const QUICK = args.includes('--quick') || MEASURE, DEV = args.includes('--dev');
@@ -207,13 +207,17 @@ try {
           let frames = 40, mid = 20;
           if (pose === 'run') { key('keydown', 'KeyD'); frames = 50; mid = 36; }
           if (pose === 'attack') { p.cds?.fill?.(0); p.startCombo(0); const dur = p.def.combo[0].dur || .6; frames = Math.max(8, Math.round(dur * 60)); mid = Math.round(frames * .5); }
-          if (pose === 'dodge') { p.dodge(null); frames = 19; mid = 9; }
+          if (pose === 'dodge') { p.dodge(null); frames = DODGE_FRAMES ? 28 : 19; mid = 9; }
+          // --dodge-frames: 구르기 시작·중간·끝(2·9·17 스텝, 1/60초)과 대기로 섞이는 0.15초(22·26 스텝, 클립 0.59·0.69초 — 기사 몸이 바닥을 파던 구간)를
+          // 같은 고정 카메라로 더 남긴다.
+          const extra = pose === 'dodge' && DODGE_FRAMES ? { 2: 's', 9: 'm', 17: 'e', 22: 'f22', 26: 'f26' } : {}, extras = {};
           let image = null;
-          for (let f = 0; f < frames; f++) { step(); if (f === mid) image = q.closeup(); }
+          for (let f = 0; f < frames; f++) { step(); if (f === mid) image = q.closeup(); if (extra[f]) extras[extra[f]] = q.closeup(); }
           if (pose === 'run') key('keyup', 'KeyD');
-          return { image, state: p.state };
+          return { image, extras, state: p.state };
         }, pose);
         rec.shots.push(await saveDataUrl(result.image, `${id}_battle_${pose}.png`));
+        for (const [tag, image] of Object.entries(result.extras || {})) rec.shots.push(await saveDataUrl(image, `${id}_battle_${pose}_${tag}.png`));
         battle.poses[pose] = result.state;
       }
     } catch (e) { rec.error = String(e.message || e).slice(0, 300); report.mismatches.push({ case: id, error: rec.error }); }
