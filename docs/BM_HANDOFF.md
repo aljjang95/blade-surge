@@ -40,3 +40,4 @@ PR #231 머지(main `419c99b`). 설계·규칙 정본은 [BM_DESIGN.md](BM_DESIG
   3. 5→25→100%. G2(서버 결과를 먼저 받는 소환)가 끝나기 전에는 p0까지만.
   4. `play-iap-register --apply`(가격 공개)
   5. 라이선스 테스터 결제 E2E(PC·실기기)
+- **Play 내부 테스트 빌드(2026-10-25, gogo-chunk:play-internal-aab)**: versionCode **3**(1.0.3) 내부 트랙 `completed`, production·alpha·beta 비어 있음. Play 보관 번들 sha256 `2a3f091a8c1f…`(서명본), 서명 전 AAB sha256 `ea6a3b225c363738c6cccf00556eaaeab3c11659a13984dda09292c15b62214d`(63,507,335바이트, META-INF 서명 파일 0). 원인·해법: `repo.maven.apache.org`가 프록시에서 429였고 `~/.gradle/init.d`에 Central을 `maven-central.storage-download.googleapis.com` 미러로 바꾸는 init 스크립트(저장소 밖)를 두자 3분에 빌드됨. `apex play`는 `/usr/local/bin/apex` 옛 캐시 사본이 아니라 `~/.cache/apex/src/claude/cloud/bin/apex`(8MB 조각 업로드)로 실행. 가격·IAP 플래그는 건드리지 않음.
