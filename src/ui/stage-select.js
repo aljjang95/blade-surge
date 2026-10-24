@@ -4,7 +4,7 @@
 import { stageDef } from '../data/stages.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
-import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap } from '../data/stage-select-maps.js';
+import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap, fitStageMapBox } from '../data/stage-select-maps.js';
 import { cardThumb } from './citadel-command.js';
 import {
   stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory,
@@ -341,16 +341,18 @@ export class StageSelectUI {
   layoutMap() {
     const path = this.list.querySelector('.ss-path');
     if (!path || !this.mapNodes) return;
-    const width = path.clientWidth, height = path.clientHeight;
+    // 지도 상자는 2.5:1 고정. 목록 영역 폭을 다 쓰고, 높이가 모자라면 높이에 맞춘다(배경 그림과 같은 비율이라 잘리지 않는다).
+    const [width, height] = fitStageMapBox(this.list.clientWidth, this.list.clientHeight);
     if (!width || !height) return;
+    path.style.width = `${width.toFixed(1)}px`;
+    path.style.height = `${height.toFixed(1)}px`;
     const layout = layoutStageMap(this.mapNodes, width, height);
-    path.style.setProperty('--map-size', `${layout.size[0].toFixed(1)}px ${layout.size[1].toFixed(1)}px`);
-    path.style.setProperty('--map-pos', `${layout.offset[0].toFixed(1)}px ${layout.offset[1].toFixed(1)}px`);
-    path.dataset.compressed = String(layout.compressed);
+    path.style.setProperty('--ss-node', `${layout.node}px`);
+    path.style.setProperty('--ss-node-boss', `${layout.boss}px`);
     const steps = path.querySelectorAll('.ss-step');
     layout.points.forEach(([x, y], index) => { const step = steps[index]; if (step) { step.style.left = `${x.toFixed(1)}px`; step.style.top = `${y.toFixed(1)}px`; } });
     const road = path.querySelector('.ss-road');
-    road?.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    road?.setAttribute('viewBox', `0 0 ${width.toFixed(1)} ${height.toFixed(1)}`);
     road?.firstElementChild?.setAttribute('points', layout.points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
   }
 

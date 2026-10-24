@@ -20,7 +20,7 @@ dialog.ss-dialog[open] {
   position: fixed; inset: var(--ss-top) max(10px, calc(var(--sar, 0px) + 8px)) var(--ss-bottom) auto; z-index: 60;
   width: min(700px, 55vw); height: auto; max-width: none; max-height: none; margin: 0; padding: 0; box-sizing: border-box;
   display: flex; flex-direction: column; overflow: visible;
-  background: linear-gradient(180deg, rgba(16, 30, 50, .97), rgba(8, 17, 30, .98)); border: 2px solid var(--ss-line); border-radius: 8px;
+  background: linear-gradient(180deg, #101e32, #08111e); border: 2px solid var(--ss-line); border-radius: 8px;
   box-shadow: inset 0 0 0 1px var(--ss-line-dark), inset 0 0 22px rgba(0, 0, 0, .55), 0 0 0 1px #2a1d0b, 0 18px 40px rgba(0, 0, 0, .55);
 }
 dialog.ss-dialog::backdrop { background: linear-gradient(90deg, rgba(4, 10, 18, .1), rgba(4, 10, 18, .42)); }
@@ -72,12 +72,13 @@ dialog.ss-dialog[open]::after { right: -7px; }
 .ss-dialog[data-tab="campaign"] .ss-list { overflow: hidden; }
 .ss-list-note { flex: none; margin: 0; padding: 4px 12px 6px; color: var(--ss-muted); font-size: var(--type-sm, 14px); line-height: 1.3; font-variant-numeric: tabular-nums; }
 
-/* 지도: 지역 그림(4:3)을 덮는 크기로 깔고, 노드·점선 길은 layoutStageMap 이 px 로 배치한다(--map-size, --map-pos, 각 노드 left/top). */
+/* 지도: 2.5:1 고정 상자(layoutMap 이 목록 영역에 맞춰 px 크기를 정하고 가운데 둔다). 배경 그림도 2.5:1 이라 100% 100% 로 잘리지 않는다.
+   노드 지름(--ss-node, 보스 --ss-node-boss)은 상자 높이에 맞춰 40~56px. */
 .ss-path {
   --ss-node: 52px;
-  position: absolute; inset: 0; list-style: none; margin: 0; padding: 0;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100%; aspect-ratio: 2.5 / 1; list-style: none; margin: 0; padding: 0; border-radius: 3px; overflow: hidden;
   background-image: var(--map-art, none), radial-gradient(120% 90% at 25% 20%, rgba(92, 150, 96, .55), transparent 60%), radial-gradient(90% 80% at 80% 85%, rgba(44, 104, 112, .5), transparent 62%), linear-gradient(180deg, #24443a, #14292c);
-  background-size: var(--map-size, cover), auto, auto, auto; background-position: var(--map-pos, center), center, center, center; background-repeat: no-repeat;
+  background-size: 100% 100%, auto, auto, auto; background-position: center; background-repeat: no-repeat;
 }
 .ss-path::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 40px rgba(0, 0, 0, .55); }
 .ss-road { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -87,7 +88,7 @@ dialog.ss-dialog[open]::after { right: -7px; }
   position: absolute; left: 0; top: 0; transform: translate(-50%, calc(var(--ss-node) / -2)); display: flex; flex-direction: column; align-items: center;
   width: max-content; min-width: 48px; min-height: 48px; margin: 0; padding: 0; border: 0; background: none; color: var(--ss-text);
 }
-.ss-step[data-rank="mid"], .ss-step[data-rank="region"] { --ss-node: 60px; }
+.ss-step[data-rank="mid"], .ss-step[data-rank="region"] { --ss-node: var(--ss-node-boss, 58px); }
 .ss-node-disc {
   position: relative; display: grid; place-items: center; width: var(--ss-node); height: var(--ss-node); box-sizing: border-box; border-radius: 50%;
   border: 3px solid #9aa0a8; background: radial-gradient(circle at 38% 30%, #5d6672, #262c35 72%);
@@ -197,13 +198,6 @@ dialog.ss-dialog[open]::after { right: -7px; }
   .ss-region { padding: 1px 8px 1px 10px; }
   .ss-region-name, .ss-region-progress { font-size: 15px; }
   .oath-visual .ss-dialog .ss-region-step, .ss-dialog .ss-region-step { width: 30px; height: 30px; min-height: 30px; }
-  .ss-path { --ss-node: 42px; }
-  .ss-step[data-rank="mid"], .ss-step[data-rank="region"] { --ss-node: 48px; }
-  .ss-node-code { font-size: 13px; }
-  .ss-node[data-locked="true"] .ss-node-code { font-size: 11px; transform: translateY(7px); }
-  .ss-node-disc .ss-lock { top: 6px; width: 15px; height: 15px; }
-  .ss-node-disc .ss-skull { top: 4px; width: 20px; height: 20px; }
-  .ss-step[data-rank="mid"] .ss-node-code, .ss-step[data-rank="region"] .ss-node-code { transform: translateY(10px); font-size: 12px; }
   .ss-node-tag { font-size: 11px; padding: 2px 6px 3px; }
   .ss-detail { padding: 3px 6px 6px 12px; gap: 8px; }
   .ss-detail-head { padding-bottom: 1px; }
@@ -229,7 +223,6 @@ dialog.ss-dialog[open]::after { right: -7px; }
   .ss-title { font-size: 19px; }
   .ss-dialog .ss-tab { flex-basis: 110px; min-width: 76px; }
   .ss-body { margin: 0 8px; }
-  .ss-path { --ss-node: 50px; }
   .ss-detail { grid-template-columns: minmax(0, 1fr); padding: 6px 10px 10px 12px; }
   .ss-action { flex-direction: row; align-items: center; justify-content: space-between; max-width: none; }
   .ss-blocked { text-align: left; }
@@ -237,3 +230,16 @@ dialog.ss-dialog[open]::after { right: -7px; }
   .ss-dungeons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ss-guide { left: 10px; right: 10px; bottom: auto; top: calc(66px + var(--sat, 0px)); max-width: none; }
 }
+
+/* 캠페인 탭: 지도 영역은 2.5:1 높이까지만 차지하고(모자라면 줄어든다), 남는 높이는 상세 줄이 가진다. */
+.ss-dialog[data-tab="campaign"] .ss-body { flex: 0 1 auto; }
+.ss-dialog[data-tab="campaign"] .ss-list { flex: 0 1 auto; aspect-ratio: 2.5 / 1; min-height: 0; }
+.ss-dialog[data-tab="campaign"] .ss-detail { flex: 1 0 auto; align-content: center; }
+/* 노드 안 아이콘은 지름에 비례 */
+.ss-node-disc .ss-lock { width: calc(var(--ss-node) * .34); height: calc(var(--ss-node) * .34); top: calc(var(--ss-node) * .16); }
+.ss-node-disc .ss-skull { width: calc(var(--ss-node) * .44); height: calc(var(--ss-node) * .44); top: calc(var(--ss-node) * .1); }
+.ss-node-code { font-size: clamp(12px, calc(var(--ss-node) * .29), 16px); }
+.ss-node[data-locked="true"] .ss-node-code { font-size: clamp(11px, calc(var(--ss-node) * .25), 14px); transform: translateY(calc(var(--ss-node) * .17)); }
+.ss-step[data-rank="mid"] .ss-node-code, .ss-step[data-rank="region"] .ss-node-code { font-size: clamp(11px, calc(var(--ss-node) * .24), 14px); transform: translateY(calc(var(--ss-node) * .2)); }
+/* 그림 길이 U자로 노드와 맞으므로 점선 길은 그림이 없을 때만 */
+.ss-path[data-art="true"] .ss-road { display: none; }

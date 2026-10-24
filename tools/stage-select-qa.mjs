@@ -69,7 +69,20 @@ try {
       const nodes = [...document.querySelectorAll('#stage-select .ss-node')].map((n) => n.getBoundingClientRect());
       const nodesInView = nodes.every((r) => r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth);
       const introOverlapsSheet = !!intro && intro.w > 0 && !(intro.r <= dialog.x || intro.x >= dialog.r || intro.b <= dialog.y || intro.y >= dialog.b);
-      return { enter, dialog, enterInView: inView(enter), dialogInView: inView(dialog), enterHit: !!hit && (hit.id === 'stage-select-enter' || !!hit.closest?.('#stage-select-enter')), nodesInView, introOverlapsSheet, smallTargets: [...document.querySelectorAll('#stage-select button')].filter((b) => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.height < 32 || r.width < 32); }).map((b) => b.getAttribute('aria-label') || b.textContent) };
+      // 노드 겹침: 원판끼리, 꼬리표와 다른 노드 원판. 첫 안내와 상단 재화 줄 겹침.
+      const discs = [...document.querySelectorAll('#stage-select .ss-node-disc')].map((n) => n.getBoundingClientRect());
+      const tags = [...document.querySelectorAll('#stage-select .ss-node')].map((n) => n.querySelector('.ss-node-tag')?.getBoundingClientRect());
+      const hitRect = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+      let nodeOverlaps = 0;
+      for (let i = 0; i < discs.length; i++) for (let j = i + 1; j < discs.length; j++) if (hitRect(discs[i], discs[j])) nodeOverlaps++;
+      tags.forEach((tag, own) => { if (tag) discs.forEach((disc, index) => { if (index !== own && hitRect(tag, disc)) nodeOverlaps++; }); });
+      const minDisc = discs.length ? Math.min(...discs.map((r) => Math.min(r.width, r.height))) : 0;
+      const guideBox = document.querySelector('#stage-select-intro:not([hidden])')?.getBoundingClientRect();
+      const bar = document.querySelector('#cur-energy')?.getBoundingClientRect();
+      const guideCoversBar = !!guideBox && !!bar && guideBox.width > 0 && guideBox.top < bar.bottom - 1 && guideBox.bottom > bar.top;
+      const map = document.querySelector('#stage-select .ss-path')?.getBoundingClientRect();
+      const mapAspect = map && map.height ? +(map.width / map.height).toFixed(3) : null;
+      return { nodeOverlaps, minDisc, guideCoversBar, mapAspect, enter, dialog, enterInView: inView(enter), dialogInView: inView(dialog), enterHit: !!hit && (hit.id === 'stage-select-enter' || !!hit.closest?.('#stage-select-enter')), nodesInView, introOverlapsSheet, smallTargets: [...document.querySelectorAll('#stage-select button')].filter((b) => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.height < 32 || r.width < 32); }).map((b) => b.getAttribute('aria-label') || b.textContent) };
     });
     try {
       await page.goto(origin);
@@ -91,6 +104,9 @@ try {
       const firstLayout = await layout(); row.layoutOpen = firstLayout;
       check('시트·입장 버튼이 화면 안, 입장 버튼이 가려지지 않음', firstLayout.dialogInView && firstLayout.enterInView && firstLayout.enterHit, firstLayout);
       check('관문 노드 10개 모두 화면 안', firstLayout.nodesInView);
+      check('노드·꼬리표 겹침 없음, 노드 지름 40px 이상', firstLayout.nodeOverlaps === 0 && firstLayout.minDisc >= 39.5, { overlaps: firstLayout.nodeOverlaps, minDisc: firstLayout.minDisc });
+      check('지도 상자 2.5:1', Math.abs(firstLayout.mapAspect - 2.5) < 0.02, firstLayout.mapAspect);
+      check('첫 안내가 상단 재화 줄을 덮지 않음', !firstLayout.guideCoversBar);
       check('가로 스크롤 없음', s.overflowX <= 0, s.overflowX);
       await shot('01-open-campaign');
       // 2) 잠긴 관문
@@ -167,8 +183,8 @@ try {
       await shot('07-seed-1-4');
       // --regions: 6지역 지도·노드 배치 캡처(지역 넘기기 버튼 실제 입력). 잠긴 지역도 볼 수 있다.
       if (args.includes('--regions')) {
-        for (let ch = 2; ch <= 6; ch++) { await act('#stage-select .ss-region-step[data-dir="next"]'); await settle(900); await shot(`08-region-${ch}`); }
-        const nodesOk = await layout(); check('6지역 넘겨 보기 후 노드 화면 안', nodesOk.nodesInView, nodesOk);
+        for (let ch = 2; ch <= 6; ch++) { await act('#stage-select .ss-region-step[data-dir="next"]'); await settle(900); await shot(`08-region-${ch}`); const l = await layout(); check(`지역 ${ch} 노드 화면 안·겹침 없음`, l.nodesInView && l.nodeOverlaps === 0, { overlaps: l.nodeOverlaps }); }
+        const nodesOk = await layout(); check('6지역 넘겨 보기 후 노드 화면 안·겹침 없음', nodesOk.nodesInView && nodesOk.nodeOverlaps === 0, nodesOk);
       }
       await act('#stage-select-close'); await settle(200);
       check('런타임 오류 0', row.errors.length === 0, row.errors.slice(0, 5));

@@ -148,41 +148,32 @@ test('지역 화면을 따로 고를 수 있고 난이도 배율이 보상에 �
   expect(boosted.stages[0].difficultyName).toBe('숙련');
 });
 
-test('지역 지도: 6지역 모두 노드 10개, 보이는 띠 안, 844×390 지도(420×315)에서 서로 겹치지 않음', async () => {
+test('지역 지도: 6지역 모두 U자 노드 10개(윗줄 1→5, 아랫줄 6→10), 844×390 상자에서 서로 떨어짐', async () => {
   const { STAGE_MAPS, DEFAULT_STAGE_NODES, stageMapFor } = await import('../src/data/stage-select-maps.js');
-  const maps = [...Object.values(STAGE_MAPS), { nodes: DEFAULT_STAGE_NODES }];
   expect(Object.keys(STAGE_MAPS)).toEqual(['1', '2', '3', '4', '5', '6']);
-  for (const map of maps) {
+  expect(DEFAULT_STAGE_NODES.map(([x]: any) => Math.round(x * 100))).toEqual([12, 31, 50, 69, 88, 88, 69, 50, 31, 12]);
+  for (const map of [...Object.values(STAGE_MAPS), { nodes: DEFAULT_STAGE_NODES }]) {
     expect(map.nodes).toHaveLength(10);
-    for (const [x, y] of map.nodes) {
-      expect(x).toBeGreaterThanOrEqual(0.1); expect(x).toBeLessThanOrEqual(0.9);
-      expect(y).toBeGreaterThanOrEqual(0.24); expect(y).toBeLessThanOrEqual(0.72);
-    }
+    map.nodes.slice(0, 5).forEach(([, y]: any) => { expect(y).toBeGreaterThan(0.2); expect(y).toBeLessThan(0.4); });
+    map.nodes.slice(5).forEach(([, y]: any) => { expect(y).toBeGreaterThan(0.62); expect(y).toBeLessThan(0.8); });
+    for (let i = 0; i < 4; i++) { expect(map.nodes[i + 1][0]).toBeGreaterThan(map.nodes[i][0]); expect(map.nodes[i + 6][0]).toBeLessThan(map.nodes[i + 5][0]); }
     for (let i = 0; i < 10; i++) for (let j = i + 1; j < 10; j++) {
-      const dx = (map.nodes[i][0] - map.nodes[j][0]) * 420, dy = (map.nodes[i][1] - map.nodes[j][1]) * 315;
-      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(46);
+      expect(Math.hypot((map.nodes[i][0] - map.nodes[j][0]) * 427, (map.nodes[i][1] - map.nodes[j][1]) * 171)).toBeGreaterThanOrEqual(60);
     }
   }
   expect(stageMapFor(99).nodes).toBe(DEFAULT_STAGE_NODES);
 });
 
-test('지도 배치: 휴대폰 가로·세로·데스크톱 크기에서 노드가 여백 안, 넓은 지도는 그림 길과 그대로(압축 없음)', async () => {
-  const { STAGE_MAPS, layoutStageMap, STAGE_MAP_WIDTH } = await import('../src/data/stage-select-maps.js');
-  for (const map of Object.values(STAGE_MAPS)) {
-    for (const [w, h] of [[420, 180], [430, 200], [354, 300], [675, 500]]) {
-      const layout = layoutStageMap(map.nodes, w, h);
-      for (const [x, y] of layout.points) {
-        expect(x).toBeGreaterThanOrEqual(33.9); expect(x).toBeLessThanOrEqual(w - 33.9);
-        expect(y).toBeGreaterThanOrEqual(37.9); expect(y).toBeLessThanOrEqual(h - 43.9);
-      }
-      expect(layout.size[0]).toBeGreaterThanOrEqual(w - 0.01); expect(layout.size[1]).toBeGreaterThanOrEqual(h - 0.01);
-      expect(layout.offset[0]).toBeLessThanOrEqual(0); expect(layout.offset[0]).toBeGreaterThanOrEqual(w - layout.size[0] - 0.01);
-    }
-    // 데스크톱 지도(675×500)는 압축 없이 그림 좌표 그대로: 노드 간 x 간격 = 그림 폭 비율.
-    const wide = layoutStageMap(map.nodes, 675, 500);
-    expect(wide.compressed).toBe(false);
-    const dx = wide.points[1][0] - wide.points[0][0];
-    expect(dx).toBeCloseTo((map.nodes[1][0] - map.nodes[0][0]) * wide.size[0], 3);
-    expect(wide.size[0] / STAGE_MAP_WIDTH).toBeCloseTo(wide.size[1] / 900, 6);
+test('지도 상자 2.5:1 고정과 노드 크기(최소 40px), 꼬리표가 아랫줄과 겹치지 않음', async () => {
+  const { fitStageMapBox, layoutStageMap, DEFAULT_STAGE_NODES } = await import('../src/data/stage-select-maps.js');
+  expect(fitStageMapBox(500, 400)).toEqual([500, 200]);
+  expect(fitStageMapBox(500, 150)).toEqual([375, 150]);
+  for (const [w, h] of [[427, 171], [354, 141.6], [676, 270.4]]) {
+    const layout = layoutStageMap(DEFAULT_STAGE_NODES, w, h);
+    expect(layout.node).toBeGreaterThanOrEqual(40); expect(layout.node).toBeLessThanOrEqual(56);
+    const [top, bottom] = [layout.points[0][1], layout.points[9][1]];
+    // 윗줄 노드 아래(반지름 + 꼬리표 약 16px)가 아랫줄 노드 위쪽(보스 반지름)보다 위
+    expect(top + layout.node / 2 + 16).toBeLessThanOrEqual(bottom - layout.boss / 2 + 1);
+    expect(layout.points[4][0]).toBeCloseTo(w * 0.88, 5);
   }
 });
