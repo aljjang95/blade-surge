@@ -42,7 +42,10 @@ export function validateBootsData(value) {
 }
 validateBootsData(BOOTS_DATA);
 
-/** 신발 등급에 맞는 부츠 항목. 그 단계 부츠가 없으면 한 단계씩 낮춘다(L→E→N). 없으면 null. */
+/**
+ * 신발 등급에 맞는 부츠 항목. 그 단계 부츠가 없으면 한 단계씩 낮춘다(L→E→N). 없으면 null.
+ * @param {string} rarity @param {any} [data]
+ */
 export function pickBootsEntry(rarity, data = BOOTS_DATA) {
   const tier = bootsTierForRarity(rarity);
   if (!tier) return null;
