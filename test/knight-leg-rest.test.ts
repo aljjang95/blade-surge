@@ -22,7 +22,7 @@ function skinData(path: string) {
 
 test('기사 2·3단계: 다리 밖 역바인드는 1단계와 같고, 다리 역바인드만 바뀌었다', () => {
   const t1 = skinData('asset-library/normalized/hero_knight_t1.glb');
-  for (const id of ['hero_knight_t2', 'hero_knight_t3']) {
+  for (const id of ['hero_knight_t2', 'hero_knight_t3', 'avatar_knight_sakura']) {
     const body = skinData(`asset-library/normalized/${id}.glb`);
     expect(body.names).toEqual(t1.names);
     let legChanged = 0;
@@ -36,7 +36,7 @@ test('기사 2·3단계: 다리 밖 역바인드는 1단계와 같고, 다리 �
 });
 
 test('기사 2·3단계: bind 자세(1단계 골격 rest)에서 발 정점이 바닥에 닿고 발목 rest 높이가 1단계와 같다', () => {
-  for (const id of ['hero_knight_t2', 'hero_knight_t3']) {
+  for (const id of ['hero_knight_t2', 'hero_knight_t3', 'avatar_knight_sakura']) {
     const { json, bin, prim, names, inverses, position } = skinData(`asset-library/normalized/${id}.glb`);
     const jointsAcc = json.accessors[prim.attributes.JOINTS_0], weightsAcc = json.accessors[prim.attributes.WEIGHTS_0];
     expect(jointsAcc.componentType === 5121 || jointsAcc.componentType === 5123).toBe(true);
@@ -65,4 +65,20 @@ test('기사 2·3단계: bind 자세(1단계 골격 rest)에서 발 정점이 �
     let floor = Infinity; for (let i = 1; i < position.length; i += 3) floor = Math.min(floor, position[i]);
     expect(restAnkle - floor).toBeCloseTo(0.1633, 3);
   }
+});
+
+test('용암 오니 군주: 역바인드 닮음 맞춤으로 bind 자세 키가 다른 야만전사 몸과 같은 규격이고 발이 바닥에 닿는다', () => {
+  const { json, bin, prim, names, inverses, position } = skinData('asset-library/normalized/avatar_barbarian_oni.glb');
+  const t1 = skinData('asset-library/normalized/hero_barbarian_t1.glb');
+  expect(names).toEqual(t1.names);
+  // 모든 관절이 같은 사상 M = rest(t1) · inverse(oni) 를 공유한다(균등 닮음, 굽힘 없음).
+  const m = (k: number) => new THREE.Matrix4().fromArray(t1.inverses, k * 16).invert().multiply(new THREE.Matrix4().fromArray(inverses, k * 16));
+  const m0 = m(0), scale = new THREE.Vector3().setFromMatrixScale(m0);
+  expect(scale.x).toBeCloseTo(scale.y, 4); expect(scale.y).toBeCloseTo(scale.z, 4);
+  for (let k = 1; k < names.length; k++) expect(m(k).elements.every((v, i) => Math.abs(v - m0.elements[i]) < 1e-4), names[k]).toBe(true);
+  let lo = Infinity, hi = -Infinity; const v = new THREE.Vector3();
+  for (let i = 0; i < position.length / 3; i++) { v.set(position[i * 3], position[i * 3 + 1], position[i * 3 + 2]).applyMatrix4(m0); lo = Math.min(lo, v.y); hi = Math.max(hi, v.y); }
+  expect(Math.abs(lo)).toBeLessThan(0.005);
+  expect(hi).toBeGreaterThan(1.65); expect(hi).toBeLessThan(1.85);
+  expect(json && bin && prim).toBeTruthy();
 });

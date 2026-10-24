@@ -716,7 +716,7 @@
       "heightM": 1.8,
       "triangles": 10835,
       "bytes": 1892048,
-      "sha256": "7615ebe18dee36349911c570525bd6108a75e248cf2cf5d8a40fb040da33af9a",
+      "sha256": "3b46ff22ee17b26d2e3210cb9954acd4009cc01ca3947165b200eed705d033b2",
       "clips": {},
       "provenance": {
         "tool": "Blender 5.2",
@@ -741,7 +741,7 @@
       "heightM": 1.8,
       "triangles": 9809,
       "bytes": 1673828,
-      "sha256": "92d80fd808e5760a31d374f93d2e8bdbbcf95de7346a19258b69397e402a4d9f",
+      "sha256": "09fde297583fe8df7f9d0b09f508944fff72e34cc72cae7fdf554c768c449b68",
       "clips": {},
       "provenance": {
         "tool": "Blender 5.2",
