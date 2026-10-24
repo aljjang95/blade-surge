@@ -13,7 +13,7 @@ const noop=()=>{};
 function fixture() {
   const game:any=Object.create(Battle.prototype),hero:any={level:1,exp:0,star:1,skills:[]};
   const stats=heroStats(HEROES.knight,hero);
-  const state=normalizeMasterworks(null),rpg={bestiary:{},combatXp:0};
+  const state:any=normalizeMasterworks(null),rpg={bestiary:{},combatXp:0};
   Object.assign(game,{
     active:true,paused:false,pauseReasons:new Set(),elapsed:0,kills:0,waveKilled:0,combatXp:0,roomsCleared:0,runKills:new WeakSet(),killLedger:new KillLedger(),enemies:[],pending:[],effects:{},buildBase:stats,
     stage:{idx:1,ch:1,code:'1-1',scale:1},heroId:'knight',world:{rooms:[],remaining:2,bossRoom:{cleared:false}},
