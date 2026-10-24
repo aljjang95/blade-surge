@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import {
-  STAGE_SELECT_STORAGE_KEY, normalizeStageSelectMemory, readStageSelectMemory, writeStageSelectMemory,
+  STAGE_SELECT_STORAGE_KEY, normalizeStageSelectMemory, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
   powerTone, nextCampaignStage, campaignStages, dungeonStages, stageSelectModel, selectedEntry, isRecommendedSelection, entryAction,
 } from '../src/game/stage-select-model.js';
 
@@ -176,4 +176,34 @@ test('지도 상자 2.5:1 고정과 노드 크기(최소 40px), 꼬리표가 아
     expect(top + layout.node / 2 + 16).toBeLessThanOrEqual(bottom - layout.boss / 2 + 1);
     expect(layout.points[4][0]).toBeCloseTo(w * 0.88, 5);
   }
+});
+
+test('캠페인 완주(6-10 클리어) 뒤 추천을 따랐던 캠페인 기억은 던전 추천으로 연다', () => {
+  const { eco, expedition } = fresh();
+  eco.s.progress.unlocked = 60; eco.s.progress.stars = { '6-10': 1 };
+  const model: any = stageSelectModel(inputs(eco, expedition, { memory: { introSeen: true, last: { tab: 'campaign', ch: 6, st: 10, followed: true } }, dungeonRecommended: { id: 'glass_garden', depth: 'standard' } }));
+  expect(model.selection).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'standard' });
+  // 추천이 아닌 곳을 골랐던 기억(반복 사냥)은 완주 뒤에도 그 자리 그대로.
+  const exact: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'campaign', ch: 6, st: 10, followed: false } } }));
+  expect(exact.selection).toEqual({ tab: 'campaign', ch: 6, st: 10 });
+});
+
+test('저장 실패·차단: 두 번째 열기에도 세션 기억(introSeen·last)을 유지한다', () => {
+  const failing = { getItem: () => null, setItem() { throw new Error('quota'); } };
+  let memory: any = refreshStageSelectMemory(undefined, undefined, failing);
+  expect(memory).toEqual({ introSeen: false, last: null });
+  memory = { ...memory, introSeen: true };
+  let ok = writeStageSelectMemory(memory, failing);
+  expect(ok).toBe(false);
+  memory = { ...refreshStageSelectMemory(memory, ok, failing), last: { tab: 'campaign', ch: 1, st: 1, followed: true } };
+  ok = writeStageSelectMemory(memory, failing);
+  const second = refreshStageSelectMemory(memory, ok, failing);
+  expect(second).toEqual({ introSeen: true, last: { tab: 'campaign', ch: 1, st: 1, followed: true } });
+  // 읽기 자체가 막힌 경우에도 세션 사본을 쓴다.
+  const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  expect(refreshStageSelectMemory(second, undefined, blocked)).toEqual(second);
+  // 정상 저장이면 저장된 값을 읽는다.
+  const store = memoryStore();
+  writeStageSelectMemory({ introSeen: true, last: null }, store);
+  expect(refreshStageSelectMemory({ introSeen: false, last: null }, true, store).introSeen).toBe(true);
 });

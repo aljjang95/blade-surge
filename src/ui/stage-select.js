@@ -7,7 +7,7 @@ import { citadelHotspot } from '../data/citadel-hub.js';
 import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap, fitStageMapBox } from '../data/stage-select-maps.js';
 import { cardThumb } from './citadel-command.js';
 import {
-  stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory,
+  stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
 } from '../game/stage-select-model.js';
 import './stage-select.css';
 
@@ -169,7 +169,7 @@ export class StageSelectUI {
     this.trigger = trigger;
     this.prefer = prefer;
     this.dungeonRecommended = dungeonRecommended;
-    this.memory = readStageSelectMemory();
+    this.memory = refreshStageSelectMemory(this.memory, this.memoryWriteOk);
     this.selection = null;
     this.viewChapter = null;
     this.render();
@@ -178,7 +178,7 @@ export class StageSelectUI {
     this.guideLead.textContent = rest.length ? `${lead}!` : lead;
     this.guideText.textContent = rest.join('! ');
     this.guide.hidden = !this.model.intro;
-    if (this.model.intro) { this.memory = { ...this.memory, introSeen: true }; writeStageSelectMemory(this.memory); }
+    if (this.model.intro) { this.memory = { ...this.memory, introSeen: true }; this.memoryWriteOk = writeStageSelectMemory(this.memory); }
     this.app.input?.clear?.();
     this.app.citadel?.clearInput?.();
     this.dialog.showModal();
@@ -450,7 +450,7 @@ export class StageSelectUI {
     const entry = selection ? selectedEntry(model, selection) : null;
     if (!entry || !entryAction(entry).enabled || !this.canOpen()) return false;
     this.memory = { ...this.memory, last: { ...selection, followed: isRecommendedSelection(model, selection) } };
-    writeStageSelectMemory(this.memory);
+    this.memoryWriteOk = writeStageSelectMemory(this.memory);
     const returnTo = this.trigger;
     // 닫을 때 초점 복귀는 하지 않는다. 다음 화면(전투 또는 준비창)이 초점을 맡는다.
     this.trigger = null;

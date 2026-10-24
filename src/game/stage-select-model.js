@@ -36,6 +36,19 @@ export function readStageSelectMemory(storage) {
     return normalizeStageSelectMemory(raw ? JSON.parse(raw) : null);
   } catch { return normalizeStageSelectMemory(null); }
 }
+/**
+ * 화면을 열 때 쓸 기억. 저장 공간을 읽을 수 없거나 마지막 쓰기가 실패했으면 이번 세션 사본을 그대로 쓴다
+ * (차단된 브라우저에서 첫 안내가 열 때마다 다시 뜨거나 같은 세션의 마지막 선택을 잊지 않게).
+ * @param {unknown} session 이번 세션에 들고 있는 기억  @param {boolean|undefined} lastWriteOk 마지막 쓰기 결과(쓴 적 없으면 undefined)
+ */
+export function refreshStageSelectMemory(session, lastWriteOk, storage) {
+  if (session && lastWriteOk === false) return normalizeStageSelectMemory(session);
+  try {
+    const raw = (storage === undefined ? globalThis.localStorage : storage)?.getItem(STAGE_SELECT_STORAGE_KEY);
+    if (raw === null || raw === undefined) return session ? normalizeStageSelectMemory(session) : normalizeStageSelectMemory(null);
+    return normalizeStageSelectMemory(JSON.parse(raw));
+  } catch { return normalizeStageSelectMemory(session); }
+}
 export function writeStageSelectMemory(memory, storage) {
   try { (storage === undefined ? globalThis.localStorage : storage)?.setItem(STAGE_SELECT_STORAGE_KEY, JSON.stringify(normalizeStageSelectMemory(memory))); return true; } catch { return false; }
 }
@@ -172,7 +185,11 @@ export function stageSelectModel({ progress, expedition, power, heroLevel, energ
     }
     return null;
   };
-  const remembered = saved.last ? (saved.last.followed ? (saved.last.tab === 'dungeon' && recDungeon ? { tab: 'dungeon', ...recDungeon } : saved.last.tab === 'campaign' ? { tab: 'campaign', ch: next.ch, st: next.st } : null) : saved.last) : null;
+  // '그때 추천을 골랐다'는 기억은 지금의 추천으로 푼다. 캠페인을 완주했으면(6-10 클리어) 캠페인 기억도 전체 추천(던전)으로 연다.
+  const followedPick = !saved.last?.followed ? null
+    : saved.last.tab === 'dungeon' ? (recDungeon ? { tab: 'dungeon', ...recDungeon } : null)
+    : finished ? recommended : { tab: 'campaign', ch: next.ch, st: next.st };
+  const remembered = saved.last ? (saved.last.followed ? followedPick : saved.last) : null;
   const selection = usable(prefer) || usable(remembered) || usable(recommended) || { tab: 'campaign', ch: next.ch, st: next.st };
   const viewChapter = isInt(chapter, 1, CHAPTERS.length) ? chapter : selection.tab === 'campaign' ? selection.ch : next.ch;
   const campaign = campaignStages({ progress, chapter: viewChapter, power, heroLevel, energy, difficulty });
