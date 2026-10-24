@@ -22,8 +22,8 @@ export const ECONOMY_PACE = {
       "hero": "barbarian",
       "grade": "SSSR",
       "freeDays": 31,
-      "withDays": 28,
-      "days": 3
+      "withDays": 29,
+      "days": 2
     },
     "monthly": {
       "key": "monthly",
@@ -67,8 +67,8 @@ export const ECONOMY_PACE = {
       "hero": "barbarian",
       "grade": "SSSR",
       "freeDays": 31,
-      "withDays": 18,
-      "days": 13
+      "withDays": 20,
+      "days": 11
     },
     "vip_pass": {
       "key": "vip_pass",

@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Economy, gachaRates, gachaContents, heroPickup } from '../src/game/economy.js';
 import { EconomyCore, createMemoryStorage } from '../src/game/economy-core.js';
-import { BANNER_EPOCH, BANNER_PERIOD_MS, HERO_PICKUP_ROTATION, PICKUP_THEMES, rotationIndex, rotationWindow } from '../src/data/gacha-banners.js';
+import { BANNER_EPOCH, BANNER_PERIOD_MS, HERO_PICKUP_ROTATION, HERO_DEBUT, PICKUP_THEMES, GACHA_MILEAGE, heroReleased, rotationIndex, rotationWindow } from '../src/data/gacha-banners.js';
 import { HEROES } from '../src/data/heroes.js';
 
 const DAY = 86_400_000;
@@ -16,16 +16,17 @@ describe('교대 일정(KST)', () => {
   test('기준 시각은 2026-10-26 00:00 KST, 한 칸은 14일', () => {
     expect(BANNER_EPOCH).toBe(kst(2026, 10, 26)); expect(BANNER_PERIOD_MS).toBe(14 * DAY);
   });
-  test('교대표: 늑대인간 족장 → 검성 → 광전사, 전부 SSR 영웅', () => {
-    expect([...HERO_PICKUP_ROTATION]).toEqual(['werewolf', 'knight', 'barbarian']);
+  test('교대표: 늑대인간 족장 → 검은 고양이 사냥꾼 → 검성 → 광전사, 전부 SSR 영웅', () => {
+    expect([...HERO_PICKUP_ROTATION]).toEqual(['werewolf', 'blackcat', 'knight', 'barbarian']);
     for (const id of HERO_PICKUP_ROTATION) expect(HEROES[id as keyof typeof HEROES]?.rarity).toBe('SSR');
   });
-  test('경계 1ms 단위: ~10-26 광전사 → 10-26 늑대인간(할로윈) → 11-09 검성 → 11-23 광전사 → 12-07 늑대인간', () => {
+  test('경계 1ms 단위: ~10-26 광전사 → 10-26 늑대인간(할로윈) → 11-09 검은 고양이 → 11-23 검성 → 12-07 광전사 → 12-21 늑대인간', () => {
     const plan: Array<[number, string, string]> = [
       [kst(2026, 10, 26), 'barbarian', 'werewolf'],
-      [kst(2026, 11, 9), 'werewolf', 'knight'],
-      [kst(2026, 11, 23), 'knight', 'barbarian'],
-      [kst(2026, 12, 7), 'barbarian', 'werewolf'],
+      [kst(2026, 11, 9), 'werewolf', 'blackcat'],
+      [kst(2026, 11, 23), 'blackcat', 'knight'],
+      [kst(2026, 12, 7), 'knight', 'barbarian'],
+      [kst(2026, 12, 21), 'barbarian', 'werewolf'],
     ];
     for (const [at, before, after] of plan) {
       const [b, a, a1] = around(at);
@@ -39,9 +40,17 @@ describe('교대 일정(KST)', () => {
     expect(rotationWindow(kst(2026, 10, 31))).toEqual({ index: 0, start: BANNER_EPOCH, end: kst(2026, 11, 9) });
     expect(rotationWindow(kst(2026, 11, 9))).toMatchObject({ index: 1, end: kst(2026, 11, 23) });
   });
-  test('할로윈 주제는 늑대인간 픽업에만', () => {
+  test('주제 띠: 할로윈은 늑대인간, 그믐밤은 검은 고양이 픽업에만', () => {
     expect(PICKUP_THEMES.werewolf?.label).toBe('기간 한정 · 할로윈 픽업');
-    expect(Object.keys(PICKUP_THEMES)).toEqual(['werewolf']);
+    expect(PICKUP_THEMES.blackcat).toEqual({ id: 'newmoon', label: '신규 SSR · 그믐밤 픽업' });
+    expect(Object.keys(PICKUP_THEMES)).toEqual(['werewolf', 'blackcat']);
+  });
+  test('검은 고양이 데뷔 시각은 자기 픽업 칸의 시작(11-09 00:00 KST)과 같다', () => {
+    expect(HERO_DEBUT.blackcat).toBe(kst(2026, 11, 9));
+    expect(rotationWindow(HERO_DEBUT.blackcat)).toMatchObject({ index: 1, start: HERO_DEBUT.blackcat });
+    expect(heroReleased('blackcat', HERO_DEBUT.blackcat - 1)).toBe(false); expect(heroReleased('blackcat', HERO_DEBUT.blackcat)).toBe(true);
+    // 데뷔 표에 없는 영웅·없는 id는 항상 풀에 있다.
+    for (const id of ['werewolf', 'knight', 'barbarian', 'nobody', '__proto__']) expect(heroReleased(id, 0)).toBe(true);
   });
 });
 
@@ -82,6 +91,60 @@ describe('경계에서 바뀌는 것: 확률표·구성품·천장·확정·마�
       const c: any = new Economy({ storage: createMemoryStorage(), now: () => t }), s: any = new EconomyCore({ now: () => t });
       c.chooseStarter('mage'); s.chooseStarter('mage'); c.gachaState().mileage = s.gachaState().mileage = 200;
       expect(s.mileageQuote().id).toBe(c.mileageQuote().id);
+    }
+  });
+});
+
+describe('데뷔 전 비공개: 검은 고양이는 11-09 00:00 KST 전에 어떤 소환 풀에도 없다', () => {
+  const DEBUT = kst(2026, 11, 9), PRE = DEBUT - 1;
+  const heroIdsIn = (list: any[]) => new Set(list.filter((x) => x.kind === 'hero').map((x) => x.id));
+  test('확률·구성품 공개 표(영웅·초보자 배너)와 비픽업 SSR 목록', () => {
+    for (const banner of ['hero', 'beginner']) {
+      expect(heroIdsIn(gachaContents(banner, PRE)).has('blackcat')).toBe(false);
+      expect(heroIdsIn(gachaContents(banner, DEBUT)).has('blackcat')).toBe(true);
+    }
+    expect(gachaRates('hero', PRE).ssrSplit.otherHeroes).not.toContain('blackcat');
+    expect(gachaRates('hero', DEBUT).featured).toBe('blackcat');
+    // 데뷔 전 SSR 구성품 확률 합은 1(빠진 몫이 다른 SSR 영웅에 돌아간다).
+    const sum = gachaContents('hero', PRE).filter((x: any) => x.grade === 'SSR').reduce((a: number, x: any) => a + x.p, 0);
+    expect(sum).toBeCloseTo(gachaRates('hero', PRE).base.SSR, 12);
+  });
+  for (const [name, mk] of [
+    ['클라이언트 Economy', (now: () => number) => new Economy({ storage: createMemoryStorage(), now, gachaSeed: 7 })],
+    ['서버 EconomyCore', (now: () => number) => new EconomyCore({ now, gachaSeed: 7 })],
+  ] as const) {
+    test(`${name}: 영웅 배너·초보자·SSR 확정권 실제 소환이 데뷔 전에는 검은 고양이를 내지 않고 정각 뒤에는 낼 수 있다`, () => {
+      const drawn = (t: number) => {
+        const seen = new Set<string>();
+        for (let seed = 1; seed <= 60; seed++) {
+          const e: any = mk(() => t); e.gachaRng = ((x) => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296))(seed);
+          e.chooseStarter('mage'); e.s.gems = 1e7; e.s.tickets = 0; e.s.ssrTickets = 5;
+          const hit = (r: any) => { for (const x of r || []) if (x.type === 'hero') seen.add(x.id); };
+          for (let i = 0; i < 12; i++) hit(e.pull(10, 'hero'));
+          hit(e.pull(10, 'beginner')); hit(e.pull(10, 'beginner'));
+          while (e.s.ssrTickets > 0) hit(e.pullSSR());
+        }
+        return seen;
+      };
+      expect(drawn(PRE).has('blackcat')).toBe(false);
+      expect(drawn(DEBUT).has('blackcat')).toBe(true);
+    });
+    test(`${name}: 마일리지 교환은 데뷔 정각 전에는 늑대인간·광전사 칸 픽업만, 정각에 검은 고양이를 준다`, () => {
+      let t = PRE; const e: any = mk(() => t); e.chooseStarter('mage'); e.gachaState().mileage = GACHA_MILEAGE.cost;
+      expect(e.mileageQuote()).toMatchObject({ ok: true, id: 'werewolf' });
+      t = DEBUT; expect(e.mileageQuote()).toMatchObject({ ok: true, id: 'blackcat' });
+      expect(e.exchangeMileage()[0]).toMatchObject({ id: 'blackcat', unlocked: true });
+    });
+  }
+  test('서버와 클라이언트가 데뷔 경계 직전·직후 같은 SSR 풀을 본다', () => {
+    for (const t of around(DEBUT)) {
+      const c: any = new Economy({ storage: createMemoryStorage(), now: () => t }), s: any = new EconomyCore({ now: () => t });
+      c.chooseStarter('mage'); s.chooseStarter('mage'); c.gachaState().mileage = s.gachaState().mileage = GACHA_MILEAGE.cost;
+      expect(s.mileageQuote().id).toBe(c.mileageQuote().id);
+      // 같은 시드·같은 시계의 실제 소환 결과도 같다(풀 구성이 갈라지면 난수 인덱스가 어긋난다).
+      for (const e of [c, s]) { e.gachaRng = ((x: number) => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296))(11); e.s.gems = 1e7; }
+      const ids = (e: any) => [...e.pull(10, 'hero'), ...e.pull(10, 'hero'), ...e.pull(10, 'hero')].filter((x: any) => x.type === 'hero').map((x: any) => x.id);
+      expect(ids(s)).toEqual(ids(c));
     }
   });
 });

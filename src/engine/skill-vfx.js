@@ -78,11 +78,14 @@ export const SKILL_VFX = Object.freeze({
   ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { sig: true }),
   gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { sig: true, gain: .6 }),
   skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x3fe0a0, 12, { dist: 7, seek: [18, 6], sig: true, gain: .5 }),
+  // 검은 고양이 사냥꾼 고유 스킬: 명사수 비취 대신 보라(0xb070ff 계열). 모양은 skill-signatures.js 서명이 맡는다.
+  cat_omen: R(VIOLET, 'wind-arrow-trail', 'self', 'none', 0xb070ff, 3.5, { sig: true }),
+  nine_lives: R(VIOLET, 'wind-arrow-trail', 'self', 'none', 0xb070ff, 5, { sig: true, gain: .6 }),
 });
 
 // 궁극기(인덱스 3)와 고위 각성(6·7)만 전장 장악 링 + 카메라 펀치 1회를 쓴다.
 export const MAJOR_SKILL_INDEXES = Object.freeze([3, 6, 7]);
-export const MAJOR_SKILL_IDS = Object.freeze(new Set([...Object.values(HERO_SKILLS).flatMap((ids) => MAJOR_SKILL_INDEXES.map((i) => ids[i])), 'moonlit_hunt']));
+export const MAJOR_SKILL_IDS = Object.freeze(new Set([...Object.values(HERO_SKILLS).flatMap((ids) => MAJOR_SKILL_INDEXES.map((i) => ids[i])), 'moonlit_hunt', 'nine_lives']));
 
 /** 등급 없는 레거시 영웅은 def.rarity, 그것도 없으면 SR 로 내려간다. */
 export function resolveHeroGrade(player) {

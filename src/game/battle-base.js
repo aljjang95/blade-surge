@@ -5,6 +5,7 @@ import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
 import { WEREWOLF_HOWL } from './werewolf-kit.js';
+import { BLACKCAT_OMEN } from './blackcat-kit.js';
 import { FEEL, KillChain, cinematicBeat, killSlowmo, slowAccentFor, slowAccentLevel } from './feel.js';
 import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
@@ -760,9 +761,12 @@ export class Battle {
     const p = opts.source?.stats ? opts.source : this.player; const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
     if (this.sp) amount *= this.sp.dmgMul(e);   // 서리 세트: 결정화된 적은 받는 피해 +30%
+    // 검은 고양이 불길한 징조: 표식을 건 시전자의 피해만 BLACKCAT_OMEN.taken배(다른 파티원·다른 영웅 피해는 그대로).
+    if (e.omenBy === p && e.omenUntil > this.elapsed) amount *= BLACKCAT_OMEN.taken;
     // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
     const dealt = e.hurt(amount, { ...opts, crit, attacker: p });
     if (dealt <= 0) return;
+    if (opts.omen && e.alive) { e.omenBy = p; e.omenUntil = this.elapsed + BLACKCAT_OMEN.time; }
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
@@ -796,7 +800,7 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false, streak = null }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false, streak = null, omen = false }) {
     const effect = frontierEffectForStage(this.stage);
     if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
@@ -811,7 +815,7 @@ export class Battle {
     // 아군 화살은 같은 속도로 그어지는 비취 궤적을 남긴다(스킬마다 모양이 다르다). 판정·난수와 무관한 표시 층이다.
     const streakStyle = !hostile && visual === 'arrow' ? (streak || (basic ? (finisher ? 'finisher' : 'basic') : 'volley')) : null;
     const beam = streakStyle ? this.fx.arrowStreak?.(pos, dir, speed, life, streakStyle) ?? null : null;
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle });
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle, omen });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -828,7 +832,7 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen });
             if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }

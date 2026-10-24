@@ -79,7 +79,7 @@ describe('늑대인간 족장 외형·소리 조회는 kit(광전사) 표를 쓴
   test('소리: 고유 스킬 둘은 광전사 효과음을 빌리고 세트·보이스도 광전사 것', () => {
     expect(skillSound('blood_howl', 'werewolf')).toBe(skillSound('berserk', 'barbarian'));
     expect(skillSound('moonlit_hunt', 'werewolf')).toBe(skillSound('hell_axe', 'barbarian'));
-    expect(SKILL_SOUND_ALIAS).toEqual({ blood_howl: 'berserk', moonlit_hunt: 'hell_axe' });
+    expect(SKILL_SOUND_ALIAS).toEqual({ blood_howl: 'berserk', moonlit_hunt: 'hell_axe', cat_omen: 'ranger_volley', nine_lives: 'ranger_tempest' });
     expect(heroSoundFiles('werewolf')).toEqual(heroSoundFiles('barbarian'));
     expect(ultimateSound('werewolf')).toBe(ultimateSound('barbarian'));
     expect(heroVoiceName('werewolf', 'select')).toBe('hero_barbarian_select');

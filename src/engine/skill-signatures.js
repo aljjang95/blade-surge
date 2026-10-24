@@ -12,6 +12,8 @@ import { SIGNATURES as BARBARIAN, PRELUDES as BARBARIAN_PRELUDES } from './sig-b
  * 궁수: 관통 일직선 / 세 갈래 부채 / 회피 폭발 / 폭풍 나침 / 연사 조준 / 덩굴 부채 / 바람 소용돌이 / 하늘 화살비 표식.
  */
 const JADE = 0x3fe0a0, JADE_HOT = 0x9fffd8, VINE = 0x63e08a;
+/** 검은 고양이 사냥꾼(고유 스킬 2종) 보라 팔레트. 명사수 비취와 한눈에 갈린다. */
+const CAT = 0xb070ff, CAT_HOT = 0xe6ccff, CAT_DEEP = 0x5a2a9a;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
 const yawOf = (f) => Math.atan2(f.z, f.x);
 
@@ -234,6 +236,35 @@ const RANGER = {
       if (!lite) impact._emit(IMPACT_KIND.mark, _b.x, .06, _b.z, 2.6, JADE, .45, { stretch: MARK_STYLE.thorn, delay: hitT });
     }
   },
+  // 불길한 징조: 발밑 보라 부채 표식 + 세 갈래 보라 대시(표적 셋의 저주 화살) + 끝점 별빛. 맞은 적의 표식은 skills.js 가 따로 찍는다.
+  cat_omen(ctx) {
+    const { impact, f, player } = ctx; const SPEED = 34;
+    impact.mark(player.pos, CAT, { radius: 5.5, life: .7, style: MARK_STYLE.fan, angle: yawOf(f) });
+    _b.copy(player.pos).setY(.08);
+    for (let i = -1; i <= 1; i++) {
+      rotY(f, i * .2, _d);
+      rail(impact, _b, _d, .8, 12, 2.4, i ? CAT : CAT_HOT, { width: .2, speed: SPEED, life: .55 });
+      _e.copy(_b).addScaledVector(_d, 9).setY(1);
+      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.4, CAT_HOT, .22, { angle: .3, grow: .5, delay: 9 / SPEED });
+    }
+  },
+  // 아홉 목숨의 밤: 무적 물러남 길(7m)을 따라 보라 고리가 차례로 터지고, 둘레에 아홉 갈래 그믐 나침이 돌며 접선 불똥이 감긴다.
+  nine_lives(ctx) {
+    const { impact, f, player, lite } = ctx; const o = bow(ctx, _a);
+    impact.mark(player.pos, CAT_HOT, { radius: 4.6, life: 1.2, style: MARK_STYLE.compass, angle: yawOf(f) });
+    _d.set(-f.x, 0, -f.z);
+    for (let i = 0; i < 4; i++) {
+      const t = i * .1; _e.copy(player.pos).addScaledVector(_d, 7 * t * 1.4);
+      impact._emit(IMPACT_KIND.ring, _e.x, .6, _e.z, 2 + i * .4, i % 2 ? CAT : CAT_HOT, .34, { grow: 1, delay: t });
+    }
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 2.2, CAT_HOT, .1, { angle: .3, grow: .4 });
+    const n = lite ? 4 : 9;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 1.8;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .34, i % 2 ? CAT : CAT_HOT, .6,
+        { vx: -Math.sin(a) * 11, vy: 2.2, vz: Math.cos(a) * 11, stretch: 1, grow: 1, delay: i * .09 });
+    }
+  },
 };
 
 /**
@@ -242,6 +273,16 @@ const RANGER = {
  * @type {Record<string, (ctx: SigCtx) => void>}
  */
 export const SKILL_PRELUDES = {
+  // 아홉 목숨의 밤: 발밑에 어두운 보라 고리가 조여들고 그믐 불똥이 둘레에서 모여든다(보라).
+  nine_lives(ctx) {
+    const { impact, f, player, lite } = ctx;
+    impact.mark(player.pos, CAT_DEEP, { radius: 4.2, life: 1.3, style: MARK_STYLE.compass, angle: yawOf(f) + .2 });
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 3.4;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .28, i % 2 ? CAT : CAT_HOT, .5,
+        { vx: -Math.cos(a) * 6 - Math.sin(a) * 5, vy: 2, vz: -Math.sin(a) * 6 + Math.cos(a) * 5, stretch: 1, grow: 1, delay: (i % 4) * .15 });
+    }
+  },
   // 폭풍의 일곱 화살: 발밑 나침 고리가 조여들고, 일곱 갈래 방향으로 가는 바람 예고선이 깔리며, 둘레 바람이 활로 모인다.
   ranger_tempest(ctx) {
     const { impact, f, player, lite } = ctx;

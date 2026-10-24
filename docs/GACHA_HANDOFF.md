@@ -27,7 +27,7 @@
 
 ## 남은 것(우선순위)
 1. 서버 권위 모드 전에 소환을 "서버 결과 먼저 받고 연출"로(지금은 클라이언트 선굴림 + 서버 재실행 패리티).
-2. 신규 SSR 4명(늑대인간 족장은 2차에서 완료 — 용암 오니 군주·벚꽃 무사·밤까마귀·검은 고양이) 영웅 정의·스킬·초상 → `HERO_PICKUP_ROTATION`에 추가(BM 12.5).
+2. 신규 SSR 3명(늑대인간 족장은 2차, 검은 고양이 사냥꾼은 3차에서 완료 — 밤까마귀·벚꽃 무사·용암 오니 군주) 영웅 정의·스킬·초상 → `HERO_PICKUP_ROTATION`에 추가(BM 12.5).
 3. 설계만 된 상품 SKU(성장 펀드·스텝업·첫 충전 2배·픽업 기간 패키지·복귀·초대·선택권) 구현 — 판매·가격 공개는 대표님 확인.
 4. 월정액 일일 100 보석 유료/무료 분류 법무 확인, 운영 사이트 확률 공개 페이지(`/odds`).
 5. 등급분류 초안의 '확인 필요' 항목(웹 게임 직접 신청 대상, 수수료, 중소기업 확률 공개 예외), 보석 팩 구성(카탈로그 3종 vs 목업 6종) 정리.
@@ -57,3 +57,24 @@
   - 원정(던전·결투장) 결과 버튼은 시험과 코드 리뷰로만 확인했다. 운영 촬영은 캠페인 결과만 했다.
   - 헤드리스 브라우저에서는 게임 시계가 멈춰 `victory()`의 1.6초 지연이 흐르지 않는다. 그래서 촬영할 때는 `app.ui.showResult(app.battle, true)`를 직접 불렀다.
   - 시즌 이벤트 한정 재화가 생기면 `rewardNextAction`에 갈래 하나를 추가한다.
+
+## 소환 3차 (2026-10-25, gogo-chunk:summon-3)
+- **선택 근거**: 현 SSR 셋(검성·광전사·늑대인간)이 전부 근접이다. 2호는 첫 원거리 SSR(궁수 kit, 검은 고양이 사냥꾼)로 골라 늑대인간의 근접 돌격과 겹치지 않게 했다. 밤까마귀(rogue kit)는 근접 암살이라 다음 칸으로 미뤘다. 다른 선택지: 밤까마귀 먼저(역할이 늑대인간과 겹침), 벚꽃 무사(knight 반격, 검성과 겹침)로 보류.
+- **영웅**: `blackcat`(`kit:'ranger'`·`bodyAvatar:'avatar_ranger_blackcat'`·`gachaOnly`), 몸·무기·애니메이션·소리 세트·보이스·집중(`jobId:'ranger'`)은 명사수 것. 소유 정책은 늑대인간과 같다(정책 1 무료 범위·영웅 상품·시작 후보는 원래 다섯).
+- **스킬 요약**(`src/game/blackcat-kit.js`, 명사수 스킬 여섯은 공유): 불길한 징조(삼중 추적화살 자리) = 위협이 큰 적 셋(정예·보스 우선)에 저주 화살, 맞은 적은 6초간 내게 받는 피해 +15%, 집중 +1. 궁극기 아홉 목숨의 밤(폭풍의 일곱 화살 자리) = 무적으로 물러나며 그림자 화살 9발을 표적마다 돌려 쏘고 끝에 표식 적마다 그믐 폭발(집중 3 소비 시 폭발 +50%). 소리는 명사수 삼중 추적화살·폭풍의 일곱 화살을 빌린다(`SKILL_SOUND_ALIAS`), 연출은 보라 0xb070ff 계열(`skill-vfx.js`·`skill-signatures.js`).
+- **sim(8시드, `bun tools/hero-balance-sim.mjs --assert`)**: 명사수@SSR(같은 kit을 SSR 등급으로 올린 가상 영웅) 대비 무리 0.975배·단일 1.028배. 테스트(`test/hero-balance-sim.test.ts`)는 4시드로 같은 판정을 약 3초에 돌린다.
+- **데뷔 전 비공개**: `HERO_DEBUT = { blackcat: 2026-11-09 00:00 KST }`와 `heroReleased(id, now)`(`src/data/gacha-banners.js`, 표에 없는 id는 항상 true). 클라이언트 `Economy`와 서버 `EconomyCore`가 같은 `economy.js`의 `heroesOf(rarity, now)`·`validSsrHero(id, now)`로 영웅 배너 비픽업 SSR·초보자 SSR·SSR 확정권·마일리지 교환·확률/구성품 공개 표를 모두 같은 시계로 거른다(패리티 시험은 `test/gacha-rotation.test.ts`). 데뷔 정각부터는 자기 픽업 칸이라 풀에도 픽업으로 들어간다. 이미 공개된 것: 아바타 상점의 같은 이름 외형(`avatars.js`)은 이전부터 판매 목록에 있어 영웅 이름은 비밀이 아니다. 영웅 탭 목록도 미보유·데뷔 전 영웅은 숨긴다(`meta.js renderHeroes`, `heroReleased`).
+- **교대**: `['werewolf','blackcat','knight','barbarian']` — ~10-26 광전사(회차 -1) / 10-26 늑대인간 / 11-09 검은 고양이(주제 `newmoon` '신규 SSR · 그믐밤 픽업') / 11-23 검성 / 12-07 광전사 / 12-21 늑대인간. 배너 그림은 치비가 없어 늑대인간과 같은 방식(영웅 초상 = 아바타 초상 `avatar_ranger_blackcat-v1.webp`)이다.
+- **남은 것**: ① 치비 배너(아래 프롬프트)를 만들어 `HERO_BANNER_ART.blackcat`에 한 줄 — 11-09 전에. ② 다음 신규 칸(11-23 이후)은 밤까마귀·벚꽃 무사·용암 오니 군주 후보, 구현은 다음 덩어리. ③ 검은 고양이 전용 스킬 아이콘(지금 명사수 것)·음성(지금 명사수 것).
+- **치비 배너 프롬프트**(BM 12.9 그림체 규칙: 큰 머리·짧은 몸의 귀여운 체형, 밝은 금빛 하이라이트, 시즌 색만 배경·배지에, 사실풍 금지, 화면 이름은 게임 데이터 이름만. 16:9 가로, 캐릭터는 가운데 40% 띠. 늑대인간 PC 스크립트 `C:\Work\tasks\summon2-art-src\gen.ps1`는 이 환경에서 읽을 수 없어 형식만 맞췄다. 출력 `public/img/tll/banners/blackcat-chibi-v1.webp`):
+  ```
+  Cute chibi gacha banner illustration, 16:9 landscape. A black-cat hunter archer "검은 고양이 사냥꾼":
+  oversized head, short stubby body, big glossy eyes, small black cat ears and a thin curled tail, midnight-black hooded
+  cloak with violet inner lining and a tiny crescent-moon clasp, holding a compact dark recurve bow with glowing violet
+  string, a nocking arrow with violet curse-mark glow, confident playful smile. Pose: leaping back mid-shot, one foot
+  lifted, cloak flaring. Warm bright golden rim light and gold sparkle highlights on the character (same chibi style as the
+  other SSR banners). Background: new-moon night sky, deep indigo to violet gradient, a thin crescent moon, soft violet
+  and gold bokeh stars, faint nine glowing cat-eye marks drifting around. Season palette only in background and badge area
+  (violet 0xb070ff family). Character fully inside the central 40% horizontal band, empty decorative space left and right.
+  No text, no letters, no logo, no watermark, no realistic proportions, no photoreal style, plain clean edges.
+  ```

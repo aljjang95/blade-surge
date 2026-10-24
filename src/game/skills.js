@@ -5,6 +5,7 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { WEREWOLF_HOWL, WEREWOLF_HUNT } from './werewolf-kit.js';
+import { BLACKCAT_OMEN, BLACKCAT_NIGHT } from './blackcat-kit.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
@@ -55,6 +56,30 @@ function werewolfHuntTarget(game, origin, last) {
     if (w < bestD) { bestD = w; best = e; }
   }
   return best || fallback;
+}
+/** 검은 고양이 표적 n명: origin 에서 reach 안, 가까운 순에 정예·보스·(marked면)표식 적을 앞세운다. 적이 n보다 적으면 돌려 채운다. */
+function blackcatTargets(game, p, origin, reach, n, marked = false) {
+  const list = [];
+  for (const e of game.enemies) {
+    if (!e.alive || e.spawning) continue;
+    const d = Math.hypot(e.pos.x - origin.x, e.pos.z - origin.z);
+    if (d >= reach) continue;
+    const omen = marked && e.omenBy === p && e.omenUntil > (game.elapsed || 0);
+    list.push({ e, w: d - (e.isBoss ? 4 : e.isElite ? 2 : 0) - (omen ? 3 : 0) });
+  }
+  list.sort((a, b) => a.w - b.w);
+  if (!list.length) return [];
+  return Array.from({ length: n }, (_, i) => list[i % list.length].e);
+}
+/** 표적 하나를 겨눈 화살(관통 없음). 표적이 움직여도 거의 맞도록 빠르고 판정이 조금 넓다. */
+function blackcatArrow(game, p, e, dmg, options = {}) {
+  const from = rangerOrigin(p, p.forward(new THREE.Vector3()));
+  const dir = new THREE.Vector3(e.pos.x - from.x, 0, e.pos.z - from.z);
+  if (dir.lengthSq() < 1e-6) dir.copy(p.forward(new THREE.Vector3()));
+  dir.normalize();
+  const dist = Math.hypot(e.pos.x - from.x, e.pos.z - from.z);
+  game.spawnProjectile({ pos: from, dir, speed: BLACKCAT_OMEN.speed, radius: BLACKCAT_OMEN.radius, dmg, color: 0xb070ff, size: .45, owner: p, kb: 2, kind: 'slash',
+    pierce: false, life: Math.min(1.2, Math.max(BLACKCAT_OMEN.life, (dist + 2) / BLACKCAT_OMEN.speed)), visual: 'arrow', streak: 'quick', ...options });
 }
 /** fn 실행 동안 center에서 limit m 밖 적을 판정 대상에서 뺀다(hitArea·hitRadius가 spawning 적을 건너뛰는 규칙을 이용, 끝나면 원복). */
 function onlyWithin(game, center, limit, fn) {
@@ -123,6 +148,8 @@ export const SKILL_AIM_SHAPES = Object.freeze({
   berserk: { kind: 'self', range: 0 },
   blood_howl: { kind: 'self', range: 0, radius: WEREWOLF_HOWL.radius },
   moonlit_hunt: { kind: 'self', range: WEREWOLF_HUNT.reach, radius: WEREWOLF_HUNT.moonRadius },
+  cat_omen: { kind: 'self', range: BLACKCAT_OMEN.reach, radius: BLACKCAT_OMEN.reach },
+  nine_lives: { kind: 'self', range: BLACKCAT_NIGHT.reach, radius: BLACKCAT_NIGHT.reach },
   hell_axe: { kind: 'circle', range: 13, radius: 6 },
   fireball: { kind: 'line', range: SKILL_PROJECTILES.fire.speed * SKILL_PROJECTILES.fire.life, width: 2, radius: 4.2, origin: 1 },
   chain: { kind: 'self', range: 12 },
@@ -751,6 +778,69 @@ export const SKILLS = {
       game.fx.light(at, 0xc8d8ff, 18, 20, 0.9);
       game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xd8e4ff); game.renderer.aberr = 1.1; game.timeCtl.slowmo(0.3, 0.55);
       audio.boom({ vol: 1, dur: 0.9, low: 48 }); audio.play('hit_mining', { vol: 1, rate: 0.6 }); audio.vibe([90, 40, 140]);
+    },
+  },
+
+  // 검은 고양이 불길한 징조(삼중 추적화살 자리): 위협이 큰 적 셋(정예·보스 우선, 적이 하나면 셋 다 그 적)에게 저주 화살을 겨눠 쏜다.
+  // 맞은 적은 BLACKCAT_OMEN.time초 동안 시전자에게 받는 피해 ×taken(battle-base damageEnemy). 집중 +1.
+  cat_omen: {
+    dur: .6,
+    cast(game, p, c) {
+      const list = blackcatTargets(game, p, p.pos, BLACKCAT_OMEN.reach, BLACKCAT_OMEN.arrows);
+      if (!list.length) { rangerArrows(game, p, c.dmg, 1, { omen: true, color: 0xb070ff, streak: 'quick' }); p.gainJobResource(1); return; }
+      list.forEach((e, i) => game.after(i * .07, () => { if (game.active !== false && p.alive && e.alive) blackcatArrow(game, p, e, c.dmg, { omen: true }); }));
+      for (const e of new Set(list)) game.fx.impact?.mark(e.pos, 0xb070ff, { radius: 1.2, life: 1, style: 2 });
+      p.gainJobResource(1);
+      audio.whoosh({ vol: .45, pitch: 1.3, dur: .25 }); audio.dark({ vol: .3, base: 220, dur: .4 });
+    },
+  },
+  // 궁극기 아홉 목숨의 밤(폭풍의 일곱 화살 자리): 무적으로 뒤로 물러나 그림자 화살 shots발을 표적마다 돌려 쏘고(표식 적 우선, 맞으면 표식),
+  // 끝에 시전 지점 reach 안의 표식 적마다 그믐 폭발(그 적에게 c.dmg×burstMul, 고리 반경 burstRadius는 표시만). 집중 3이면 소비해 폭발 50% 증가.
+  nine_lives: {
+    dur: .4, total: BLACKCAT_NIGHT.total,
+    start(game, p, c) {
+      skillPrelude(game, p, 'nine_lives');
+      c.data.n = 0; c.data.tick = .1; c.data.origin = p.pos.clone();
+      c.data.empowered = (p.jobResource || 0) >= 3; if (c.data.empowered) p.jobResource = 0;
+      p.invuln = Math.max(p.invuln || 0, BLACKCAT_NIGHT.total + .1);
+      const first = blackcatTargets(game, p, p.pos, BLACKCAT_NIGHT.reach, 1)[0];
+      if (first) p.face(first.pos.x, first.pos.z);
+      p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar(-BLACKCAT_NIGHT.backstep);
+      game.fx.castCircle(p.pos, 0x8a50e0, { radius: 4, life: .9, demon: true });
+      game.renderer.desat = .35; game.renderer.aberr = .4;
+      audio.dark({ vol: .55, base: 160, dur: 1.4 }); audio.whoosh({ vol: .45, pitch: .8, dur: .4 }); audio.vibe([30, 20, 30]);
+    },
+    update(game, p, c, dt) {
+      if (c.data.tick < .05) p.vel.multiplyScalar(Math.max(0, 1 - dt * 10));
+      c.data.tick -= dt;
+      if (c.data.tick > 0 || c.data.n >= BLACKCAT_NIGHT.shots) return;
+      c.data.tick = BLACKCAT_NIGHT.step;
+      const i = c.data.n++;
+      // 순서는 첫 발에 한 번 정한다(표식이 붙을 때마다 다시 정렬하면 같은 적을 건너뛰거나 겹친다). 죽은 표적 자리만 새로 고른다.
+      if (!c.data.order) c.data.order = blackcatTargets(game, p, c.data.origin, BLACKCAT_NIGHT.reach, BLACKCAT_NIGHT.shots, true);
+      let e = c.data.order[i];
+      if (!e?.alive || e.spawning) e = c.data.order[i] = blackcatTargets(game, p, c.data.origin, BLACKCAT_NIGHT.reach, 1, true)[0];
+      if (!e) return;
+      p.face(e.pos.x, e.pos.z);
+      p.playTimed?.('Bow_Shoot', BLACKCAT_NIGHT.step * 1.6, { fade: .03 });
+      onlyWithin(game, c.data.origin, BLACKCAT_NIGHT.reach, () => blackcatArrow(game, p, e, c.dmg * BLACKCAT_NIGHT.shotMul, { omen: true, quietStop: i % 3 !== 0 }));
+      audio.whoosh({ vol: .32, pitch: 1.2 + i * .06, dur: .12 });
+    },
+    end(game, p, c) {
+      p.vel.set(0, 0, 0); game.renderer.desat = 0; game.renderer.aberr = 0;
+      const origin = c.data.origin || p.pos, now = game.elapsed || 0, mul = BLACKCAT_NIGHT.burstMul * (c.data.empowered ? 1.5 : 1);
+      // 마지막 화살이 닿을 시간(사거리 18m ÷ 속도 34 ≈ 0.53초)을 두고 터뜨린다(표식이 붙은 뒤).
+      game.after(.55, () => {
+        if (game.active === false) return;
+        const marked = game.enemies.filter((e) => e.alive && !e.spawning && e.omenBy === p && e.omenUntil > (game.elapsed || now) && Math.hypot(e.pos.x - origin.x, e.pos.z - origin.z) < BLACKCAT_NIGHT.reach);
+        for (const e of marked) {
+          const at = e.pos.clone();
+          game.damageEnemy(e, c.dmg * mul, { kb: 6, kind: 'magic', up: true, stun: .4, finisher: true, skillCast: c, source: p, dirx: e.pos.x - origin.x, dirz: e.pos.z - origin.z });
+          game.fx.shockTex(at, 0xb070ff, { r1: BLACKCAT_NIGHT.burstRadius + 1, life: .45 });
+          game.fx.burst(at.clone().setY(.8), 0xd8b0ff, { n: 18, speed: 9, size: .35, up: .8 });
+        }
+        if (marked.length) { game.renderer.flashScreen(.3, 0x6a30c0); game.renderer.shake(.5); game.renderer.punch(1); game.timeCtl?.slowmo?.(.25, .5); audio.boom({ vol: .8, dur: .7, low: 60 }); audio.vibe([60, 30, 90]); }
+      });
     },
   },
 

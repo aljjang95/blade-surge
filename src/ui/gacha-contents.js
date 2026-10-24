@@ -2,6 +2,7 @@
 import { HEROES, HERO_ORDER } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_INFO, RARITY_COLOR } from '../data/items.js';
 import { SETS } from '../data/items.js';
+import { heroReleased } from '../data/gacha-banners.js';
 import { REWARD_LABEL, gachaContents, gachaRates } from '../game/economy.js';
 import { weaponLook, weaponLookText, ENHANCE_STEPS } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
@@ -56,7 +57,9 @@ export function showGachaContents(filter) {
 export function showWeaponPreview(itemId, heroId = this.eco.s.selected, enh = 0) {
   const it = ITEM_BY_ID[itemId]; if (!it || it.slot !== 'weapon') return;
   const look = weaponLook(heroId, { id: itemId, enh }, LOOKS);
-  const heroes = HERO_ORDER.filter((id) => this.app.models?.[HEROES[id].model]);
+  const now = this.eco.now?.() ?? Date.now();
+  // 데뷔 전 미보유 신규 SSR(HERO_DEBUT)은 미리보기 영웅 버튼에도 보이지 않는다.
+  const heroes = HERO_ORDER.filter((id) => this.app.models?.[HEROES[id].model] && (this.eco.ownHero(id) || heroReleased(id, now)));
   const p = gachaContents(this.gachaBanner || 'gear').find((x) => x.id === itemId)?.p || 0;
   const close = () => this.app.wardrobe?.previewStop?.();
   this.ui.modal('<div class="wp-wrap"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + '</h2><p class="setting-help">' + RARITY_INFO[it.rarity].name + ' 무기 · 소환 확률 ' + pct(p, 3) + '</p>'
