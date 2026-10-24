@@ -58,7 +58,8 @@ for (int k = 0; k < 8; k++) {
   vGearZone.y += dot(skinWeight, vec4(equal(skinIndex, vec4(gearRingBones[k]))));
 }
 #endif`);
-    shader.fragmentShader = 'uniform vec3 gearRimBody;\nuniform vec3 gearRimFeet;\nuniform vec3 gearRimRing;\nuniform float gearHideFeet;\nvarying vec2 vGearZone;\nvarying float vGearFoot;\n' + shader.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    shader.fragmentShader = 'uniform vec3 gearRimBody;\nuniform vec3 gearRimFeet;\nuniform vec3 gearRimRing;\nuniform float gearHideFeet;\nvarying vec2 vGearZone;\nvarying float vGearFoot;\n' + shader.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+if (gearHideFeet > 0.5 && vGearFoot > 0.5) discard;`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 {
   float gearFacing = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
   float gearRim = pow(1.0 - gearFacing, 2.6);
