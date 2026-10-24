@@ -36,6 +36,8 @@ const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
  * - paid = 서버 권한(entitled.heroes) 그대로
  * - 정책 1(5명 소유)은 ① 서버 문서가 이미 정책 1이거나 ② 원본에 roster가 없거나 정책 1이고 save.created가 기준 시각 이전일 때만 인정
  * - 그 밖에는 정책 2 + 시작 영웅 1명(서버가 기억하는 선택 > 원본 시작 영웅 > 원본 selected > knight) + 서버 문서가 이미 가진 owned
+ * @param {unknown} raw
+ * @param {{ now: number, serverRoster?: any, entitledHeroes?: readonly string[], grandfatherBeforeMs?: number }} opts
  * @returns {{ roster: any, grandfathered: boolean }}
  */
 export function trustedRoster(raw, { now, serverRoster, entitledHeroes, grandfatherBeforeMs }) {
