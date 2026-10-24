@@ -13,7 +13,7 @@ import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
-import { GACHA_BANNERS, rotationWindow } from '../data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, rotationWindow } from '../data/gacha-banners.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
@@ -117,6 +117,7 @@ export class Meta {
     $('btn-pull10').addEventListener('click', () => this.pull(10));
     document.querySelectorAll('#gacha-tabs .gz-tab').forEach((b) => b.addEventListener('click', () => this.selectBanner(b.dataset.banner)));
     $('btn-pull-ssr').addEventListener('click', () => this.pullSSR());
+    $('btn-mileage').addEventListener('click', () => this.exchangeMileage());
     $('btn-rates').addEventListener('click', () => this.showRates());
     $('btn-pass-buy').addEventListener('click', () => this.buyPass());
     $('btn-reveal-skip').addEventListener('click', () => this.revealSkip());
@@ -476,6 +477,8 @@ export class Meta {
     else { const n = b.pity - pityOf[id]; ratio = pityOf[id] / b.pity; head = `SSR 확정까지 <b id="pity-left">${n}</b>회`; line = guarOf[id] ? (id === 'gear' ? '다음 SSR은 픽업 세트 확정' : '다음 SSR은 픽업 영웅 확정') : (id === 'gear' ? '픽업 실패 시 다음 SSR 픽업 세트 확정' : '픽업 실패 시 다음 SSR 픽업 확정'); }
     if (pt.innerHTML !== head) pt.innerHTML = head; set(sub, line); guar.hidden = !guarOf[id]; guar.textContent = id === 'gear' ? '다음 SSR 픽업 세트 확정' : '다음 SSR 픽업 확정';
     fill.style.width = (Math.max(0, Math.min(1, ratio)) * 100).toFixed(1) + '%'; bar.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+    const mile = $('gz-mile'); mile.hidden = id !== GACHA_MILEAGE.banner;
+    if (!mile.hidden) { const mq = eco.mileageQuote(), mb = $('btn-mileage'); $('gz-mile-t').innerHTML = `마일리지 <b>${mq.have}/${mq.cost}</b> · 픽업 SSR 교환`; mb.disabled = !mq.ok; mb.title = mq.ok ? `${HEROES[mq.id]?.name || '픽업 영웅'} 교환` : mq.reason === 'points' ? `${mq.cost - mq.have}점 더 필요합니다` : '교환할 픽업이 없습니다'; }
     // 버튼: 비용·부족은 pullQuote 결과로
     const setBtn = (btn, n, label) => {
       const q = eco.pullQuote(n, id), small = btn.querySelector('small'), name = btn.querySelector('span');
@@ -513,6 +516,13 @@ export class Meta {
     this._revealBanner = bannerId;
     this.trackPull(n, currency === 'tickets' ? 'tickets' : 'gems', pityBefore, results);
     this.showReveal(results);
+  }
+  async exchangeMileage() {
+    if (this._revealOpen) return;
+    const q = this.eco.mileageQuote(); if (!q.ok) { audio.play('ui_error'); return; }
+    if (!await this.ui.confirm('마일리지 교환', `마일리지 ${q.cost}점으로 픽업 SSR ${esc(HEROES[q.id]?.name || '')}을(를) 받을까요?`, { ok: '교환', cancel: '취소' })) return;
+    const r = this.eco.exchangeMileage(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 교환을 취소했습니다. 마일리지는 그대로입니다.' : '마일리지를 교환할 수 없습니다.', 'red'); return; }
+    this._revealBanner = this.gachaBanner || 'hero'; this.showReveal(r);
   }
   pullSSR() { if (this._revealOpen) return; const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this._revealBanner = this.gachaBanner || 'hero'; this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
   trackPull(count, currency, pityBefore, results) {

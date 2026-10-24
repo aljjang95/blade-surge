@@ -300,6 +300,11 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .gz-pity-s { font-size: 11px; color: var(--muted); line-height: 1.25; }
 .gz-guar { align-self: center; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 900; color: #3a2000; background: linear-gradient(180deg, #ffe27a, #ffb03a); box-shadow: 0 0 12px rgba(255,200,90,.7); }
 .gz-guar[hidden] { display: none; }
+.gz-mile { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #ffe9b0; }
+.gz-mile[hidden] { display: none; }
+.gz-mile b { color: #ffcf5a; }
+.gz-mile .btn { padding: 3px 12px; font-size: 12px; min-height: 28px; }
+.gz-mile .btn:disabled { filter: grayscale(.8); opacity: .6; }
 .gacha-btns { display: flex; gap: 8px; }
 .gacha-btns .btn { flex: 1; min-width: 0; padding: 8px 6px; font-size: 16px; }
 .gacha-btns .btn[hidden], .gacha-btns .btn.hidden { display: none; }
