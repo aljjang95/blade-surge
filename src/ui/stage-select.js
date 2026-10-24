@@ -287,6 +287,7 @@ export class StageSelectUI {
     const chapter = campaign.chapters[campaign.chapter - 1];
     const map = stageMapFor(campaign.chapter);
     this.region.hidden = false;
+    this.regionPrev.hidden = false; this.regionNext.hidden = false;
     this.regionName.textContent = chapter.name;
     this.regionProgress.textContent = chapter.unlocked ? `${chapter.cleared} / 10` : '잠김';
     this.regionPrev.disabled = campaign.chapter <= 1;
@@ -358,7 +359,7 @@ export class StageSelectUI {
     this.region.hidden = false;
     this.regionName.textContent = '열린 던전';
     this.regionProgress.textContent = `${dungeons.open} / ${dungeons.total}`;
-    this.regionPrev.disabled = true; this.regionNext.disabled = true;
+    this.regionPrev.hidden = true; this.regionNext.hidden = true;
     this.listNote.hidden = false;
     const grid = node('ul', 'ss-dungeons');
     grid.setAttribute('aria-label', '던전');
