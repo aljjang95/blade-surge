@@ -221,7 +221,8 @@ export function refitHeroBoots(root, makeMaterial) {
 export function syncHeroBoots(root, boots, { data = BOOTS_DATA, load, makeMaterial, onChange, warn = console.warn } = {}) {
   const entry = root.userData.authoredContract?.role === 'hero' && boots ? pickBootsEntry(boots.rarity, data) : null;
   if (!entry) { removeHeroBoots(root); return false; }
-  if (root.userData.heroBoots?.entry.id === entry.id || root.userData.bootsTargetId === entry.id) return true;
+  if (root.userData.heroBoots?.entry.id === entry.id) { root.userData.bootsTargetId = entry.id; return true; }   // 대기 중인 다른 목표는 무효화
+  if (root.userData.bootsTargetId === entry.id) return true;
   root.userData.bootsTargetId = entry.id;
   Promise.resolve().then(() => load(entry.path)).then((gltf) => {
     if (root.userData.libraryDisposed || root.userData.bootsTargetId !== entry.id) return;
