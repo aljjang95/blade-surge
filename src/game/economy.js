@@ -2,7 +2,7 @@
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
-import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt } from '../data/gacha-banners.js';
+import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt, heroReleased } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
@@ -76,16 +76,17 @@ export function gachaChances(pity, banner = GACHA_BANNERS.hero) { return bannerC
 export function rollGachaRarity(pity, rng = Math.random, banner = GACHA_BANNERS.hero) {
   return pity >= banner.pity ? 'SSR' : pickWeighted({ R: banner.rates.R, SR: banner.rates.SR, SSR: bannerSsrWeight(banner, pity) }, rng);
 }
-const heroesOf = (r) => HERO_ORDER.filter((h) => HEROES[h].rarity === r);
-const validSsrHero = (id) => Object.hasOwn(HEROES, id) && HEROES[id].rarity === 'SSR';
+// 소환 풀은 데뷔 시각(HERO_DEBUT) 전 영웅을 뺀다. now 는 호출하는 쪽 규칙 시계(서버·클라이언트 같은 함수).
+const heroesOf = (r, now) => HERO_ORDER.filter((h) => HEROES[h].rarity === r && heroReleased(h, now));
+const validSsrHero = (id, now) => Object.hasOwn(HEROES, id) && HEROES[id].rarity === 'SSR' && heroReleased(id, now);
 const validPickupSet = (id) => SLOTS.some((slot) => ITEM_POOL[slot].some((x) => x.rarity === 'L' && x.set === id));
 /** 지금 영웅 픽업(교대표에서 유효한 SSR 영웅). 없으면 GACHA.featured. */
-export function heroPickup(now = Date.now()) { return pickupAt(HERO_PICKUP_ROTATION, now, validSsrHero) || GACHA.featured; }
+export function heroPickup(now = Date.now()) { return pickupAt(HERO_PICKUP_ROTATION, now, (id) => validSsrHero(id, now)) || GACHA.featured; }
 /** 지금 장비 픽업 세트(L 등급 세트). 없으면 null. */
 export function gearPickup(now = Date.now()) { return pickupAt(GEAR_PICKUP_ROTATION, now, validPickupSet); }
 /** 배너의 지금 픽업 id(영웅 id 또는 세트 id). 초보자는 픽업 없음. */
 export function bannerPickup(bannerId, now = Date.now()) { return bannerId === 'hero' ? heroPickup(now) : bannerId === 'gear' ? gearPickup(now) : null; }
-const otherSsrHeroes = (featured) => heroesOf('SSR').filter((h) => h !== featured);
+const otherSsrHeroes = (featured, now) => heroesOf('SSR', now).filter((h) => h !== featured);
 const ssrGearPool = () => SLOTS.flatMap((slot) => ITEM_POOL[slot].filter((x) => x.rarity === 'L'));
 /**
  * 실제 소환 코드와 같은 식으로 계산한 공개 확률표(단일 소환 기준, 10연 SR 보장 보정 제외).
@@ -97,14 +98,14 @@ export function gachaRates(bannerId = 'hero', now = Date.now()) {
   const banner = GACHA_BANNERS[bannerId] || GACHA_BANNERS.hero;
   const ssrByPull = Array.from({ length: banner.pity }, (_, i) => bannerChances(banner, i + 1).SSR);
   const expected = bannerPullsPerSsr(banner), featured = bannerPickup(banner.id, now);
-  const others = banner.ssr.hero ? otherSsrHeroes(featured) : [];
+  const others = banner.ssr.hero ? otherSsrHeroes(featured, now) : [];
   // 다른 SSR 영웅이 없으면 그 몫은 픽업으로 간다(rollResult와 같은 규칙). 초보자는 SSR 영웅 균등.
   const featuredHero = banner.ssr.hero ? (banner.ssr.featured ? (others.length ? banner.ssr.featured : 1) : 0) : 0;
   const materials = structuredClone(bannerMaterials(banner));
   return {
     bannerId: banner.id, name: banner.name, featured, base: bannerChances(banner, 1), softPityFrom: banner.softPity, hardPity: banner.pity, ssrByPull,
     expectedPullsPerSsr: expected, consolidatedSsr: 1 / expected, limit: banner.limit || 0,
-    ssrSplit: { featuredHero, otherSsrHero: banner.ssr.hero ? 1 - featuredHero : 0, otherHeroes: banner.ssr.featured ? others : heroesOf('SSR'),
+    ssrSplit: { featuredHero, otherSsrHero: banner.ssr.hero ? 1 - featuredHero : 0, otherHeroes: banner.ssr.featured ? others : heroesOf('SSR', now),
       ssrGear: banner.ssr.gear || 0, featuredGear: banner.ssr.gear ? banner.ssr.featured : 0, materials: 0 },
     srSplit: { hero: banner.sr.hero || 0, gear: banner.sr.gear || 0 }, rSplit: { hero: 0, gear: banner.r.gear || 0 },
     tenPullSrPlus: 1, dupShards: GACHA.dupShards, materials,
@@ -140,7 +141,7 @@ export function gachaContents(bannerId = 'hero', now = Date.now(), { ownsHero } 
   }
   mats('SSR');
   // 초보자 배너 SR 영웅은 미보유 영웅이 남아 있으면 그 영웅들 사이에서만 뽑는다(rollResult와 같은 규칙). 소유 정보가 있으면 그 기준으로 공개한다.
-  const srAll = heroesOf('SR'), srFresh = rates.bannerId === 'beginner' && typeof ownsHero === 'function' ? srAll.filter((id) => !ownsHero(id)) : [];
+  const srAll = heroesOf('SR', now), srFresh = rates.bannerId === 'beginner' && typeof ownsHero === 'function' ? srAll.filter((id) => !ownsHero(id)) : [];
   heroes('SR', srFresh.length ? srFresh : srAll, base.SR * rates.srSplit.hero);
   gear('SR', base.SR * rates.srSplit.gear); mats('SR');
   gear('R', base.R * rates.rSplit.gear); mats('R');
@@ -773,12 +774,12 @@ export class Economy {
         if (banner.id === GACHA_MILEAGE.banner) g.mileage += GACHA_MILEAGE.perPull;
       }
       // 초보자 10회의 마지막 칸은 아직 없는 SR 영웅이 있으면 그 영웅 확정(SSR이 나온 칸은 그대로). 2번이면 SR 로스터가 첫날 거의 찬다.
-      const freshSr = banner.id === 'beginner' && n === 10 && i === 9 && rar !== 'SSR' && heroesOf('SR').some((id) => !this.ownHero(id));
+      const freshSr = banner.id === 'beginner' && n === 10 && i === 9 && rar !== 'SSR' && heroesOf('SR', now).some((id) => !this.ownHero(id));
       if (freshSr) rar = 'SR';
       if (n === 10 && i === 9 && !srGuaranteed && rar === 'R') rar = 'SR';
       if (rar !== 'R') srGuaranteed = true;
       if (rar === 'SSR') { if (banner.id === 'gear') g.gearPity = 0; else if (banner.id === 'hero') g.pity = 0; else g.beginnerSsr = true; }
-      results.push(this.rollResult(rar, { banner, featured, freshSr }));
+      results.push(this.rollResult(rar, { banner, featured, freshSr, now }));
     }
     s.pity = g.pity; // 기존 UI가 읽는 레거시 미러
     this.recordJourneyAction('pulls', n);
@@ -790,7 +791,7 @@ export class Economy {
   mileageQuote() {
     const g = this.gachaState(), id = heroPickup(nowOf(this)), have = g.mileage || 0;
     const base = { id, have, cost: GACHA_MILEAGE.cost, ok: false, reason: null };
-    if (!validSsrHero(id)) return { ...base, reason: 'no-pickup' };
+    if (!validSsrHero(id, nowOf(this))) return { ...base, reason: 'no-pickup' };
     if (have < GACHA_MILEAGE.cost) return { ...base, reason: 'points' };
     return { ...base, ok: true };
   }
@@ -810,7 +811,7 @@ export class Economy {
   pullSSR() {
     this.lastGachaError = null;
     const before = structuredClone(this.s), s = this.s; if (s.ssrTickets <= 0) { this.lastGachaError = 'no-ssr-ticket'; return null; }
-    s.ssrTickets--; const r = this.rollResult('SSR', { banner: GACHA_BANNERS.beginner, featured: null }); this.recordJourneyAction('pulls');
+    s.ssrTickets--; const r = this.rollResult('SSR', { banner: GACHA_BANNERS.beginner, featured: null, now: nowOf(this) }); this.recordJourneyAction('pulls');
     if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
     for (const listener of this.listeners) listener(this.s);
     return [r];
@@ -820,14 +821,14 @@ export class Economy {
    * 픽업 배너의 SSR은 50:50이며, 픽업이 아니면 같은 배너의 다음 SSR은 픽업 확정이다.
    * @param {string} rar @param {{ banner?: any, featured?: string|null, freshSr?: boolean }} [opts] freshSr: 미보유 SR 영웅 확정(초보자 10회 마지막 칸)
    */
-  rollResult(rar, { banner = GACHA_BANNERS.hero, featured = bannerPickup(banner.id, nowOf(this)), freshSr = false } = {}) {
+  rollResult(rar, { banner = GACHA_BANNERS.hero, now = nowOf(this), featured = bannerPickup(banner.id, now), freshSr = false } = {}) {
     const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
     const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
     const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
     const split = rar === 'SSR' ? banner.ssr : rar === 'SR' ? banner.sr : banner.r;
     if (rar === 'SSR' && split.hero) {
-      const others = otherSsrHeroes(featured);
-      if (!banner.ssr.featured || !featured) return hero(pick(heroesOf('SSR')));
+      const others = otherSsrHeroes(featured, now);
+      if (!banner.ssr.featured || !featured) return hero(pick(heroesOf('SSR', now)));
       const key = 'guarantee', win = g[key] || !others.length || rng() < banner.ssr.featured;
       g[key] = !win;
       return win ? hero(featured, { featured: true }) : hero(pick(others));
@@ -839,11 +840,11 @@ export class Economy {
       g.gearGuarantee = !win;
       return win ? item(pick(inSet), { featured: true }) : item(pick(rest));
     }
-    if (freshSr) { const fresh = heroesOf('SR').filter((id) => !this.ownHero(id)); if (fresh.length) return hero(pick(fresh)); }
+    if (freshSr) { const fresh = heroesOf('SR', now).filter((id) => !this.ownHero(id)); if (fresh.length) return hero(pick(fresh)); }
     const r = rng(), heroShare = split.hero || 0, gearShare = split.gear || 0;
     if (r < heroShare) {
       // 초보자 배너의 SR 영웅은 아직 없는 영웅을 먼저 준다(첫 주 안에 SR 로스터를 채우는 온보딩 규칙, 문서 12.2).
-      const all = heroesOf(rar), fresh = banner.id === 'beginner' ? all.filter((id) => !this.ownHero(id)) : [];
+      const all = heroesOf(rar, now), fresh = banner.id === 'beginner' ? all.filter((id) => !this.ownHero(id)) : [];
       return hero(pick(fresh.length ? fresh : all));
     }
     if (r < heroShare + gearShare) return { type: 'item', rar, item: this.addItem(rar, null, rng) };
