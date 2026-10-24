@@ -12,11 +12,12 @@ import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable,
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
-import { REWARD_LABEL, gachaRates, gachaChances } from '../game/economy.js';
+import { REWARD_LABEL, gachaRates, gachaChances, gachaContents, bannerPickup } from '../game/economy.js';
+import { GACHA_BANNERS, rotationWindow } from '../data/gacha-banners.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
-import { revealPlan, tenPullStatus } from './reveal-plan.js';
+import { revealPlan } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
@@ -114,12 +115,13 @@ export class Meta {
     } else { $('promo-starter').remove(); $('promo-monthly').remove(); }
     $('btn-pull1').addEventListener('click', () => this.pull(1));
     $('btn-pull10').addEventListener('click', () => this.pull(10));
+    document.querySelectorAll('#gacha-tabs .gz-tab').forEach((b) => b.addEventListener('click', () => this.selectBanner(b.dataset.banner)));
     $('btn-pull-ssr').addEventListener('click', () => this.pullSSR());
     $('btn-rates').addEventListener('click', () => this.showRates());
     $('btn-pass-buy').addEventListener('click', () => this.buyPass());
     $('btn-reveal-skip').addEventListener('click', () => this.revealSkip());
     $('btn-reveal-close').addEventListener('click', () => this.revealClose());
-    $('btn-reveal-again').addEventListener('click', () => { this.revealClose(); this.pull(10); });
+    $('btn-reveal-again').addEventListener('click', () => { const bid = this._revealBanner || this.gachaBanner || 'hero'; this.revealClose(); this.pull(10, bid); });
     this.eco.onChange(() => this.refreshTop());
     setInterval(() => this.tick(), 1000);
   }
@@ -152,7 +154,7 @@ export class Meta {
     this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
-    if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') this.refreshGacha();
+    if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') { if (sub && Object.hasOwn(GACHA_BANNERS, sub)) this.gachaBanner = sub; this.refreshGacha(); }
     if (tab === 'home') this.refreshHome();
   }
   /** 메뉴 안(소환·상점·패스·우편 등)에 받을 것이 있으면 하단 메뉴 버튼에도 점을 띄워 첫 소환·보상 수령을 놓치지 않게 한다. */
@@ -178,9 +180,6 @@ export class Meta {
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     this.refreshMenuBadge();
-    $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = s.pity; $('pity-left').textContent = GACHA.pity - s.pity;
-    // SSR 확정권은 확률 정보 창 안이 아니라 소환 버튼 줄에서 바로 쓴다(보유할 때만 보인다).
-    $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
     this.refreshGachaOdds(); this.refreshGachaPace();
     // 홈 프로모션 버튼은 부트 때 결제가 없으면 DOM에서 치워진다(나중에 결제가 연결돼도 상점 탭으로만 판매).
     const promoStarter = $('promo-starter'), promoMonthly = $('promo-monthly');
@@ -207,7 +206,8 @@ export class Meta {
   tick() {
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
     if (this.billingOn() && $('promo-timer')) $('promo-timer').textContent = '한정 상품';
-    $('banner-timer').textContent = hms(this.eco.s.limitedStart + 7 * 86400000 - Date.now());
+    const rot = rotationWindow(Date.now()); $('banner-timer').textContent = hms(rot.end - Date.now());
+    if (this._rotIdx !== rot.index) { this._rotIdx = rot.index; this.renderGacha(); }
     if (this.tab === 'shop') document.querySelectorAll('[data-timer]').forEach((el) => { el.textContent = '남은 시간 ' + hms(this.eco.limitedLeft(this.eco.sku(el.dataset.timer))); });
     // 월정액 자동 지급
     if (this.eco.claimMonthly()) this.ui.toast('월정액 일일 보석 +100', 'gold');
@@ -331,12 +331,13 @@ export class Meta {
     const price = (productId) => { try { return payOn ? this.app.heroPurchase.price?.(productId) || null : null; } catch { return null; } };
     const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid)).length;
     const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
-    const hasFree = !(q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' || q.reason === 'starter-pending');
+    const viaGacha = q.reason === 'gacha';
+    const hasFree = !viaGacha && !(q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' || q.reason === 'starter-pending');
     const need = Math.max(1, q.need - 1), done = Math.max(0, Math.min(need, q.progress - 1)), stageOk = done >= need, gemOk = q.have >= q.gems;
     const ratio = (n, m) => `${Math.round(Math.max(0, Math.min(1, m ? n / m : 0)) * 100)}%`;
     const freeRows = hasFree ? `<div class="hl-row ${stageOk ? 'ok' : ''}" data-cond="progress"><i class="hl-ico hl-ico-book" aria-hidden="true"></i><span class="hl-lab">${q.needLabel} 클리어</span><b class="hl-meter"><u style="width:${ratio(done, need)}"></u></b><span class="hl-val">${done} / ${need}</span><i class="hl-check" aria-label="${stageOk ? '조건 충족' : '조건 미충족'}">${stageOk ? '✓' : ''}</i></div>
       <div class="hl-row hl-gem ${gemOk ? 'ok' : ''}" data-cond="gems"><i class="hl-ico hl-ico-gem" aria-hidden="true"></i><span class="hl-lab">보석 ${fmt(q.gems)}</span><b class="hl-meter"><u style="width:${ratio(q.have, q.gems)}"></u></b><span class="hl-val">${fmt(q.have)} / ${fmt(q.gems)}</span><i class="hl-check" aria-label="${gemOk ? '조건 충족' : '조건 미충족'}">${gemOk ? '✓' : ''}</i></div>` : '';
-    const freeBtn = q.canFree ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">보석 ${fmt(q.gems)}개로 해금</button>` : `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">조건 달성 후 해금</button>`;
+    const freeBtn = viaGacha ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">소환에서 획득</button>` : q.canFree ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">보석 ${fmt(q.gems)}개로 해금</button>` : `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">조건 달성 후 해금</button>`;
     const heroPrice = price(heroProductId(id)), allPrice = lockedLeft > 1 && IAP_BY_ID[HERO_ALL_PRODUCT_ID] ? price(HERO_ALL_PRODUCT_ID) : null;
     const buyBtn = payOn
       ? (heroPrice ? `<button type="button" class="hl-btn hl-gold hl-buy" id="h-buy" aria-label="${esc(def.name)} 바로 해금 ${esc(heroPrice)}"><i class="hl-pile" aria-hidden="true"></i><span>${esc(heroPrice)}</span><em aria-hidden="true">›</em></button>` : `<button type="button" class="hl-btn hl-gray hl-buy" id="h-buy" disabled>가격 확인 중</button>`)
@@ -345,13 +346,13 @@ export class Meta {
       <section class="hl-card"><div class="hl-art"><img class="hl-portrait" src="${esc(def.portrait || '')}" alt="${esc(def.name)}" onerror="this.style.visibility='hidden'"><span class="hl-badge"><i aria-hidden="true">🔒</i>미보유</span></div>
         <div class="hl-info"><h2>${esc(def.name)}</h2><div class="sub">${esc(cmp.role)}</div><p class="hl-intro">${esc(cmp.intro)}</p>${compareBarsHtml(cmp)}</div></section>
       <div class="hl-boards">
-        <section class="hl-box" data-lock="free"><h3>무료 해금</h3><p class="hl-lead">특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.</p>${freeRows}${why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
-        <section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>
-        ${allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
-        <p class="hl-note"><i aria-hidden="true">!</i>결제는 서버 확인 후 지급됩니다.</p>
+        <section class="hl-box" data-lock="free"><h3>${viaGacha ? '소환으로 획득' : '무료 해금'}</h3><p class="hl-lead">${viaGacha ? '이 영웅은 소환에서 얻을 수 있습니다.' : '특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.'}</p>${freeRows}${viaGacha ? `<p class="hl-why" id="hl-why">영웅 소환(2주 교대 픽업)과 초보자 소환에서 나옵니다. 이미 가진 영웅이 나오면 조각 ${GACHA.dupShards}개로 바뀌어 초월에 쓰입니다.</p>` : why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
+        ${viaGacha ? '' : `<section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>`}
+        ${!viaGacha && allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
+        ${viaGacha ? '' : '<p class="hl-note"><i aria-hidden="true">!</i>결제는 서버 확인 후 지급됩니다.</p>'}
       </div></div>`;
-    det.querySelector('#h-free').onclick = () => this.unlockHeroFree(id);
-    det.querySelector('#h-buy').onclick = () => this.buyHero(heroProductId(id), id);
+    det.querySelector('#h-free').onclick = () => (viaGacha ? this.openTab('gacha', 'hero') : this.unlockHeroFree(id));
+    const buy = det.querySelector('#h-buy'); if (buy) buy.onclick = () => this.buyHero(heroProductId(id), id);
     const all = det.querySelector('#h-buy-all'); if (all) all.onclick = () => this.buyHero(HERO_ALL_PRODUCT_ID, id);
   }
   /** 다음 열릴 관문 번호 → '3-5' 식 표기(마지막으로 깬 관문). */
@@ -431,7 +432,8 @@ export class Meta {
   offerGold() { setTimeout(() => this.ui.modal(`<h2>골드가 부족합니다</h2><p>보석으로 골드를 즉시 충전할 수 있어요</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">골드 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'gold'); }; } }), 600); }
 
   // ================= 가챠 =================
-  refreshGacha() { const f = HEROES[GACHA.featured]; $('banner-title').textContent = f.name; $('banner-art').src = '/img/banner_featured.webp'; $('banner-art').onerror = () => { $('banner-art').src = f.portrait; }; this.refreshTop(); this.trackFunnel('gacha_view', { pity: clampPity(this.eco.s.pity) }); }
+  refreshGacha() { this.refreshTop(); this.trackFunnel('gacha_view', { pity: clampPity(this.eco.s.pity) }); }
+  selectBanner(id) { if (!Object.hasOwn(GACHA_BANNERS, id) || this.gachaBanner === id) return; this.gachaBanner = id; audio.play('ui_click', { vol: 0.5 }); this.renderGacha(); }
   /** 로컬 퍼널 기록. 계측 실패가 화면 흐름을 막지 않는다. */
   trackFunnel(name, payload) { try { return funnelFor(this.app).track(name, payload); } catch { return { ok: false, reason: 'unavailable' }; } }
   /** 배너·하단 카운터를 실제 확률식으로 채운다. s.pity는 마지막 SSR 이후 누적 횟수라 다음 소환 순번은 s.pity + 1이다. */
@@ -441,26 +443,78 @@ export class Meta {
     if (line) { line.hidden = !pace; line.textContent = pace ? 'SSR 확정권 1장 · ' + pace.text + ' (' + pace.saved + ') · ' + pace.basis : ''; if (pace) line.title = pace.full; }
     if (tag) { tag.hidden = !pace; tag.textContent = pace ? pace.saved + ' 단축' : ''; }
   }
-  refreshGachaOdds() {
-    const rates = gachaRates(), pity = clampPity(this.eco.s.pity), next = gachaChances(pity + 1).SSR, left = Math.max(1, GACHA.pity - pity);
-    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
-    const soft = softStart(rates);
-    set('banner-ssr', pct(rates.base.SSR)); set('banner-pickup', pct(rates.ssrSplit.featuredHero, 0)); set('banner-soft', String(soft));
-    set('gacha-odds', pity + 1 >= soft
-      ? ` 확률 상승 중 · 다음 소환 SSR ${pct(next, 1)} · ${left}회 안에 SSR 확정`
-      : ` 다음 소환 SSR ${pct(next, 1)} · ${soft}번째부터 확률 상승 · ${left}회 안에 SSR 확정`);
+  refreshGachaOdds() { this.renderGacha(); }
+  /** 소환 탭 전체를 현재 배너(영웅·장비·초보자)로 다시 그린다. 숫자는 배너 표·견적 함수 값만 쓴다. */
+  renderGacha() {
+    const wrap = $('gacha-wrap'); if (!wrap) return;
+    const id = Object.hasOwn(GACHA_BANNERS, this.gachaBanner) ? this.gachaBanner : (this.gachaBanner = 'hero'), b = GACHA_BANNERS[id], eco = this.eco, s = eco.s, g = eco.gachaState(), now = Date.now();
+    const rates = gachaRates(id, now), pick = bannerPickup(id, now), left = eco.beginnerLeft(), set = (el, v) => { if (el && el.textContent !== v) el.textContent = v; };
+    wrap.dataset.banner = id;
+    const pityOf = { hero: g.pity, gear: g.gearPity, beginner: g.beginner }, guarOf = { hero: g.guarantee, gear: g.gearGuarantee, beginner: false };
+    const usedDone = id === 'beginner' && left <= 0;
+    const thumb = { hero: HEROES[bannerPickup('hero', now)]?.portrait || '', gear: SETS[bannerPickup('gear', now)]?.icon || '', beginner: HEROES.mage?.portrait || HEROES.knight?.portrait || '' };
+    document.querySelectorAll('#gacha-tabs .gz-tab').forEach((btn) => {
+      const bid = btn.dataset.banner, on = bid === id, ts = btn.querySelector('.gz-ts'), img = btn.querySelector('img');
+      btn.classList.toggle('on', on); btn.setAttribute('aria-selected', String(on)); btn.tabIndex = on ? 0 : -1;
+      const done = bid === 'beginner' && eco.beginnerLeft() <= 0; btn.classList.toggle('done', done);
+      set(ts, bid === 'beginner' ? (done ? '완료' : `남은 ${eco.beginnerLeft()}/${GACHA_BANNERS.beginner.limit}회`) : `SSR 확정 ${GACHA_BANNERS[bid].pity - (bid === 'gear' ? g.gearPity : g.pity)}회`);
+      if (img && thumb[bid] && img.getAttribute('src') !== thumb[bid]) img.setAttribute('src', thumb[bid]);
+    });
+    // 중앙: 픽업 이름·일러스트·남은 시간
+    const art = $('banner-art'); let artSrc, title, kicker;
+    if (id === 'hero') { const h = HEROES[pick]; artSrc = pick === 'barbarian' ? '/img/banner_featured.webp' : (h?.portrait || '/img/banner_featured.webp'); title = h?.name || '픽업 영웅'; kicker = '픽업 소환 · 확률 UP'; }
+    else if (id === 'gear') { artSrc = SETS[pick]?.icon || '/img/set_dragon.webp'; title = SETS[pick]?.name || '장비 소환'; kicker = '픽업 세트 · 확률 UP'; }
+    else { artSrc = HEROES.knight?.portrait || '/img/banner_featured.webp'; title = 'SSR 영웅 확정'; kicker = `첫 ${b.limit}회 한정 · ${fmt(b.ten)}`; }
+    if (art.getAttribute('src') !== artSrc) { art.setAttribute('src', artSrc); art.onerror = () => { art.onerror = null; art.setAttribute('src', HEROES[bannerPickup('hero', now)]?.portrait || ''); }; }
+    set($('banner-title'), title); set($('banner-kicker'), kicker); $('banner-timer-wrap').hidden = id === 'beginner';
+    const gear = $('gz-gear'), feat = id === 'gear' ? gachaContents('gear', now).filter((x) => x.featured && x.kind === 'gear') : [];
+    gear.hidden = !feat.length; gear.innerHTML = feat.map((x) => { const it = ITEM_BY_ID[x.id]; return `<span title="${esc(it.name)}"><img src="${esc(itemVisual(it, { heroId: s.selected }).iconUrl)}" alt="${esc(it.name)}" onerror="this.remove()"></span>`; }).join('');
+    // 오른쪽: 천장 바
+    const pt = $('gz-pity-t'), sub = $('gz-pity-s'), guar = $('gz-guar'), fill = $('gz-bar-fill'), bar = $('gz-bar');
+    let ratio, head, line;
+    if (id === 'beginner') { ratio = (b.limit - left) / b.limit; head = usedDone ? '초보자 소환 완료' : `남은 <b id="pity-left">${left}</b>/${b.limit}회`; line = usedDone ? '20회를 모두 사용했어요' : (g.beginnerSsr ? 'SSR 영웅을 이미 받았어요 · 남은 횟수는 그대로 사용' : `${b.limit}회 안에 SSR 영웅 확정`); }
+    else { const n = b.pity - pityOf[id]; ratio = pityOf[id] / b.pity; head = `SSR 확정까지 <b id="pity-left">${n}</b>회`; line = guarOf[id] ? (id === 'gear' ? '다음 SSR은 픽업 세트 확정' : '다음 SSR은 픽업 영웅 확정') : (id === 'gear' ? '픽업 실패 시 다음 SSR 픽업 세트 확정' : '픽업 실패 시 다음 SSR 픽업 확정'); }
+    if (pt.innerHTML !== head) pt.innerHTML = head; set(sub, line); guar.hidden = !guarOf[id]; guar.textContent = id === 'gear' ? '다음 SSR 픽업 세트 확정' : '다음 SSR 픽업 확정';
+    fill.style.width = (Math.max(0, Math.min(1, ratio)) * 100).toFixed(1) + '%'; bar.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+    // 버튼: 비용·부족은 pullQuote 결과로
+    const setBtn = (btn, n, label) => {
+      const q = eco.pullQuote(n, id), small = btn.querySelector('small'), name = btn.querySelector('span');
+      btn.hidden = id === 'beginner' && n === 1; name.textContent = label;
+      let html = '', off = false, short = false;
+      if (q.ok && q.currency === 'tickets') html = `<i class="ic ic-ticket"></i> 소환권 ${q.tickets}장 사용`;
+      else if (q.ok) html = `<i class="ic ic-gem"></i> ${id === 'beginner' ? `<s>${fmt(GACHA_BANNERS.hero.ten)}</s> ` : ''}${fmt(q.cost)}`;
+      else if (q.reason === 'insufficient-funds') { short = true; html = `<i class="ic ic-gem"></i> ${fmt(q.cost)}<em>${fmt(q.need)} 부족</em>`; }
+      else if (q.reason === 'beginner-used') { off = true; html = '완료'; }
+      if (q.ok && n === 10 && id !== 'beginner') html += '<em>SR 이상 1장 보장</em>';
+      if (small.innerHTML !== html) small.innerHTML = html;
+      btn.disabled = off; btn.classList.toggle('is-short', short); btn.setAttribute('aria-disabled', String(off || short));
+    };
+    setBtn($('btn-pull1'), 1, '1회'); setBtn($('btn-pull10'), 10, '10회');
+    // SSR 확정권은 보유할 때만 소환 버튼 아래에 보인다.
+    $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
+    $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = pityOf[id];
+    // 확률 한 줄(확률식에서만)
+    const odds = $('gacha-odds');
+    if (id === 'beginner') odds.textContent = usedDone ? '' : `SSR ${pct(rates.base.SSR)} · ${rates.hardPity}회째까지 없으면 SSR 영웅 확정 · SR 영웅은 아직 없는 영웅 우선`;
+    else { const n = pityOf[id], next = gachaChances(n + 1, b).SSR, soft = softStart(rates); odds.textContent = (n + 1 >= soft ? '확률 상승 중 · ' : '') + `다음 소환 SSR ${pct(next)}` + (n + 1 < soft ? ` · ${soft}번째부터 상승` : ''); }
   }
-  async pull(n) {
+  async pull(n, bannerId = this.gachaBanner || 'hero') {
     // 결과 화면이 열려 있는 동안에는 어떤 소환도 다시 시작하지 않는다(리뷰 P1: 초점이 남은 버튼 Enter 반복으로 재화가 추가 소모되고 앞 결과가 사라짐).
     if (this._revealOpen) return;
-    const s = this.eco.s; const cost = n === 10 ? GACHA.ten : GACHA.single; const useTicket = n === 1 ? s.tickets > 0 : s.tickets >= 10;
-    if (!useTicket && s.gems < cost) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(cost)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, { ok: '보석 상점 보기', cancel: '취소' }); if (ok) this.openTab('shop', 'gem'); return; }
-    const pityBefore = clampPity(s.pity);
-    const results = this.eco.pull(n); if (!results) { if (this.eco.lastGachaError === 'storage') this.ui.toast('저장 실패로 소환을 취소했습니다. 재화와 천장은 그대로입니다.', 'red'); else if (this.eco.lastGachaError === 'insufficient-funds') this.ui.toast('소환 재화가 부족합니다.', 'red'); return; }
-    this.trackPull(n, useTicket ? 'tickets' : 'gems', pityBefore, results);
+    const s = this.eco.s, q = this.eco.pullQuote(n, bannerId);
+    if (!q.ok) {
+      audio.play('ui_error');
+      if (q.reason === 'insufficient-funds') { const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(q.cost)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, { ok: '보석 상점 보기', cancel: '취소' }); if (ok) this.openTab('shop', 'gem'); }
+      else if (q.reason === 'beginner-used') this.ui.toast('초보자 소환을 모두 사용했습니다.', 'red');
+      return;
+    }
+    const currency = q.currency, pityBefore = clampPity(s.pity);
+    const results = this.eco.pull(n, bannerId); if (!results) { if (this.eco.lastGachaError === 'storage') this.ui.toast('저장 실패로 소환을 취소했습니다. 재화와 천장은 그대로입니다.', 'red'); else if (this.eco.lastGachaError === 'insufficient-funds') this.ui.toast('소환 재화가 부족합니다.', 'red'); return; }
+    this._revealBanner = bannerId;
+    this.trackPull(n, currency === 'tickets' ? 'tickets' : 'gems', pityBefore, results);
     this.showReveal(results);
   }
-  pullSSR() { if (this._revealOpen) return; const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
+  pullSSR() { if (this._revealOpen) return; const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this._revealBanner = this.gachaBanner || 'hero'; this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
   trackPull(count, currency, pityBefore, results) {
     const n = (rar) => results.filter((r) => r.rar === rar).length;
     this.trackFunnel('gacha_pull', { count, currency, pityBefore, ssr: n('SSR'), sr: n('SR'), dupes: results.filter((r) => r.type === 'hero' && r.dup).length });
@@ -486,7 +540,7 @@ export class Meta {
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
       const sub = r.type === 'hero' ? (r.dup || r.locked ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
       // 영웅 일러스트는 카드를 가득 채우고, 장비·재료 아이콘은 잘리지 않게 안쪽에 맞춘다
-      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && r.locked ? '<span class="new">잠금 영웅</span>' : r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
+      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && r.locked ? '<span class="new">잠금 영웅</span>' : r.type === 'hero' && (r.unlocked || !r.dup) ? '<span class="new">NEW 영웅</span>' : ''}${r.featured ? '<span class="pick">PICK UP</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
       const step = plan.cards[i];
       if (step.hintAt !== null) later(() => c.classList.add('hint'), step.hintAt);
@@ -505,25 +559,42 @@ export class Meta {
   revealDone() {
     $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden');
     // 재화가 모자라도 버튼을 끄지 않는다. 얼마가 부족한지 보여 주고, 누르면 기존 보석 부족 안내(상점 연결)가 뜬다.
-    const st = tenPullStatus(this.eco.s, GACHA), again = $('btn-reveal-again'), cost = again.querySelector('small');
-    again.disabled = false; again.classList.toggle('is-short', !st.ok); again.setAttribute('aria-disabled', st.ok ? 'false' : 'true');
-    if (cost) cost.innerHTML = st.ok ? `<i class="ic ic-gem"></i> ${st.label}` : `<i class="ic ic-gem"></i> ${fmt(st.need)} 부족 · 필요 ${fmt(GACHA.ten)}`;
-    again.title = st.ok ? '' : `보석 ${fmt(st.need)}개가 더 필요합니다 (보유 ${fmt(this.eco.s.gems)})`;
+    const q = this.eco.pullQuote(10, this._revealBanner || 'hero'), again = $('btn-reveal-again'), cost = again.querySelector('small'), short = q.reason === 'insufficient-funds', used = q.reason === 'beginner-used';
+    again.disabled = used; again.classList.toggle('is-short', short); again.setAttribute('aria-disabled', String(short || used));
+    if (cost) cost.innerHTML = q.ok ? (q.currency === 'tickets' ? `<i class="ic ic-ticket"></i> 소환권 ${q.tickets}장` : `<i class="ic ic-gem"></i> ${fmt(q.cost)}`) : short ? `<i class="ic ic-gem"></i> ${fmt(q.need)} 부족 · 필요 ${fmt(q.cost)}` : '완료';
+    again.title = short ? `보석 ${fmt(q.need)}개가 더 필요합니다 (보유 ${fmt(this.eco.s.gems)})` : '';
     $('btn-reveal-close').focus({ preventScroll: true });
   }
   revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup && !r.locked)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
   showRates() {
-    const rates = gachaRates(), b0 = rates.base, sp = rates.ssrSplit, pity = clampPity(this.eco.s.pity);
-    const featured = HEROES[GACHA.featured]?.name || '픽업 영웅', others = sp.otherHeroes.map((id) => HEROES[id]?.name).filter(Boolean).join(', ');
+    const id = Object.hasOwn(GACHA_BANNERS, this.gachaBanner) ? this.gachaBanner : 'hero', b = GACHA_BANNERS[id], rates = gachaRates(id), list = gachaContents(id), g = this.eco.gachaState();
+    const sp = rates.ssrSplit, hard = rates.hardPity, soft = softStart(rates), rises = soft < hard, at = (k) => pct(rates.ssrByPull[k - 1], 1);
     const row = (label, p, color = '') => `<tr><th scope="row">${label}</th><td${color ? ` style="color:var(${color})"` : ''}>${pct(p, 2)}</td></tr>`;
-    const at = (k) => pct(rates.ssrByPull[k - 1], 1);
-    const soft = softStart(rates), hard = rates.hardPity;
-    const matRows = (grade, color) => (rates.materials[grade] || []).map((m) => row(`${grade} 강화 재료 · ${REWARD_LABEL[m.k]?.[0] || m.k} ×${m.n}`, b0[grade] * m.w, color)).join('');
-    this.ui.modal(`<h2>소환 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기 · 무기 외형 미리보기</button><table class="rates-table" aria-label="소환 등급별 확률">${row(`SSR 픽업 영웅 · ${featured}`, b0.SSR * sp.featuredHero, '--r-ssr')}${sp.otherSsrHero ? row(`SSR 다른 영웅${others ? ` · ${others}` : ''}`, b0.SSR * sp.otherSsrHero, '--r-ssr') : ''}${row('SSR 장비', b0.SSR * sp.ssrGear, '--r-ssr')}${matRows('SSR', '--r-ssr')}${row('SR 영웅', b0.SR * rates.srSplit.hero, '--r-sr')}${row('SR 장비', b0.SR * rates.srSplit.gear, '--r-sr')}${matRows('SR', '--r-sr')}${row('R 장비', b0.R * rates.rSplit.gear)}${matRows('R', '')}</table>
-      <p>SSR이 나오면 ${pct(sp.featuredHero, 0)} 확률로 픽업 영웅 ${featured}입니다.<br>${soft}번째 소환부터 SSR 확률이 오릅니다 (${soft}번째 ${at(soft)} · ${Math.min(hard - 1, soft + 9)}번째 ${at(Math.min(hard - 1, soft + 9))} · ${hard - 1}번째 ${at(hard - 1)}). ${hard}번째 소환은 SSR 확정입니다.<br>천장을 포함한 평균은 SSR 1회당 약 ${rates.expectedPullsPerSsr.toFixed(1)}회 (통합 SSR ${pct(rates.consolidatedSsr, 2)})입니다.<br>10회 소환은 SR 이상 1장을 보장합니다. 이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.</p>
-      <p><b>현재 누적 ${pity}회</b> · 다음 소환 SSR ${pct(gachaChances(pity + 1).SSR, 1)} · ${Math.max(1, hard - pity)}회 안에 SSR 확정</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-contents').onclick = () => this.showGachaContents(); const s = b.querySelector('#m-ssr'); if (s) s.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } });
+    const sum = (f) => list.filter(f).reduce((a, x) => a + x.p, 0), nameList = (xs) => xs.map((x) => HEROES[x.id]?.name).filter(Boolean).join(', ');
+    const pickName = id === 'gear' ? (SETS[rates.featured]?.name || '픽업 세트') : (HEROES[rates.featured]?.name || '픽업 영웅');
+    const grade = { SSR: '--r-ssr', SR: '--r-sr', R: '' };
+    const rows = ['SSR', 'SR', 'R'].map((gr) => {
+      const inGr = (x) => x.grade === gr, out = [], add = (label, p) => { if (p > 1e-12) out.push(row(label, p, grade[gr])); };
+      const fh = list.filter((x) => inGr(x) && x.kind === 'hero' && x.featured), oh = list.filter((x) => inGr(x) && x.kind === 'hero' && !x.featured);
+      if (fh.length) add(`${gr} 픽업 영웅 · ${nameList(fh)}`, sum((x) => inGr(x) && x.kind === 'hero' && x.featured));
+      if (oh.length) add(gr === 'SSR' && !fh.length ? `SSR 영웅(균등) · ${nameList(oh)}` : gr === 'SSR' ? `SSR 다른 영웅 · ${nameList(oh)}` : `${gr} 영웅`, sum((x) => inGr(x) && x.kind === 'hero' && !x.featured));
+      add(`${gr} 픽업 세트 장비 · ${pickName}`, sum((x) => inGr(x) && x.kind === 'gear' && x.featured));
+      add(gr === 'SSR' ? 'SSR 그 밖의 L 장비' : `${gr} 장비`, sum((x) => inGr(x) && x.kind === 'gear' && !x.featured));
+      for (const m of list.filter((x) => inGr(x) && x.kind === 'material')) add(`${gr} 강화 재료 · ${REWARD_LABEL[m.id]?.[0] || m.id} ×${m.n}`, m.p);
+      return out.join('');
+    }).join('');
+    const ssrLine = id === 'hero' ? `SSR ${pct(rates.base.SSR, 1)} 중 픽업 ${pct(sp.featuredHero, 0)} · 픽업이 아니면 다음 SSR 픽업 확정 · ${soft}번째부터 상승 · ${hard}번째 확정`
+      : id === 'gear' ? `SSR ${pct(rates.base.SSR, 1)} 중 픽업 세트 ${pct(sp.featuredGear, 0)} · 픽업이 아니면 다음 SSR 픽업 세트 확정 · ${soft}번째부터 상승 · ${hard}번째 확정`
+      : `${rates.limit}회 안 SSR 영웅 확정 · SR 영웅은 아직 없는 영웅 우선 · 10회 단위만 · 계정당 ${rates.limit}회`;
+    const detail = id === 'beginner' ? `<br>SSR 영웅은 픽업 없이 균등합니다. 이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.`
+      : `<br>${rises ? `${soft}번째 소환부터 SSR 확률이 오릅니다 (${soft}번째 ${at(soft)} · ${Math.min(hard - 1, soft + 9)}번째 ${at(Math.min(hard - 1, soft + 9))} · ${hard - 1}번째 ${at(hard - 1)}). ` : ''}${hard}번째 소환은 SSR 확정입니다.<br>천장을 포함한 평균은 SSR 1회당 약 ${rates.expectedPullsPerSsr.toFixed(1)}회 (통합 SSR ${pct(rates.consolidatedSsr, 2)})입니다.${id === 'hero' ? `<br>이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.` : ''}`;
+    const status = id === 'beginner' ? `<b>남은 ${this.eco.beginnerLeft()}/${b.limit}회</b>${g.beginnerSsr ? ' · SSR 영웅 획득 완료' : ''}`
+      : `<b>현재 누적 ${id === 'gear' ? g.gearPity : g.pity}회</b> · 다음 소환 SSR ${pct(gachaChances((id === 'gear' ? g.gearPity : g.pity) + 1, b).SSR, 1)} · ${Math.max(1, hard - (id === 'gear' ? g.gearPity : g.pity))}회 안에 SSR 확정${(id === 'gear' ? g.gearGuarantee : g.guarantee) ? ' · 다음 SSR 픽업 확정' : ''}`;
+    this.ui.modal(`<h2>${esc(rates.name)} 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기${id === 'gear' ? ' · 무기 외형 미리보기' : ''}</button><table class="rates-table" aria-label="소환 등급별 확률">${rows}</table>
+      <p><b>${ssrLine}</b>${detail}<br>10회 소환은 SR 이상 1장을 보장합니다.</p>
+      <p>${status}</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<p class="gz-rates-foot">유료 보석과 무료 보석은 구분해 기록되며 무료 보석부터 사용됩니다.</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (bx) => { bx.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); bx.querySelector('#m-contents').onclick = () => this.showGachaContents(); const sb = bx.querySelector('#m-ssr'); if (sb) sb.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } });
   }
 
   // ================= 상점 =================
@@ -561,8 +632,9 @@ export class Meta {
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
     const notice = $('shop-notice');
-    if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
-      : `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
+    const gemSplit = (() => { const st = this.eco.s, paid = Math.min(Math.max(0, Math.floor(st.paidGems || 0)), st.gems); return `<b>보석 유료 ${fmt(paid)} · 무료 ${fmt(st.gems - paid)}</b> (무료부터 사용) · `; })();
+    if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
+      : `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`);
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
     for (const sku of this.shopSkus()) {
