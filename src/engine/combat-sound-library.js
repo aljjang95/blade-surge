@@ -203,6 +203,8 @@ export const EVENT_SOUNDS = Object.freeze({
   lootRare: EVENT_PREFIX + 'loot_rare', lootEpic: EVENT_PREFIX + 'loot_epic', lootLegend: EVENT_PREFIX + 'loot_legend',
 });
 export const EVENT_SOUND_FILES = Object.freeze(Object.values(EVENT_SOUNDS));
+/** 룬 박기·합성(R3, Mirelo SFX). 시작 때 미리 받지 않고 룬 화면을 열 때 한 번만 불러온다(src/ui/rune-sound.js). 파일이 없으면 대체음. */
+export const RUNE_SOUNDS = Object.freeze({ insert: EVENT_PREFIX + 'rune_insert', merge: EVENT_PREFIX + 'rune_merge' });
 /** 보스 등장 스팅어: 지역 최종 보스·중간 보스(수문장 포함)·그 밖의 보스(원정·대장). 길이는 BGM 덕킹 시간이다. */
 export const BOSS_INTRO = Object.freeze({
   finale: Object.freeze({ sound: EVENT_SOUNDS.stingerFinale, vol: 0.95, rate: 1, duck: 0.3, dur: 3.3 }),

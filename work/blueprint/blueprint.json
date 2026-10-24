@@ -390,6 +390,51 @@
       "chosen": false,
       "note": "밝고 정원 배경과 어울리지만 카드 가챠와 느낌이 겹친다",
       "sha256": "0e44e7d3472c3f4cc3c22fba26512821e10ef1234eb0d01bbdacd05daca4c1f7"
+    },
+    {
+      "id": "C26",
+      "group": "stage-select-20261024",
+      "title": "측면 시트 경로(오른쪽 55% 시트, 그림 지도 위 지그재그 관문 노드)",
+      "image": "images/stage-select-c1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "로비·영웅을 왼쪽에 남기고 탭·경로·상세·입장이 한 시트에 모인다. 지역별 지도 배경 6장이 필요",
+      "sha256": "e8f03ef22325f2141469cfd6a89c26f43a6431f1605c53fb3c3eec33a6c6ad97"
+    },
+    {
+      "id": "C27",
+      "group": "stage-select-20261024",
+      "title": "전체 화면 그림 지역 지도",
+      "image": "images/stage-select-c2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "몰입감은 크지만 로비·영웅이 사라지고 짧은 가로에서 상세 카드가 지도를 가린다",
+      "sha256": "45de9dc4caa2b7fdd61ea6026ca329347b379a7e2602652e23c6a693f9f4184e"
+    },
+    {
+      "id": "C28",
+      "group": "stage-select-20261024",
+      "title": "하단 관문 카드 캐러셀",
+      "image": "images/stage-select-c3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "기존 던전 카드 줄과 모양이 겹쳐 '어디서 무엇을 고르는지'가 흐려진다. 5·10 보스 위치가 한눈에 안 보인다",
+      "sha256": "200a131d30fe8a9e8e4b16f422de25f17628fcb0c271b0dc89beadf7b59699a8"
     }
   ],
   "nodes": [
@@ -1243,6 +1288,82 @@
       "type": "component",
       "group": "blessing-20261024",
       "title": "기존 원정 준비 창 CitadelHubUI(.citadel-hub-dialog) — 전운 칸 1곳만 추가"
+    },
+    {
+      "id": "stage-select-screen",
+      "type": "screen",
+      "group": "stage-select-20261024",
+      "title": "관문 선택(스테이지 선택) 화면",
+      "image": "images/stage-select-c1.jpg",
+      "checks": [
+        "로비 '출격'(그리고 영웅·장비의 출격 준비)을 누르면 열린다. 열기·닫기·ESC·탭 전환·고르기는 에너지·저장을 바꾸지 않는다",
+        "가로(844x390·1280x720): 오른쪽 약 52~55% 측면 시트, 왼쪽 3D 로비·영웅이 보인다. 세로(390x844): 아래쪽 시트(높이 약 70%), 영웅은 위",
+        "머리: '관문 선택' 제목 · [캠페인|던전] 세그먼트(선택 탭 파랑+금 테두리, 위 금 마름모) · X 닫기",
+        "지역 줄: 지역 이름 · 이전/다음 지역 화살표 · 정화 진행 'N / 10'(잠긴 지역은 '잠김')",
+        "지도 상자는 모든 화면 크기에서 2.5:1 고정, 배경(1600x640)도 같은 비율이라 잘리지 않는다. 노드는 U자 2줄: 윗줄 1→5(x 12·31·50·69·88 %, y≈30 %), 오른쪽에서 꺾어 아랫줄 6→10(오→왼, y≈72 %, 지역별 그림 길 높이에 맞춤), 10은 왼쪽 아래 보스 랜드마크",
+        "노드 지름은 지도 높이에 맞춰 40~56px(탭 영역 40px 이상), 노드·꼬리표끼리 겹치지 않는다. 추천=금색 링+점 3개+'추천', 열림=파랑, 클리어=초록+별, 잠김=회색+자물쇠",
+        "X-5 해골+'중간 보스', X-10 큰 해골+왕관+'지역 보스' 꼬리표",
+        "아래 상세 줄: 'X-Y  이름' · 꼬리표 · '추천 레벨 Lv.N' / 교차검 '내 전투력 N / 권장 N'(초록 충분·노랑 80%·빨강 부족) / 입장 에너지 · 주요 보상",
+        "오른쪽 아래 주황 둥근 '입장'(교차검·에너지 N). 잠긴 곳은 회색 '잠김' + 해금 조건 한 줄",
+        "던전 탭: 열린 던전 카드 + 다음 잠긴 1곳, 각 카드에 [기본|심층] 단계 버튼(잠긴 단계는 자물쇠·사유)",
+        "첫 진입 안내: 시트 밖 왼쪽 아래 여우 동행 초상 + 말풍선 '처음이라면 1-1부터! / 관문을 깨면 다음 관문이 열려요' (신규 저장·이 기기에서 한 번)",
+        "세로 390x844: 지도는 폭 기준 2.5:1, 남는 높이는 상세 줄. 상단 재화 줄은 첫 안내가 덮지 않는다"
+      ],
+      "risks": [
+        "844x390에서 지도 높이가 약 170px: 노드 42px·보스 48px로 줄이고 꼬리표가 아랫줄과 겹치지 않게(단위 테스트·QA 겹침 검사)",
+        "준비창 내부(citadel-hub)는 수정하지 않고 호출만 한다"
+      ],
+      "copy": [
+        "관문 선택",
+        "캠페인",
+        "던전",
+        "추천",
+        "중간 보스",
+        "지역 보스",
+        "추천 레벨",
+        "내 전투력",
+        "권장",
+        "입장 에너지",
+        "주요 보상",
+        "입장",
+        "잠김",
+        "처음이라면 1-1부터!",
+        "관문을 깨면 다음 관문이 열려요"
+      ],
+      "sha256": "e8f03ef22325f2141469cfd6a89c26f43a6431f1605c53fb3c3eec33a6c6ad97"
+    },
+    {
+      "id": "stage-select-model",
+      "type": "rule",
+      "group": "stage-select-20261024",
+      "title": "스테이지 선택 순수 모델(src/game/stage-select-model.js)",
+      "checks": [
+        "탭별 목록·잠금 사유·추천·기본 선택을 저장·진행에서 계산하고 아무것도 쓰지 않는다",
+        "기본 선택 순서: 던전 카드로 직접 고른 던전 → 기억한 마지막 선택(그때 추천을 골랐으면 지금 추천) → 다음 관문",
+        "캠페인 완주 저장은 던전 탭이 추천",
+        "던전 목록은 stageSelectDungeonSource 한 함수에서만 읽는다(마을 해금 레인 판정으로 교체 지점)"
+      ]
+    },
+    {
+      "id": "stage-select-memory",
+      "type": "data",
+      "group": "stage-select-20261024",
+      "title": "기기별 기억 localStorage blade-surge.stage-select.v1",
+      "checks": [
+        "{ introSeen, last: {tab, ch/st 또는 id/depth, followed} } 정규화·멱등, 손상·차단 시 기본값",
+        "게임 저장(eco.s) 형식은 바꾸지 않는다"
+      ]
+    },
+    {
+      "id": "stage-map-art",
+      "type": "asset",
+      "group": "stage-select-20261024",
+      "title": "지역 지도 배경 6장(public/img/stage-select/map-r1~6.webp, 1600x640 U자 길) + 노드 좌표(src/data/stage-select-maps.js)",
+      "checks": [
+        "1600x640(2.5:1), 노드·글자 없는 순수 배경, 윗길 y≈22~28 %, 아랫길 y≈64~73 %, 오른쪽에서 꺾임, 왼쪽 아래 보스 랜드마크",
+        "webp 각 250KB 이하",
+        "노드 중심이 그림 길 위(지역별 윗줄·아랫줄 y 미세 조정)"
+      ]
     }
   ],
   "edges": [
@@ -1510,6 +1631,31 @@
       "from": "blessing-rules",
       "to": "rune-rules",
       "type": "reads"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "stage-select-screen",
+      "type": "navigates"
+    },
+    {
+      "from": "stage-select-screen",
+      "to": "stage-select-model",
+      "type": "reads"
+    },
+    {
+      "from": "stage-select-screen",
+      "to": "stage-select-memory",
+      "type": "writes"
+    },
+    {
+      "from": "stage-select-screen",
+      "to": "stage-map-art",
+      "type": "contains"
+    },
+    {
+      "from": "stage-select-screen",
+      "to": "citadel-prepare-dialog",
+      "type": "navigates"
     }
   ],
   "acceptance": [
@@ -1728,6 +1874,33 @@
       "node": "blessing-rules",
       "criterion": "하루 무료 1회는 05:00 KST에 리셋되고, 보석 굴림은 같은 원정에서 30→60→90, 하루 30회에서 막힌다. 보석 부족 시 차감 없이 막힌다",
       "surface": "단위 테스트(시계 주입)"
+    },
+    {
+      "id": "A44",
+      "node": "stage-select-screen",
+      "criterion": "신규 저장 Lv.1에서 '출격'을 누르면 바로 전투가 아니라 관문 선택이 열리고 1-1이 추천·선택돼 있으며, '입장' 한 번으로 1-1 전투에 들어가 에너지가 그 한 번만 줄어든다",
+      "surface": "브라우저 844x390 터치 에뮬 실제 탭(tools/stage-select-qa.mjs)"
+    },
+    {
+      "id": "A45",
+      "node": "stage-select-screen",
+      "criterion": "잠긴 관문·단계를 누르면 입장 버튼이 '잠김'으로 막히고 해금 조건 한 줄이 보인다. 닫기·ESC·탭 전환은 비용이 없고 초점은 출격 버튼으로 돌아온다",
+      "surface": "브라우저 390x844·844x390·1280x720 실제 입력"
+    },
+    {
+      "id": "A46",
+      "node": [
+        "stage-select-screen",
+        "stage-select-memory"
+      ],
+      "criterion": "두 번째 출격 때 마지막 선택(예: 유리정원 기본)으로 열려 한 번 탭으로 입장할 수 있고, 1-3까지 깬 저장은 1-4가 추천·선택된다",
+      "surface": "같은 QA 도구 + 단위 테스트 test/stage-select-model.test.ts"
+    },
+    {
+      "id": "A47",
+      "node": "stage-select-screen",
+      "criterion": "첫 진입 안내(여우 초상+말풍선)는 신규 저장의 첫 열기에만 한 번 보이고 시트·입장 버튼을 가리지 않는다",
+      "surface": "브라우저 3 크기 캡처"
     }
   ],
   "decisions": [
@@ -1835,6 +2008,26 @@
       "id": "D23",
       "text": "이름은 \"전운 굴리기\"(상점의 축복 주문서와 분리)",
       "source": "대표님 2026-10-24 이름 확정(지휘 전달)"
+    },
+    {
+      "id": "D24",
+      "text": "스테이지 선택 시안은 c1 측면 시트 경로(점수 18, c3 17, c2 16). 세로는 아래쪽 시트(약 70%), 1280x720은 같은 측면 시트",
+      "source": "지휘 세션 2026-10-24 결정"
+    },
+    {
+      "id": "D25",
+      "text": "첫 안내 본 기록·마지막 선택은 게임 저장이 아니라 기기 localStorage에 둔다(기존 안내 키 관행, 수익화 레인의 economy/save 영역과 충돌 회피). 이미 관문을 깬 기존 저장에는 첫 안내를 띄우지 않는다",
+      "source": "stage-select 레인 판단(docs/stage-select.md)"
+    },
+    {
+      "id": "D26",
+      "text": "던전 '입장'은 기존 준비창을 연다(영웅·물약·서약·목표 확인 유지). 에너지는 준비창의 '원정 시작'만, 캠페인은 startStage 만 쓴다",
+      "source": "docs/dungeon-first-lobby.md 준비창 계약"
+    },
+    {
+      "id": "D27",
+      "text": "관문 노드는 모든 화면 크기에서 U자 2줄, 지도 상자 2.5:1 고정. 배경은 같은 U자 길을 그린 1600x640 지도로 교체(3줄로 몰리고 그림 길과 무관하던 첫 구현은 결함)",
+      "source": "지휘 검수 2026-10-24"
     }
   ],
   "outOfScope": [
@@ -1849,7 +2042,9 @@
     "룬워드식 발동 조건 조합",
     "전투 중 굴림·전투 중 각인 선택 창",
     "전운 굴리기의 서버 권위 명령(v1 OPS) — 서버 컷오버 덩어리와 함께",
-    "유료/무료 보석 분리 전 전운 보석 굴림 환불 역분개"
+    "유료/무료 보석 분리 전 전운 보석 굴림 환불 역분개",
+    "스테이지 선택 화면의 난이도(숙련·악몽·지옥) 고르기 — 기존 캠페인 탭이 맡는다",
+    "던전 목록의 마을 해금 판정 교체 — claude/blade-town-unlock 레인 export 이후"
   ],
   "changes": [
     {
@@ -1929,6 +2124,18 @@
       "reason": "Codex 리뷰: A41 기본 확률 검증은 천장 끔, 천장 보장·실효 확률은 따로 검증, 확률 시트 문구에 천장 포함 확률 추가",
       "from": "aba0dbb2e690",
       "to": "2201c4a8fc05"
+    },
+    {
+      "at": "2026-10-24T02:59:59.104Z",
+      "reason": "던전 첫 진입 스테이지 선택 화면 추가(대표님 2026-10-24 피드백)",
+      "from": "2201c4a8fc05",
+      "to": "d5ed9e661dda"
+    },
+    {
+      "at": "2026-10-24T03:35:50.985Z",
+      "reason": "관문 선택 지도: U자 2줄·2.5:1 상자·U자 길 지도 6장으로 교체(지휘 검수 결함 수정)",
+      "from": "d5ed9e661dda",
+      "to": "9c2ff2260b08"
     }
   ],
   "shots": [
@@ -1947,9 +2154,41 @@
       "at": "2026-10-18T12:04:54.966Z",
       "blueprintDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
+    },
+    {
+      "node": "stage-select-screen",
+      "image": "images/shots/stage-select-screen-20261024T030011-a5a0a2.png",
+      "sha256": "2d6149466d3c2156fa790d6dc945bd48f169b170058bf9acb94e9de6279cf3ec",
+      "at": "2026-10-24T03:00:11.703Z",
+      "blueprintDigest": "d5ed9e661dda9ad9137bc42dde08faee2b308c8323c66e92aeabb5255e89d324",
+      "note": "844x390 터치 에뮬 개발 서버 33929805 신규 저장 출격 직후(SwiftShader)"
+    },
+    {
+      "node": "stage-select-screen",
+      "image": "images/shots/stage-select-screen-20261024T030011-abecda.png",
+      "sha256": "f125bc9b3e96175803515223efe35079f7f8c626727e3f57b9b4f99832cae3a2",
+      "at": "2026-10-24T03:00:11.883Z",
+      "blueprintDigest": "d5ed9e661dda9ad9137bc42dde08faee2b308c8323c66e92aeabb5255e89d324",
+      "note": "390x844 세로 하단 시트, 개발 서버 33929805 신규 저장(SwiftShader)"
+    },
+    {
+      "node": "stage-select-screen",
+      "image": "images/shots/stage-select-screen-20261024T033607-fa5309.png",
+      "sha256": "d4f7b4d48278ffade95b6df114b04e6d4e87fccbfe8c8730d2e79de7ad672d27",
+      "at": "2026-10-24T03:36:07.777Z",
+      "blueprintDigest": "9c2ff2260b0843e3f9b6a0d2194e04d191591317b5c89cf5e972256c8febdc2b",
+      "note": "844x390 터치 에뮬, 개발 서버 7d28ded3, U자·2.5:1 지도(SwiftShader)"
+    },
+    {
+      "node": "stage-select-screen",
+      "image": "images/shots/stage-select-screen-20261024T033608-94cb47.png",
+      "sha256": "ebc7acbc3121363730676c17206c9ace98d808371b90d774aac4eeabbff47a3b",
+      "at": "2026-10-24T03:36:08.037Z",
+      "blueprintDigest": "9c2ff2260b0843e3f9b6a0d2194e04d191591317b5c89cf5e972256c8febdc2b",
+      "note": "390x844 세로 하단 시트, 개발 서버 7d28ded3(SwiftShader)"
     }
   ],
-  "lockedDigest": "2201c4a8fc05340caf765575ddf44b5fdc7e7fd74547c22670ebe72afbdfdcf7",
-  "lockedAt": "2026-10-24T01:49:32.118Z",
+  "lockedDigest": "9c2ff2260b0843e3f9b6a0d2194e04d191591317b5c89cf5e972256c8febdc2b",
+  "lockedAt": "2026-10-24T03:35:50.985Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
