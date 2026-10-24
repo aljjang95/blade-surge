@@ -13,4 +13,6 @@ export const PORTRAIT_BACKGROUNDS = Object.freeze({
   avatar_barbarian_werewolf: 'bg_barbarian_werewolf.png',
 });
 export const PORTRAIT_REVISION = 'v1';
-export const portraitPath = (id) => `/img/tll/avatars/${id}-${PORTRAIT_REVISION}.webp`;
+// /img/* 는 immutable 1년 캐시라 초상을 다시 구우면 파일 이름의 리비전을 올린다(아바타별). 2026-10-24 t6: 늑대인간 족장 볼 문양 한 줄 몸 → v2.
+export const PORTRAIT_REVISIONS = Object.freeze({ avatar_barbarian_werewolf: 'v2' });
+export const portraitPath = (id) => `/img/tll/avatars/${id}-${PORTRAIT_REVISIONS[id] || PORTRAIT_REVISION}.webp`;
