@@ -12,7 +12,7 @@ function affordableSummon(eco) {
     const n = id === 'beginner' ? 10 : 1, q = eco.pullQuote?.(n, id);
     if (!q?.ok) continue;
     const name = GACHA_BANNERS[id].name, cost = q.currency === 'tickets' ? `소환권 ${num(q.tickets)}` : `보석 ${num(q.cost)}`;
-    return { banner: id, hint: `${cost} → ${name} ${n}회` };
+    return { banner: id, tickets: q.currency === 'tickets', hint: `${cost} → ${name} ${n}회` };
   }
   return null;
 }
@@ -36,7 +36,7 @@ function enhanceable(eco) {
 export function rewardNextAction({ mode, got, eco }) {
   if (!eco?.s) return null;
   const gems = earned(got, ['gems']), tickets = earned(got, ['tickets']), stones = earned(got, ['stones', 'stones2', 'stones3']);
-  const summon = () => { const a = affordableSummon(eco); return a && { id: 'summon', label: '보석으로 소환하기', hint: a.hint, target: { tab: 'gacha', banner: a.banner } }; };
+  const summon = () => { const a = affordableSummon(eco); return a && { id: 'summon', label: a.tickets ? '소환권으로 소환하기' : '보석으로 소환하기', hint: a.hint, target: { tab: 'gacha', banner: a.banner } }; };
   const enhance = () => { const a = enhanceable(eco); return a && { id: 'enhance', label: '강화석으로 장비 강화', hint: `${a.name} +${a.from} → +${a.to} 강화 가능`, target: { tab: 'heroes', heroId: a.heroId, uid: a.uid } }; };
   const chest = () => eco.towerSummary?.().chest?.ready ? { id: 'chest', label: '주간 보급 받기', hint: '이번 주 무한의 성 보급 상자 수령 가능', target: { tab: 'journey', journeyTab: 'tower' } } : null;
   const pass = () => { const n = eco.passClaimable?.() || 0; return n > 0 ? { id: 'pass', label: '패스 보상 받기', hint: `받을 수 있는 패스 보상 ${num(n)}개`, target: { tab: 'pass' } } : null; };
