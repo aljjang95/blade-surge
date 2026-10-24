@@ -149,4 +149,15 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     expect(rig({ channel: 'googleplay' }).hp.available()).toBe(false);
     expect(rig({ channel: 'onestore' }).hp.available()).toBe(false);
   });
+
+  test('가격 문구: 웹은 카탈로그 금액, Play는 스토어가 확인한 판매 가능 가격만, 없으면 null', async () => {
+    const web = rig(); expect(web.hp.price('hero_knight_v1')).toBeNull(); await web.hp.init();
+    expect(web.hp.price('hero_knight_v1')).toBe('₩5,900'); expect(web.hp.price('nope')).toBeNull();
+    const store = new Map<string, any>([['hero_knight_v1', { formattedPrice: '₩6,100', sellable: true }], ['hero_mage_v1', { formattedPrice: '₩6,100', sellable: false }]]);
+    const play = rig({ channel: 'googleplay', billing: { available: () => true, product: (id: string) => store.get(id) ?? null } });
+    expect(play.hp.price('hero_knight_v1')).toBe('₩6,100');
+    expect(play.hp.price('hero_mage_v1')).toBeNull(); expect(play.hp.price('hero_rogue_v1')).toBeNull();
+    const off = rig({ channel: 'googleplay', billing: { available: () => false, product: () => ({ formattedPrice: '₩1', sellable: true }) } });
+    expect(off.hp.price('hero_knight_v1')).toBeNull();
+  });
 });

@@ -4,6 +4,7 @@
 // - Play 채널(안드로이드): 같은 productId를 기존 billing-service(Play 결제 → 서버 verify)로 넘긴다.
 // - 모바일 리다이렉트 결제: 결제 전에 보류 paymentId를 localStorage에 남기고, 복귀한 페이지에서 resume()이 complete를 다시 보낸다.
 import { STORE_CHANNEL } from './store-channel.js';
+import { IAP_BY_ID } from '../shared/iap-catalog.js';
 
 export const PORTONE_SDK_URL = 'https://cdn.portone.io/v2/browser-sdk.js';
 export const PENDING_KEY = 'bladesurge_web_pay_pending_v1';
@@ -78,6 +79,16 @@ export function createHeroPurchase({ api, eco, billing = null, channel = STORE_C
       if (channel === 'web') return webOn;
       if (channel === 'googleplay') return !!billing && typeof billing.available === 'function' && billing.available();
       return false;
+    },
+    /**
+     * 화면에 보일 가격 문구. 웹은 서버 intent 금액과 같은 카탈로그 priceKRW, Play는 스토어가 돌려준 formattedPrice(판매 가능 확인 포함)만 쓴다.
+     * 확인된 가격이 없으면 null — 호출한 쪽은 그 상품 버튼을 숨기거나 비활성으로 둔다(카탈로그 값을 Play 가격처럼 보이지 않는다).
+     */
+    price(productId) {
+      if (!service.available()) return null;
+      if (channel === 'web') { const krw = IAP_BY_ID[productId]?.priceKRW; return Number.isFinite(krw) ? '₩' + Number(krw).toLocaleString('en-US') : null; }
+      const p = typeof billing?.product === 'function' ? billing.product(productId) : null;
+      return p && p.sellable === true && typeof p.formattedPrice === 'string' && p.formattedPrice ? p.formattedPrice : null;
     },
     async buy(productId) {
       if (typeof productId !== 'string' || !PRODUCT_ID.test(productId)) return { ok: false, reason: 'unknown-product' };
