@@ -127,6 +127,9 @@
     ],
     "hero_rogue_t3": [
       "helm"
+    ],
+    "hero_barbarian_t3": [
+      "helm"
     ]
   },
   "heroFit": {
@@ -165,23 +168,12 @@
     }
   },
   "heroSetFit": {
-    "barbarian": {
-      "parts_l": {
-        "helm": {
-          "offset": [
-            0,
-            0.07,
-            0
-          ]
-        }
-      }
-    },
     "knight": {
       "parts_l": {
         "helm": {
           "offset": [
             0,
-            0.03,
+            0.06,
             0
           ]
         }
