@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
 import { decorFamilies, REEL_TIMINGS, REEL_OVERSHOOT, TICK_MIN_INTERVAL, planReels, cellsForReel, reelAt, timelineAt, eventsBetween, stopOrder, shouldTick, stopVibration, stripOffset } from '../src/ui/blessing-reel-timeline.js';
-import { heldPreRunBoons, launchWithBlessing } from '../src/ui/blessing-launch.js';
+import { heldPreRunBoons, launchWithBlessing, startPersonalExpedition } from '../src/ui/blessing-launch.js';
 import { boonEffectText } from '../src/ui/blessing-glyphs.js';
 import { blessingOddsHtml, inertBackground, trapTab } from '../src/ui/blessing-odds.js';
 import { EVENT_SOUNDS, EVENT_SOUND_FILES } from '../src/engine/combat-sound-library.js';
@@ -146,6 +146,8 @@ function fakeApp(heldGrade = 2) {
   return { app: { eco, battle }, eco, battle, calls };
 }
 
+const snapshotOf = (eco: any) => { const b = eco.blessingState(); return { held: b.held, offer: b.offer, runGemRolls: b.runGemRolls, runRolls: b.runRolls, rollSeq: b.rollSeq }; };
+
 test('보관 각인 → preRunBoons(등급 n이면 같은 id n번)', () => {
   expect(heldPreRunBoons({ id: 'tide_breath', grade: 3 })).toEqual(['tide_breath', 'tide_breath', 'tide_breath']);
   expect(heldPreRunBoons(null)).toEqual([]);
@@ -223,11 +225,12 @@ test('출격 시작이 예외로 실패해도 보관 각인을 복원하고 넘�
   expect(ok.consumed).toBe(true);
   expect(eco.blessingState().held).toBeNull();
   expect(eco.blessingRestore(null).ok).toBe(false);
+  expect(eco.blessingRestore(snapshotOf(eco)).ok).toBe(false);
 });
 
 test('blessingRestore 는 다른 각인을 이미 보관 중이면 덮어쓰지 않는다', () => {
   const { eco } = fakeApp(1);
-  expect(eco.blessingRestore({ id: 'tide_breath', grade: 2 }).ok).toBe(false);
+  expect(eco.blessingRestore({ ...snapshotOf(eco), held: { id: 'tide_breath', grade: 2 } }).ok).toBe(false);
   expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 1 });
 });
 
@@ -277,4 +280,69 @@ test('릴 장식 문양: 연출 3종(기본·짧게·움직임 줄이기 이전 
     }
     expect(spy).toHaveBeenCalledTimes(0);
   } finally { spy.mockRestore(); }
+});
+
+// ---------- 2차 리뷰: 공통 진입점·전운 상태 통째 복원 ----------
+test('준비 창이 아닌 진입점(훅 없음)으로 출발해도 각인이 setPreRunBoons 로 넘어가고 소모된다', async () => {
+  const { app, eco, battle, calls } = fakeApp(2);
+  let started = 0;
+  const ok = await startPersonalExpedition(app, async () => { started++; expect(eco.blessingState().held).toBeNull(); return true; });
+  expect(ok).toBe(true); expect(started).toBe(1);
+  expect(calls).toEqual([['ember_edge', 'ember_edge']]);
+  expect(battle.preRunBoons).toEqual(['ember_edge', 'ember_edge']);
+  expect(eco.blessingState().held).toBeNull();
+});
+
+test('공통 진입점: 준비 창 훅은 소모 저장 뒤에 불리고, 저장 실패면 훅·출격 없이 준비 창 안내만, 훅이 없으면 앱 토스트', async () => {
+  const { app, eco } = fakeApp(1);
+  const order: string[] = [];
+  await startPersonalExpedition(app, async () => { order.push('start'); return true; }, { beforeStart: () => order.push(`close:${eco.blessingState().held === null}`) });
+  expect(order).toEqual(['close:true', 'start']);
+  const f = fakeApp(1); f.eco.save = () => false;
+  const notes: string[] = [], toasts: string[] = [];
+  let ran = 0;
+  expect(await startPersonalExpedition(f.app, async () => { ran++; return true; }, { beforeStart: () => notes.push('close'), onBlessingSaveFailed: () => notes.push('strip') }, (m) => toasts.push(m))).toBe(false);
+  expect(notes).toEqual(['strip']); expect(toasts).toEqual([]); expect(ran).toBe(0);
+  expect(await startPersonalExpedition(f.app, async () => true, {}, (m) => toasts.push(m))).toBe(false);
+  expect(toasts.length).toBe(1);
+  expect(f.eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 1 });
+});
+
+test('파티·결투 시작 경로는 startExpedition/startPersonalExpedition 을 거치지 않으므로 각인을 넘기지 않는다', async () => {
+  const { app, eco, calls } = fakeApp(2);
+  // 파티·결투는 launchWithBlessing 을 호출하지 않는다 → setPreRunBoons 호출 0, 보관 각인 그대로.
+  expect(calls).toEqual([]);
+  expect(eco.blessingState().held).toEqual({ id: 'ember_edge', grade: 2 });
+  const fs = await import('node:fs');
+  const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e: any) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  const partyFiles = walk('src/party').filter((f) => f.endsWith('.js') || f.endsWith('.jsx'));
+  for (const f of partyFiles) expect(fs.readFileSync(f, 'utf8')).not.toMatch(/startExpedition|setPreRunBoons/);
+  expect(app).toBeTruthy();
+});
+
+function rolled() {
+  const { app, eco, battle } = fakeApp(2);
+  eco.s.gems = 1000;
+  eco.s.blessing = { ...eco.blessingState(), runGemRolls: 2, runRolls: 3, rollSeq: 7, offer: { candidates: [{ id: 'ember_edge', grade: 1 }, { id: 'tide_breath', grade: 1 }, { id: 'storm_eye', grade: 2 }], guaranteed: false, picked: -1 } };
+  return { app, eco, battle };
+}
+
+test('보관 각인 + 보석 재굴림 뒤 출격 실패 → held·offer·runGemRolls·runRolls 모두 원래대로(다음 보석 비용 유지)', async () => {
+  const { app, eco } = rolled();
+  const before = JSON.stringify(snapshotOf(eco)), cost = eco.blessingQuote().cost;
+  for (const start of [async () => false, async () => { throw new Error('asset load'); }]) {
+    try { await launchWithBlessing(app, start); } catch { /* 예외 경로 */ }
+    expect(JSON.stringify(snapshotOf(eco))).toBe(before);
+    expect(eco.blessingQuote().cost).toEqual(cost);
+  }
+});
+
+test('소모 뒤 새 굴림이 끼어들면 복원이 덮어쓰지 않는다', async () => {
+  const { app, eco } = rolled();
+  await launchWithBlessing(app, async () => {
+    eco.s.blessing = { ...eco.blessingState(), rollSeq: 8, runRolls: 1 };
+    return false;
+  });
+  const b = eco.blessingState();
+  expect(b.held).toBeNull(); expect(b.offer).toBeNull(); expect(b.rollSeq).toBe(8); expect(b.runRolls).toBe(1);
 });

@@ -315,15 +315,18 @@ export function blessingConsume(/** @type {any} */ eco) {
 }
 
 /**
- * 출격 시작이 실패했을 때 먼저 소모한 보관 각인을 되돌린다. 이미 다른 각인을 보관 중이면 덮어쓰지 않는다.
+ * 출격 시작이 실패했을 때 소모 직전 전운 상태(보관 각인·굴린 후보·준비 굴림 수)를 통째로 되돌린다.
+ * 스냅샷은 blessingState() 의 {held, offer, runGemRolls, runRolls, rollSeq}.
+ * 소모 뒤 새 굴림·선택이 끼어들어 상태가 달라졌으면(rollSeq 변경, 이미 보관·후보 있음) 덮어쓰지 않는다.
  * 저장에 실패하면 commit 이 세이브를 되돌린다(다른 전운 조작과 같은 방식).
  */
-export function blessingRestore(/** @type {any} */ eco, /** @type {{ id: string, grade: number }|null} */ held) {
+export function blessingRestore(/** @type {any} */ eco, /** @type {any} */ snapshot) {
   const cur = blessingOf(eco);
-  if (!held || cur.held) return fail('held');
-  const next = normalizeBlessing({ ...cur, held: { id: held.id, grade: held.grade } });
-  if (!next.held) return fail('invalid');
-  return commit(eco, () => { eco.s.blessing = next; return { ok: /** @type {const} */ (true), held: { ...next.held } }; });
+  if (!snapshot || typeof snapshot !== 'object') return fail('snapshot');
+  if (cur.held || cur.offer || cur.runGemRolls || cur.runRolls || cur.rollSeq !== snapshot.rollSeq) return fail('held');
+  const next = normalizeBlessing({ ...cur, held: snapshot.held, offer: snapshot.offer, runGemRolls: snapshot.runGemRolls, runRolls: snapshot.runRolls });
+  if (!next.held && !next.offer && !next.runGemRolls && !next.runRolls) return fail('invalid');
+  return commit(eco, () => { eco.s.blessing = next; return { ok: /** @type {const} */ (true), held: next.held && { ...next.held } }; });
 }
 
 /** 부적 지급(저장은 호출자 몫). 실제로 더해진 수. */

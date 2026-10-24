@@ -87,6 +87,7 @@ const BOOT_TIPS = [
 
 import { applyLook, LOOKS } from './game/look.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
+import { startPersonalExpedition } from './ui/blessing-launch.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
@@ -471,7 +472,15 @@ class App {
     if (!stage) { this.ui.toast(!summary.unlocked ? '무한의 성은 2-10을 클리어하면 열립니다.' : `이번 주 도전 상한 ${summary.cap}층에 도달했습니다. 다음 주에 더 높이 열립니다.`, 'red'); return false; }
     return this.startStage(stage);
   }
-  async startExpedition(kind, id, options = {}) {
+  /**
+   * 개인 원정 공통 진입점. 전운 각인 소모 저장 → setPreRunBoons → 시작 → 실패 시 복원을 모든 진입점에서 똑같이 처리한다.
+   * 파티·AI 결투는 이 함수를 거치지 않는다(별도 시작 경로).
+   * @param {{ beforeStart?: () => void, onBlessingSaveFailed?: () => void }} [hooks] 준비 창이 닫기·칸 안 안내를 끼워 넣는 자리
+   */
+  async startExpedition(kind, id, options = {}, hooks = {}) {
+    return startPersonalExpedition(this, () => this._startExpeditionCore(kind, id, options), hooks, (message) => this.ui.toast(message, 'red'));
+  }
+  async _startExpeditionCore(kind, id, options = {}) {
     if (this.store?.busy) return false;
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); return false; }
     if (this.expeditionUI.result?.saveError) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return false; }

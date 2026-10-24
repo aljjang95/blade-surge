@@ -6,7 +6,6 @@ import { citadelPreparation } from '../game/citadel-preparation.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 import { mountBlessingSlot } from './blessing-reel.js';
-import { launchWithBlessing } from './blessing-launch.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용' };
@@ -263,11 +262,12 @@ export class CitadelHubUI {
     // 후보를 굴리고 고르지 않았으면 창 안 띠로 한 번 확인한다(팝업 없음).
     if (this.blessing && !this.blessing.confirmDeparture()) return false;
     this.busy = true;
-    // 소모 저장을 먼저 하고(실패하면 창을 닫지 않고 띠로 안내), 그다음 각인을 넘겨 시작한다. 시작이 실패하면 보관 각인을 되돌린다.
+    // 전운 각인 소모·적용·실패 복원은 App.startExpedition 공통 경로가 맡는다(저장 실패면 창을 닫지 않고 띠로 안내).
     try {
-      const out = await launchWithBlessing(this.app, () => { this.close(); return this.app.startExpedition('dungeon', def.id, { depth }); });
-      if (out.saveFailed) this.blessing?.notice('저장에 실패했습니다. 각인을 쓰지 않았으니 다시 눌러 주세요.', 'warn');
-      return out.started;
+      return await this.app.startExpedition('dungeon', def.id, { depth }, {
+        beforeStart: () => this.close(),
+        onBlessingSaveFailed: () => this.blessing?.notice('저장에 실패했습니다. 각인을 쓰지 않았으니 다시 눌러 주세요.', 'warn'),
+      });
     } finally { this.busy = false; }
   }
   refreshDestination() {
