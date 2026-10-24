@@ -4,7 +4,7 @@ import { heroCompare, HERO_DIFFICULTY, HERO_TRAITS } from '../src/data/hero-trai
 
 describe('영웅 비교 막대', () => {
   test('다섯 영웅 모두 특성·난이도가 정의돼 있다', () => {
-    for (const id of HERO_ORDER) { expect(HERO_TRAITS[id]).toBeDefined(); expect([1, 2, 3]).toContain(HERO_DIFFICULTY[id]); }
+    for (const id of HERO_ORDER) { expect((HERO_TRAITS as any)[id]).toBeDefined(); expect([1, 2, 3]).toContain((HERO_DIFFICULTY as any)[id]); }
   });
   test('공격·생존은 0~1 로 정규화되고 각각 최댓값 영웅이 1 이다', () => {
     const all = HERO_ORDER.map((id) => heroCompare(id)!);
