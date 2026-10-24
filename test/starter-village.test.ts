@@ -81,7 +81,7 @@ test('starter hub exposes the new interaction kinds and every hotspot is reachab
   expect(hub.starter).toBe(true);
   const kinds = new Set(hub.hotspots.map((spot: any) => spot.kind));
   for (const kind of ['guide', 'training', 'board', 'smith', 'story', 'campaign', 'merchant', 'trainer', 'steward', 'waystone']) expect(kinds.has(kind)).toBe(true);
-  expect(STARTER_HOTSPOTS.map(spot => spot.kind).sort()).toEqual(['board', 'campaign', 'guide', 'smith', 'story', 'training']);
+  expect((STARTER_HOTSPOTS as any[]).map(spot => spot.kind).sort()).toEqual(['board', 'campaign', 'guide', 'smith', 'story', 'training']);
   expect(hub.hotspots.find((spot: any) => spot.id === 'gate:campaign')?.kind).toBe('campaign');
   expect(hub.spawn).toEqual(CITADEL_HUB_SPAWN);
   const reach = hubReach(hub);

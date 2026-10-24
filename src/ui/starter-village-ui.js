@@ -82,6 +82,7 @@ export function starterChecklist(progress, save) {
  * 던전은 region-dungeon-gate.js 가 지금 마을에 세운 첫 관문 던전(보이는 던전)이다. 없으면 카드를 뺀다.
  */
 export function starterBoardCards(progress, save) {
+  /** @type {Array<{ id: string, title: string, body: string, done: boolean, action: string, actionLabel: string, progress: string, dungeonId?: string }>} */
   const cards = [{ id: 'stage-1-1', title: '관문 1-1 정화', body: '출격 포탈에서 첫 관문을 정화하세요.', done: stageOneCleared(save), action: 'stage', actionLabel: '관문 선택', progress: '' }];
   const dungeonId = regionDungeonState(save).gateIds[0];
   const def = DUNGEONS.find((dungeon) => dungeon.id === dungeonId);
