@@ -18,6 +18,7 @@ import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDeta
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
 import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
+import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
@@ -443,6 +444,7 @@ function swapLibraryHeroBody(root, gltf, target) {
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
   // 등급 부츠는 새 몸의 본·역바인드로 다시 묶는다(부츠가 없으면 무동작).
   refitHeroBoots(root, createBootsMaterial);
+  refitHeroGearParts(root, createBootsMaterial);   // 갑옷 외형 파츠도 같은 방식(파츠가 없으면 무동작)
   return true;
 }
 
@@ -597,6 +599,7 @@ export function disposeCharacter(root, mixer) {
   root.userData.libraryDisposed = true;
   disposeHeroBodyMotion(root);
   removeHeroBoots(root);   // 부츠 지오메트리는 인스턴스 소유
+  removeHeroGearParts(root);
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {
