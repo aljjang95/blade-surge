@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
-import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier } from '../engine/assets.js';
+import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier, loadBootsModel, createBootsMaterial } from '../engine/assets.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { heroAppearance } from '../data/hero-library.js';
 import { applyArmorAppearance } from './armor-appearance.js';
@@ -9,6 +9,7 @@ import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
 import { acquireItemGeometry, createItemMaterial, ITEM_WEAPON_FORMS } from '../engine/item-forge.js';
 import { excludeFromBloom } from '../engine/character-bloom.js';
 import { applyGearAccents, removeGearAccents } from './gear-accents.js';
+import { syncHeroBoots, removeHeroBoots } from '../engine/hero-boots.js';
 const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
@@ -79,7 +80,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   if (model.userData.authoredContract?.role === 'hero' && !hasAvatar) {
     const slot = (name) => { const item = equip[name] ? ITEM_BY_ID[equip[name].id] : null; return item?.slot === name ? item : null; };
     applyGearAccents(model, { armor: slot('armor'), ring: slot('ring'), boots: slot('boots') }, { armor: equip.armor?.enh, ring: equip.ring?.enh, boots: equip.boots?.enh });
-  } else removeGearAccents(model);
+    syncHeroBoots(model, slot('boots'), { load: loadBootsModel, makeMaterial: createBootsMaterial, onChange: () => model.userData.onLibraryBodySwap?.() });
+  } else { removeGearAccents(model); removeHeroBoots(model); }
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {

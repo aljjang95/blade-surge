@@ -23,6 +23,8 @@
 #   정점(치비 얼굴 아래쪽·턱)을 모두 Head 100% 로 묶는다. 2026-10-24 흡혈 백작: Tripo 목 관절이 눈 아래 높이라 아랫눈꺼풀·볼·턱이 목 아래였고,
 #   거기에 Spine·Spine1·어깨 가중치가 섞여(Head 0~0.35) 대기 자세에서 얼굴 아래쪽이 7cm 따로 움직여 눈이 찌그러지고 한쪽 눈이 가렸다.
 #   기본(없음)은 이전과 같은 출력.
+#   --head-min 0.2: 머리 영역 규칙을 받는 Head 가중치 하한. 2026-10-24 야만전사 늑대인간: 어깨를 덮은 늑대 가죽(Head .1~.5·어깨 .5)이
+#   머리 영역 규칙으로 어깨·팔을 잃고 Head 에 붙어, 이웃 가죽(어깨·팔 그대로)과 공격에서 0.36m 찢어졌다. 기본 0.2 는 이전과 같은 출력.
 #   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
 import numpy as np
@@ -190,6 +192,9 @@ def main():
     if 'braid-hue' in a:
         decor.update(braidHue=a['braid-hue'], braidSat=float(a.get('braid-sat', 0.25)), braidVal=float(a.get('braid-val', 0.12)))
         braidMask = vertex_decor(mesh, hue_ranges(decor['braidHue']), decor['braidSat'], decor['braidVal'])
+    # --head-min X: 머리 영역 규칙(팔·어깨를 빼고 목 아래는 Spine2 로)을 받을 Head 가중치 하한(기본 0.2 = 이전과 같은 출력).
+    head_min = float(a.get('head-min', 0.2))
+    if 'head-min' in a: decor['headMin'] = head_min
     mw = mesh.matrix_world
     for v in mesh.data.vertices:
         w = {names[g.group]: g.weight for g in v.groups if g.weight > 0}
@@ -214,7 +219,7 @@ def main():
             new = {head_group.name: 1.0}; stats['headRigid'] = stats.get('headRigid', 0) + 1
             if arm_w > 0.05: stats['headRigidArm'] = stats.get('headRigidArm', 0) + 1
             if chin: stats['headRigidChin'] = stats.get('headRigidChin', 0) + 1
-        elif head_w >= 0.2 or braid:
+        elif head_w >= head_min or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
             z = p.dot(up)

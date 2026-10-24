@@ -97,3 +97,25 @@ test('아바타 착용 전후 전투력과 스탯은 동일하다', () => {
   const manifestAvatars = (libraryManifest.assets as any[]).filter(asset => asset.avatar === true).map(asset => asset.id).sort();
   expect(AVATARS.map(avatar => avatar.id).sort()).toEqual(manifestAvatars);
 });
+
+test('아바타 상점 초상은 정해진 경로 형식이고 실제 512² webp 파일이 있다', async () => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  const { PORTRAIT_BACKGROUNDS, portraitPath } = await import('../tools/art/avatar-portrait/render-config.mjs');
+  for (const avatar of AVATARS as readonly any[]) {
+    // 모든 아바타는 배경 매핑이 있어야 render.mjs 로 바로 구울 수 있다.
+    expect(existsSync(`art-src/t5-pc/portrait-bg/${(PORTRAIT_BACKGROUNDS as Record<string, string>)[avatar.id]}`)).toBe(true);
+    if (avatar.portrait === undefined) continue;
+    expect(avatar.portrait).toBe(portraitPath(avatar.id));
+    expect(avatar.portrait).toMatch(/^\/img\/tll\/avatars\/avatar_[a-z]+_[a-z]+-v\d+\.webp$/);
+    const file = readFileSync('public' + avatar.portrait);
+    expect(file.subarray(0, 4).toString()).toBe('RIFF');
+    expect(file.subarray(8, 12).toString()).toBe('WEBP');
+    // VP8 손실 webp: 프레임 헤더의 14비트 폭·높이
+    expect(file.subarray(12, 16).toString()).toBe('VP8 ');
+    expect([file.readUInt16LE(26) & 0x3fff, file.readUInt16LE(28) & 0x3fff]).toEqual([512, 512]);
+  }
+  // 1차 아바타 5종은 초상이 구워져 있어야 한다(영웅 초상 재사용 금지).
+  for (const id of ['avatar_knight_sakura', 'avatar_barbarian_oni', 'avatar_mage_astral', 'avatar_rogue_crow', 'avatar_ranger_fox']) {
+    expect((AVATAR_BY_ID as any)[id].portrait).toBe(portraitPath(id));
+  }
+});
