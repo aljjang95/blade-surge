@@ -1,6 +1,7 @@
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonLanding } from './dungeon-landing.js';
+import { landingPrefer } from '../game/stage-select-model.js';
 import { isFirstSortie, firstSortieModel } from './first-sortie.js';
 import { stageDef } from '../data/stages.js';
 import './dungeon-lobby.css';
@@ -296,7 +297,11 @@ export class CitadelCommand {
       const returnTo = trigger?.isConnected && trigger.closest?.('#tab-home') ? trigger : this.prepare;
       const recommended = model.reason === 'campaign' ? (model.recommendedId ? { id: model.recommendedId, depth: 'standard' } : null)
         : model.dungeon && model.unlocked && model.reason !== 'selected' ? { id: model.dungeon.id, depth: model.depth } : model.recommendedId ? { id: model.recommendedId, depth: 'standard' } : null;
-      return app.stageSelect.open({ trigger: returnTo, prefer: this.selectedId ? { tab: 'dungeon', id: this.selectedId, depth: 'standard' } : null, dungeonRecommended: recommended });
+      const prefer = landingPrefer(model.dungeon ? model : null, this.selectedId);
+      const opened = app.stageSelect.open({ trigger: returnTo, prefer, dungeonRecommended: recommended });
+      // 카드 우선 선택은 선택창을 열 때 한 번만 쓴다. 남겨 두면 선택창에서 다른 곳으로 입장한 뒤 다음 출격까지 이전 던전이 따라온다.
+      if (opened && this.selectedId) { this.selectedId = null; this.refresh(); }
+      return opened;
     }
     if (!model.dungeon) return false;
     // 첫 출격: 준비창 없이 곧바로 캠페인 1-1(튜토리얼 포함). 에너지 부족·실패 처리는 startStage 가 맡는다.

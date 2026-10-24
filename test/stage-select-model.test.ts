@@ -3,7 +3,7 @@ import { Economy } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import {
   STAGE_SELECT_STORAGE_KEY, normalizeStageSelectMemory, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
-  powerTone, nextCampaignStage, campaignStages, dungeonStages, stageSelectModel, selectedEntry, isRecommendedSelection, entryAction,
+  powerTone, nextCampaignStage, campaignStages, dungeonStages, stageSelectModel, selectedEntry, isRecommendedSelection, entryAction, landingPrefer, selectionSelector,
 } from '../src/game/stage-select-model.js';
 
 const fresh = () => { const eco = new Economy(); return { eco, expedition: new ExpeditionEconomy(eco) }; };
@@ -225,4 +225,19 @@ test('저장 실패·차단: 두 번째 열기에도 세션 기억(introSeen·la
   const store = memoryStore();
   writeStageSelectMemory({ introSeen: true, last: null }, store);
   expect(refreshStageSelectMemory({ introSeen: false, last: null }, true, store).introSeen).toBe(true);
+});
+
+test('landingPrefer: 카드 던전의 실제 단계를 넘기고 선택이 없으면 null', () => {
+  expect(landingPrefer({ dungeon: { id: 'glass_garden' }, depth: 'deep' }, 'glass_garden')).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'deep' });
+  expect(landingPrefer({ dungeon: { id: 'glass_garden' }, depth: 'standard' }, 'glass_garden')).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'standard' });
+  expect(landingPrefer({ dungeon: { id: 'other' }, depth: 'deep' }, 'glass_garden')?.depth).toBe('standard');
+  expect(landingPrefer(null, 'glass_garden')?.depth).toBe('standard');
+  expect(landingPrefer({ dungeon: { id: 'a' }, depth: 'deep' }, null)).toBeNull();
+});
+
+test('selectionSelector: 관문·던전 단계 버튼을 다시 찾는 선택자', () => {
+  expect(selectionSelector({ tab: 'campaign', ch: 2, st: 5 })).toBe('[data-ch="2"][data-st="5"]');
+  expect(selectionSelector({ tab: 'dungeon', id: 'glass_garden', depth: 'deep' })).toBe('[data-dungeon-id="glass_garden"][data-depth="deep"]');
+  expect(selectionSelector({ tab: 'dungeon', id: 'x', depth: 'weird' })).toBe('[data-dungeon-id="x"][data-depth="standard"]');
+  expect(selectionSelector(null)).toBeNull();
 });

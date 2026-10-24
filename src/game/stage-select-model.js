@@ -212,6 +212,20 @@ export function selectedEntry(model, selection = model.selection) {
   return null;
 }
 
+/** 로비 던전 카드가 가리키는 던전을 선택창의 우선 선택으로 만든다. 카드의 실제 단계(심층 등)를 유지한다. */
+export function landingPrefer(landing, selectedId) {
+  if (!selectedId) return null;
+  const depth = landing?.dungeon?.id === selectedId && landing.depth === 'deep' ? 'deep' : 'standard';
+  return { tab: 'dungeon', id: selectedId, depth };
+}
+
+/** 목록 버튼을 다시 찾는 선택자(관문은 ch/st, 던전은 id/depth). 목록이 통째로 바뀐 뒤 초점 복원에 쓴다. */
+export function selectionSelector(selection) {
+  if (selection?.tab === 'campaign') return `[data-ch="${selection.ch}"][data-st="${selection.st}"]`;
+  if (selection?.tab === 'dungeon') return `[data-dungeon-id="${selection.id}"][data-depth="${selection.depth === 'deep' ? 'deep' : 'standard'}"]`;
+  return null;
+}
+
 /** 선택이 그 탭의 현재 추천과 같은가(기억할 때 followed 로 남긴다). */
 export function isRecommendedSelection(model, selection) {
   if (!selection) return false;
