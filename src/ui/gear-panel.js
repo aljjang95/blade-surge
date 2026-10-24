@@ -66,15 +66,22 @@ export function renderOwnedHero(meta, id, det) {
     const it = ITEM_BY_ID[inst.id];
     return '<button type="button" class="equip-slot has hs-slot rar-' + it.rarity + '" data-slot="' + slot + '" data-uid="' + inst.uid + '" aria-label="' + SLOT_NAME[slot] + ': ' + esc(it.name) + ' +' + inst.enh + ', 비교와 강화 열기" title="' + esc(it.name) + '">' + iconImg(it, '', id) + '<span class="plus">+' + inst.enh + '</span><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
   }).join('');
-  const avatar = AVATARS.find((entry) => entry.heroId === id), avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
+  // 영웅마다 아바타가 여럿일 수 있다(1차 + 할로윈 2차). 줄에는 하나씩 보이고 '다음'으로 넘긴다:
+  // 고른 것(meta.avatarPick) → 착용 중 → 첫 상품 순서. 시착 중에 넘기면 새 아바타로 시착을 이어 간다.
+  const heroAvatars = AVATARS.filter((entry) => entry.heroId === id);
+  const pickedId = meta.avatarPick?.[id], equippedId = eco.equippedAvatar(id);
+  const avatar = heroAvatars.find((entry) => entry.id === pickedId) || heroAvatars.find((entry) => entry.id === equippedId) || heroAvatars[0], avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
   const gearShown = avatarEquipped && !eco.displayAvatar(id);
   // 아바타 줄: 미보유는 시착(미리보기)·구매, 보유는 시착·착용, 착용 중은 장비 외형 표시 토글·해제. 시착은 저장을 바꾸지 않는다.
+  const trying = !!avatar && avatarReady && !avatarEquipped && meta.avatarTrying?.heroId === id && meta.avatarTrying.avatarId === avatar.id;
+  const avatarIndex = heroAvatars.indexOf(avatar);
+  const avatarNext = heroAvatars.length > 1 ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-next" data-avatar-next aria-label="다른 아바타 보기 (' + (avatarIndex + 1) + '/' + heroAvatars.length + ')">' + (avatarIndex + 1) + '/' + heroAvatars.length + ' ▸</button>' : '';
   const avatarButtons = !avatar ? '' : !avatarReady ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-action" disabled>준비 중</button>'
     : (avatarEquipped
       ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-gear" data-avatar-gear role="switch" aria-checked="' + gearShown + '" title="아바타를 입은 채로 장비 외형을 보여 줍니다">장비 외형 ' + (gearShown ? '켬' : '끔') + '</button>'
-      : '<button type="button" class="btn btn-ghost btn-sm hero-avatar-try" data-avatar-try aria-pressed="false">미리보기</button>')
+      : '<button type="button" class="btn btn-ghost btn-sm hero-avatar-try" data-avatar-try aria-pressed="' + trying + '">' + (trying ? '미리보기 끝' : '미리보기') + '</button>')
       + '<button type="button" class="btn ' + (avatarOwned ? 'btn-ghost' : 'btn-gold') + ' btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '">' + (avatarOwned ? (avatarEquipped ? '해제' : '착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') + '</button>';
-  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타' + (avatarEquipped ? ' · 착용 중' : avatarOwned ? ' · 보유' : '') + '</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><span class="hero-avatar-buttons">' + avatarButtons + '</span></section>' : '';
+  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타' + (avatarEquipped ? ' · 착용 중' : avatarOwned ? ' · 보유' : '') + '</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><span class="hero-avatar-buttons">' + avatarNext + avatarButtons + '</span></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
     '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small class="hs-grade" data-grade="' + heroGrade(def, h) + '" style="color:' + RC[heroGrade(def, h)] + '">' + heroGrade(def, h) + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
@@ -99,7 +106,20 @@ export function renderOwnedHero(meta, id, det) {
   if (tryButton && avatar) tryButton.onclick = () => {
     const on = tryButton.getAttribute('aria-pressed') !== 'true';
     tryButton.setAttribute('aria-pressed', String(on)); tryButton.textContent = on ? '미리보기 끝' : '미리보기';
+    meta.avatarTrying = on ? { heroId: id, avatarId: avatar.id } : null;
     meta.app.wardrobe?.show(id, on ? { previewAvatarId: avatar.id, previewLabel: '미리보기' } : {});
+  };
+  // 다시 그리기(renderHeroes)는 옷장을 착용 상태로 되돌리므로 시착 중이면 미리보기를 다시 입힌다.
+  if (trying) meta.app.wardrobe?.show(id, { previewAvatarId: avatar.id, previewLabel: '미리보기' });
+  else if (meta.avatarTrying?.heroId === id) meta.avatarTrying = null;
+  const nextButton = det.querySelector('[data-avatar-next]');
+  if (nextButton) nextButton.onclick = () => {
+    const next = heroAvatars[(avatarIndex + 1) % heroAvatars.length];
+    meta.avatarPick = { ...(meta.avatarPick || {}), [id]: next.id };
+    // 시착 중이면 다음 아바타로 시착을 옮긴다(착용 중인 아바타로 돌아오면 renderOwnedHero 가 시착을 끝낸다).
+    if (meta.avatarTrying?.heroId === id) meta.avatarTrying = { heroId: id, avatarId: next.id };
+    meta.renderHeroes();
+    det.querySelector('[data-avatar-next]')?.focus({ preventScroll: true });
   };
   const gearButton = det.querySelector('[data-avatar-gear]');
   if (gearButton) gearButton.onclick = () => {
