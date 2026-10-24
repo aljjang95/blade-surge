@@ -165,6 +165,24 @@ describe('기존 이용자 보호: 서버 증거(소셜 프로필 생성 시각)
     expect(r2.body.report.days).toBe(1);
   });
 
+  test('12. 증거로 정책 1이 된 계정의 스냅샷은 재화를 다시 깎지 않고 허브를 다시 부르지 않는다', async () => {
+    const { h, a } = await setup(HERO_STARTER_POLICY_SINCE - 60 * DAY);
+    const r = await importSave(h, a, save('late.json'));
+    expect(r.body.report.clamped).toEqual({});
+    expect(r.body.doc.gold).toBe(90_000_000);
+    expect(r.body.report.socialAt).toBe(HERO_STARTER_POLICY_SINCE - 60 * DAY);
+    // 가져오기 뒤에는 허브가 죽어도 스냅샷이 저장된 소셜 시각으로 같은 기준을 쓴다.
+    const real = h.social!.hub;
+    (h.env as any).SOCIAL = { idFromName: (n: string) => n, get: () => ({ fetch: (req: Request) =>
+      new URL(req.url).pathname === '/internal/evidence' ? Promise.resolve(new Response('{}', { status: 500 })) : real.fetch(req) }) };
+    const snap = await h.send('POST', '/shadow/snapshot', { cid: 'snap-keep-gold-01', save: save('late.json') }, a.token);
+    expect(snap.status).toBe(200);
+    expect(snap.body.clamped).toEqual({});
+    const doc = await me(h, a);
+    expect(doc.doc.gold).toBe(90_000_000);
+    expect(doc.doc.roster.policy).toBe(1);
+  });
+
   test('11. 공개 소셜 라우터로 /internal/evidence는 404, 허브 직접 호출도 헤더 없으면 404', async () => {
     const { handleSocialRequest } = await import('../packages/tll-social/src/server/router');
     const { h, a } = await setup(BEFORE);
