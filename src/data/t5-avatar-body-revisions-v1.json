@@ -9,11 +9,11 @@
       "status": "GENERATED",
       "source": {
         "path": "asset-library/normalized/avatar_rogue_vampire.glb",
-        "sha256": "856188ee73ae51a2b07414b409e12dbb71a00115d2db0d152c3bd685d3ed256b"
+        "sha256": "7e03df7f3351b8d2306f16b2be31add2dc4ae475d89ea2f1ff5e429e97c3f6df"
       },
       "output": {
         "path": "/models/heroes-next/rogue-vampire-body-fit-v1.glb",
-        "sha256": "3d55c6bbe8b1771a06de77d84cb904a6dfd9f49576ca668e4f073466fb4cc850"
+        "sha256": "e416cbf6b23ce4f15088cf1277e4c696c16d903059d398bd3acbafed2bd3255e"
       },
       "authoring": {
         "kind": "body-rebind",

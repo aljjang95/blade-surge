@@ -19,8 +19,9 @@
 #   --pauldron 0.5: 어깨(LeftShoulder·RightShoulder)+팔 가중치 합이 0.5 이상인 장식 정점은 땋은 머리·망토 규칙을 받지 않는다. 2026-10-24
 #   궁수 U 불사조: 왼어깨 불꽃 깃털 견갑(어깨 .49·팔 .47)이 망토 규칙으로 어깨·팔을 잃고 Spine2 에 굳어 구르기에서 0.39m 바닥을 팠다.
 #   기본(없음)은 이전과 같은 출력.
-#   --head-rigid 1: 목 관절보다 높은 정점은 모두 Head 100% 로 묶는다(치비 머리 전체가 한 덩어리). 2026-10-24 흡혈 백작: Tripo 가 얼굴에
-#   어깨·팔 가중치를 섞어(눈 높이 정점 다수가 Head < 0.2) 대기 자세에서 얼굴 아래쪽이 머리와 최대 17cm 따로 움직여 앞머리가 눈을 덮었다.
+#   --head-rigid 1: 목 관절보다 높은 정점과, 목 관절~가슴 중간(Spine1·Spine2 중간) 높이 중 목 앞쪽·몸 축 옆으로 (목−가슴 중간)×1.2 안의
+#   정점(치비 얼굴 아래쪽·턱)을 모두 Head 100% 로 묶는다. 2026-10-24 흡혈 백작: Tripo 목 관절이 눈 아래 높이라 아랫눈꺼풀·볼·턱이 목 아래였고,
+#   거기에 Spine·Spine1·어깨 가중치가 섞여(Head 0~0.35) 대기 자세에서 얼굴 아래쪽이 7cm 따로 움직여 눈이 찌그러지고 한쪽 눈이 가렸다.
 #   기본(없음)은 이전과 같은 출력.
 #   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
@@ -207,9 +208,12 @@ def main():
         if pauldron is not None and green[v.index] and not (braidMask is not green and braidMask[v.index]) and arm_w + sum(x for n, x in w.items() if is_shoulder(n)) >= pauldron: on_arm = True
         if green[v.index] and on_arm: stats['decorOnArm'] += 1
         braid = braidMask[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
-        if head_rigid and p.dot(up) >= zn:
+        chin = head_rigid and zc <= p.dot(up) < zn and (p - J['Neck']).dot(front) > 0 \
+            and abs((p - J['Neck']).dot(side)) < 1.2 * (zn - zc)
+        if head_rigid and (p.dot(up) >= zn or chin):
             new = {head_group.name: 1.0}; stats['headRigid'] = stats.get('headRigid', 0) + 1
             if arm_w > 0.05: stats['headRigidArm'] = stats.get('headRigidArm', 0) + 1
+            if chin: stats['headRigidChin'] = stats.get('headRigidChin', 0) + 1
         elif head_w >= 0.2 or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
