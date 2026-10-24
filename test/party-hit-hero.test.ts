@@ -8,6 +8,7 @@ import { Battle as PartyBattle } from '../src/party/battle.js';
 import { Battle as RpgBattle } from '../src/game/rpg-battle.js';
 import { audio } from '../src/engine/audio.js';
 import { COMBAT_SOUND_FILES, HIT_SOUND_FILES, WEAPON_BY_HERO, HERO_BY_WEAPON, partyHitProfile } from '../src/engine/combat-sound-library.js';
+import { kitOf } from '../src/data/heroes.js';
 
 afterEach(() => mock.restore());
 
@@ -130,7 +131,9 @@ function playAs(event: object) {
 }
 
 test('영웅 → 무기 매핑은 HERO_BY_WEAPON 의 정확한 역이다', () => {
-  expect(Object.keys(WEAPON_BY_HERO).sort()).toEqual([...PARTY_HEROES].sort());
+  // 소환 전용 영웅(늑대인간 족장)은 자기 무기 항목 없이 kit(광전사)의 것을 쓴다.
+  expect(Object.keys(WEAPON_BY_HERO).sort()).toEqual(PARTY_HEROES.filter((h: string) => kitOf(h) === h).sort());
+  expect(partyHitProfile('werewolf')).toEqual(partyHitProfile('barbarian'));
   for (const [weapon, hero] of Object.entries(HERO_BY_WEAPON)) expect(WEAPON_BY_HERO[hero as string]).toBe(weapon);
   expect(partyHitProfile('admin')).toBeNull();
   expect(partyHitProfile(undefined)).toBeNull();
@@ -141,10 +144,11 @@ test('게스트 재생: 공격자 영웅마다 서로 다른 영웅 접촉 레�
   const layers = new Map<string, string[]>();
   for (const hero of PARTY_HEROES) {
     const heard = playAs({ type: 'hit', id: 'e1', value: 200, hero });
-    expect(heroLayers(heard)).toEqual([hero]);
+    expect(heroLayers(heard)).toEqual([kitOf(hero)]);
     layers.set(hero, heard.filter(n => n.includes('/hero/')));
   }
-  expect(new Set([...layers.values()].map(v => v.join('|'))).size).toBe(PARTY_HEROES.length);
+  // 서로 다른 소리 세트는 kit 이 다른 영웅 수만큼(늑대인간 족장은 광전사와 같은 세트).
+  expect(new Set([...layers.values()].map(v => v.join('|'))).size).toBe(new Set(PARTY_HEROES.map((h: string) => kitOf(h))).size);
   // 무기별 몸체 규칙도 따른다: 도끼(barbarian)는 무거운 바디, 쌍단검(rogue)은 가벼운 바디.
   expect(bodies(playAs({ type: 'hit', id: 'e1', value: 200, hero: 'barbarian' }))).toEqual(['b_heavy']);
   expect(bodies(playAs({ type: 'hit', id: 'e1', value: 200, hero: 'rogue' }))).toEqual(['b_light']);

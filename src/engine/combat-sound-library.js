@@ -14,7 +14,8 @@ export const WEAPON_BY_HERO = Object.freeze(Object.fromEntries(Object.entries(HE
 const PARTY_HIT_KIND = Object.freeze({ knight: 'slash', barbarian: 'slash', mage: 'magic', rogue: 'slash', ranger: 'slash' });
 /** 원격 타격 재생 인자 { kind, weapon }. 알 수 없는 영웅이면 null(호출 쪽이 기존 slash 로 내려간다). */
 export function partyHitProfile(heroId) {
-  return Object.hasOwn(WEAPON_BY_HERO, heroId) ? { kind: PARTY_HIT_KIND[heroId], weapon: WEAPON_BY_HERO[heroId] } : null;
+  const kit = kitOf(heroId);   // 늑대인간 족장은 광전사 무기·타격음
+  return Object.hasOwn(WEAPON_BY_HERO, kit) ? { kind: PARTY_HIT_KIND[kit], weapon: WEAPON_BY_HERO[kit] } : null;
 }
 export const HERO_HIT_VARIANTS = 2;
 export const HERO_SKILLS = Object.freeze({

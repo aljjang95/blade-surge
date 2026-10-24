@@ -189,7 +189,7 @@ function applyItemWeapons(model, looks, item) {
 
 function applyLibraryArmoryAppearance(model, equip, def) {
   const contract = model.userData.authoredContract;
-  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); return; }
+  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, { id: kitOf(def) }); return; }
   // 병기고 장식은 이름이 handslot.* 인 스킨 본을 찾으므로 Mixamo 손 본 이름을 잠시 바꾼다.
   const renamed = [];
   for (const side of ['r', 'l']) {
@@ -197,7 +197,7 @@ function applyLibraryArmoryAppearance(model, equip, def) {
     if (!bone) continue;
     renamed.push([bone, bone.name, `handslot.${side}`]); bone.name = `handslot.${side}`;
   }
-  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); }
+  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, { id: kitOf(def) }); }
   finally {
     for (const [bone, name, key] of renamed) {
       bone.name = name;

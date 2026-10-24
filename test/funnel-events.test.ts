@@ -233,11 +233,15 @@ test('automatic hunt level-ups are a separate event from player-chosen upgrades'
 
 test('hero purchase screen skus (derived from iap-catalog) and hero_unlock_free are accepted', async () => {
   const { HERO_ORDER } = await import('../src/data/heroes.js');
+  const { HERO_LEGACY_IDS } = await import('../src/data/hero-roster.js');
   const { heroProductId, HERO_ALL_PRODUCT_ID } = await import('../src/shared/iap-catalog.js');
-  for (const id of [...HERO_ORDER.map(heroProductId), HERO_ALL_PRODUCT_ID]) expect(validateFunnelEvent('paysheet_open', { sku: id }).ok).toBe(true);
+  // 상품은 원래 다섯 영웅뿐(소환 전용 영웅은 상품이 없다).
+  for (const id of [...HERO_LEGACY_IDS.map(heroProductId), HERO_ALL_PRODUCT_ID]) expect(validateFunnelEvent('paysheet_open', { sku: id }).ok).toBe(true);
   expect(validateFunnelEvent('paysheet_open', { sku: 'hero_nobody_v1' })).toEqual({ ok: false, reason: 'invalid_value:sku' });
   expect(validateFunnelEvent('hero_unlock_free', { hero: HERO_ORDER[0], step: 1 }).ok).toBe(true);
   expect(validateFunnelEvent('hero_unlock_free', { hero: 'nobody', step: 1 }).ok).toBe(false);
+  expect(validateFunnelEvent('hero_unlock_free', { hero: 'werewolf', step: 1 }).ok).toBe(false);   // 소환 전용은 보석 무료 해금 대상이 아니다
+  expect(HERO_ORDER).toContain('werewolf');
   expect(validateFunnelEvent('hero_unlock_free', { hero: HERO_ORDER[0] }).ok).toBe(false);
 });
 

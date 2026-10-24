@@ -16,6 +16,8 @@ import { starterChoices, needsStarterSelect } from '../src/ui/starter-select.js'
 import { audio } from '../src/engine/audio.js';
 
 const IDS = Object.keys(HEROES);
+// 정책 1 이 소유하는 영웅은 원래 다섯뿐이다(소환 전용 영웅 늑대인간 족장은 소환으로만 해금).
+const LEGACY = [...HERO_LEGACY_IDS];
 const fresh = (storage = createMemoryStorage()) => new Economy({ storage });
 /** 이 정책 전의 저장 원본: roster 필드가 없다. */
 function legacyRaw(patch: (raw: any) => void = () => {}) {
@@ -35,8 +37,9 @@ describe('저장 정책', () => {
   test('roster 없는 기존 저장은 정책 1 로 다섯 영웅을 모두 소유하고 레벨·선택을 보존하며 여러 번 불러도 같다', () => {
     const raw = legacyRaw((r) => { r.selected = 'mage'; r.heroes.mage.level = 24; r.heroes.rogue.level = 9; r.heroes.rogue.shards = 33; });
     const a = withStore(raw);
-    expect(a.s.roster).toEqual({ policy: HERO_POLICY.LEGACY, owned: IDS, starter: null, starterChosen: true, paid: [] });
-    for (const id of IDS) expect(a.ownHero(id)).toBe(true);
+    expect(a.s.roster).toEqual({ policy: HERO_POLICY.LEGACY, owned: LEGACY, starter: null, starterChosen: true, paid: [] });
+    for (const id of LEGACY) expect(a.ownHero(id)).toBe(true);
+    expect(a.ownHero('werewolf')).toBe(false);
     expect(a.s.selected).toBe('mage');
     expect([a.s.heroes.mage.level, a.s.heroes.rogue.level, a.s.heroes.rogue.shards]).toEqual([24, 9, 33]);
     const once = JSON.stringify(a.s.roster);
@@ -104,7 +107,7 @@ describe('시작 영웅 선택', () => {
   });
   test('선택 화면은 다섯 영웅 카드를 초상·이름·한 줄 특징과 함께 모두 낸다', () => {
     const cards = starterChoices();
-    expect(cards.map((c) => c.id)).toEqual(HERO_ORDER);
+    expect(cards.map((c) => c.id)).toEqual(HERO_ORDER.filter((id) => !(HEROES as any)[id].gachaOnly));
     for (const c of cards) { expect(c.name).toBe((HEROES as any)[c.id].name); expect(c.portrait.length).toBeGreaterThan(0); expect(c.role.length).toBeGreaterThan(0); expect(c.line.length).toBeGreaterThan(0); }
   });
 });
@@ -350,13 +353,13 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
   test('기존 저장(정책 1)의 다섯 영웅은 전부 그대로 성장·장비가 된다', () => {
     const eco = withStore(legacyRaw((r) => { r.gold = 99999999; r.gems = 5000; }));
     const out: Record<string, boolean[]> = {};
-    for (const id of IDS) {
+    for (const id of LEGACY) {
       const h = eco.s.heroes[id]; h.level = 20; h.exp = Math.ceil(levelExp(20) / 2); h.shards = 9999;
       const uid = eco.addItem('N', 'weapon').uid;
       out[id] = [eco.levelUpHero(id) === true, eco.promoteHero(id) === true, eco.equip(id, uid) !== false && h.equip.weapon === uid,
         eco.unequip(id, 'weapon') !== false && h.equip.weapon === null, eco.setShowGear(id, true).ok === true, eco.learnSkill(id, 1).reason !== 'locked'];
     }
-    for (const id of IDS) expect(out[id]).toEqual([true, true, true, true, true, true]);
+    for (const id of LEGACY) expect(out[id]).toEqual([true, true, true, true, true, true]);
     expect(eco.s.roster.policy).toBe(HERO_POLICY.LEGACY);
   });
 

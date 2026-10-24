@@ -59,7 +59,7 @@ test('궁극기와 고위 각성만 넓은 지면 링(noRune 서명 스킬 제�
     if (MAJOR_SKILL_IDS.has(id)) { expect(shakes).toHaveLength(1); if ((SKILL_VFX as any)[id].noRune) { expect((SKILL_SIGNATURES as any)[id]).toBeTypeOf('function'); expect(rings).toHaveLength(0); } else expect(rings.length).toBeGreaterThanOrEqual(1); }
     else { expect(shakes).toHaveLength(0); expect(rings).toHaveLength(0); }
   }
-  expect(MAJOR_SKILL_IDS.size).toBe(15);
+  expect(MAJOR_SKILL_IDS.size).toBe(16);   // 궁극기·고위 각성 15 + 늑대인간 족장 궁극기 월광 사냥
 });
 
 test('섬광은 100ms 이하이고 동작 줄이기·혼잡·저사양에서 레이어가 줄어든다', () => {
