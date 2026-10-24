@@ -174,3 +174,34 @@ test('룬석 아이콘은 가문 색·등급 점, 잠긴 칸은 자물쇠', () =
   expect((html.match(/<i><\/i>/g) || []).length).toBe(3);
   expect(emptyHex('locked')).toContain('rune-hex-locked');
 });
+
+describe('룬 소켓 탭 안내 줄: 토스트가 전투력을 가리지 않게 탭 안에 둔다', () => {
+  const metaOf = (eco: any) => ({ eco, ui: { toast() { throw Error('탭 안내는 앱 토스트를 쓰지 않는다'); } } });
+  test('안내가 있는 동안 공명 줄 자리에 .rs-notice 를 그리고 만료되면 원래 공명 줄로 돌아온다', async () => {
+    const { runePaneHtml, setRuneNotice } = await import('../src/ui/rune-socket.js');
+    const eco = core({ storm_edge: [0, 1, 0] });
+    const realNow = Date.now; let now = T0;
+    Date.now = () => now;
+    try {
+      expect(runePaneHtml(metaOf(eco), 2, 'knight', null)).not.toContain('rs-notice');
+      setRuneNotice('바람 칼끝 II 박기 완료', 'gold');
+      const html = runePaneHtml(metaOf(eco), 2, 'knight', null);
+      expect(html).toContain('class="rs-notice gold"');
+      expect(html).toContain('바람 칼끝 II 박기 완료');
+      // 공명 줄(rs-syns) 안에 있고, 별도 띠(toast)로 뜨지 않으며, 각인판 링크는 그대로 있다
+      expect(html.indexOf('rs-notice')).toBeGreaterThan(html.indexOf('class="rs-syns"'));
+      expect(html).toContain('id="rs-overview"');
+      expect(html).not.toContain('toast');
+      now += 2300;
+      const later = runePaneHtml(metaOf(eco), 2, 'knight', null);
+      expect(later).not.toContain('rs-notice');
+      expect(later).toContain('공명 없음');
+    } finally { Date.now = realNow; }
+  });
+  test('빨간 안내도 같은 줄을 쓴다', async () => {
+    const { runePaneHtml, setRuneNotice } = await import('../src/ui/rune-socket.js');
+    const eco = core();
+    setRuneNotice('+15 강화 시 개방되는 칸입니다', 'red');
+    expect(runePaneHtml(metaOf(eco), 2, 'knight', null)).toContain('class="rs-notice red"');
+  });
+});
