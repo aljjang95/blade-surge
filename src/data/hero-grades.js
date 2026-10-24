@@ -10,10 +10,10 @@ export const GRADE_RULES = Object.freeze({
 });
 
 // 초월 비용: 목표 등급 기준. 하루 30분·1장/최상위 파밍 모두 SSR 3~4주를 목표로 한다.
-// SSSR은 일회성 보석 소진 뒤 누적 2~3배 기간(도구 검증)이며 기존 보유량은 줄이지 않는다. 소환 구조(BM 12장)에서 SSSR 조각 220→210(3배 상한 유지).
+// SSSR은 일회성 보석 소진 뒤 누적 2~3배 기간(도구 검증)이며 기존 보유량은 줄이지 않는다.
 export const GRADE_UP_COST = Object.freeze({
   SSR: Object.freeze({ shards: 180, transcendStones: 10, gold: 300000 }),
-  SSSR: Object.freeze({ shards: 210, transcendStones: 30, gold: 1500000 }),
+  SSSR: Object.freeze({ shards: 220, transcendStones: 30, gold: 1500000 }),
 });
 
 export const gradeRank = (grade) => GRADE_ORDER.indexOf(grade);

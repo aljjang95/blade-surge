@@ -3,8 +3,8 @@
 export const ECONOMY_PACE = {
   "minutesPerDay": 30,
   "freeDays": {
-    "SSR": 23,
-    "SSSR": 56
+    "SSR": 26,
+    "SSSR": 63
   },
   "savings": {
     "ssrTicket": {
@@ -12,17 +12,17 @@ export const ECONOMY_PACE = {
       "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 29,
-      "withDays": 27,
-      "days": 2
+      "freeDays": 31,
+      "withDays": 28,
+      "days": 3
     },
     "starter": {
       "key": "starter",
       "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 29,
-      "withDays": 26,
+      "freeDays": 31,
+      "withDays": 28,
       "days": 3
     },
     "monthly": {
@@ -30,8 +30,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 22,
+      "freeDays": 26,
+      "withDays": 25,
       "days": 1
     },
     "remove_ads": {
@@ -39,8 +39,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "growth": {
@@ -48,17 +48,17 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 19,
-      "days": 4
+      "freeDays": 26,
+      "withDays": 21,
+      "days": 5
     },
     "boss_pack": {
       "key": "boss_pack",
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 14,
+      "freeDays": 26,
+      "withDays": 17,
       "days": 9
     },
     "transcend_pack": {
@@ -66,26 +66,26 @@ export const ECONOMY_PACE = {
       "target": "SSR 영웅 SSR→SSSR",
       "hero": "barbarian",
       "grade": "SSSR",
-      "freeDays": 29,
-      "withDays": 14,
-      "days": 15
+      "freeDays": 31,
+      "withDays": 15,
+      "days": 16
     },
     "vip_pass": {
       "key": "vip_pass",
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 21,
-      "days": 2
+      "freeDays": 26,
+      "withDays": 23,
+      "days": 3
     },
     "gem1": {
       "key": "gem1",
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 22,
+      "freeDays": 26,
+      "withDays": 25,
       "days": 1
     },
     "gem2": {
@@ -93,8 +93,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 22,
+      "freeDays": 26,
+      "withDays": 25,
       "days": 1
     },
     "gem3": {
@@ -102,8 +102,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 21,
+      "freeDays": 26,
+      "withDays": 24,
       "days": 2
     },
     "gem4": {
@@ -111,17 +111,17 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 21,
-      "days": 2
+      "freeDays": 26,
+      "withDays": 23,
+      "days": 3
     },
     "gem5": {
       "key": "gem5",
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 18,
+      "freeDays": 26,
+      "withDays": 21,
       "days": 5
     },
     "gem6": {
@@ -129,8 +129,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 13,
+      "freeDays": 26,
+      "withDays": 16,
       "days": 10
     },
     "skill_reset1": {
@@ -138,8 +138,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "skill_reset5": {
@@ -147,8 +147,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "tstone10": {
@@ -156,8 +156,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "stone1": {
@@ -165,8 +165,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "stone2": {
@@ -174,8 +174,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "stone_hi": {
@@ -183,8 +183,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "stone_legend": {
@@ -192,8 +192,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "protect1": {
@@ -201,8 +201,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "protect5": {
@@ -210,8 +210,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "bless1": {
@@ -219,8 +219,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "enh_pack": {
@@ -228,8 +228,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 21,
+      "freeDays": 26,
+      "withDays": 24,
       "days": 2
     },
     "gold1": {
@@ -237,8 +237,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "gold2": {
@@ -246,8 +246,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "gold3": {
@@ -255,8 +255,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "en1": {
@@ -264,8 +264,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     },
     "en2": {
@@ -273,8 +273,8 @@ export const ECONOMY_PACE = {
       "target": "마법사 SR→SSR",
       "hero": "mage",
       "grade": "SSR",
-      "freeDays": 23,
-      "withDays": 23,
+      "freeDays": 26,
+      "withDays": 26,
       "days": 0
     }
   }
