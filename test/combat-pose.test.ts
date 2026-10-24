@@ -101,7 +101,8 @@ describe('전투·마을 가산 자세 층', () => {
     }
   });
   test('실제 전투 정의의 길이·히트 시각·피해·범위와 보호 파일을 기준 HEAD에 고정한다', () => {
-    expect(Object.fromEntries(Object.entries(HEROES).map(([id, hero]) => [id, { combo: hero.combo, skills: hero.skills }]))).toEqual(timing.gameplay);
+    // 기준 HEAD 에 있던 다섯 영웅의 정의는 그대로여야 한다(이후 추가된 소환 전용 영웅은 비교 대상이 아니다).
+    expect(Object.fromEntries(Object.entries(HEROES).filter(([id]) => id in timing.gameplay).map(([id, hero]) => [id, { combo: hero.combo, skills: hero.skills }]))).toEqual(timing.gameplay);
     for (const [file, hash] of Object.entries(timing.pinned)) {
       expect(createHash('sha256').update(readFileSync(new URL('../' + file, import.meta.url))).digest('hex')).toBe(hash);
     }
@@ -163,7 +164,7 @@ describe('전투·마을 가산 자세 층', () => {
     const actor = readFileSync(new URL('../src/game/actor.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
     expect(actor).toContain('this.heroPose?.restore();\n    this.mixer.update(dt);\n    this.updateCombatPose(dt);\n    this.heroPose?.apply(dt);');
     expect(actor).toContain('this.heroPose?.dispose(); this.mixer.stopAllAction();');
-    expect(readFileSync(new URL('../src/game/player.js', import.meta.url), 'utf8')).toContain('createCombatPose(this.model, def.id, this.mixer, this.clips)');
+    expect(readFileSync(new URL('../src/game/player.js', import.meta.url), 'utf8')).toContain('createCombatPose(this.model, kitOf(def), this.mixer, this.clips)');
     const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
     expect(main.match(/this\.showcase\.combatPose\?\.dispose\(\); this\.showcase\.pose\?\.dispose\(\); disposeCharacter/g)?.length).toBe(3);
     expect(main).toContain('s.combatPose?.restore();\n        s.pose?.restore();');
