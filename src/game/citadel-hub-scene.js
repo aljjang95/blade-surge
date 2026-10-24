@@ -8,6 +8,7 @@ import { preloadEnvironmentKit, buildEnvironmentInstances } from '../engine/envi
 import { CanopySightline } from '../engine/canopy-sightline.js';
 import { libraryAssets } from '../engine/library-assets.js';
 import { createCitadelGateDesignLibrary } from './citadel-gate-designs.js';
+import { buildStarterVillage } from './starter-village-scene.js';
 
 const templates = new Map();
 const pending = new Map();
@@ -89,6 +90,9 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   const base = TOWN_THEMES[town || 'oathhold'], theme = skin ? { ...base, palette: skin.palette, waystone: skin.waystone, accent: skin.accent } : base;
   const palette = theme.palette, legacyPlaza = !town || town === 'oathhold', legacyLook = legacyPlaza && !skin;
   const hub = town ? townHub(town) : null;
+  // 첫 마을(1지역)은 초보자 구역 배치(starter-village.js). 바닥·구역 소품은 starter-village-scene 이 그린다.
+  const starter = !!hub?.starter && !skin;
+  const classicLook = legacyLook && !starter;
   const hotspots = hub ? hub.hotspots : CITADEL_HUB_HOTSPOTS, hubProps = hub ? hub.props : CITADEL_HUB_PROPS;
   const root = new THREE.Group(); root.name = 'Citadel_PlayableHub';
   const geometryOwned = new Set(), materialsOwned = new Set(), texturesOwned = new Set();
@@ -138,8 +142,10 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   }
   const plaza = batch();
   const pavingPath = `${CITADEL_HUB_ASSET_ROOT}paving.glb`;
-  const pavingSource = legacyLook ? (assets instanceof Map ? assets.get(pavingPath) : assets[pavingPath]) : null;
-  if (legacyPlaza) {
+  const pavingSource = legacyLook && !starter ? (assets instanceof Map ? assets.get(pavingPath) : assets[pavingPath]) : null;
+  if (starter) {
+    plaza.box(25.6, .32, 25.6, shadowStone, 0, -.22, 0);
+  } else if (legacyPlaza) {
     plaza.box(25.6, .32, 25.6, shadowStone, 0, -.22, 0);
     plaza.box(25.1, .08, 25.1, stone, 0, -.045, 0);
     // Broad low-contrast paving provides scale without disguising the routes.
@@ -210,6 +216,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     }
   }
   plaza.finish();
+  const starterVillage = starter ? buildStarterVillage({ root, owned: { geometries: geometryOwned, materials: materialsOwned, textures: texturesOwned }, environmentTexture, quality }) : null;
 
   function cloneAsset(path, parent) {
     const source = assets instanceof Map ? assets.get(path) : assets[path];
@@ -348,7 +355,12 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     node.userData.hotspotId = spot.id; node.position.set(spot.x, 0, spot.z); node.rotation.y = spot.yaw;
     root.add(node); gateNodes.set(spot.id, node);
     const isGate = ['dungeon', 'campaign', 'arena'].includes(spot.kind);
-    if (isGate) {
+    if (starter && spot.kind === 'campaign') {
+      // 출격 포탈 아치는 starter-village-scene 이 그렸다. 이름표만 단다.
+      textLabel(spot, 5.9);
+    } else if (starter && ['training', 'board', 'story'].includes(spot.kind)) {
+      textLabel(spot, spot.kind === 'board' ? 3.3 : spot.kind === 'story' ? 4.1 : 2.4);
+    } else if (isGate) {
       node.add(gateDesigns.build(spot));
       const label = textLabel(spot, 4.12);
       if (spot.kind === 'dungeon' && emergingIds.has(spot.route)) {
@@ -389,6 +401,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   for (const prop of hubProps) {
     const node = new THREE.Group(); node.name = `Citadel_Prop_${prop.id}`;
     node.position.set(prop.x, 0, prop.z); node.rotation.y = prop.yaw; root.add(node);
+    if (starter && ['anvil', 'hearth', 'rack'].includes(prop.kind)) continue; // 초보자 마을 대장간 소품은 장면 모듈이 그렸다
     const index = roleIndex.get(prop.kind) || 0; roleIndex.set(prop.kind, index + 1);
     if (planLibrary(prop.kind, { x: prop.x, z: prop.z, yaw: prop.yaw }, index)) { if (prop.kind === 'stall') authoredStall = true; continue; }
     if (prop.asset && cloneAsset(prop.asset, node)) { if (prop.kind === 'stall') authoredStall = true; continue; }
@@ -434,7 +447,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     b.finish();
   }
   const bottleMaterials = [mat(0x96ddbc, { roughness: .35 }), mat(0xc89c7d, { roughness: .4 }), mat(0x83bddd, { roughness: .4 })];
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < (starter ? 0 : 9); i++) {
     const x = -7.22 + i * .21, z = authoredStall ? 7.08 : i % 2 ? 7.31 : 7.46;
     const y = authoredStall ? 1.22 : .99;
     booth.cylinder(.065, .18, bottleMaterials[i % 3], x, y, z, 8, .05);
@@ -455,7 +468,14 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
 
   // 기존 충돌·입구와 같은 광장을 쓰며 높은 수목은 이동 경계 밖에 둔다.
   const grove = [];
-  if (legacyPlaza) {
+  if (starter) {
+    // 담 바깥 나무 띠와 오두막(마을 안쪽을 향함). 걷는 경계(±12) 밖이다.
+    for (const side of [-1, 1]) {
+      for (const z of [-11.8, -2.6, 4.4, 11.6]) grove.push({ asset: z === -2.6 || z === 11.6 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 14.2, z, y: -.42, yaw: side * .7 + z, scale: .95 });
+      grove.push({ asset: 'broadleaf-tree', x: side * 6.5, z: -15, y: -.4, yaw: side, scale: 1.05 });
+    }
+    grove.push({ asset: 'mossy-rock-cluster', x: -11, z: -2.6, y: -.1, yaw: 1, scale: .4 });
+  } else if (legacyPlaza) {
     for (const side of [-1, 1]) {
       for (const z of [-8.4, -2.8, 3.5]) {
         grove.push({ asset: z === -2.8 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 15.4, z,
@@ -484,7 +504,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   const groveTint = GROVE_TINT[town] || skin?.grove;
   if (groveTint) tintGroup(gardenAssets, ...groveTint);
   if (gardenAssets.userData.batchCount) root.add(gardenAssets);
-  const courtyardTrees = buildEnvironmentInstances(legacyLook ? [-1, 1].map(side => ({
+  const courtyardTrees = buildEnvironmentInstances(classicLook ? [-1, 1].map(side => ({
     asset: 'broadleaf-tree', x: side * 6, z: -4.8, y: .47, yaw: side * .9, scale: .57,
   })) : [], { name: 'Citadel_CourtyardTrees' });
   const canopySightline = new CanopySightline();
@@ -495,9 +515,9 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   if (courtyardTrees.userData.batchCount) root.add(courtyardTrees);
 
   // 물약상의 직물, 상자와 화단을 정적 배치로 묶어 시장의 쓰임을 읽게 한다.
-  const market = batch(), cloth = mat(legacyLook ? 0x477b6c : palette.teal), earth = mat(0x2e5041), bloom = mat(0xb9d6a5);
+  const market = batch(), cloth = mat(classicLook ? 0x477b6c : palette.teal), earth = mat(0x2e5041), bloom = mat(0xb9d6a5);
   const lawn = mat(0x365a46), pathStone = mat(0x6b7f80);
-  if (legacyLook) {
+  if (classicLook) {
     // 낮은 녹지와 넓은 돌길이 같은 지면에서 광장의 구역을 읽게 한다.
     market.box(4.6, .008, 23.8, pathStone, 0, .019, 0);
     market.box(24.6, .008, 2.15, pathStone, 0, .019, -2.5);
@@ -506,17 +526,17 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       market.add(new THREE.RingGeometry(.96, 1, 24).scale(2.28, 3.38, 1), ivory, side * 6, .025, -3.2, -Math.PI / 2);
     }
   }
-  if (!authoredStall) {
+  if (!authoredStall && !starter) {
     for (const side of [-1, 1]) {
       market.box(.14, 2.65, .14, wood, -6.4 + side * 1.1, 1.32, 7.75);
       market.box(.13, 2.4, .13, wood, -6.4 + side * 1.1, 1.2, 6.8);
     }
     market.box(2.52, .06, 1.28, cloth, -6.4, 2.66, 7.32);
   }
-  for (const side of [-1, 1]) {
+  if (!starter) for (const side of [-1, 1]) {
     market.box(.65, .6, .62, wood, -6.4 + side * .85, .3, 7.47);
     market.box(.7, .07, .66, gold, -6.4 + side * .85, .64, 7.47);
-    if (!legacyLook) continue;
+    if (!classicLook) continue;
     for (const z of [-4.8, -1.3]) {
       market.box(1.6, .06, .4, earth, side * 6, z === -4.8 ? .49 : -.01, z);
       if(z!==-4.8)continue;
@@ -526,7 +546,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       }
     }
   }
-  if (legacyLook) for (const side of [-1, 1]) {
+  if (classicLook) for (const side of [-1, 1]) {
     // 바닥의 정원 문양은 단차 없이 벤치와 나무를 한 구역으로 묶는다.
     for (let i = 0; i < 8; i++) {
       const angle = i * Math.PI / 4;
@@ -538,7 +558,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
 
   let disposed = false, nearestId = null;
   root.userData = {
-    version: 'citadel-playable-hub-v1', townId: town, campaignChapter: skin?.chapter || 1, spatial: hub || CITADEL_HUB, hotspots,
+    version: 'citadel-playable-hub-v1', townId: town, starter: starterVillage, campaignChapter: skin?.chapter || 1, spatial: hub || CITADEL_HUB, hotspots,
     authoredAssetCount,
     environmentInstanceCount: gardenAssets.userData.instanceCount + courtyardTrees.userData.instanceCount,
     hotspotNodes: gateNodes,
@@ -557,6 +577,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       if (disposed) return;
       const { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = state;
       gateDesigns.update(dt, reducedMotion);
+      starterVillage?.update(dt, reducedMotion);
       for (const entry of rising) {
         if (entry.done) continue;
         // 느린 기기에서도 실제 시간에 맞춰 끝나도록 프레임당 0.25초까지 진행한다(탭 전환 같은 긴 정지만 자른다).

@@ -1,14 +1,17 @@
 import './citadel-hub.css';
 import { DUNGEONS, MATERIALS, CONSUMABLES } from '../data/expansion.js';
-import { CITADEL_HUB_HOTSPOTS, findHotspot } from '../data/citadel-hub.js';
+import { CITADEL_HUB_HOTSPOTS, findHotspot, activeTownHub } from '../data/citadel-hub.js';
 import { TownUI } from './town-ui.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 import { mountBlessingSlot } from './blessing-reel.js';
+import { StarterVillageUI } from './starter-village-ui.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용' };
+const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용',
+  // 초보자 마을(src/data/starter-village.js) 전용 상호작용.
+  guide: '말 걸기', training: '연습하기', board: '의뢰 보기', smith: '대화하기', story: '비석 읽기' };
 const count = value => Number(value).toLocaleString('ko-KR');
 const potionArt = id => `/img/departure-journal/icons/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
 const rewardCards = rewards => {
@@ -170,7 +173,15 @@ export class CitadelHubUI {
     }
     if (canonical.kind === 'waystone') return !!this.app.townUI?.openMap(trigger);
     if (canonical.kind === 'arena' || canonical.kind === 'steward') { this.app.expeditionUI.open('arena'); return true; }
-    if (canonical.kind === 'campaign') { this.app.meta.openTab('stage'); return true; }
+    if (canonical.kind === 'campaign') {
+      // 초보자 마을의 출격 포탈은 관문 선택 화면을 연다(docs/stage-select.md). 다른 마을은 기존 캠페인 탭.
+      if (activeTownHub().starter) return this.app.commandUI?.openPreparation(trigger) !== false;
+      this.app.meta.openTab('stage'); return true;
+    }
+    if (activeTownHub().starter && ['guide', 'training', 'board', 'smith', 'story'].includes(canonical.kind)) {
+      this.starter ??= new StarterVillageUI(this.app, this);
+      return this.starter.interact(canonical, trigger);
+    }
     return false;
   }
   /** @param {{ depth?: 'standard'|'deep' }} [options] 최근 원정이 심층이었다면 같은 단계로 준비창을 연다. */
@@ -348,6 +359,8 @@ export class CitadelHubUI {
     if (!this.opened && !this.dialog.open) return;
     // Finish state/input cleanup before the native dialog becomes walkable.
     this.opened = false; this.dialogSpot = null; this.reviewedPreparation = null;
+    // 초보자 마을 창이었다면 전용 모양을 걷어 낸다(다음 원정 준비창이 같은 dialog 를 쓴다).
+    this.dialog.classList?.remove('starter-village-dialog'); if (this.dialog.dataset) delete this.dialog.dataset.starter;
     // 회전 중 닫혀도 결과는 이미 저장돼 있다. 연출 루프만 멈춘다(보관 각인은 유지).
     this.blessing?.stopLoop();
     this.app.hubControls?.clear(); this.app.citadelControls?.clear();
