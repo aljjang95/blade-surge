@@ -50,12 +50,17 @@ export const RUNE_MERGE_COST = {
 /** @type {Record<number, number>} */
 export const RUNE_REMOVE_COST = { 1: 1000, 2: 3000, 3: 8000 };
 
-/** 획득처 초안(2.6장). chance 는 0~1, 나머지는 개수. */
+/**
+ * 획득처(2.6장). chance 는 0~1, 나머지는 개수. 2026-10-24 R2 가 sim:90d 곡선으로 조정했다
+ * (미드 7일 II 2개 · 30일 III 1개 · 90일 III 5개, 시드 16 p50). 초안(정예 3%·보스 25%/심층 50%·상자 5/12/20·분해 U 10/L 30)은
+ * 90일 III 150개 이상으로 넘쳤다: 처치·장비 드랍 양이 많아 확률·분해 가루를 크게 낮추고 첫 클리어 가루(first)로 초반을 받쳤다.
+ * expeditionDust 는 출격(캠페인·원정) 승리 정산 상자: base 일반 · deep 심층 원정 · hell 지옥 난이도 · first 첫 클리어 추가.
+ */
 export const RUNE_SOURCES = {
-  eliteDrop: { grade: 1, chance: 0.03 },
-  bossDrop: { grade: 1, chance: 0.25, deepChance: 0.5, deepGrade2Chance: 0.1 },
-  expeditionDust: { base: 5, deep: 12, hell: 20 },
-  dismantleDust: { U: 10, L: 30 },
+  eliteDrop: { grade: 1, chance: 0.005 },
+  bossDrop: { grade: 1, chance: 0.02, deepChance: 0.04, deepGrade2Chance: 0.1 },
+  expeditionDust: { base: 2, deep: 3, hell: 3, first: 3 },
+  dismantleDust: { U: 0, L: 1 },
   craftFamily: { runeDust: 40, grade: 1 },
   craftExact: { runeDust: 80, grade: 1 },
   weeklyDust: 30,

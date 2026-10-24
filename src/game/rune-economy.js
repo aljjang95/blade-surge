@@ -187,10 +187,10 @@ export function recordRuneKill(/** @type {any} */ eco, /** @type {any} */ stage,
 /**
  * 처치 수와 출격 종류로 룬 드랍과 완료 상자 룬 가루를 정한다. 순수 함수(같은 seed → 같은 결과).
  * @param {{ elite?: number, boss?: number }} kills
- * @param {{ deep?: boolean, hell?: boolean, win?: boolean }} kind deep=심층 원정, hell=지옥 난이도(둘 다 심층 보스 판정)
+ * @param {{ deep?: boolean, hell?: boolean, first?: boolean, win?: boolean }} kind deep=심층 원정, hell=지옥 난이도(둘 다 심층 보스 판정), first=첫 클리어(상자 가루 추가)
  * @param {number} seed
  */
-export function rollRuneDrops(kills, { deep = false, hell = false, win = true } = {}, seed = 0) {
+export function rollRuneDrops(kills, { deep = false, hell = false, first = false, win = true } = {}, seed = 0) {
   const rng = createSeededRng(seed >>> 0), S = RUNE_SOURCES, drops = [];
   const pickId = () => RUNES[Math.floor(rng() * RUNES.length)].id;
   for (let i = 0; i < count(kills?.elite, 10000); i++) if (rng() < S.eliteDrop.chance) drops.push({ id: pickId(), grade: S.eliteDrop.grade });
@@ -200,7 +200,7 @@ export function rollRuneDrops(kills, { deep = false, hell = false, win = true } 
     const grade = deepBoss && rng() < S.bossDrop.deepGrade2Chance ? 2 : S.bossDrop.grade;
     drops.push({ id: pickId(), grade });
   }
-  const dust = win ? (hell ? S.expeditionDust.hell : deep ? S.expeditionDust.deep : S.expeditionDust.base) : 0;
+  const dust = win ? (hell ? S.expeditionDust.hell : deep ? S.expeditionDust.deep : S.expeditionDust.base) + (first ? S.expeditionDust.first : 0) : 0;
   return { drops, dust };
 }
 
@@ -208,7 +208,7 @@ export function rollRuneDrops(kills, { deep = false, hell = false, win = true } 
  * 정산 장부의 처치 수로 룬·가루를 지급한다(승리 정산 경로에서만 호출). 시드는 세이브 생성 시각과 정산 순번.
  * 저장은 호출자(정산 트랜잭션) 몫. 반환은 addRewards 와 같은 got 항목 배열.
  */
-export function settleRuneDrops(/** @type {any} */ eco, /** @type {any} */ ledger, /** @type {{ deep?: boolean, hell?: boolean }} */ kind = {}) {
+export function settleRuneDrops(/** @type {any} */ eco, /** @type {any} */ ledger, /** @type {{ deep?: boolean, hell?: boolean, first?: boolean }} */ kind = {}) {
   if (!ledger || ledger.settled) return [];
   const runes = runesOf(eco);
   runes.dropSeq = Math.min(MAX, runes.dropSeq + 1);

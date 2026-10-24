@@ -537,7 +537,7 @@ export class Economy {
     if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
-    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' }));
+    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell', first }));
     const prevLv = this.hero(heroId).level;
     const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));

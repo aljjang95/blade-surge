@@ -5,6 +5,7 @@ import { ITEM_POOL, ITEM_BY_ID } from '../src/data/items.js';
 import { normalizeSave } from '../src/game/save.js';
 import { giftBag, normalizeRunes, rollRuneDrops, contractBonus, passCharms } from '../src/game/rune-economy.js';
 import { BLESSING_GEM_PRICES } from '../src/data/blessing.js';
+import { RUNE_SOURCES } from '../src/data/runes.js';
 import { stageDef } from '../src/data/stages.js';
 
 const T0 = 1_700_000_000_000;
@@ -135,14 +136,14 @@ describe('장비가 사라질 때 룬 회수', () => {
     expect(bag(eco, 'stone_root')).toEqual([1, 0, 0]);
     expect(eco.s.heroes.knight.equip.armor).toBeNull();
   });
-  test('분해(U/L): 룬 가루 U 10·L 30, 룬 회수, 장착 해제. N/S/E 는 거절', () => {
+  test('분해(U/L): 표의 룬 가루, 룬 회수, 장착 해제. N/S/E 는 거절', () => {
     const eco = core();
     eco.runeInsert(1, 1, { id: 'storm_step', grade: 1 });
     const u = eco.salvageItem(1);
-    expect(u).toEqual({ ok: true, uid: 1, runeDust: 10, recovered: [{ id: 'storm_step', grade: 1 }] });
+    expect(u).toEqual({ ok: true, uid: 1, runeDust: RUNE_SOURCES.dismantleDust.U, recovered: [{ id: 'storm_step', grade: 1 }] });
     expect(eco.s.heroes.knight.equip.weapon).toBeNull();
-    expect(eco.salvageItem(2).runeDust).toBe(30);
-    expect(eco.s.runes.dust).toBe(40);
+    expect(eco.salvageItem(2).runeDust).toBe(RUNE_SOURCES.dismantleDust.L);
+    expect(eco.s.runes.dust).toBe(RUNE_SOURCES.dismantleDust.U + RUNE_SOURCES.dismantleDust.L);
     expect(eco.salvageItem(3)).toEqual({ ok: false, reason: 'rarity' });
   });
   test('기존 일괄 분해(N/S/E)도 박힌 룬을 회수한다', () => {
@@ -205,21 +206,23 @@ describe('전운 굴리기 economy 경로', () => {
 });
 
 describe('룬 드랍 정산과 전투 효과', () => {
-  test('rollRuneDrops 는 같은 시드에 같은 결과, 확률은 정예 3%·보스 25%·심층 50%(II 10%)', () => {
+  test('rollRuneDrops 는 같은 시드에 같은 결과, 확률은 RUNE_SOURCES 표(정예·보스·심층 보스 II)', () => {
     expect(rollRuneDrops({ elite: 30, boss: 3 }, { deep: true }, 42)).toEqual(rollRuneDrops({ elite: 30, boss: 3 }, { deep: true }, 42));
     let elite = 0, boss = 0, deep = 0, deep2 = 0;
-    const N = 20000;
+    const N = 100000, S = RUNE_SOURCES;
     for (let i = 0; i < N; i++) {
       elite += rollRuneDrops({ elite: 1 }, {}, i).drops.length;
       boss += rollRuneDrops({ boss: 1 }, {}, i).drops.length;
       const d = rollRuneDrops({ boss: 1 }, { hell: true }, i).drops;
       deep += d.length; deep2 += d.filter((x) => x.grade === 2).length;
     }
-    expect(elite / N).toBeCloseTo(0.03, 2);
-    expect(boss / N).toBeCloseTo(0.25, 1);
-    expect(deep / N).toBeCloseTo(0.5, 1);
-    expect(deep2 / deep).toBeCloseTo(0.1, 1);
-    expect([rollRuneDrops({}, {}, 1).dust, rollRuneDrops({}, { deep: true }, 1).dust, rollRuneDrops({}, { hell: true }, 1).dust]).toEqual([5, 12, 20]);
+    expect(Math.abs(elite / N - S.eliteDrop.chance)).toBeLessThan(0.002);
+    expect(Math.abs(boss / N - S.bossDrop.chance)).toBeLessThan(0.003);
+    expect(Math.abs(deep / N - S.bossDrop.deepChance)).toBeLessThan(0.004);
+    expect(Math.abs(deep2 / deep - S.bossDrop.deepGrade2Chance)).toBeLessThan(0.03);
+    const D = S.expeditionDust;
+    expect([rollRuneDrops({}, {}, 1).dust, rollRuneDrops({}, { deep: true }, 1).dust, rollRuneDrops({}, { hell: true }, 1).dust, rollRuneDrops({}, { first: true }, 1).dust])
+      .toEqual([D.base, D.deep, D.hell, D.base + D.first]);
   });
   test('캠페인 승리 정산은 장부 처치 수로 결정적으로 룬·가루를 준다', () => {
     const settle = () => {
@@ -231,7 +234,8 @@ describe('룬 드랍 정산과 전투 효과', () => {
     };
     const a = settle(), b = settle();
     expect(a).toEqual(b);
-    expect(a.got.find((g: any) => g.k === 'runeDust')).toEqual({ k: 'runeDust', n: 5 });
+    // 1-3 첫 클리어: 기본 + 첫 클리어 가루
+    expect(a.got.find((g: any) => g.k === 'runeDust')).toEqual({ k: 'runeDust', n: RUNE_SOURCES.expeditionDust.base + RUNE_SOURCES.expeditionDust.first });
     expect(a.runes.dropSeq).toBe(1);
     // 장부 없는 정산(소탕 등)은 룬을 주지 않는다.
     const eco = core(); eco.completeStage(stageDef(1, 3), 3);
