@@ -1,0 +1,18 @@
+{
+  "schema": "blade-surge.hero-gear-parts.v1",
+  "slots": {
+    "helm": { "ref": 0.2 },
+    "pauldron": { "ref": 0.18 },
+    "gauntlet": { "ref": 0.25 }
+  },
+  "grades": { "N": null, "S": null, "E": null, "U": null, "L": null },
+  "tint": {
+    "S": { "color": 0.08, "glow": 0 },
+    "E": { "color": 0.12, "glow": 0 },
+    "U": { "color": 0.35, "glow": 0.22 },
+    "L": { "color": 0.18, "glow": 0.3 }
+  },
+  "sets": [],
+  "items": {},
+  "bodyCovers": {}
+}

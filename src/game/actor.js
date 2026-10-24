@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { removeHeroBoots } from '../engine/hero-boots.js';
+import { removeHeroGearParts } from '../engine/hero-gear-parts.js';
 import { RIGS, libraryPackRig } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
 import { knockbackDecay } from './feel.js';
@@ -284,7 +285,7 @@ export class Actor {
   dispose() {
     if (this.disposed) return; this.disposed = true;
     this.game.scene.remove(this.root); this.heroPose?.dispose(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
-    this.model.userData.libraryDisposed = true; removeHeroBoots(this.model);
+    this.model.userData.libraryDisposed = true; removeHeroBoots(this.model); removeHeroGearParts(this.model);
     const skeletons = new Set(), materials = new Set();
     this.model.traverse((o) => {
       if (o.isSkinnedMesh) skeletons.add(o.skeleton);
