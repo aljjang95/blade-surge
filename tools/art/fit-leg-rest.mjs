@@ -22,7 +22,7 @@ export function readGlb(bytes) {
   return { json, binStart, bin: bytes.subarray(binStart, binStart + bytes.readUInt32LE(binOffset)) };
 }
 
-function accessorView(json, index) {
+export function accessorView(json, index) {
   const acc = json.accessors[index], view = json.bufferViews[acc.bufferView], comps = COMPS[acc.type];
   const size = acc.componentType === 5126 ? 4 : acc.componentType === 5123 ? 2 : acc.componentType === 5121 ? 1 : 0;
   if (!size) throw new Error('unsupported componentType ' + acc.componentType);
@@ -30,7 +30,7 @@ function accessorView(json, index) {
   return { acc, comps, size, start, stride };
 }
 
-function readAccessor(json, bin, index) {
+export function readAccessor(json, bin, index) {
   const { acc, comps, size, start, stride } = accessorView(json, index);
   const out = new Float32Array(acc.count * comps);
   for (let i = 0; i < acc.count; i++) for (let c = 0; c < comps; c++) {
@@ -42,7 +42,7 @@ function readAccessor(json, bin, index) {
   return out;
 }
 
-const bare = (name) => String(name).replace(/[^A-Za-z0-9]/g, '').replace(/^mixamorig/i, '');
+export const bare = (name) => String(name).replace(/[^A-Za-z0-9]/g, '').replace(/^mixamorig/i, '');
 
 /** GLB 하나의 다리 관절 높이(뼈 rest·메시 추정)와 새 역바인드를 계산한다. */
 export function planLegRest(bytes) {
