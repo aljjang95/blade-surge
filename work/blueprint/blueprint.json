@@ -1500,6 +1500,22 @@
       "at": "2026-10-18T12:04:54.966Z",
       "blueprintDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
+    },
+    {
+      "node": "starter-select",
+      "image": "images/shots/starter-select-20261024T024329-49cc07.png",
+      "sha256": "c29c0f5cd4d6efbd8075a951d92990a94f0980e381c7ba5464e369f3fda11ae2",
+      "at": "2026-10-24T02:43:29.224Z",
+      "blueprintDigest": "5a2d35d81cc3c647a3eb306ade95b45ebc452ecee1fa11af5f7dbe7317afc227",
+      "note": "Playwright 390x844 새 저장"
+    },
+    {
+      "node": "hero-locked-detail",
+      "image": "images/shots/hero-locked-detail-20261024T024329-51561c.png",
+      "sha256": "1353b6befa44aa544a486b6e11f2eb627fea8a7762faf993949a8a69ebab044e",
+      "at": "2026-10-24T02:43:29.289Z",
+      "blueprintDigest": "5a2d35d81cc3c647a3eb306ade95b45ebc452ecee1fa11af5f7dbe7317afc227",
+      "note": "Playwright 390x844 새 저장"
     }
   ],
   "lockedDigest": "5a2d35d81cc3c647a3eb306ade95b45ebc452ecee1fa11af5f7dbe7317afc227",
