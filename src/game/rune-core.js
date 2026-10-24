@@ -13,7 +13,7 @@
 import { sumEffects } from './masterworks-core.js';
 import {
   RUNE_BY_ID, RUNE_FAMILY_IDS, RUNE_GRADES, RUNE_SOCKETS, RUNE_SOCKET_BONUS, RUNE_SOCKET_BONUS_ENH,
-  RUNE_DUPLICATE_CAP, RUNE_MERGE_COST, RUNE_REMOVE_COST, RUNE_SYNERGIES, RUNE_SYNERGY_MIN,
+  RUNE_DUPLICATE_CAP, RUNE_GRADE_MUL, RUNE_MERGE_COST, RUNE_REMOVE_COST, RUNE_SYNERGIES, RUNE_SYNERGY_MIN,
 } from '../data/runes.js';
 
 /** @typedef {{ id: string, grade: number }} RuneRef */
@@ -232,7 +232,7 @@ export function runeSynergies(/** @type {Record<string, number>} */ counts) {
 }
 
 /**
- * 장착 장비들의 룬 효과 합계(공명 포함). rank = grade, 같은 룬 2개 상한, 잠긴 칸 제외,
+ * 장착 장비들의 룬 효과 합계(공명 포함). 효과 = 각인 1랭크 × RUNE_GRADE_MUL[grade](공명은 배율 없음), 같은 룬 2개 상한, 잠긴 칸 제외,
  * 상한 규칙은 masterworks-core 의 sumEffects 와 같다.
  * 전운 각인의 효과 자체는 preRunBoons 쪽에서 더하고, 여기서는 가문 공명 수에만 +1로 반영한다.
  * @param {GearRunes[]} items
@@ -240,6 +240,6 @@ export function runeSynergies(/** @type {Record<string, number>} */ counts) {
  */
 export function runeEffects(items, options = {}) {
   const parts = runeActivation(items).filter((e) => e.active).map((e) =>
-    Object.fromEntries(Object.entries(RUNE_BY_ID[e.rune.id].effects).map(([k, v]) => [k, v * e.rune.grade])));
+    Object.fromEntries(Object.entries(RUNE_BY_ID[e.rune.id].effects).map(([k, v]) => [k, v * RUNE_GRADE_MUL[e.rune.grade]])));
   return sumEffects([...parts, ...runeSynergies(familyCounts(items, options)).map((s) => s.effects)]);
 }

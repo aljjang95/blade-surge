@@ -14,11 +14,18 @@ export const RUNE_FAMILIES = [
 ];
 export const RUNE_FAMILY_IDS = RUNE_FAMILIES.map((f) => f.id);
 
-/** 등급 I/II/III — 효과는 각인 랭크와 같다(rank = grade). */
+/** 등급 I/II/III. */
 export const RUNE_GRADES = [1, 2, 3];
 /** @type {Record<number, string>} */
 export const RUNE_GRADE_LABEL = { 1: 'I', 2: 'II', 3: 'III' };
 export const RUNE_MAX_GRADE = 3;
+/**
+ * 등급별 효과 배율(각인 1랭크 효과 × 배율). 2026-10-24 지휘 결정: rank = grade(×1/×2/×3)는 같은 룬 2개 상한에서도
+ * 공격력 +54%까지 쌓여 sim:90d D8 밴드를 깼다. ×0.5/×1/×1.5 로 줄여 공격력 최대 (5+4)%×1.5×2 = 27%,
+ * 옛 출격 중 각인 3랭크(+15%) 수준에 맞춘다. 공명 효과는 배율 없이 그대로. 버린 안: II×1.5·III×2(최대 +36%).
+ * @type {Record<number, number>}
+ */
+export const RUNE_GRADE_MUL = { 1: 0.5, 2: 1, 3: 1.5 };
 
 /** 룬 12종 = 각인 12종. effects 는 BOONS 의 객체를 그대로 참조한다. */
 export const RUNES = BOONS.map((b) => ({ id: b.id, name: b.name, family: b.family, description: b.description, effects: b.effects }));
