@@ -35,11 +35,10 @@ export const PERSONAS = Object.freeze({
   hardcore: { id: 'hardcore', name: '하드코어', minutes: 100, sessions: 3, skill: 0.88, enhCap: 20, towerShare: .3, hero: 'knight' },
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
+// 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
+// D8 을 맞췄으므로 룬(옛 각인의 대체)도 같은 보너스층으로 진행 판정에서 뺀다. 대신 룬 전투력 몫(runePowerPct)을 상·하한 밴드로 가드한다.
+// (버린 안 2026-10-24: 룬을 진행 판정에 넣고 배율을 줄임 — 배율 0, 공명만 +4.9%여도 미드 D90 탑 161층·지옥 6-10 66일로 밴드 초과.)
 // 룬 정밀 제작 우선순위: 전투력에 직접 들어가는 효과(공격력·최대 체력)부터. III 를 먼저 완성한다(같은 룬 2개 상한).
-// 출격 중 각인(2026-10-24 제거)과 룬: 룬 전투력은 실제 게임처럼 진행 판정 전투력에 들어간다(D8·D9 밴드 그대로).
-// REMOVED_BOON_POWER = 옛 출격 중 각인 평균 몫(추정, 실측 아님: 출격당 최대 6회, 공격력 4~5%·최대 체력 6~7% → 약 +15%).
-// 룬 전투력 몫이 이 값 이상이면 각인 제거 공백을 메운 것으로 본다.
-export const REMOVED_BOON_POWER = 0.15;
 export const RUNE_PRIORITY = Object.freeze(['ember_edge', 'stone_root', 'tide_breath', 'storm_edge']);
 const HARD = DIFFICULTY_ORDER.filter((d) => d !== 'story');
 
@@ -121,7 +120,7 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
   };
   const basePower = () => heroStats(def, { level: st.level, star: st.star, grade: st.grade }, equipBonus(st.gear));
   const runePower = () => { const b = basePower(), fx = runeFx(); return Object.keys(fx).length ? applyBuildStats(b, fx).power : b.power; };
-  const power = () => runePower();
+  const power = () => basePower().power; // 진행 판정: 보너스층(숙련·세트·옛 각인·룬)은 뺀다
   const gainExp = (n) => { st.exp += n; while (st.level < 80 && st.exp >= levelExp(st.level)) { st.exp -= levelExp(st.level); st.level++; } };
   const earn = (k, n) => { if (!n) return; st[k] += n; if (k === 'gold') totals.goldEarned += n; };
   const mark = (day, kind, label) => milestones.push({ day, kind, label });
@@ -357,10 +356,14 @@ export function assertBands(report) {
   band('라이트 스토리 6-10 p50(일)', light.milestones.story_6_10.p50, 7, 24);
   band('미드 악몽 6-10 p50(일)', mid.milestones.nightmare_6_10.p50, 25, 70);
   // 룬 곡선(RUNE_AND_BLESSING_DESIGN 2.6): 일반(미드) 7일 II 2개, 30일 III 1개, 90일 III 4~6개.
-  // 출격 중 각인 제거(2026-10-24)로 빠진 전투력을 룬이 메우는지: 미드 D30·D90 룬 전투력 몫 ≥ 옛 각인 평균 몫(REMOVED_BOON_POWER).
-  if (days >= 7) band('미드 D7 룬 II 보유 p50', mid.checkpoints.D7.runeII.p50, 2, 6);
-  if (days >= 30) { band('미드 D30 룬 III 보유 p50', mid.checkpoints.D30.runeIII.p50, 1, 2); band('미드 D30 룬 전투력 +% p50(옛 각인 몫 이상)', mid.checkpoints.D30.runePowerPct.p50, REMOVED_BOON_POWER * 100, 40); }
-  if (days >= 90) { band('미드 D90 룬 III 보유 p50', mid.checkpoints.D90.runeIII.p50, 4, 6); band('미드 D90 룬 전투력 +% p50', mid.checkpoints.D90.runePowerPct.p50, REMOVED_BOON_POWER * 100, 60); }
+  // 룬 전투력 몫(보너스층, 진행 판정 밖): 옛 출격 중 각인이 쌓던 몫을 대체하는 상·하한(지휘 결정 2026-10-24).
+  const runePct = (s, d) => s.checkpoints[d]?.runePowerPct.p50;
+  if (days >= 7) { band('미드 D7 룬 II 보유 p50', mid.checkpoints.D7.runeII.p50, 2, 6); band('미드 D7 룬 전투력 +% p50', runePct(mid, 'D7'), 5, 100); }
+  if (days >= 30) { band('미드 D30 룬 III 보유 p50', mid.checkpoints.D30.runeIII.p50, 1, 2); band('미드 D30 룬 전투력 +% p50', runePct(mid, 'D30'), 10, 25); }
+  if (days >= 90) {
+    band('미드 D90 룬 III 보유 p50', mid.checkpoints.D90.runeIII.p50, 4, 6); band('미드 D90 룬 전투력 +% p50', runePct(mid, 'D90'), 20, 35);
+    band('라이트 D90 룬 전투력 +% p50', runePct(light, 'D90'), 12, 100); band('하드코어 D90 룬 전투력 +% p50', runePct(hard, 'D90'), 0, 45);
+  }
   if (days >= 90) {
     band('미드 D90 무한의 성 p50(층)', mid.checkpoints.D90.tower.p50, 60, 160);
     band('미드 지옥 6-10 p50(일, 미도달=999)', mid.milestones.hell_6_10.p50 ?? 999, 70, 999); // 지옥 완주는 70일 이후
