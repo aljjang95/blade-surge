@@ -71,7 +71,7 @@ function geometryFor(slot, summonShape = '') {
   shapes.set(cacheKey,geometries); return geometries;
 }
 
-/** Shared slot geometry and cached materials survive pickup; no per-drop GL allocations. */
+/** 폴백 드랍 형상(원본 3D 가 없거나 아직 읽히지 않은 장비). 슬롯 형상 · 재질을 공유하고 그림자를 만들지 않는다. */
 export function createLootVisual(item, cache = new Map()) {
   const def = ITEM_BY_ID[item.id], slot = def?.slot || 'weapon', rarity = item.rarity || def?.rarity || 'N', summonShape = def?.summonShape || '';
   const key = `${slot}|${rarity}|${summonShape || 'base'}`;
@@ -87,7 +87,7 @@ export function createLootVisual(item, cache = new Map()) {
   const root = new THREE.Group(); root.name = `loot-${slot}-${item.id}`;
   root.userData.lootSlot = slot;
   if (def?.summon) root.userData.lootSummon = def.summon.id;
-  geometryFor(slot, summonShape).forEach((geometry,i) => { const mesh = new THREE.Mesh(geometry,cache.get(key)[i]); mesh.castShadow = true; root.add(mesh); });
+  geometryFor(slot, summonShape).forEach((geometry,i) => { const mesh = new THREE.Mesh(geometry,cache.get(key)[i]); mesh.castShadow = false; root.add(mesh); });
   root.rotation.x = -.3;
   return root;
 }
