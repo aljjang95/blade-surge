@@ -342,6 +342,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         }
       };
       previewToggle.onclick = () => {
+        if (side === 'rune') return;   // 룬 탭은 자기 무대를 쓴다: 시트당 렌더러 1개
         previewOpen = !previewOpen; previewToggle.setAttribute('aria-pressed', String(previewOpen)); previewSection.hidden = !previewOpen;
         if (previewOpen) openPreview(); else disposePreview();
       };
