@@ -198,7 +198,7 @@ try {
       await page.setViewportSize(SIZES[2]); await page.waitForTimeout(300);
       rec.shots.push(await saveDataUrl(await page.evaluate(() => window.__gpQA.closeup()), `${id}_battle_zoom.png`));
       if (POSES) for (const pose of ['run', 'attack', 'dodge']) {
-        const result = await page.evaluate((pose) => {
+        const result = await page.evaluate(([pose, DODGE_FRAMES]) => {
           const app = window.app, p = app.battle.player, q = window.__gpQA;
           const key = (type, code) => window.dispatchEvent(new KeyboardEvent(type, { code, key: code, bubbles: true }));
           const step = () => { p.invuln = 1e9; app.step(1 / 60, false); };
@@ -215,7 +215,7 @@ try {
           for (let f = 0; f < frames; f++) { step(); if (f === mid) image = q.closeup(); if (extra[f]) extras[extra[f]] = q.closeup(); }
           if (pose === 'run') key('keyup', 'KeyD');
           return { image, extras, state: p.state };
-        }, pose);
+        }, [pose, DODGE_FRAMES]);
         rec.shots.push(await saveDataUrl(result.image, `${id}_battle_${pose}.png`));
         for (const [tag, image] of Object.entries(result.extras || {})) rec.shots.push(await saveDataUrl(image, `${id}_battle_${pose}_${tag}.png`));
         battle.poses[pose] = result.state;
