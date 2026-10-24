@@ -195,3 +195,20 @@ test('계약을 어긴 GLB 는 경고 후 원래 발을 유지한다', async () 
   expect(root.userData.heroBoots).toBeUndefined(); expect(warns).toHaveLength(1);
   expect(root.userData.gearFeetHidden).toBeFalsy();
 });
+
+test('비색인 지오메트리도 왼발 면 법선이 바깥을 향한다(감김 뒤집기)', () => {
+  const faceOutward = (g: THREE.BufferGeometry) => {
+    const p = g.attributes.position, n = g.attributes.normal; let ok = 0, total = 0;
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), face = new THREE.Vector3(), vn = new THREE.Vector3();
+    for (let t = 0; t < p.count; t += 3) {
+      a.fromBufferAttribute(p, t); b.fromBufferAttribute(p, t + 1); c.fromBufferAttribute(p, t + 2);
+      face.subVectors(c, b).cross(a.clone().sub(b)); vn.fromBufferAttribute(n, t);
+      total++; if (face.dot(vn) > 0) ok++;
+    }
+    return ok === total;
+  };
+  const source = new THREE.BoxGeometry(0.2, 0.3, 0.5).translate(0.05, 0, 0).toNonIndexed();
+  expect(source.index).toBeNull();
+  expect(faceOutward(source)).toBe(true);
+  expect(faceOutward(mirrorBootsGeometry(source))).toBe(true);
+});

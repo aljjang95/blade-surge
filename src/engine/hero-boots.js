@@ -86,8 +86,23 @@ export function mirrorBootsGeometry(source) {
   for (let i = 0; i < position.count; i++) position.setX(i, -position.getX(i));
   if (normal) for (let i = 0; i < normal.count; i++) normal.setX(i, -normal.getX(i));
   const index = geometry.index;
-  if (index) for (let i = 0; i < index.count; i += 3) { const b = index.getX(i + 1); index.setX(i + 1, index.getX(i + 2)); index.setX(i + 2, b); }
-  position.needsUpdate = true; if (normal) normal.needsUpdate = true; if (index) index.needsUpdate = true;
+  if (index) {
+    for (let i = 0; i < index.count; i += 3) { const b = index.getX(i + 1); index.setX(i + 1, index.getX(i + 2)); index.setX(i + 2, b); }
+    index.needsUpdate = true;
+  } else {
+    // 비색인: 삼각형마다 2·3번째 정점을 모든 attribute 에서 맞바꾼다.
+    for (const attribute of Object.values(geometry.attributes)) {
+      const size = attribute.itemSize;
+      for (let t = 0; t + 2 < attribute.count; t += 3) {
+        for (let k = 0; k < size; k++) {
+          const a = attribute.getComponent(t + 1, k), b = attribute.getComponent(t + 2, k);
+          attribute.setComponent(t + 1, k, b); attribute.setComponent(t + 2, k, a);
+        }
+      }
+      attribute.needsUpdate = true;
+    }
+  }
+  position.needsUpdate = true; if (normal) normal.needsUpdate = true;
   return geometry;
 }
 
