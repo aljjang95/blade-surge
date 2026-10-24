@@ -1018,8 +1018,8 @@ export class FX {
     const parts = [];
     root.updateMatrixWorld(true);
     root.traverse((o) => {
-      // 등급 부츠(hero-boots.js)는 몸 발 위에 겹친 별도 스킨이라 잔상 실루엣엔 몸만 쓴다(잔상마다 CPU 스키닝 정점 수를 늘리지 않는다).
-      if (!o.isSkinnedMesh || o.userData.heroBoots) return;
+      // 등급 부츠(hero-boots.js)·갑옷 파츠(hero-gear-parts.js)는 몸 위에 겹친 별도 스킨이라 잔상 실루엣엔 몸만 쓴다(잔상마다 CPU 스키닝 정점 수를 늘리지 않는다).
+      if (!o.isSkinnedMesh || o.userData.heroBoots || o.userData.heroGearParts) return;
       const src = o.geometry; const cnt = src.attributes.position.count; const arr = new Float32Array(cnt * 3);
       for (let i = 0; i < cnt; i++) { o.getVertexPosition(i, _v); _v.applyMatrix4(o.matrixWorld); arr[i * 3] = _v.x; arr[i * 3 + 1] = _v.y; arr[i * 3 + 2] = _v.z; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); if (src.index) g.setIndex(src.index.clone());

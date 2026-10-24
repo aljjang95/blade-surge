@@ -16,7 +16,9 @@ const HOLD_MS = 30 * 24 * 3600 * 1000;
 /** 서버가 지급한 유료 보상만큼 정화 상한을 넓히고, 유효한 결제 권한(패스 프리미엄 수령 기록·월정액 수령일)은 보존한다. */
 async function paidContext(c: Ctx, accountId: string, serverState?: Record<string, any>) {
   // 서버 문서의 roster는 신뢰값이다(정책 1은 이 값에서만 유지된다). 결제 스키마와 무관하게 항상 준다.
-  const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined };
+  // 소환 상태(마일리지·픽업 확정·초보자 횟수)와 유료 보석 몫도 서버 문서 값만 믿는다(가져오기로 위조 금지, BM 12장).
+  const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined, serverGacha: serverState?.gacha as Record<string, unknown> | undefined,
+    serverPaidGems: Number(serverState?.paidGems) || 0 };
   if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
   return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };

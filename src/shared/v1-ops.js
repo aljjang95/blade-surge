@@ -35,6 +35,10 @@ export const OPS = {
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)
   enhance: { args: [(v) => int(v, 1), bool, bool], run: (e, uid, protect, bless) => e.enhance(uid, { protect, bless }), ok: okResult, random: true },
+  // 소환 (서버 난수·서버 시계 픽업). 배너 표는 src/data/gacha-banners.js 하나를 클라이언트·서버가 함께 읽는다.
+  pull: { args: [(v) => v === 1 || v === 10, (v) => v === 'hero' || v === 'gear' || v === 'beginner'], run: (e, n, banner) => e.pull(n, banner), ok: okValue, random: true },
+  pullSSR: { args: [], run: (e) => e.pullSSR(), ok: okValue, random: true },
+  exchangeMileage: { args: [], run: (e) => e.exchangeMileage(), ok: okValue },
   // 일일·보상 수령 (서버 시계)
   claimDaily: { args: [], run: (e) => e.claimDaily(), ok: okValue },
   claimMonthly: { args: [], run: (e) => e.claimMonthly(), ok: okBool },

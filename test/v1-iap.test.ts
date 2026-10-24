@@ -62,11 +62,13 @@ describe('BM D10a 서버 영수증 검증 → 지급', () => {
     expect((await h.send('GET', '/iap/catalog', undefined, a.token)).body.reason).toBe('credential-route-unavailable');
   });
 
-  test('카탈로그는 판매 상품만 내보내고 비활성 보석 팩은 의도도 거부한다', async () => {
+  test('카탈로그는 판매 상품만 내보내고 비활성 보석 팩·영웅 직접 판매는 의도도 거부한다', async () => {
     const { h, a, intent } = await setup();
     const cat = await h.send('GET', '/iap/catalog', undefined, a.token);
     expect(cat.body.billing).toBe(true);
-    expect(cat.body.products.map((p: any) => p.id).sort()).toEqual(['hero_all_v1', 'hero_barbarian_v1', 'hero_knight_v1', 'hero_mage_v1', 'hero_ranger_v1', 'hero_rogue_v1', 'monthly_card_v1', 'remove_ads_v1', 'season_pass_s1', 'starter_pack_v1']);
+    expect(cat.body.products.map((p: any) => p.id).sort()).toEqual(['monthly_card_v1', 'remove_ads_v1', 'season_pass_s1', 'starter_pack_v1']);
+    // 영웅은 소환으로만 얻는다: 영웅 직접 판매 상품(gate gacha-only)도 의도를 거부한다.
+    for (const id of ['hero_knight_v1', 'hero_all_v1']) expect((await intent(a.token, id)).body.error).toBe('unknown-product');
     expect((await intent(a.token, 'gems_300_v1')).body.error).toBe('unknown-product');
     expect((await intent(a.token, 'nope')).body.error).toBe('unknown-product');
   });

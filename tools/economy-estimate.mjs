@@ -59,7 +59,9 @@ export function shardsPerPull(heroId) {
   if (rarity === 'SR') heroShare = GACHA.srSplit.hero / srHeroes().length;
   else if (rarity === 'SSR') {
     const others = ssrHeroes().filter(h => h !== GACHA.featured);
-    heroShare = heroId === GACHA.featured ? GACHA.ssrSplit.featured + (others.length ? 0 : GACHA.ssrSplit.pool) : (others.length ? GACHA.ssrSplit.pool / others.length : 0);
+    // 픽업 실패 뒤 다음 SSR 픽업 확정(BM 12장)이 있으면 장기 픽업 몫은 f 가 아니라 1/(2-f) 다(f=0.5 → 2/3).
+    const f = GACHA.ssrSplit.featured, featuredEff = others.length ? 1 / (2 - f) : 1;
+    heroShare = heroId === GACHA.featured ? featuredEff : (others.length ? (1 - featuredEff) / others.length : 0);
   }
   const single = share[rarity] * heroShare * dup;
   const allR = Math.pow(gachaChances(1).R, 10);
@@ -205,7 +207,8 @@ export function simulate(options = {}) {
     const reward = DAILY_REWARDS[dailyIdx++ % DAILY_REWARDS.length]; collect(reward); sources.dailyGems += reward.gems || 0;
     if (gift.monthly && day <= gift.monthly) w.gems += 100;
     // 확정권은 실제 rollResult('SSR', true)처럼 픽업 영웅만 준다. SR 영웅의 조각으로 바꾸지 않는다.
-    if (heroId === GACHA.featured && w.ssrTickets) { w.shards += w.ssrTickets * GACHA.dupShards; w.ssrTickets = 0; }
+    // SSR 확정권은 SSR 영웅 균등(BM 12장): SSR 영웅 하나에 기대 조각 = 장수 × 40 ÷ SSR 영웅 수.
+    if (HEROES[heroId]?.rarity === 'SSR' && w.ssrTickets) { w.shards += w.ssrTickets * GACHA.dupShards / ssrHeroes().length; w.ssrTickets = 0; }
     if (o.energyMode === 'session') bank = Math.min(energyMax, bank + (day > 1 ? perDayEnergy : 0)); else bank = perDayEnergy;
     if (day === 1 && gift.energy) bank = Math.min(energyMax + 200, bank + gift.energy);
     // 오늘의 런: 프런티어(처음 깨는 스테이지)와 파밍(가장 높게 깬 스테이지 반복)
@@ -330,7 +333,7 @@ export function productSavings(options = {}) {
   const baseOptions = { ...options, minutesPerDay: options.minutesPerDay ?? 30, strategy: options.strategy ?? 'ch1' };
   const targets = {
     SSR: { hero: 'mage', grade: 'SSR', label: '마법사 SR→SSR' },
-    SSSR: { hero: GACHA.featured, grade: 'SSSR', label: '픽업 SSR→SSSR' },
+    SSSR: { hero: GACHA.featured, grade: 'SSSR', label: 'SSR 영웅 SSR→SSSR' },
   };
   const baseline = Object.fromEntries(Object.entries(targets).map(([key, t]) => [key, simulate({ ...baseOptions, hero: t.hero }).daysTo[t.grade]]));
   const measure = (key, extra, targetKey) => {

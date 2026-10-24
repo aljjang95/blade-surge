@@ -167,7 +167,7 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
     expect(r.body.doc.gold).toBeLessThan((start as any).gold);
   });
 
-  test('미소유 영웅을 지정한 성장·장비·외형 명령은 422로 거절하고 문서를 바꾸지 않는다, 해금 직후에는 허용', async () => {
+  test('미소유 영웅을 지정한 성장·장비·외형 명령은 422로 거절하고 문서를 바꾸지 않는다, 소환 해금 직후에는 허용', async () => {
     const h = await v1Harness();
     const a = await h.session();
     const start: any = richState(h.now()); // 신규 문서(정책 2): 시작 영웅 knight 만 소유, 나머지는 레벨·조각이 쌓인 미소유
@@ -187,9 +187,14 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
     start.heroes.knight.exp = Math.ceil(levelExp(start.heroes.knight.level) / 2);
     await withDoc(h, a.accountId, start);
     expect((await h.cmd(a.token, 'levelUpHero', ['knight'])).status).toBe(200);
-    // 무료 해금(서버 규칙) 직후에는 미소유였던 영웅의 명령이 허용된다.
-    const unlock = await h.cmd(a.token, 'unlockHeroFree', ['mage']);
-    expect(unlock.status).toBe(200);
+    // 보석 해금 사다리는 닫혔다(소환으로만 획득): 같은 명령은 422이고 문서·보석은 그대로다.
+    const gemsBefore = (await h.send('GET', '/me', undefined, a.token)).body.doc.gems;
+    expect((await h.cmd(a.token, 'unlockHeroFree', ['mage'])).status).toBe(422);
+    expect((await h.send('GET', '/me', undefined, a.token)).body.doc.gems).toBe(gemsBefore);
+    // 소환으로 첫 획득(해금)한 직후에는 미소유였던 영웅의 명령이 허용된다(해금 자체는 gacha-banners 테스트가 규칙 엔진으로 검증).
+    const cur: any = (await h.send('GET', '/me', undefined, a.token)).body.doc;
+    cur.roster.owned = [...cur.roster.owned, 'mage'];
+    await withDoc(h, a.accountId, cur);
     expect((await h.cmd(a.token, 'levelUpHero', ['mage'])).status).toBe(200);
     expect((await h.cmd(a.token, 'equipAvatar', ['mage', 'avatar_mage_astral'])).status).toBe(200);
     const after = await h.send('GET', '/me', undefined, a.token);
