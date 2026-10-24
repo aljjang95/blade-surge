@@ -131,7 +131,7 @@
 3. **대표님 확인 후** Play 콘솔 상품 등록: `NODE_USE_ENV_PROXY=1 node tools/play-iap-register.mjs`(dry-run으로 본문 확인) → `--apply --i-have-owner-approval`. 2026-10-22 현재 Play 등록 상품 0개(`oneTimeProducts`·`subscriptions` 204).
 4. 내부 테스트 트랙에 이 브랜치 AAB 업로드, 라이선스 테스터로 `IAP_ENABLED=true`·`IAP_ALLOW_TEST=true` 검증(구매→지급→환불→역분개).
 5. RTDN: GCP Pub/Sub 토픽 + push 구독(엔드포인트 6장, OIDC 서비스 계정) → Play 콘솔 수익 창출 설정에 토픽 등록 → `RTDN_AUDIENCE`·`RTDN_PUSH_SUBJECT` 설정 → 콘솔 "테스트 알림"으로 `test` 기록 확인.
-6. 운영 개방: `IAP_ALLOW_TEST=false`, `IAP_ENABLED=true`. 가격 공개·판매 시작은 대표님 확인.
+6. 운영 개방: `IAP_ALLOW_TEST=false`, `IAP_TEST_ACCOUNTS=""`(test=1 결제는 테스트 모드를 끄거나 허용 목록에서 빠지면 complete·크론에서 지급 거부), `IAP_ENABLED=true`. 가격 공개·판매 시작은 대표님 확인.
 
 ## 10. 남은 것
 
@@ -199,7 +199,7 @@
 | `WEB_BILLING_ENABLED` | `false` | 웹 결제 스위치. 꺼지면 `/iap/web/*` 전부 503(`web-billing-disabled`), `flags.webBilling=false` |
 | `PORTONE_STORE_ID` | `store-75d3b0fa-…` | 비밀 아님 |
 | `PORTONE_CHANNEL_KEY` | `""` | 실결제 채널 키(비밀 아님). **비어 있으면 intent 거부**(`web-not-configured`) |
-| `PORTONE_TEST_CHANNEL_KEY` | `channel-key-2ec7…` | `IAP_ALLOW_TEST=true`일 때만 사용. 이름이 '신기충만 - KG이니시스 테스트'라 실결제 채널로 쓰지 않는다. 테스트 지급은 매출 0·퍼널 '첫 결제' 제외 |
+| `PORTONE_TEST_CHANNEL_KEY` | `channel-key-2ec7…` | `IAP_ALLOW_TEST=true`이고 `IAP_TEST_ACCOUNTS`(쉼표 구분 account_id, 기본 비어 있음)에 든 계정에게만 쓴다. 일반 게스트는 받지 못한다. 이름이 '신기충만 - KG이니시스 테스트'라 실결제 채널로 쓰지 않는다. 테스트 지급은 매출 0·퍼널 '첫 결제' 제외 |
 | `PORTONE_API_SECRET` | Secrets Store | `apex-shared-apis/APEX_CLOUD_PLAY…`와 같은 스토어의 `APEX_CLOUD_PORTONE_API_SECRET`. 조회(GET)에만 사용, 값은 로그·응답에 나가지 않는다 |
 
 닫히는 순서(fail-closed): 스위치 → D1 스키마 v4 → 시크릿 바인딩 → storeId·채널 키.
@@ -225,6 +225,6 @@
 1. D1 `blade-surge-commerce-production`에 `0004_web_payments.sql` 원격 적용(스키마 v4). 미적용이면 웹 결제만 `web-schema-missing`으로 닫힘(Play·나머지 v1은 그대로).
 2. 포트원 콘솔에서 **실결제 채널**(KG이니시스 실연동)을 만들고 채널 키를 `PORTONE_CHANNEL_KEY`에 설정. 시크릿 `APEX_CLOUD_PORTONE_API_SECRET` 바인딩이 배포에 포함됐는지 확인.
 3. **[게이트] 기존 이용자 보호용 서버 증거 경로**(11.6 1번)가 없으면 V1 서버 권위 개방을 하지 않는다. 그 경로 전에는 서버 가져오기에서 grandfather가 되지 않는다.
-4. 테스트 채널 + `IAP_ALLOW_TEST=true`로 내부 결제(구매→지급→포트원 콘솔 취소→회수) 한 번 확인.
+4. 테스트 채널 + `IAP_ALLOW_TEST=true` + 테스터 계정만 `IAP_TEST_ACCOUNTS`에 넣어(실채널이 있으면 intent에 `test:true`) 내부 결제(구매→지급→포트원 콘솔 취소→회수) 한 번 확인.
 5. `WEB_BILLING_ENABLED=true`. 단, **가격(₩5,900 / ₩17,900)과 상품 문구를 대표님이 확인한 뒤에만 공개.**
 6. 이후 Play: `tools/play-iap-register.mjs`가 영웅 6종도 등록 대상에 포함한다(dry-run으로 확인 → 대표님 확인 후 `--apply`).

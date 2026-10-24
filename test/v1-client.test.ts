@@ -88,7 +88,7 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     expect(eco.s.selected).toBe('mage');
     expect(eco.s.roster.starterChosen).toBe(true);
     expect(eco.s.roster.owned).toEqual(['mage']);
-    const me = await state.client.me();
+    const me = await state.client!.me();
     expect(me.doc.selected).toBe('mage');
     expect(me.doc.roster.starterChosen).toBe(true);
     expect(me.doc.roster.owned).toEqual(['mage']);

@@ -38,6 +38,8 @@
     // RTDN은 Pub/Sub push 구독의 OIDC audience·푸시 서비스 계정 고유 ID(sub)를 코디네이터가 설정한 뒤에만 받는다(docs/BM_DESIGN.md 9장).
     "IAP_ENABLED": "false",
     "IAP_ALLOW_TEST": "false",
+    // 웹 테스트 채널을 받을 수 있는 account_id(쉼표 구분). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제 intent/지급이 된다. 기본 비어 있음.
+    "IAP_TEST_ACCOUNTS": "",
     // 웹 결제(포트원 V2): 기본 꺼짐. 켜는 순서는 docs/BM_DESIGN.md '영웅 해금' 개방 순서(D1 0004 원격 적용 → 실채널 키 → 이 스위치 → 대표님 금액 확인).
     // storeId·channelKey는 비밀이 아니다. PORTONE_CHANNEL_KEY가 비면 intent를 거부한다. 테스트 채널('신기충만 - KG이니시스 테스트')은 IAP_ALLOW_TEST=true일 때만 쓰며 실결제 채널로 쓰지 않는다.
     "WEB_BILLING_ENABLED": "false",

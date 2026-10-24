@@ -59,7 +59,12 @@ describe('웹 결제 스위치·채널 설정', () => {
     const t = await setup({ PORTONE_CHANNEL_KEY: '', PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001' });
     expect((await t.me(t.a.token)).flags.webBilling).toBe(false);
     expect((await t.intent(t.a.token, 'hero_knight_v1')).body.error).toBe('web-not-configured');
-    const u = await setup({ PORTONE_CHANNEL_KEY: '', PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true' });
+    const u = await setup({ PORTONE_CHANNEL_KEY: '', PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true', IAP_TEST_ACCOUNTS: '' });
+    // 테스트 모드여도 허용 목록이 비어 있으면 일반 게스트는 테스트 채널을 받지 못한다(/me 표시·intent 모두 닫힘).
+    expect((await u.me(u.a.token)).flags.webBilling).toBe(false);
+    expect((await u.intent(u.a.token, 'hero_all_v1')).body.error).toBe('web-not-configured');
+    expect(u.count('SELECT COUNT(*) AS n FROM iap_web_payments')).toBe(0);
+    (u.h.env as any).IAP_TEST_ACCOUNTS = ' other-account , ' + u.a.accountId;
     expect((await u.me(u.a.token)).flags.webBilling).toBe(true);
     const it = (await u.intent(u.a.token, 'hero_knight_v1')).body;
     expect(it.channelKey).toBe('channel-key-test-0001');
@@ -67,6 +72,32 @@ describe('웹 결제 스위치·채널 설정', () => {
     u.pn.pay(it);
     expect((await u.complete(u.a.token, it.paymentId)).body.state).toBe('granted');
     expect(u.h.db.sqlite.query('SELECT price_krw FROM iap_grants').get()).toEqual({ price_krw: 0 });
+    expect(u.h.db.sqlite.query('SELECT test FROM iap_purchases').get()).toEqual({ test: 1 });
+  });
+
+  test('실채널이 있으면 일반 계정은 실채널, 허용 테스터는 기본 실채널이고 test:true를 보낼 때만 테스트 채널', async () => {
+    const t = await setup({ PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true', IAP_TEST_ACCOUNTS: '' });
+    expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: CHANNEL, test: false });
+    (t.h.env as any).IAP_TEST_ACCOUNTS = t.a.accountId;
+    expect((await t.intent(t.a.token, 'hero_mage_v1')).body).toMatchObject({ channelKey: CHANNEL, test: false });
+    expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: 'channel-key-test-0001', test: true });
+    expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: 'yes' }, t.a.token)).status).toBe(400);
+  });
+
+  test('테스트 모드를 끄거나 허용 목록에서 빠지면 test=1 결제는 지급하지 않는다(complete·크론)', async () => {
+    const u = await setup({ PORTONE_CHANNEL_KEY: '', PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true' });
+    (u.h.env as any).IAP_TEST_ACCOUNTS = u.a.accountId;
+    const it = (await u.intent(u.a.token, 'hero_all_v1')).body;
+    u.pn.pay(it);
+    (u.h.env as any).IAP_ALLOW_TEST = 'false';
+    expect((await u.complete(u.a.token, it.paymentId)).body.error).toBe('test-purchase-not-allowed');
+    (u.h.env as any).IAP_ALLOW_TEST = 'true'; (u.h.env as any).IAP_TEST_ACCOUNTS = '';
+    expect((await u.complete(u.a.token, it.paymentId)).body.error).toBe('test-purchase-not-allowed');
+    u.h.advance(10 * 60000);
+    const r = await reconcileWebPayments(u.ctx());
+    expect(r.granted).toBe(0);
+    expect(u.count('SELECT COUNT(*) AS n FROM iap_grants')).toBe(0);
+    expect(paidOf(u.h, u.a.accountId)).toEqual([]);
   });
 
   test('시크릿 바인딩도 가짜 API도 없으면 credential-route-unavailable로 닫힌다', async () => {
