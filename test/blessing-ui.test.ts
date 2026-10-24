@@ -115,7 +115,7 @@ test('등급 n 효과 문구는 각인 효과 × n, 연쇄는 2명 상한', () =
 test('확률 시트 숫자는 oddsTable 에서 오고, 천장 포함 실효는 17.5%(17.9% 아님)', () => {
   const table = oddsTable(), html = blessingOddsHtml(table);
   for (const g of table.grades) expect(html).toContain(g.text);
-  for (const b of table.perBoon) { expect(html).toContain(b.name); for (const g of b.grades) expect(html).toContain(g.text); }
+  for (const b of table.perBoon) { expect(html).toContain(String(b.name)); for (const g of b.grades) expect(html).toContain(g.text); }
   expect(html).toContain(table.baseAtLeastOneIII.text);
   expect(table.baseAtLeastOneIII.text).toBe('14.3%');
   expect(table.effective.atLeastOneIIIPerRoll.text).toBe('17.5%');
@@ -153,9 +153,9 @@ test('보관 각인 → preRunBoons(등급 n이면 같은 id n번)', () => {
 
 test('출격 시작 성공 뒤에만 소모한다: 시작 직전 넘기고, 성공이면 보관이 비워진다', async () => {
   const { app, eco, battle, calls } = fakeApp(2);
-  let seenAtStart: string[] | null = null;
-  const out = await launchWithBlessing(app, async () => { seenAtStart = battle.preRunBoons; expect(eco.blessingState().held).not.toBeNull(); return true; });
-  expect(seenAtStart).toEqual(['ember_edge', 'ember_edge']);
+  const seen: { atStart: string[] | null } = { atStart: null };
+  const out = await launchWithBlessing(app, async () => { seen.atStart = battle.preRunBoons; expect(eco.blessingState().held).not.toBeNull(); return true; });
+  expect(seen.atStart).toEqual(['ember_edge', 'ember_edge']);
   expect(out).toEqual({ started: true, consumed: true, preRunBoons: ['ember_edge', 'ember_edge'] });
   expect(eco.blessingState().held).toBeNull();
   expect(calls).toEqual([['ember_edge', 'ember_edge']]);

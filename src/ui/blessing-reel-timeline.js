@@ -99,6 +99,9 @@ export function timelineAt(plan, t, skipAt = null) {
  * - {type:'stop', reel, at}: 릴 멈춤(쿵·진동·등급 점). 건너뛰기로 멈춘 릴은 skipAt 에 한꺼번에 나온다.
  * - {type:'ready', at}: 카드 선택 가능.
  * @param {ReturnType<typeof planReels>} plan
+ * @param {number} t0
+ * @param {number} t1
+ * @param {number|null} [skipAt]
  */
 export function eventsBetween(plan, t0, t1, skipAt = null) {
   /** @type {{type: 'stop'|'ready', reel?: number, at: number, skipped?: boolean}[]} */
