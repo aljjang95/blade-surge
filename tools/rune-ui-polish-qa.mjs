@@ -8,7 +8,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 const base = process.argv[2] || 'http://127.0.0.1:5288/';
 const out = process.env.RUNE_POLISH_OUT || 'work/qa/rune-ui-polish';
 const prefix = process.env.RUNE_POLISH_PREFIX || 'after';
-const sizes = (process.env.RUNE_POLISH_SIZES || '844x390,1280x720,390x844').split(',').map((s) => s.split('x').map(Number));
+const sizes = (process.env.RUNE_POLISH_SIZES || '844x390,1280x720,390x844,320x740').split(',').map((s) => s.split('x').map(Number));
 await fs.mkdir(out, { recursive: true });
 const report = { base, prefix, at: new Date().toISOString(), sizes: {}, errors: [], failures: [] };
 
@@ -94,6 +94,9 @@ try {
     await page.waitForTimeout(1200);
     const hudRes = await page.evaluate(() => {
       app.testPause = true; for (let i = 0; i < 30; i++) app.step(1 / 60, i === 29);
+      // 가장 긴 던전 이름: 제목 예약 폭이 버튼 묶음 폭을 따라가는지 본다(좁은 세로 화면 겹침 회귀).
+      const LONG = '성운의 레비아탄 첨탑 · 깊은 심연의 끝';
+      document.getElementById('hud-stage').textContent = LONG;
       const box = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 }; };
       const b = app.battle.chronicle.hud, r = box(b);
       const hud = document.getElementById('hud');
@@ -104,10 +107,22 @@ try {
         const ww = Math.min(r.right, o.right) - Math.max(r.left, o.left), hh = Math.min(r.bottom, o.bottom) - Math.max(r.top, o.top);
         if (ww > 0 && hh > 0) overlaps.push({ id: el.id || s, area: Math.round(ww * hh) });
       }
+      // 제목 글자 줄 사각형(Range) 과의 겹침: 요소 상자가 아니라 실제 글자 위치로 잰다.
+      const titleHits = [];
+      for (const sel of ['.hud-center .wave', '.hud-center .stage-name']) {
+        const el = hud.querySelector(sel); if (!el) continue;
+        const rg = document.createRange(); rg.selectNodeContents(el);
+        for (const q of rg.getClientRects()) {
+          if (!q.width || !q.height) continue;
+          const ww = Math.min(r.right, q.right) - Math.max(r.left, q.left), hh = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top);
+          if (ww > 0 && hh > 0) titleHits.push({ sel, area: Math.round(ww * hh), overlapX: Math.round(ww * 10) / 10 });
+        }
+      }
+      for (const t of titleHits) overlaps.push({ id: 'title-text:' + t.sel, area: t.area });
       // 플레이 영역: 화면 가운데 3분의 1(가로) x 가운데 3분의 1(세로) 와의 교차
       const cx = { left: innerWidth / 3, right: innerWidth * 2 / 3, top: innerHeight / 3, bottom: innerHeight * 2 / 3 };
       const ww = Math.min(r.right, cx.right) - Math.max(r.left, cx.left), hh = Math.min(r.bottom, cx.bottom) - Math.max(r.top, cx.top);
-      return { hidden: b.hidden, parent: b.parentElement?.id || b.parentElement?.className, rect: r, text: b.textContent, overlaps, centerArea: ww > 0 && hh > 0 ? Math.round(ww * hh) : 0, inViewport: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight };
+      return { titleHits, stageText: document.getElementById('hud-stage').textContent, hidden: b.hidden, parent: b.parentElement?.id || b.parentElement?.className, rect: r, text: b.textContent, overlaps, centerArea: ww > 0 && hh > 0 ? Math.round(ww * hh) : 0, inViewport: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight };
     });
     rec.checks.hud = hudRes;
     await shot('2-hud-engrave');

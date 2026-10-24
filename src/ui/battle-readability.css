@@ -146,16 +146,21 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
  .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer){--portrait-action-space:194px}
  .experience-v2.oath-visual #hud.battle-readability .hud-top:has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:200px}
  .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:278px}
+ /* 각인 버튼(.hud-engrave, 전운 각인이 있을 때만 보임)이 우상단 묶음에 끼면 제목 예약 폭도 그만큼(버튼 51.8px + 간격 6px) 늘린다. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.hud-engrave:not([hidden])){--portrait-action-space:176px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(.hud-engrave:not([hidden])){--portrait-action-space:252px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(#btn-boss-shortcut:not([hidden])):has(.hud-engrave:not([hidden])){--portrait-action-space:258px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])):has(.hud-engrave:not([hidden])){--portrait-action-space:336px}
 }
 @media(orientation:portrait) and (max-width:374px){
- /* Four full-size actions take their own row instead of clipping the stage title. */
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-right-top{grid-row:3;justify-self:start;flex-wrap:wrap;max-width:100%}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .stage-name{max-width:100%}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-player{grid-row:4}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #btn-map{grid-row:4/6}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #objective{grid-row:5}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .rpg-target{grid-row:6}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .mw-posture{grid-row:7}
+ /* Four full-size actions (or the engraving button) take their own row instead of clipping the stage title. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-right-top{grid-row:3;justify-self:start;flex-wrap:wrap;max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-center .stage-name{max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-player{grid-row:4}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) #btn-map{grid-row:4/6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) #objective{grid-row:5}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-center .rpg-target{grid-row:6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:is(:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])),:has(.hud-engrave:not([hidden]))) .hud-center .mw-posture{grid-row:7}
 }
 @media(prefers-reduced-motion:reduce){.battle-atlas *,#map-tactics-context *{animation:none;transition:none}}
 

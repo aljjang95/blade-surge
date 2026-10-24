@@ -67,3 +67,20 @@ test('각인 버튼은 일시정지 창 정보 묶음이 아니라 보이는 HUD
   f.view.layoutControls(battle);
   expect(engraving.parentElement).toBe(top);
 });
+test('세로 화면: 각인 버튼이 보이면 제목 예약 폭이 늘고, 좁은 화면(374px 이하)은 버튼을 별도 행으로 내린다', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../src/ui/battle-readability.css', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../src/ui/masterworks.js', import.meta.url), 'utf8');
+  // 버튼에는 CSS 가 잡을 수 있는 표식 클래스가 있다
+  expect(js).toContain("'hud-btn hud-engrave'");
+  // 기본 예약 폭(116px, AUTO·정지 2개 기준)보다 큰 값이 각인 버튼이 보일 때 걸린다(버튼 51.8px + 간격 6px 이상)
+  const base = Number(/--portrait-action-space:(\d+)px;position:relative/.exec(css)![1]);
+  const engrave = Number(/\.hud-top:has\(\.hud-engrave:not\(\[hidden\]\)\)\{--portrait-action-space:(\d+)px\}/.exec(css)![1]);
+  expect(engrave).toBeGreaterThanOrEqual(base + 58);
+  // 예약 폭 규칙이 4가지 조합(각인 단독·+획득 제안·+보스 직행·셋 다) 모두 있다
+  expect((css.match(/hud-engrave:not\(\[hidden\]\)\)\{--portrait-action-space/g) || []).length).toBe(4);
+  // 좁은 화면에서는 각인 버튼이 보이면 .hud-right-top 이 3행으로 내려가고 제목은 전체 폭을 쓴다
+  const narrow = css.slice(css.indexOf('@media(orientation:portrait) and (max-width:374px)'));
+  expect(narrow).toMatch(/:has\(\.hud-engrave:not\(\[hidden\]\)\)\)\s+\.hud-right-top\{grid-row:3/);
+  expect(narrow).toMatch(/\.stage-name\{max-width:100%\}/);
+});
