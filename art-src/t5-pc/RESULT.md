@@ -1,6 +1,6 @@
 # t5 PC 결과 (이어받은 실행)
 
-시작 크레딧 표시 11775 (2026-10-24, Studio 구독분). 끝 크레딧: (진행 중)
+시작 크레딧 표시 11775 (2026-10-24, Studio 구독분). 끝 크레딧 표시 11065 (사용 710 = 부츠 3×90 + 아바타 4×110, 상한 1,000 이내). 삼각형 수는 화면 표기 기준(rogue·ranger는 소형 화면 판독이라 ±수십 근사). 이전 실행 knight_pumpkin 포함 시 이번 브리프 Tripo 대상 8건 중 부츠 3·아바타 5 모두 완료
 
 # t5 PC 결과 (진행 중)
 
@@ -28,3 +28,5 @@
 | avatar_mage_pumpkin | b(concept.png=b) | e88671c8-13c8-4abc-8825-588c20f55c8b | 0 | 110 (55+35+20) | 10,757,312 B · ed159778aede06dc835e9326db7919b0b5e11adac94c30f7210fef9fa9b8e634 | 10,580 / 65 | check-weights ok=true, v16267, multiInfluence 11303 / joints 65, withTranslation 65 | 정면·3/4·위 모두 두 눈 보임(모자챙이 눈썹 위). 걷기 미리보기 정상. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
 | avatar_rogue_vampire | a | 5f243e66-ac72-4f72-b064-6fbeb9697d6d | 0 | 110 (55+35+20) | 9,159,144 B · e471fbe211cfe6c8003758907ed67cf1f67c88407764f408a8e30404f977c38c | 10,700 / 65 | check-weights ok=true, v15796, multiInfluence 15101 / joints 65, withTranslation 65 | 정면·3/4 두 눈·붉은 눈 보임, 위 미리보기도 두 눈 보임(앞머리가 이마만 덮음). 걷기 미리보기 정상, 목도리 없음. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
 | avatar_ranger_blackcat | a | d2a8856b-5783-4f18-854c-49e099622083 | 0 | 110 (55+35+20) | 10,068,852 B · 2e14edb74b218cde2c8aaa721f9aa644f9d687062a2a9817cc856fbbab9ce129 | 11,061 / 65 | check-weights ok=true, v16350, multiInfluence 13287 / joints 65, withTranslation 65 | 정면·3/4·위(근접) 모두 두 눈 보임, 꼬리 없음, 땋은 머리 왼쪽 앞. 걷기 미리보기 정상. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
+| avatar_barbarian_werewolf | a | 827326e6-ce13-4250-a314-a989cea12712 | 0 | 110 (55+35+20) | 11,920,228 B · 50d23e5193e74e00ff82b21dca2fdd0a051eaa703cbd3d848600ac1f178eecc7 | 약 11,300 / 65 | check-weights ok=true, v20410, multiInfluence 19557 / joints 65, withTranslation 65 | 정면·3/4·위 모두 두 눈 보임(늑대 모자는 정수리 뒤), 볼 문양 한 줄. 걷기 미리보기 정상. 내보내기 GLB 2K·스켈레톤 켬·애니메이션 0 |
+
