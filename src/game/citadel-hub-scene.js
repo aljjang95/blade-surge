@@ -404,8 +404,10 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     if (starter && prop.kind === 'stall') starterVillage?.adoptFallback('stall', node);   // Tripo 상점 좌판이 오면 이 기존 좌판은 숨는다
     if (starter && ['anvil', 'hearth', 'rack'].includes(prop.kind)) continue; // 초보자 마을 대장간 소품은 장면 모듈이 그렸다
     const index = roleIndex.get(prop.kind) || 0; roleIndex.set(prop.kind, index + 1);
-    if (planLibrary(prop.kind, { x: prop.x, z: prop.z, yaw: prop.yaw }, index)) { if (prop.kind === 'stall') authoredStall = true; continue; }
-    if (prop.asset && cloneAsset(prop.asset, node)) { if (prop.kind === 'stall') authoredStall = true; continue; }
+    // 초보자 마을 좌판은 node 안에 절차로 그려야 Tripo 좌판이 왔을 때 함께 숨는다(라이브러리 배치는 node 밖에 선다).
+    const starterStall = starter && prop.kind === 'stall';
+    if (!starterStall && planLibrary(prop.kind, { x: prop.x, z: prop.z, yaw: prop.yaw }, index)) { if (prop.kind === 'stall') authoredStall = true; continue; }
+    if (!starterStall && prop.asset && cloneAsset(prop.asset, node)) { if (prop.kind === 'stall') authoredStall = true; continue; }
     const b = batch(node);
     if (prop.kind === 'bench') {
       b.box(1.94, .12, .65, wood, 0, .46, 0);

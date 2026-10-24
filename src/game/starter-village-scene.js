@@ -526,7 +526,7 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     fountain: template => ({
       holder: instantiate('fountain', template, [placeMatrix(STARTER_ZONES.fountain.x, STARTER_ZONES.fountain.z, 0)]),
       // 분수 높이 2.3m -> 1.74m(윗 수반 y≈1.3, 기둥 끝 1.74): 물줄기를 윗 수반 위로 내리고 수반 폭(반경 .66)에 맞춰 좁힌다.
-      after: () => { jet.position.y = 1.55; jetScale = .85; },
+      after: () => { jet.position.y = 1.55; jetScale = .85; jet.scale.setScalar(jetScale); },
     }),
     portal: template => ({
       holder: instantiate('portal', template, [placeMatrix(portal.x, portal.z, 0)]),
@@ -574,10 +574,10 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
         try {
           const result = swaps[name](template);
           if (result.holder) group.add(result.holder);
-          result.attach?.();
-          hideFallback(name); result.after?.();
+          try { result.attach?.(); result.after?.(); } catch (error) { result.holder?.removeFromParent(); throw error; }
+          hideFallback(name);
           applied.add(name); done.push(name);
-        } catch { /* 이 소품은 절차 모델 그대로 둔다 */ }
+        } catch { /* 이 소품은 절차 모델 그대로 둔다(세우다 만 GLB 는 걷어낸다) */ }
       }
       return done;
     },
