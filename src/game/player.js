@@ -15,6 +15,7 @@ import { FEEL, attackBlend, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, he
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
+import { kitOf } from '../data/heroes.js';
 import { createCombatPose } from '../engine/combat-pose.js';
 import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
@@ -116,7 +117,7 @@ export class Player extends Actor {
     // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
     this.turnSmoothing = !!this.bowLayers;
     // 전투·마을 클립이 무기·팔을 몸에 파묻는 결함을 직업×클립별 가산 회전으로 보정한다(클립·시간 불변).
-    this.heroPose = createCombatPose(this.model, def.id, this.mixer, this.clips);
+    this.heroPose = createCombatPose(this.model, kitOf(def), this.mixer, this.clips);
     this._bowLegs = null; this._bowLegBlend = 0;
     this.play('Idle');
     this.footT = 0;
@@ -225,7 +226,7 @@ export class Player extends Actor {
         this.faceDir(this.moveDir.x, this.moveDir.z);
         if (this.state !== 'move') { this.state = 'move'; this.play('Running_A', { fade: 0.15 }); }
         // 재생 배율은 실제 이동 속도(질주·버프·둔화 포함)를 따라가 디딤발이 바닥에서 덜 미끄러진다(feel.js locomotion).
-        this.action.timeScale = this.def.id in FEEL.locomotion.heroRunStride ? heroRunTempo(this.def.id, spd, this.sprint) : (1.1 + this.sprint * 0.35) * this.buffs.spd;
+        this.action.timeScale = kitOf(this.def) in FEEL.locomotion.heroRunStride ? heroRunTempo(this.def.id, spd, this.sprint) : (1.1 + this.sprint * 0.35) * this.buffs.spd;
         this.footT += dt;
         if (this.footT > (this.sprint > 0.5 ? 0.2 : 0.28)) { this.footT = 0; this.game.fx.dust(this.pos, { n: this.sprint > 0.5 ? 3 : 2, size: 0.6 + this.sprint * 0.4, life: 0.5, speed: 1 }); }
         if (this.sprint > 0.6 && Math.random() < dt * 8) this.game.fx.embers(this.pos, this.def.color, { n: 1, radius: 0.4, life: 0.35, size: 0.2, rise: 1 });
@@ -455,7 +456,7 @@ export class Player extends Actor {
       this.game.fx.slashSprite(sp, f, this.def.color, { size: c.range * 1.7, life: c.finisher ? 0.32 : 0.22, tilt, flip: this.comboIdx % 2 === 1 });
       if (c.finisher) {
         // 마무리 타격: 살짝 몹몰이 + 충격파
-        if (!['knight','barbarian'].includes(this.def.id) || gravity) this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
+        if (!['knight','barbarian'].includes(kitOf(this.def)) || gravity) this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
         if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 군중 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
         this.game.fx.shockTex(this.pos.clone().addScaledVector(f, 1.2), this.def.color, { r1: 4.2, life: 0.35 });
         // 마무리 폭발은 영웅 본색(검성 금·광전사 주홍·암살자 보라)으로: 옅은 강조색은 적 위에 크림 구름으로 보였다.

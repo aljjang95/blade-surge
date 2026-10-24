@@ -5,6 +5,7 @@ import { removeHeroGearParts } from '../engine/hero-gear-parts.js';
 import { RIGS, libraryPackRig } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
 import { knockbackDecay } from './feel.js';
+import { kitOf } from '../data/heroes.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
@@ -174,7 +175,7 @@ export class Actor {
       const expires = this.buffs?.t > 0 && this.buffs.t <= dt;
       const speed = (expires ? 1 : (this.buffs?.atkSpd || 1)) * (this.stormT > dt ? 1.4 : 1);
       const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
-      const warriorIndex = this.def.id === 'knight' || this.def.id === 'barbarian' ? this.comboIdx : -1;
+      const warriorIndex = ['knight', 'barbarian'].includes(kitOf(this.def)) ? this.comboIdx : -1;
       const pose = attackBody(t, c.hitAt, this.def.weapon, this.def.ranged, warriorIndex, c.move, c.finisher);
       pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward; pivot.rotation.z = pose.roll || 0;
     }

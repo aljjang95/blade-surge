@@ -1,5 +1,6 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
+import { HEROES } from '../data/heroes.js';
 import { monsterRosterEntry } from '../data/monster-roster.js';
 import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v6.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
@@ -312,7 +313,8 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
   const cache = new Map();
   return {
     assetFor(name) { return assets.find((asset) => asset.id === name) || null; },
-    assetForHero(heroId, /** @type {HeroBodyRequest} */ tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
+    // 기본 몸이 따로 있는 영웅(늑대인간 족장)은 그 아바타 몸을 쓴다.
+    assetForHero(heroId, /** @type {HeroBodyRequest} */ tier = 1) { return (HEROES[heroId]?.bodyAvatar && assetForAvatar(value, HEROES[heroId].bodyAvatar)) || selectHeroLibraryAsset(value, heroId, tier); },
     assetForAvatar(avatarId) { return assetForAvatar(value, avatarId); },
     heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
     load(asset, fallback, prepareAsset = prepare) {
@@ -359,7 +361,7 @@ export function libraryAssetForModel(modelName) {
 }
 
 export function libraryAssetForHero(heroId) {
-  return selectHeroLibraryAsset(manifest, heroId, 1);
+  return (HEROES[heroId]?.bodyAvatar && assetForAvatar(manifest, HEROES[heroId].bodyAvatar)) || selectHeroLibraryAsset(manifest, heroId, 1);
 }
 
 export function assetForAvatar(value, avatarId) {

@@ -24,7 +24,7 @@ import { MONSTER_ROSTER } from './data/monster-roster.js';
 import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
-import { HEROES } from './data/heroes.js';
+import { HEROES, kitOf } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
@@ -357,7 +357,7 @@ class App {
     mixer.update(0);
     const pose = createLobbyPose(root, id);
     pose?.apply();
-    const combatPose = createCombatPose(root, id, mixer, clips);
+    const combatPose = createCombatPose(root, kitOf(id), mixer, clips);
     this.scene.add(root);
     this.showcase = { root, mixer, clips, def, look, pose, combatPose, idleAction: a, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.hubMovement.attach(this.showcase);

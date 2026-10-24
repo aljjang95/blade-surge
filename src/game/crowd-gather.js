@@ -1,4 +1,5 @@
 import { audio } from '../engine/audio.js';
+import { kitOf } from '../data/heroes.js';
 
 // 고정 경고·돌진의 swept path 소유자를 움직이면 예고와 실제 타격 원점이 갈라진다.
 const originLocked = enemy => !!enemy.mobRole?.plan || enemy.telegraph > 0 ||
@@ -74,7 +75,7 @@ export function gatherEnemies(game, center, radius, speed, duration = .14) {
 /** 전사 마무리는 실제 공격 방향 안에서 준비 중에 모은다. 명중 뒤 넉백을 다시 지우지 않는다. */
 export function gatherWarriorWindup(player, combo, duration) {
   const game = player.game;
-  if (!game.active || game.paused || !player.alive || !['knight','barbarian'].includes(player.def.id) || !combo.finisher) return 0;
+  if (!game.active || game.paused || !player.alive || !['knight','barbarian'].includes(kitOf(player.def)) || !combo.finisher) return 0;
   const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw), offset = combo.move === 'slam' ? .8 : 1.35;
   let x = player.pos.x + fx * offset, z = player.pos.z + fz * offset;
   if (game.world?.resolve) [x,z] = game.world.resolve(player.pos.x,player.pos.z,x,z,.55);
