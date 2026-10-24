@@ -1,18 +1,76 @@
 {
   "schema": "blade-surge.hero-gear-parts.v1",
   "slots": {
-    "helm": { "ref": 0.2 },
-    "pauldron": { "ref": 0.18 },
-    "gauntlet": { "ref": 0.25 }
+    "helm": {
+      "ref": 0.2
+    },
+    "pauldron": {
+      "ref": 0.18
+    },
+    "gauntlet": {
+      "ref": 0.25
+    }
   },
-  "grades": { "N": null, "S": null, "E": null, "U": null, "L": null },
+  "grades": {
+    "N": null,
+    "S": "parts_n",
+    "E": "parts_e",
+    "U": "parts_e",
+    "L": "parts_l"
+  },
   "tint": {
-    "S": { "color": 0.08, "glow": 0 },
-    "E": { "color": 0.12, "glow": 0 },
-    "U": { "color": 0.35, "glow": 0.22 },
-    "L": { "color": 0.18, "glow": 0.3 }
+    "S": {
+      "color": 0.08,
+      "glow": 0
+    },
+    "E": {
+      "color": 0.12,
+      "glow": 0
+    },
+    "U": {
+      "color": 0.35,
+      "glow": 0.22
+    },
+    "L": {
+      "color": 0.18,
+      "glow": 0.3
+    }
   },
-  "sets": [],
+  "sets": [
+    {
+      "id": "parts_n",
+      "path": "/models/gear-parts/parts_n.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4400,
+      "sha256": "3814f1e65d272e74dacfac03fc93a071305f7dceb85dbb4ae7761ec29ef9ac69"
+    },
+    {
+      "id": "parts_e",
+      "path": "/models/gear-parts/parts_e.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4400,
+      "sha256": "e117afc50ffad3ea26578a61ae8bf354dbca2f352cb75b3381db36801d6c02b9"
+    },
+    {
+      "id": "parts_l",
+      "path": "/models/gear-parts/parts_l.glb",
+      "parts": [
+        "helm",
+        "pauldron",
+        "gauntlet"
+      ],
+      "triangles": 4399,
+      "sha256": "f4a30abeef67d2884507beee7e99f56fcb0cac36be7e31d93330b5abe577fe2e"
+    }
+  ],
   "items": {},
   "bodyCovers": {}
 }
