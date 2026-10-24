@@ -314,3 +314,69 @@ test('removeHeroGearParts·disposeCharacter·Actor 해제 시 파츠 지오메�
   }
   expect(removeHeroGearParts(hero().root)).toBe(false);
 });
+
+/** 슬롯 파츠 한 쪽(skinIndex 슬롯)의 지오메트리 중심과 크기. */
+function pieceBox(mesh: THREE.SkinnedMesh, boneSlot: number) {
+  const pos = mesh.geometry.attributes.position, slot = mesh.geometry.attributes.skinIndex, box = new THREE.Box3(), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) if (slot.getX(i) === boneSlot) box.expandByPoint(v.fromBufferAttribute(pos, i));
+  return { center: box.getCenter(new THREE.Vector3()), size: box.getSize(new THREE.Vector3()) };
+}
+const gauntletBoxes = (h: ReturnType<typeof hero>, data: any, heroId: string | null = 'knight', slot = 'gauntlet') => {
+  const [m] = buildHeroGearPartMeshes(partsScene().scene, h.skin, { ...pickAll(data), parts: [slot], heroId }, { data })!;
+  return [pieceBox(m, 0), pieceBox(m, 1)];   // 0 = 오른손, 1 = 왼손
+};
+
+test('맞춤 보정: pickGearParts 가 heroId 를 반환에 싣는다', () => {
+  const data = fixtureData();
+  expect(pickGearParts(armor(), { data, heroId: 'knight' })!.heroId).toBe('knight');
+  expect(pickGearParts(armor(), { data })!.heroId).toBeNull();
+});
+
+test('맞춤 보정: 세트 fit × 영웅 heroFit 배율이 곱해지고, 없는 영웅·다른 슬롯에는 영향 없음', () => {
+  const data = fixtureData(), h = hero();
+  const base = gauntletBoxes(h, data)[0];
+  data.sets[0].fit = { gauntlet: { scale: 1.5 } };
+  data.heroFit = { knight: { gauntlet: { scale: 1.2 } } };
+  expect(() => validateGearPartsData(data)).not.toThrow();
+  expect(gauntletBoxes(h, data)[0].size.y / base.size.y).toBeCloseTo(1.8, 2);
+  expect(gauntletBoxes(h, data, 'mage')[0].size.y / base.size.y).toBeCloseTo(1.5, 2);   // heroFit 은 해당 영웅만
+  expect(gauntletBoxes(h, data, null)[0].size.y / base.size.y).toBeCloseTo(1.5, 2);
+  // 보정 후 배율이 범위(3) 밖이면 파츠가 빠진다
+  data.heroFit.knight.gauntlet.scale = 1.9; data.sets[0].fit.gauntlet.scale = 1.9;   // 1.9 × 1.9 = 3.61 > 3
+  expect(buildHeroGearPartMeshes(partsScene().scene, h.skin, { ...pickAll(data), parts: ['gauntlet'], heroId: 'knight' }, { data })).toBeNull();
+});
+
+test('맞춤 보정: 오프셋은 배율·회전 뒤 적용되고 왼쪽은 x 반전', () => {
+  const data = fixtureData(), h = hero();
+  const base = gauntletBoxes(h, data);
+  data.heroFit = { knight: { gauntlet: { offset: [0.1, 0.05, 0] } } };
+  const moved = gauntletBoxes(h, data);
+  const dr = moved[0].center.clone().sub(base[0].center), dl = moved[1].center.clone().sub(base[1].center);
+  expect(dr.distanceTo(new THREE.Vector3(0.1, 0.05, 0))).toBeLessThan(1e-5);     // T자세: 회전 없음, 배율 1
+  expect(dl.distanceTo(new THREE.Vector3(-0.1, 0.05, 0))).toBeLessThan(1e-5);   // 왼쪽 x 반전
+  // 배율 1.5: 저작 단위 오프셋이 배율만큼 늘어난다
+  data.sets[0].fit = { gauntlet: { scale: 1.5 } };
+  const scaled = gauntletBoxes(h, data);
+  const scaledBase = (() => { const d = fixtureData(); d.sets[0].fit = { gauntlet: { scale: 1.5 } }; return gauntletBoxes(h, d); })();
+  expect(scaled[0].center.clone().sub(scaledBase[0].center).distanceTo(new THREE.Vector3(0.15, 0.075, 0))).toBeLessThan(1e-5);
+  // A자세: 오프셋이 슬롯 rest 회전을 따라 돈다(오른쪽 어깨, 배율 0.2/0.18)
+  const a = hero(0.2), plain = fixtureData(), fit = fixtureData();
+  fit.heroFit = { knight: { pauldron: { offset: [0, 0.1, 0] } } };
+  const rot = slotRestRotation(a.skin, SLOT_RIGS.pauldron.axis, SLOT_RIGS.pauldron.authored, false);
+  const expected = new THREE.Vector3(0, 0.1, 0).multiplyScalar(0.2 / 0.18).applyQuaternion(rot);
+  expect(gauntletBoxes(a, fit, 'knight', 'pauldron')[0].center.clone().sub(gauntletBoxes(a, plain, 'knight', 'pauldron')[0].center).distanceTo(expected)).toBeLessThan(1e-5);
+  expect(expected.x).not.toBeCloseTo(0, 3);   // 실제로 회전이 있었다
+});
+
+test('맞춤 보정: 잘못된 fit·heroFit 은 검증에서 거절', () => {
+  const bad = (mutate: (d: any) => void) => { const d = fixtureData(); mutate(d); expect(() => validateGearPartsData(d)).toThrow(); };
+  bad((d) => { d.sets[0].fit = { wing: { scale: 1 } }; });
+  bad((d) => { d.sets[0].fit = { helm: { scale: 0.5 } }; });
+  bad((d) => { d.sets[0].fit = { helm: { scale: 2 } }; });
+  bad((d) => { d.sets[0].fit = { helm: { offset: [0, 0] } }; });
+  bad((d) => { d.sets[0].fit = { helm: { offset: [0, 0.6, 0] } }; });
+  bad((d) => { d.heroFit = { knight: { helm: { scale: 3 } } }; });
+  bad((d) => { d.heroFit = { knight: { tail: { scale: 1 } } }; });
+  const ok = fixtureData(); ok.sets[0].fit = { helm: { scale: 1.9, offset: [0.5, -0.5, 0] } }; ok.heroFit = { knight: { pauldron: { scale: 0.6 } } };
+  expect(() => validateGearPartsData(ok)).not.toThrow();
+});
