@@ -495,6 +495,7 @@ class App {
       if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
+      this.eco.reconcileOwnership(); // 미소유 영웅은 출격하지 못한다(권한 회수 직후 등): 시작 영웅으로 되돌린다
       const heroId = this.eco.s.selected;
       await this.battle.start(stage, heroId, this.eco.hero(heroId), this.eco.heroEquipBonus(heroId));
       this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
