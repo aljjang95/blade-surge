@@ -42,3 +42,7 @@ PR #291 (squash 9062a61). 출처: `ART_T7_HANDOFF.md` 제안 — 기사 계열 �
 1. 기사 사망 클립도 바닥을 판다(기사 1 −6.5cm, 3단계 −12.7cm, 벚꽃 −5.1cm). 같은 계약에 `death` 항목 추가.
 2. 야만전사·마법사는 대기 시작 자세에서 스킨 최저가 +4~12cm(발이 뜸)인데 부츠 등 비스킨 파츠가 받쳐 주는지 확인 필요.
 3. `hero-gear-parts-shots` 측면 시점: `app.renderer.render()` 가 쓰는 카메라를 직접 렌더하도록 고치기.
+
+## 운영 배포
+- 2026-10-25 04:38 KST, PC 워크트리 `C:\Work\tasks\blade-art-deploy`에서 `node tools/deploy.mjs --auth=wrangler`(exit 0; 1차는 배포 잠금으로 exit 1 → 재실행).
+- readback `https://blade.tllhouse.com/version.json`: sha 9062a613dbafd2f644f16b4dcdd1c135ebf6477c, dirty false. Worker 버전 103f9080-f666-41f2-b413-77bdc1b3e425, 롤백 기준 13267041-8587-4c4c-94e8-f5c2af4ddd4f.
