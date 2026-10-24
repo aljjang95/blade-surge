@@ -20,6 +20,9 @@ export const EN_LISTINGS = Object.freeze({
   starter_pack_v1: { title: 'First Purchase Starter Pack', description: '1 guaranteed SSR summon ticket, 1,000 gems, 50,000 gold (once per account).' },
   monthly_card_v1: { title: 'Monthly Card', description: '1,200 gems on every payment plus 100 gems daily while active (auto-renews, cancel anytime).' },
   season_pass_s1: { title: 'Season 1 Premium Pass', description: 'Unlocks the premium reward track for Season 1 (already reached tiers can be claimed).' },
+  ...Object.fromEntries(['knight', 'barbarian', 'mage', 'rogue', 'ranger'].map((id) => [`hero_${id}_v1`,
+    { title: `Unlock Hero: ${id[0].toUpperCase()}${id.slice(1)}`, description: `Permanently unlocks the ${id} hero on your account (restored on any device).` }])),
+  hero_all_v1: { title: 'Unlock All Heroes', description: 'Permanently unlocks all five heroes on your account (discounted vs. buying each).' },
 });
 
 const enabled = (catalog) => catalog.filter((p) => p.enabled);

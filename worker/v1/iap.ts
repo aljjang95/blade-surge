@@ -11,12 +11,17 @@ import { docOf, loadEconomy } from './state';
 import { randomHex, sha256Hex } from './token';
 import { createPlayApi, type PlayApi, type PlayEnv } from './play';
 import { recordServerMilestone } from './funnel';
+import { heroIdFromEntitlement } from '../../src/data/hero-roster.js';
+import { HERO_ORDER } from '../../src/data/heroes.js';
 import {
-  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, sellableProduct, summarizeEntitlements,
+  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, summarizeEntitlements, soldOn,
   type IapProduct,
 } from '../../src/shared/iap-catalog.js';
 
 export const IAP_SCHEMA_VERSION = 3;
+/** 웹 결제(포트원) 표가 있는 스키마 버전(마이그레이션 0004). Play 흐름은 3이면 돈다. */
+export const WEB_SCHEMA_VERSION = 4;
+const HERO_IDS: readonly string[] = HERO_ORDER;
 const TOKEN = /^[A-Za-z0-9._:-]{10,4096}$/;
 const DAY = 86400000;
 const ABUSE_WINDOW = 90 * DAY;
@@ -34,6 +39,8 @@ type IapCtx = Ctx & { deps: Ctx['deps'] & IapDeps };
 
 const iapEnv = (c: Ctx) => c.env as unknown as IapEnv;
 export const tokenHash = (token: string) => sha256Hex('play:' + token);
+/** 웹 결제(포트원) 지급의 원장 키. Play 토큰 해시와 접두사가 달라 서로 충돌하지 않는다. */
+export const webTokenHash = (paymentId: string) => sha256Hex('portone:' + paymentId);
 
 export async function iapSchemaReady(db: D1Database): Promise<boolean> {
   try {
@@ -68,6 +75,12 @@ export async function overlayEntitlements(db: D1Database, accountId: string, sta
   const e = await entitlementsOf(db, accountId, now);
   state.monthlyUntil = Math.max(0, e.monthlyUntil);
   if (state.pass && typeof state.pass === 'object') state.pass.premium = e.passPremium;
+  setRosterPaid(state, e.heroes);
+}
+
+/** 영웅 소유의 정본은 서버 권한이다. 문서에 roster가 있으면 paid를 서버 권한(hero:*)의 영웅 목록으로 덮어쓴다. */
+export function setRosterPaid(state: Record<string, any>, heroes: readonly string[]): void {
+  if (state.roster && typeof state.roster === 'object') state.roster.paid = [...heroes];
 }
 
 /** 정화 상한 가산분: 이 계정에 서버가 지급(역분개 제외)한 유료 보상 합. 결제한 재화가 그림자 스냅샷에서 깎이지 않게 한다. */
@@ -87,15 +100,27 @@ export async function iapAllowance(db: D1Database, accountId: string): Promise<R
 export async function catalog(c: Ctx, auth: Authed) {
   const reason = await billingReason(c);
   const owned = reason ? new Set<string>() : await ownedProducts(c.db, auth.account.account_id);
+  const activeKeys = reason ? new Set<string>() : await activeEntitlementKeys(c.db, auth.account.account_id, c.now);
   return {
     version: IAP_CATALOG_VERSION, billing: !reason, ...(reason ? { reason } : {}),
     products: IAP_PRODUCTS.filter((p) => p.enabled).map((p) => ({
       id: p.id, type: p.type, playType: p.type === 'subscription' ? 'subs' : 'inapp', basePlanId: p.basePlanId ?? null,
-      priceKRW: p.priceKRW, title: p.title, description: p.description, shopSku: p.shopSku, once: !!p.once,
-      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)),
+      priceKRW: p.priceKRW, title: p.title, description: p.description, shopSku: p.shopSku, once: !!p.once, channels: p.channels ?? ['play'],
+      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys),
     })),
     serverTime: c.now,
   };
+}
+
+/** 지금 유효한 권한 키 집합(철회·만료 제외). */
+export async function activeEntitlementKeys(db: D1Database, accountId: string, now: number): Promise<Set<string>> {
+  const rows = await db.prepare('SELECT ent_key FROM iap_entitlements WHERE account_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)').bind(accountId, now).all<{ ent_key: string }>();
+  return new Set((rows.results ?? []).map((r) => r.ent_key));
+}
+/** 영구 권한 상품의 모든 권한을 이미 갖고 있는가(영웅 해금 중복 구매 차단). 권한이 없는 상품은 false. */
+export function allKeysActive(product: IapProduct, active: Set<string>): boolean {
+  const keys = entitlementKeys(product);
+  return product.type === 'non_consumable' && keys.length > 0 && keys.every((k) => active.has(k));
 }
 
 async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
@@ -119,10 +144,14 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
+  // 영웅 상품(권한 hero:*)은 서버 권위 계정에게만 판다. 다른 상품은 기존 동작 그대로.
+  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k))) fail(403, 'server-authority-required');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
   const owned = await ownedProducts(c.db, accountId);
   if ((product.once || product.type === 'non_consumable') && owned.has(product.id)) fail(409, 'not-eligible');
+  if (!soldOn(product, 'play')) fail(400, 'unknown-product');
+  if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
   if (product.type === 'subscription') {
     const e = await entitlementsOf(c.db, accountId, c.now);
     if (e.monthlyUntil > c.now) fail(409, 'already-subscribed');
@@ -150,7 +179,7 @@ export async function state(c: Ctx, auth: Authed) {
   if (!await iapSchemaReady(c.db)) fail(503, 'iap-schema-missing');
   return stateFor(c, auth.account.account_id);
 }
-async function stateFor(c: Ctx, accountId: string) {
+export async function stateFor(c: Ctx, accountId: string) {
   const rows = await c.db.prepare('SELECT grant_id, product_id, rewards, granted_at, reversed_at, debt FROM iap_grants WHERE account_id = ? ORDER BY granted_at DESC LIMIT 50')
     .bind(accountId).all<{ grant_id: string; product_id: string; rewards: string; granted_at: number; reversed_at: number | null; debt: string | null }>();
   const grants = [], reversals = [];
@@ -210,7 +239,7 @@ export async function processPurchase(c: Ctx, product: IapProduct, token: string
   const grantId = 'iap:' + hash;
   const result = await grantOnce(c, accountId, product, hash, grantId, product.grant.rewards ?? {}, {
     purchase: { state: 'granted', test: p.test },
-    entitlement: product.grant.entitlement ? { key: product.grant.entitlement.key, expiresAt: entitlementEnds(product, c.now) } : null,
+    entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
   if (result === 'declined') return declinePurchase(c, hash, accountId, product, p.test);
   if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test: p.test };
@@ -257,7 +286,7 @@ async function processSubscription(c: Ctx, api: PlayApi, env: IapEnv, product: I
   const grantId = `iap:${hash}:${(await sha256Hex('order:' + order)).slice(0, 24)}`;
   const result = await grantOnce(c, accountId, product, hash, grantId, product.grant.perPeriod ?? {}, {
     purchase: { state: 'granted', test: s.test, expiresAt: expiry, orderHash: await sha256Hex('order:' + order) },
-    entitlement: { key: product.grant.entitlement?.key ?? 'monthly', expiresAt: expiry },
+    entitlements: [{ key: product.grant.entitlement?.key ?? 'monthly', expiresAt: expiry }],
   });
   if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: s.acknowledged, test: s.test };
   const granted = result === 'granted';
@@ -319,8 +348,8 @@ export async function debtRepayment(db: D1Database, accountId: string, state: Re
  * 'duplicate' = 같은 grant_id가 이미 있음, 'declined' = 계정당 1회 상품의 두 번째 구매, 'refunded' = 같은 배치 시점에 이미 환불됨.
  * 문서 경합(다른 명령과 동시)은 최대 3회 다시 읽어 재시도한다.
  */
-async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: string, grantId: string, rewards: Record<string, number>,
-  o: { purchase: { state: string; test: boolean; expiresAt?: number; orderHash?: string }; entitlement: { key: string; expiresAt: number | null } | null }): Promise<GrantResult> {
+export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: string, grantId: string, rewards: Record<string, number>,
+  o: { purchase: { state: string; test: boolean; expiresAt?: number; orderHash?: string; priceKRW?: number }; entitlements: { key: string; expiresAt: number | null }[] }): Promise<GrantResult> {
   for (const [key, value] of Object.entries(rewards)) if (!IAP_REWARD_KEYS.includes(key) || !Number.isSafeInteger(value) || value <= 0) fail(500, 'catalog-invalid');
   for (let attempt = 0; attempt < 3; attempt++) {
     const exists = await c.db.prepare('SELECT 1 AS x FROM iap_grants WHERE grant_id = ?').bind(grantId).first();
@@ -328,6 +357,12 @@ async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: s
     const doc = await loadAccountDoc(c.db, accountId);
     const eco = loadEconomy(doc.state, { now: c.now });
     if (Object.keys(rewards).length) eco.addRewards(rewards, { silent: true, applyVip: false });
+    // 영웅 권한을 주는 지급이면 같은 커밋에서 문서의 roster.paid도 서버 권한에 맞춘다(문서가 정본과 어긋나지 않게).
+    if (o.entitlements.some((e) => heroIdFromEntitlement(e.key))) {
+      const heroes = new Set((await entitlementsOf(c.db, accountId, c.now)).heroes);
+      for (const e of o.entitlements) { const id = heroIdFromEntitlement(e.key); if (id && HERO_IDS.includes(id)) heroes.add(id); }
+      setRosterPaid(eco.s, [...heroes]);
+    }
     const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
     const net: Record<string, number> = {};
@@ -346,12 +381,12 @@ async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: s
           updated_at = excluded.updated_at WHERE iap_purchases.account_id = excluded.account_id`,
         values: [hash, accountId, product.id, product.type, p.state, p.orderHash ?? null, p.expiresAt ?? null, p.test ? 1 : 0, c.now, c.now] },
       { sql: `INSERT INTO iap_grants(grant_id, account_id, token_hash, product_id, rewards, price_krw, granted_at, order_hash, once_key, repaid) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${REV_GUARD}`,
-        values: [grantId, accountId, hash, product.id, JSON.stringify(net), p.test ? 0 : product.priceKRW, c.now, p.orderHash ?? null,
+        values: [grantId, accountId, hash, product.id, JSON.stringify(net), p.test ? 0 : (p.priceKRW ?? product.priceKRW), c.now, p.orderHash ?? null,
           product.once ? `${accountId}:${product.id}` : null, Object.keys(debt.repaid).length ? JSON.stringify(debt.repaid) : null] },
     ];
-    if (o.entitlement) writes.push({ sql: `INSERT INTO iap_entitlements(account_id, ent_key, token_hash, starts_at, expires_at) SELECT ?, ?, ?, ?, ? WHERE ${REV_GUARD}
+    for (const ent of o.entitlements) writes.push({ sql: `INSERT INTO iap_entitlements(account_id, ent_key, token_hash, starts_at, expires_at) SELECT ?, ?, ?, ?, ? WHERE ${REV_GUARD}
         ON CONFLICT(account_id, ent_key, token_hash) DO UPDATE SET expires_at = excluded.expires_at WHERE iap_entitlements.revoked_at IS NULL`,
-      values: [accountId, o.entitlement.key, hash, c.now, o.entitlement.expiresAt] });
+      values: [accountId, ent.key, hash, c.now, ent.expiresAt] });
     // 결제 퍼널의 '첫 결제'는 테스트가 아닌 서버 검증 지급에서만 기록한다.
     if (!p.test) writes.push({ sql: `INSERT OR IGNORE INTO funnel_milestones(account_id, step, first_at, cohort_day)
         SELECT ?, 'first_purchase', ?, CAST(created_at / 86400000 AS INTEGER) FROM accounts WHERE account_id = ? AND ${REV_GUARD}`,
@@ -359,7 +394,7 @@ async function grantOnce(c: Ctx, accountId: string, product: IapProduct, hash: s
     let outcome;
     try {
       outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-        ledger: { opId: grantId, kind: 'iap:' + product.id, delta: { rewards, net, repaid: debt.repaid, entitlement: o.entitlement?.key ?? null }, receipt: { grantId, productId: product.id, rewards: net } },
+        ledger: { opId: grantId, kind: 'iap:' + product.id, delta: { rewards, net, repaid: debt.repaid, entitlements: o.entitlements.map((e) => e.key) }, receipt: { grantId, productId: product.id, rewards: net } },
         projection: next.projection, writes });
     } catch (error) {
       if (isConstraint(error, 'iap_grants.once_key')) return 'declined';
@@ -419,12 +454,31 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
       if (attempt === 2) fail(409, 'conflict');
     }
   }
-  if (!orderHash) await c.db.batch([
-    c.db.prepare("UPDATE iap_entitlements SET revoked_at = ? WHERE account_id = ? AND token_hash = ? AND revoked_at IS NULL").bind(c.now, accountId, hash),
-    c.db.prepare("UPDATE iap_purchases SET state = 'refunded', updated_at = ? WHERE token_hash = ? AND account_id = ?").bind(c.now, hash, accountId),
-  ]);
+  if (!orderHash) {
+    const hadHero = await c.db.prepare("SELECT 1 AS x FROM iap_entitlements WHERE account_id = ? AND token_hash = ? AND ent_key LIKE 'hero:%' AND revoked_at IS NULL").bind(accountId, hash).first();
+    await c.db.batch([
+      c.db.prepare("UPDATE iap_entitlements SET revoked_at = ? WHERE account_id = ? AND token_hash = ? AND revoked_at IS NULL").bind(c.now, accountId, hash),
+      c.db.prepare("UPDATE iap_purchases SET state = 'refunded', updated_at = ? WHERE token_hash = ? AND account_id = ?").bind(c.now, hash, accountId),
+    ]);
+    // 영웅 권한이 빠졌으면 계정 문서의 roster.paid도 서버 권한에 맞춘다(데이터는 보존, 잠금만 다시 걸림).
+    if (hadHero) await syncRosterPaid(c, accountId, hash);
+  }
   if (reversed) await abuseCheck(c, accountId);
   return reversed;
+}
+
+/** 권한 철회 뒤 계정 문서의 roster.paid를 서버 권한으로 다시 맞춘다. 경합하면 다음 /me·/cmd의 overlay가 같은 값을 얹는다. */
+async function syncRosterPaid(c: Ctx, accountId: string, hash: string): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await loadAccountDoc(c.db, accountId);
+    const eco = loadEconomy(doc.state, { now: c.now });
+    if (!eco.s.roster || typeof eco.s.roster !== 'object') return;
+    setRosterPaid(eco.s, (await entitlementsOf(c.db, accountId, c.now)).heroes);
+    const next = docOf(eco);
+    const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
+      ledger: { opId: `roster:${hash}:${c.now}`, kind: 'iap-roster', delta: { why: 'entitlement-revoked' }, receipt: { roster: eco.s.roster.paid } }, projection: next.projection });
+    if (outcome.ok || outcome.reason === 'duplicate') return;
+  }
 }
 
 /** 구독 결제 주기 하나가 환불됐을 때: 그 주문의 지급만 되돌리고, 권한은 Play의 현재 구독 상태로 다시 맞춘다. */

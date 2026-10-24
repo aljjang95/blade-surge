@@ -38,11 +38,20 @@
     // RTDN은 Pub/Sub push 구독의 OIDC audience·푸시 서비스 계정 고유 ID(sub)를 코디네이터가 설정한 뒤에만 받는다(docs/BM_DESIGN.md 9장).
     "IAP_ENABLED": "false",
     "IAP_ALLOW_TEST": "false",
+    // 웹 테스트 채널을 받을 수 있는 account_id(쉼표 구분). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제 intent/지급이 된다. 기본 비어 있음.
+    "IAP_TEST_ACCOUNTS": "",
+    // 웹 결제(포트원 V2): 기본 꺼짐. 켜는 순서는 docs/BM_DESIGN.md '영웅 해금' 개방 순서(D1 0004 원격 적용 → 실채널 키 → 이 스위치 → 대표님 금액 확인).
+    // storeId·channelKey는 비밀이 아니다. PORTONE_CHANNEL_KEY가 비면 intent를 거부한다. 테스트 채널('신기충만 - KG이니시스 테스트')은 IAP_ALLOW_TEST=true일 때만 쓰며 실결제 채널로 쓰지 않는다.
+    "WEB_BILLING_ENABLED": "false",
+    "PORTONE_STORE_ID": "store-75d3b0fa-c6c8-4e9e-b848-8025e4bb7503",
+    "PORTONE_CHANNEL_KEY": "",
+    "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
     "RTDN_AUDIENCE": "",
     "RTDN_PUSH_SUBJECT": "",
     "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
   },
-  "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" }],
+  "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" },
+    { "binding": "PORTONE_API_SECRET", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PORTONE_API_SECRET" }],
   "observability": { "enabled": true },
   "triggers": { "crons": ["17 * * * *"] },
   "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28", "migrations_dir": "worker/v1/migrations" }],

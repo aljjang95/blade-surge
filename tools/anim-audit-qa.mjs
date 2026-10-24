@@ -153,7 +153,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
     await page.goto(origin);
     await page.locator('#boot-start:not(.hidden)').waitFor();
-    await page.evaluate(() => { const eco = window.app.eco; eco.reset(); eco.s.tutorial = { completed: true }; eco.s.daily.last = Math.floor(Date.now() / 86400000); for (const h of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) if (!eco.ownHero(h)) eco.grantHero(h); eco.save(); });
+    await page.evaluate(() => { const eco = window.app.eco; eco.reset(); eco.s.tutorial = { completed: true }; eco.s.daily.last = Math.floor(Date.now() / 86400000); for (const h of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true); eco.save(); });
     await page.locator('#boot-start').click();
     await page.waitForFunction(() => window.app.mode === 'lobby' && !document.getElementById('boot').classList.contains('show'));
     await page.evaluate(() => { window.app.ui.closeModal(); window.app.testPause = true; });

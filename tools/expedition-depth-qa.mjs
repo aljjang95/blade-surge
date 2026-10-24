@@ -61,7 +61,7 @@ try{
         const heroId=seed===20260914?'knight':'mage';
         const fixture=await page.evaluate(({heroId,items})=>{
           const a=window.app,e=a.eco;a.expeditionUI.result=null;a.toLobby();a.testPause=true;a.ui.closeModal();
-          e.grantHero(heroId);e.s.selected=heroId;const h=e.hero(heroId);h.level=50;h.star=3;h.skills=[5,5,5,5];h.exp=0;
+          (e.s.roster.policy = 1, e.s.roster.starterChosen = true);e.s.selected=heroId;const h=e.hero(heroId);h.level=50;h.star=3;h.skills=[5,5,5,5];h.exp=0;
           h.equip={};for(const def of items){const inst=e.addItem(def.rarity,def.slot);inst.id=def.id;inst.enh=15;h.equip[def.slot]=inst.uid;}
           e.s.energy=e.energyMax;e.s.energyT=Date.now();a.journey.s.autoBattle=true;e.save();
           a.expeditionUI.open('dungeons',{depth:'deep'});

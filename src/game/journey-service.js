@@ -2,6 +2,7 @@ import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJour
 import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { contractBonus } from './rune-economy.js';
+import { visibleDungeonIds } from './region-dungeon-gate.js';
 
 /** New grants share the workshop's save, rollback and recovery receipt boundary. */
 export class JourneyService {
@@ -13,7 +14,7 @@ export class JourneyService {
     refreshPeriods(this.state.journey, Date.now()); return this.state.journey;
   }
   get s() { return this.ensure(); }
-  snapshot() { const s = this.s; return { steps: journeySteps(this.app.eco.s), contracts: contractRows(s, Date.now(), this.waivers()), target: this.target(), autoBattle: s.autoBattle }; }
+  snapshot() { const s = this.s; return { steps: journeySteps(this.app.eco.s), contracts: contractRows(s, Date.now(), this.contractOptions()), target: this.target(), autoBattle: s.autoBattle }; }
   transact(fn, duringBattle = false) {
     if (this.app.stageStarting || (!duringBattle && (this.app.battle?.active || this.app.expeditionUI?.result?.saveError))) return { ok: false, error: '전투와 전리품 정산을 마친 뒤 이용해 주세요.' };
     return this.app.expedition.transact(() => fn(this.s));
@@ -28,11 +29,13 @@ export class JourneyService {
   claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
   /** 무한의 성이 이번 주 상한에 닿았으면 탑 임무는 채울 방법이 없으므로 달성으로 본다. */
   waivers() { const t = this.app.eco.towerSummary?.(); return { waived: t?.unlocked && t.capped ? ['towerFloors'] : [] }; }
+  /** 의뢰 표시·수령이 같은 옵션을 쓴다: 탑 상한 면제 + 이 저장에서 열린 던전(오늘의 원정지는 잠긴 곳을 가리키지 않는다). */
+  contractOptions() { return { ...this.waivers(), openIds: visibleDungeonIds(this.app.eco.s) }; }
   /** 의뢰 수령. 그 기간(일·주)의 첫 수령에는 전운 부적(일일 1·주간 3)과 주간 룬 가루 30이 붙는다. */
   claim(kind, id) {
-    const waivers = this.waivers();
+    const options = this.contractOptions();
     return this.transact(s => {
-      const result = this.grant(claimContract(s, kind, id, waivers));
+      const result = this.grant(claimContract(s, kind, id, options));
       if (result.ok && s[kind]?.claimed?.length === 1) result.bonus = this.app.eco.addRewards(contractBonus(kind), { silent: true, applyVip: false });
       return result;
     });
@@ -42,12 +45,14 @@ export class JourneyService {
   target() {
     const recipe = RECIPES.find(r => r.id === this.s.targetRecipeId && r.itemId);
     if (!recipe) return null;
-    const eco = this.app.eco, item = ITEM_BY_ID[recipe.itemId];
+    const eco = this.app.eco, item = ITEM_BY_ID[recipe.itemId], open = visibleDungeonIds(eco.s);
     const owned = eco.s.inventory.filter(i => i.id === item.id).sort((a, b) => b.enh - a.enh)[0];
     const owner = owned && Object.keys(eco.s.heroes).find(id => Object.values(eco.s.heroes[id].equip).includes(owned.uid));
     const materials = Object.entries(recipe.materials).map(([id, need]) => {
-      const have = eco.s.expedition.materials[id] || 0, dungeon = DUNGEONS.find(d => d.rewards.materials[id]);
-      return { id, need, have, missing: Math.max(0, need - have), dungeonId: dungeon?.id, runs: Math.ceil(Math.max(0, need - have) / (dungeon?.rewards.materials[id] || 1)) };
+      // 재료를 주는 던전 중 이 저장에서 열린 곳만 안내한다. 전부 잠겼으면 던전 이름을 숨기고 locked 로만 알린다.
+      const sources = DUNGEONS.filter(d => d.rewards.materials[id]), dungeon = sources.find(d => open.has(d.id));
+      const have = eco.s.expedition.materials[id] || 0;
+      return { id, need, have, missing: Math.max(0, need - have), dungeonId: dungeon?.id, locked: !dungeon && sources.length > 0, runs: Math.ceil(Math.max(0, need - have) / (dungeon?.rewards.materials[id] || 1)) };
     });
     return { recipe, item, owned: owned ? { ...owned } : null, owner, equipped: owner === eco.s.selected,
       materials, goldMissing: Math.max(0, recipe.gold - eco.s.gold), ready: eco.s.gold >= recipe.gold && materials.every(m => !m.missing) };

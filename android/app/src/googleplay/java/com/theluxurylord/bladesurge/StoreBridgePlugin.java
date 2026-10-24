@@ -331,6 +331,13 @@ public class StoreBridgePlugin extends Plugin {
     CATALOG_TYPES.put("starter_pack_v1", "inapp");
     CATALOG_TYPES.put("season_pass_s1", "inapp");
     CATALOG_TYPES.put("monthly_card_v1", "subs");
+    // 영웅 해금(비소모 INAPP). 서버 카탈로그의 Play 판매 상품과 id 집합이 같아야 한다(test/store-bridge-catalog.test.ts).
+    CATALOG_TYPES.put("hero_knight_v1", "inapp");
+    CATALOG_TYPES.put("hero_barbarian_v1", "inapp");
+    CATALOG_TYPES.put("hero_mage_v1", "inapp");
+    CATALOG_TYPES.put("hero_rogue_v1", "inapp");
+    CATALOG_TYPES.put("hero_ranger_v1", "inapp");
+    CATALOG_TYPES.put("hero_all_v1", "inapp");
   }
 
   private interface DetailsHandler {

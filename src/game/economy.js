@@ -4,6 +4,9 @@ import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceSton
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
+import { reconcileSelectedHero } from './save-base.js';
+import { dropUnownedJob } from './expedition-economy.js';
+import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty } from './difficulty.js';
@@ -140,7 +143,8 @@ export class Economy {
       schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
-      selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
+      selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
+      inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
@@ -184,7 +188,7 @@ export class Economy {
       // 현재 진행 저장이 우선이다. 백업 공간 부족이 정상 저장을 막지 않는다.
       this.storage.setItem(KEY, raw);
       try { if (this._lastGoodSave) this.storage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
-      this._lastGoodSave = raw; this.storageStatus = 'ready'; return true;
+      this._lastGoodSave = raw; this.storageStatus = 'ready'; this.hasStoredSave = true; return true;
     } catch { this.storageStatus = 'unavailable'; return false; }
   }
   reset() {
@@ -245,7 +249,57 @@ export class Economy {
   }
   // ---------- 영웅 ----------
   hero(id = this.s.selected) { return this.s.heroes[id]; }
-  ownHero(id) { return !!this.s.heroes[id]; }
+  /** 소유 여부: roster(시작·무료 해금·서버 권한)만이 근거다. 영웅 상태(레벨·장비)는 미소유여도 보존한다. */
+  ownHero(id) { return typeof id === 'string' && !!this.s.heroes[id] && rosterOwns(this.s.roster, id); }
+  /** 소유 영웅 id 목록(HERO_ORDER 순). */
+  ownedHeroIds() { return HERO_ORDER.filter((id) => this.ownHero(id)); }
+  /** 저장 후 알림까지 한 번에. 저장이 실패하면 호출자가 롤백한다. */
+  _commit(before) {
+    if (!this.save()) { this.s = before; return false; }
+    for (const f of this.listeners) f(this.s);
+    return true;
+  }
+  /** 첫 실행 시작 영웅 선택(정책 2, 한 번만). 고른 영웅이 유일한 소유 영웅이 되고 출전 영웅이 된다. */
+  chooseStarter(id) {
+    const r = this.s.roster;
+    if (!r || r.policy !== HERO_POLICY.STARTER) return { ok: false, reason: 'policy' };
+    if (r.starterChosen) return { ok: false, reason: 'chosen' };
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !this.s.heroes[id]) return { ok: false, reason: 'unknown' };
+    const before = structuredClone(this.s);
+    r.owned = [id]; r.starter = id; r.starterChosen = true; this.s.selected = id;
+    reconcileSelectedHero(this.s); dropUnownedJob(this.s);
+    if (!this._commit(before)) return { ok: false, reason: 'storage' };
+    return { ok: true, id };
+  }
+  /**
+   * 무료 해금 견적(UI·서버 공통). reason: owned | starter-pending | policy | unknown | max | progress | gems | null(해금 가능).
+   * step 은 지금까지 무료로 연 영웅 수(시작 영웅 제외)이며, 조건·비용은 HERO_FREE_UNLOCK[step] 이다. 결제로 연 영웅은 step 을 올리지 않는다.
+   */
+  heroUnlockQuote(id) {
+    const s = this.s, r = s.roster, have = s.gems;
+    const base = { id, owned: false, step: 0, need: 0, needLabel: '', gems: 0, have, progress: s.progress?.unlocked || 1, canFree: false, reason: null };
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id)) return { ...base, reason: 'unknown' };
+    if (this.ownHero(id)) return { ...base, owned: true, reason: 'owned' };
+    if (!r || r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
+    if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
+    const step = Math.max(0, r.owned.length - 1), tier = HERO_FREE_UNLOCK[step];
+    if (!tier) return { ...base, step, reason: 'max' };
+    const out = { ...base, step, need: tier.need, needLabel: stageLabelFromUnlocked(tier.need, STAGES_PER_CHAPTER), gems: tier.gems };
+    if (out.progress < tier.need) return { ...out, reason: 'progress' };
+    if (have < tier.gems) return { ...out, reason: 'gems' };
+    return { ...out, canFree: true };
+  }
+  /** 캠페인 진행 + 보석으로 영웅 하나를 연다. 저장이 실패하면 보석·소유를 되돌린다. */
+  unlockHeroFree(id) {
+    const q = this.heroUnlockQuote(id);
+    if (!q.canFree) return { ok: false, reason: q.reason };
+    const before = structuredClone(this.s);
+    this.s.gems -= q.gems; this.s.roster.owned = [...this.s.roster.owned, id];
+    if (!this._commit(before)) return { ok: false, reason: 'storage' };
+    return { ok: true, id, gems: q.gems };
+  }
+  /** 환불·회수·정화 뒤 출전 영웅과 직업이 소유 영웅 안에 있게 맞춘다. */
+  reconcileOwnership() { reconcileSelectedHero(this.s); dropUnownedJob(this.s); }
   heroEquipBonus(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
     const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [], summons: [] };
     for (const sl of SLOTS) { const iid = equipment[sl]; const inst = inventory.find((x) => x.uid === iid); if (inst) { const def = ITEM_BY_ID[inst.id]; const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = def.set; b.sets[set] = (b.sets[set] || 0) + 1; for (const proc of def.procs || []) if (!b.procs.includes(proc)) b.procs.push(proc); if (def.summon && !b.summons.some((summon) => summon.id === def.summon.id)) b.summons.push({ ...def.summon, itemId: def.id }); } }
@@ -389,7 +443,12 @@ export class Economy {
   }
   // 레벨 해금과 SP 습득을 모두 마친 각성 스킬만 Q/E에 넣는다(리뷰 P1: 초기화 뒤 미습득 스킬이 다시 장착되던 경로).
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; if (!skillLearned(h.skills[skillIndex])) return false; const next = normalizeSkillLoadout(def, h.skillLoadout, h.skills, h.level); if (next[slot] === skillIndex) { if (next.every((v, k) => v === h.skillLoadout?.[k])) return false; h.skillLoadout = next; this.emit(); return true; } const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
-  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = freshHeroState(id); return { dup: false, shards: 0 }; }
+  /** 가챠 영웅 지급: 소유 영웅은 조각 +40(중복), 미소유 영웅은 소유를 열지 않고 같은 조각만 쌓는다(locked). */
+  grantHero(id) {
+    const h = this.s.heroes[id]; if (!h) return { dup: false, locked: true, shards: 0 };
+    h.shards += GACHA.dupShards;
+    return this.ownHero(id) ? { dup: true, locked: false, shards: GACHA.dupShards } : { dup: false, locked: true, shards: GACHA.dupShards };
+  }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
   addItem(rarity, slot = null, rng = rngOf(this)) {
@@ -643,7 +702,7 @@ export class Economy {
   rollResult(rar, heroOnly = false) {
     // 분배 비율은 GACHA.ssrSplit / srSplit (gachaRates()와 같은 값). 중복 영웅은 grantHero에서 조각으로 바뀐다.
     const rng = this.gachaRng;
-    const hero = (id) => { const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, shards: g.shards, name: HEROES[id].name, img: HEROES[id].portrait }; };
+    const hero = (id) => { const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, ...(g.locked ? { locked: true } : {}), shards: g.shards, name: HEROES[id].name, img: HEROES[id].portrait }; };
     if (rar === 'SSR') {
       const r = rng(), { featured, pool, gear } = GACHA.ssrSplit;
       if (heroOnly || r < featured) return hero(GACHA.featured);
@@ -678,7 +737,7 @@ export class Economy {
   setBilling(service) { this.billing = service || null; }
   /**
    * 서버가 검증한 결제 상태를 세이브에 반영한다. 서버 응답만이 지급·권한의 근거이며 같은 opId는 한 번만 적용한다.
-   * @param {{ grants?: Array<{ opId: string, productId?: string, rewards?: Record<string, number> }>, reversals?: Array<{ opId: string, grantId?: string, rewards?: Record<string, number> }>, entitlements?: { adsRemoved?: boolean, monthlyUntil?: number, passPremium?: boolean } }} state
+   * @param {{ grants?: Array<{ opId: string, productId?: string, rewards?: Record<string, number> }>, reversals?: Array<{ opId: string, grantId?: string, rewards?: Record<string, number> }>, entitlements?: { adsRemoved?: boolean, monthlyUntil?: number, passPremium?: boolean, heroes?: string[] } }} state
    * @returns {Array<{ k: string, n: number }> | null} 이번에 새로 지급한 보상(저장 실패면 null, 이때 상태는 롤백)
    */
   applyIapState(state) {
@@ -704,6 +763,12 @@ export class Economy {
       if (monthly !== s.monthlyUntil) { s.monthlyUntil = monthly; changed = true; }
       if (typeof e.passPremium === 'boolean' && e.passPremium !== s.pass.premium) { s.pass.premium = e.passPremium; changed = true; }
       if (typeof e.adsRemoved === 'boolean' && e.adsRemoved !== s.adsRemoved) { s.adsRemoved = e.adsRemoved; changed = true; }
+      // 영웅 권한: 서버가 준 활성 목록이 정본이다. paid 를 통째로 바꾸고, 회수된 영웅은 잠금만 건다(레벨·장비는 보존).
+      if (Array.isArray(e.heroes) && s.roster) {
+        const paid = HERO_ORDER.filter((id) => e.heroes.includes(id));
+        if (paid.length !== s.roster.paid.length || paid.some((id, i) => id !== HERO_ORDER.filter((x) => s.roster.paid.includes(x))[i])) { s.roster.paid = paid; changed = true; }
+        reconcileSelectedHero(s); dropUnownedJob(s);
+      }
     }
     if (!changed) return got;
     s.iapApplied = s.iapApplied.slice(-IAP_APPLIED_MAX);

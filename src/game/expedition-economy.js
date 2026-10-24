@@ -2,13 +2,14 @@ import { ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES,
 import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';
+import { normalizeJourney, refreshPeriods, recordJourneyWin, rotationDungeon } from './journey-core.js';
 import { riftForDay, riftBonus } from './journey-rifts.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
 import { CITADEL_POTIONS } from '../data/citadel-shop.js';
-import { dungeonVisibility, regionDungeonState } from './region-dungeon-gate.js';
+import { rosterOwns } from '../data/hero-roster.js';
+import { dungeonVisibility, regionDungeonState, visibleDungeonIds } from './region-dungeon-gate.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -45,6 +46,11 @@ export function normalizeExpedition(raw) {
     selectedJob: unlockedJobs.includes(r.selectedJob) ? r.selectedJob : null, seq: num(r.seq),
     campaignReceipts: [...new Set((Array.isArray(r.campaignReceipts) ? r.campaignReceipts : []).filter(x => typeof x === 'string' && x.length <= 120))],
     pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) && (p.conquestId == null || conquestForRun(p.target, depth, p.conquestId)) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy, ...(p.conquestId ? { conquestId: p.conquestId } : {}), ...(frontierFromSnapshot(p.frontier) ? { frontier: frontierSnapshot(p.frontier) } : {}) } : null };
+}
+/** 미소유 영웅의 직업을 선택한 채로 두지 않는다(환불·회수 뒤 잠금). 직업 해금 기록과 데이터는 그대로 둔다. */
+export function dropUnownedJob(s) {
+  const job = find(JOBS, s.expedition?.selectedJob);
+  if (job && !rosterOwns(s.roster, job.heroId)) s.expedition.selectedJob = null;
 }
 export class ExpeditionEconomy {
   constructor(eco) {
@@ -108,13 +114,13 @@ export class ExpeditionEconomy {
     if (kind === 'dungeon') { const access = this.dungeonAccess(id, { depth }); if (!access.ok) return access; }
     if (this.s.level < d.minLevel) return { ok: false, error: `탐험 레벨 ${d.minLevel} 필요` };
     const started = this.transact(() => {
-      const frontier = kind === 'dungeon' && depth === 'standard' && !rift ? frontierForRoute(id) : null;
+      const frontier = kind === 'dungeon' && depth === 'standard' && !rift ? frontierForRoute(id, new Date(), visibleDungeonIds(this.eco.s)) : null;
       if (expectedFrontier !== undefined && (!frontier || !frontierSnapshot(expectedFrontier) ||
           JSON.stringify(frontierSnapshot(expectedFrontier)) !== JSON.stringify(frontierSnapshot(frontier)))) {
         return { ok: false, error: '주간 원정이 갱신됐습니다. 새 지역과 효과를 확인한 뒤 출격해 주세요.' };
       }
       const period = refreshPeriods(this.eco.s.journey, Date.now());
-      const rotation = DUNGEONS[((period.day % 3) + 3) % 3].id;
+      const rotation = rotationDungeon(period.day, visibleDungeonIds(this.eco.s)).id;
       if (rift && (kind !== 'dungeon' || id !== rotation)) return { ok: false, error: '오늘의 회전 던전에서 균열에 도전해 주세요.' };
       this.eco.tickEnergy();
       if (this.eco.s.energy < d.energy) return { ok: false, error: '에너지가 부족합니다.' };
@@ -230,7 +236,7 @@ export class ExpeditionEconomy {
     if (!d || !Number.isInteger(count) || count < 1 || count > 3) return { ok: false, error: '소탕 횟수는 1~3회입니다.' };
     if (!this.s.stats[id]) return { ok: false, error: '이 던전을 실전에서 먼저 클리어해 주세요.' };
     if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
-    const frontier = frontierForRoute(id);
+    const frontier = frontierForRoute(id, new Date(), visibleDungeonIds(this.eco.s));
     // A supply run earns completion bonuses once per run, but never claims rooms
     // that were not played. Treasure-room and combat bonuses are live-run only.
     const one = applyFrontierRewards(d.rewards, frontier);
@@ -262,10 +268,13 @@ export class ExpeditionEconomy {
   unlockJob(id) {
     const job = find(JOBS, id);
     if (!job || this.s.unlockedJobs.includes(id) || !this.s.claimed.includes(job.questId)) return { ok: false, error: '직업 해금 퀘스트 보상을 먼저 받아 주세요.' };
-    return this.transact(() => { this.s.unlockedJobs.push(id); if (!this.eco.s.heroes[job.heroId]) this.eco.grantHero(job.heroId); return { ok: true }; });
+    // 직업 해금은 영웅 소유를 열어 주지 않는다. 영웅을 먼저 해금해야 직업을 열 수 있다.
+    if (!this.eco.ownHero(job.heroId)) return { ok: false, error: '영웅을 먼저 해금해 주세요.' };
+    return this.transact(() => { this.s.unlockedJobs.push(id); return { ok: true }; });
   }
   selectJob(id) {
     if (id !== null && !this.s.unlockedJobs.includes(id)) return { ok: false, error: '잠긴 직업입니다.' };
+    if (id !== null && !this.eco.ownHero(find(JOBS, id)?.heroId)) return { ok: false, error: '영웅을 먼저 해금해 주세요.' };
     return this.transact(() => { this.s.selectedJob = id; if (id) this.eco.s.selected = find(JOBS, id).heroId; return { ok: true }; });
   }
   craft(id) {

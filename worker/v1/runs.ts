@@ -1,7 +1,7 @@
 // MMO P1-E: 런 티켓 발급·정산 (docs/MMO_DESIGN.md 3.4.2). T0 서버 발급 티켓·시계 + T1 개연성.
 // 보상 실행 런은 티켓이 필수이며 정산은 티켓당 1회, 유효 2시간이다.
 import { casCommit, ledgerReceipt, REV_GUARD, type GuardedWrite } from './db';
-import { debtRepayment } from './iap';
+import { debtRepayment, overlayEntitlements } from './iap';
 import { CID, fail, isId, onlyKeys } from './http';
 import type { Authed, Ctx } from './auth';
 import { loadAccountDoc } from './cmd';
@@ -36,11 +36,15 @@ export async function startRun(c: Ctx, auth: Authed, body: Record<string, unknow
     .bind(accountId, c.now).first<{ n: number }>();
   if ((open?.n ?? 0) >= MAX_OPEN_TICKETS) fail(429, 'too-many-open');
   const doc = await loadAccountDoc(c.db, accountId);
+  // 영웅 소유의 정본은 서버 권한 표다. 문서의 roster.paid를 권한으로 덮어쓴 뒤 소유를 확인한다(/cmd와 같은 방식).
+  await overlayEntitlements(c.db, accountId, doc.state, c.now);
   const eco = loadEconomy(doc.state, { now: c.now });
   const stage = campaignStage(eco.s, body.contentId, (body.difficulty as string) ?? 'story');
   if (!stage || !eco.isUnlocked(stage.ch, stage.st)) fail(403, 'locked');
   const heroId = body.heroId as string, profile = heroCombatProfile(eco, heroId);
   if (!profile) fail(403, 'hero');
+  // 미소유 영웅으로는 티켓을 발급하지 않는다(해금 전 영웅으로 보상 판을 돌리는 우회 차단).
+  if (!eco.ownHero(heroId)) fail(403, 'hero-locked');
   // 에너지는 서버 시계로만 계산한다. 기기 시계·요청 값은 들어가지 않는다.
   if (!eco.spendEnergy(stage.energy)) fail(409, 'energy', { energy: eco.s.energy, energyT: eco.s.energyT, need: stage.energy, serverTime: c.now });
   const runId = randomHex(16), seed = uint32(), lootSeed = uint32(), expiresAt = c.now + TICKET_TTL_MS;

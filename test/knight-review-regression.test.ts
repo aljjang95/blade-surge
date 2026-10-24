@@ -5,6 +5,7 @@ import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import { MasterworksService } from '../src/game/masterworks-service.js';
 import { ArsenalService } from '../src/game/arsenal-service.js';
 import { applyKnightSlashVariant } from '../src/game/knight-builds.js';
+import { grandfather } from './helpers/legacy-roster';
 const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');let values:Map<string,string>;
 beforeEach(()=>{values=new Map();Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)}});});
 afterEach(()=>{if(old)Object.defineProperty(globalThis,'localStorage',old);else Reflect.deleteProperty(globalThis,'localStorage');});
@@ -17,7 +18,7 @@ test('legacy preset missing Q/E keeps the current hero loadout across upgrade an
  expect(setup().eco.hero().skillLoadout).toEqual([6,7]);
 });
 test('legacy hero switch keeps the target hero Q/E, not the previously selected hero',()=>{
- const a=setup();a.eco.hero('knight').skillLoadout=[6,7];a.eco.hero('ranger').skillLoadout=[7,6];
+ const a=setup();grandfather(a.eco);a.eco.hero('knight').skillLoadout=[6,7];a.eco.hero('ranger').skillLoadout=[7,6];
  a.eco.s.arsenal={heroes:{ranger:{presets:[{name:'ranger-old',equipment:{}}]}}};a.eco.save();
  const b=setup();expect(b.arsenal.applyPreset(0,'ranger').ok).toBe(true);expect(b.eco.hero('ranger').skillLoadout).toEqual([7,6]);expect(b.eco.hero('knight').skillLoadout).toEqual([6,7]);
 });

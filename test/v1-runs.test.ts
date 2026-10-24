@@ -170,3 +170,22 @@ describe('MMO P1-E 런 티켓·정산', () => {
     expect(after.heroes.knight.exp + after.heroes.knight.level * 1e6).toBeGreaterThan(before.heroes.knight.exp + before.heroes.knight.level * 1e6);
   });
 });
+
+describe('MMO 영웅 소유 정책: 런 티켓', () => {
+  const startAs = (h: any, token: string, heroId: string, n: number) =>
+    h.send('POST', '/runs/start', { kind: 'campaign', contentId: '1-1', heroId, cid: 'run-hero-' + String(n).padStart(4, '0') }, token);
+
+  test('knight만 소유한 계정은 mage 티켓이 403(hero-locked), 결제 권한 hero:mage 뒤에는 200', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    const locked = await startAs(h, a.token, 'mage', 1);
+    expect(locked.status).toBe(403);
+    expect(locked.body.error).toBe('hero-locked');
+    expect((await startAs(h, a.token, 'knight', 2)).status).toBe(200);
+    await h.db.prepare('INSERT INTO iap_entitlements(account_id, ent_key, token_hash, starts_at, expires_at) VALUES (?, ?, ?, ?, NULL)')
+      .bind(a.accountId, 'hero:mage', 'tok-hero-mage', h.now()).run();
+    const open = await startAs(h, a.token, 'mage', 3);
+    expect(open.status).toBe(200);
+    expect(open.body.heroId).toBe('mage');
+  });
+});

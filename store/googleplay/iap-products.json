@@ -1,7 +1,7 @@
 {
   "_comment": "src/shared/iap-catalog.js 에서 생성됨(node tools/play-iap-register.mjs --write-json). 직접 고치지 말고 카탈로그를 고친다. 가격은 후보이며 등록·공개는 대표님 확인 뒤.",
   "packageName": "com.theluxurylord.bladesurge",
-  "catalogVersion": 1,
+  "catalogVersion": 2,
   "products": [
     {
       "id": "remove_ads_v1",
@@ -85,6 +85,132 @@
           "languageCode": "en-US",
           "title": "Season 1 Premium Pass",
           "description": "Unlocks the premium reward track for Season 1 (already reached tiers can be claimed)."
+        }
+      ]
+    },
+    {
+      "id": "hero_knight_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 해금 · 검성 아르카",
+          "description": "검성 아르카을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock Hero: Knight",
+          "description": "Permanently unlocks the knight hero on your account (restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "hero_barbarian_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 해금 · 광전사 드라칸",
+          "description": "광전사 드라칸을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock Hero: Barbarian",
+          "description": "Permanently unlocks the barbarian hero on your account (restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "hero_mage_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 해금 · 대마도사 리아",
+          "description": "대마도사 리아을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock Hero: Mage",
+          "description": "Permanently unlocks the mage hero on your account (restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "hero_rogue_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 해금 · 암살자 카인",
+          "description": "암살자 카인을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock Hero: Rogue",
+          "description": "Permanently unlocks the rogue hero on your account (restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "hero_ranger_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 5900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 해금 · 바람추적자 실바",
+          "description": "바람추적자 실바을(를) 계정에 영구 해금합니다(기기를 바꿔도 복원)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock Hero: Ranger",
+          "description": "Permanently unlocks the ranger hero on your account (restored on any device)."
+        }
+      ]
+    },
+    {
+      "id": "hero_all_v1",
+      "type": "non_consumable",
+      "kind": "oneTimeProduct",
+      "priceKRW": 17900,
+      "currencyCode": "KRW",
+      "regionCode": "KR",
+      "purchaseOptionId": "default",
+      "listings": [
+        {
+          "languageCode": "ko-KR",
+          "title": "영웅 전원 해금",
+          "description": "다섯 영웅을 모두 계정에 영구 해금합니다(개별 구매 대비 약 24% 할인)."
+        },
+        {
+          "languageCode": "en-US",
+          "title": "Unlock All Heroes",
+          "description": "Permanently unlocks all five heroes on your account (discounted vs. buying each)."
         }
       ]
     }

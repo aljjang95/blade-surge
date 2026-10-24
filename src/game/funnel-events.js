@@ -3,6 +3,8 @@
 // 결제 "성공" 이벤트(purchase_verified)는 서버 verify가 granted를 돌려준 뒤에만 기록한다. 시트 열림·구매 시도·취소·대기는 성공이 아니다.
 // 구매 토큰·주문 ID는 어떤 이벤트에도 넣지 않는다.
 import { SKUS, SHOP_TABS } from '../data/shop.js';
+import { HERO_ORDER } from '../data/heroes.js';
+import { IAP_PRODUCTS, HERO_ALL_PRODUCT_ID, heroProductId } from '../shared/iap-catalog.js';
 
 export const FUNNEL_STORAGE_KEY = 'bladesurge_funnel_v1';
 export const FUNNEL_DEFAULT_CAP = 200;
@@ -11,7 +13,9 @@ export const FUNNEL_MAX_AGE_MS = 30 * 86400000;
 // 비정상적으로 큰 저장값은 파싱하지 않고 버린다.
 const MAX_RAW_CHARS = 128 * 1024;
 
-const SKU_IDS = Object.freeze(SKUS.map((sku) => sku.id));
+// 영웅 구매 화면 sku 는 서버 카탈로그(영웅 개별 hero_<id>_v1 + 전원 해금)에서 파생한다.
+const HERO_SKU_IDS = Object.freeze([...HERO_ORDER.map(heroProductId), HERO_ALL_PRODUCT_ID].filter((id) => IAP_PRODUCTS.some((p) => p.id === id)));
+const SKU_IDS = Object.freeze([...SKUS.map((sku) => sku.id), ...HERO_SKU_IDS]);
 const TAB_IDS = Object.freeze(SHOP_TABS.map((tab) => tab.id));
 
 const int = (min, max) => (v) => Number.isSafeInteger(v) && v >= min && v <= max;
@@ -50,8 +54,18 @@ const SCHEMA = Object.freeze({
   paysheet_open: { required: { sku: oneOf([...SKU_IDS, 'pass']) }, optional: {} },
   // 서버가 영수증을 검증하고 지급(granted)했을 때만 기록한다. 토큰·금액은 넣지 않는다.
   purchase_verified: { required: { sku: oneOf([...SKU_IDS, 'pass']) }, optional: {} },
+  // 보석으로 영웅을 무료 해금한 순간(서버 결제 아님). step 은 지금까지 무료로 연 영웅 수.
+  hero_unlock_free: { required: { hero: oneOf(HERO_ORDER), step: int(0, 50) }, optional: {} },
   return_session: { required: { gapDays: int(0, 3650) }, optional: {} },
 });
+
+/**
+ * 서버 검증 완료 이벤트(purchase_verified)의 sku. 영웅 상품은 진입 이벤트(paysheet_open)와 같은 상품 id(hero_<id>_v1)를 쓰고,
+ * 나머지는 상점 sku(shopSku)를 쓴다. 카탈로그 shopSku(hero_mage·hero_all)는 스키마가 받지 않아 완료 이벤트가 버려졌다.
+ */
+export function funnelSkuFor({ productId, shopSku }) {
+  return HERO_SKU_IDS.includes(productId) ? productId : (shopSku ?? productId ?? null);
+}
 
 export const FUNNEL_EVENTS = Object.freeze(Object.keys(SCHEMA));
 
