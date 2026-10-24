@@ -253,7 +253,8 @@ export function autoFillPlan(/** @type {any} */ eco, /** @type {string} */ heroI
       for (const [order, r] of RUNES.entries()) for (const grade of [3, 2, 1]) {
         if (!(bag[r.id]?.[grade - 1] > 0)) continue;
         const next = withSocket(gear, slotIndex, s.index, { id: r.id, grade });
-        if (runeActivation(/** @type {any} */ (rulesItems(next))).some((e) => e.rune.id === r.id && e.reason === 'duplicate')) continue;
+        // 새로 채우는 칸 자체가 꺼질 때만 뺀다(높은 등급은 낮은 사본을 밀어내고 켜진다).
+        if (runeActivation(/** @type {any} */ (rulesItems(next))).some((e) => e.item === slotIndex && e.index === s.index && e.reason === 'duplicate')) continue;
         const score = grade * 1000 + (runeSynergies(gearCounts(next)).length - baseSyn) * 100 + (RUNES.length - order);
         if (score > bestScore) { bestScore = score; best = { id: r.id, grade }; }
       }

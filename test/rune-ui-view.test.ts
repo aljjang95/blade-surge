@@ -161,6 +161,13 @@ describe('룬 각인판(A38)', () => {
   });
 });
 
+test('자동 장착: 낮은 등급 2개가 박혀 있어도 높은 등급은 후보로 고른다', () => {
+  const eco = core({ ember_edge: [2, 0, 1] });
+  eco.runeInsert(1, 0, { id: 'ember_edge', grade: 1 });
+  eco.runeInsert(1, 1, { id: 'ember_edge', grade: 1 });
+  expect(autoFillPlan(eco, 'knight').some((p) => p.rune.id === 'ember_edge' && p.rune.grade === 3)).toBe(true);
+});
+
 test('룬석 아이콘은 가문 색·등급 점, 잠긴 칸은 자물쇠', () => {
   const html = runeHex('storm', 3);
   expect(html).toContain('data-family="storm"');
