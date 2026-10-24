@@ -14,11 +14,18 @@ export const RUNE_FAMILIES = [
 ];
 export const RUNE_FAMILY_IDS = RUNE_FAMILIES.map((f) => f.id);
 
-/** 등급 I/II/III — 효과는 각인 랭크와 같다(rank = grade). */
+/** 등급 I/II/III. */
 export const RUNE_GRADES = [1, 2, 3];
 /** @type {Record<number, string>} */
 export const RUNE_GRADE_LABEL = { 1: 'I', 2: 'II', 3: 'III' };
 export const RUNE_MAX_GRADE = 3;
+/**
+ * 등급별 효과 배율(각인 1랭크 효과 × 배율). 2026-10-24 지휘 결정: rank = grade(×1/×2/×3)는 같은 룬 2개 상한에서도
+ * 공격력 +54%까지 쌓여 sim:90d D8 밴드를 깼다. ×0.5/×1/×1.5 로 줄여 공격력 최대 (5+4)%×1.5×2 = 27%,
+ * 옛 출격 중 각인 3랭크(+15%) 수준에 맞춘다. 공명 효과는 배율 없이 그대로. 버린 안: II×1.5·III×2(최대 +36%).
+ * @type {Record<number, number>}
+ */
+export const RUNE_GRADE_MUL = { 1: 0.5, 2: 1, 3: 1.5 };
 
 /** 룬 12종 = 각인 12종. effects 는 BOONS 의 객체를 그대로 참조한다. */
 export const RUNES = BOONS.map((b) => ({ id: b.id, name: b.name, family: b.family, description: b.description, effects: b.effects }));
@@ -50,12 +57,17 @@ export const RUNE_MERGE_COST = {
 /** @type {Record<number, number>} */
 export const RUNE_REMOVE_COST = { 1: 1000, 2: 3000, 3: 8000 };
 
-/** 획득처 초안(2.6장). chance 는 0~1, 나머지는 개수. */
+/**
+ * 획득처(2.6장). chance 는 0~1, 나머지는 개수. 2026-10-24 R2 가 sim:90d 곡선으로 조정했다
+ * (미드 7일 II 2개 · 30일 III 1개 · 90일 III 5개, 시드 16 p50). 초안(정예 3%·보스 25%/심층 50%·상자 5/12/20·분해 U 10/L 30)은
+ * 90일 III 150개 이상으로 넘쳤다: 처치·장비 드랍 양이 많아 확률·분해 가루를 크게 낮추고 첫 클리어 가루(first)로 초반을 받쳤다.
+ * expeditionDust 는 출격(캠페인·원정) 승리 정산 상자: base 일반 · deep 심층 원정 · hell 지옥 난이도 · first 첫 클리어 추가.
+ */
 export const RUNE_SOURCES = {
-  eliteDrop: { grade: 1, chance: 0.03 },
-  bossDrop: { grade: 1, chance: 0.25, deepChance: 0.5, deepGrade2Chance: 0.1 },
-  expeditionDust: { base: 5, deep: 12, hell: 20 },
-  dismantleDust: { U: 10, L: 30 },
+  eliteDrop: { grade: 1, chance: 0.005 },
+  bossDrop: { grade: 1, chance: 0.02, deepChance: 0.04, deepGrade2Chance: 0.1 },
+  expeditionDust: { base: 2, deep: 3, hell: 3, first: 3 },
+  dismantleDust: { U: 0, L: 1 },
   craftFamily: { runeDust: 40, grade: 1 },
   craftExact: { runeDust: 80, grade: 1 },
   weeklyDust: 30,

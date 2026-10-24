@@ -5,6 +5,7 @@ import { normalizeMasterworks } from './masterworks-core.js';
 import { normalizeJourney } from './journey-core.js';
 import { normalizeArsenal } from './arsenal-core.js';
 import { normalizeEndgame, migrateEndgame } from './endgame-core.js';
+import { normalizeRunes, normalizeBlessing, restoreSockets } from './rune-economy.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
 export function normalizeSave(raw, fresh) {
@@ -15,5 +16,10 @@ export function normalizeSave(raw, fresh) {
   save.arsenal = normalizeArsenal(raw.arsenal);
   // 엔드게임 도입 전 저장은 별점(스토리 클리어)과 최근 전투 기록의 난이도 승리를 최고 난이도 기록으로 이월한다.
   save.endgame = raw.endgame && typeof raw.endgame === 'object' ? normalizeEndgame(raw.endgame) : migrateEndgame(save);
+  // 룬·전운(2026-10-24). 룬 도입 전 세이브는 네 가문 I 룬 1개씩을 한 번 받는다(giftClaimed).
+  save.runes = normalizeRunes(raw.runes);
+  save.blessing = normalizeBlessing(raw.blessing);
+  // save-base 는 인벤토리 인스턴스를 { uid, id, enh } 로 다시 만들어 sockets 를 버린다. 원본에서 다시 붙인다.
+  restoreSockets(save, raw.inventory);
   return save;
 }

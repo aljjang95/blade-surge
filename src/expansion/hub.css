@@ -13,3 +13,5 @@
 
 .exp-season-frontier{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 22px;padding:16px 19px;border:1px solid #9dd9c545;border-radius:12px;background:linear-gradient(115deg,#1c3d35,#172725 60%,#203c45);box-shadow:0 12px 28px #0002}.exp-season-frontier h3{margin:7px 0 3px;font-size:18px;color:#eef3dc}.exp-season-frontier p{margin:0;max-width:720px;font-size:11px;color:#b8d3c4}.exp-season-route{flex:0 0 auto;border-color:#c4e6b766!important;background:#d5e8be!important;color:#21362d!important;font-size:11px!important;white-space:nowrap}.exp-rivals article>img{border-radius:8px;object-fit:cover;aspect-ratio:1}.exp-rivals article{min-width:0}.exp-rivals h3,.exp-rivals p{overflow-wrap:anywhere}
 @media(max-width:700px){.exp-season-frontier{align-items:flex-start;flex-direction:column}.exp-season-route{width:100%}}
+/* 다음 지역 마을 예고(잠금 줄). 지역 마을이 열리기 전 던전은 목록에 없고 이 줄 하나만 보인다. */
+.exp-dungeon.exp-region-teaser{border-style:dashed;background:#141f1e;display:flex;align-items:center;min-height:120px}.exp-region-teaser .exp-card-body{width:100%}.exp-region-teaser h3{opacity:.8}

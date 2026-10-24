@@ -43,7 +43,7 @@ test('등급 매핑: N 없음, S=boots_n, E·U=boots_e, L=boots_l', () => {
   expect(['N', 'S', 'E', 'U', 'L'].map((r) => pickBootsEntry(r, data)?.id ?? null)).toEqual([null, 'boots_n', 'boots_e', 'boots_e', 'boots_l']);
   expect(pickBootsEntry('X', data)).toBeNull();
   expect(pickBootsEntry('L', { schema: BOOTS_SCHEMA, boots: [entry('boots_e', ['E'])] })).toBeNull();   // 없는 등급은 원래 발
-  for (const r of ['N', 'S', 'E', 'U', 'L']) expect(pickBootsEntry(r, BOOTS_DATA)).toBeNull();          // 출하 데이터는 아트 전까지 비어 있다
+  expect(['N', 'S', 'E', 'U', 'L'].map((r) => pickBootsEntry(r, BOOTS_DATA)?.id ?? null)).toEqual([null, 'boots_n', 'boots_e', 'boots_e', 'boots_l']);   // 출하 데이터(3종 등록)
 });
 
 test('데이터 검증: 경로·삼각형 예산·등급 중복을 거절한다', () => {
@@ -256,6 +256,30 @@ test('E 부착 중 L 요청 후 L 로드 전에 E 로 되돌리면 늦게 온 L 
   syncHeroBoots(root, { rarity: 'E' }, options);
   releases.l(bootsScene()); await tick(); await tick();
   expect(root.userData.heroBoots.entry.id).toBe('boots_e');
+});
+
+test('잔상(fx.ghost)은 몸 스킨만 굽고 부츠 스킨은 넣지 않는다', async () => {
+  const { FX } = await import('../src/engine/fx.js');
+  const { root, skin } = hero();
+  syncHeroBoots(root, { rarity: 'E' }, { data: full(), load: () => Promise.resolve(bootsScene()) }); await tick();
+  expect(root.userData.heroBoots).toBeDefined();
+  // FX 생성자의 캔버스 텍스처용 최소 document(decorative-vfx-gain.test.ts 와 같은 방식)
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const gradient = { addColorStop() {} };
+  const context = { createRadialGradient: () => gradient, createLinearGradient: () => gradient, fillRect() {}, clearRect() {} };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({ getContext: () => context }), getElementById: () => ({ firstChild: null }) } });
+  const scene = new THREE.Scene(), fx = new FX(scene, new THREE.PerspectiveCamera());
+  try {
+    const before = scene.children.length;
+    fx.ghost(root, 0xffffff);
+    const group = scene.children[before] as THREE.Group;
+    expect(group.children).toHaveLength(1);
+    expect((group.children[0] as THREE.Mesh).geometry.attributes.position.count).toBe(skin.geometry.attributes.position.count);
+  } finally {
+    fx.dispose();
+    if (descriptor) Object.defineProperty(globalThis, 'document', descriptor);
+    else Reflect.deleteProperty(globalThis, 'document');
+  }
 });
 
 test('E 로드 중 L 로 바꾼 뒤 지난 E 요청이 실패해도 L 은 정상 부착된다', async () => {

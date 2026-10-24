@@ -3,7 +3,7 @@ import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
 import { activeCampaignSkin } from '../data/campaign-towns.js';
-import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds } from '../data/citadel-hub.js';
+import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds, markEmergingGates } from '../data/citadel-hub.js';
 import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
 import { townServiceFor } from './town-service-adapter.js';
@@ -71,12 +71,35 @@ export class TownUI {
   towns() { return attempt(() => this.service.towns(), []); }
   currentTown() { return this.towns().find(town => town.id === this.activeId) || null; }
   wins(dungeonId) { return attempt(() => this.app.expedition?.snapshot().stats?.[dungeonId], 0) || 0; }
-  dungeonIds(town) { return town.dungeonIds?.length ? town.dungeonIds : defaultTownDungeonIds(town.id); }
+  /**
+   * 광장 관문(3D)과 '마을 일 · 던전' 목록이 보여 줄 던전. 서비스 마을(상점·교관·배치)과 무관하게 지금 로비 마을(캠페인 지역)의
+   * 던전만 선다 — 지역 마을이 열리지 않은 던전은 관문도 없다(region-dungeon-gate.js gateIds). 판정이 없으면 기존 배정.
+   */
+  dungeonIds(town) {
+    const gates = attempt(() => this.app.expedition?.regionDungeons?.().gateIds, null);
+    if (Array.isArray(gates)) return gates.slice();
+    return town.dungeonIds?.length ? town.dungeonIds : defaultTownDungeonIds(town.id);
+  }
+  /**
+   * 관문 배정을 장면·걷기 데이터에 다시 알린다. 처음 본 관문(새 지역 해금으로 생긴 것)은 다음 장면에서 솟아오르게 표시한다.
+   * 현재 마을의 관문이 바뀌었으면 true.
+   */
+  syncGates() {
+    const before = this.activeId ? townHub(this.activeId).dungeonIds.join('|') : null;
+    const ids = this.dungeonIds(this.currentTown() || { id: this.activeId || CITADEL_TOWN_IDS[0] });
+    for (const town of this.towns()) setTownDungeonIds(town.id, ids);
+    if (this.seenGates) { const fresh = ids.filter(id => !this.seenGates.has(id)); if (fresh.length) markEmergingGates(fresh); }
+    this.seenGates = new Set([...(this.seenGates || []), ...ids]);
+    if (!this.activeId) return false;
+    const hub = townHub(this.activeId), movement = this.app.hubMovement;
+    if (movement) { movement.hotspots = hub.hotspots; movement.blockers = hub.blockers; }
+    return hub.dungeonIds.join('|') !== before;
+  }
 
   // ------------------------------------------------------------ 장면 동기화
   /** 서비스가 말하는 현재 마을을 장면·걷기 데이터·HUD에 반영한다. */
   sync() {
-    for (const town of this.towns()) setTownDungeonIds(town.id, this.dungeonIds(town));
+    this.syncGates();
     let id = attempt(() => this.service.currentTownId(), CITADEL_TOWN_IDS[0]);
     if (!TOWN_THEMES[id]) id = CITADEL_TOWN_IDS[0];
     return this.apply(id);
@@ -93,6 +116,8 @@ export class TownUI {
   onChange() {
     const current = attempt(() => this.service.currentTownId(), this.activeId);
     if (current !== this.activeId) { this.sync(); this.app.hubMovement?.reset(); this.app.syncHub?.(); }
+    // 새 지역 마을이 열리면(1-10 첫 클리어 등) 관문 배정이 바뀐다. 장면은 로비 복귀(showcaseHero)나 마을 전환(app.syncCampaignTown)이 새로 짓는다.
+    else this.syncGates();
     // 전투 중에 열린 것은 알림을 미뤄 두었다가 로비로 돌아온 첫 변경에서 알린다.
     if (this.app.mode === 'lobby') this.announce(this.content.checkUnlocks());
     this.updateBadge();
