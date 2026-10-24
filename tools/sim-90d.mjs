@@ -23,6 +23,10 @@ import { ENERGY } from '../src/data/shop.js';
 import { ECONOMY_PACE } from '../src/data/economy-pace.js';
 import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../src/data/journey.js';
 import { createSeededRng, hashSeed } from '../src/shared/rng.js';
+import { RUNE_SOURCES, RUNE_MERGE_COST, RUNE_DUPLICATE_CAP } from '../src/data/runes.js';
+import { socketCount, runeEffects } from '../src/game/rune-core.js';
+import { rollRuneDrops, giftBag } from '../src/game/rune-economy.js';
+import { applyBuildStats } from '../src/game/masterworks-combat.js';
 
 const DAY_MS = 86400000;
 export const PERSONAS = Object.freeze({
@@ -31,6 +35,13 @@ export const PERSONAS = Object.freeze({
   hardcore: { id: 'hardcore', name: '하드코어', minutes: 100, sessions: 3, skill: 0.88, enhCap: 20, towerShare: .3, hero: 'knight' },
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
+// 룬 정밀 제작 우선순위: 전투력에 직접 들어가는 효과(공격력·최대 체력)부터. III 를 먼저 완성한다(같은 룬 2개 상한).
+// 출격 중 각인(2026-10-24 제거)과 룬: 시뮬레이터는 숙련·세트·스킬처럼 출격 중 각인도 진행 판정 전투력에서 뺐다(POWER_NEED 는 그 기준으로 맞춤).
+// 룬은 각인의 대체이므로 같은 방식으로 진행 판정에서 빼고, 룬 전투력 몫(runePowerPct)을 따로 재서 공백을 메우는지 밴드로 단언한다.
+// 옛 흐름의 출격 평균 각인 몫(추정, 실측 아님): 출격당 최대 6회 선택, 공격력 4~5%·최대 체력 6~7% → 출격 평균 약 +15%.
+// (실험 2026-10-24: 룬 전투력을 진행 판정에 넣으면 +19%만으로도 미드 D90 무한의 성이 상한 210층에 닿아 D8 밴드를 깬다.)
+export const REMOVED_BOON_POWER = 0.15;
+export const RUNE_PRIORITY = Object.freeze(['ember_edge', 'stone_root', 'tide_breath', 'storm_edge']);
 const HARD = DIFFICULTY_ORDER.filter((d) => d !== 'story');
 
 // ---------- 요구 전투력 ----------
@@ -79,7 +90,39 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
   const totals = { goldEarned: 0, goldSpent: 0, trainingGold: 0, enhanceTries: 0, destroyed: 0 };
   const sssrDay = Math.round(ECONOMY_PACE.freeDays.SSSR * Math.pow(30 / P.minutes, .6));
   const daysLog = [], milestones = [];
-  const power = () => heroStats(def, { level: st.level, star: st.star, grade: st.grade }, equipBonus(st.gear)).power;
+  // ---------- 룬(R2): 드랍·가루·합성(III 우선)·소켓 장착. 장비 교체 때 룬은 무료 회수(판매 회수와 같음) ----------
+  const runeRng = createSeededRng(hashSeed('sim-90d-rune', personaId, seed));
+  const runes = { bag: Object.fromEntries(Object.entries(giftBag()).map(([id, c]) => [id, [...c]])), dust: 0, fx: {}, dirty: true, dropped: 0, crafted: 0 };
+  const have = (id, g) => runes.bag[id]?.[g - 1] || 0;
+  const addRune = (id, g, n = 1) => { (runes.bag[id] ||= [0, 0, 0])[g - 1] += n; runes.dirty = true; };
+  const mergeAll = () => {
+    for (const id of Object.keys(runes.bag)) for (const g of [2, 3]) {
+      const c = RUNE_MERGE_COST[g];
+      while (have(id, g - 1) >= c.count && st.gold >= c.gold && runes.dust >= c.runeDust) { runes.bag[id][g - 2] -= c.count; st.gold -= c.gold; totals.goldSpent += c.gold; runes.dust -= c.runeDust; addRune(id, g); }
+    }
+  };
+  /** 정밀 제작 대상: III 2개(중복 상한)를 아직 못 채운 우선 룬 중 첫 번째. */
+  const craftTarget = () => RUNE_PRIORITY.find((id) => have(id, 3) < RUNE_DUPLICATE_CAP) || RUNE_PRIORITY[0];
+  const craftRunes = () => {
+    const reserve = RUNE_MERGE_COST[3].runeDust;
+    while (runes.dust >= RUNE_SOURCES.craftExact.runeDust + reserve) { runes.dust -= RUNE_SOURCES.craftExact.runeDust; addRune(craftTarget(), 1); runes.crafted++; mergeAll(); }
+  };
+  const runeCounts = () => { const out = [0, 0, 0]; for (const c of Object.values(runes.bag)) c.forEach((n, i) => { out[i] += n; }); return out; };
+  /** 소켓 배치: 열린 칸 수만큼 높은 등급·우선 룬부터, 같은 룬은 2개까지. 효과는 rune-core.runeEffects 그대로. */
+  const runeFx = () => {
+    if (!runes.dirty) return runes.fx;
+    const open = SLOTS.map((slot) => st.gear[slot] ? socketCount(st.gear[slot].r, st.gear[slot].enh) : 0);
+    const pool = [];
+    for (const g of [3, 2, 1]) for (const id of [...RUNE_PRIORITY, ...Object.keys(runes.bag).filter((x) => !RUNE_PRIORITY.includes(x)).sort()]) {
+      const n = Math.min(have(id, g), RUNE_DUPLICATE_CAP - pool.filter((r) => r.id === id).length);
+      for (let i = 0; i < n; i++) pool.push({ id, grade: g });
+    }
+    const items = SLOTS.map((slot, i) => st.gear[slot] ? { grade: st.gear[slot].r, enh: st.gear[slot].enh, sockets: pool.splice(0, open[i]) } : null).filter(Boolean);
+    runes.fx = runeEffects(items); runes.dirty = false; return runes.fx;
+  };
+  const basePower = () => heroStats(def, { level: st.level, star: st.star, grade: st.grade }, equipBonus(st.gear));
+  const runePower = () => { const b = basePower(), fx = runeFx(); return Object.keys(fx).length ? applyBuildStats(b, fx).power : b.power; };
+  const power = () => basePower().power;
   const gainExp = (n) => { st.exp += n; while (st.level < 80 && st.exp >= levelExp(st.level)) { st.exp -= levelExp(st.level); st.level++; } };
   const earn = (k, n) => { if (!n) return; st[k] += n; if (k === 'gold') totals.goldEarned += n; };
   const mark = (day, kind, label) => milestones.push({ day, kind, label });
@@ -91,7 +134,9 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
       for (let k = 0; k < t.gearRolls; k++) {
         const r = pickWeighted(t.gearWeights, rng), slot = SLOTS[Math.floor(rng() * SLOTS.length)];
         const cand = { r, slot, enh: 0 };
-        if (slotScore(cand) > slotScore(st.gear[slot] && { ...st.gear[slot], slot })) st.gear[slot] = { r, enh: 0 };
+        const old = st.gear[slot];
+        if (slotScore(cand) > slotScore(old && { ...old, slot })) { st.gear[slot] = { r, enh: 0 }; runes.dirty = true; if (old) { runes.dust += RUNE_SOURCES.dismantleDust[old.r] || 0; } }
+        else runes.dust += RUNE_SOURCES.dismantleDust[r] || 0; // 쓰지 않는 유니크·레전드리는 분해(룬 가루)
       }
     }
   };
@@ -104,6 +149,10 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
     st.shards += v.heroShards; st.transcendStones += v.transcendStones;
     // 처치 수는 기댓값을 반올림해 장비 드랍을 굴린다(보스 1·정예·일반).
     dropGear(v.ch, 'boss', diffId, Math.round(v.kills.boss)); dropGear(v.ch, 'elite', diffId, Math.round(v.kills.elite)); dropGear(v.ch, 'normal', diffId, Math.round(v.kills.normal));
+    // 룬 드랍·완료 상자 룬 가루: 게임 정산과 같은 rollRuneDrops(정예·보스 처치 수, 지옥 = 심층 보스 판정).
+    const rr = rollRuneDrops({ elite: Math.round(v.kills.elite), boss: Math.round(v.kills.boss) }, { hell: diffId === 'hell', first }, Math.floor(runeRng() * 4294967296));
+    for (const d of rr.drops) { addRune(d.id, d.grade); runes.dropped++; }
+    runes.dust += rr.dust; craftRunes(); mergeAll();
     return v;
   };
   const enhanceAll = () => {
@@ -114,6 +163,7 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
       const it = st.gear[slots[0]], lv = it.enh, cost = enhanceCost(lv), need = enhanceStones(lv), key = STONE_KEY[enhanceStoneTier(lv)];
       if (st.gold < cost || st[key] < need) return;
       st.gold -= cost; st[key] -= need; totals.goldSpent += cost; totals.enhanceTries++; st.dailyUpgrades++;
+      runes.dirty = true;
       if (rng() < enhanceChance(lv)) it.enh++;
       else if (rng() < destroyChance(lv)) { it.enh = 0; totals.destroyed++; }
       else it.enh = Math.max(0, lv - enhanceDown(lv));
@@ -205,15 +255,17 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
     if (season.day === 6) { // 주의 마지막 날 주간 임무·탑 보급 정산
       const weekly = { towerFloors: st.weekly.tower, hardClears: st.weekly.hard, bossAttempts: st.weekly.boss, upgrades: st.weekly.upgrades };
       for (const c of WEEKLY_CONTRACTS) if (c.stat in weekly && weekly[c.stat] >= c.target) { earn('gold', c.rewards.gold || 0); earn('stones', c.rewards.stones || 0); }
+      runes.dust += RUNE_SOURCES.weeklyDust; // 주간 의뢰 첫 수령 룬 가루
       const tier = [...TOWER.weeklyChest].reverse().find((row) => st.towerBest >= row.floor);
       if (tier && st.towerWeekCleared > 0) for (const k of ['gold', 'stones', 'stones2', 'stones3', 'gems']) earn(k, tier[k] || 0);
     }
-    train(); enhanceAll();
+    train(); enhanceAll(); craftRunes(); mergeAll();
     while (st.star < 5 && st.shards >= starShards(st.star)) { st.shards -= starShards(st.star); st.star++; mark(day, 'star', `별 ${st.star}`); }
     daysLog.push({ day, level: st.level, power: power(), story: st.storyUnlocked - 1, hard: hardCounts(st), tower: st.towerBest,
       gold: st.gold, goldEarned: totals.goldEarned - goldBefore, stones: st.stones, stones2: st.stones2, stones3: st.stones3,
       enh: SLOTS.map((s) => st.gear[s] ? `${st.gear[s].r}+${st.gear[s].enh}` : '-').join(' '), newContent, usedMin: Math.round(usedMin), starvedMin: Math.round(starvedMin),
-      events: events.map((e) => e.id) });
+      events: events.map((e) => e.id), runes: runeCounts(), runeDust: runes.dust, runeDropped: runes.dropped, runeCrafted: runes.crafted,
+      runePowerPct: +(((runePower() / basePower().power) - 1) * 100).toFixed(1) });
   }
   return { persona: personaId, seed, days: daysLog, milestones, totals, sssrDay };
 }
@@ -282,6 +334,8 @@ export function summarize(runs, days) {
       story: dist((r) => at(r, d).story).p50, adept: dist((r) => at(r, d).hard.adept).p50, nightmare: dist((r) => at(r, d).hard.nightmare).p50,
       hell: dist((r) => at(r, d).hard.hell), tower: dist((r) => at(r, d).tower), gold: dist((r) => at(r, d).gold).p50,
       enh: at(runs[0], d).enh,
+      runeII: dist((r) => at(r, d).runes[1]), runeIII: dist((r) => at(r, d).runes[2]), runePowerPct: dist((r) => at(r, d).runePowerPct),
+      runeDust: dist((r) => at(r, d).runeDust).p50, runeDropped: dist((r) => at(r, d).runeDropped).p50, runeCrafted: dist((r) => at(r, d).runeCrafted).p50,
     }])),
     stalls: { longest: dist((r) => longestStall(r).length), example: longestStall(runs[0]) },
     newContentDays: dist((r) => r.days.filter((d) => d.newContent > 0).length),
@@ -303,6 +357,11 @@ export function assertBands(report) {
   band('미드 스토리 6-10 p50(일)', mid.milestones.story_6_10.p50, 5, 12);
   band('라이트 스토리 6-10 p50(일)', light.milestones.story_6_10.p50, 7, 24);
   band('미드 악몽 6-10 p50(일)', mid.milestones.nightmare_6_10.p50, 25, 70);
+  // 룬 곡선(RUNE_AND_BLESSING_DESIGN 2.6): 일반(미드) 7일 II 2개, 30일 III 1개, 90일 III 4~6개.
+  // 출격 중 각인 제거(2026-10-24)로 빠진 전투력을 룬이 메우는지: 미드 D30·D90 룬 전투력 몫 ≥ 옛 각인 평균 몫(REMOVED_BOON_POWER).
+  if (days >= 7) band('미드 D7 룬 II 보유 p50', mid.checkpoints.D7.runeII.p50, 2, 6);
+  if (days >= 30) { band('미드 D30 룬 III 보유 p50', mid.checkpoints.D30.runeIII.p50, 1, 2); band('미드 D30 룬 전투력 +% p50(옛 각인 몫 이상)', mid.checkpoints.D30.runePowerPct.p50, REMOVED_BOON_POWER * 100, 40); }
+  if (days >= 90) { band('미드 D90 룬 III 보유 p50', mid.checkpoints.D90.runeIII.p50, 4, 6); band('미드 D90 룬 전투력 +% p50', mid.checkpoints.D90.runePowerPct.p50, REMOVED_BOON_POWER * 100, 60); }
   if (days >= 90) {
     band('미드 D90 무한의 성 p50(층)', mid.checkpoints.D90.tower.p50, 60, 160);
     band('미드 지옥 6-10 p50(일, 미도달=999)', mid.milestones.hell_6_10.p50 ?? 999, 70, 999); // 지옥 완주는 70일 이후
@@ -342,6 +401,7 @@ if (import.meta.main) {
       console.table(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { level: c.level, powerP50: c.power.p50, story: c.story, adept: c.adept, nightmare: c.nightmare, hellP50: c.hell.p50, towerP10: c.tower.p10, towerP50: c.tower.p50, towerP90: c.tower.p90, gold: c.gold, gear: c.enh }])));
       console.log('SSSR(무과금) 일:', s.milestones.sssr, '· 최장 정체:', JSON.stringify(s.stalls), '· 새 진행일:', JSON.stringify(s.newContentDays), '· 남는 시간(분/일, 마지막 30일):', JSON.stringify(s.starvedMinutesPerDay));
       console.log('경제:', JSON.stringify(s.economy));
+      console.log('룬:', JSON.stringify(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { II: c.runeII.p50, III: c.runeIII.p50, powerPct: c.runePowerPct.p50, dust: c.runeDust, dropped: c.runeDropped, crafted: c.runeCrafted }]))));
     }
   }
   if (process.argv.includes('--assert')) {
