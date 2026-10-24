@@ -201,6 +201,9 @@ export const EVENT_SOUNDS = Object.freeze({
   stingerFinale: EVENT_PREFIX + 'stinger_finale', stingerMidboss: EVENT_PREFIX + 'stinger_midboss', bossWarning: EVENT_PREFIX + 'boss_warning',
   gachaCharge: EVENT_PREFIX + 'gacha_charge', gachaRevealSr: EVENT_PREFIX + 'gacha_reveal_sr',
   lootRare: EVENT_PREFIX + 'loot_rare', lootEpic: EVENT_PREFIX + 'loot_epic', lootLegend: EVENT_PREFIX + 'loot_legend',
+  // 전운 굴리기 릴(설계 3.5): 레버(회전 시작)·째깍(문양 1칸)·쿵(릴 멈춤)·금빛 종(III)·선택.
+  blessingLever: EVENT_PREFIX + 'blessing_lever', blessingTick: EVENT_PREFIX + 'blessing_tick', blessingStop: EVENT_PREFIX + 'blessing_stop',
+  blessingGold: EVENT_PREFIX + 'blessing_gold', blessingPick: EVENT_PREFIX + 'blessing_pick',
 });
 export const EVENT_SOUND_FILES = Object.freeze(Object.values(EVENT_SOUNDS));
 /** 보스 등장 스팅어: 지역 최종 보스·중간 보스(수문장 포함)·그 밖의 보스(원정·대장). 길이는 BGM 덕킹 시간이다. */
