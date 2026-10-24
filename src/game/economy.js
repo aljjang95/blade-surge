@@ -734,6 +734,8 @@ export class Economy {
     if (banner.id === 'beginner' && n !== 10) return { ok: false, reason: 'invalid-count' };
     if (banner.id === 'beginner' && this.beginnerLeft() < n) return { ok: false, reason: 'beginner-used' };
     const s = this.s, cost = n === 10 ? banner.ten : banner.single, tickets = n === 10 ? 10 : 1;
+    // 초보자는 반값이라 보석이 있으면 보석을 먼저 쓴다(소환권 10장 = 정가 2,700 가치). 나머지 배너는 소환권 먼저.
+    if (banner.id === 'beginner' && s.gems >= cost) return { ok: true, reason: null, banner, currency: 'gems', tickets: 0, cost };
     if (s.tickets >= tickets) return { ok: true, reason: null, banner, currency: 'tickets', tickets, cost: 0 };
     if (s.gems >= cost) return { ok: true, reason: null, banner, currency: 'gems', tickets: 0, cost };
     return { ok: false, reason: 'insufficient-funds', banner, need: cost - s.gems, cost };
