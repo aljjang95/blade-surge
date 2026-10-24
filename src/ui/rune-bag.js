@@ -21,7 +21,7 @@ export function runeBagHtml(/** @type {any} */ eco, /** @type {{ id: string, toG
   const id = st.id, toGrade = st.toGrade || mergeTarget(rs.bag, id);
   const m = mergeView({ bag: rs.bag, gold: eco.s.gold, dust: rs.dust }, id, toGrade);
   const cells = view.map((f) => f.runes.map((r) => '<button type="button" class="rb-cell" data-rune="' + r.id + '" style="--fam:' + f.color + '" aria-pressed="' + (r.id === id) + '"' + (r.total ? '' : ' data-none="1"') + '>' +
-    runeHex(f.id, r.best || 1, { size: 'md', cls: r.total ? '' : 'rune-hex-dim' }) + '<span class="rb-copy"><b>' + esc(r.name) + '</b>' + dots(r.counts) + '<small>' + r.counts.map((n, i) => RUNE_GRADE_LABEL[i + 1] + ' x' + n).join(' · ') + '</small></span></button>').join('')).join('');
+    runeHex(f.id, r.best || 1, { size: 'md', cls: r.total ? '' : 'rune-hex-dim' }) + '<span class="rb-copy"><b>' + esc(r.name) + '</b>' + dots(r.counts) + '<small><span>' + RUNE_GRADE_LABEL[1] + ' x' + r.counts[0] + ' · ' + RUNE_GRADE_LABEL[2] + ' x' + r.counts[1] + ' ·</span> <span>' + RUNE_GRADE_LABEL[3] + ' x' + r.counts[2] + '</span></small></span></button>').join('')).join('');
   const mats = m ? m.slots.map((have) => '<span class="rb-mat' + (have ? '' : ' short') + '">' + runeHex(m.family, m.fromGrade, { size: 'md', cls: have ? '' : 'rune-hex-dim' }) + '<small>' + esc(m.from) + '</small></span>').join('') : '';
   return '<div class="rune-bag">' +
     '<section class="rb-bag" aria-label="룬 가방"><header class="rb-head"><h3>룬 가방</h3><button type="button" class="rb-link" id="rb-overview">룬 각인판 ›</button></header><div class="rb-grid">' + cells + '</div><p class="rb-src">' + esc(SOURCE_TEXT) + '</p></section>' +

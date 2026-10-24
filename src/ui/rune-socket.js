@@ -20,8 +20,8 @@ const esc = (/** @type {unknown} */ value) => String(value).replace(/[&<>"]/g, (
 const REASON = { gold: '골드가 부족합니다', bag: '가방에 그 룬이 없습니다', locked: '+15 강화 시 개방되는 칸입니다', occupied: '이미 룬이 박힌 칸입니다', empty: '빈 칸입니다', same: '같은 룬입니다', index: '칸을 찾지 못했습니다', item: '장비를 찾지 못했습니다', unknown: '알 수 없는 룬입니다', storage: '저장하지 못해 그대로 두었습니다', materials: '재료 룬이 부족합니다', dust: '룬 가루가 부족합니다', grade: '합성할 수 없는 등급입니다' };
 export const runeReasonText = (/** @type {string} */ reason) => REASON[reason] || '처리하지 못했습니다';
 
-/** 소켓판 칸 위치(판 중심 기준, 반지름 배수). 칸 수 1~3. */
-const POS = { 1: [[0, -0.62]], 2: [[-0.74, -0.34], [0.74, -0.34]], 3: [[-0.74, -0.34], [0.74, -0.34], [0, 0.72]] };
+/** 소켓판 칸 위치(판 중심 기준 px, --u 로 배율). 칸 수 1~3. 시안처럼 위 두 칸은 좌우, 세 번째(잠긴) 칸은 아래 가운데. */
+const POS = { 1: [[0, -38]], 2: [[-72, -14], [72, -14]], 3: [[-72, -14], [72, -14], [0, 40]] };
 
 /** 소켓 하나(판 위 육각 + 이름표). */
 function socketHtml(/** @type {any} */ s, /** @type {number} */ total, /** @type {number|null} */ selected, size = 'lg', extra = '') {
@@ -29,7 +29,8 @@ function socketHtml(/** @type {any} */ s, /** @type {number} */ total, /** @type
   const art = s.state === 'locked' ? (s.rune ? runeHex(RUNE_BY_ID[s.rune.id].family, s.rune.grade, { size, cls: 'rune-hex-dim' }) + emptyHex('locked', 'sm').replace('rune-hex-sm', 'rune-hex-sm rs-lock-badge') : emptyHex('locked', size))
     : s.rune ? runeHex(RUNE_BY_ID[s.rune.id].family, s.rune.grade, { size }) : emptyHex(selected === s.index ? 'target' : 'empty', size);
   const caption = s.state === 'locked' ? s.lockText : s.rune ? s.label : selected === s.index ? '장착할 소켓' : '빈 소켓';
-  return '<button type="button" class="rs-socket" data-socket="' + s.index + '" data-state="' + s.state + '"' + (s.duplicate ? ' data-dup="1"' : '') + ' aria-pressed="' + (selected === s.index) + '" style="--x:' + x + ';--y:' + y + '" aria-label="' + (s.index + 1) + '번 소켓 · ' + esc(caption) + '"' + extra + '>' + art +
+  const bottom = total >= 3 && s.index === 2;
+  return '<button type="button" class="rs-socket" data-socket="' + s.index + '" data-state="' + s.state + '"' + (s.duplicate ? ' data-dup="1"' : '') + ' aria-pressed="' + (selected === s.index) + '"' + (bottom ? ' data-pos="bottom"' : '') + ' style="--x:' + x + ';--y:' + y + '" aria-label="' + (s.index + 1) + '번 소켓 · ' + esc(caption) + '"' + extra + '>' + art +
     '<small>' + esc(caption) + (s.duplicate ? '<em>중복 상한</em>' : '') + '</small></button>';
 }
 /** 원형 소켓판. */
@@ -56,10 +57,9 @@ export function runePaneHtml(meta, uid, heroId, selected) {
   const sel = selected ?? defaultSocket(board), on = board.synergies.filter((/** @type {any} */ s) => s.active);
   const cur = board.sockets[sel];
   return '<section class="rs-pane" aria-label="룬 소켓">' + boardHtml(board, sel, heroId) + familiesHtml(board.families) +
-    '<div class="rs-syns">' + (on.length ? on.map((/** @type {any} */ s) => synergyChip(s, { suffix: ' 발동' })).join('') : '<span class="rs-syn-none">공명 없음 · 두 가문을 각 2개씩 맞추면 켜집니다</span>') + '</div>' +
+    '<div class="rs-syns">' + (on.length ? on.map((/** @type {any} */ s) => synergyChip(s, { suffix: ' 발동' })).join('') : '<span class="rs-syn-none">공명 없음 · 두 가문 각 2개</span>') + '<button type="button" class="rs-overview-link" id="rs-overview" aria-label="룬 각인판 · 전체 보기">각인판 ›</button></div>' +
     '<div class="rs-actions"><button type="button" class="btn rs-btn-cream" id="rs-swap"' + (cur?.rune ? '' : ' disabled') + '>' + (cur?.state === 'locked' && cur.rune ? '룬 빼기' : '룬 교체') + '</button>' +
-    '<button type="button" class="btn btn-gold" id="rs-insert"' + (board.sockets.some((/** @type {any} */ s) => s.state === 'empty') ? '' : ' disabled') + '>룬 장착</button></div>' +
-    '<button type="button" class="rs-overview-link" id="rs-overview">룬 각인판 · 전체 보기 ›</button></section>';
+    '<button type="button" class="btn btn-gold" id="rs-insert"' + (board.sockets.some((/** @type {any} */ s) => s.state === 'empty') ? '' : ' disabled') + '>룬 장착</button></div></section>';
 }
 
 /**
@@ -138,8 +138,8 @@ export function openRunePicker(meta, { uid, heroId, index, back }) {
     const synList = (p ? p.synergies : v.board.synergies).filter((/** @type {any} */ s) => s.active || (p && p.gained.includes(s.name)));
     return '<div class="rune-picker">' +
       '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + itemIconHtml(it, '', { heroId }) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + ' · ' + (v.mode === 'replace' ? esc(runeLabel(v.current)) + ' 교체' : (index + 1) + '번 칸에 박기') + '</div></div><button type="button" class="btn btn-ghost btn-sm" id="rp-close" aria-label="닫기">닫기</button></header>' +
-      '<div class="rp-main"><div class="rp-left">' + boardHtml(v.board, index, heroId, { caption: true }) + '</div>' +
-      '<section class="rp-right" aria-label="룬 선택"><h3>룬 선택 <small>보유 ' + v.total + '종</small></h3><div class="rp-filters" role="tablist">' + v.filters.map((/** @type {any} */ f) => '<button type="button" role="tab" data-filter="' + f.id + '" aria-selected="' + (v.filter === f.id) + '">' + (f.id === 'all' ? '' : familyGlyph(f.id)) + f.name + '</button>').join('') + '</div>' +
+      '<div class="rp-main"><div class="rp-left">' + boardHtml(v.board, index, heroId) + '</div>' +
+      '<section class="rp-right" aria-label="룬 선택"><div class="rp-top"><h3>룬 선택</h3><div class="rp-filters" role="tablist">' + v.filters.map((/** @type {any} */ f) => '<button type="button" role="tab" data-filter="' + f.id + '" aria-selected="' + (v.filter === f.id) + '">' + (f.id === 'all' ? '' : familyGlyph(f.id)) + f.name + '</button>').join('') + '</div></div>' +
       '<div class="rp-grid">' + grid + '</div>' + detail + '</section></div>' +
       '<div class="rp-resonance"><span class="rp-res-title">가문 공명</span>' + fams.map((/** @type {any} */ f) => {
         const before = v.board.counts[f.id], changed = p && before !== f.count;
@@ -171,7 +171,11 @@ export function openRunePicker(meta, { uid, heroId, index, back }) {
       back();
     };
     b.onkeydown = (event) => { if (event.key === 'Escape') { event.preventDefault(); back(); } };
-    /** @type {HTMLElement|null} */ (b.querySelector('.rp-cell[aria-pressed="true"]') || b.querySelector('#rp-cancel'))?.focus({ preventScroll: true });
+    const picked = /** @type {HTMLElement|null} */ (b.querySelector('.rp-cell[aria-pressed="true"]'));
+    const grid = /** @type {HTMLElement|null} */ (b.querySelector('.rp-grid'));
+    // 고른 룬이 가로 스크롤 밖이면 보이게 맞춘다(세로 공간이 없어 격자는 가로로 흐른다).
+    if (picked && grid) { const gl = grid.getBoundingClientRect(), pl = picked.getBoundingClientRect(); if (pl.right > gl.right) grid.scrollLeft += pl.right - gl.right + 4; else if (pl.left < gl.left) grid.scrollLeft -= gl.left - pl.left + 4; }
+    /** @type {HTMLElement|null} */ (picked || b.querySelector('#rp-cancel'))?.focus({ preventScroll: true });
   };
   ui.modal(html(), { onOpen: bind });
 }
@@ -190,9 +194,9 @@ export function openRuneOverview(meta, heroId, { back = null } = {}) {
       (r.inst ? '<button type="button" class="ro-item rar-' + r.rarity + '" data-uid="' + r.uid + '" aria-label="' + esc(r.name) + ' 룬 소켓 열기">' + itemIconHtml(ITEM_BY_ID[r.inst.id], '', { heroId }) + '<em>+' + r.enh + '</em></button>' +
         '<span class="ro-sockets">' + (r.sockets.length ? r.sockets.map((s) => '<button type="button" class="ro-socket" data-uid="' + r.uid + '" data-socket="' + s.index + '" data-state="' + s.state + '"' + (s.duplicate ? ' data-dup="1"' : '') + ' aria-label="' + esc(r.slotName + ' ' + (s.index + 1) + '번 · ' + (s.state === 'locked' ? '+15 강화 시 개방' : s.rune ? s.label : '빈 소켓')) + '">' +
           (s.state === 'locked' ? emptyHex('locked', 'md') : s.rune ? runeHex(RUNE_BY_ID[s.rune.id].family, s.rune.grade, { size: 'md' }) : emptyHex('empty', 'md')) + (s.rune && s.state !== 'locked' ? '<small>' + esc(s.label) + '</small>' : '') + '</button>').join('') : '<span class="ro-none">소켓 없음 · 스페셜 이상</span>') + '</span>'
-        : '<span class="ro-item ro-item-empty">비어 있음</span><span class="ro-sockets"></span>') + '</div>').join('');
+        : '<span class="ro-item ro-item-empty">없음</span><span class="ro-sockets"></span>') + '</div>').join('');
     return '<div class="rune-overview"><div class="ro-hero"><span class="ro-hero-name">' + esc(HEROES[heroId]?.name || '') + '</span><img class="ro-portrait" alt="' + esc(HEROES[heroId]?.name || '') + '"><span class="ro-pedestal" aria-hidden="true"></span></div>' +
-      '<section class="ro-board" aria-label="룬 각인판"><header class="ro-head"><h2>룬 각인판</h2><button type="button" class="ro-fx" id="ro-fx" aria-expanded="' + showFx + '">총 룬 효과 보기 ›</button><button type="button" class="btn btn-ghost btn-sm" id="ro-close">닫기</button></header>' +
+      '<section class="ro-board" aria-label="룬 각인판"><header class="ro-head"><b class="ro-title" role="heading" aria-level="2">룬 각인판</b><button type="button" class="ro-fx" id="ro-fx" aria-expanded="' + showFx + '">총 룬 효과 보기 ›</button><button type="button" class="btn btn-ghost btn-sm" id="ro-close">닫기</button></header>' +
       (showFx ? '<div class="ro-fx-list">' + (v.effects.length ? v.effects.map((t) => '<span>' + esc(t) + '</span>').join('') : '<span>박힌 룬 효과가 없습니다.</span>') + '</div>' : '<div class="ro-rows">' + rows + '</div>') +
       '<div class="ro-res"><span class="rp-res-title">가문 공명</span>' + v.families.map((f) => '<span class="rp-bar" style="--fam:' + f.color + '">' + familyGlyph(f.id) + '<b>' + f.name + '</b><i>' + [0, 1, 2].map((k) => '<u' + (k < Math.min(3, f.count) ? ' class="on"' : '') + '></u>').join('') + '</i><em>' + f.count + '</em></span>').join('') + '</div>' +
       '<footer class="ro-foot"><span class="ro-chips">' + v.chips.map((s) => synergyChip(s, { suffix: s.active ? ' · ' + s.effect : '' })).join('') + '</span><button type="button" class="btn btn-gold" id="ro-auto"' + (v.plan.length ? '' : ' disabled') + '>자동 장착' + (v.plan.length ? ' <small>빈 칸 ' + v.plan.length + '</small>' : '') + '</button></footer></section></div>';

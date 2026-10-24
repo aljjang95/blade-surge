@@ -216,7 +216,7 @@ export function overviewView(/** @type {any} */ eco, /** @type {string} */ heroI
     return { slot, slotName: SLOT_NAME[slot], inst, uid: inst.uid, name: item.name, rarity: item.rarity, enh: inst.enh, sockets };
   });
   const counts = gearCounts(gear), syn = synergyView(counts);
-  const on = syn.filter((s) => s.active), near = syn.filter((s) => !s.active).sort((a, b) => b.progress - a.progress).slice(0, Math.max(1, 3 - on.length));
+  const on = syn.filter((s) => s.active), near = syn.filter((s) => !s.active).sort((a, b) => b.progress - a.progress).slice(0, Math.max(0, 2 - on.length));
   const plan = autoFillPlan(eco, heroId);
   return { rows, counts, families: familyView(counts), synergies: syn, chips: [...on, ...near], plan, effects: totalEffects(eco, heroId) };
 }
