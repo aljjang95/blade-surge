@@ -6,6 +6,7 @@
 // 정당한 헤비 플레이어를 깎지 않는 쪽으로 보수했다. 베타 지표로 보정한다.
 import { EconomyCore } from '../game/economy-core.js';
 import { HEROES } from '../data/heroes.js';
+import { HERO_POLICY } from '../data/hero-roster.js';
 
 export const LEGACY_EPOCH = Date.UTC(2026, 6, 1);
 const DAY = 86400000;
@@ -23,6 +24,40 @@ export const ONE_TIME = Object.freeze({
 });
 const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transcendStones', 'skillResets'];
 
+/**
+ * 기존 이용자(정책 1, 영웅 5명 소유) 인정 기준 시각 기본값 = 이번 배포 예정일. 운영값은 wrangler var HERO_GRANDFATHER_BEFORE_MS이며 개방 시점에 갱신한다.
+ * 남는 위험: save.created는 클라이언트 값이라 위조해 정책 1을 주장할 수 있다(docs/BM_DESIGN.md '영웅 해금' 남는 위험).
+ */
+export const HERO_GRANDFATHER_DEFAULT_MS = Date.UTC(2026, 9, 25);
+const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * 영웅 소유 정본 정화. 클라이언트가 보낸 roster.paid·owned는 버리고 서버가 아는 값으로 만든다.
+ * - paid = 서버 권한(entitled.heroes) 그대로
+ * - 정책 1(5명 소유)은 ① 서버 문서가 이미 정책 1이거나 ② 원본에 roster가 없거나 정책 1이고 save.created가 기준 시각 이전일 때만 인정
+ * - 그 밖에는 정책 2 + 시작 영웅 1명(서버가 기억하는 선택 > 원본 시작 영웅 > 원본 selected > knight) + 서버 문서가 이미 가진 owned
+ * @returns {{ roster: any, grandfathered: boolean }}
+ */
+export function trustedRoster(raw, { now, serverRoster, entitledHeroes, grandfatherBeforeMs }) {
+  const ids = Object.keys(HEROES);
+  const known = (list) => [...new Set((Array.isArray(list) ? list : []).filter((id) => typeof id === 'string' && ids.includes(id)))];
+  const paid = known(entitledHeroes);
+  const cutoff = Number.isSafeInteger(grandfatherBeforeMs) ? grandfatherBeforeMs : HERO_GRANDFATHER_DEFAULT_MS;
+  const rr = isRecord(raw?.roster) ? raw.roster : null;
+  const created = raw?.created;
+  const claim = (!rr || rr.policy === HERO_POLICY.LEGACY) && Number.isSafeInteger(created) && created < cutoff && created <= now;
+  if (claim || serverRoster?.policy === HERO_POLICY.LEGACY) {
+    return { grandfathered: true, roster: { policy: HERO_POLICY.LEGACY, owned: ids.slice(), starter: null, starterChosen: true, paid } };
+  }
+  const server = isRecord(serverRoster) ? serverRoster : null;
+  const pick = (v) => (typeof v === 'string' && ids.includes(v) ? v : null);
+  const starter = (server?.starterChosen === true ? pick(server.starter) : null)
+    ?? (rr?.starterChosen === true ? pick(rr.starter) : null) ?? pick(raw?.selected) ?? 'knight';
+  // 시작 영웅을 아직 고르지 않은 서버 문서(새 계정의 기본값)의 owned는 신뢰하지 않는다(기본 영웅이 덤으로 붙는 것을 막는다).
+  const owned = [...new Set([starter, ...(server?.starterChosen === true ? known(server.owned) : [])])];
+  return { grandfathered: false, roster: { policy: HERO_POLICY.STARTER, owned, starter, starterChosen: server?.starterChosen === true || rr?.starterChosen === true, paid } };
+}
+
 export function elapsedDays(created, now) {
   const from = Number.isSafeInteger(created) ? Math.min(now, Math.max(LEGACY_EPOCH, created)) : now;
   return { from, days: Math.max(1, Math.ceil((now - from) / DAY)) };
@@ -32,12 +67,16 @@ export function elapsedDays(created, now) {
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
  * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number } }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
- *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한
+ *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
+ *   serverRoster = 서버 문서의 현재 roster(신뢰값), grandfatherBeforeMs = 정책 1 인정 기준 시각
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {} }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, grandfatherBeforeMs }) {
   let eco;
-  try { eco = EconomyCore.fromState(raw, { now: () => now, rng: () => 0.5 }); }
+  // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
+  const { roster, grandfathered } = trustedRoster(raw, { now, serverRoster, entitledHeroes: entitled.heroes, grandfatherBeforeMs });
+  const input = isRecord(raw) ? { ...raw, roster } : raw;
+  try { eco = EconomyCore.fromState(input, { now: () => now, rng: () => 0.5 }); }
   catch { return { ok: false, reason: 'corrupt', report: { clamped: {}, severe: false } }; }
   const fresh = EconomyCore.fromState(null, { now: () => now, rng: () => 0.5 }).s;
   const s = eco.snapshot();
@@ -74,8 +113,10 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   Object.assign(s, { purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: Number(entitled.monthlyUntil) > now ? entitled.monthlyUntil : 0, monthlyClaimed: keepMonthly, firstPurchaseUsed: {} });
   const claimedPrem = entitled.passPremium && Array.isArray(s.pass.claimedPrem) ? s.pass.claimedPrem.filter((lv) => Number.isSafeInteger(lv) && lv >= 1 && lv <= 1000) : [];
   s.pass = { ...s.pass, premium: !!entitled.passPremium, claimedPrem };
+  // 정화가 끝난 상태에서도 paid는 서버 권한과 같다(정규화가 어떤 값을 만들었든 마지막에 한 번 더 덮어쓴다).
+  if (isRecord(s.roster)) s.roster.paid = [...roster.paid];
   s.energy = Math.min(Number(s.energy) || 0, fresh.energy + 200);
   s.energyT = now;
   s.created = from;
-  return { ok: true, state: s, report: { clamped, severe, days, created: from, droppedPaid, schemaVersion: s.schemaVersion } };
+  return { ok: true, state: s, report: { clamped, severe, days, created: from, droppedPaid, schemaVersion: s.schemaVersion, roster: { policy: roster.policy, grandfathered } } };
 }

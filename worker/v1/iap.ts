@@ -39,6 +39,8 @@ type IapCtx = Ctx & { deps: Ctx['deps'] & IapDeps };
 
 const iapEnv = (c: Ctx) => c.env as unknown as IapEnv;
 export const tokenHash = (token: string) => sha256Hex('play:' + token);
+/** 웹 결제(포트원) 지급의 원장 키. Play 토큰 해시와 접두사가 달라 서로 충돌하지 않는다. */
+export const webTokenHash = (paymentId: string) => sha256Hex('portone:' + paymentId);
 
 export async function iapSchemaReady(db: D1Database): Promise<boolean> {
   try {
@@ -175,7 +177,7 @@ export async function state(c: Ctx, auth: Authed) {
   if (!await iapSchemaReady(c.db)) fail(503, 'iap-schema-missing');
   return stateFor(c, auth.account.account_id);
 }
-async function stateFor(c: Ctx, accountId: string) {
+export async function stateFor(c: Ctx, accountId: string) {
   const rows = await c.db.prepare('SELECT grant_id, product_id, rewards, granted_at, reversed_at, debt FROM iap_grants WHERE account_id = ? ORDER BY granted_at DESC LIMIT 50')
     .bind(accountId).all<{ grant_id: string; product_id: string; rewards: string; granted_at: number; reversed_at: number | null; debt: string | null }>();
   const grants = [], reversals = [];
