@@ -37,7 +37,7 @@ describe('영웅 소유 서버 권위 정화', () => {
       expect(r.state.roster.starter).toBe('ranger');
       expect(r.state.roster.starterChosen).toBe(true);
       expect(r.state.roster.paid).toEqual([]);
-      expect(r.report.roster).toEqual({ policy: 2, grandfathered: false });
+      expect(r.report.roster).toEqual({ policy: 2, grandfathered: false, legacyClaim: true, proof: null });
     }
     // 선택 영웅이 유효하지 않으면 knight
     expect(run(save({ created: BEFORE, selected: 'ghost' }, ['roster'])).state.roster.owned).toEqual(['knight']);
