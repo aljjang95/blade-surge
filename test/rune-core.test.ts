@@ -131,7 +131,7 @@ describe('회수', () => {
 
 describe('효과 합산', () => {
   test('III 룬 = 각인 효과 ×3, rank = grade 로 boonEffects 와 같다', () => {
-    for (const b of BOONS) {
+    for (const b of BOONS as unknown as Array<{ id: string, effects: Record<string, number> }>) {
       const e = runeEffects([{ grade: 'S', enh: 0, sockets: [rune(b.id, 3)] }]);
       // boonEffects 는 다른 각인의 0 값 키도 남기므로 0이 아닌 값만 비교한다.
       expect(e).toEqual(Object.fromEntries(Object.entries(boonEffects({ [b.id]: 3 })).filter(([, v]) => v !== 0)));
@@ -167,7 +167,7 @@ describe('가문 공명', () => {
     const two = [...one, { grade: 'U', enh: 0, sockets: [rune('ember_hunt'), rune('tide_guard')] }];
     expect(familyCounts(two)).toEqual({ ember: 2, tide: 2, storm: 0, stone: 0 });
     expect(runeSynergies(familyCounts(two)).map((s) => s.id)).toEqual(['steam']);
-    expect(runeEffects(two).healOnKill).toBeCloseTo(SYNERGIES.find((s) => s.id === 'steam')!.effects.healOnKill!);
+    expect(runeEffects(two).healOnKill).toBeCloseTo((SYNERGIES as unknown as Array<{ id: string, effects: Record<string, number> }>).find((s) => s.id === 'steam')!.effects.healOnKill);
   });
   test('잠긴 칸·중복 상한 룬은 가문 수에 들어가지 않는다', () => {
     const items = [{ grade: 'L', enh: 0, sockets: [rune('ember_edge'), rune('ember_edge'), rune('ember_hunt')] },
