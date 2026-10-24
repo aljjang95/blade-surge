@@ -69,7 +69,8 @@ describe('새 저장 · 진행 저장의 노출', () => {
     expect(state.latest).toBe(2); expect(state.current).toBe(2);
     expect(state.visibleIds.slice(0, 6)).toEqual(regionDungeonIds(2));
     expect(state.visibleIds.slice(6)).toEqual(REGION1);
-    expect(state.gateIds).toEqual(regionDungeonIds(2));
+    // 석양 황동 채석장은 관문 없는 컨셉 던전(목록 전용)이라 광장 관문은 5곳이다.
+    expect(state.gateIds).toEqual(regionDungeonIds(2).filter((id) => id !== 'sunbrass_quarry'));
     expect(state.teaser?.region).toBe(3);
     // 이전 마을(1지역)을 로비 마을로 고르면 그 마을 관문으로 돌아간다.
     const back = regionDungeonState({ ...s, campaignTown: { current: 1, celebrated: 2 } });

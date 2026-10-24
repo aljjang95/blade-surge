@@ -4,7 +4,7 @@
 // - 입장·클리어 기록이 있는 던전은 지역이 아직 잠겨 있어도 절대 숨기지 않는다(소급 보존).
 // - 아직 열리지 않은 지역 중 바로 다음 지역 하나만 '다른 던전' 목록에서 잠금 줄로 예고한다(teaser).
 // 로비 카드 줄·3D 관문·마을 둘러보기·추천·스테이지 선택 화면이 모두 이 판정을 쓴다.
-import { ALL_DUNGEONS } from '../data/expansion.js';
+import { ALL_DUNGEONS, CONCEPT_DUNGEONS } from '../data/expansion.js';
 import { DUNGEON_REGION, dungeonRegion } from '../data/region-dungeons.js';
 import { campaignTown, latestTownChapter, resolveCampaignTown } from '../data/campaign-towns.js';
 import { normalizeRunRoute } from './run-history.js';
@@ -13,6 +13,8 @@ const record = (value) => value !== null && typeof value === 'object' && !Array.
 const positive = (value) => Number.isSafeInteger(value) && value > 0;
 export const REGION_GATE_VERSION = 1;
 const GATE_SLOTS = 6;
+// 컨셉 던전(빙하 조수 분지·석양 황동 채석장)은 처음부터 광장 관문이 없는 목록 전용 던전이다(concept-dungeons 계약). 관문 후보에서 뺀다.
+const GATELESS = new Set(CONCEPT_DUNGEONS.map((dungeon) => dungeon.id));
 
 /** 저장에 남은 던전 기록(승리·심층 승리·진행 중 입장권·원정 기록·전술 공략·이관 때 보존한 목록). */
 export function dungeonRecordIds(save) {
@@ -70,7 +72,7 @@ export function dungeonVisibility(save, id, records = dungeonRecordIds(save)) {
  * 저장 전체의 지역 던전 상태. ALL_DUNGEONS 순서로 판정을 돌려준다.
  * - visibleIds: 지금 보이는 던전(현재 마을 지역 → 다른 열린 지역 → 소급 보존 순).
  * - teaserIds: '다른 던전' 목록에서만 잠금 줄로 보일 다음 지역 던전.
- * - gateIds: 현재 로비 마을의 3D 관문(최대 6). 현재 지역 던전 + 아직 마을이 없는 소급 보존 던전.
+ * - gateIds: 현재 로비 마을의 3D 관문(최대 6). 현재 지역 던전 + 아직 마을이 없는 소급 보존 던전. 관문 없는 컨셉 던전은 제외.
  */
 export function regionDungeonState(save) {
   const records = dungeonRecordIds(save);
@@ -81,7 +83,7 @@ export function regionDungeonState(save) {
   const ordered = visible.map((entry, index) => ({ entry, index }))
     .sort((a, b) => rank(a.entry) - rank(b.entry) || (rank(a.entry) === 1 ? a.entry.region - b.entry.region : 0) || a.index - b.index)
     .map(({ entry }) => entry.id);
-  const gateIds = visible.filter((entry) => entry.region === town.current || entry.preserved).map((entry) => entry.id)
+  const gateIds = visible.filter((entry) => !GATELESS.has(entry.id) && (entry.region === town.current || entry.preserved)).map((entry) => entry.id)
     .sort((a, b) => Number(dungeonRegion(a) !== town.current) - Number(dungeonRegion(b) !== town.current)).slice(0, GATE_SLOTS);
   const next = town.latest + 1;
   return {
