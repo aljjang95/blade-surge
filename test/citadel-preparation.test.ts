@@ -106,7 +106,7 @@ test('세 기준문 이외에는 새 행동을 만들지 않으며 반복 준비
 test('every gate projects canonical basic and deep routes; each deep lock uses actual expedition eligibility', () => {
   for (const def of GATE_DEPTHS) {
     const app = fixture(), basic = DUNGEONS.find(d => d.id === def.id)!;
-    app.expedition.s.level = 50;
+    app.expedition.s.level = 50; app.eco.s.progress.unlocked = 60; // 지역 마을 6곳을 모두 연 저장(지역 잠금은 region-dungeon-unlock 테스트가 본다)
     expect(preparation(app, def.id).definition).toEqual(basic);
     let projected = preparation(app, def.id, 'deep');
     expect(projected.definition).toEqual(def); expect(projected.access.cost).toBe(def.energy);
