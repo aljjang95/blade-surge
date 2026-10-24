@@ -200,8 +200,8 @@ describe('전운 굴리기 economy 경로', () => {
     eco.s.monthlyUntil = T0 + 30 * DAY;
     expect(eco.claimMonthly()).toBe(true);
     expect(eco.s.blessing.charms).toBe(3);
-    expect(REWARD_LABEL.runeDust[0]).toBe('룬 가루');
-    expect(REWARD_LABEL.blessingCharm[0]).toBe('전운 부적');
+    expect((REWARD_LABEL as any).runeDust[0]).toBe('룬 가루');
+    expect((REWARD_LABEL as any).blessingCharm[0]).toBe('전운 부적');
   });
 });
 
@@ -255,6 +255,6 @@ describe('룬 드랍 정산과 전투 효과', () => {
     expect(Object.keys(withBless).length).toBeGreaterThanOrEqual(2);
     eco.unequip('knight', 'weapon');
     expect(eco.heroRuneEffects('knight')).toEqual({ hp: 0.07 });
-    expect(ITEM_BY_ID[eco.s.inventory[0].id].rarity).toBe('U');
+    expect((ITEM_BY_ID as any)[eco.s.inventory[0].id].rarity).toBe('U');
   });
 });
