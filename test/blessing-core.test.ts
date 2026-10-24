@@ -155,7 +155,7 @@ test('확률 공개 표: 데이터에서 생성, 각인별 5.83/2.08/0.42%, 기�
   expect(t.grades.map(g=>g.text)).toEqual(['70%','25%','5%']);
   expect(t.perBoon.length).toBe(12);
   for(const b of t.perBoon) expect(b.grades.map(g=>g.text)).toEqual(['5.83%','2.08%','0.42%']);
-  expect(t.families.length).toBe(4);for(const f of t.families){expect(f.boonIds.length).toBe(3);expect(f.rate).toBeCloseTo(.25,10);}
+  expect(t.families.length).toBe(4);for(const f of t.families){expect(f.boonIds.length).toBe(3);expect(f.rate).toBeCloseTo(.25,10);expect(f.grades.reduce((a,g)=>a+g.rate,0)).toBeCloseTo(f.rate,10);expect(f.grades[0].text).toBe('17.50%');}
   expect(t.baseAtLeastOneIII.text).toBe('14.3%');expect(t.baseAtLeastOneIII.rate).toBeCloseTo(1-.95**3,10);
   expect(t.effective.atLeastOneIIIPerRoll.text).toBe('17.5%');expect(t.effective.iiiCandidateRate.text).toBe('6.19%');
   expect(t.pity.threshold).toBe(10);expect(t.prices.gems).toEqual([30,60,90]);expect(t.prices.dailyGemCap).toBe(30);
