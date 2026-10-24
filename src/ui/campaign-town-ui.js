@@ -79,16 +79,45 @@ export class CampaignTownUI {
     document.querySelector('.region-unlock-banner')?.remove();
     const node = document.createElement('div');
     node.className = 'region-unlock-banner'; node.setAttribute('role', 'status'); node.style.setProperty('--town-accent', unlock.accent || '#ffd27a');
-    node.innerHTML = `<span aria-hidden="true">★</span><b>새 지역 해금 · ${esc(unlock.name)}</b><small>로비로 돌아가면 마을이 바뀝니다</small>`;
+    node.innerHTML = `<span aria-hidden="true">★</span><b>새 지역 해금 · ${esc(unlock.name)}</b><small>로비로 돌아가면 새 마을로 이동합니다</small>`;
     document.body.append(node);
     audio.play('jingle_win1', { vol: 0.55 });
     setTimeout(() => node.remove(), 4800);
     if (markSeen) this.eco.markTownCelebrated(unlock.chapter);
+    // 로비로 돌아갈 때 한 번 '새 마을 도착' 연출을 보인다(세션 상태, 저장 아님).
+    this.pendingArrival = unlock;
+    if (this.app.mode === 'lobby') this.arrive();
+    return true;
+  }
+
+  /**
+   * 새 마을 도착 연출. 짧은 이동 전환(가장자리에서 걷히는 마을 색 장막, 입력을 막지 않음)과 위쪽 가장자리 띠.
+   * 새 던전 관문은 광장 장면이 땅에서 솟아오르게 그린다(citadel-hub-scene emerging). 플레이 영역에 창을 띄우지 않는다.
+   */
+  arrive(unlock = this.pendingArrival) {
+    if (!unlock) return false;
+    this.pendingArrival = null;
+    const opened = (() => { try { return this.app.expedition?.regionDungeons?.().entries.filter((entry) => entry.region === unlock.chapter && entry.open).length || 0; } catch { return 0; } })();
+    document.querySelector('.town-arrival-veil')?.remove(); document.querySelector('.town-arrival-banner')?.remove(); document.querySelector('.region-unlock-banner:not([data-qa-held])')?.remove();
+    const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) {
+      const veil = document.createElement('div');
+      veil.className = 'town-arrival-veil'; veil.setAttribute('aria-hidden', 'true'); veil.style.setProperty('--town-accent', unlock.accent || '#ffd27a');
+      document.body.append(veil); setTimeout(() => veil.remove(), 1400);
+    }
+    const node = document.createElement('div');
+    node.className = 'town-arrival-banner'; node.setAttribute('role', 'status'); node.style.setProperty('--town-accent', unlock.accent || '#ffd27a');
+    node.dataset.chapter = String(unlock.chapter);
+    node.innerHTML = `<small>REGION 0${unlock.chapter} · 새 마을 도착</small><b>${esc(unlock.name)}</b>${opened ? `<em>새 던전 ${opened}곳이 열렸습니다</em>` : ''}`;
+    document.body.append(node);
+    audio.play('ui_glass', { vol: 0.45 });
+    setTimeout(() => node.remove(), 5200);
     return true;
   }
 
   /** 로비로 돌아왔는데 아직 축하하지 못한 해금이 있으면(결과 화면 전에 앱이 닫힌 경우) 한 번 알린다. */
   announcePending() {
+    if (this.pendingArrival) return this.arrive();
     const state = this.eco.campaignTownState();
     if (state.celebrated >= state.latest) return false;
     const town = this.eco.campaignTownList()[state.latest - 1];

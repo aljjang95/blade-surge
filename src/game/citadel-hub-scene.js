@@ -80,9 +80,10 @@ export async function preloadCitadelHubAssets({ quality = 'high', fetcher = glob
 /**
  * The visible geometry and collision data refer to the same ground plane (y=0).
  * townId 없이 부르면 12개 게이트가 모두 선 원본 성채 광장이고, townId를 주면 그 마을의 장면이다.
- * @param {{ models?: Record<string, any>, environmentTexture?: any, quality?: string, assets?: any, camera?: any, townId?: string | null, libraryProps?: Array<any>, skin?: any }} [options]
+ * emerging: 새 지역 마을이 열려 처음 서는 던전 id 들. 그 관문은 땅 아래에서 빛기둥과 함께 솟아오른다(약 2초, 동작 줄이기면 즉시).
+ * @param {{ models?: Record<string, any>, environmentTexture?: any, quality?: string, assets?: any, camera?: any, townId?: string | null, libraryProps?: Array<any>, skin?: any, emerging?: Iterable<string> | null }} [options]
  */
-export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates, camera = null, townId = null, libraryProps = [], skin = null } = {}) {
+export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates, camera = null, townId = null, libraryProps = [], skin = null, emerging = null } = {}) {
   const town = townId && TOWN_THEMES[townId] ? townId : null;
   // skin: 캠페인 지역 마을(campaign-towns.js). 광장 구조는 서비스 마을이 정하고 색·부두 소품 톤만 지역 마을이 덮는다.
   const base = TOWN_THEMES[town || 'oathhold'], theme = skin ? { ...base, palette: skin.palette, waystone: skin.waystone, accent: skin.accent } : base;
@@ -338,6 +339,10 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     b.finish();
   }
 
+  // 새로 열린 관문의 등장: 노드를 땅 아래로 내리고 update 에서 순서대로 올린다. 빛기둥은 공유 기하 하나·재질 하나를 쓴다.
+  const emergingIds = new Set(emerging || []), rising = [], pendingLabels = new Set();
+  const riseColumn = emergingIds.size ? new THREE.CylinderGeometry(.9, 1.25, 7, 18, 1, true) : null;
+  if (riseColumn) geometryOwned.add(riseColumn);
   for (const spot of hotspots) {
     const node = new THREE.Group(); node.name = `Citadel_Hotspot_${spot.id}`;
     node.userData.hotspotId = spot.id; node.position.set(spot.x, 0, spot.z); node.rotation.y = spot.yaw;
@@ -345,7 +350,14 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     const isGate = ['dungeon', 'campaign', 'arena'].includes(spot.kind);
     if (isGate) {
       node.add(gateDesigns.build(spot));
-      textLabel(spot, 4.12);
+      const label = textLabel(spot, 4.12);
+      if (spot.kind === 'dungeon' && emergingIds.has(spot.route)) {
+        const glow = new THREE.MeshBasicMaterial({ color: spot.accent || '#ffd27a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+        materialsOwned.add(glow);
+        const column = new THREE.Mesh(riseColumn, glow); column.position.set(spot.x, 3.5, spot.z); column.renderOrder = 3; root.add(column);
+        rising.push({ node, label, column, glow, delay: .9 + rising.length * .45, t: 0 });
+        node.position.y = -4.6; node.scale.setScalar(.35); label.visible = false; pendingLabels.add(label);
+      }
     } else if (spot.kind === 'waystone') {
       buildWaystone(node, spot);
       textLabel(spot, 3.4);
@@ -534,14 +546,28 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       if (id === nearestId) return; nearestId = id || null;
       for (const [key, marker] of markers) marker.material.opacity = key === nearestId ? .74 : .18;
       for (const { sprite, spot, isNpc } of labels) {
-        sprite.visible = !nearestId || (spot.id === nearestId && !isNpc);
+        sprite.visible = !pendingLabels.has(sprite) && (!nearestId || (spot.id === nearestId && !isNpc));
         sprite.material.opacity = spot.id === nearestId ? 1 : isNpc ? .6 : .84;
       }
     },
+    /** 아직 솟아오르는 중인 관문 수(QA·연출 확인용). */
+    risingGates: () => rising.filter(entry => !entry.done).length,
+    emergingIds: [...emergingIds],
     update(dt, state = {}) {
       if (disposed) return;
       const { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = state;
       gateDesigns.update(dt, reducedMotion);
+      for (const entry of rising) {
+        if (entry.done) continue;
+        entry.t += reducedMotion ? 99 : Math.min(dt, .05);
+        const p = Math.max(0, Math.min(1, (entry.t - entry.delay) / 1.5)), ease = 1 - (1 - p) ** 3;
+        entry.node.position.y = -4.6 * (1 - ease); entry.node.scale.setScalar(.35 + .65 * ease);
+        // 빛기둥: 오르는 동안 밝아졌다가 다 서면 0.8초에 걸쳐 사라진다.
+        const fade = Math.max(0, Math.min(1, (entry.t - entry.delay - 1.5) / .8));
+        entry.glow.opacity = (p > 0 ? .55 * Math.min(1, p * 3) : 0) * (1 - fade);
+        if (p >= 1 && pendingLabels.delete(entry.label)) entry.label.visible = !nearestId || entry.label.userData.hotspotId === nearestId;
+        if (fade >= 1) { entry.done = true; entry.column.visible = false; }
+      }
       canopySightline.setTarget(playerPosition);
       if (camera) canopySightline.update(camera.position); else canopySightline.disable();
       if (Object.hasOwn(state, 'nearestId') || Object.hasOwn(state, 'nearest')) this.highlightHotspot(nextId ?? nearest?.id ?? null);
@@ -549,7 +575,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       if (playerPosition) for (const { sprite, spot, isNpc } of labels) {
         const distance = Math.hypot(spot.x - playerPosition.x, spot.z - playerPosition.z), selected = spot.id === nearestId;
         const range = isNpc ? 9 : quality === 'low' ? 9 : 14;
-        sprite.visible = (!nearestId || (selected && !isNpc)) && (selected || distance < range);
+        sprite.visible = !pendingLabels.has(sprite) && (!nearestId || (selected && !isNpc)) && (selected || distance < range);
         // 게이트 이름표: 멀수록 흐려지고, 가장 가까운 입구는 하단 카드가 이름을 알려 주므로 반투명으로 둔다.
         if (!isNpc) { sprite.material.opacity = selected ? .6 : Math.min(.5, Math.max(.12, (range - distance) / 8)); sprite.scale.set(selected ? 2.6 : 2.2, selected ? .61 : .516, 1); }
         if (isNpc) {

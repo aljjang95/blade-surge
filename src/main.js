@@ -329,6 +329,7 @@ class App {
     const next = setActiveCampaignTownChapter(this.eco.campaignTownState().current);
     if (next === before) return false;
     if (rebuild && this.arena.lobbyHall) {
+      this.townUI?.syncGates(); // 마을(지역)마다 서는 던전 관문이 다르다(region-dungeon-gate.js)
       this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub(); this.townUI?.renderPlace();
       if (this.mode === 'lobby') audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     }

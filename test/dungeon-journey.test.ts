@@ -22,11 +22,13 @@ const result = { kind: 'dungeon', id: 'glass_garden', depth: 'standard', win: tr
 test('Lv.1 지도는 실제 첫 던전을 추천하고 탐색만으로 자원·진행을 바꾸지 않는다', () => {
   const { economy, service } = make(), before = JSON.stringify(economy.s);
   const journey = dungeonJourney(service);
-  expect(journey.nodes).toHaveLength(20);
+  // 지역 마을 해금(docs/region-dungeon-unlock.md): 새 저장의 첫 마을(종지기 정원)에는 지역 1 던전 4곳만 보인다.
+  expect(journey.nodes.map(node => node.dungeon.id)).toEqual(['glass_garden', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum']);
   expect(journey.current?.dungeon.id).toBe('glass_garden');
-  expect(journey.nodes.find(node => node.dungeon.id === 'ember_vault')?.unlocked).toBe(false);
-  // 컨셉 던전 2곳은 새 계정 Lv.1에서도 목록에 열려 있고, 추천 순서(첫 던전)는 바꾸지 않는다.
-  for (const id of ['glacier_tide_basin', 'sunbrass_quarry']) expect(journey.nodes.find(node => node.dungeon.id === id)?.unlocked).toBe(true);
+  for (const id of ['ember_vault', 'glacier_tide_basin', 'sunbrass_quarry']) expect(journey.nodes.some(node => node.dungeon.id === id)).toBe(false);
+  // 다음 지역(불씨 용광로 마을)만 잠금 줄로 예고한다.
+  expect(journey.teaser).toMatchObject({ region: 2, town: '불씨 용광로 마을', unlockCode: '1-10' });
+  expect(journey.teaser?.dungeons.map(dungeon => dungeon.id)).toContain('ember_vault');
   expect(journey.cleared).toBe(0);
   expect(JSON.stringify(economy.s)).toBe(before);
   expect(dungeonContinuation(service, result)).toBeNull();
@@ -37,16 +39,16 @@ test('실제 정산·저장·재로딩 뒤 다음 해금 던전은 이어지고 
   const ticket = service.begin('dungeon', 'glass_garden').ticket;
   expect(service.settle(ticket, { win: true }).ok).toBe(true);
   const saved = JSON.stringify(economy.s);
-  expect(dungeonContinuation(service, result)?.id).toBe('ember_vault');
+  expect(dungeonContinuation(service, result)?.id).toBe('bellfall_crypt');
   expect(dungeonContinuation(service, result)?.claimQuestIds).toEqual(['garden_scout']);
   expect(JSON.stringify(economy.s)).toBe(saved);
   const restored = make().service;
   expect(dungeonJourney(restored).cleared).toBe(1);
-  expect(dungeonContinuation(restored, result)?.id).toBe('ember_vault');
-  expect(restored.dungeonAccess('ember_vault').ok).toBe(false);
+  expect(dungeonContinuation(restored, result)?.id).toBe('bellfall_crypt');
+  expect(restored.dungeonAccess('bellfall_crypt').ok).toBe(false);
   expect(restored.claimQuest('garden_scout').ok).toBe(true);
   expect(restored.claimQuest('garden_scout').ok).toBe(false);
-  expect(restored.dungeonAccess('ember_vault').ok).toBe(true);
+  expect(restored.dungeonAccess('bellfall_crypt').ok).toBe(true);
   expect(dungeonContinuation(restored, result)?.claimQuestIds).toEqual([]);
   expect(restored.settle(ticket, { win: true }).ok).toBe(false);
   expect(restored.begin('dungeon', 'star_archive').ok).toBe(false);

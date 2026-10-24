@@ -8,6 +8,7 @@ import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
 import { CITADEL_POTIONS } from '../data/citadel-shop.js';
+import { dungeonVisibility, regionDungeonState } from './region-dungeon-gate.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -72,11 +73,19 @@ export class ExpeditionEconomy {
   dungeonAccess(id, { depth = 'standard' } = {}) {
     if (!validDepth(depth)) return { ok: false, error: '알 수 없는 원정 단계입니다.' };
     const d = depth === 'deep' ? expeditionDepth(id) : find(DUNGEONS, id);
-    const error = !d ? '알 수 없는 던전입니다.' : this.s.level < d.minLevel ? `탐험 레벨 ${d.minLevel} 필요`
+    // 지역 마을이 아직 열리지 않은 던전(기록 없는)은 보이지도 열리지도 않는다(region-dungeon-gate.js).
+    // 기본 원정은 지역 사유를 먼저 보인다. 심층의 캠페인 조건(X-10)은 항상 지역 해금보다 뒤라 기존 문구를 유지한다.
+    const region = d ? dungeonVisibility(this.eco.s, id) : null;
+    const error = !d ? '알 수 없는 던전입니다.' : depth !== 'deep' && !region.open ? region.reason : this.s.level < d.minLevel ? `탐험 레벨 ${d.minLevel} 필요`
       : depth === 'deep' && !(Number(this.eco.s.progress?.stars?.[d.unlockCode]) >= 1) ? `캠페인 ${d.unlockCode} 클리어 필요`
+      : !region.open ? region.reason
       : depth === 'deep' && !this.s.stats[id] ? '기본 원정을 먼저 클리어해 주세요.' : null;
     return { ok: !error, error };
   }
+  /** 이 저장에서 던전이 보이는가/열렸는가(지역 마을 기준). 레벨 조건은 dungeonAccess 가 함께 본다. */
+  dungeonVisibility(id) { return dungeonVisibility(this.eco.s, id); }
+  /** 지역 던전 상태 전체(보이는 순서·예고 줄·현재 마을 관문). */
+  regionDungeons() { return regionDungeonState(this.eco.s); }
   conquestAccess(conquestId) {
     const c = expeditionConquest(conquestId);
     if (!c) return { ok: false, error: '알 수 없는 전술 공략입니다.' };
