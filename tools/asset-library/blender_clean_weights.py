@@ -19,6 +19,8 @@
 #   --pauldron 0.5: 어깨(LeftShoulder·RightShoulder)+팔 가중치 합이 0.5 이상인 장식 정점은 땋은 머리·망토 규칙을 받지 않는다. 2026-10-24
 #   궁수 U 불사조: 왼어깨 불꽃 깃털 견갑(어깨 .49·팔 .47)이 망토 규칙으로 어깨·팔을 잃고 Spine2 에 굳어 구르기에서 0.39m 바닥을 팠다.
 #   기본(없음)은 이전과 같은 출력.
+#   --head-min 0.2: 머리 영역 규칙을 받는 Head 가중치 하한. 2026-10-24 야만전사 늑대인간: 어깨를 덮은 늑대 가죽(Head .1~.5·어깨 .5)이
+#   머리 영역 규칙으로 어깨·팔을 잃고 Head 에 붙어, 이웃 가죽(어깨·팔 그대로)과 공격에서 0.36m 찢어졌다. 기본 0.2 는 이전과 같은 출력.
 #   --merge-bone a,b: 이름의 (자식 없는) 관절을 지우고 그 가중치를 메시 이웃 평균으로 넘긴다(merge_bones). 기본은 아무것도 지우지 않는다.
 import bpy, colorsys, json, sys
 import numpy as np
@@ -184,6 +186,9 @@ def main():
     if 'braid-hue' in a:
         decor.update(braidHue=a['braid-hue'], braidSat=float(a.get('braid-sat', 0.25)), braidVal=float(a.get('braid-val', 0.12)))
         braidMask = vertex_decor(mesh, hue_ranges(decor['braidHue']), decor['braidSat'], decor['braidVal'])
+    # --head-min X: 머리 영역 규칙(팔·어깨를 빼고 목 아래는 Spine2 로)을 받을 Head 가중치 하한(기본 0.2 = 이전과 같은 출력).
+    head_min = float(a.get('head-min', 0.2))
+    if 'head-min' in a: decor['headMin'] = head_min
     mw = mesh.matrix_world
     for v in mesh.data.vertices:
         w = {names[g.group]: g.weight for g in v.groups if g.weight > 0}
@@ -202,7 +207,7 @@ def main():
         if pauldron is not None and green[v.index] and not (braidMask is not green and braidMask[v.index]) and arm_w + sum(x for n, x in w.items() if is_shoulder(n)) >= pauldron: on_arm = True
         if green[v.index] and on_arm: stats['decorOnArm'] += 1
         braid = braidMask[v.index] and not on_arm and front_side > 0 and zc - 1.6 * (zn - zc) < p.dot(up) < zn and head_w < 0.2
-        if head_w >= 0.2 or braid:
+        if head_w >= head_min or braid:
             new = {n: x for n, x in w.items() if not is_arm(n) and not is_shoulder(n)}
             stats['headRegion'] += 1
             z = p.dot(up)
