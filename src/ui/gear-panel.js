@@ -13,6 +13,8 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
+import { runeAwarePreview, hasSockets } from './rune-view.js';
+import { runePaneHtml, bindRunePane, openRuneOverview } from './rune-socket.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -158,9 +160,10 @@ export function renderPane(meta, id) {
   syncTabs($('hero-detail'), pane);
   panel.dataset.pane = pane;
   if (pane === 'gear') {
-    panel.innerHTML = '<div id="hero-bag"></div><div class="hs-craft-link"><span>원정 재료로 새 장비를 만들려면</span><button type="button" class="btn btn-ghost btn-sm" id="h-forge">제작 공방</button></div>';
+    panel.innerHTML = '<div id="hero-bag"></div><div class="hs-craft-link"><span>원정 재료로 새 장비를 만들려면</span><button type="button" class="btn btn-ghost btn-sm" id="h-forge">제작 공방</button><button type="button" class="btn btn-ghost btn-sm" id="h-runes">룬 각인판</button></div>';
     renderBag(meta, id);
     $('h-forge').onclick = () => { meta.app.expeditionUI?.open('forge'); };
+    $('h-runes').onclick = () => openRuneOverview(meta, id);
     return;
   }
   if (pane === 'growth') {
@@ -275,9 +278,12 @@ function enhanceHtml(meta, inst) {
 }
 
 /** 가방 장비를 눌렀을 때 열리는 시트. 현재 장비와 나란히 비교하고 주 버튼 하나로 장착한다. */
-export function showItemSheet(meta, uid, heroId, { focus } = {}) {
+export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) {
   const { eco, ui } = meta;
   let rerenderTimer = 0;
+  // 오른쪽 패널 탭(강화 | 룬 소켓)과 고른 소켓은 시트를 다시 그려도 유지한다.
+  let side = focus === 'rune' ? 'rune' : 'enhance';
+  const runeState = { socket };
   // 선택형 3D 미리보기: 시트 하나에 렌더러 하나. 시트가 닫히거나 다른 모달로 바뀌면 해제하고, 강화 뒤 다시 그릴 때는 열림 상태를 이어 간다.
   let preview = null, previewOpen = false, previewSeq = 0;
   const disposePreview = () => { previewSeq++; preview?.dispose(); preview = null; };
@@ -289,7 +295,8 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
       return;
     }
     const it = ITEM_BY_ID[inst.id], h = eco.hero(heroId), equipped = h.equip[it.slot] === uid;
-    const p = eco.previewItem(heroId, uid); if (!p) return;
+    const p = runeAwarePreview(eco, heroId, uid); if (!p) return;   // 룬 효과까지 반영한 비교·전투력
+    const runes = hasSockets(inst); if (!runes) side = 'enhance';
     const set = it.set ? SETS[it.set] : null;
     const statRows = HERO_ROWS.filter(([key]) => ['atk', 'hp', 'def'].includes(key) || Math.abs((p.after[key] || 0) - (p.before[key] || 0)) > 1e-9).map(([key, name]) => {
       const before = p.before[key] || 0, after = p.after[key] || 0, delta = after - before, same = Math.abs(delta) < 1e-9;
@@ -311,7 +318,8 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
       (owner ? '<p class="is-note stat-down">' + esc(HEROES[owner].name) + '에게 장착 중입니다. 장착하면 그 영웅에게서 옮겨옵니다.</p>' : '') +
       (look ? '<div class="item-look" style="--wl:' + look.color + '">착용 모습 · ' + esc([visual.formLabel, look.glow > 0 ? look.element + ' 발광' : '발광 없음', look.tier ? '+' + look.enh + ' ' + look.tier : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
       (it.summon ? '<p class="is-note" style="color:' + RARITY_COLOR[it.rarity] + '">✦ ' + esc(it.summon.name) + ' 소환 · ' + it.summon.interval + '초마다 ' + Math.round(it.summon.ratio * 100) + '% 공격</p>' : '') +
-      setChangesHtml(p) + '</div>' + enhanceHtml(meta, inst) + '</div>' +
+      setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
+        (side === 'rune' ? '<div class="is-side-body">' + runePaneHtml(meta, uid, heroId, runeState.socket) + '</div>' : enhanceHtml(meta, inst)) + '</div>' : enhanceHtml(meta, inst)) + '</div>' +
       '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button><button type="button" class="btn btn-gold" id="i-eq">' + primary + '</button></footer></div>',
     { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); },
       onOpen: (b) => {
@@ -341,6 +349,8 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
       const later = (ms) => { clearTimeout(rerenderTimer); rerenderTimer = setTimeout(() => { rerenderTimer = 0; if (ui.modalSeq === seq && ui.el.modal.classList.contains('show')) render(); }, ms); };
       const close = () => { ui.closeModal(); if (meta._sheetDirty) { meta._sheetDirty = false; meta.renderHeroes(); } meta.focusInventory(uid, it.slot); };
       b.querySelector('#i-close').onclick = close;
+      b.querySelectorAll('[data-side-tab]').forEach((el) => el.onclick = () => { if (side === el.dataset.sideTab) return; side = el.dataset.sideTab; audio.play('ui_click', { vol: 0.4 }); render(); });
+      bindRunePane(b, { meta, uid, heroId, state: runeState, back: () => showItemSheet(meta, uid, heroId, { focus: 'rune', socket: runeState.socket }) });
       b.querySelector('#i-eq').onclick = () => {
         if (equipped) eco.unequip(heroId, it.slot); else eco.equip(heroId, uid);
         audio.play('ui_confirm', { vol: 0.5 }); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
@@ -387,7 +397,7 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       };
-      ((focus === 'enhance' && b.querySelector('#e-go')) || b.querySelector('#i-eq'))?.focus({ preventScroll: true });
+      ((focus === 'enhance' && b.querySelector('#e-go')) || (side === 'rune' && b.querySelector('[data-side-tab="rune"]')) || b.querySelector('#i-eq'))?.focus({ preventScroll: true });
     } });
   };
   render();
