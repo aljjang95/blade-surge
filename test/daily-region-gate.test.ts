@@ -43,7 +43,7 @@ describe('오늘의 원정지(일일 임무 rotation)', () => {
     const save = freshSave(), open = visibleDungeonIds(save), seen = new Set<string>();
     for (const now of days(60)) {
       const rows = contractRows(normalizeJourney(null), now, { openIds: open });
-      const row = rows.daily.find((r: any) => r.id === 'rotation')!;
+      const row: any = rows.daily.find((r: any) => r.id === 'rotation')!;
       expect(rows.rotationDungeonId).toBe(row.dungeonId);
       expect(open.has(rows.rotationDungeonId)).toBe(true);
       expect(REGION1).toContain(rows.rotationDungeonId);
@@ -107,7 +107,7 @@ describe('오늘의 원정지(일일 임무 rotation)', () => {
 });
 
 describe('주간 시즌 원정(프론티어)', () => {
-  const weeks = Array.from({ length: 52 }, (_, i) => Date.UTC(2026, 0, 1 + i * 7, 12));
+  const weeks = Array.from({ length: 52 }, (_, i) => new Date(Date.UTC(2026, 0, 1 + i * 7, 12)));
 
   test('신규 저장: 한 해 모든 주가 열린 던전만 가리키고 출격 표식이 유효하다', () => {
     const open = visibleDungeonIds(freshSave());
@@ -123,7 +123,7 @@ describe('주간 시즌 원정(프론티어)', () => {
   });
 
   test('같은 시즌에 열린 던전이 없으면 지역 1 기본 던전으로 대신한다', () => {
-    const date = Date.UTC(2026, 3, 10, 12), open = new Set(REGION1); // 밀물의 각성: 사막 환영 분지·재의 밀물 수문(모두 지역 2 이상)
+    const date = new Date(Date.UTC(2026, 3, 10, 12)), open = new Set(REGION1); // 밀물의 각성: 사막 환영 분지·재의 밀물 수문(모두 지역 2 이상)
     const f = weeklyFrontier(date, open);
     expect(f.routeId).toBe(FRONTIER_FALLBACK_ROUTE);
     expect(open.has(f.routeId)).toBe(true);
@@ -138,7 +138,7 @@ describe('주간 시즌 원정(프론티어)', () => {
   });
 
   test('경제: 잠긴 지정 던전은 프론티어 효과를 못 받고 대신 가리킨 던전이 받는다(출격 표식 일치)', () => {
-    const date = Date.UTC(2026, 3, 10, 12); setSystemTime(date);
+    const date = new Date(Date.UTC(2026, 3, 10, 12)); setSystemTime(date);
     const app = make(); app.expedition.s.level = 10;
     const f = weeklyFrontier(date, visibleDungeonIds(app.eco.s));
     expect(app.expedition.begin('dungeon', f.routeId, { depth: 'standard', expectedFrontier: frontierSnapshot(f) })).toMatchObject({ ok: true });

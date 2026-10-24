@@ -67,7 +67,8 @@ export const FRONTIER_FALLBACK_ROUTE = 'glass_garden';
  * 이번 주 프론티어. 효과는 날짜로만 정해지고, 시즌 목록의 지정 던전이 이 저장에서 아직 열리지 않았으면
  * (openIds, 지역 마을 미해금) 같은 시즌의 열린 던전 → 지역 1 기본 던전 순으로 대신 가리킨다.
  * openIds 가 null 이면 모든 던전이 열린 것으로 보아 예전과 똑같다(진행이 끝난 저장).
- * @param {Date|number|string} [date] @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
+ * @param {Date|number|string} [date]
+ * @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
  */
 export function weeklyFrontier(date = new Date(), openIds = null) {
   const d = asDate(date), year = d.getUTCFullYear(), season = seasonForDate(d);
@@ -81,6 +82,11 @@ export function weeklyFrontier(date = new Date(), openIds = null) {
 }
 
 /** 현재 주간 프론티어 route에서만 활성화한다. 다른 던전은 효과를 빌려 쓰지 않는다. */
+/**
+ * @param {string} routeId
+ * @param {Date|number|string} [date]
+ * @param {Set<string>|null} [openIds]
+ */
 export function frontierForRoute(routeId, date = new Date(), openIds = null) {
   const frontier = weeklyFrontier(date, openIds);
   return frontier.routeId === routeId ? frontier : null;

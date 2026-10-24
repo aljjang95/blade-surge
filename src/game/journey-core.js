@@ -25,7 +25,8 @@ export const ROTATION_FALLBACK_DUNGEON='glass_garden';
  * 오늘의 원정지(= 균열 도전 던전). 기본은 DUNGEONS[day%3]이고, 그 던전이 이 저장에서 아직 열리지 않았으면
  * (지역 마을 미해금, docs/region-dungeon-unlock.md) 열린 던전 목록에서 day 로 결정적으로 고른다.
  * openIds 가 null 이면 모든 던전이 열린 것으로 보아 예전과 똑같이 고른다(진행이 끝난 저장).
- * @param {number} day @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
+ * @param {number} day
+ * @param {Set<string>|null} [openIds] 이 저장에서 열린 던전 id
  */
 export function rotationDungeon(day,openIds=null) {
   const base=DUNGEONS[((day%3)+3)%3];

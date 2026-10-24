@@ -77,7 +77,7 @@ export class JourneyView {
     return this.app.startExpedition('dungeon',id,{rift:true});
   }
   /** 이번 주 프론티어. 지정 던전이 이 저장에서 잠겼으면 열린 던전으로 대신한다(표시와 출격이 같은 판정). */
-  frontier() { return weeklyFrontier(new Date(), visibleDungeonIds(this.app.eco.s)); }
+  frontier() { const save=this.app.eco?.s;return weeklyFrontier(new Date(),save?visibleDungeonIds(save):null); }
   async launchFrontier(id, shown = frontierSnapshot(this.frontier())) {
     if(this.blockNotice())return false;
     const current=frontierSnapshot(this.frontier());
@@ -177,7 +177,7 @@ export class JourneyView {
     this.banner('빠른 보급','실전에서 한 번 완료한 던전만 소탕할 수 있습니다. 고정 골드·재료·원정 EXP·물약을 받으며 영웅 EXP·장비·실전 의뢰 진척은 지급하지 않습니다.','glass_garden');
     const auto=node('label','journey-auto'),check=node('input');check.type='checkbox';check.checked=snap.autoBattle;check.dataset.control='auto-battle';check.disabled=this.blocked;check.addEventListener('change',()=>this.act(()=>this.app.journey.setAuto(check.checked),'다음 출격의 자동 전투 설정을 저장했습니다.'));auto.append(check,node('span','','출격할 때 자동 전투 켜기'));this.content.append(auto);
     this.content.append(node('p','journey-rewards',`에너지 ${fmt(this.app.eco.s.energy)} · 소탕권 ${fmt(this.app.eco.s.sweep)}`));
-    const list=node('div','journey-grid');for(const d of DUNGEONS.filter(d=>this.app.expedition.dungeonVisibility(d.id).visible)){const card=node('article','journey-card');card.append(illustration('nav-dungeon'),node('h3','',d.name));const choices=node('div','journey-actions');
+    const list=node('div','journey-grid');for(const d of DUNGEONS.filter(d=>this.app.expedition.dungeonVisibility?.(d.id).visible!==false)){const card=node('article','journey-card');card.append(illustration('nav-dungeon'),node('h3','',d.name));const choices=node('div','journey-actions');
       for(const count of [1,3]){const b=button(`${count}회`,()=>{this.counts[d.id]=count;this.render();},`count-${d.id}-${count}`,'journey-secondary');b.setAttribute('aria-pressed',String((this.counts[d.id]||1)===count));choices.append(b);}card.append(choices);
       const preview=this.app.expedition.sweepPreview(d.id,this.counts[d.id]||1);
       if(preview.ok)card.append(node('p','',`사용: 에너지 ${preview.energy} · 소탕권 ${preview.tickets}`),rewardIcons(preview.rewards),node('p','journey-muted','원정 레벨업 보너스 별도'));else card.append(node('p','journey-muted',preview.error));
