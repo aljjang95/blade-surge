@@ -26,3 +26,17 @@ PR #231 머지(main `419c99b`). 설계·규칙 정본은 [BM_DESIGN.md](BM_DESIG
 - 홈 프로모 버튼(스타터·월정액)이 결제 연결 뒤에도 돌아오지 않는 기존 구조 수정.
 - 스타터 팩 72시간 노출 창, 외형 상품, VIP.
 - 결제율 보고: `node tools/funnel-report.mjs --days 30`의 SQL을 운영 D1에서 실행(목표 1%).
+
+## 수익화 2단계 인계 (2026-10-25, gogo-chunk:monetize-2)
+- **끝남(main 머지)**
+  - #284 `83824cf` 기존 이용자 보호: 소셜 프로필 생성 시각(서버 기록) < `HERO_STARTER_POLICY_SINCE`(2026-10-24 16:26:22 KST)면 정책 1. 증거가 없는데 정책 1을 주장하면 정책 2 + 소환권 10을 한 번 준다. `bun run check` 통과(5,348). 교차 리뷰는 GitHub Codex 한도, PC OpenCodex 응답 없음으로 Sonnet 독립 리뷰가 대신 함. P1 1건(정책 1 계정 스냅샷의 재화 절삭) 수정.
+  - #285 `596ca16` 실행 직전 준비: `docs/V1_ROLLOUT.md`, `tools/v1-rollout.mjs`(dry-run 전용), `docs/PLAY_INTERNAL_TEST.md`, 죽은 영웅 listing 제거. 롤백은 `legacy_saves.status='shadow'`로 되돌림(그림자 동기화 유지).
+  - 영웅 직접 판매(hero_*)는 `gacha-only`로 신규 판매가 닫혀 있다. 기존 영수증 복구 경로는 유지.
+- **확인한 값**: Play 내부 트랙 최신 versionCode = **2**. 커밋하지 않은 편집으로 조회한 뒤 삭제함. 상품 등록 dry-run 8요청(remove_ads ₩4,900 · starter ₩1,200 · monthly ₩5,900/월 · season_pass ₩9,900), 오류 없음.
+- **막힘: AAB 빌드**: 클라우드에서 `bun run build:aab:cloud -- --version-code 3`이 Gradle 의존성 단계에서 실패함. Maven Central 429와 저장소별 간헐 404가 원인이며 재시도 5회, 프록시 설정, refresh 모두 실패. → 시간을 두고 클라우드에서 재시도하거나 PC 빌드 후 `apex play <aab> BLADESURGE_PLAY internal`(versionCode 3 이상).
+- **대표님 한 줄 확인 뒤 집행할 것** (V1_ROLLOUT 7장)
+  1. 운영 D1 0003·0004 적용
+  2. 첫 배포(#284 포함, `V1_ENABLED=true`, 퍼센트 0)
+  3. 5→25→100%. G2(서버 결과를 먼저 받는 소환)가 끝나기 전에는 p0까지만.
+  4. `play-iap-register --apply`(가격 공개)
+  5. 라이선스 테스터 결제 E2E(PC·실기기)
