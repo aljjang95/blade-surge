@@ -26,7 +26,7 @@ const heroes = ['knight', 'barbarian', 'mage', 'rogue'];
 const tiers = [{ k: 'bare' }, { k: 'E', r: 'E', enh: 0 }, { k: 'L15', r: 'L', enh: 15 }];
 for (const h of heroes) for (const t of tiers) {
   const info = await page.evaluate(async ({ h, t }) => {
-    const e = window.app.eco; if (!e.ownHero(h)) (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
+    const e = window.app.eco; (e.s.roster.policy = 1, e.s.roster.starterChosen = true);
     e.s.selected = h; const hero = e.hero(h);
     for (const sl of ['weapon', 'armor', 'ring', 'boots']) hero.equip[sl] = null;
     if (t.r) for (const sl of ['weapon', 'armor']) { const inst = e.addItem(t.r, sl); inst.enh = t.enh; hero.equip[sl] = inst.uid; }

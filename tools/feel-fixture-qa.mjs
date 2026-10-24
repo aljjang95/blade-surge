@@ -142,7 +142,7 @@ async function runHero(browser, origin, hero, out, strips) {
   await page.locator('#boot-start:not(.hidden)').waitFor();
   await page.evaluate(hero => {
     const eco = window.app.eco; eco.reset();
-    if (!eco.ownHero(hero)) (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true);
+    (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true);
     eco.s.daily.last = Math.floor(Date.now() / 86400000); eco.s.tutorial = { completed: true };
     eco.s.selected = hero; eco.hero(hero).level = 10; eco.hero(hero).exp = 0; eco.save(); window.app.journey.setAuto(false);
   }, hero);

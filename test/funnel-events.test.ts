@@ -15,7 +15,7 @@ function memStorage(initial: Record<string, string> = {}) {
 const fixedClock = (start = 1_800_000_000_000) => { let t = start; return { now: () => t, advance: (ms: number) => { t += ms; } }; };
 
 test('exposes exactly the funnel events; purchase success only as purchase_verified (server-verified) and no pass/ad success events', () => {
-  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'paysheet_open', 'purchase_verified', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
+  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'hero_unlock_free', 'paysheet_open', 'purchase_verified', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
   for (const name of ['purchase_success', 'purchase_complete', 'pass_purchase', 'ad_reward', 'ad_complete', 'grant']) {
     expect(validateFunnelEvent(name, {})).toEqual({ ok: false, reason: 'unknown_event' });
   }
@@ -229,4 +229,14 @@ test('automatic hunt level-ups are a separate event from player-chosen upgrades'
   const battleSource = readFileSync(new URL('../src/game/rpg-battle.js', import.meta.url), 'utf8');
   expect(battleSource).not.toMatch(/track\('upgrade'/);
   expect(battleSource).toMatch(/track\('hero_level_up', \{ source: 'combat'/);
+});
+
+test('hero purchase screen skus (derived from iap-catalog) and hero_unlock_free are accepted', async () => {
+  const { HERO_ORDER } = await import('../src/data/heroes.js');
+  const { heroProductId, HERO_ALL_PRODUCT_ID } = await import('../src/shared/iap-catalog.js');
+  for (const id of [...HERO_ORDER.map(heroProductId), HERO_ALL_PRODUCT_ID]) expect(validateFunnelEvent('paysheet_open', { sku: id }).ok).toBe(true);
+  expect(validateFunnelEvent('paysheet_open', { sku: 'hero_nobody_v1' })).toEqual({ ok: false, reason: 'invalid_value:sku' });
+  expect(validateFunnelEvent('hero_unlock_free', { hero: HERO_ORDER[0], step: 1 }).ok).toBe(true);
+  expect(validateFunnelEvent('hero_unlock_free', { hero: 'nobody', step: 1 }).ok).toBe(false);
+  expect(validateFunnelEvent('hero_unlock_free', { hero: HERO_ORDER[0] }).ok).toBe(false);
 });

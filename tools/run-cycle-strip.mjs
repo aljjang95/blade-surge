@@ -22,7 +22,7 @@ try {
     const page = await ctx.newPage(); page.setDefaultTimeout(900000);
     await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
     await page.goto(origin); await page.locator('#boot-start:not(.hidden)').waitFor();
-    await page.evaluate(h => { const eco = window.app.eco; eco.reset(); if (!eco.ownHero(h)) (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true); eco.s.tutorial = { completed: true }; eco.s.daily.last = Math.floor(Date.now() / 86400000); eco.s.selected = h; eco.save(); window.app.journey.setAuto(false); }, hero);
+    await page.evaluate(h => { const eco = window.app.eco; eco.reset(); (eco.s.roster.policy = 1, eco.s.roster.starterChosen = true); eco.s.tutorial = { completed: true }; eco.s.daily.last = Math.floor(Date.now() / 86400000); eco.s.selected = h; eco.save(); window.app.journey.setAuto(false); }, hero);
     await page.locator('#boot-start').click();
     await page.waitForFunction(() => window.app.mode === 'lobby' && !document.getElementById('boot').classList.contains('show'));
     await page.evaluate(async () => { const app = window.app; app.ui.closeModal(); app.testPause = true; let s = 7; Math.random = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; if (await app.startStage(app.eco.nextStage()) !== true) throw Error('출격 실패'); app.battle.player.auto = false; app.companionAgent?.endBattle?.(); app.renderer.setCameraPreset('action'); const b = app.battle; for (const e of b.enemies) e.dispose(); b.enemies.length = 0; b.pending.length = 0; const r = b.world.startRoom; b.player.pos.set(r.x - 4, 0, r.z); for (let i = 0; i < 60; i++) app.step(1 / 60, false); });
