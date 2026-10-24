@@ -325,7 +325,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .gz-tab { min-height: 38px; padding: 3px 8px; }
   .gz-tn { font-size: 13px; }
   .gz-plate h2 { font-size: 18px; }
-  .gz-panel { padding: 6px; gap: 4px; }
+  /* 짧은 가로(640x320 등): 확정권·픽업 확정 배지가 더해져도 천장 바가 잘리지 않게 패널을 행 높이에 맞추고 안에서 스크롤 */
+  .gz-panel { padding: 6px; gap: 4px; align-self: stretch; min-height: 0; max-height: 100%; overflow-y: auto; justify-content: flex-end; }
   .gz-pity-t b { font-size: 18px; }
   .gz-pity-s { font-size: 10px; }
   .gacha-btns .btn { padding: 5px 4px; font-size: 14px; }
