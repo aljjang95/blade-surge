@@ -7,7 +7,7 @@ import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
 import { dropUnownedJob } from './expedition-economy.js';
-import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty } from './difficulty.js';
@@ -306,7 +306,7 @@ export class Economy {
     return { ok: true, id };
   }
   /**
-   * 무료 해금 견적(UI·서버 공통). reason: owned | starter-pending | policy | unknown | max | progress | gems | null(해금 가능).
+   * 무료 해금 견적(UI·서버 공통). reason: owned | starter-pending | policy | unknown | gacha(소환으로만 획득) | max | progress | gems | null(해금 가능).
    * step 은 지금까지 무료로 연 영웅 수(시작 영웅 제외)이며, 조건·비용은 HERO_FREE_UNLOCK[step] 이다. 결제로 연 영웅은 step 을 올리지 않는다.
    */
   heroUnlockQuote(id) {
@@ -316,6 +316,8 @@ export class Economy {
     if (this.ownHero(id)) return { ...base, owned: true, reason: 'owned' };
     if (!r || r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
     if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
+    // 영웅은 소환으로 얻는다(BM 12장). 보석 해금 사다리(HERO_FREE_UNLOCK)는 초보자 배너·진행 소환권으로 대체해 닫았다.
+    if (HERO_UNLOCK_VIA_GACHA) return { ...base, reason: 'gacha' };
     const step = Math.max(0, r.owned.length - 1), tier = HERO_FREE_UNLOCK[step];
     if (!tier) return { ...base, step, reason: 'max' };
     const out = { ...base, step, need: tier.need, needLabel: stageLabelFromUnlocked(tier.need, STAGES_PER_CHAPTER), gems: tier.gems };
