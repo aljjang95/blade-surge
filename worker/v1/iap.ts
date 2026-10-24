@@ -358,8 +358,6 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
     const doc = await loadAccountDoc(c.db, accountId);
     const eco = loadEconomy(doc.state, { now: c.now });
     if (Object.keys(rewards).length) eco.addRewards(rewards, { silent: true, applyVip: false });
-    // 결제 지급 보석은 유료 몫(BM 12.4). 클라이언트 applyIapState와 같은 회계.
-    if (rewards.gems > 0) eco.s.paidGems = Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)) + rewards.gems;
     // 영웅 권한을 주는 지급이면 같은 커밋에서 문서의 roster.paid도 서버 권한에 맞춘다(문서가 정본과 어긋나지 않게).
     if (o.entitlements.some((e) => heroIdFromEntitlement(e.key))) {
       const heroes = new Set((await entitlementsOf(c.db, accountId, c.now)).heroes);
@@ -370,6 +368,9 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
     const net: Record<string, number> = {};
     for (const [key, value] of Object.entries(rewards)) if (value - (debt.repaid[key] ?? 0) > 0) net[key] = value - (debt.repaid[key] ?? 0);
+    // 결제 지급 보석은 유료 몫(BM 12.4). 클라이언트는 순 지급량(net)으로 applyIapState 하므로 서버도 net 기준(부채 상계분 제외), 총액 이하.
+    if ((net.gems ?? 0) > 0) eco.s.paidGems = Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)) + net.gems;
+    eco.s.paidGems = Math.min(Math.max(0, Math.floor(Number(eco.s.paidGems) || 0)), Math.max(0, Math.floor(Number(eco.s.gems) || 0)));
     const next = docOf(eco);
     const p = o.purchase;
     const writes: GuardedWrite[] = [

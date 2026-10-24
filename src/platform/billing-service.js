@@ -2,7 +2,7 @@
 // - 가격 표시는 Play가 돌려준 값(formattedPrice)만 쓴다. 카탈로그 priceKRW는 폴백으로 보이지 않는다.
 // - 구매 토큰은 어댑터 → 서버 verify로만 흐른다. 저장·로그·퍼널에 남기지 않는다.
 import { loadPlayCatalogAdapter } from './iap-billing.js';
-import { soldOn } from '../shared/iap-catalog.js';
+import { soldOn, IAP_BY_ID, VERIFY_ONLY_GATES } from '../shared/iap-catalog.js';
 import { funnelSkuFor } from '../game/funnel-events.js';
 import { askCustomerInfo } from '../ui/customer-info.js';
 import { createHeroPurchase } from './hero-purchase.js';
@@ -59,7 +59,10 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
   const writeCheck = (productId, at) => { try { storage?.setItem(SUB_CHECK_KEY, JSON.stringify({ ...readChecks(), [productId]: at })); } catch { /* 저장 불가면 다음 sync에서 다시 확인 */ } };
   /** 이 보유 항목을 서버에 verify할지. */
   const shouldVerify = (o) => {
-    if (!catalog.some((p) => p.id === o.productId)) return false;
+    // 판매를 내린 상품(gate gacha-only)의 미승인 기존 구매도 복구 검증한다(서버 /iap/verify는 verifiableProduct로 받는다).
+    const legacy = Object.hasOwn(IAP_BY_ID, o.productId) && VERIFY_ONLY_GATES.includes(IAP_BY_ID[o.productId].gate);
+    if (!catalog.some((p) => p.id === o.productId) && !legacy) return false;
+    if (legacy && o.acknowledged === true) return false;
     if (o.acknowledged !== true) return true;
     if (o.type !== 'subs') return false;
     const last = Number(readChecks()[o.productId]);
