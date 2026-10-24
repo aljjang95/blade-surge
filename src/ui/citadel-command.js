@@ -173,7 +173,12 @@ export class CitadelCommand {
   }
 
   ensureCards(cards) {
-    if (this.cardViews.size) return;
+    // 새 지역 마을이 열리거나 마을을 바꾸면 보이는 던전이 달라진다. 목록이 같으면 기존 버튼(초점)을 그대로 둔다.
+    const key = cards.map((card) => card.id).join('|');
+    if (this.cardViews.size && this.cardKey === key) return;
+    this.cardKey = key;
+    const focused = this.cards.contains(document.activeElement) ? document.activeElement.dataset.dungeonId : null;
+    this.cards.replaceChildren(); this.cardViews.clear(); this.shownCardId = null;
     for (const card of cards) {
       const button = element('button', 'dl-pick');
       button.type = 'button';
@@ -189,6 +194,7 @@ export class CitadelCommand {
       this.cards.append(button);
       this.cardViews.set(card.id, { button, art, name, text });
     }
+    if (focused) this.cardViews.get(focused)?.button.focus({ preventScroll: true });
   }
 
   updateCards(model) {

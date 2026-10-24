@@ -24,7 +24,18 @@ JOBS = {
     'loot_rare': ('rare item drop on the ground, short bright magical chime with soft thud', 0.8),
     'loot_epic': ('epic item drop, sparkling ascending crystal chimes with a soft magical thud', 1.2),
     'loot_legend': ('legendary item drop, radiant golden beam slamming down with deep impact and shimmering bell tail', 2.2),
+    # 전운(축복) 굴리기·룬 합성 (R6, docs/RUNE_AND_BLESSING_DESIGN.md 3.5장). 엔진 연결은 R5.
+    'blessing_lever': ('slot machine lever pull with a heavy mechanical ratchet clack as the reels start spinning', 0.6),
+    'blessing_tick': ('single short mechanical reel tick, one symbol clicking past on a slot machine reel', 0.25),
+    'blessing_stop': ('slot machine reel stopping with a heavy mechanical thunk, solid metal lock-in', 0.5),
+    'blessing_gold': ('golden tier reveal, radiant golden bell chimes and a bright shimmering glow burst', 1.6),
+    'blessing_pick': ('bright short magical confirm chime, card selection locked in with a sparkle', 0.6),
+    'rune_insert': ('rune stone clicking into an equipment socket, stone and metal click with a short glowing hum', 0.7),
+    'rune_merge': ('three runes fusing together, converging magical energy then a crystal forming thud with a sparkling shimmer tail', 1.8),
 }
+# 요청 길이는 최소 1.0초라, 짧은 소리는 요청 길이를 따로 두고 후처리에서 앞부분만 쓴다.
+REQ_DUR = {'blessing_tick': 1.0}
+MAX_OUT = {'blessing_tick': 0.3, 'rune_merge': 2.4}
 PROXY = os.environ.get('APEX_CLOUD_URL', '').rstrip('/') + '/p/runware/v1'
 
 def curl(args, data=None):
@@ -63,7 +74,7 @@ def candidates(ids, count=3, dur_override=None):
     정점이 충분한(> -12dB) 후보 중 크레스트(타격감)가 가장 큰 것을 고른다. 이전 원본은 rejected/ 로 옮긴다(삭제하지 않는다)."""
     cand_dir = os.path.join(RAW, 'cands'); os.makedirs(cand_dir, exist_ok=True); os.makedirs(os.path.join(RAW, 'rejected'), exist_ok=True)
     for jid in ids:
-        prompt, dur = JOBS[jid]; dur = max(1.0, dur_override or dur + 1.5)
+        prompt, dur = JOBS[jid]; dur = max(1.0, dur_override or REQ_DUR.get(jid) or dur + 1.5)
         rows = []
         for k in range(count):
             task = str(uuid.uuid4())
@@ -93,6 +104,8 @@ def read(path, sr=44100):
 def process():
     os.makedirs(DST, exist_ok=True)
     items = []
+    prev = os.path.join(DST, 'manifest.json')
+    old = {a['id']: a for a in json.load(open(prev, encoding='utf8'))['assets']} if os.path.exists(prev) else {}
     for jid in JOBS:
         src = os.path.join(RAW, jid + '.wav')
         if not os.path.exists(src): continue
@@ -103,6 +116,7 @@ def process():
         env = np.abs(x[start:]); loud = np.where(env > peak0 * 0.0056)[0]
         end = (loud[-1] + int(0.05 * sr)) if len(loud) else len(env)
         y = x[start:start + max(end, int(0.12 * sr))]
+        if jid in MAX_OUT: y = y[:int(MAX_OUT[jid] * sr)]
         fade = min(len(y) // 4, int(max(0.03, 0.12 * len(y) / sr) * sr))
         if fade > 0: y[-fade:] *= np.linspace(1, 0, fade) ** 1.5
         y[:int(0.0015 * sr)] *= np.linspace(0, 1, int(0.0015 * sr))
@@ -114,6 +128,9 @@ def process():
                       'durationSec': round(len(d) / sr, 4), 'decodedPeak': round(float(np.max(np.abs(d))), 4), 'decodedRms': round(float(np.sqrt(np.mean(d ** 2))), 4),
                       'onsetMs': round(int(np.argmax(np.abs(d) > 0.02)) / sr * 1000, 2), 'prompt': rec['prompt'], 'provider': 'runware', 'model': 'mirelo:1@1',
                       'modelName': 'Mirelo SFX 1.5', 'taskUUID': rec['taskUUID'], 'seed': rec.get('seed'), 'sourceSha256': rec['sha256'], 'costUsd': rec.get('costUsd')})
+    done = {a['id'] for a in items}  # 원본이 없어 이번에 다시 만들지 않은 기존 항목은 그대로 유지한다.
+    items = [old[k] for k in old if k not in done and k.split('/')[-1] in JOBS] + items
+    items.sort(key=lambda a: list(JOBS).index(a['id'].split('/')[-1]))
     manifest = {'library': 'mirelo-v1/event', 'generator': 'Runware mirelo:1@1 (Mirelo SFX 1.5)', 'jobs': 'tools/audio/mirelo-event-forge.py',
                 'license': 'owner-generated (Runware/Mirelo API output, commercial use per provider terms)', 'sampleRate': 44100, 'channels': 1,
                 'codec': 'mp3 96k', 'createdAt': '2026-10-22', 'humanListening': 'pending',

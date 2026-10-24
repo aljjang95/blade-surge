@@ -306,6 +306,15 @@ export class ParticlePool {
     this.col[i * 3] = color.r; this.col[i * 3 + 1] = color.g; this.col[i * 3 + 2] = color.b;
     this.size[i] = size; this.size0[i] = size; this.alpha[i] = 1; this.age[i] = 0; this.life[i] = life; this.grav[i] = grav; this.drag[i] = drag; this.shrink[i] = shrink;
   }
+  /**
+   * 장식용 방출: 풀에 빈자리가 있을 때만 낸다. 가득 차면 건너뛰고 false.
+   * emit() 의 가득 참 분기는 Math.random 으로 교체 대상을 고르므로, 시드 전투(app.step) 결정성에 닿으면 안 되는 장식은 이것을 쓴다.
+   */
+  emitIfFree(x, y, z, vx, vy, vz, color, size, life, options) {
+    if (this.n >= this.max) return false;
+    this.emit(x, y, z, vx, vy, vz, color, size, life, options);
+    return true;
+  }
   update(dt) {
     let n = this.n;
     for (let i = 0; i < n; i++) {
@@ -1009,7 +1018,8 @@ export class FX {
     const parts = [];
     root.updateMatrixWorld(true);
     root.traverse((o) => {
-      if (!o.isSkinnedMesh) return;
+      // 등급 부츠(hero-boots.js)는 몸 발 위에 겹친 별도 스킨이라 잔상 실루엣엔 몸만 쓴다(잔상마다 CPU 스키닝 정점 수를 늘리지 않는다).
+      if (!o.isSkinnedMesh || o.userData.heroBoots) return;
       const src = o.geometry; const cnt = src.attributes.position.count; const arr = new Float32Array(cnt * 3);
       for (let i = 0; i < cnt; i++) { o.getVertexPosition(i, _v); _v.applyMatrix4(o.matrixWorld); arr[i * 3] = _v.x; arr[i * 3 + 1] = _v.y; arr[i * 3 + 2] = _v.z; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); if (src.index) g.setIndex(src.index.clone());

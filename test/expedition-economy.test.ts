@@ -43,6 +43,9 @@ test('progression gates authored dungeons without paid resources, crafts actual 
   const {eco,x}=make(); x.claimQuest('first_oath');
   for(let i=0;i<6;i++) x.settle(x.begin('dungeon','glass_garden').ticket,{win:true});
   expect(x.s.level).toBeGreaterThanOrEqual(3);
+  // 지역 마을이 열리기 전에는 레벨이 돼도 다음 지역 던전(잿불 금고 등)은 열리지 않는다. 지역을 모두 열면 레벨 조건만 남는다.
+  expect(x.dungeonAccess('ember_vault').ok).toBe(false);
+  eco.s.progress.unlocked = 60;
   expect(DUNGEONS.filter(d=>d.minLevel<=x.s.level).every(d=>x.dungeonAccess(d.id).ok)).toBe(true);
   expect(DUNGEONS.filter(d=>d.minLevel>x.s.level).every(d=>!x.dungeonAccess(d.id).ok)).toBe(true);
   const recipe=RECIPES.find(r=>r.itemId==='exp_glasswarden_weapon')!;
