@@ -9,7 +9,7 @@ describe('roster 서버 소유·패리티', () => {
   test('roster는 패리티·서버 소유 키에 들어 있다', () => {
     expect(PARITY_KEYS).toContain('roster');
     expect(SERVER_OWNED_KEYS).toContain('roster');
-    expect(paritySubset(fresh().s).roster).toBeDefined();
+    expect((paritySubset(fresh().s) as any).roster).toBeDefined();
   });
 
   test('서버 문서가 knight+mage 소유일 때 로컬 knight만 저장에 병합하면 mage가 열린다', () => {

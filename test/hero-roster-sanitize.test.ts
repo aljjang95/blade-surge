@@ -67,7 +67,7 @@ describe('영웅 소유 서버 권위 정화', () => {
   });
 
   test('trustedRoster 단위: 알 수 없는 영웅 id는 버린다', () => {
-    const r = trustedRoster(save({ created: AFTER, selected: 'ghost' }, ['roster']), { now: NOW, entitledHeroes: ['ghost', 'mage', 'mage'] });
+    const r = trustedRoster(save({ created: AFTER, selected: 'ghost' }, ['roster']), { entitledHeroes: ['ghost', 'mage', 'mage'] });
     expect(r.roster.starter).toBe('knight');
     expect(r.roster.paid).toEqual(['mage']);
   });
