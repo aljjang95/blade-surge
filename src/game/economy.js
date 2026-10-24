@@ -183,7 +183,7 @@ export class Economy {
       // 현재 진행 저장이 우선이다. 백업 공간 부족이 정상 저장을 막지 않는다.
       this.storage.setItem(KEY, raw);
       try { if (this._lastGoodSave) this.storage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
-      this._lastGoodSave = raw; this.storageStatus = 'ready'; return true;
+      this._lastGoodSave = raw; this.storageStatus = 'ready'; this.hasStoredSave = true; return true;
     } catch { this.storageStatus = 'unavailable'; return false; }
   }
   reset() {
