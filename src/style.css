@@ -310,6 +310,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-item .timer { font-size: 10px; color: var(--red); }
 .shop-item .sold { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--muted); }
 .avatar-shop-item { min-height: 178px; }
+/* 아바타 카드는 초상(96px)이 커서 내용이 min-height 보다 길다. 행 높이를 내용에 맞춰야 아래 줄 카드가 윗줄 가격 버튼을 덮지 않는다(1280×720, 10종) */
+.shop-grid:has(.avatar-shop-item) { grid-auto-rows: max-content; }
 .avatar-shop-item .si-body { width: 100%; }
 .avatar-shop-item.avatar-pending { filter: saturate(.55); }
 /* 아바타 초상(512² 배경 합성 webp)은 얼굴이 읽히게 크게, 사각 카드 그림으로 보인다. */

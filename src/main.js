@@ -61,6 +61,7 @@ import { CitadelHubUI } from './ui/citadel-hub.js';
 import { CampaignTownUI } from './ui/campaign-town-ui.js';
 import { CitadelShop } from './ui/citadel-shop.js';
 import { CitadelCommand } from './ui/citadel-command.js';
+import { StageSelectUI } from './ui/stage-select.js';
 import './ui/citadel-integration.css';
 import './ui/garden-ui.css';
 import './ui/departure-journal.css';
@@ -127,6 +128,8 @@ class App {
     this.citadelShop = new CitadelShop(this);
     this.hubUI = new CitadelHubUI(this, { onInteract: spot => this.interactHub(spot) });
     this.commandUI = new CitadelCommand(this);
+    // 로비 '출격' → 스테이지 선택 화면. 입장만 startStage / 준비창을 부른다.
+    this.stageSelect = new StageSelectUI(this);
     this.hubControls = new HubControls({ isActive: () => this.canWalkHub(), joystick: this.hubUI.touchStick, knob: this.hubUI.touchKnob });
     this.canvas.tabIndex = 0;
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
