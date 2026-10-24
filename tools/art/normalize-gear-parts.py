@@ -55,6 +55,13 @@ PAULDRON_ORIGIN_Z = 0.35  # 돔 꼭대기에서 아래로 이 비율(높이) = �
 GAUNTLET_LENGTH = 1.15    # 손목→손끝 = ref x 이 값
 GAUNTLET_WRIST = 0.20     # 소매 끝에서 손끝 쪽으로 가로 길이의 이 비율 = 손목
 
+# 세트별 맞춤 보정(런타임 set.fit: 배율 배수·저작 단위 이동 [x,y,z], 오른쪽 기준). 화면 촬영(tools/art/hero-gear-parts-shots.mjs)으로 정했다.
+#  parts_e 장갑: 실제 손보다 팔쪽(근위)에 앉아 손가락 방향(-X)으로 당긴다. parts_l 투구: 눈썹 가리개가 눈을 덮어 위로 올린다.
+SET_FIT = {
+    'parts_e': {'gauntlet': {'offset': [-0.06, 0, 0]}},
+    'parts_l': {'helm': {'offset': [0, 0.07, 0]}, 'gauntlet': {'offset': [-0.03, 0, 0]}},
+}
+
 
 def read(path):
     with open(path, 'rb') as f:
@@ -290,7 +297,7 @@ def main():
     if args.data and not args.only:
         with open(args.data, encoding='utf-8') as f:
             data = json.load(f)
-        data['sets'] = [{'id': r['id'], 'path': f"/models/gear-parts/{r['id']}.glb", 'parts': list(SLOTS), 'triangles': r['triangles'], 'sha256': r['sha256']} for r in reports]
+        data['sets'] = [{'id': r['id'], 'path': f"/models/gear-parts/{r['id']}.glb", 'parts': list(SLOTS), 'triangles': r['triangles'], 'sha256': r['sha256'], **({'fit': SET_FIT[r['id']]} if r['id'] in SET_FIT else {})} for r in reports]
         for slot in SLOTS:
             data['slots'][slot]['ref'] = REF[slot]
         data['grades'] = {'N': None, 'S': 'parts_n', 'E': 'parts_e', 'U': 'parts_e', 'L': 'parts_l'}

@@ -57,7 +57,16 @@
         "gauntlet"
       ],
       "triangles": 4400,
-      "sha256": "39ec3ba1a52f2752b91c89ec64e078b588c54ad42780e60deb3f917898f3ba94"
+      "sha256": "39ec3ba1a52f2752b91c89ec64e078b588c54ad42780e60deb3f917898f3ba94",
+      "fit": {
+        "gauntlet": {
+          "offset": [
+            -0.06,
+            0,
+            0
+          ]
+        }
+      }
     },
     {
       "id": "parts_l",
@@ -68,7 +77,23 @@
         "gauntlet"
       ],
       "triangles": 4399,
-      "sha256": "e98b8c065e498dfbb4c6f9ed6a5a3cd4137556e466f54b2d417e52789e785278"
+      "sha256": "e98b8c065e498dfbb4c6f9ed6a5a3cd4137556e466f54b2d417e52789e785278",
+      "fit": {
+        "helm": {
+          "offset": [
+            0,
+            0.07,
+            0
+          ]
+        },
+        "gauntlet": {
+          "offset": [
+            -0.03,
+            0,
+            0
+          ]
+        }
+      }
     }
   ],
   "items": {},
@@ -87,6 +112,48 @@
     ],
     "hero_mage_t3": [
       "helm"
+    ],
+    "hero_rogue_t1": [
+      "helm"
+    ],
+    "hero_rogue_t1s": [
+      "helm"
+    ],
+    "hero_rogue_t2": [
+      "helm"
+    ],
+    "hero_rogue_t2u": [
+      "helm"
+    ],
+    "hero_rogue_t3": [
+      "helm"
     ]
+  },
+  "heroFit": {
+    "ranger": {
+      "helm": {
+        "scale": 0.9,
+        "offset": [
+          0,
+          0.03,
+          0
+        ]
+      }
+    },
+    "barbarian": {
+      "helm": {
+        "scale": 0.85
+      }
+    },
+    "mage": {
+      "gauntlet": {
+        "scale": 0.7
+      }
+    },
+    "rogue": {
+      "gauntlet": {
+        "scale": 1.4
+      }
+    }
   }
 }
