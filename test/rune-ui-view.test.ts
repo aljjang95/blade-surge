@@ -5,7 +5,7 @@ import { familyCounts, runeSynergies } from '../src/game/rune-core.js';
 import { gearRunes } from '../src/game/rune-economy.js';
 import {
   socketBoard, pickerView, bagView, mergeView, mergeTarget, overviewView, autoFillPlan, runeAwarePreview,
-  runeEffectText, ladderText, removeCostText, defaultSocket, hasSockets, heroGear,
+  runeEffectText, ladderText, removeCostText, defaultSocket, hasSockets, heroGear, craftInfo,
 } from '../src/ui/rune-view.js';
 import { runeHex, emptyHex } from '../src/ui/rune-art.js';
 
@@ -94,9 +94,11 @@ describe('룬 고르기(A37)', () => {
     expect(removeCostText()).toBe('I 1,000 / II 3,000 / III 8,000 골드');
   });
   test('효과 문구와 등급 사다리', () => {
-    expect(runeEffectText('storm_edge', 2)).toBe('공격력 +8%');
-    expect(ladderText('storm_edge')).toBe('I +4% · II +8% · III +12%');
-    expect(runeEffectText('ember_feast', 3)).toBe('처치 시 최대 체력 1.5% 회복');
+    // 등급 배율 I 0.5 · II 1 · III 1.5(RUNE_GRADE_MUL), 개수형(연쇄)은 올림
+    expect(runeEffectText('storm_edge', 2)).toBe('공격력 +4%');
+    expect(ladderText('storm_edge')).toBe('I +2% · II +4% · III +6%');
+    expect(runeEffectText('ember_feast', 3)).toBe('처치 시 최대 체력 0.75% 회복');
+    expect(ladderText('storm_eye')).toBe('I 1명 · II 1명 · III 2명');
   });
 });
 
@@ -117,6 +119,18 @@ describe('룬 가방·합성(A36)', () => {
     const short: any = mergeView({ bag: eco.runeState().bag, gold: eco.s.gold, dust: 0 }, 'ember_edge', 2);
     expect(short.ok).toBe(false); expect(short.reason).toBe('materials');
     expect(mergeTarget({ ember_edge: [0, 3, 0] }, 'ember_edge')).toBe(3);
+  });
+  test('제작 2종: 정밀(가루 80) · 가문 지정(가루 40) 버튼 정보와 실제 제작', () => {
+    const eco = core({});
+    eco.s.runes.dust = 120;
+    const [fam, exact] = craftInfo('storm_edge', 120);
+    expect(fam).toMatchObject({ target: 'storm', dust: 40, ok: true, text: '가문 지정 제작 · 가루 40' });
+    expect(exact).toMatchObject({ target: 'storm_edge', dust: 80, ok: true, text: '정밀 제작 · 가루 80' });
+    expect(eco.runeCraftExact('storm_edge').created).toEqual({ id: 'storm_edge', grade: 1 });
+    const r = eco.runeCraftFamily('storm');
+    expect(r.ok).toBe(true); expect(['storm_step', 'storm_eye', 'storm_edge']).toContain(r.created.id);
+    expect(eco.runeState().dust).toBe(0);
+    expect(craftInfo('storm_edge', 0).every((c: any) => !c.ok)).toBe(true);
   });
 });
 

@@ -9,7 +9,7 @@ import { audio } from '../engine/audio.js';
 import { RUNE_GRADE_LABEL } from '../data/runes.js';
 import { runeHex } from './rune-art.js';
 import { playRuneSound, warmRuneSounds } from './rune-sound.js';
-import { bagView, mergeView, mergeTarget, craftInfo, SOURCE_TEXT } from './rune-view.js';
+import { bagView, mergeView, mergeTarget, craftInfo, runeLabel, SOURCE_TEXT } from './rune-view.js';
 import { runeReasonText, openRuneOverview } from './rune-socket.js';
 
 const esc = (/** @type {unknown} */ value) => String(value).replace(/[&<>"]/g, (ch) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
@@ -31,7 +31,7 @@ export function runeBagHtml(/** @type {any} */ eco, /** @type {{ id: string, toG
       '<span class="rb-cost' + (eco.s.gold < m.gold ? ' short' : '') + '"><i class="ic ic-gold"></i> 골드 ' + fmt(m.gold) + (m.dust ? ' · 룬 가루 ' + m.dust : '') + '</span></div>' +
       '<button type="button" class="btn btn-gold rb-go" id="rb-go"' + (m.ok ? '' : ' disabled') + '>' + m.button + '</button><p class="rb-reason">' + esc(m.reasonText || '재료 ' + m.need + '개 · 실패 없음 · 확정 ' + m.chance + '%') + '</p>' : '') +
     '<div class="rb-dust"><span class="rb-dust-have"><img src="/img/icon_fragment.webp" alt="" onerror="this.remove()"><b>룬 가루</b><em>' + fmt(rs.dust) + '</em></span><span class="rb-crafts">' +
-      craftInfo().map((c) => '<button type="button" class="rb-craft" data-craft="' + c.id + '" disabled title="곧 열립니다">' + esc(c.text) + '<small>곧 열림</small></button>').join('') + '</span></div></section></div>';
+      craftInfo(id, rs.dust).map((c) => '<button type="button" class="rb-craft" data-craft="' + c.id + '" data-target="' + c.target + '"' + (c.ok ? '' : ' disabled') + '>' + esc(c.text) + '<small>' + esc(c.note) + '</small></button>').join('') + '</span></div></section></div>';
 }
 
 /**
@@ -49,6 +49,14 @@ export function mountRuneBag(el, app, opts = {}) {
     el.querySelectorAll('[data-grade]').forEach((b) => /** @type {HTMLElement} */ (b).onclick = () => { st.toGrade = +(/** @type {HTMLElement} */ (b).dataset.grade || 2); audio.play('ui_click', { vol: 0.35 }); draw(); });
     const ov = /** @type {HTMLElement|null} */ (el.querySelector('#rb-overview'));
     if (ov && app.meta) ov.onclick = () => openRuneOverview(app.meta, eco.s.selected);
+    el.querySelectorAll('.rb-craft').forEach((b) => /** @type {HTMLElement} */ (b).onclick = () => {
+      const kind = /** @type {HTMLElement} */ (b).dataset.craft, target = /** @type {HTMLElement} */ (b).dataset.target || '';
+      const r = kind === 'family' ? eco.runeCraftFamily(target) : eco.runeCraftExact(target);
+      if (!r.ok) { app.ui?.toast?.(runeReasonText(r.reason), 'red'); audio.play('ui_error'); return; }
+      playRuneSound('merge');
+      app.ui?.toast?.(esc(runeLabel(r.created)) + ' 제작 완료 · 룬 가루 -' + r.cost, 'gold');
+      st.id = r.created.id; st.toGrade = null; draw(); opts.onChange?.();
+    });
     const go = /** @type {HTMLButtonElement|null} */ (el.querySelector('#rb-go'));
     if (go) go.onclick = () => {
       const toGrade = st.toGrade || mergeTarget(eco.runeState().bag, st.id);

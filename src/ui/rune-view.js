@@ -5,11 +5,10 @@
 import { ITEM_BY_ID, SLOTS, SLOT_NAME } from '../data/items.js';
 import {
   RUNES, RUNE_BY_ID, RUNE_FAMILIES, RUNE_GRADES, RUNE_GRADE_LABEL, RUNE_DUPLICATE_CAP, RUNE_MERGE_COST,
-  RUNE_REMOVE_COST, RUNE_SOURCES, RUNE_SYNERGIES, RUNE_SYNERGY_MIN,
+  RUNE_REMOVE_COST, RUNE_SOURCES, RUNE_SYNERGIES, RUNE_SYNERGY_MIN, RUNE_GRADE_MUL,
 } from '../data/runes.js';
-import { socketStates, runeActivation, familyCounts, runeSynergies, normalizeRuneBag, maxSocketCount, socketCount, runeEffects, removeCost } from '../game/rune-core.js';
+import { socketStates, runeActivation, familyCounts, runeSynergies, normalizeRuneBag, maxSocketCount, socketCount, removeCost, INTEGER_EFFECTS } from '../game/rune-core.js';
 import { gearRunes } from '../game/rune-economy.js';
-import { applyBuildStats } from '../game/masterworks-combat.js';
 
 /** @typedef {{ id: string, grade: number }} RuneRef */
 /** @typedef {{ uid: number, id: string, enh: number, sockets?: unknown }} Inst */
@@ -43,17 +42,21 @@ export const runeName = (/** @type {string} */ id) => RUNE_BY_ID[id]?.name || id
 export const runeLabel = (/** @type {RuneRef|null|undefined} */ rune) => (rune ? runeName(rune.id) + ' ' + RUNE_GRADE_LABEL[rune.grade] : '');
 export const familyOf = (/** @type {string} */ id) => FAMILY_BY_ID[RUNE_BY_ID[id]?.family] || RUNE_FAMILIES[0];
 
-/** 룬 한 개의 등급 효과 문구(예: '공격력 +8%'). */
+/** 등급 배율을 곱한 효과 값(rune-core runeEffects 와 같은 식: 개수형은 올림). */
+export const gradeValue = (/** @type {string} */ key, /** @type {number} */ value, /** @type {number} */ grade) => {
+  const v = value * (/** @type {Record<number, number>} */ (RUNE_GRADE_MUL)[grade] || 0);
+  return INTEGER_EFFECTS.includes(key) ? Math.ceil(v) : v;
+};
+/** 룬 한 개의 등급 효과 문구(예: '공격력 +4%'). */
 export function runeEffectText(/** @type {string} */ id, /** @type {number} */ grade) {
   const rune = RUNE_BY_ID[id]; if (!rune) return '';
-  if (grade === 1 && !Object.keys(rune.effects).every((k) => FX_TEXT[k])) return rune.description;
-  return Object.entries(rune.effects).map(([k, v]) => (FX_TEXT[k] ? FX_TEXT[k](v * grade) : rune.description)).join(' · ');
+  return Object.entries(rune.effects).map(([k, v]) => (FX_TEXT[k] ? FX_TEXT[k](gradeValue(k, v, grade)) : rune.description)).join(' · ');
 }
 /** 등급 사다리 'I +4% · II +8% · III +12%'. */
 export function runeLadder(/** @type {string} */ id) {
   const rune = RUNE_BY_ID[id]; if (!rune) return [];
   const [key, value] = Object.entries(rune.effects)[0] || ['', 0];
-  return RUNE_GRADES.map((grade) => ({ grade, label: RUNE_GRADE_LABEL[grade], value: FX_SHORT[key] ? FX_SHORT[key](value * grade) : '+' + pct(value * grade) + '%' }));
+  return RUNE_GRADES.map((grade) => ({ grade, label: RUNE_GRADE_LABEL[grade], value: FX_SHORT[key] ? FX_SHORT[key](gradeValue(key, value, grade)) : '+' + pct(gradeValue(key, value, grade)) + '%' }));
 }
 export const ladderText = (/** @type {string} */ id) => runeLadder(id).map((s) => s.label + ' ' + s.value).join(' · ');
 /** 빼기 비용 안내 'I 1,000 / II 3,000 / III 8,000 골드'. */
@@ -194,11 +197,14 @@ export function mergeView(/** @type {{ bag: unknown, gold: number, dust: number 
     chance: 100, button: '합성 (확정 100%)',
     reasonText: reason === 'materials' ? runeLabel({ id, grade: toGrade - 1 }) + ' ' + cost.count + '개가 필요합니다 (보유 ' + have + ')' : reason === 'gold' ? '골드가 부족합니다' : reason === 'dust' ? '룬 가루가 부족합니다' : '' };
 }
-/** 룬 가루 제작 안내(제작 메서드가 경제에 붙기 전까지 비활성). */
-export const craftInfo = () => [
-  { id: 'family', text: '가문 지정 제작 · 가루 ' + RUNE_SOURCES.craftFamily.runeDust, dust: RUNE_SOURCES.craftFamily.runeDust },
-  { id: 'exact', text: '정밀 제작 · 가루 ' + RUNE_SOURCES.craftExact.runeDust, dust: RUNE_SOURCES.craftExact.runeDust },
-];
+/** 룬 가루 제작 2종(설계 2.6장): 가문 지정(가문 안 무작위 I) · 정밀(고른 룬 I). 고른 룬 기준. */
+export function craftInfo(/** @type {string} */ id, /** @type {number} */ dust) {
+  const rune = RUNE_BY_ID[id], fam = familyOf(id);
+  return [
+    { id: 'family', target: fam.id, text: '가문 지정 제작 · 가루 ' + RUNE_SOURCES.craftFamily.runeDust, note: fam.name + ' 룬 I 무작위', dust: RUNE_SOURCES.craftFamily.runeDust, ok: dust >= RUNE_SOURCES.craftFamily.runeDust },
+    { id: 'exact', target: id, text: '정밀 제작 · 가루 ' + RUNE_SOURCES.craftExact.runeDust, note: (rune?.name || '') + ' I', dust: RUNE_SOURCES.craftExact.runeDust, ok: dust >= RUNE_SOURCES.craftExact.runeDust },
+  ];
+}
 export const SOURCE_TEXT = '획득처: 정예·보스 처치 · 원정 상자 · 장비 분해 · 주간 의뢰';
 
 /** 각인판(전체 보기): 4부위 소켓, 가문 공명 막대, 켜진·가까운 공명 칩. */
@@ -259,14 +265,7 @@ export function autoFillPlan(/** @type {any} */ eco, /** @type {string} */ heroI
   return plan;
 }
 
-/** 룬 효과까지 반영한 장착 비교(전투력은 heroPower 와 같은 식). previewItem 결과에 before/after 를 덮어쓴다. */
-export function runeAwarePreview(/** @type {any} */ eco, /** @type {string} */ heroId, /** @type {number} */ uid) {
-  const p = eco.previewItem(heroId, uid); if (!p) return p;
-  const inst = eco.s.inventory.find((/** @type {Inst} */ x) => x.uid === uid);
-  const fx = (/** @type {(Inst|null)[]} */ gear) => { const items = gear.filter((i) => i?.sockets).map((i) => gearRunes(/** @type {Inst} */ (i))); return items.length ? runeEffects(items) : {}; };
-  const apply = (/** @type {any} */ st, /** @type {Record<string, number>} */ e) => (Object.keys(e).length ? applyBuildStats(st, e) : st);
-  const beforeFx = fx(heroGear(eco, heroId)), afterFx = fx(heroGear(eco, heroId, inst, p.remove));
-  return { ...p, before: apply(p.before, beforeFx), after: apply(p.after, afterFx), runeFx: { before: beforeFx, after: afterFx } };
-}
+/** 룬 효과까지 반영한 장착 비교. economy.previewItem 이 heroBuildStats(룬·공명 포함)로 계산한다(heroPower 와 같은 식). */
+export const runeAwarePreview = (/** @type {any} */ eco, /** @type {string} */ heroId, /** @type {number} */ uid) => eco.previewItem(heroId, uid);
 
 export { RUNE_FAMILIES, RUNE_GRADE_LABEL, RUNE_DUPLICATE_CAP, FAMILY_BY_ID };
