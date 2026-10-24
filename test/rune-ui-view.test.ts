@@ -84,6 +84,13 @@ describe('룬 고르기(A37)', () => {
     eco.runeInsert(2, 0, { id: 'ember_edge', grade: 1 });
     expect((socketBoard(eco, 'knight', 1) as any).sockets.concat((socketBoard(eco, 'knight', 2) as any).sockets).filter((s: any) => s.duplicate).length).toBe(1);
   });
+  test('낮은 등급 2개가 박혀 있어도 더 높은 등급은 상한 경고 없이 켜진다', () => {
+    const eco = core({ ember_edge: [2, 0, 1] });
+    eco.runeInsert(1, 0, { id: 'ember_edge', grade: 1 });
+    eco.runeInsert(1, 1, { id: 'ember_edge', grade: 1 });
+    const v: any = pickerView(eco, 'knight', 2, 0);
+    expect(v.entries.find((x: any) => x.key === 'ember_edge:3').capped).toBe(false);
+  });
   test('가문 필터·교체 모드·빼기 비용 안내', () => {
     const eco = core({ ember_edge: [1, 1, 0], tide_breath: [1, 0, 0] });
     eco.runeInsert(2, 0, { id: 'ember_edge', grade: 2 });

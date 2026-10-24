@@ -140,7 +140,8 @@ export function pickerView(/** @type {any} */ eco, /** @type {string} */ heroId,
     const count = bag[r.id]?.[grade - 1] || 0;
     if (!count || (current && current.id === r.id && current.grade === grade)) continue;
     const act = runeActivation(/** @type {any} */ (rulesItems(afterOf({ id: r.id, grade }))));
-    const capped = act.some((e) => e.rune.id === r.id && e.reason === 'duplicate');
+    // 고른 칸 자체가 꺼지는지만 본다(높은 등급은 낮은 등급 사본을 밀어내고 켜진다).
+    const capped = act.some((e) => e.item === slotIndex && e.index === index && e.reason === 'duplicate');
     all.push({ key: r.id + ':' + grade, id: r.id, grade, count, family: r.family, color: familyOf(r.id).color, name: r.name, label: runeLabel({ id: r.id, grade }), capped });
   }
   const entries = filter === 'all' ? all : all.filter((e) => e.family === filter);
