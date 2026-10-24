@@ -406,6 +406,17 @@ export function registerHeroBodyMotion(root, clips, registry = higherMotionRegis
   try { refreshHeroBodyMotion(root); } catch (error) { states.delete(root); throw error; }
 }
 
+// 골반 부모의 축·배율은 캐릭터 root 의 부모 기준으로 잰다(게임에서는 root 부모가 장면이라 world 와 같다).
+// 옷장 미리보기는 root 위에 화면 맞춤 배율·회전 그룹을 두므로 world 로 재면 저작 배율과 달라 몸 교체가 거절됐다.
+const gainMatrix = new THREE.Matrix4();
+function hipsParentGain(root) {
+  const parent = root.getObjectByName('mixamorigHips')?.parent;
+  requireMotion(parent, '실제 골반 부모 없음'); parent.updateWorldMatrix(true, false);
+  gainMatrix.copy(parent.matrixWorld);
+  if (root.parent) gainMatrix.premultiply(new THREE.Matrix4().copy(root.parent.matrixWorld).invert());
+  return gainMatrix.elements;
+}
+
 /** 몸체 제거 전에 모든 대상 트랙을 검사한다. 이 함수는 root·별칭·현재 액션을 변경하지 않는다. */
 export function prepareHeroBodyMotion(root, identity = root.userData.libraryBodyMotionIdentity || { asset: root.userData.libraryBodyAssetId }) {
   const state = states.get(root); if (!state) return null;
@@ -421,9 +432,7 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     && identity.path === band.body.path && identity.sha256 === band.body.sha256, '실제 선택 1단계 몸체와 모션 불일치');
   if (t1) {
     requireMotion(band.clipOverrides.every(entry => state.entries.some(item => item.base.name === entry.base.clip)), '1단계 공유 원본 클립 누락');
-    const parent = root.getObjectByName('mixamorigHips')?.parent;
-    requireMotion(parent, '실제 골반 부모 없음'); parent.updateWorldMatrix(true, false);
-    const matrix = parent.matrixWorld.elements;
+    const matrix = hipsParentGain(root);
     requireMotion(Math.abs(matrix[1]) < 1e-7 && Math.abs(matrix[9]) < 1e-7 && matrix[5] > 0
       && band.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '1단계 골반 부모 world/native 축·배율 불일치');
   }
@@ -432,14 +441,12 @@ export function prepareHeroBodyMotion(root, identity = root.userData.libraryBody
     && identity.path === body.body.path && identity.sha256 === body.body.sha256, '실제 선택 몸체와 모션 불일치');
   if (body) requireMotion(body.clipOverrides.every(entry => state.entries.some(item => item.base.name === entry.base.clip)), '공유 원본 클립 누락');
   if (body) {
-    const parent = root.getObjectByName('mixamorigHips')?.parent;
-    requireMotion(parent, '실제 골반 부모 없음'); parent.updateWorldMatrix(true, false);
-    const matrix = parent.matrixWorld.elements;
+    const matrix = hipsParentGain(root);
     requireMotion(Math.abs(matrix[1]) < 1e-7 && Math.abs(matrix[9]) < 1e-7 && matrix[5] > 0
       && body.clipOverrides.every(entry => Math.abs(entry.authoring.parentWorldYGain - matrix[5]) <= 1e-7), '골반 부모 world/native 축·배율 불일치');
   }
   if(isR2V2(body)){
-    const matrix=root.getObjectByName('mixamorigHips').parent.matrixWorld.elements;
+    const matrix=hipsParentGain(root);
     requireMotion(Math.abs(matrix[4])<1e-7&&Math.abs(matrix[6])<1e-7,'signed STAB actual parent localY world axis');
   }
   const changes = state.entries.map(entry => {
