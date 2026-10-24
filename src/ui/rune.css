@@ -1,0 +1,227 @@
+/* =====================================================================
+   룬 화면(R3): 장비 상세 룬 소켓 탭 · 룬 고르기 · 룬 각인판 · 제작 공방 룬 가방/합성.
+   시안 C20(rune-a1) · rune-picker · rune-a3 · rune-bag. 색은 가문 고정색(--fam)과 기존 금(--gold).
+   ===================================================================== */
+:root { --rune-cream: linear-gradient(180deg, #fff6dc 0%, #f6e3b4 60%, #e9cd8c 100%); --rune-panel: rgba(8, 24, 44, .62); --rune-line: rgba(255, 216, 112, .42); }
+
+/* ---------- 육각 룬석 ---------- */
+.rune-hex { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--hs, 44px); height: calc(var(--hs, 44px) * 1.1); }
+.rune-hex::before { content: ''; position: absolute; inset: 0; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(160deg, #fff1b8 0%, #d7a640 38%, #7a5212 70%, #f2cf6c 100%); filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55)); }
+.rune-hex-core { position: absolute; inset: 8%; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--fam, #555) 55%, #fff) 0%, var(--fam, #555) 38%, color-mix(in srgb, var(--fam2, #222) 80%, #000) 100%); box-shadow: inset 0 0 10px rgba(0, 0, 0, .5); }
+.rune-hex-core svg { width: 62%; height: 62%; filter: drop-shadow(0 0 4px rgba(255, 255, 255, .55)); }
+.rune-hex-sm { --hs: 26px; } .rune-hex-md { --hs: 44px; } .rune-hex-lg { --hs: 54px; }
+.rune-dots { position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); display: flex; gap: 2px; z-index: 1; }
+.rune-dots i { width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6c8, #ffc83a 55%, #b57a10); box-shadow: 0 0 0 1px rgba(60, 30, 0, .7); }
+.rune-hex-lg .rune-dots i { width: 9px; height: 9px; }
+.rune-hex-empty::before, .rune-hex-target::before, .rune-hex-locked::before { background: linear-gradient(160deg, #8e9aa6, #3b4652 60%, #7d8996); }
+.rune-hex-empty .rune-hex-core, .rune-hex-target .rune-hex-core, .rune-hex-locked .rune-hex-core { background: radial-gradient(circle at 50% 35%, #2b3a4a, #121b26); }
+.rune-hex-empty b, .rune-hex-target b { font-size: calc(var(--hs) * .5); line-height: 1; color: rgba(214, 226, 238, .75); font-weight: 400; }
+.rune-hex-target::before { background: linear-gradient(160deg, #fff4b8, #ffc23a 45%, #b67810); filter: drop-shadow(0 0 8px rgba(255, 200, 60, .85)); }
+.rune-hex-locked .rune-hex-core svg { width: 46%; height: 46%; filter: none; }
+.rune-hex-dim { filter: grayscale(.85) brightness(.6); }
+.rune-glyph { width: 18px; height: 18px; flex: none; }
+.rune-glyph path { stroke: var(--fam); }
+
+/* ---------- 장비 상세: 오른쪽 강화 | 룬 소켓 탭 ---------- */
+.is-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; align-self: start; padding: 6px; border-radius: 12px; border: 1px solid var(--rune-line); background: var(--rune-panel); }
+.is-side-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; flex: none; }
+.is-side-tabs button { min-height: 34px; border-radius: 9px 9px 4px 4px; font-weight: 900; font-size: 14px; color: #cfe0ee; background: rgba(255, 255, 255, .06); border-bottom: 3px solid transparent; }
+.is-side-tabs button[aria-selected="true"] { background: var(--rune-cream); color: #3a2608; border-bottom-color: var(--gold2, #ff9a1f); }
+.is-side > .is-enh { border: 0; background: none; padding: 2px 4px; }
+
+/* 소켓판 */
+.rs-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rs-board { --r: 54px; position: relative; height: calc(var(--r) * 2 + 40px); margin: 2px auto 0; width: 100%; max-width: 300px; }
+.rs-ring { position: absolute; left: 50%; top: 46%; width: calc(var(--r) * 2.2); height: calc(var(--r) * 2.2); transform: translate(-50%, -50%); border-radius: 50%;
+  border: 3px solid rgba(214, 170, 72, .8); box-shadow: 0 0 0 6px rgba(20, 34, 54, .9), 0 0 0 8px rgba(214, 170, 72, .45), inset 0 0 22px rgba(255, 200, 90, .18);
+  background: radial-gradient(circle, rgba(46, 70, 104, .55) 0 40%, rgba(12, 22, 38, .85) 72%); }
+.rs-ring::after { content: ''; position: absolute; inset: 18%; border-radius: 50%; border: 1px dashed rgba(214, 170, 72, .45); }
+.rs-center { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; border: 3px solid rgba(255, 216, 112, .8); background: radial-gradient(circle at 50% 30%, #3a6f8e, #13304a); }
+.rs-center img { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .6)); }
+.rs-center b { position: absolute; top: 100%; margin-top: 2px; white-space: nowrap; font-size: 12px; color: var(--gold); text-shadow: 0 1px 2px #000; }
+.rs-socket { position: absolute; left: calc(50% + var(--x) * var(--r)); top: calc(46% + var(--y) * var(--r)); transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 48px; min-height: 48px; padding: 0; z-index: 1; }
+.rs-socket small { display: block; white-space: nowrap; font-size: 11px; font-weight: 800; line-height: 1.15; color: #f4efe6; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+.rs-socket small em { display: block; font-style: normal; color: #ffb4a8; font-size: 10px; }
+.rs-socket[data-state="locked"] small { color: #c9d3dc; font-weight: 700; }
+.rs-socket[data-dup] .rune-hex { filter: grayscale(1) brightness(.7); }
+.rs-socket[aria-pressed="true"] .rune-hex::after { content: ''; position: absolute; inset: -5px; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: rgba(255, 210, 80, .0); box-shadow: none; outline: 0; border: 0; }
+.rs-socket[aria-pressed="true"] .rune-hex { filter: drop-shadow(0 0 6px rgba(255, 210, 80, .95)) drop-shadow(0 0 2px #fff3b0); }
+.rs-socket:focus-visible { outline: 2px solid #fff0b3; outline-offset: 2px; border-radius: 10px; }
+.rs-lock-badge { position: absolute; right: -6px; top: -4px; }
+.rs-socket .rs-lock-badge { position: absolute; }
+
+/* 가문 4칸 · 공명 칩 */
+.rs-families { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.rs-family { display: flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 28px; padding: 2px 4px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(4, 14, 28, .6); font-size: 12px; white-space: nowrap; }
+.rs-family b { color: var(--fam); font-weight: 900; }
+.rs-family em { font-style: normal; font-weight: 900; color: #fff; }
+.rs-family[data-changed] { border-color: var(--fam); box-shadow: 0 0 8px color-mix(in srgb, var(--fam) 60%, transparent); }
+.rs-syns { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 26px; }
+.rs-syn { position: relative; display: inline-flex; align-items: center; gap: 2px; min-height: 26px; padding: 2px 14px; border-radius: 6px; font-size: 12px; white-space: nowrap; color: #c3ccd6;
+  border: 1px solid rgba(255, 255, 255, .2); background: rgba(10, 18, 30, .7); }
+.rs-syn .rune-glyph { width: 16px; height: 16px; }
+.rs-syn b { margin-left: 4px; font-weight: 800; }
+.rs-syn.on { color: #fff3c6; border: 2px solid #e7b94a; background: linear-gradient(180deg, rgba(64, 46, 12, .92), rgba(28, 20, 6, .92)); box-shadow: 0 0 10px rgba(255, 196, 64, .35); }
+.rs-syn.on::before, .rs-syn.on::after { content: ''; position: absolute; top: 50%; width: 8px; height: 8px; transform: translateY(-50%) rotate(45deg); border: 2px solid #e7b94a; background: #2a1d06; }
+.rs-syn.on::before { left: -6px; } .rs-syn.on::after { right: -6px; }
+.rs-syn.glow { animation: runeGlow 1.2s ease-in-out infinite alternate; }
+.rs-syn-none { font-size: 12px; color: #9fb3c4; align-self: center; }
+@keyframes runeGlow { from { box-shadow: 0 0 4px rgba(255, 196, 64, .3); } to { box-shadow: 0 0 14px rgba(255, 210, 90, .9); } }
+.rs-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rs-actions .btn { min-height: 42px; padding: 6px 10px; font-size: 15px; }
+.rs-btn-cream { background: var(--rune-cream); color: #3a2608; }
+.btn[disabled] { filter: grayscale(.7) brightness(.75); cursor: not-allowed; }
+.rs-overview-link { align-self: flex-end; min-height: 28px; padding: 2px 6px; font-size: 12px; font-weight: 800; color: #ffd98a; }
+
+/* ---------- 룬 고르기 ---------- */
+.modal-box:has(.rune-picker), .modal-box:has(.rune-overview) { width: min(98vw, 980px); max-height: calc(var(--app-height, 100dvh) - 10px); padding: 6px 10px 8px; display: flex; flex-direction: column; overflow: hidden; }
+.rune-picker { display: flex; flex-direction: column; gap: 5px; min-height: 0; text-align: left; }
+.rune-picker .is-head { flex: none; }
+.rune-picker .is-head-art { width: 42px; height: 42px; }
+.rune-picker .is-head-art img { width: 32px; height: 32px; }
+:root:root .rune-picker .is-head-copy h2 { margin: 0; font-size: 17px; line-height: 1.15; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-main { display: grid; grid-template-columns: minmax(150px, 34%) minmax(0, 1fr); gap: 8px; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.rp-left { display: grid; place-items: center; min-width: 0; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .1); background: rgba(4, 14, 28, .45); }
+.rp-left .rs-board { --r: 50px; }
+.rp-right { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 0; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--rune-line); background: var(--rune-panel); }
+.rp-right h3 { margin: 0; font-size: 15px; } .rp-right h3 small { font-size: 11px; color: #9fb3c4; font-weight: 600; }
+.rp-filters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.rp-filters button { display: inline-flex; align-items: center; gap: 3px; flex: 1 0 auto; min-height: 30px; padding: 2px 10px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #dbe6ef; border: 1px solid rgba(255, 255, 255, .16); background: rgba(4, 14, 28, .6); }
+.rp-filters button[aria-selected="true"] { background: var(--rune-cream); color: #3a2608; border-color: #e7b94a; }
+.rp-filters .rune-glyph { width: 16px; height: 16px; }
+.rp-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: minmax(96px, 1fr); gap: 4px; overflow-x: auto; overscroll-behavior: contain; padding-bottom: 2px; flex: none; }
+.rp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 64px; padding: 3px 2px 2px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(4, 14, 28, .62); }
+.rp-cell .rune-hex { --hs: 34px; }
+.rp-cell b { font-size: 11px; line-height: 1.1; white-space: nowrap; color: #eef3f8; }
+.rp-cell .rp-count { position: absolute; right: 5px; top: 14px; font-style: normal; font-size: 12px; font-weight: 900; color: #fff; }
+.rp-cell[aria-pressed="true"] { border: 2px solid #ffb52e; background: rgba(60, 40, 10, .7); box-shadow: 0 0 10px rgba(255, 170, 40, .45); }
+.rp-cell[aria-pressed="true"] b { color: #ffd36a; }
+.rp-cell[data-capped] { filter: grayscale(.9); opacity: .78; }
+.rp-cap { position: absolute; right: 0; top: 0; padding: 1px 4px; border-radius: 0 8px 0 6px; background: #c42c2c; color: #fff; font-style: normal; font-size: 10px; font-weight: 900; }
+.rp-empty { margin: 4px; font-size: 12px; color: #9fb3c4; }
+.rp-detail { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'hex copy' 'hex ladder' 'pv pv'; align-items: center; gap: 2px 8px; padding: 4px 6px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(4, 14, 28, .55); flex: none; }
+.rp-detail > .rune-hex { grid-area: hex; --hs: 42px; }
+.rp-detail-copy { grid-area: copy; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; min-width: 0; }
+.rp-detail-copy b { font-size: 15px; color: color-mix(in srgb, var(--fam) 55%, #fff); }
+.rp-detail-copy span { font-size: 14px; font-weight: 800; color: #fff; }
+.rp-ladder { grid-area: ladder; display: flex; gap: 6px; font-size: 12px; color: #aebfcd; white-space: nowrap; }
+.rp-ladder span.on { color: #fff; font-weight: 900; border: 1px solid rgba(255, 255, 255, .45); border-radius: 6px; padding: 0 5px; }
+.rp-preview { grid-area: pv; display: flex; flex-wrap: wrap; gap: 4px; }
+.rp-preview > span { display: inline-flex; align-items: center; gap: 3px; min-height: 24px; padding: 1px 8px; border-radius: 7px; font-size: 12px; font-weight: 800; white-space: nowrap; border: 1px solid rgba(255, 255, 255, .2); background: rgba(10, 18, 30, .7); color: #e7eef5; }
+.rp-preview .rune-glyph { width: 15px; height: 15px; }
+.rp-gain { border: 2px solid #ff9a1f !important; color: #ffe2a6 !important; background: rgba(70, 30, 6, .8) !important; animation: runeGlow 1s ease-in-out infinite alternate; }
+.rp-lost { color: #ffb4a8 !important; }
+.rp-detail-empty { display: block; font-size: 12px; color: #9fb3c4; }
+.rp-resonance, .ro-res { display: flex; align-items: center; gap: 4px; flex: none; flex-wrap: wrap; padding: 3px 6px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(4, 14, 28, .55); }
+.rp-res-title { font-size: 13px; font-weight: 900; color: #fff; margin-right: 2px; white-space: nowrap; }
+.rp-bar { display: inline-flex; align-items: center; gap: 3px; min-height: 26px; padding: 1px 6px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(10, 18, 30, .6); font-size: 12px; white-space: nowrap; }
+.rp-bar b { color: var(--fam); } .rp-bar em { font-style: normal; font-weight: 900; color: #fff; }
+.rp-bar i { display: inline-flex; gap: 2px; } .rp-bar u { width: 9px; height: 10px; border-radius: 2px; background: rgba(255, 255, 255, .14); }
+.rp-bar u.on { background: var(--fam); box-shadow: 0 0 4px var(--fam); }
+.rp-bar[data-changed] { border-color: var(--fam); }
+.rp-bar .rune-glyph { width: 15px; height: 15px; }
+.rp-syns { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; padding: 0 6px; }
+.rp-foot { display: flex; align-items: center; gap: 6px; flex: none; }
+.rp-foot small { flex: 1 1 auto; min-width: 0; font-size: 11px; color: #aebfcd; }
+.rp-foot .btn { min-height: 42px; padding: 6px 16px; font-size: 15px; }
+.rp-foot #rp-go { flex: 0 1 40%; } .rp-foot #rp-cancel { flex: 0 1 26%; }
+.rp-foot #rp-remove { font-size: 12px; padding: 6px 10px; }
+
+/* ---------- 룬 각인판 ---------- */
+.rune-overview { display: grid; grid-template-columns: minmax(150px, 30%) minmax(0, 1fr); gap: 8px; min-height: 0; text-align: left; }
+.ro-hero { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 0; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at 50% 80%, rgba(80, 160, 140, .35), rgba(8, 20, 34, .2) 70%); }
+.ro-hero-name { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-weight: 900; font-size: 16px; color: #fff0c8; text-shadow: 0 1px 3px #000; }
+.ro-portrait { position: relative; z-index: 1; width: 100%; max-height: 82%; object-fit: contain; }
+.ro-pedestal { position: absolute; bottom: 4%; left: 12%; right: 12%; height: 16%; border-radius: 50%; border: 3px solid rgba(214, 170, 72, .8); background: radial-gradient(ellipse, #2a5d6c, #0e2230 70%); box-shadow: 0 0 18px rgba(80, 200, 180, .3); }
+.ro-board { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 0; padding: 4px 8px 6px; border-radius: 12px; border: 2px solid rgba(214, 170, 72, .65); background: linear-gradient(180deg, rgba(10, 38, 52, .92), rgba(6, 22, 34, .94)); }
+.ro-head { display: flex; align-items: center; gap: 8px; flex: none; }
+.ro-head h2 { margin: 0; font-size: 18px; text-align: left; font-family: var(--font); font-weight: 900; color: #fff3d0; }
+.ro-fx { margin-left: auto; min-height: 32px; padding: 2px 6px; font-size: 13px; font-weight: 800; color: #ffe2a0; }
+.ro-head .btn { min-height: 36px; padding: 4px 12px; font-size: 13px; }
+.ro-rows { display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow-y: auto; }
+.ro-row { display: grid; grid-template-columns: 52px 50px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 52px; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(214, 170, 72, .3); background: rgba(4, 18, 30, .5); }
+.ro-slot { font-weight: 900; font-size: 14px; color: #fff; }
+.ro-item { position: relative; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 9px; border: 2px solid rgba(255, 255, 255, .3); background: linear-gradient(180deg, #2c4f6a, #132b40); }
+.ro-item img { width: 36px; height: 36px; object-fit: contain; }
+.ro-item em { position: absolute; right: 2px; top: -1px; font-style: normal; font-weight: 900; font-size: 11px; color: #ffe08a; text-shadow: 0 1px 2px #000; }
+.ro-item-empty { font-size: 11px; color: #9fb3c4; border-style: dashed; }
+.ro-sockets { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ro-socket { position: relative; display: flex; align-items: center; gap: 4px; min-height: 46px; padding: 0; }
+.ro-socket .rune-hex { --hs: 38px; }
+.ro-socket small { font-size: 11px; font-weight: 800; white-space: nowrap; color: #e7eef5; }
+.ro-socket[data-dup] .rune-hex { filter: grayscale(1) brightness(.7); }
+.ro-none { font-size: 12px; color: #9fb3c4; }
+.ro-fx-list { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; min-height: 120px; padding: 6px; }
+.ro-fx-list span { padding: 3px 10px; border-radius: 8px; background: rgba(255, 255, 255, .08); font-size: 13px; font-weight: 800; color: #fff3d0; }
+.ro-foot { display: flex; align-items: center; gap: 8px; flex: none; }
+.ro-chips { display: flex; flex-wrap: wrap; gap: 10px; flex: 1 1 auto; min-width: 0; padding-left: 6px; }
+.ro-foot .btn { min-height: 42px; padding: 6px 18px; font-size: 15px; flex: none; }
+.ro-foot .btn small { font-size: 11px; font-weight: 700; }
+
+/* ---------- 제작 공방: 룬 가방 · 합성 ---------- */
+.exp-forge-panes { display: flex; gap: 8px; margin: -8px 0 14px; }
+.exp-shell .exp-forge-panes button { min-height: 40px; padding: 6px 18px; font-size: 13px; }
+.exp-shell .exp-forge-panes button.active { background: var(--rune-cream); color: #3a2608; border-color: #e7b94a; }
+.rune-bag { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; color: #eef3f8; }
+.rb-bag, .rb-merge { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px 10px; border-radius: 12px; border: 2px solid rgba(90, 150, 210, .45); background: linear-gradient(180deg, rgba(12, 30, 56, .95), rgba(8, 20, 40, .95)); }
+.rb-head { display: flex; align-items: center; gap: 8px; }
+.exp-shell .rb-head h3 { margin: 0; font-size: 18px; font-weight: 900; color: #fff; }
+.exp-shell .rb-link { margin-left: auto; min-height: 32px; padding: 2px 8px; font-size: 12px; border: 0; background: none; color: #ffd98a; }
+.rb-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.exp-shell .rb-cell { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 60px; padding: 4px 6px; border-radius: 10px; border: 1px solid rgba(120, 170, 220, .25); background: rgba(6, 18, 36, .75); color: #eef3f8; text-align: left; }
+.exp-shell .rb-cell[aria-pressed="true"] { border: 2px solid #ffb52e; box-shadow: 0 0 10px rgba(255, 170, 40, .45); background: rgba(40, 28, 10, .8); }
+.rb-cell[data-none] .rb-copy { opacity: .55; }
+.rb-cell .rune-hex { --hs: 42px; }
+.rb-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.rb-copy b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-copy small { font-size: 10px; color: #b8c7d6; white-space: nowrap; }
+.rb-dots { display: flex; gap: 3px; } .rb-dots i { width: 9px; height: 9px; border-radius: 50%; background: #4a5663; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5); }
+.rb-dots i.on { background: radial-gradient(circle at 35% 30%, #fff6c8, #ffc83a 55%, #b57a10); }
+.exp-shell .rb-src { margin: 0; font-size: 11px; color: #b8c7d6; text-align: center; line-height: 1.4; }
+.rb-merge { position: relative; overflow: hidden; }
+.rb-grades { display: inline-flex; gap: 4px; margin-left: auto; }
+.exp-shell .rb-grades button { min-height: 32px; padding: 2px 10px; font-size: 12px; }
+.exp-shell .rb-grades button[aria-selected="true"] { background: var(--rune-cream); color: #3a2608; border-color: #e7b94a; }
+.rb-forge { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 6px; border-radius: 10px; min-height: 180px;
+  background: radial-gradient(ellipse at 50% 70%, rgba(255, 150, 40, .38), transparent 60%), linear-gradient(180deg, rgba(40, 20, 10, .55), rgba(20, 10, 6, .85)), var(--forge) center/cover no-repeat, #2a160c; }
+.rb-forge::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 12% 30%, rgba(255, 170, 60, .35), transparent 22%), radial-gradient(circle at 88% 30%, rgba(255, 170, 60, .3), transparent 22%); }
+.rb-mats { display: flex; gap: 10px; z-index: 1; }
+.rb-mat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(255, 210, 120, .5); background: rgba(20, 12, 6, .7); }
+.rb-mat small { font-size: 11px; font-weight: 800; white-space: nowrap; }
+.rb-mat.short { border-style: dashed; opacity: .75; }
+.rb-arrow { z-index: 1; width: 70%; height: 22px; border: 3px solid #ffcf5a; border-top: 0; border-radius: 0 0 8px 8px; position: relative; }
+.rb-arrow::after { content: ''; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); border: 9px solid transparent; border-top: 12px solid #ffcf5a; }
+.rb-result { z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; }
+.rb-result b { padding: 1px 10px; border-radius: 8px; background: rgba(10, 8, 6, .75); font-size: 13px; color: #fff3d0; }
+.rb-result .rune-hex { --hs: 58px; filter: drop-shadow(0 0 10px rgba(255, 180, 60, .8)); }
+.rb-cost { z-index: 1; padding: 2px 12px; border-radius: 999px; background: rgba(10, 8, 6, .8); border: 1px solid rgba(255, 210, 120, .4); font-size: 13px; font-weight: 800; color: #ffe8b0; }
+.rb-cost.short { color: #ffa3ad; }
+.rb-flash .rb-result .rune-hex { animation: runeMerge .8s cubic-bezier(.2, 1.4, .3, 1) both; }
+@keyframes runeMerge { 0% { transform: scale(.3); filter: brightness(3) drop-shadow(0 0 24px #ffd36a); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.exp-shell .rb-go { width: 100%; min-height: 46px; font-size: 17px; border: 0; color: #2a1706; }
+.exp-shell .rb-reason { margin: 0; font-size: 11px; text-align: center; color: #b8c7d6; line-height: 1.4; }
+.rb-dust { display: flex; align-items: center; gap: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, .12); }
+.rb-dust-have { display: flex; align-items: center; gap: 4px; flex: none; }
+.rb-dust-have img { width: 30px; height: 30px; object-fit: contain; }
+.rb-dust-have b { font-size: 13px; } .rb-dust-have em { font-style: normal; font-size: 16px; font-weight: 900; color: #fff; }
+.rb-crafts { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.exp-shell .rb-craft { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 2px 8px; font-size: 12px; border-radius: 8px; background: var(--rune-cream); color: #3a2608; border: 0; }
+.rb-craft small { font-size: 10px; color: #7a5a20; }
+
+@media (max-width: 700px) {
+  .rp-main { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .rp-left .rs-board { --r: 44px; }
+  .rune-overview { grid-template-columns: minmax(0, 1fr); }
+  .ro-hero { display: none; }
+  .rune-bag { grid-template-columns: minmax(0, 1fr); }
+  .rp-foot small { display: none; }
+}
+@media (max-height: 420px) {
+  .rs-board { --r: 44px; height: calc(var(--r) * 2 + 34px); }
+  .rs-center { width: 46px; height: 46px; } .rs-center img { width: 34px; height: 34px; }
+  .rune-hex-lg { --hs: 46px; }
+  .rp-left .rs-board { --r: 44px; }
+  .rp-cell { min-height: 56px; } .rp-cell .rune-hex { --hs: 30px; }
+}
+@media (prefers-reduced-motion: reduce) { .rs-syn.glow, .rp-gain, .rb-flash .rb-result .rune-hex { animation: none; } }
