@@ -108,12 +108,17 @@ export function campaignStages({ progress, chapter, power, heroLevel, energy = n
 }
 
 /**
- * 던전 목록의 단일 소스. 마을 해금 레인이 '이 저장에서 보이는/열린 던전' 판정을 내보내면 이 함수만 바꾼다.
- * 지금은 기존 던전 여정(dungeonAccess)의 기본 단계 판정을 쓴다.
- * @param {{ s: any, dungeonAccess: (id: string, options: { depth: string }) => { ok: boolean, error?: string|null } }} expedition
+ * 던전 목록의 단일 소스: 지역 마을 해금 판정(region-dungeon-gate, app.expedition.regionDungeons()).
+ * 보이는(visible) 던전만 목록에 오고, 아직 열리지 않은 바로 다음 지역은 예고(teaser) 한 줄로만 알린다. 숨은 던전은 나오지 않는다.
+ * 입장 가능 여부·잠금 사유는 dungeonAccess(지역+탐험 레벨)의 문구를 그대로 쓴다. 판정을 모르는 서비스(테스트 대역)는 전체 목록이다.
+ * @param {{ s: any, dungeonAccess: (id: string, options: { depth: string }) => { ok: boolean, error?: string|null }, regionDungeons?: () => any }} expedition
+ * @returns {{ nodes: Array<{ dungeon: any, unlocked: boolean, reason: string, wins: number, cleared: boolean }>, teaser: null | { region: number, town: string, reason: string, unlockCode: string } }}
  */
 export function stageSelectDungeonSource(expedition) {
-  return dungeonJourney(expedition).nodes.map((node) => ({ dungeon: node.dungeon, unlocked: node.unlocked, reason: node.reason || '', wins: node.wins, cleared: node.cleared }));
+  const journey = dungeonJourney(expedition);
+  const nodes = journey.nodes.map((node) => ({ dungeon: node.dungeon, unlocked: node.unlocked, reason: node.reason || '', wins: node.wins, cleared: node.cleared }));
+  const teaser = journey.teaser ? { region: journey.teaser.region, town: journey.teaser.town, reason: journey.teaser.reason, unlockCode: journey.teaser.unlockCode } : null;
+  return { nodes, teaser };
 }
 
 const materialRewards = (rewards) => [
@@ -122,15 +127,13 @@ const materialRewards = (rewards) => [
 ];
 
 /**
- * 던전 탭 목록. 열린 던전 전부 + 다음에 열릴 잠긴 던전 1곳(해금 조건 표시). 나머지 잠긴 던전은 개수만 알린다.
+ * 던전 탭 목록. 지역 판정으로 보이는 던전 전부(탐험 레벨로 잠긴 곳은 사유 표시) + 다음 마을 예고 한 줄.
  * 각 던전은 기본/심층 단계를 갖고, 심층은 정의가 있는 던전만 보인다.
- * @param {{ expedition: any, power: number, energy?: number|null, source?: Array<{ dungeon: any, unlocked: boolean, reason: string, wins: number, cleared: boolean }> }} input
+ * @param {{ expedition: any, power: number, energy?: number|null, source?: ReturnType<typeof stageSelectDungeonSource> }} input
  */
 export function dungeonStages({ expedition, power, energy = null, source = undefined }) {
-  const nodes = source || stageSelectDungeonSource(expedition);
+  const { nodes, teaser } = source || stageSelectDungeonSource(expedition);
   const open = nodes.filter((node) => node.unlocked);
-  const nextLocked = nodes.find((node) => !node.unlocked);
-  const shown = nextLocked ? [...open, nextLocked] : open;
   const depthWins = expedition?.s?.depthWins || {};
   const entry = (node, depth) => {
     const definition = depth === 'deep' ? expeditionDepth(node.dungeon.id) : node.dungeon;
@@ -150,8 +153,8 @@ export function dungeonStages({ expedition, power, energy = null, source = undef
       rewards,
     };
   };
-  const list = shown.map((node) => ({ id: node.dungeon.id, name: node.dungeon.name, unlocked: node.unlocked, depths: [entry(node, 'standard'), entry(node, 'deep')].filter(Boolean) }));
-  return { dungeons: list, open: open.length, total: nodes.length, hiddenLocked: Math.max(0, nodes.length - shown.length) };
+  const list = nodes.map((node) => ({ id: node.dungeon.id, name: node.dungeon.name, unlocked: node.unlocked, depths: [entry(node, 'standard'), entry(node, 'deep')].filter(Boolean) }));
+  return { dungeons: list, open: open.length, total: nodes.length, teaser };
 }
 
 const findCampaign = (campaign, ch, st) => campaign.chapter === ch ? campaign.stages.find((stage) => stage.st === st) : null;

@@ -99,30 +99,49 @@ test('마지막 선택 기억: 지난 관문 그대로, 추천을 골랐으면 �
   expect(dungeon.tab).toBe('dungeon');
   expect(selectedEntry(dungeon)).toMatchObject({ id: 'glass_garden', depth: 'standard', unlocked: true });
   // 던전 카드로 직접 고른 던전이 기억보다 먼저다.
-  const prefer: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'campaign', ch: 1, st: 2 } }, prefer: { tab: 'dungeon', id: 'eclipse_hydra_vault' } }));
-  expect(prefer.selection).toEqual({ tab: 'dungeon', id: 'eclipse_hydra_vault', depth: 'standard' });
+  const prefer: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'campaign', ch: 1, st: 2 } }, prefer: { tab: 'dungeon', id: 'glass_garden' } }));
+  expect(prefer.selection).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'standard' });
   expect(isRecommendedSelection(exact, { tab: 'campaign', ch: 1, st: 4 })).toBe(true);
   expect(isRecommendedSelection(exact, { tab: 'campaign', ch: 1, st: 2 })).toBe(false);
 });
 
-test('던전 탭: 열린 던전 전부 + 다음 잠긴 1곳, 심층은 정의가 있을 때만·조건 사유', () => {
+test('던전 탭(지역 판정): 신규 저장 = 지역 1 던전 4곳 + 다음 마을 예고 1줄, 숨은 던전 없음, 사유는 dungeonAccess 문구', () => {
   const { eco, expedition } = fresh();
   const result: any = dungeonStages({ expedition, power: eco.heroPower(eco.s.selected), energy: eco.s.energy });
-  const open = result.dungeons.filter((d: any) => d.unlocked);
-  expect(open.length).toBe(result.open);
-  expect(result.dungeons.length).toBe(result.open + 1);
-  expect(result.hiddenLocked).toBe(result.total - result.dungeons.length);
-  const locked = result.dungeons.find((d: any) => !d.unlocked);
-  expect(locked.depths[0].lockReason).toMatch(/탐험 레벨 \d+ 필요/);
+  const region = (expedition as any).regionDungeons();
+  expect(result.dungeons.map((d: any) => d.id)).toEqual(['glass_garden', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum']);
+  expect(result.dungeons.map((d: any) => d.id)).toEqual(region.visibleIds);
+  expect(result.dungeons.some((d: any) => region.teaserIds.includes(d.id))).toBe(false);
+  expect(result.total).toBe(4); expect(result.open).toBe(1);
+  expect(result.teaser).toMatchObject({ region: 2, unlockCode: '1-10' });
+  expect(result.teaser.reason).toBe(region.teaser.reason);
+  const bell = result.dungeons.find((d: any) => d.id === 'bellfall_crypt');
+  expect(bell.depths[0].lockReason).toBe(expedition.dungeonAccess('bellfall_crypt', { depth: 'standard' }).error);
   const garden = result.dungeons.find((d: any) => d.id === 'glass_garden');
   expect(garden.depths.map((d: any) => d.depth)).toEqual(['standard', 'deep']);
   expect(garden.depths[0]).toMatchObject({ unlocked: true, cost: 4 });
-  expect(garden.depths[1]).toMatchObject({ unlocked: false, lockReason: '캠페인 2-10 클리어 필요' });
+  expect(garden.depths[1]).toMatchObject({ unlocked: false, lockReason: expedition.dungeonAccess('glass_garden', { depth: 'deep' }).error });
   expect(garden.depths[1].rewards.some((r: any) => r.id === 'first')).toBe(true);
   expect(entryAction(garden.depths[1]).enabled).toBe(false);
-  // 단일 소스 교체: 다른 판정을 넘기면 그 판정을 그대로 쓴다.
-  const swapped: any = dungeonStages({ expedition, power: 0, source: [{ dungeon: { id: 'glass_garden', name: '정원', stage: { recPower: 2600 }, energy: 4, minLevel: 1, rewards: {} }, unlocked: false, reason: '마을 해금 필요', wins: 0, cleared: false }] });
+  // 숨은 던전은 기억·직접 선택으로도 고를 수 없다.
+  const hidden = region.teaserIds[0];
+  const model: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'dungeon', id: hidden, depth: 'standard' } } }));
+  expect(model.selection).toEqual({ tab: 'campaign', ch: 1, st: 1 });
+  // 단일 소스 교체: 넘긴 판정을 그대로 쓴다.
+  const swapped: any = dungeonStages({ expedition, power: 0, source: { nodes: [{ dungeon: { id: 'glass_garden', name: '정원', stage: { recPower: 2600 }, energy: 4, minLevel: 1, rewards: {} }, unlocked: false, reason: '마을 해금 필요', wins: 0, cleared: false }], teaser: null } });
   expect(swapped.dungeons[0].depths[0]).toMatchObject({ unlocked: false, lockReason: '마을 해금 필요' });
+  expect(swapped.teaser).toBeNull();
+});
+
+test('던전 탭(지역 판정): 1-10 클리어 저장은 지역 2 던전이 보이고 예고는 지역 3', () => {
+  const { eco, expedition } = fresh();
+  eco.s.progress.unlocked = 11; eco.s.progress.stars = { '1-10': 1 };
+  const result: any = dungeonStages({ expedition, power: 0, energy: eco.s.energy });
+  const ids = result.dungeons.map((d: any) => d.id);
+  expect(ids).toEqual((expedition as any).regionDungeons().visibleIds);
+  for (const id of ['ember_vault', 'cinder_tide_lock', 'glass_garden', 'bellfall_crypt']) expect(ids).toContain(id);
+  expect(result.teaser).toMatchObject({ region: 3, unlockCode: '2-10' });
+  expect(result.dungeons.find((d: any) => d.id === 'ember_vault').depths[0].lockReason).toBe(expedition.dungeonAccess('ember_vault', { depth: 'standard' }).error);
 });
 
 test('캠페인 완주 저장은 던전 탭이 추천, 에너지 부족은 입장 가능하되 사유 표시', () => {

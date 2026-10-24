@@ -391,7 +391,9 @@ export class StageSelectUI {
     }
     if (!dungeons.dungeons.length) grid.append(node('li', 'ss-empty', '아직 열린 던전이 없습니다. 캠페인 관문을 깨고 탐험 레벨을 올려 보세요.'));
     this.list.replaceChildren(grid);
-    this.listNote.textContent = `열린 던전 ${dungeons.open}/${dungeons.total}${dungeons.hiddenLocked ? ` · 잠긴 던전 ${dungeons.hiddenLocked}곳은 탐험 레벨을 올리면 열립니다` : ''}`;
+    // 다음 마을 예고 한 줄(지역 판정 문구 그대로). 숨은 던전은 목록에도 개수에도 나오지 않는다.
+    this.listNote.textContent = dungeons.teaser ? `다음 마을 예고 · ${dungeons.teaser.reason}` : '';
+    this.listNote.hidden = !dungeons.teaser;
   }
 
   paintDetail() {
