@@ -149,7 +149,7 @@ try {
         await page.setViewportSize(size); await page.waitForTimeout(500);
         if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').click().catch(() => {});
         await page.evaluate(() => window.app.renderer.render()).catch(() => {});
-        const file = `${id}_lobby_${size.width}.png`; await page.screenshot({ path: `${OUT}/${file}` }); rec.shots.push(file);
+        const file = `${id}_lobby_${size.width}.png`; await page.screenshot({ path: `${OUT}/${file}`, timeout: 120000 });   // 첫 장은 SwiftShader 셰이더 컴파일로 느리다 rec.shots.push(file);
       }
       await page.setViewportSize(SIZES[1]); await page.waitForTimeout(300);
       rec.shots.push(await saveDataUrl(await page.evaluate(() => window.__bootsQA.closeup()), `${id}_lobby_closeup.png`));
