@@ -359,7 +359,8 @@ export class Economy {
   blessingPick(index) { return Runes.blessingPick(this, index); }
   blessingConsume() { return Runes.blessingConsume(this); }
   addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
-  trainingQuote(id) { return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
+  /** 미소유 영웅은 성장·장비·외형 명령을 모두 거절한다(미리 키워 두는 우회 차단). 로컬과 서버 /cmd가 같은 Economy 메서드를 부르므로 한 곳에서 막는다. */
+  trainingQuote(id) { if (!this.ownHero(id)) return { ok: false, reason: 'locked' }; return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
   levelUpHero(id) {
     const quote = this.trainingQuote(id); this.lastTrainingError = quote.reason;
     if (!quote.ok) return false;
@@ -372,13 +373,14 @@ export class Economy {
     for (const listener of this.listeners) listener(this.s);
     return true;
   }
-  promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
+  promoteHero(id) { if (!this.ownHero(id)) return false; const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   skillPoints(id) {
     const def = HEROES[id], h = this.hero(id);
     if (!def || !h) return { earned: 0, bonus: 0, spent: 0, available: 0 };
     return { earned: spBudget(h), bonus: spBonus(h), spent: spSpent(def, h.skills), available: spAvailable(def, h) };
   }
   learnSkill(id, i) {
+    if (!this.ownHero(id)) return { ok: false, reason: 'locked' };
     const h = this.hero(id), def = HEROES[id];
     if (!h || !def || !Number.isInteger(i) || i < 0) return { ok: false, reason: 'skill' };
     const quote = canLearnSkill(def, h, i);
@@ -395,6 +397,7 @@ export class Economy {
       gemPrice: this.sku('skill_reset1').price, refund: this.skillPoints(id).spent };
   }
   resetSkills(id, { useGems = false } = {}) {
+    if (!this.ownHero(id)) return { ok: false, reason: 'locked' };
     const h = this.hero(id), def = HEROES[id], quote = this.skillResetQuote(id);
     if (!h || !def) return { ok: false, reason: 'scroll' };
     const used = quote.free ? 'free' : quote.scrolls > 0 ? 'scroll' : 'gems';
@@ -426,6 +429,7 @@ export class Economy {
       after: next ? heroStats(def, { ...h, grade: next }, bonus) : null };
   }
   transcend(id) {
+    if (!this.ownHero(id)) return { ok: false, reason: 'locked' };
     const quote = this.transcendQuote(id);
     if (!quote.next || !quote.cost) return { ok: false, reason: 'max' };
     for (const [key, reason] of [['shards', 'shards'], ['transcendStones', 'stones'], ['gold', 'gold']]) {
@@ -441,7 +445,7 @@ export class Economy {
     return { ok: true, grade: quote.next };
   }
   // 레벨 해금과 SP 습득을 모두 마친 각성 스킬만 Q/E에 넣는다(리뷰 P1: 초기화 뒤 미습득 스킬이 다시 장착되던 경로).
-  setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; if (!skillLearned(h.skills[skillIndex])) return false; const next = normalizeSkillLoadout(def, h.skillLoadout, h.skills, h.level); if (next[slot] === skillIndex) { if (next.every((v, k) => v === h.skillLoadout?.[k])) return false; h.skillLoadout = next; this.emit(); return true; } const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
+  setSkillLoadout(id, slot, skillIndex) { if (!this.ownHero(id)) return false; const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; if (!skillLearned(h.skills[skillIndex])) return false; const next = normalizeSkillLoadout(def, h.skillLoadout, h.skills, h.level); if (next[slot] === skillIndex) { if (next.every((v, k) => v === h.skillLoadout?.[k])) return false; h.skillLoadout = next; this.emit(); return true; } const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
   /** 가챠 영웅 지급: 소유 영웅은 조각 +40(중복), 미소유 영웅은 소유를 열지 않고 같은 조각만 쌓는다(locked). */
   grantHero(id) {
     const h = this.s.heroes[id]; if (!h) return { dup: false, locked: true, shards: 0 };
@@ -457,8 +461,8 @@ export class Economy {
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return inst;
   }
-  equip(heroId, uid) { const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
-  unequip(heroId, slot) { this.hero(heroId).equip[slot] = null; this.emit(); }
+  equip(heroId, uid) { if (!this.ownHero(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
+  unequip(heroId, slot) { if (!this.ownHero(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
   /** 강화: +8까지 100%, 이후 확률/파괴. protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
   enhance(uid, { protect = false, bless = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
@@ -814,6 +818,7 @@ export class Economy {
   /** @param {string} heroId @param {string|null} [id] */
   equipAvatar(heroId, id = null) {
     if (!Object.hasOwn(HEROES, heroId)) return { ok: false, reason: 'hero' };
+    if (!this.ownHero(heroId)) return { ok: false, reason: 'locked' };
     if (id === null) { delete this.s.avatars.equipped[heroId]; this.emit(); return { ok: true }; }
     const avatar = AVATAR_BY_ID[id];
     if (!avatar || avatar.heroId !== heroId || !this.s.avatars.owned.includes(id)) return { ok: false, reason: 'avatar' };
@@ -826,6 +831,7 @@ export class Economy {
   /** @param {string} heroId @param {boolean} on */
   setShowGear(heroId, on) {
     if (!Object.hasOwn(HEROES, heroId)) return { ok: false, reason: 'hero' };
+    if (!this.ownHero(heroId)) return { ok: false, reason: 'locked' };
     const map = this.s.avatars.showGear || (this.s.avatars.showGear = {});
     if (on) map[heroId] = true; else delete map[heroId];
     this.emit(); return { ok: true };
