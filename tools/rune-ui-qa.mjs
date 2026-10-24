@@ -30,7 +30,10 @@ try {
     report.sizes[tag] = rec;
     const page = await browser.newPage({ viewport: { width: w, height: h }, hasTouch: true, isMobile: w < h || w <= 900 });
     page.on('pageerror', (e) => report.errors.push(tag + ' pageerror ' + e.message));
+    page.on('response', (r) => { if (r.status() >= 400) report.errors.push(tag + ' http ' + r.status() + ' ' + r.url().replace(base, '/')); });
     page.on('console', (m) => { if (m.type() === 'error') report.errors.push(tag + ' console ' + m.text().slice(0, 200)); });
+    // 실제 터치: 요소 가운데를 터치스크린으로 누른다(렌더 루프가 무거운 세로 화면에서 안정 대기 없이).
+    const touch = async (loc) => { const ignore = page.locator('#btn-ignore-rotate'); if (await ignore.isVisible().catch(() => false)) { await ignore.click(); await page.waitForTimeout(200); } await loc.waitFor({ state: 'visible' }); await loc.scrollIntoViewIfNeeded(); await page.waitForTimeout(400); const b = await loc.boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(150); };
     const shot = async (name) => { const p = `${out}/${tag}-${name}.png`; await page.waitForTimeout(250); await page.screenshot({ path: p, timeout: 120000 }); rec.shots.push(p); rec.checks[name + ':clip'] = await page.evaluate(clipCheck); };
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 });
@@ -63,18 +66,19 @@ try {
     await page.waitForTimeout(400);
     // 장비 상세 → 룬 소켓 탭(빈 2칸 + 잠긴 3번째)
     await page.evaluate(({ armor, heroId }) => window.app.meta.showItem(armor, heroId), ids);
-    await page.locator('[data-side-tab="rune"]').tap();
+    await touch(page.locator('[data-side-tab="rune"]'));
     await page.locator('.rs-pane').waitFor();
     rec.checks.powerBefore = await page.locator('.is-power b').textContent();
     rec.checks.sockets = await page.$$eval('.rs-pane .rs-socket', (els) => els.map((e) => e.dataset.state + ':' + e.querySelector('small').textContent));
     await shot('1-socket-tab');
     // 룬 장착 → 룬 고르기(폭풍 필터 → 바람 칼끝 II)
-    await page.locator('#rs-insert').tap();
-    await page.locator('.rune-picker').waitFor();
-    await page.locator('.rp-cell[data-key="storm_edge:2"]').tap();
+    await touch(page.locator('#rs-insert'));
+    try { await page.locator('.rune-picker').waitFor({ timeout: 8000 }); }
+    catch (e) { await page.screenshot({ path: `${out}/${tag}-debug.png` }); const b = await page.locator('#rs-insert').boundingBox(); console.log('debug', JSON.stringify(b), await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.outerHTML.slice(0, 160), [b.x + b.width / 2, b.y + b.height / 2])); throw e; }
+    await touch(page.locator('.rp-cell[data-key="storm_edge:2"]'));
     rec.checks.preview = await page.$$eval('.rp-preview > span', (els) => els.map((e) => e.textContent));
     await shot('2-picker');
-    await page.locator('#rp-go').tap();
+    await touch(page.locator('#rp-go'));
     await page.locator('.rs-pane').waitFor();
     rec.checks.powerAfterInsert = await page.locator('.is-power b').textContent();
     rec.checks.socketsAfter = await page.$$eval('.rs-pane .rs-socket', (els) => els.map((e) => e.dataset.state + ':' + e.querySelector('small').textContent));
@@ -82,30 +86,30 @@ try {
     rec.checks.realCounts = await page.evaluate(({ armor, heroId }) => { const eco = window.app.eco; return { sockets: eco.s.inventory.find((x) => x.uid === armor).sockets, gold: eco.s.gold }; }, ids);
     await shot('3-after-insert');
     // 두 번째 칸도 박기(물결) 뒤 교체 확인창(앱 안)
-    await page.locator('.rs-socket[data-socket="0"]').tap();
-    await page.locator('#rs-swap').tap();
+    await touch(page.locator('.rs-socket[data-socket="0"]'));
+    await touch(page.locator('#rs-swap'));
     await page.locator('.rune-picker').waitFor();
     await shot('4-picker-replace');
-    await page.locator('#rp-cancel').tap();
+    await touch(page.locator('#rp-cancel'));
     await page.locator('.rs-pane').waitFor();
     // 각인판
-    await page.locator('#rs-overview').tap();
+    await touch(page.locator('#rs-overview'));
     await page.locator('.rune-overview').waitFor();
     await page.waitForTimeout(1200);
     await shot('5-overview');
     rec.checks.overviewAutoPlan = await page.locator('#ro-auto').textContent();
-    await page.locator('#ro-auto').tap();
+    await touch(page.locator('#ro-auto'));
     await page.waitForTimeout(300);
     rec.checks.afterAuto = await page.evaluate(({ weapon, ring, armor }) => { const inv = window.app.eco.s.inventory; return [weapon, ring, armor].map((u) => inv.find((x) => x.uid === u)?.sockets || null); }, ids);
     await shot('6-overview-auto');
     // 제작 공방 → 룬 가방 · 합성
     await page.evaluate(() => { window.app.ui.closeModal(); window.app.expeditionUI.open('forge'); });
-    await page.locator('.exp-forge-panes button', { hasText: '룬 가방' }).tap();
+    await touch(page.locator('.exp-forge-panes button', { hasText: '룬 가방' }));
     await page.locator('.rune-bag').waitFor();
-    await page.locator('.rb-cell[data-rune="ember_edge"]').tap();
+    await touch(page.locator('.rb-cell[data-rune="ember_edge"]'));
     rec.checks.bagBefore = await page.evaluate(() => window.app.eco.runeState().bag.ember_edge);
     await shot('7-bag-merge');
-    await page.locator('#rb-go').tap();
+    await touch(page.locator('#rb-go'));
     await page.waitForTimeout(300);
     rec.checks.bagAfter = await page.evaluate(() => ({ bag: window.app.eco.runeState().bag.ember_edge, gold: window.app.eco.s.gold }));
     await shot('8-bag-merged');
