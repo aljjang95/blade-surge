@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { validateCustomer } from '../src/ui/customer-info.js';
 import { createHeroPurchase, PENDING_KEY } from '../src/platform/hero-purchase.js';
 
 const PID = 'bsw_' + 'a'.repeat(32);
@@ -6,7 +7,7 @@ const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId,
 
 class MemStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
 
-function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any; authority?: string | null } = {}) {
+function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any; authority?: string | null; askCustomer?: () => Promise<any> } = {}) {
   const calls: any[] = [], applied: any[] = [], storage = new MemStorage();
   const api = {
     async me() { return { flags: { webBilling: opts.webBilling ?? true } }; },
@@ -20,11 +21,35 @@ function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: a
   const eco = { applyIapState(state: any) { applied.push(state); return []; } };
   const payCalls: any[] = [];
   const sdk = opts.sdk === undefined ? { requestPayment: async (req: any) => { payCalls.push(req); return { paymentId: req.paymentId }; } } : opts.sdk;
-  const hp = createHeroPurchase({ api, eco, channel: opts.channel ?? 'web', billing: opts.billing ?? null, authority: () => opts.authority === undefined ? 'server' : opts.authority, loadSdk: async () => sdk, storage, now: () => 1000,
+  const hp = createHeroPurchase({ api, eco, channel: opts.channel ?? 'web', billing: opts.billing ?? null, authority: () => opts.authority === undefined ? 'server' : opts.authority, loadSdk: async () => sdk, askCustomer: opts.askCustomer, storage, now: () => 1000,
     location: { origin: 'https://blade.example', search: opts.search ?? '', pathname: '/' }, history: { replaceState() {} } });
   return { hp, calls, applied, payCalls, storage };
 }
 const apiErr = (status: number, error: string) => Object.assign(new Error(error), { status, body: { error } });
+
+describe('구매자 정보(KG이니시스 필수)', () => {
+  const who = { fullName: '홍길동', phoneNumber: '01012345678', email: 'a@b.co' };
+  test('결제창 호출에 customer가 전달되고, 입력은 intent 요청 본문에 섞이지 않는다', async () => {
+    const { hp, payCalls, calls } = rig({ askCustomer: async () => who });
+    await hp.init();
+    await hp.buy('hero_knight_v1');
+    expect(payCalls[0].customer).toEqual(who);
+    expect(JSON.stringify(calls)).not.toContain('01012345678');
+  });
+  test('입력 검증: 이름·휴대폰·이메일 형식', () => {
+    expect(validateCustomer({ fullName: '홍길동', phoneNumber: '010-1234-5678', email: 'a@b.co' })).toEqual({ ok: true, customer: who });
+    expect(validateCustomer({ fullName: '', phoneNumber: '01012345678', email: 'a@b.co' }).ok).toBe(false);
+    expect(validateCustomer({ fullName: '홍길동', phoneNumber: '12345', email: 'a@b.co' })).toMatchObject({ ok: false, field: 'phoneNumber' });
+    expect(validateCustomer({ fullName: '홍길동', phoneNumber: '01012345678', email: 'nope' })).toMatchObject({ ok: false, field: 'email' });
+  });
+  test('취소하면 customer-cancelled이고 서버를 부르지 않는다', async () => {
+    const { hp, calls, payCalls } = rig({ askCustomer: async () => null });
+    await hp.init();
+    expect(await hp.buy('hero_knight_v1')).toEqual({ ok: false, reason: 'customer-cancelled' });
+    expect(calls).toEqual([]);
+    expect(payCalls).toEqual([]);
+  });
+});
 
 describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
   test('그림자·로컬 모드 계정은 서버가 웹 결제를 알려도 available=false이고 buy는 서버를 부르지 않는다', async () => {

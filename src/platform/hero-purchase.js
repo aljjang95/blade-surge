@@ -30,10 +30,10 @@ export function loadPortOneSdk(doc = globalThis.document) {
 }
 
 /**
- * @param {{ api: any, eco: any, billing?: any, channel?: string, loadSdk?: () => Promise<any>, storage?: any, now?: () => number,
+ * @param {{ api: any, eco: any, billing?: any, channel?: string, loadSdk?: () => Promise<any>, askCustomer?: () => Promise<{ fullName: string, phoneNumber: string, email: string } | null>, storage?: any, now?: () => number,
  *   authority?: () => string | null, location?: { origin?: string, search?: string, pathname?: string }, history?: any }} options
  */
-export function createHeroPurchase({ api, eco, billing = null, authority = () => null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, storage = defaultStorage(), now = () => Date.now(),
+export function createHeroPurchase({ api, eco, billing = null, authority = () => null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, askCustomer = null, storage = defaultStorage(), now = () => Date.now(),
   location = globalThis.location, history = globalThis.history }) {
   let webOn = false, busy = false, syncing = false, lastSyncAt = 0;
   // 상태 적용 순서: 요청을 시작할 때 단조 증가 번호를 받고, 더 최근에 시작한 요청의 결과가 이미 적용됐으면 오래된 응답은 버린다.
@@ -127,6 +127,13 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
       if (busy) return { ok: false, reason: 'busy' };
       busy = true;
       try {
+        // KG이니시스 결제창은 구매자 이름·연락처·이메일이 필수다. 서버 intent 전에 받고, 취소하면 서버를 부르지 않는다. 저장하지 않는다.
+        let customer = null;
+        if (typeof askCustomer === 'function') {
+          try { customer = await askCustomer(); } catch { customer = null; }
+          if (!customer?.fullName || !customer?.phoneNumber || !customer?.email) return { ok: false, reason: 'customer-cancelled' };
+          customer = { fullName: customer.fullName, phoneNumber: customer.phoneNumber, email: customer.email };
+        }
         let intent;
         try { intent = await api.request('POST', '/iap/web/intent', { productId }); }
         catch (error) {
@@ -143,6 +150,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
           result = await sdk.requestPayment({
             storeId: intent.storeId, channelKey: intent.channelKey, paymentId: intent.paymentId, orderName: intent.orderName,
             totalAmount: intent.totalAmount, currency: intent.currency, payMethod: intent.payMethod, customData: intent.customData,
+            ...(customer ? { customer } : {}),
             // 모바일은 결제 앱·PG 페이지로 나갔다가 이 주소로 돌아온다(복귀 시 resume()이 complete를 다시 보낸다).
             redirectUrl: `${origin}/?bs_pay=${encodeURIComponent(intent.paymentId)}`,
           });
