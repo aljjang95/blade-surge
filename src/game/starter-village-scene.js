@@ -583,7 +583,11 @@ export function buildStarterVillage({ root, owned, environmentTexture = null, qu
     },
     /** 장면 해제 뒤 늦게 도착한 GLB 를 무시한다. */
     retire() { retired = true; },
-    /** 훈련장 연습 한 번: 가장 가까운 허수아비가 맞은 방향으로 흔들린다. 맞은 허수아비 id 를 돌려준다. */
+    /**
+     * 훈련장 연습 한 번: 가장 가까운 허수아비가 맞은 방향으로 흔들린다. 맞은 허수아비 id 를 돌려준다.
+     * @param {{ x: number, z: number } | null} [position]
+     * @param {number} [power]
+     */
     strike(position = null, power = 1) {
       let best = 0, bestDistance = Infinity;
       if (position) STARTER_DUMMIES.forEach((dummy, i) => { const d = Math.hypot(dummy.x - position.x, dummy.z - position.z); if (d < bestDistance) { bestDistance = d; best = i; } });
