@@ -13,7 +13,7 @@ export class LazyWardrobe {
   status(host, retry, failed = false) {
     if (!host) return;
     const message = document.createElement(failed ? 'button' : 'p');
-    message.className = 'wardrobe-loading';
+    message.className = failed ? 'wardrobe-loading wardrobe-retry' : 'wardrobe-loading';
     message.textContent = failed ? '불러오지 못했어요. 다시 시도' : '착용 모습을 불러오는 중';
     if (failed) { message.type = 'button'; message.onclick = retry; }
     else message.setAttribute('role', 'status');
