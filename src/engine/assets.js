@@ -540,9 +540,8 @@ export function mergeSkinned(scene, animations = []) {
 }
 
 export async function preloadAll(onProgress) {
-  await preloadSurfaceTextures();
-  await preloadDungeonSurface();
-  await preloadArmory();
+  // 서로 독립인 표면·던전·무기 준비를 겹치되, 모델 가공 전 완료는 유지한다.
+  await Promise.all([preloadSurfaceTextures(), preloadDungeonSurface(), preloadArmory()]);
   let done = 0;
   await Promise.all(MODEL_LIST.map(async (n) => { await loadModel(n); done++; onProgress?.(done / MODEL_LIST.length); }));
 }

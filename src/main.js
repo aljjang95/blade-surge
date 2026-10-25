@@ -34,7 +34,7 @@ import { ExpeditionEconomy } from './game/expedition-economy.js';
 import { buildExpeditionStage } from './game/expedition-combat.js';
 import { ExpeditionUI } from './expansion/hub.jsx';
 import { playExpeditionIntro } from './expansion/cinematic.js';
-import { Wardrobe } from './expansion/wardrobe.jsx';
+import { LazyWardrobe } from './expansion/lazy-wardrobe.js';
 import { JourneyService } from './game/journey-service.js';
 import { JourneyView } from './ui/journey.js';
 import { applyRiftStage } from './game/journey-rifts.js';
@@ -124,7 +124,7 @@ class App {
     this.journey = new JourneyService(this);
     this.arsenal = new ArsenalService(this);
     this.models = {};
-    this.wardrobe = new Wardrobe(this);
+    this.wardrobe = new LazyWardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true; this.hubWalkMode = false;
     this.hubMovement = new HubMovement(CITADEL_HUB);
     this.citadel = { movement: this.hubMovement, clearInput: () => { this.hubControls?.clear(); this.lobbyCameraControls?.finish(); } };
