@@ -220,10 +220,17 @@ export class Bellringer {
     audio.shatter?.({ vol: .5 }); audio.boom?.({ vol: .4, dur: .3, low: 90 });
     if (this.bell) this.bell.visible = false;
   }
-  /** 예고만 거둔다(이미 퍼지는 고리는 남는다). */
+  /**
+   * 예고와 대기 중인 발사를 거둔다(이미 퍼지는 고리는 끝까지 간다).
+   * 첫 고리 뒤 간격(recover) 중에 종이 깨지면 두 번째 고리가 발사되지 않게 남은 발사를 취소한다.
+   */
   cancelWindup() {
     const e = this.enemy;
     if (this.phase === 'toll') { this.phase = null; this.t = 0; e.special = null; e.telegraph = 0; }
+    else if (this.phase === 'recover') {
+      this.phase = null; this.t = 0; this.nextRing = RING_COUNT; e.special = null; e.telegraph = 0;
+      this.cd = BELL.cooldown + this.random() * BELL.cooldownJitter;
+    }
   }
   /** 예고 중 기절: 종소리가 나기 전에 끊고 잠시 뒤 다시 친다. */
   interrupt() {
@@ -266,13 +273,14 @@ export class Bellringer {
     return { id: `${id}:bell:${this.tolls}`, kind: 'ring', x: this.enemy.pos.x, z: this.enemy.pos.z, radius: BELL.maxRadius, width: 0, length: 0, angle: 0,
       safeRadius: 0, remaining: Math.max(0, BELL.windup - this.t), duration: BELL.windup, color: BELL_COLOR };
   }
-  /** 호스트가 스냅샷에 싣는 값. 종 체력(bh)은 늘, 예고 진행(ph)과 고리 반경(rr·rs)은 진행 중일 때만 넣어 평소 크기를 지킨다. */
-  /** @returns {{ bh: number, ph?: number, rr?: number, rs?: number }} */
+  /** 호스트가 스냅샷에 싣는 값. 종 체력(bh)은 늘, 예고 진행(ph)과 고리 반경·발사 중심(rr·rx·rz / rs·sx·sz)은 진행 중일 때만 넣어 평소 크기를 지킨다. */
+  /** @returns {{ bh: number, ph?: number, rr?: number, rx?: number, rz?: number, rs?: number, sx?: number, sz?: number }} */
   partyState() {
     const out = { bh: +(this.bellHp / this.bellMax).toFixed(3) };
     if (this.phase === 'toll') out.ph = +Math.min(1, this.t / BELL.windup).toFixed(3);
-    if (this.rings[0].active) out.rr = +this.rings[0].r.toFixed(2);
-    if (this.rings[1].active) out.rs = +this.rings[1].r.toFixed(2);
+    // 고리 중심은 발사 순간의 종지기 위치다(그 뒤 종지기가 추적·넉백돼도 판정은 이 중심이다). 게스트가 같은 중심으로 그리도록 함께 싣는다.
+    if (this.rings[0].active) { const r = this.rings[0]; out.rr = +r.r.toFixed(2); out.rx = +r.cx.toFixed(2); out.rz = +r.cz.toFixed(2); }
+    if (this.rings[1].active) { const r = this.rings[1]; out.rs = +r.r.toFixed(2); out.sx = +r.cx.toFixed(2); out.sz = +r.cz.toFixed(2); }
     return out;
   }
   /**
@@ -286,12 +294,13 @@ export class Bellringer {
     this.bellHp = (Number.isFinite(item.bh) ? Math.max(0, Math.min(1, item.bh)) : 1) * this.bellMax;
     this.t = (Number.isFinite(item.ph) ? item.ph : 0) * BELL.windup;
     this.phase = item.ph > 0 ? 'toll' : null;
-    const draw = (index, r) => {
+    // 고리 중심: 호스트가 보낸 발사 좌표. 구버전 호스트(필드 없음)면 종지기의 현재 위치.
+    const draw = (index, r, x, z) => {
       const ring = this.rings[index]; ring.active = r > 0 && r < BELL.maxRadius; ring.r = r;
-      ring.cx = this.enemy.pos.x; ring.cz = this.enemy.pos.z;
+      ring.cx = Number.isFinite(x) ? x : this.enemy.pos.x; ring.cz = Number.isFinite(z) ? z : this.enemy.pos.z;
       if (ring.active) this.drawRing(ring); else if (ring.mesh) ring.mesh.visible = false;
     };
-    draw(0, this._gr); draw(1, this._gs);
+    draw(0, this._gr, item.rx, item.rz); draw(1, this._gs, item.sx, item.sz);
     this.drawBell();
   }
   dispose() {

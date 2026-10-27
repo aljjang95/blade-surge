@@ -5,6 +5,7 @@ import { validPartyWarning } from '../src/party/combat-effects.js';
 import { validPartySnapshot } from '../src/party/protocol.js';
 import { ENEMIES, stageDef } from '../src/data/stages.js';
 import { monsterRosterEntry } from '../src/data/monster-roster.js';
+import { Player } from '../src/game/player.js';
 
 const DT = 1 / 60;
 
@@ -312,4 +313,102 @@ test('실제 Enemy.hurt: 종이 피해를 먼저 받아 몸 체력이 그대로�
   const before = enemy.hp;
   enemy.hurt(100, { kb: 0 });
   expect(before - enemy.hp).toBeGreaterThan(100 * (1 - (enemy.def.armor || 0)) * 1.4);   // 무방비 1.5배
+});
+
+// ---------- 코드 리뷰 P2 3건 ----------
+test('리뷰 P2-1: 파티 스냅샷이 고리마다 발사 중심을 싣고, 게스트는 종지기가 움직여도 그 중심으로 그린다(구버전은 현재 위치)', () => {
+  const f = fixture(8);
+  f.player.invuln = true;
+  f.enemy.pos.set(3, 0, -2);
+  until(f, () => f.ringer.rings[0].active);
+  const launchX = f.ringer.rings[0].cx, launchZ = f.ringer.rings[0].cz;
+  expect(launchX).toBeCloseTo(3); expect(launchZ).toBeCloseTo(-2);
+  // 발사 뒤 종지기가 추적·넉백으로 다른 곳에 있다.
+  f.enemy.pos.set(9, 0, 5);
+  until(f, () => f.ringer.rings[1].active);
+  const state: any = f.ringer.partyState();
+  expect(state.rx).toBeCloseTo(launchX); expect(state.rz).toBeCloseTo(launchZ);
+  expect(state.sx).toBeCloseTo(9); expect(state.sz).toBeCloseTo(5);
+  const snapshot = {
+    tick: 1, elapsed: 1,
+    players: [0, 1].map((i) => ({ id: 'p' + i, heroId: 'knight', x: 0, z: 0, yaw: 0, hp: 10, maxHp: 10, state: 'idle', anim: 'Idle', ult: 0, cds: [0, 0, 0, 0] })),
+    enemies: [{ id: 'e1', key: 'bell_ringer', x: 20, z: 20, yaw: 0, hp: 10, maxHp: 10, state: 'chase', anim: 'Idle', boss: false, elite: false, ...state }],
+    rooms: [{ id: 0, discovered: true, cleared: false, activated: true }], roomsCleared: 0, bossDefeated: false, portal: null, events: [],
+  };
+  expect(validPartySnapshot(snapshot)).toBe(true);
+  expect(validPartySnapshot({ ...snapshot, enemies: [{ ...snapshot.enemies[0], rx: 'a' }] })).toBe(false);
+  expect(validPartySnapshot({ ...snapshot, enemies: [{ ...snapshot.enemies[0], rz: 99999 }] })).toBe(false);
+  // 게스트: 복제본은 호스트와 다른 위치(20,20)에 있어도 발사 중심에 그린다.
+  const guest = fixture(30);
+  guest.enemy.pos.set(20, 0, 20);
+  guest.ringer.applyParty(state, DT);
+  const m0 = guest.ringer.rings[0].mesh!, m1 = guest.ringer.rings[1].mesh!;
+  expect(m0.position.x).toBeCloseTo(launchX); expect(m0.position.z).toBeCloseTo(launchZ);
+  expect(m1.position.x).toBeCloseTo(9); expect(m1.position.z).toBeCloseTo(5);
+  // 같은 스냅샷이 여러 프레임 보여도 중심은 그대로, 반경만 이어진다.
+  guest.ringer.applyParty(state, .1);
+  expect(m0.position.x).toBeCloseTo(launchX); expect(m0.scale.x).toBeCloseTo(state.rr + BELL.speed * .1);
+  // 구버전 호스트(중심 필드 없음): 종지기 현재 위치.
+  const legacy = fixture(30);
+  legacy.enemy.pos.set(4, 0, 6);
+  legacy.ringer.applyParty({ bh: 1, rr: 4 }, DT);
+  expect(legacy.ringer.rings[0].mesh!.position.x).toBeCloseTo(4); expect(legacy.ringer.rings[0].mesh!.position.z).toBeCloseTo(6);
+});
+
+function autoStep(enemies: any[], me: any = {}) {
+  const requests: string[] = [];
+  const game: any = { enemies, stage: {}, world: null, elapsed: 5, input: { press(k: string) { requests.push(k); } } };
+  const p = Object.assign(Object.create(Player.prototype), { game, pos: { x: 0, z: 0 }, state: 'idle', hitDone: false, dodgeCd: 0, invuln: 0, radius: .5,
+    def: { ranged: false, skills: [] }, heroLevel: 1, skillLoadout: [4, 5], cds: [], hp: 100, maxHp: 100, mp: 100, ult: 0, ultMax: 100, _autoHubCounts: [], ...me });
+  Player.prototype.autoMove.call(p, 1 / 60);
+  return requests;
+}
+
+test('리뷰 P2-2: 고리가 다가오는 동안(telegraph 0, 근접 거리 밖)에도 AUTO가 종지기를 위협으로 보고 닿기 직전 회피한다', () => {
+  const origRandom = Math.random; Math.random = () => 0;
+  try {
+    const f = fixture(6);
+    const enemy: any = f.enemy;
+    enemy.pos.set(6, 0, 0); enemy.isElite = false; enemy.hp = 1000;
+    enemy.distTo = function (o: any) { return Math.hypot(this.pos.x - o.pos.x, this.pos.z - o.pos.z); };
+    f.player.invuln = true;
+    until(f, () => f.ringer.rings[0].active);
+    // strike() 가 telegraph 를 0 으로 지웠다 — 예전 조건(telegraph>0 && 거리<4)이면 건너뛰던 상태.
+    expect(enemy.telegraph).toBe(0);
+    f.player.pos.set(0, 0, 0);
+    // 아직 멀다(고리 도달까지 회피 무적 창보다 오래): 구르지 않는다.
+    f.ringer.rings[0].r = 1.4;
+    expect(enemyImpactIn(enemy, f.player as any)).toBeGreaterThan(.5);
+    expect(autoStep([enemy])).not.toContain('dodge');
+    // 고리가 플레이어 바로 앞(0.1초 안)까지 왔다: 구른다. 근접 거리 4 밖(6m)에서도.
+    f.ringer.rings[0].r = 6 - .05;
+    expect(enemy.pos.distanceTo(f.player.pos)).toBeGreaterThan(5.5);
+    expect(enemyImpactIn(enemy, f.player as any)).toBeLessThan(.1);
+    expect(autoStep([enemy])).toContain('dodge');
+    // 고리가 이미 지나갔다(맞았거나 지나침): 다시 구르지 않는다.
+    f.ringer.rings[0].r = 8;                              // 고리가 플레이어(6m)를 지나 바깥으로 갔다
+    f.ringer.rings[1].active = false;
+    expect(enemyImpactIn(enemy, f.player as any)).toBe(Infinity);
+    expect(autoStep([enemy])).not.toContain('dodge');
+  } finally { Math.random = origRandom; }
+});
+
+test('리뷰 P2-3: 첫 고리 뒤 간격 중에 종이 깨지면 두 번째 고리는 발사되지 않고, 이미 나간 첫 고리는 끝까지 간다', () => {
+  const f = fixture(8);
+  f.player.invuln = true;
+  until(f, () => f.ringer.rings[0].active);
+  expect(f.ringer.phase).toBe('recover');
+  expect(f.ringer.rings[1].active).toBe(false);
+  f.ringer.absorb(f.ringer.bellHp + 1);               // 간격(0.75초) 중 종 파괴
+  expect(f.ringer.intact).toBe(false);
+  expect(f.ringer.phase).toBeNull();
+  expect(f.enemy.special).toBeNull();
+  expect(f.enemy.telegraph).toBe(0);
+  f.enemy.stun = 0; f.enemy.state = 'chase';
+  let secondFired = false, maxR = 0;
+  for (let i = 0; i < 600; i++) { step(f); if (f.ringer.rings[1].active) secondFired = true; if (f.ringer.rings[0].active) maxR = Math.max(maxR, f.ringer.rings[0].r); }
+  expect(secondFired).toBe(false);
+  expect(maxR).toBeGreaterThan(BELL.maxRadius - .5);   // 첫 고리는 최대 반지름까지 진행했다
+  expect(f.ringer.ringing).toBe(false);
+  expect(f.ringer.tolls).toBe(1);
 });
