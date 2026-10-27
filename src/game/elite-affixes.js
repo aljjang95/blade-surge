@@ -67,11 +67,11 @@ export class EliteAffixes {
     // 불길 자취: 남은 불을 줄이고 영웅이 밟으면 0.5초마다 데인다.
     if (this.has.molten) {
       this.patchTick -= dt; let burn = false;
-      for (const pt of this.patches) if (pt.life > 0) { pt.life -= dt; if (pt.life > 0 && Math.hypot(p.pos.x - pt.x, p.pos.z - pt.z) < 1.35) burn = true; }
-      if (burn && this.patchTick <= 0) { this.patchTick = .5; p.hurt(e.atk * .55, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
+      for (const pt of this.patches) if (pt.life > 0) { pt.life -= dt; if (pt.life > 0 && Math.hypot(p.pos.x - pt.x, p.pos.z - pt.z) < 1.2) burn = true; }
+      if (burn && this.patchTick <= 0) { this.patchTick = .5; p.hurt(e.atk * .3, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
       if (e.alive && (this.t.trail -= dt) <= 0 && Math.hypot(e.vel.x, e.vel.z) > .5) {
-        this.t.trail = .55; const pt = this.patches[this.patchI++ % PATCHES]; pt.x = e.pos.x; pt.z = e.pos.z; pt.life = 4.5;
-        g.fx.groundTex(_v.set(pt.x, 0, pt.z), 'circle_demon', 0xff7a2a, { r0: 1.2, r1: 1.4, life: 4.5, spin: .3, fadeIn: .1, hold: 3.6 });
+        this.t.trail = .7; const pt = this.patches[this.patchI++ % PATCHES]; pt.x = e.pos.x; pt.z = e.pos.z; pt.life = 3.5;
+        g.fx.groundTex(_v.set(pt.x, 0, pt.z), 'circle_demon', 0xff7a2a, { r0: 1.1, r1: 1.25, life: 3.5, spin: .3, fadeIn: .1, hold: 2.7 });
       }
     }
     if (!e.alive) {
@@ -159,6 +159,6 @@ export class EliteAffixes {
   /** 지휘관 곁의 무리 공격 대기 가속(Enemy.update 에서 atkCd 감소에 곱한다). */
   static commandMul(enemy) {
     const leader = enemy.pack?.leader;
-    return leader && leader !== enemy && leader.alive && leader.affixes?.has.commander && leader.distTo(enemy) < 10 ? 1.35 : 1;
+    return leader && leader !== enemy && leader.alive && leader.affixes?.has.commander && leader.distTo(enemy) < 10 ? 1.25 : 1;
   }
 }

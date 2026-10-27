@@ -181,12 +181,12 @@ test('volatile: 영웅이 반경 밖이면 영웅은 안 다친다', () => {
   expect(hero.hurts.length).toBe(0);
 });
 
-test('commandMul: 지휘관 접두사 생존 리더가 10 안이면 1.35, 아니면 1', () => {
+test('commandMul: 지휘관 접두사 생존 리더가 10 안이면 1.25, 아니면 1', () => {
   const { game, hero, e, aff } = build(['commander'], 0, 0);
   const pack: any = { leader: e };
   e.pack = pack;
   const minion = makeEnemy(game, hero, 5, 0, { pack });
-  expect(EliteAffixes.commandMul(minion)).toBe(1.35);
+  expect(EliteAffixes.commandMul(minion)).toBe(1.25);
   minion.pos.set(10.5, 0, 0);
   expect(EliteAffixes.commandMul(minion)).toBe(1);
   minion.pos.set(5, 0, 0);

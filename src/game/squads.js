@@ -35,7 +35,7 @@ export const SQUADS = {
   artillery: { name: '포격진', key: 'ranged', need: 2, slots: ['tank', 'ranged', 'ranged', 'line', 'ranged'], hint: '뒷줄 원거리부터 노리세요. 방패병을 돌아 들어가면 사격이 멎습니다.' },
   ritual: { name: '주술 의식', key: 'support', slots: ['support', 'line', 'line', 'tank', 'line'], hint: '녹색 고리의 주술사가 치유하고 소환합니다. 먼저 쓰러뜨리세요.' },
   ambush: { name: '매복', key: 'ambush', slots: ['ambush', 'ambush', 'line', 'ambush', 'line'], hint: '땅이 갈라지는 원에서 솟구칩니다. 원 밖으로 비킨 뒤 솟은 직후의 무방비를 치세요.' },
-  demolition: { name: '폭파조', key: 'bomber', slots: ['bomber', 'bomber', 'line', 'bomber', 'bruiser'], hint: '자폭병을 무리 속으로 끌어모으면 연쇄 폭발이 적을 쓸어 냅니다.' },
+  demolition: { name: '폭파조', key: 'bomber', slots: ['bomber', 'line', 'bomber', 'bruiser', 'line'], hint: '자폭병을 무리 속으로 끌어모으면 연쇄 폭발이 적을 쓸어 냅니다.' },
   skirmish: { name: '습격대', key: 'flanker', slots: ['flanker', 'flanker', 'line', 'striker', 'line'], hint: '자객이 옆으로 돌아 찌릅니다. 예고 선을 보고 회피한 뒤 반격하세요.' },
   brawlers: { name: '분쇄대', key: 'bruiser', slots: ['bruiser', 'line', 'bruiser', 'striker', 'line'], hint: '내려찍기 원 밖으로 빠졌다가 큰 몸이 멈춘 틈에 몰아치세요.' },
   bellhost: { name: '종 대열', key: 'special', slots: ['special', 'line', 'tank', 'line', 'ranged'], hint: '종지기의 고리 사이 빈틈으로 피하세요. 종을 깨면 주변 적이 기절합니다.' },
@@ -85,7 +85,7 @@ export function composeRoom(R, st, roomId, stageIdx, n, { featuredRoom = false }
   const has = (role, k = 1) => (byRole[role]?.length || 0) >= k || (role === 'ranged' && k === 2 && (byRole.ranged?.length || 0) + (byRole.support?.length || 0) >= 2);
   const featuredRole = curve.featured ? speciesRole(ENEMIES[curve.featured]) : null;
   const avail = Object.entries(SQUADS).filter(([k, s]) => k !== 'rabble' && has(s.key, s.need || 1));
-  const weight = ([k, s]) => (s.key === featuredRole ? 4 : 1) * (k === 'vanguard' || k === 'artillery' ? 1 : 1.5);
+  const weight = ([k, s]) => (s.key === featuredRole ? 2 : 1) * (k === 'vanguard' || k === 'artillery' ? 1 : 1.5);
   const pick = (seed, skip) => {
     const pool = avail.filter(([k]) => k !== skip); if (!pool.length) return 'rabble';
     let total = 0; for (const e of pool) total += weight(e);

@@ -106,15 +106,17 @@ test('echo: 방이 이미 클리어됐으면 부활 없이 settleRoomSpawn 만 �
   expect(game.settled.length).toBe(1);
 });
 
-test('slag: packId%3===0 일 때만 쇳물 웅덩이, 영웅이 1.5 안이면 0.5초마다 maxHp*0.025', () => {
+test('slag: packId%4===0 일 때만 쇳물, 0.9초 예고 뒤에만 1.3 안 영웅을 0.5초마다 maxHp*0.015 데운다', () => {
   const { hero, game, rt } = setup('forge');
   rt.onDeath(makeEnemy(game, 0, 0, { packId: 1 }), null);
   rt.update(0.1);
   expect(hero.hurts.length).toBe(0);
-  rt.onDeath(makeEnemy(game, 0, 0, { packId: 3 }), null);
-  rt.update(0.1);
+  rt.onDeath(makeEnemy(game, 0, 0, { packId: 4 }), null);
+  rt.update(0.5); rt.update(0.3);
+  expect(hero.hurts.length).toBe(0);   // 예고 중
+  rt.update(0.2);
   expect(hero.hurts.length).toBe(1);
-  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.025);
+  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.015);
   rt.update(0.3);
   expect(hero.hurts.length).toBe(1);
   rt.update(0.3);
@@ -125,7 +127,7 @@ test('slag: 영웅이 1.5 밖이면 피해 없음, 소환체는 웅덩이 없음
   const { hero, game, rt } = setup('forge');
   hero.pos.set(2, 0, 0);
   rt.onDeath(makeEnemy(game, 0, 0, { packId: 0 }), null);
-  rt.update(0.1);
+  rt.update(1.0); rt.update(0.1);
   expect(hero.hurts.length).toBe(0);
   hero.pos.set(0, 0, 0);
   rt.onDeath(makeEnemy(game, 9, 9, { packId: 0, summoned: true }), null);

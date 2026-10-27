@@ -34,7 +34,7 @@ export class RegionTraits {
   constructor(game) {
     this.game = game; this.theme = regionTheme(game.stage);
     this.trait = this.theme ? REGION_TRAITS[this.theme] : null;
-    this.pools = Array.from({ length: POOLS }, () => ({ x: 0, z: 0, life: 0, kind: '' })); this.poolI = 0; this.burnT = 0;
+    this.pools = Array.from({ length: POOLS }, () => ({ x: 0, z: 0, life: 0, arm: 0, kind: '' })); this.poolI = 0; this.burnT = 0;
     this.chill = 0; this.chillT = 0; this.announced = false;
   }
   get active() { return !!this.trait; }
@@ -91,16 +91,21 @@ export class RegionTraits {
         g.settleRoomSpawn?.(room);
       });
       this.announce();
-    } else if (id === 'slag' && !e.summoned && (e.packId % 3 === 0)) {
+    } else if (id === 'slag' && !e.summoned && (e.packId % 4 === 0) && this.activePools('slag') < 4) {
       this.pool(e.pos.x, e.pos.z, 'slag', 3.5); this.announce();
     } else if (id === 'undertow' && !e.summoned && (e.packId % 2 === 0)) {
       this.pool(e.pos.x, e.pos.z, 'undertow', 1.2); this.announce();
       g.fx.groundTex(_v.set(e.pos.x, 0, e.pos.z), 'circle_gold', 0x48dabd, { r0: 5, r1: .6, life: 1.2, spin: -2.5, fadeIn: .05 });
     }
   }
+  activePools(kind) { let n = 0; for (const p of this.pools) if (p.life > 0 && p.kind === kind) n++; return n; }
   pool(x, z, kind, life) {
-    const p = this.pools[this.poolI++ % POOLS]; p.x = x; p.z = z; p.life = life; p.kind = kind;
-    if (kind === 'slag') this.game.fx.groundTex(_v.set(x, 0, z), 'circle_demon', 0xff6a1a, { r0: 1.4, r1: 1.6, life, spin: .2, fadeIn: .1, hold: life - .6 });
+    // 쇳물은 0.9초 동안 식은 테두리로 예고한 뒤에만 데운다(몰이 중 발밑에서 바로 데이지 않게).
+    const p = this.pools[this.poolI++ % POOLS]; p.x = x; p.z = z; p.life = life + (kind === 'slag' ? .9 : 0); p.arm = kind === 'slag' ? .9 : 0; p.kind = kind;
+    if (kind === 'slag') {
+      this.game.fx.ring(_v.set(x, 0, z), 0xff6a1a, { r0: 1.1, r1: 1.3, telegraph: true, life: .9, y: .06, width: 1 });
+      this.game.fx.groundTex(_v, 'circle_demon', 0xff6a1a, { r0: 1.2, r1: 1.3, life: life + .9, spin: .2, fadeIn: .9, hold: life - .6 });
+    }
   }
   update(dt) {
     if (!this.trait) return;
@@ -110,9 +115,9 @@ export class RegionTraits {
     this.burnT -= dt;
     for (const pl of this.pools) {
       if (pl.life <= 0) continue;
-      pl.life -= dt;
+      pl.life -= dt; if (pl.arm > 0 && (pl.arm -= dt) > 0) continue;
       if (pl.kind === 'slag') {
-        if (p?.alive && this.burnT <= 0 && Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z) < 1.5) { this.burnT = .5; p.hurt(p.maxHp * .025, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
+        if (p?.alive && this.burnT <= 0 && Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z) < 1.3) { this.burnT = .5; p.hurt(p.maxHp * .015, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
       } else if (pl.kind === 'undertow') {
         for (const e of g.enemies) if (e.alive && !e.spawning && !e.isBoss && Math.hypot(e.pos.x - pl.x, e.pos.z - pl.z) < 5) e.gather?.(pl.x, pl.z, 6, .12);
       }
