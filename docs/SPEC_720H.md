@@ -124,6 +124,7 @@
 - 2026-10-27 덩어리 1 시작(main `b98225c2`).
 - 2026-10-27 콘텐츠·데이터 레인(`claude/s720-endless`) 1회차: 3.1 전설 수련(`src/game/legend-rank.js`), 3.2 고통 단계(`difficulty.js` `torment-1`~`torment-50`, `content-90d.js` `TORMENT`, `torment-core.js`, `endgame.torment`, `loot-tables.js` 깊이 표), 정산 연결(`economy.js`), `tools/sim-90d.mjs` marathon·S2/S3/S5 밴드. 기존 라이트·미드·하드코어 결과는 시드 0~3에서 변경 전과 JSON 동일.
 - 2026-10-27 같은 레인 2회차(지휘 리뷰: "밴드는 통과했지만 D30부터 60일 정체"): S5b 밴드 추가, 고통 단계 장비 파워(`tp`) 도입, 곡선·EXP·전설 수련 수치 재보정, 전설 5단위 주 3일 상한. 세 페르소나 결과는 이번에도 시드 0~3에서 동일.
+- 2026-10-27 UI 레인(`claude/s720-ui`): 관문 선택 난이도판(스토리~지옥 + 고통 단계 스텝퍼·잠금 사유·배율·에너지 0·풀 보상 남은 판·감쇠 안내, `src/ui/difficulty-picker.js`), 결과 화면 고통/전설 한 줄 띠(`#result-endless`), 영웅 '전설' 탭 + 전설 수련 판(`src/ui/legend-rank.js`, 노드 찍기 +1·+5·최대·키스톤·재분배 앱 내 확인), 장비 접두(고대·태고)·단계 표기(인벤토리·비교 시트·드랍 토스트). 순수 모델은 `src/game/{torment-ui-model,legend-ui-model,item-tier-label}.js`, 실제 입력 QA는 `tools/s720-ui-qa.mjs`(844×390·640×360·1280×720). 규칙·수치는 바꾸지 않았다.
 - 시뮬레이션 결과(시드 16, p50. 7장 포함 값 — 2026-10-27 #300 병합 뒤. 마라톤만 고통 단계를 쓴다 — 7절 한계):
 
 | 페르소나 | 날 | 레벨 | 전투력 | 고통 단계 (p10–p90) | 전설 단계 | 전설 전투력 +% | idleMin |

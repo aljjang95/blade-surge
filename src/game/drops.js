@@ -203,7 +203,7 @@ export class DropSystem {
     } else {
       this.loot.push(it.payload);
       const def = ITEM_BY_ID[it.payload.id];
-      g.ui.lootPopup(def, it.payload.rarity);
+      g.ui.lootPopup(def, it.payload.rarity, it.payload);
       audio.loot(it.payload.rarity);
       g.fx.burst(pos, RARITY_COLOR[it.payload.rarity], { n: 14, speed: 6, size: 0.35, life: 0.5 });
       this._pickupFx(pos, it.payload.rarity);

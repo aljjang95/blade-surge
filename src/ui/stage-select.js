@@ -7,11 +7,14 @@ import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap, fitStageMapBox } from '../data/stage-select-maps.js';
 import { cardThumb } from './citadel-command.js';
+import { DifficultyPicker } from './difficulty-picker.js';
+import { tormentInfo } from '../game/torment-ui-model.js';
 import {
   stageSelectModel, selectedEntry, entryAction, isRecommendedSelection, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
   selectionSelector,
 } from '../game/stage-select-model.js';
 import './stage-select.css';
+import './stage-select-difficulty.css';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag);
@@ -100,7 +103,13 @@ export class StageSelectUI {
     this.regionNext = button('', () => this.showChapter((this.model?.campaign.chapter || 1) + 1), 'ss-region-step');
     this.regionNext.dataset.dir = 'next';
     this.regionProgress = node('span', 'ss-region-progress');
-    this.region.append(this.regionName, this.regionPrev, this.regionNext, this.regionProgress);
+    // 난이도 버튼: 현재 난이도를 보여 주고, 누르면 시트 위로 난이도판(스토리~지옥 · 고통 단계)이 열린다. 던전 탭에서는 숨긴다.
+    this.diffButton = button('', () => this.toggleDiff(), 'ss-diff-open');
+    this.diffButton.id = 'stage-select-difficulty';
+    this.diffButton.setAttribute('aria-haspopup', 'true'); this.diffButton.setAttribute('aria-expanded', 'false'); this.diffButton.setAttribute('aria-controls', 'stage-select-diff');
+    this.diffLabel = node('span', 'ss-diff-label', '난이도'); this.diffValue = node('b', 'ss-diff-value');
+    this.diffButton.append(this.diffLabel, this.diffValue);
+    this.region.append(this.regionName, this.diffButton, this.regionPrev, this.regionNext, this.regionProgress);
     this.list = node('div', 'ss-list');
     this.list.id = 'stage-select-list';
     this.list.setAttribute('role', 'tabpanel');
@@ -123,6 +132,7 @@ export class StageSelectUI {
     const fact = (label) => { const wrap = node('div', 'ss-fact'); const value = node('dd'); wrap.append(node('dt', '', label), value); this.detailFacts.append(wrap); return { wrap, value }; };
     this.costFact = fact('입장 에너지');
     this.rewardFact = fact('주요 보상');
+    this.fullFact = fact('풀 보상'); this.fullFact.wrap.hidden = true;
     copy.append(headRow, this.powerRow, this.detailFacts);
     this.blocked = node('p', 'ss-blocked');
     this.blocked.id = 'stage-select-blocked';
@@ -138,10 +148,20 @@ export class StageSelectUI {
 
     const body = node('div', 'ss-body');
     body.append(this.region, this.list, this.listNote);
-    this.dialog.append(this.guide, header, body, detail);
+    // 난이도판: 시트 머리 아래를 덮는 층. 고르면 바로 적용(Economy.setDifficulty)되고 '완료'로 닫는다.
+    this.diff = new DifficultyPicker(app);
+    this.diffPanel = node('section', 'ss-diff');
+    this.diffPanel.id = 'stage-select-diff'; this.diffPanel.hidden = true; this.diffPanel.setAttribute('role', 'group'); this.diffPanel.setAttribute('aria-labelledby', 'stage-select-diff-title');
+    const diffHead = node('header', 'ss-diff-head');
+    this.diffTitle = node('h3', 'ss-diff-title', '난이도'); this.diffTitle.id = 'stage-select-diff-title';
+    this.diffStage = node('span', 'ss-diff-stage');
+    this.diffClose = button('완료', () => this.closeDiff(true), 'ss-diff-close'); this.diffClose.id = 'stage-select-diff-close';
+    diffHead.append(this.diffTitle, this.diffStage, this.diffClose);
+    this.diffPanel.append(diffHead, this.diff.root);
+    this.dialog.append(this.guide, header, body, detail, this.diffPanel);
     document.body.append(this.dialog);
 
-    this.dialog.addEventListener('cancel', (event) => { event.preventDefault(); this.close(); });
+    this.dialog.addEventListener('cancel', (event) => { event.preventDefault(); if (!this.diffPanel.hidden) this.closeDiff(true); else this.close(); });
     this.dialog.addEventListener('close', () => { if (this.opened && !this.dialog.open) this.finishClose(); });
     // 로비 이동·카메라 입력이 뒤의 장면으로 새지 않게 막는다(기존 보급 상점과 같은 규칙).
     for (const event of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'click']) this.dialog.addEventListener(event, (input) => input.stopPropagation());
@@ -199,6 +219,7 @@ export class StageSelectUI {
 
   finishClose() {
     this.opened = false;
+    this.closeDiff(false);
     this.app.input?.clear?.();
     this.app.citadel?.clearInput?.();
     this.app.syncHub?.();
@@ -219,6 +240,7 @@ export class StageSelectUI {
 
   switchTab(tab) {
     if (!this.model || this.model.tab === tab) return;
+    this.closeDiff(false);
     // 탭을 바꾸면 그 탭의 기억 → 추천으로 고른다. 비용 없음.
     const model = this.model;
     if (tab === 'campaign') {
@@ -296,6 +318,7 @@ export class StageSelectUI {
     const chapter = campaign.chapters[campaign.chapter - 1];
     const map = stageMapFor(campaign.chapter);
     this.region.hidden = false;
+    this.paintDifficulty();
     this.regionPrev.hidden = false; this.regionNext.hidden = false;
     this.regionName.textContent = chapter.name;
     this.regionProgress.textContent = chapter.unlocked ? `${chapter.cleared} / 10` : '잠김';
@@ -367,12 +390,45 @@ export class StageSelectUI {
     road?.firstElementChild?.setAttribute('points', layout.points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
   }
 
+  /** 난이도 버튼 글자와 난이도판의 기준 관문. 고른 관문이 있으면 그 관문, 없으면 보고 있는 지역의 1번 관문. */
+  paintDifficulty() {
+    const model = this.model, pick = model.selection?.tab === 'campaign' ? model.selection : { ch: model.campaign.chapter, st: 1 };
+    const current = this.app.eco.difficultyFor(pick.ch, pick.st);
+    this.diff.setStage(pick.ch, pick.st);
+    this.diffButton.hidden = false;
+    this.diffValue.textContent = current.tormentTier ? `고통 T${current.tormentTier}` : current.name;
+    this.diffButton.dataset.tone = current.tone || '';
+    this.diffButton.setAttribute('aria-label', `난이도 ${current.name}, 눌러서 바꾸기`);
+    this.diffStage.textContent = `${pick.ch}-${pick.st}`;
+    if (!this.diffPanel.hidden) this.diff.refresh();
+  }
+
+  toggleDiff() { if (this.diffPanel.hidden) this.openDiff(); else this.closeDiff(true); }
+  openDiff() {
+    if (this.model?.tab !== 'campaign') return;
+    this.paintDifficulty();
+    this.diff.refresh();
+    this.diffPanel.style.top = `${(this.dialog.querySelector('.ss-head')?.offsetHeight || 48) + 4}px`;
+    this.diffPanel.hidden = false;
+    this.diffButton.setAttribute('aria-expanded', 'true');
+    const active = this.diff.optionButtons.torment?.dataset.locked === 'false' && this.diff.model?.activeTier ? this.diff.optionButtons.torment : this.diffPanel.querySelector('.dp-option[aria-pressed="true"]');
+    (active || this.diffClose).focus({ preventScroll: true });
+  }
+  closeDiff(restoreFocus) {
+    if (this.diffPanel.hidden) return;
+    this.diffPanel.hidden = true;
+    this.diffButton.setAttribute('aria-expanded', 'false');
+    this.diff.note = '';
+    if (restoreFocus) this.diffButton.focus({ preventScroll: true });
+  }
+
   paintDungeons() {
     const { dungeons } = this.model;
     this.region.hidden = false;
     this.regionName.textContent = '열린 던전';
     this.regionProgress.textContent = `${dungeons.open} / ${dungeons.total}`;
     this.regionPrev.hidden = true; this.regionNext.hidden = true;
+    this.diffButton.hidden = true; this.closeDiff(false);
     this.listNote.hidden = false;
     const grid = node('ul', 'ss-dungeons');
     grid.setAttribute('aria-label', '던전');
@@ -413,12 +469,14 @@ export class StageSelectUI {
     const model = this.model;
     const entry = model.selection ? selectedEntry(model, model.selection) : null;
     const action = entryAction(entry);
+    let torment = null;
     this.dialog.dataset.entry = entry ? entry.key : '';
     if (!entry) {
       this.detailName.textContent = model.tab === 'campaign' ? '관문을 골라 주세요' : '던전을 골라 주세요';
       this.detailTag.textContent = ''; this.detailLevel.textContent = '';
       this.powerMine.textContent = ''; this.powerNeed.textContent = '';
       this.costFact.value.textContent = '-'; this.rewardFact.value.textContent = '-';
+      this.fullFact.wrap.hidden = true;
     } else {
       if (entry.kind === 'campaign') {
         this.detailName.textContent = `${entry.code}  ${entry.title}`;
@@ -440,10 +498,15 @@ export class StageSelectUI {
       this.costFact.wrap.dataset.tone = entry.enoughEnergy ? 'ok' : 'low';
       const rewards = entry.rewards.filter((reward) => reward.id !== 'exp').slice(0, 2).map((reward) => `${reward.name} ×${fmt(reward.amount)}`).join(' · ');
       this.rewardFact.value.textContent = (entry.kind === 'campaign' && entry.unlocksChapter && !entry.cleared ? `지역 ${entry.unlocksChapter} 해금 · ` : '') + (rewards || '-');
+      // 고통 단계: 에너지 0 · 오늘 풀 보상 남은 판. 감쇠 판이면 안내(재화 35%, 경험치 100%).
+      torment = entry.kind === 'campaign' && entry.tormentTier ? tormentInfo(entry.tormentTier, this.app.eco.tormentStatus()) : null;
+      this.fullFact.wrap.hidden = !torment;
+      if (torment) { this.fullFact.value.textContent = torment.decayed ? '모두 사용' : `${torment.fullLeft}/${torment.fullRuns}판 남음`; this.fullFact.wrap.dataset.tone = torment.decayed ? 'low' : 'ok'; }
     }
     const hero = HEROES[this.app.eco.s.selected];
-    this.blocked.textContent = action.reason;
-    this.blocked.hidden = !action.reason;
+    const note = action.reason || (action.enabled && torment?.decayNote) || '';
+    this.blocked.textContent = note;
+    this.blocked.hidden = !note;
     this.blocked.dataset.tone = action.enabled ? 'warn' : 'locked';
     this.enterButton.disabled = !action.enabled;
     this.enterLabel.textContent = action.label;

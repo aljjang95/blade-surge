@@ -85,6 +85,8 @@ export function campaignStages({ progress, chapter, power, heroLevel, energy = n
     const unlocked = campaignUnlocked(progress, ch, st, now), got = Math.max(0, Math.min(3, Number(stars[stage.code]) || 0));
     const mode = (typeof difficulty === 'function' ? difficulty(ch, st) : difficulty) || {};
     const rewardMul = Number(mode.rewardMul) || 1, expMul = Number(mode.expMul) || 1;
+    // 고통 단계는 에너지 0(applyDifficulty 와 같은 규칙).
+    const tormentCost = mode.tormentTier ? 0 : stage.energy;
     const rewards = [{ id: 'gold', name: '골드', amount: Math.floor(stage.rewards.gold * rewardMul) }, { id: 'exp', name: '경험치', amount: Math.floor(stage.rewards.exp * expMul) }];
     if (!got) rewards.push({ id: 'gems', name: '첫 클리어 보석', amount: stage.rewards.firstGems });
     list.push({
@@ -97,8 +99,8 @@ export function campaignStages({ progress, chapter, power, heroLevel, energy = n
       recommendedLevel: stage.recommendedLevel, heroLevel: Number(heroLevel) || 1,
       levelTone: (Number(heroLevel) || 1) >= stage.recommendedLevel ? 'ok' : (Number(heroLevel) || 1) >= stage.recommendedLevel - 2 ? 'close' : 'low',
       recPower: stage.recPower, power: Number(power) || 0, powerTone: powerTone(power, stage.recPower),
-      cost: stage.energy, enoughEnergy: Number.isFinite(energy) ? Number(energy) >= stage.energy : true,
-      difficultyName: mode.name || '', rewards,
+      cost: tormentCost, enoughEnergy: Number.isFinite(energy) ? Number(energy) >= tormentCost : true,
+      difficultyName: mode.name || '', difficultyId: mode.id || '', tormentTier: Number(mode.tormentTier) || 0, rewards,
     });
   }
   const chapters = CHAPTERS.map((entry) => ({

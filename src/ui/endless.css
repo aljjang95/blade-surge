@@ -1,0 +1,42 @@
+/* 720시간 콘텐츠 UI 공용: 결과 화면 한 줄 띠(고통 단계·전설 수련)와 고통 단계 장비 표시(고대·태고).
+   색: 일반 장비 등급 색(S 초록·E 파랑·U 보라·L 주황)과 겹치지 않게 고통 단계는 붉은 계열, 고대는 청록, 태고는 금빛 붉은색으로 구분한다. */
+:root { --tier-tp: #ff8f7e; --tier-godae: #62e8d6; --tier-taego: #ff5f86; --tier-taego-2: #ffd36b; }
+
+/* ---------- 결과 띠 ---------- */
+.result-endless { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; width: 100%; margin: 0; padding: 0; font-size: 12px; line-height: 1.35; }
+.result-endless[hidden] { display: none; }
+.result-endless .re-part { padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .22); background: rgba(0, 0, 0, .38); color: #eaf3fa; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.result-endless .re-part[data-kind="torment"] { border-color: rgba(255, 143, 126, .6); background: linear-gradient(180deg, rgba(110, 28, 30, .55), rgba(40, 12, 16, .6)); color: #ffd9d1; }
+.result-endless .re-part[data-kind="torment"][data-tone="best"] { border-color: #ffe39a; color: #fff3b0; box-shadow: 0 0 10px rgba(255, 210, 110, .4); }
+.result-endless .re-part[data-kind="torment"][data-tone="decay"] { color: #ffc2b5; }
+.result-endless .re-part[data-kind="legend"] { border-color: rgba(120, 200, 255, .55); background: linear-gradient(180deg, rgba(20, 60, 100, .55), rgba(10, 22, 44, .6)); color: #cfeaff; }
+.result-endless .re-part[data-kind="legend"][data-tone="keystone"] { border-color: #ffe39a; color: #fff3b0; box-shadow: 0 0 10px rgba(255, 210, 110, .45); }
+
+/* ---------- 고통 단계 장비 표시 ---------- */
+.tier-tag { display: inline-block; padding: 1px 4px; border-radius: 4px; font: 800 10px/1.1 var(--font); font-style: normal; letter-spacing: 0; color: #fff; background: rgba(120, 28, 30, .9); border: 1px solid var(--tier-tp); text-shadow: 0 1px 1px #000; pointer-events: none; white-space: nowrap; }
+.tier-godae .tier-tag, .tier-tag.tier-godae { color: #04332c; background: linear-gradient(180deg, #a6fff0, var(--tier-godae)); border-color: #d9fff9; text-shadow: none; }
+.tier-taego .tier-tag, .tier-tag.tier-taego { color: #3a0a18; background: linear-gradient(180deg, var(--tier-taego-2), var(--tier-taego)); border-color: #fff0b8; text-shadow: none; }
+/* 장비 칸·가방 칸: 모서리에 단계 표기(위치만 잡는다. 칸 자체의 등급 색 테두리는 그대로) */
+.equip-slot .tier-tag { position: absolute; top: 2px; left: 2px; }
+.bag-item .bag-art { position: relative; }
+.bag-item .bag-art .tier-tag { position: absolute; bottom: 0; left: 2px; }
+.mpl-cell .mpl-tier { left: 2px; bottom: 2px; padding: 1px 3px; font-size: 9px; text-shadow: none; }
+.loot-item .tier-tag { position: absolute; top: 2px; left: 2px; font-size: 9px; padding: 0 3px; }
+/* 단계 장비의 그림 둘레에 단계 색 고리(등급 색 테두리와 겹치지 않게 그림에만) */
+.tier-tp .bag-art img, .tier-tp .is-card-art img, .tier-tp .equip-slot img { filter: drop-shadow(0 0 4px var(--tier-tp)); }
+.tier-godae .bag-art img, .tier-godae .is-card-art img, .tier-godae.equip-slot img { filter: drop-shadow(0 0 5px var(--tier-godae)); }
+.tier-taego .bag-art img, .tier-taego .is-card-art img, .tier-taego.equip-slot img { filter: drop-shadow(0 0 6px var(--tier-taego)) drop-shadow(0 0 3px var(--tier-taego-2)); }
+.tier-tp.equip-slot img { filter: drop-shadow(0 0 4px var(--tier-tp)); }
+/* 드랍 토스트·획득 알림 */
+.loot-pop.tier-godae { box-shadow: 0 0 10px rgba(98, 232, 214, .6); }
+.loot-pop.tier-taego { box-shadow: 0 0 12px rgba(255, 95, 134, .7); }
+.loot-pop .tier-tag { vertical-align: 1px; margin-left: 2px; }
+.reward-chip .tier-tag { vertical-align: 1px; }
+.is-tags .tier-tag, .is-card-meta .tier-tag { font-size: 11px; padding: 1px 5px; }
+
+/* 640×360 같은 아주 낮은 가로 화면: 영웅 화면의 캐시 아바타 줄이 세 줄로 접혀 본문 칸(가방·성장·전설 탭)의 높이가 0이 된다.
+   이 높이에서는 오른쪽 칸 전체(아바타 줄 + 탭 + 본문)를 한 덩어리로 스크롤하게 해서 장비 접두 표시와 전설 탭에 닿을 수 있게 한다. */
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 400px) {
+  #tab-heroes .hs-main { overflow-y: auto; overscroll-behavior: contain; }
+  #tab-heroes .hs-panel { flex: 0 0 auto; overflow: visible; min-height: 180px; }
+}
