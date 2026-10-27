@@ -60,9 +60,10 @@ export const MONSTER_ROSTER = Object.freeze({
   Bell_Ringer: { asset: 'tll_ch7_bellringer', fallback: 'skeleton_mage', scale: 1.05,
     // 몸에서 분리한 종추 곤봉(prop). grip 은 곤봉 로컬 m(손잡이 가운데), at/rot 은 오른손 본 기준.
     weapon: { asset: 'tll_ch7_bellringer_club', hand: 'right', grip: [0, 0.44, 0.055], at: [0, 0.09, 0], rot: [0, 0, -90] } },
-  Bell_Warden: { asset: 'tll_ch7_midboss', fallback: 'bone_knight', scale: 0.53,
+  Bell_Warden: { asset: 'tll_ch7_midboss', fallback: 'bone_knight', scale: 0.53, fallbackScale: 1.1,
     weapon: { asset: 'tll_ch7_midboss_flail', hand: 'right', grip: [-0.12, 1.45, -0.22], at: [0, 0.12, 0], rot: [0, 0, -90] } },
-  Bell_Sovereign: { asset: 'tll_ch7_finalboss', fallback: 'frost_golem', scale: 0.5 },
+  // scale 은 Tripo 몸 기준이다. 몸 로드 실패로 대체 모델이 서면 예전 값(fallbackScale)을 쓴다(대체 모델 키·판정 반경 유지).
+  Bell_Sovereign: { asset: 'tll_ch7_finalboss', fallback: 'frost_golem', scale: 0.5, fallbackScale: 0.72 },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
@@ -75,4 +76,15 @@ export const COMPANION_ASSET = 'skeleton_mage';
 
 export function monsterRosterEntry(model) {
   return Object.hasOwn(MONSTER_ROSTER, model) ? MONSTER_ROSTER[model] : null;
+}
+
+/**
+ * 실제 로드된 라이브러리 에셋이 대체 모델이고 fallbackScale 이 있으면 그 값을, 아니면 scale 을 쓴다.
+ * @param {{ asset?: string, scale?: number, fallbackScale?: number } | null | undefined} roster
+ * @param {{ id?: string } | null} [libraryAsset]
+ */
+export function monsterRosterScale(roster, libraryAsset = null) {
+  if (!roster) return 1;
+  if (roster.fallbackScale !== undefined && libraryAsset && libraryAsset.id !== roster.asset) return roster.fallbackScale;
+  return roster.scale || 1;
 }

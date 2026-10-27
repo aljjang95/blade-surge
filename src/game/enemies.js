@@ -101,7 +101,16 @@ export class Enemy extends Actor {
     const weaponSpec = this.libraryRoster?.weapon;
     if (weaponSpec && this.libraryAsset?.id === this.libraryRoster.asset) {
       const held = attachMonsterWeapon(this.model, weaponSpec, game.app?.models);
-      if (held) held.weapon.traverse((o) => { if (o.isMesh) { o.castShadow = !!(def.boss || def.elite); for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m.emissive) this.mats.push(m); } });
+      const weaponTint = def.tint || (def.boss ? '#ffb0b0' : null), tintColor = weaponTint ? new THREE.Color(weaponTint) : null;
+      if (held) held.weapon.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = !!(def.boss || def.elite);
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          // 몸과 같은 라이브러리 색조 보정(Actor 생성자의 lerp 0.32)을 무기 재질에도 적용한다.
+          if (tintColor) m.color?.lerp(tintColor, 0.32);
+          if (m.emissive) this.mats.push(m);
+        }
+      });
     }
     // 눈 발광
     this.model.traverse((o) => { if (o.isMesh && /Eyes/.test(o.name)) { o.material.emissive = new THREE.Color(def.boss ? 0xff2020 : def.elite ? 0xffc040 : 0x40ff80); o.material.emissiveIntensity = 2.5; this.eyeMat = o.material; } });

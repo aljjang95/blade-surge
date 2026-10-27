@@ -76,7 +76,7 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
     const p = libraryLoader.load(libraryAsset, async () => {
       const fallback = fallbackAsset && fallbackAsset !== libraryAsset.id ? libraryLoader.assetFor(fallbackAsset) : null;
       if (fallback) return libraryLoader.load(fallback, () => { throw new Error(`library fallback failed: ${fallback.id}`); }).then((gltf) => {
-        gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: fallback.id } : null;
+        gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: fallback.id, scale: roster.fallbackScale ?? roster.scale, weapon: undefined } : null;
         return gltf;
       });
       throw new Error(`library asset unavailable: ${libraryAsset.id}`);

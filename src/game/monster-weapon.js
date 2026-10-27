@@ -8,7 +8,11 @@ import { spawnCharacter } from '../engine/assets.js';
 //  - spec: { asset, hand: 'right'|'left', grip: 무기 로컬에서 손에 쥘 점(m), at: 손 본 로컬 위치(m, 모델 단위), rot: 손 본 기준 오일러 XYZ(도) }
 const handPattern = (side) => new RegExp(`^(?:mixamorig\\d*[:_]?)?${side}_?hand(?:bone)?$`, 'i');
 
-/** Mixamo 계열 손 본을 찾는다(이름은 'mixamorig:RightHand'·'mixamorigRightHand' 등). */
+/**
+ * Mixamo 계열 손 본을 찾는다(이름은 'mixamorig:RightHand'·'mixamorigRightHand' 등).
+ * @param {THREE.Object3D} root @param {string} [side]
+ * @returns {THREE.Object3D | null}
+ */
 export function findMonsterHand(root, side = 'right') {
   const pattern = handPattern(side);
   let result = null;
