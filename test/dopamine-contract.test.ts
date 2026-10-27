@@ -82,14 +82,18 @@ test('loadout setter rejects locked skills and atomically swaps Q/E', () => {
   expect(eco.hero('knight').skillLoadout).toEqual([5,4]);
 });
 
-test('full clear bonuses are additive and normal clears keep base rewards', () => {
-  const fullEco=new Economy(), normalEco=new Economy();
+// 규칙 시계 고정: 시즌 1 시작(2026-10-26 05:00 KST) 전에는 이벤트가 없고, 첫 주(W1 출정식)에는 캠페인 완료 골드가 ×1.5다.
+const PRE_SEASON = Date.UTC(2026, 9, 20, 3);
+const MUSTER_WEEK = Date.UTC(2026, 9, 27, 3);
+test.each([['시즌 전(이벤트 없음)', PRE_SEASON, 1], ['시즌 1 출정식 주(캠페인 완료 골드 ×1.5)', MUSTER_WEEK, 1.5]] as const)('full clear bonuses are additive and normal clears keep base rewards: %s', (_name, at, goldMul) => {
+  const fullEco=new Economy({now:()=>at}), normalEco=new Economy({now:()=>at});
   const fullStage=fullEco.nextStage(), normalStage=normalEco.nextStage();
   const full=fullEco.completeStage(fullStage,3,{fullClear:true});
   const normal=normalEco.completeStage(normalStage,3);
   const amount=(r:any,k:string)=>r.got.find((g:any)=>g.k===k)?.n||0;
+  const eventGold=Math.floor(fullStage.rewards.gold*goldMul); // 이벤트 배율은 완료 골드에 먼저 붙고, 전체 클리어 보너스는 그 40%
   expect(full.exp-normal.exp).toBe(Math.floor(fullStage.rewards.exp*.5));
-  expect(amount(full,'gold')-amount(normal,'gold')).toBe(Math.floor(fullStage.rewards.gold*.4));
+  expect(amount(full,'gold')-amount(normal,'gold')).toBe(Math.floor(eventGold*.4));
   expect(amount(full,'fragments')-amount(normal,'fragments')).toBe(10);
   expect(full.loot.length-normal.loot.length).toBe(1);
   expect(full.fullClearBonus).toMatchObject({fragments:10,eliteGear:1});
