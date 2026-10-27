@@ -58,7 +58,7 @@ export class Battle extends BaseBattle {
     if (generation !== this._startGeneration) return;
     this.growthStart = growthStart;
     this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger(); this.hitCrowd = new HitCrowd();
-    this.combatXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
+    this.combatXp = 0; this.legendXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
     this.ensureRpg(); this.rpgView?.refresh();
   }
   stop() {
@@ -77,6 +77,8 @@ export class Battle extends BaseBattle {
     enemy.speciesId = enemy.runtimeSpeciesId || type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
     enemy.summoned = !!near;
     enemy.xpReward = monsterXp(enemy.def, this.stage.scale, enemy.summoned);
+    // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (1 + 0.1×단계), docs/SPEC_720H.md 3.2).
+    if (this.stage.campaignDifficulty?.combatExpMul > 1) enemy.xpReward = Math.floor(enemy.xpReward * this.stage.campaignDifficulty.combatExpMul);
     const effect = frontierEffectForStage(this.stage);
     if (enemy.isElite && effect?.kind === 'eliteXpMultiplier') enemy.xpReward = Math.floor(enemy.xpReward * effect.value);
     recordMonster(this.ensureRpg(), enemy.speciesId, enemy.level, this.stage.idx, false, encounter);
@@ -96,6 +98,8 @@ export class Battle extends BaseBattle {
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
       this.combatXp = Math.min(1e9, this.combatXp + award.gained);
+      // Lv.80 이후 처치 EXP 는 전설 수련으로(계정 공통). 정산 영수증의 legend 에 함께 모인다.
+      if (award.overflow > 0 && this.app.eco.grantLegend) { this.app.eco.grantLegend(award.overflow); this.legendXp = Math.min(1e12, (this.legendXp || 0) + award.overflow); }
       rpg.combatXp = Math.min(1e9, rpg.combatXp + award.gained);
       this.rpgDirty = true;
       if (award.levels) {
@@ -115,8 +119,8 @@ export class Battle extends BaseBattle {
     }
     super.onEnemyDeath(enemy);
   }
-  victory() { this.flushRpg(); super.victory(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
-  defeat() { this.flushRpg(); super.defeat(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
+  victory() { this.flushRpg(); super.victory(); if (this.result) { this.result.combatXp = this.combatXp; this.result.legendXp = this.legendXp || 0; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
+  defeat() { this.flushRpg(); super.defeat(); if (this.result) { this.result.combatXp = this.combatXp; this.result.legendXp = this.legendXp || 0; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
   update(realDt) {
     this.feedbackCount = 0; this.feedbackSound = false; this.dmgFrame = 0;
     super.update(realDt);

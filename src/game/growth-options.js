@@ -1,6 +1,7 @@
 import { HEROES, levelExp } from '../data/heroes.js';
 import { canLearnSkill } from '../data/skill-tree.js';
-import { ITEM_BY_ID, SLOTS, itemStats, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
+import { itemStats } from '../data/item-tier.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 
 /** Read-only next steps, each affordable on its own. Never a bulk purchase quote. */

@@ -6,6 +6,7 @@ import { LootAuras, LOOT_IMPACT_TIME } from './loot-auras.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { lootTable, pickLootRarity } from '../data/loot-tables.js';
 import { killDrops, grantLootItem } from '../shared/settlement.js';
+import { tormentTierOf } from './difficulty.js';
 
 // 등급별 대기 반짝임(기존 glow 파티클 풀). [간격(초), 크기, 수명]. 저화질은 간격 2배 · S 생략.
 const LOOT_SPARKLE = Object.freeze({ S: [1.1, .2, .8], E: [.5, .24, .9], U: [.3, .27, 1], L: [.17, .3, 1.1] });
@@ -268,7 +269,7 @@ export class DropSystem {
     for (const d of killDrops(stage, this.game.v1Run.lootSeed, rank, index, { summoned: !!enemy.summoned })) {
       if (d.kind === 'gold') this.spawn(pos, 'gold', d.amount, { count: d.count, spread: rank === 'boss' ? 2 : 1 });
       else if (d.kind === 'material') this.spawn(pos, 'material', { id: d.id, n: d.n });
-      else if (d.kind === 'item') { if (!eco) continue; const inst = grantLootItem(eco, d); eco.save(); this.spawn(pos, 'item', { ...inst, rarity: d.rarity }, { count: 1, spread: 1.4 }); }
+      else if (d.kind === 'item') { if (!eco) continue; const inst = grantLootItem(eco, d, tormentTierOf(stage.difficultyId)); eco.save(); this.spawn(pos, 'item', { ...inst, rarity: d.rarity }, { count: 1, spread: 1.4 }); }
       else this.spawn(pos, d.kind, d.n, { count: 1, spread: d.kind === 'frag' ? 1.5 : 1 });
     }
   }
