@@ -171,9 +171,14 @@ export class Meta {
     this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
+    // 영웅 화면은 미보유 영웅을 보다 떠났더라도 출전 영웅으로 연다. 시작 영웅 선택 전 기본값(검성)에 머물면
+    // 다른 영웅으로 시작한 이용자가 '미보유' 화면만 보고 아바타·장비 줄을 찾지 못했다(2026-10-28 대표님 지적).
+    if (tab === 'heroes') this.focusOwnedHero();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') { if (sub && Object.hasOwn(GACHA_BANNERS, sub)) this.gachaBanner = sub; this.refreshGacha(); }
     if (tab === 'home') this.refreshHome();
   }
+  /** 보고 있던 영웅이 미보유면 출전 영웅으로 되돌린다. */
+  focusOwnedHero() { if (!this.eco.ownHero(this.heroSel)) this.heroSel = this.eco.s.selected; return this.heroSel; }
   /** 메뉴 안(소환·상점·패스·우편 등)에 받을 것이 있으면 하단 메뉴 버튼에도 점을 띄워 첫 소환·보상 수령을 놓치지 않게 한다. */
   refreshMenuBadge() {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
