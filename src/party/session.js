@@ -18,7 +18,7 @@ import { PartyPresence } from './presence.js';
 
 const ERRORS = { 'not-ready':'모두 준비를 마쳐야 출격할 수 있습니다.', 'not-host':'방장만 출격할 수 있습니다.',
   'full':'파티가 가득 찼습니다.', 'running':'이미 출격한 파티입니다.', 'expired':'초대가 만료됐습니다. 새 파티를 만들어 주세요.',
-  'rate-limit':'잠시 후 다시 시도해 주세요.', 'not-found':'파티를 찾지 못했습니다. 초대 코드를 확인해 주세요.' };
+  'chapter-closed':'아직 열리지 않은 지역입니다. 개방 시각 뒤에 다시 골라 주세요.', 'rate-limit':'잠시 후 다시 시도해 주세요.', 'not-found':'파티를 찾지 못했습니다. 초대 코드를 확인해 주세요.' };
 export class PartySession {
   constructor(app) {
     this.app = app; this.players = new Map(); this.inputs = new Map(); this.replicas = new Map(); this.events = [];
