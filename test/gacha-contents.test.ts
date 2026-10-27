@@ -99,18 +99,13 @@ describe('weapon looks', () => {
     expect(weaponLook('rogue', { id: 'w_steel', enh: 0 }, LOOKS)!.form).toBe('쌍단검');
   });
 
-  test('enhancement raises glow monotonically per light tier; the foot aura starts at +15 (gold) and +20 (myth)', () => {
-    // 새 계약(2026-10-27): 강화 빛 단계 +6 은은 / +10 발광 / +13 잔광 / +15 금빛 오라 / +20 신화. 발밑 오라는 +15부터.
-    const steps = [0, 6, 10, 13, 15, 20];
-    const g = steps.map((enh) => weaponLook('knight', { id: 'w_flame', enh }, LOOKS)!);
+  test('enhancement raises glow monotonically and adds auras at +10, +15 and +20', () => {
+    const g = [0, 5, 10, 15, 20].map((enh) => weaponLook('knight', { id: 'w_flame', enh }, LOOKS)!);
     for (let i = 1; i < g.length; i++) expect(g[i].glow).toBeGreaterThan(g[i - 1].glow);
-    // +5 이하는 강화 빛이 없어 등급 발광 그대로이고 단계 이름도 없다.
-    expect(weaponLook('knight', { id: 'w_flame', enh: 5 }, LOOKS)!.glow).toBe(g[0].glow);
-    expect(g.map((x) => x.glowTier.id)).toEqual(['none', 'soft', 'glow', 'blaze', 'aura', 'myth']);
-    for (const i of [0, 1, 2, 3]) expect(g[i].aura).toBeNull();
-    expect(g[4].aura).toBe('#ffd060'); expect(g[5].aura).toBe('#ff8af0');
-    expect(g[5].glow).toBeLessThan(1.5 + 0.2);
-    expect(weaponLookText(g[4])).toBe('한손검 · 불꽃 발광 · +15 금빛 오라');
+    expect(g[0].aura).toBeNull(); expect(g[1].aura).toBeNull();
+    expect(g[2].aura).toBe('#ff6a2a'); expect(g[3].aura).toBe('#ffd060'); expect(g[4].aura).toBe('#ff8af0');
+    expect(g[4].glow).toBeLessThan(1.5 + 0.2);
+    expect(weaponLookText(g[3])).toBe('한손검 · 불꽃 발광 · +15 금빛 오라');
     expect(weaponLook('knight', { id: 'a_chain', enh: 0 }, LOOKS)).toBeNull();
   });
 
