@@ -94,7 +94,7 @@ test('fresh first departure is playable immediately and shows the essential cont
   expect((tutorial as any).phase).toBe('move'); expect(elements.get('tutorial-title')!.textContent).toBe('이동');
   expect(elements.get('tutorial-copy')!.textContent).toContain('조이스틱');
   expect(elements.get('battle-tutorial')!.classes.has('guided')).toBe(true);
-  expect((tutorial as any).toggle.textContent).toBe('안내 접기'); expect(events).toEqual([{ name: 'tutorial_step', data: { step: 1 } }]);
+  expect((tutorial as any).toggle.textContent).toBe('안내 접기'); expect(events).toEqual([{ name: 'tutorial_step', data: { step: 1, foldSec: 15 } }]);
   expect(saves).toBe(0); expect(app.eco.s.tutorial.completed).toBe(false);
 });
 

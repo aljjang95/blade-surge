@@ -98,7 +98,7 @@ export class BattleTutorial {
     this.phase = phase;
     if (this.expanded && !this.reviewing && !this.completedSteps.has(phase)) {
       this.completedSteps.add(phase);
-      this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size });
+      this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size, foldSec: GUIDED_SECONDS });
     }
     this.stepLabel.textContent = data.n; this.title.textContent = data.title; this.copy.textContent = data.copy;
     this.next.textContent = phase === 'clear' ? '안내 닫기' : '다음 안내'; this.next.hidden = false;
@@ -224,7 +224,7 @@ export class BattleTutorial {
     if (firstCompletion) {
       this.app.eco.s.tutorial = { ...this.app.eco.s.tutorial, completed: true };
       this.app.eco.emit();
-      this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
+      this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped, foldSec: GUIDED_SECONDS });
     }
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
     this.clearHealTip();
