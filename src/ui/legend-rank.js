@@ -3,6 +3,7 @@
 // 점수 재분배는 골드가 들므로 앱 안 확인창(ui.confirm)을 거친다(confirm() 금지).
 import { HEROES } from '../data/heroes.js';
 import { legendBoard } from '../game/legend-ui-model.js';
+import { LEGEND_NODES } from '../game/legend-rank.js';
 import { GrowthOverlay, el, btn, num, playSfx } from './skill-tree.js';
 import { maxHeroLevel } from './legend-pane.js';
 import './legend-rank.css';
@@ -20,7 +21,12 @@ export class LegendView extends GrowthOverlay {
     const eco = this.eco, id = eco.s.selected, saved = eco.s.legend;
     try { eco.s.legend = state; const p = eco.heroPower(id); return Number.isFinite(p) ? p : null; } catch { return null; } finally { eco.s.legend = saved; }
   }
-  readModel() { return legendBoard(this.eco.legendState(), { maxHeroLevel: maxHeroLevel(this.eco), gold: this.eco.s.gold, power: (state) => this.powerWith(state) }); }
+  /** 미리보기는 지금 보는 갈래의 선택 노드(없으면 첫 노드) 하나만 계산한다. */
+  selectedNodeId() {
+    const nodes = LEGEND_NODES.filter((n) => n.branch === this.branch);
+    return (nodes.find((n) => n.id === this.nodeId) || nodes[0])?.id || null;
+  }
+  readModel() { return legendBoard(this.eco.legendState(), { maxHeroLevel: maxHeroLevel(this.eco), gold: this.eco.s.gold, selectedNodeId: this.selectedNodeId(), power: (state) => this.powerWith(state) }); }
   open(trigger) {
     const model = this.readModel(); this.model = model;
     const spentBranch = model.branches.find((b) => b.spent > 0) || model.branches[0];

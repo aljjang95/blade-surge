@@ -244,7 +244,7 @@ test('전설 수련 판: 재분배 비용·가능 여부·사유(찍은 점수 �
 test('전설 수련 판: 전투력 미리보기는 주어진 함수로만 계산하고 점수가 모자라면 생략한다', () => {
   const calls: any[] = [];
   const power = (state: any) => { calls.push(state); return 1000 + Object.values(state.nodes as Record<string, number>).reduce((a, b) => a + b, 0) * 10; };
-  const board = legendBoard(legendState(), { maxHeroLevel: 80, power });
+  const board = legendBoard(legendState(), { maxHeroLevel: 80, power, selectedNodeId: 'blade_fury' });
   const node = board.branches[0].nodes.find((n: any) => n.id === 'blade_fury')!;
   expect(node.previewOne).toEqual({ before: 1080, after: 1090, delta: 10 });
   expect(node.previewFive).toEqual({ before: 1080, after: 1130, delta: 50 });
@@ -252,8 +252,14 @@ test('전설 수련 판: 전투력 미리보기는 주어진 함수로만 계산
   expect(calls.some((s) => s.nodes.blade_fury === 5 && s.points === 27)).toBe(true);
   // 함수가 없으면 미리보기 없음, 점수가 0 이면 항상 없음
   expect(legendBoard(legendState(), { maxHeroLevel: 80 }).branches[0].nodes[0].previewOne).toBeNull();
-  expect(legendBoard(legendState({ rank: 8 }), { maxHeroLevel: 80, power }).branches[0].nodes[0].previewOne).toBeNull();
-  expect(legendBoard(legendState({ rank: 12 }), { maxHeroLevel: 80, power }).branches[0].nodes.find((n: any) => n.id === 'blade_fury')!.previewFive).toBeNull();
+  expect(legendBoard(legendState({ rank: 8 }), { maxHeroLevel: 80, power, selectedNodeId: 'blade_edge' }).branches[0].nodes[0].previewOne).toBeNull();
+  // 선택 노드만 계산한다: 다른 노드는 미리보기 없음, power 호출은 기준 1회 + 선택 노드 +1·+5 두 번
+  calls.length = 0;
+  const only = legendBoard(legendState(), { maxHeroLevel: 80, power, selectedNodeId: 'blade_fury' });
+  expect(calls).toHaveLength(3);
+  expect(only.branches.flatMap((b: any) => b.nodes).filter((n: any) => n.previewOne || n.previewFive).map((n: any) => n.id)).toEqual(['blade_fury']);
+  calls.length = 0; legendBoard(legendState(), { maxHeroLevel: 80, power }); expect(calls).toHaveLength(1);
+  expect(legendBoard(legendState({ rank: 12 }), { maxHeroLevel: 80, power, selectedNodeId: 'blade_fury' }).branches[0].nodes.find((n: any) => n.id === 'blade_fury')!.previewFive).toBeNull();
 });
 
 test('전설 수련 판: 실제 Economy 의 찍기·재분배 결과가 판 모델과 맞는다', () => {

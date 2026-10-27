@@ -154,6 +154,12 @@ export const SCENARIOS = [
     const t = await page.evaluate(() => ({ difficulty: window.app.eco.s.progress.difficulty, tier: document.querySelector('#stage-detail .dp-tier')?.textContent, go: document.querySelector('#st-go small')?.textContent?.trim(), sweepDisabled: !!document.querySelector('#st-sweep')?.disabled, chips: [...document.querySelectorAll('#stage-detail .dp-chip')].map((n) => n.textContent.trim()), loot: document.querySelector('#stage-detail .stage-loot-guide b')?.textContent }));
     check('모험 탭: 고통 선택 → 직전에 쓴 단계(없으면 최고 해금) 적용 · 출격 에너지 0 · 소탕 비활성 · 배율 표시', /^torment-\d+$/.test(t.difficulty) && t.tier === `고통 ${t.difficulty.split('-')[1]}단계` && /에너지 0/.test(t.go || '') && t.sweepDisabled && t.chips.includes('에너지 0'), t);
     await shot('18b-campaign-tab-torment');
+    // 키보드: + 에 초점 → Enter → 화면이 다시 그려져도 초점이 같은 버튼에 남는다
+    await page.evaluate(() => { window.app.eco.setDifficulty('torment-1', 1, 1); });
+    await settle(300);
+    await page.locator('#stage-detail .dp-up').focus(); await page.keyboard.press('Enter'); await settle(400);
+    const kb = await page.evaluate(() => ({ tier: document.querySelector('#stage-detail .dp-tier')?.textContent, cls: document.activeElement?.className, inDetail: !!document.activeElement?.closest('#stage-detail') }));
+    check('캠페인 탭 고통 +: Enter 후에도 초점이 같은 버튼(dp-up)에 남음', kb.tier === '고통 2단계' && /dp-up/.test(kb.cls || '') && kb.inDetail, kb);
     await page.evaluate(() => { window.app.eco.setDifficulty('story', 1, 1); });
     await page.evaluate(() => window.app.meta.openTab('home')); await settle(400);
   } },

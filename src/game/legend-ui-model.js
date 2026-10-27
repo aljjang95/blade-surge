@@ -19,16 +19,18 @@ export function statText(stat, value) {
 
 /**
  * @param {any} legendRaw  저장의 legend (정규화한다)
- * @param {{ maxHeroLevel?: number, gold?: number, power?: (state: any) => number | null }} [options]
+ * @param {{ maxHeroLevel?: number, gold?: number, power?: (state: any) => number | null, selectedNodeId?: string | null }} [options]
+ *   selectedNodeId: 전투력 미리보기를 계산할 노드(없으면 미리보기 없음).
  *   power: 가설 전설 상태(점수를 찍은 뒤)의 출전 영웅 전투력을 돌려주는 함수(없으면 전투력 미리보기를 생략한다).
  */
-export function legendBoard(legendRaw, { maxHeroLevel = 1, gold = 0, power = null } = {}) {
+export function legendBoard(legendRaw, { maxHeroLevel = 1, gold = 0, power = null, selectedNodeId = null } = {}) {
   const state = normalizeLegend(legendRaw);
   const reached = maxHeroLevel >= LEGEND_UNLOCK_LEVEL || state.rank > 0 || state.exp > 0;
   const need = legendExpFor(state.rank);
   const basePower = typeof power === 'function' ? power(state) : null;
   const preview = (nodeId, n) => {
-    if (typeof power !== 'function' || basePower === null || state.points < n || (state.nodes[nodeId] || 0) + n > LEGEND.maxNodeLevel) return null;
+    // 화면이 쓰는 것은 선택한 노드 하나뿐이라 그 노드만 계산한다(heroPower 호출을 줄인다).
+    if (typeof power !== 'function' || basePower === null || nodeId !== selectedNodeId || state.points < n || (state.nodes[nodeId] || 0) + n > LEGEND.maxNodeLevel) return null;
     const next = { ...state, nodes: { ...state.nodes, [nodeId]: (state.nodes[nodeId] || 0) + n }, points: state.points - n };
     const after = power(next);
     return Number.isFinite(after) ? { before: basePower, after, delta: after - basePower } : null;

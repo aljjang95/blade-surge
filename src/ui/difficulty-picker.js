@@ -99,8 +99,11 @@ export class DifficultyPicker {
   }
 
   apply(difficultyId) {
+    // 호스트가 다시 그리며 이 판을 새 자리로 옮기면 초점이 사라진다. 누른 버튼을 기억했다가 되돌린다.
+    const active = document.activeElement, keep = active instanceof HTMLElement && this.root.contains(active) ? active : null;
     this.eco.setDifficulty(difficultyId, this.ch, this.st);
     this.refresh();
     this.onChange?.();
+    if (keep && keep.isConnected && !keep.disabled && document.activeElement !== keep) keep.focus({ preventScroll: true });
   }
 }
