@@ -4,6 +4,18 @@ import './lore.css';
 import { CHAPTERS } from '../data/stages.js';
 import * as lore from '../data/lore.js';
 
+/** 지역 던전 키아트(관문 선택 화면 지역 머리와 장면 배경이 같이 쓴다). */
+export const REGION_DUNGEON_ART = {
+  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
+  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
+  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
+  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
+  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
+  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
+};
+/** 장 번호 → 장면 배경 아트(없으면 undefined, 장 색 그라데이션만). */
+export const chapterSceneArt = (ch) => { const c = CHAPTERS[ch - 1]; return c ? REGION_DUNGEON_ART[c.encounterPrefix || c.theme] : undefined; };
+
 export const LORE_SEEN_KEY = 'bladesurge_lore_seen_v1';
 export const LINE_MS = 3000;
 
@@ -145,5 +157,19 @@ export function bossLoreHtml(stage) {
   let row = null;
   try { row = typeof lore.bossLore === 'function' ? lore.bossLore(stage) : null; } catch { row = null; }
   if (!row) return '';
-  return `<span class="boss-intro-lore"><b>${esc(row.title)} · ${esc(row.name)}</b><em>“${esc(row.shout)}”</em></span>`;
+  // 좁은 띠(.narrow)에서는 이름이 먼저 오도록 순서를 바꾼 줄을 보인다. 말줄임이 칭호 쪽을 자르고 이름은 남는다.
+  return `<span class="boss-intro-lore"><b class="lore-wide">${esc(row.title)} · ${esc(row.name)}</b><b class="lore-slim">${esc(row.name)} · ${esc(row.title)}</b><em>“${esc(row.shout)}”</em></span>`;
+}
+
+/**
+ * 출격 직전 진입점: 그 장을 처음 들어가는 것이면 장면을 재생하고 끝날(또는 건너뛸) 때까지 기다린다.
+ * 캠페인 탭을 열지 않고 첫 출격·포탈로 바로 들어가는 신규 이용자도 첫 전투 전에 한 번 본다. 재생하지 않으면 바로 false.
+ * @param {number} ch @param {{ track?: Function, storage?: any }} [opts] @returns {Promise<boolean>}
+ */
+export function playSceneBeforeSortie(ch, { track, storage } = {}) {
+  if (isScenePlaying() || !shouldAutoPlayScene(ch, { unlocked: true, storage })) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const started = playChapterScene(ch, { track, storage, art: chapterSceneArt(ch), onEnd: () => resolve(true) });
+    if (!started) resolve(false);
+  });
 }

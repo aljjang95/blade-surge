@@ -30,7 +30,7 @@ import { LOOKS } from '../game/look.js';
 import { createFunnelLog } from '../game/funnel-events.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
-import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying } from './lore-scene.js';
+import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying, REGION_DUNGEON_ART } from './lore-scene.js';
 import { mountCodex } from './lore-codex.js';
 import { isChapterOpen, ecoClock } from '../data/chapter-open.js';
 import { guideHtml } from './guide.js';
@@ -58,14 +58,6 @@ const funnelFor = (app) => (app?.funnel && typeof app.funnel.track === 'function
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
-const REGION_DUNGEON_ART = {
-  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
-  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
-  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
-  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
-  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
-  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
-};
 const dungeonMapSvg = (stage, { compact = false } = {}) => {
   const dungeon = stage?.dungeon;
   const layout = dungeon?.layout;
@@ -171,9 +163,14 @@ export class Meta {
     this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
+    // 영웅 화면은 미보유 영웅을 보다 떠났더라도 출전 영웅으로 연다. 시작 영웅 선택 전 기본값(검성)에 머물면
+    // 다른 영웅으로 시작한 이용자가 '미보유' 화면만 보고 아바타·장비 줄을 찾지 못했다(2026-10-28 대표님 지적).
+    if (tab === 'heroes') this.focusOwnedHero();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') { if (sub && Object.hasOwn(GACHA_BANNERS, sub)) this.gachaBanner = sub; this.refreshGacha(); }
     if (tab === 'home') this.refreshHome();
   }
+  /** 보고 있던 영웅이 미보유면 출전 영웅으로 되돌린다. */
+  focusOwnedHero() { if (!this.eco.ownHero(this.heroSel)) this.heroSel = this.eco.s.selected; return this.heroSel; }
   /** 메뉴 안(소환·상점·패스·우편 등)에 받을 것이 있으면 하단 메뉴 버튼에도 점을 띄워 첫 소환·보상 수령을 놓치지 않게 한다. */
   refreshMenuBadge() {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;

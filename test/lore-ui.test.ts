@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createSceneRun, loadLoreSeen, markLoreSeen, hasSeenLore, shouldAutoPlayScene, sceneLinesFor, bossLoreHtml, LORE_SEEN_KEY, LINE_MS } from '../src/ui/lore-scene.js';
+import { createSceneRun, loadLoreSeen, markLoreSeen, hasSeenLore, shouldAutoPlayScene, sceneLinesFor, bossLoreHtml, LORE_SEEN_KEY, LINE_MS, playSceneBeforeSortie, chapterSceneArt } from '../src/ui/lore-scene.js';
 import { codexCardHtml, codexListHtml, codexHtml, CODEX_TABS } from '../src/ui/lore-codex.js';
 import { validateFunnelEvent, FUNNEL_EVENTS } from '../src/game/funnel-events.js';
 import { stageDef } from '../src/data/stages.js';
@@ -91,5 +91,19 @@ describe('도감 렌더', () => {
     expect(CODEX_TABS.map((t) => t.id)).toEqual(['region', 'boss', 'monster', 'hero']);
     const html = codexHtml([{ ...entries[0], name: '<b>x</b>' }], 'region');
     expect((html.match(/data-codex-tab=/g) || []).length).toBe(4); expect(html).not.toContain('<b>x</b>');
+  });
+});
+
+describe('출격 직전 장면', () => {
+  test('이미 본 장이면 재생하지 않고 바로 false', async () => {
+    expect(await playSceneBeforeSortie(1, { storage: fakeStorage('[1]') })).toBe(false);
+  });
+  test('대사가 없는 장이나 DOM 이 없는 환경은 출격을 막지 않는다', async () => {
+    expect(await playSceneBeforeSortie(99, { storage: fakeStorage() })).toBe(false);
+    if (typeof document === 'undefined') expect(await playSceneBeforeSortie(1, { storage: fakeStorage() })).toBe(false);
+  });
+  test('장면 배경 아트는 지역 키아트를 쓴다', () => {
+    expect(chapterSceneArt(1)).toContain('dungeon-garden-keyart');
+    expect(chapterSceneArt(99)).toBeUndefined();
   });
 });

@@ -538,8 +538,28 @@ export class UI {
     node.classList.toggle('has-lore', !!loreHtml);
     node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b>${loreHtml || `<span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`}`;
     this.el.hud.append(node);
+    this.placeBossIntro(node);
     setTimeout(() => node.remove(), 3400);
     return true;
+  }
+  /**
+   * 짧은 가로 화면(640×360 등)에서는 화면 가운데 46% 띠가 영웅 HP 카드 오른쪽 끝과 AUTO·일시정지 버튼에 닿는다.
+   * 띠가 들어갈 때 한 번만 실제 카드 오른쪽 끝과 오른쪽 위 버튼 왼쪽 끝을 읽어 그 사이 빈칸에 가운데 정렬한다.
+   */
+  placeBossIntro(node) {
+    const hud = this.el?.hud; if (!hud?.getBoundingClientRect || !node?.style) return;
+    const box = hud.getBoundingClientRect(), gap = 6;
+    const card = hud.querySelector('.hud-player')?.getBoundingClientRect?.();
+    const rights = ['btn-auto', 'btn-pause'].map((id) => document.getElementById(id)?.getBoundingClientRect?.()).filter((r) => r && r.width > 0 && r.top < box.top + 60);
+    const left = card && card.width > 0 && card.top < box.top + 60 ? card.right - box.left + gap : 0;
+    const right = rights.length ? Math.min(...rights.map((r) => r.left)) - box.left - gap : box.width;
+    const room = right - left;
+    // 측정이 실패하면(빈칸이 너무 좁거나 요소가 없음) 기존 가운데 배치를 그대로 쓴다. 폭은 기존 상한 46%를 넘기지 않는다.
+    if (!(room > 120)) return;
+    writeHudStyle(node.style, 'left', `${Math.round(left + room / 2)}px`);
+    writeHudStyle(node.style, 'max-width', `${Math.floor(Math.min(room, box.width * 0.46))}px`);
+    // 빈칸이 좁으면 관문 코드를 숨겨 칭호·이름이 잘리지 않게 한다(코드는 체력 막대 계급 표식에도 있다).
+    node.classList.toggle('narrow', room < 260);
   }
   /** 콤보 칩은 영웅 HP 카드(EXP 막대 포함) 바로 아래 가장자리 띠에 둔다. 가로 화면에서만 실제 카드 하단을 읽어 --combo-top 을 정한다. */
   placeComboChip() {
