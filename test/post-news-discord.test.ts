@@ -15,7 +15,7 @@ describe('디스코드 소식 게시 도구', () => {
     const payload = buildPayload({ ...patch(), title: '@everyone 공지', summary: '@here 요약' });
     expect(payload.allowed_mentions).toEqual({ parse: [] });
     expect(payload.embeds[0].url).toMatch(/^https:\/\/blade\.tllhouse\.com\/news\/.+\/$/);
-    expect(payload.embeds[0].title).toContain('[패치노트 v1.0.3]');
+    expect(payload.embeds[0].title).toContain(`[패치노트 v${patch().version}]`); // 최신 패치 글 버전(글이 늘어도 깨지지 않게)
     expect(payload.embeds[0].color).toBeGreaterThan(0);
     expect(payload.embeds[0].title.length).toBeLessThanOrEqual(256);
   });
