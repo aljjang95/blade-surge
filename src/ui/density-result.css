@@ -58,3 +58,9 @@
   .daily-cell span { font-size: 11px; line-height: 1.2; }
   .daily-cell b { font-size: 11px; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
 }
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 새 지역 해금 띠는 화면 위 가운데에 4.8초 떠서 결과 화면의 VICTORY 띠를 덮었다.
+     결과 화면이 열려 있을 때만 오른쪽 위(별 자리)로 옮기고 설명 줄은 숨긴다. 문구·지속 시간은 그대로. */
+  body:has(#result.show) .region-unlock-banner { left: auto; right: calc(16px + var(--sar, 0px)); transform: none; max-width: 46vw; }
+  body:has(#result.show) .region-unlock-banner small { display: none; }
+}
