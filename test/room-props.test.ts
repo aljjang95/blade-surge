@@ -92,7 +92,7 @@ test('strike: 사거리·호 안이면 발동(used), 호 밖·멀면 안 되고 
   expect(b.prop.used).toBe(true);
 });
 
-test('keg: 발동 직후 효과 없음, 1초 뒤 반경 5 안 적과 영웅(maxHp*0.12)만 피해', () => {
+test('keg: 발동 직후 효과 없음, 1.25초 뒤 반경 5 안 적과 안쪽 3m 영웅(maxHp*0.05)만 피해', () => {
   const { game, rp, hero, prop } = place('forge');
   prop.x = 20; prop.z = 0; hero.pos.set(22, 0, 0);
   const near = makeEnemy(23, 0), far = makeEnemy(30, 0);
@@ -101,14 +101,14 @@ test('keg: 발동 직후 효과 없음, 1초 뒤 반경 5 안 적과 영웅(maxH
   expect(prop.used).toBe(true);
   expect(near.hurts.length).toBe(0);
   expect(hero.hurts.length).toBe(0);
-  rp.update(0.9);
+  rp.update(1.1);
   expect(near.hurts.length).toBe(0);
   rp.update(0.2);
   expect(near.hurts.length).toBe(1);
   expect(near.hurts[0].dmg).toBeCloseTo(100 * 0.45);
   expect(far.hurts.length).toBe(0);
   expect(hero.hurts.length).toBe(1);
-  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.12);
+  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.05);
   rp.update(1);
   expect(near.hurts.length).toBe(1);
 });
@@ -116,7 +116,7 @@ test('keg: 발동 직후 효과 없음, 1초 뒤 반경 5 안 적과 영웅(maxH
 test('keg: 영웅이 반경 밖이면 영웅은 안 다친다', () => {
   const { rp, hero, prop } = place('forge');
   prop.x = 20; prop.z = 0; hero.pos.set(30, 0, 0);
-  rp.trigger(prop); rp.update(1.1);
+  rp.trigger(prop); rp.update(1.3);
   expect(hero.hurts.length).toBe(0);
 });
 
@@ -189,7 +189,7 @@ test('정예 0.3배·보스 0.12배 비율 피해, 잠복 중(under)·사망·�
   const under = makeEnemy(21, 0, { burrow: { phase: 'under' } }), surfaced = makeEnemy(21, 1, { burrow: { phase: 'mark' } });
   const dead = makeEnemy(21, 2, { alive: false }), spawning = makeEnemy(21, -2, { spawning: true });
   game.enemies.push(normal, elite, boss, under, surfaced, dead, spawning);
-  rp.trigger(prop); rp.update(1.1);
+  rp.trigger(prop); rp.update(1.3);
   expect(normal.hurts[0].dmg).toBeCloseTo(45);
   expect(elite.hurts[0].dmg).toBeCloseTo(45 * 0.3);
   expect(boss.hurts[0].dmg).toBeCloseTo(45 * 0.12);
@@ -242,6 +242,6 @@ test('update: 장치 효과가 같은 프레임에 방을 정화해 목록이 �
   // 폭발로 적이 쓰러져 방이 정화되는 순간을 흉내 낸다: 피해를 받으면 clearRoom 을 부른다.
   game.enemies.push(makeEnemy(keg.x + 1, keg.z, { hurt() { rp.clearRoom(room); } }));
   rp.trigger(keg);
-  expect(() => rp.update(1.1)).not.toThrow();
+  expect(() => rp.update(1.3)).not.toThrow();
   expect(rp.list.length).toBe(0);
 });

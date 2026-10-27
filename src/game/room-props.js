@@ -7,7 +7,7 @@ import { audio } from '../engine/audio.js';
 
 export const ROOM_PROPS = {
   garden: { kind: 'bell', name: '잠든 공명종', color: 0xe8be74, hint: '종을 치면 공명파가 주변 적을 기절시킵니다.' },
-  forge: { kind: 'keg', name: '화약 통', color: 0xff713d, hint: '통을 치면 1초 뒤 폭발합니다. 적을 몰아넣고 빠지세요.' },
+  forge: { kind: 'keg', name: '화약 통', color: 0xff713d, hint: '통을 치면 잠시 뒤 폭발합니다. 적을 몰아넣고 빠지세요.' },
   frost: { kind: 'crystal', name: '서리 결정', color: 0x85dfff, hint: '결정을 깨면 주변 적이 얼어붙습니다.' },
   tide: { kind: 'geyser', name: '조수 밸브', color: 0x48dabd, hint: '밸브를 치면 소용돌이가 적을 한가운데로 빨아들입니다.' },
   crown: { kind: 'lantern', name: '심판의 등불', color: 0xe9c785, hint: '등불을 치면 빛 고리가 세 번 퍼져 주변 적을 태웁니다.' },
@@ -92,7 +92,7 @@ export class RoomProps {
     this.game._propsUsed = (this.game._propsUsed || 0) + 1;
     const g = this.game; p.used = true; p.ring.material.opacity = 0;
     _v.set(p.x, 0, p.z);
-    if (p.kind === 'keg') { p.fuse = 1; g.fx.ring(_v, 0xff5020, { r0: RADIUS.keg - .4, r1: RADIUS.keg, telegraph: true, life: 1, y: .06, width: 1 }); audio.play?.('hit_metal0', { vol: .4, rate: .7 }); g.ui?.combatCue?.('화약 통 점화!', 'red'); return; }
+    if (p.kind === 'keg') { p.fuse = 1.25; g.fx.ring(_v, 0xff5020, { r0: RADIUS.keg - .4, r1: RADIUS.keg, telegraph: true, life: 1.25, y: .06, width: 1 }); g.fx.ring(_v, 0xff5020, { r0: 2.8, r1: 3.1, telegraph: true, life: 1.25, y: .07, width: 1 }); audio.play?.('hit_metal0', { vol: .4, rate: .7 }); g.ui?.combatCue?.('화약 통 점화!', 'red'); return; }
     if (p.kind === 'lantern') { p.pulses = 3; p.pulseT = 0; return; }
     this.effect(p);
   }
@@ -109,7 +109,8 @@ export class RoomProps {
       if (slow) { e.slow = Math.max(e.slow || 0, .5); e.slowT = Math.max(e.slowT || 0, 4); }
       n++;
     }
-    if (player > 0) for (const pl of g.players || [g.player]) if (pl?.alive && Math.hypot(pl.pos.x - p.x, pl.pos.z - p.z) < r) pl.hurt(pl.maxHp * player, { dirx: pl.pos.x - p.x, dirz: pl.pos.z - p.z, kb: 8, kind: 'blunt' });
+    // 영웅은 안쪽 고리(3m) 안에 남았을 때만 다친다(점화 후 1.25초 안에 빠지면 무사).
+    if (player > 0) for (const pl of g.players || [g.player]) if (pl?.alive && Math.hypot(pl.pos.x - p.x, pl.pos.z - p.z) < 3.1) pl.hurt(pl.maxHp * player, { dirx: pl.pos.x - p.x, dirz: pl.pos.z - p.z, kb: 8, kind: 'blunt' });
     if (n >= 3) g.fx.damage(_v.set(p.x, 0, p.z), 0, { text: `환경 콤보 ×${n}` });
     return n;
   }
@@ -122,7 +123,7 @@ export class RoomProps {
     } else if (p.kind === 'keg') {
       g.fx.explosion?.(_v, { size: 6, color: 0xff7a30, life: .5, opacity: .7 }); g.fx.shockTex(_v, 0xff8a40, { r1: RADIUS.keg + 1, life: .45 });
       audio.boom?.({ vol: .8, dur: .6, low: 60 }); g.renderer?.shake?.(.45);
-      this.hit(p, .45, { kb: 9, player: .12 });
+      this.hit(p, .45, { kb: 9, player: .05 });
       p.mesh.visible = false;
     } else if (p.kind === 'crystal') {
       g.fx.burst?.(_v.clone().setY(1), c, { n: 24, speed: 9, size: .35 }); g.fx.shockTex(_v, c, { r1: RADIUS.crystal, life: .5 });
