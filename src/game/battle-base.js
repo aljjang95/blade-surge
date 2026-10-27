@@ -17,6 +17,7 @@ import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel, preloadHeroBody } from '../engine/assets.js';
 import { heroBodyAppearance } from '../data/hero-library.js';
+import { withAvatarSpeed } from '../data/avatars.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
@@ -112,7 +113,7 @@ export class Battle {
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
-    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
+    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = withAvatarSpeed(heroStats(def, heroState, equipBonus), equipBonus, { party: !!stage.party });
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
     this.holes = []; this.rebirthUsed = false;
@@ -145,6 +146,7 @@ export class Battle {
     await preloadHeroBody(heroId, heroBodyAppearance(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
+    this.player.magnetMul = 1 + (!stage.party && equipBonus.avatar?.pickupPct || 0);   // 아바타 풀셋: 줍기 범위
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;

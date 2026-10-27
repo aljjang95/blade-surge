@@ -234,7 +234,9 @@ export class UI {
     for (const el of [this.comboEl, this.killStreakEl]) { const r = rect(el); if (r && !el.classList?.contains('hidden')) top = Math.max(top, r.bottom); }
     top += 8;
     const limit = joy ? joy.top - 6 : height * .7;
-    if (right - left < 150 || limit - top < 60) { clear(); return; }
+    // COMBO 배지가 떠서 남는 세로 공간이 좁아도 기본 위치(화면 위 가운데·플레이어 카드 위)로 돌아가지 않는다.
+    // 그 경우 알림 띠는 높이만 줄어든다(최소 28px). 폭이 모자랄 때만 기본 배치로 돌아간다.
+    if (right - left < 150) { clear(); return; }
     hud.classList?.add('side-stack');
     const box = hud.getBoundingClientRect?.() || { left: 0, top: 0 };
     writeHudStyle(hud.style, '--side-left', px(left - box.left));
@@ -248,11 +250,14 @@ export class UI {
     }
     writeHudStyle(hud.style, '--side-banner-top', px(y - box.top));
     if (banner?.classList?.contains('on') && banner.offsetHeight > 0) y += banner.offsetHeight + 6;
+    // 경고·배너가 쌓여 알림이 들어갈 높이(28px)조차 없으면 조이스틱을 덮지 않게 기본 배치로 돌아간다.
+    if (limit - y < 28) { clear(); return; }
     toast.classList?.add('edge-strip');
     writeHudStyle(toast.style, '--battle-notice-top', px(y));
     writeHudStyle(toast.style, '--battle-notice-left', px(left));
     writeHudStyle(toast.style, '--battle-notice-right', px(width - right));
-    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(44, limit - y))));
+    // 보스 전술 안내처럼 긴 문장은 세 줄(58px)까지 보이게 한다.
+    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(58, limit - y))));
   }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
@@ -829,7 +834,8 @@ export class UI {
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
-      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
+      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
+      lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
