@@ -114,12 +114,12 @@ export function applyLook(model, def, equip = {}, opts = {}) {
         // 전용 모델도 무기만은 등급·속성색으로 물든다. 원본 발광을 45% 속성색 쪽으로 옮기고 세기는 등급·강화에 비례.
         if (owner === 'w' && wCol && wGlow > 0) base.lerp(wCol, 0.45).multiplyScalar(0.6 + Math.min(1.6, wGlow) * 0.2);
       }
-      // 강화 빛: 무기 자체가 속성색으로 달아오른다(+6 부터). 블룸 없이도 보이도록 단계 발광을 직접 더한다.
-      if (owner === 'w' && wCol && enhGlow > 0) base.add(_enh.copy(wCol).multiplyScalar(enhGlow));
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
       // 몸은 방어구 등급색으로 물들이지 않는다(방어구 외형 없음).
       else base.setScalar(0);
+      // 강화 빛: 무기 자체가 속성색으로 달아오른다(+6 부터). 위에서 base 를 매번 새로 정하므로 다시 불러도 쌓이지 않는다.
+      if (owner === 'w' && wCol && enhGlow > 0) base.add(_enh.copy(wCol).multiplyScalar(enhGlow));
       material.emissive.copy(base);
     }
   });

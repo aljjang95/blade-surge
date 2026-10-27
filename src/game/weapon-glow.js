@@ -22,7 +22,7 @@ function weaponHaloTexture() {
 }
 
 const _box = new THREE.Box3(), _part = new THREE.Box3(), _center = new THREE.Vector3(), _size = new THREE.Vector3(), _scale = new THREE.Vector3();
-const _white = new THREE.Color(0xffffff);
+const _white = new THREE.Color(0xffffff), _axis = new THREE.Vector3();
 const _inverse = new THREE.Matrix4(), _relative = new THREE.Matrix4();
 
 /**
@@ -34,7 +34,8 @@ function bladeFrame(model, anchor) {
   _inverse.copy(anchor.matrixWorld).invert();
   _box.makeEmpty();
   anchor.traverse((o) => {
-    if (!o.isMesh || o.isSprite || !o.visible || !o.geometry) return;
+    if (!o.isMesh || o.isSprite || !o.geometry) return;
+    for (let p = o; p && p !== anchor; p = p.parent) if (!p.visible) return;
     if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
     _relative.multiplyMatrices(_inverse, o.matrixWorld);
     _box.union(_part.copy(o.geometry.boundingBox).applyMatrix4(_relative));
@@ -46,6 +47,7 @@ function bladeFrame(model, anchor) {
   const far = Math.abs(hi) >= Math.abs(lo) ? hi : lo, near = far === hi ? Math.max(lo, 0) : Math.min(hi, 0);
   const length = Math.abs(far - near), blade = length * .45;
   _box.getCenter(_center); _center[axis] = far - Math.sign(far - near) * blade * .5;
+  _axis.set(0, 0, 0)[axis] = Math.sign(far - near) || 1;
   const width = Math.max(...['x', 'y', 'z'].filter((k) => k !== axis).map((k) => ext[k]));
   // 스프라이트는 화면을 향하므로 칼날 길이·너비를 넉넉한 타원으로 쓴다.
   _size.set(Math.max(width * 1.6, blade * .7), blade * 1.5, 1);
@@ -87,7 +89,7 @@ export function syncWeaponHalo(model, tier, color, weaponNodes) {
   }
   anchor.add(halo);
   // 칼날(손잡이 반대쪽 끝) 가운데에 칼날 길이만큼. 무기 전체 중심에 두면 자루·몸통 위에 뜬다(2026-10-28 QA).
-  halo.position.copy(_center);
+  halo.position.copy(_center); halo.userData.axis = _axis.clone(); halo.userData.blade = _size.y / 1.5;
   halo.scale.set(_size.x * tier.haloScale, _size.y * tier.haloScale, 1);
   // 같은 색끼리 더하면 금색 무기 위에서 묻히므로 가운데를 흰빛 쪽으로 당긴다.
   halo.material.color.set(color).lerp(_white, .35);
@@ -103,28 +105,30 @@ export function removeWeaponHalo(model) {
 
 
 const _at = new THREE.Vector3();
-const _sparkColor = new THREE.Color();
+const _sparkColor = new THREE.Color(), _dir = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const SPARK_MOTION = Object.freeze({ grav: -.6, drag: .96, shrink: .4 });
 /**
  * 칼날 불씨. state 는 호출자 소유 { t } 누적기. 광륜 위치(칼날 중심)에서 칼날 길이만큼 흩어 뿌린다.
  * 반환: 이번 프레임 뿌린 수.
  */
 export function emitWeaponSparks(fx, model, look, dt, state) {
   const tier = look?.weapon?.glowTier, halo = model?.userData.weaponHalo;
-  if (!fx?.glow || !tier?.spark || !halo?.parent) return 0;
+  if (!fx?.glow?.emitIfFree || !tier?.spark || !halo?.parent) return 0;
   const rate = fx.lite ? tier.spark * .5 : tier.spark;
   state.t = (state.t || 0) + dt * rate;
   let n = 0;
   if (state.t < 1) return 0;
+  // 칼날 축(무기 로컬)을 월드로 돌려 칼날 길이 안에서만 뿌린다(휘두르거나 눕힌 무기도 칼날 위).
   halo.getWorldPosition(_at);
-  const reach = halo.scale.y * Math.abs(halo.parent.getWorldScale(_scale).x) * .45;
+  _dir.copy(halo.userData.axis || _up).transformDirection(halo.parent.matrixWorld);
+  const reach = (halo.userData.blade || halo.scale.y) * Math.abs(halo.parent.getWorldScale(_scale).x) * .5;
   _sparkColor.set(look.weapon.color);
   while (state.t >= 1 && n < 4) {
     state.t -= 1; n++;
-    const k = (Math.random() - .5) * 2;
-    fx.glow.emit(_at.x + (Math.random() - .5) * .12, _at.y + k * reach, _at.z + (Math.random() - .5) * .12,
+    const k = (Math.random() - .5) * 2 * reach;
+    fx.glow.emitIfFree(_at.x + _dir.x * k + (Math.random() - .5) * .12, _at.y + _dir.y * k, _at.z + _dir.z * k + (Math.random() - .5) * .12,
       (Math.random() - .5) * .4, .5 + Math.random() * .7, (Math.random() - .5) * .4,
-      _sparkColor, .1 + Math.random() * .1 + (tier.min >= 13 ? .06 : 0), tier.sparkLife * (.7 + Math.random() * .6),
-      { grav: -.6, drag: .96, shrink: .4 });
+      _sparkColor, .1 + Math.random() * .1 + (tier.min >= 13 ? .06 : 0), tier.sparkLife * (.7 + Math.random() * .6), SPARK_MOTION);
   }
   if (state.t > 1) state.t = 0;
   return n;
