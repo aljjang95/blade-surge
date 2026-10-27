@@ -13,6 +13,7 @@ import { removeGearAccents } from './gear-accents.js';
 import { removeHeroBoots } from '../engine/hero-boots.js';
 import { removeHeroGearParts } from '../engine/hero-gear-parts.js';
 import { syncWeaponHalo } from './weapon-glow.js';
+const _enh = new THREE.Color();
 const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
@@ -99,10 +100,11 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   const wCol = w ? new THREE.Color(wLook?.color || RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
   const wGlow = w ? (wLook ? wLook.glow : WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025) : 0;
   const sGlow = a ? WEAPON_GLOW[a.rarity] * 0.6 + Math.min(20, equip.armor.enh || 0) * 0.02 : 0;   // 방패·보조
+  const enhGlow = (wLook?.glowTier?.emissive || 0) * 1.4;
   const wNodes = new Set(L ? L.weaponNodes : []), aNodes = new Set(L ? L.armorNodes : []);
   model.traverse((o) => {
     if (!o.isMesh) return;
-    let owner = null; for (let p = o; p && p !== model; p = p.parent) { if (wNodes.has(p.name)) { owner = 'w'; break; } if (aNodes.has(p.name)) { owner = 'a'; break; } }
+    let owner = null; for (let p = o; p && p !== model; p = p.parent) { if (wNodes.has(p.name) || p.name === 'Armory_weapon') { owner = 'w'; break; } if (aNodes.has(p.name)) { owner = 'a'; break; } }
     for (const material of materialsOf(o)) {
       if (!material.emissive) continue;
       const base = material.userData.baseEmissive || (material.userData.baseEmissive = new THREE.Color(0));
@@ -111,6 +113,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
         // 전용 모델도 무기만은 등급·속성색으로 물든다. 원본 발광을 45% 속성색 쪽으로 옮기고 세기는 등급·강화에 비례.
         if (owner === 'w' && wCol && wGlow > 0) base.lerp(wCol, 0.45).multiplyScalar(0.6 + Math.min(1.6, wGlow) * 0.2);
       }
+      // 강화 빛: 무기 자체가 속성색으로 달아오른다(+6 부터). 블룸 없이도 보이도록 단계 발광을 직접 더한다.
+      if (owner === 'w' && wCol && enhGlow > 0) base.add(_enh.copy(wCol).multiplyScalar(enhGlow));
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
       // 몸은 방어구 등급색으로 물들이지 않는다(방어구 외형 없음).

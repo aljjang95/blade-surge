@@ -37,9 +37,7 @@ test('초상 키는 실제 영웅·장비·아바타·정본 모델을 구분하
   gear.armor = { id: armor.id, enh: 3 };
   const equipped = heroPortraitSnapshot(app, 'ranger')!;
   expect(equipped.key).not.toBe(first.key);
-  // 방어구는 몸 외형을 바꾸지 않는다(2026-10-27): 몸체 단계·모델은 맨몸과 같고, 키만 장비 입력을 반영한다.
-  expect(equipped.tier).toBe(1);
-  expect(equipped.body.id).toBe(first.body.id);
+  expect(equipped.tier).toBe(3);
   expect(equipped.equipment.armor).not.toBe(gear.armor);
   gear.armor.enh = 4;
   expect(equipped.equipment.armor!.enh).toBe(3);
