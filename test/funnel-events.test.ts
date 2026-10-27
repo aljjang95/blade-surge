@@ -38,7 +38,7 @@ test('valid events are recorded in order with deterministic clock and sequence',
   const log = createFunnelLog({ storage, now: clock.now });
   expect(log.track('first_run').ok).toBe(true);
   clock.advance(1500);
-  expect(log.track('tutorial_step', { step: 1 }).ok).toBe(true);
+  expect(log.track('tutorial_step', { step: 1, foldSec: 15 }).ok).toBe(true);
   expect(log.track('gacha_pull', { count: 10, currency: 'gems', pityBefore: 59, ssr: 1, sr: 2, dupes: 1 }).ok).toBe(true);
   expect(log.track('shop_view', { tab: SHOP_TABS[0].id }).ok).toBe(true);
   expect(log.track('paysheet_open', { sku: SKUS[0].id }).ok).toBe(true);
@@ -56,6 +56,7 @@ test('rejects unknown keys, freeform strings, PII-like fields, wrong types and m
     ['first_run', { email: 'a@b.c' }],
     ['tutorial_step', { step: 1, note: 'hello' }],
     ['tutorial_step', { step: '1' }],
+    ['tutorial_step', { step: 1, foldSec: 999 }],
     ['tutorial_step', { step: 1.5 }],
     ['tutorial_step', {}],
     ['gacha_pull', { count: 5, currency: 'gems' }],

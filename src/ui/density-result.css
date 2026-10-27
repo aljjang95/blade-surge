@@ -32,10 +32,10 @@
   :root:root #result .growth-summary p { margin-bottom: 3px; line-height: 1.35; }
   :root:root #result .growth-actions { grid-template-columns: 1fr; gap: 4px; }
   :root:root #result .growth-action { align-items: center; padding: 4px 8px; }
-  /* 알림 칩 줄: 띠 아래, 상자 오른쪽 절반(별 아래)에서 가로로 나란히 */
+  /* 알림 칩 줄: 위쪽 기록 줄(처치·콤보·'기억에 남은…')을 가리지 않게 상자 바닥 행동 줄 바로 위, 오른쪽 끝에 아래서부터 쌓는다 */
   body:has(#result.show) #toast-layer {
-    top: calc(var(--sat, 0px) + 64px); left: 50%; right: max(10px, calc((100vw - min(88vw, 680px)) / 2 + 12px));
-    flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 4px; z-index: 40;
+    top: auto; bottom: calc(var(--sab, 0px) + 76px); left: 50%; right: max(10px, calc((100vw - min(88vw, 680px)) / 2 + 12px));
+    flex-direction: column-reverse; flex-wrap: nowrap; justify-content: flex-start; align-items: flex-end; gap: 4px; z-index: 40;
   }
   body:has(#result.show) #toast-layer .toast { padding: 3px 10px; font-size: 12px; line-height: 18px; border-radius: 9px; max-height: 28px; }
   /* 소환 권유는 바닥 행동 줄 왼쪽의 보조 버튼 */
@@ -57,4 +57,10 @@
   .daily-cell img { width: 26px; height: 26px; }
   .daily-cell span { font-size: 11px; line-height: 1.2; }
   .daily-cell b { font-size: 11px; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 새 지역 해금 띠는 화면 위 가운데에 4.8초 떠서 결과 화면의 VICTORY 띠를 덮었다.
+     결과 화면이 열려 있을 때만 오른쪽 위(별 자리)로 옮기고 설명 줄은 숨긴다. 문구·지속 시간은 그대로. */
+  body:has(#result.show) .region-unlock-banner { left: auto; right: calc(16px + var(--sar, 0px)); transform: none; max-width: 46vw; }
+  body:has(#result.show) .region-unlock-banner small { display: none; }
 }

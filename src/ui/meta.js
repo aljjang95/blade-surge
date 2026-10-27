@@ -163,9 +163,14 @@ export class Meta {
     this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
+    // 영웅 화면은 미보유 영웅을 보다 떠났더라도 출전 영웅으로 연다. 시작 영웅 선택 전 기본값(검성)에 머물면
+    // 다른 영웅으로 시작한 이용자가 '미보유' 화면만 보고 아바타·장비 줄을 찾지 못했다(2026-10-28 대표님 지적).
+    if (tab === 'heroes') this.focusOwnedHero();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') { if (sub && Object.hasOwn(GACHA_BANNERS, sub)) this.gachaBanner = sub; this.refreshGacha(); }
     if (tab === 'home') this.refreshHome();
   }
+  /** 보고 있던 영웅이 미보유면 출전 영웅으로 되돌린다. */
+  focusOwnedHero() { if (!this.eco.ownHero(this.heroSel)) this.heroSel = this.eco.s.selected; return this.heroSel; }
   /** 메뉴 안(소환·상점·패스·우편 등)에 받을 것이 있으면 하단 메뉴 버튼에도 점을 띄워 첫 소환·보상 수령을 놓치지 않게 한다. */
   refreshMenuBadge() {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
@@ -877,7 +882,62 @@ export class Meta {
       resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; b.querySelector('#m-reset-no').focus({ preventScroll: true }); };
       b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
       b.querySelector('#m-reset-yes').onclick = () => { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); };
+      this.groupSettingsTabs(b);
     } });
+  }
+  /** 설정 항목을 탭 다섯(소리·진동 / 화면 / 카메라 / 조작 / 계정·데이터)으로 나눈다. 요소는 옮기기만 해 기존 핸들러·저장 동작이 그대로 유지된다. */
+  groupSettingsTabs(box) {
+    const TABS = [['sound', '소리 · 진동'], ['screen', '화면'], ['camera', '카메라'], ['control', '조작'], ['account', '계정 · 데이터']];
+    const KEY_GROUP = { sfx: 'sound', music: 'sound', voice: 'sound', haptics: 'sound', screenShake: 'screen', cameraAuto: 'camera', cameraInvertX: 'camera', cameraInvertY: 'camera', autoTarget: 'control' };
+    const panels = Object.fromEntries(TABS.map(([id]) => {
+      const panel = document.createElement('div');
+      panel.className = 'setting-panel'; panel.id = 'setting-panel-' + id; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'setting-tab-' + id);
+      return [id, panel];
+    }));
+    const nodes = [...box.children].filter((n) => n.tagName !== 'H2' && !n.classList.contains('modal-btns'));
+    let last = 'sound';
+    for (const n of nodes) {
+      let g = null;
+      if (n.matches('.setting-row')) {
+        const k = n.querySelector('[data-k]')?.dataset.k;
+        if (k) g = KEY_GROUP[k];
+        else if (n.querySelector('[data-mix]') || n.querySelector('#haptic-help')) g = 'sound';
+        else if (n.querySelector('[data-q]')) g = 'screen';
+        else if (n.querySelector('[data-cam], #cam-desc')) g = 'camera';
+        else if (n.querySelector('#input-help')) g = 'control';
+        else if (n.querySelector('#pwa-install')) g = 'account';
+        else if (n.classList.contains('setting-description')) g = last;
+      } else if (n.id === 'mix-notice') g = 'sound';
+      else if (n.id === 'pwa-notice' || n.matches('.setting-legal, .danger-zone')) g = 'account';
+      g = g || last;
+      last = g;
+      panels[g].append(n);
+    }
+    const bar = document.createElement('div');
+    bar.className = 'setting-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', '설정 묶음');
+    const tabs = TABS.map(([id, label]) => {
+      const t = document.createElement('button');
+      t.type = 'button'; t.className = 'setting-tab'; t.id = 'setting-tab-' + id; t.setAttribute('role', 'tab'); t.setAttribute('aria-controls', 'setting-panel-' + id); t.textContent = label;
+      t.dataset.settingTab = id;
+      bar.append(t);
+      return t;
+    });
+    const activate = (id) => {
+      tabs.forEach((t) => { const on = t.dataset.settingTab === id; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
+      Object.entries(panels).forEach(([pid, panel]) => { panel.hidden = pid !== id; });
+    };
+    tabs.forEach((t, i) => {
+      t.onclick = () => activate(t.dataset.settingTab);
+      t.onkeydown = (e) => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        e.preventDefault(); const nt = tabs[(i + d + tabs.length) % tabs.length]; activate(nt.dataset.settingTab); nt.focus();
+      };
+    });
+    const h2 = box.querySelector('h2');
+    (h2 || box).after(bar);
+    bar.after(...TABS.map(([id]) => panels[id]));
+    activate('sound');
   }
   showProfile() {
     const s = this.eco.s, pay = this.vipShown(), vipNext = [0, 1, 20000, 50000, 100000, 300000];

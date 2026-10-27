@@ -29,8 +29,8 @@ const SCHEMA = Object.freeze({
   // 세션 시작 표식. main이 직전 session_start 시각으로 first_run/return_session을 판단한다.
   session_start: { required: {}, optional: {} },
   first_run: { required: {}, optional: {} },
-  tutorial_step: { required: { step: int(0, 50) }, optional: {} },
-  tutorial_complete: { required: { steps: int(0, 50) }, optional: { skipped: bool } },
+  tutorial_step: { required: { step: int(0, 50) }, optional: { foldSec: int(0, 120) } },
+  tutorial_complete: { required: { steps: int(0, 50) }, optional: { skipped: bool, foldSec: int(0, 120) } },
   heal_hint_shown: { required: { tier: oneOf(['early', 'critical']) }, optional: {} },
   auto_retry_selected: { required: {}, optional: {} },
   reward_claim: {
