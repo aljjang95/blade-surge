@@ -218,3 +218,16 @@ test('Lv.80 영웅의 고통 단계 EXP는 전설 수련으로 간다(영웅 레
   expect(t.exp / (stageDef(1, 5).rewards.exp * tormentScale(1).expMul)).toBeGreaterThan(0.99);
   expect(h.exp / (stageDef(1, 5).rewards.exp * HELL_DIFFICULTY.expMul)).toBeCloseTo(0.5, 1);
 });
+
+test('정산: 풀 보상 판 이후에는 보스 완료 조각(5)도 감쇠한다(리뷰 P2)', () => {
+  const eco = hellCleared(newEco()); eco.s.hero = undefined;
+  const stage = stageAt(eco, 1, 10, 'torment-1') as any;
+  expect(stage.boss).toBeTruthy();
+  const fragsOf = (r: any) => r.got.find((g: any) => g.k === 'fragments')?.n || 0;
+  const full = eco.completeStage(stage, 3);
+  expect(fragsOf(full)).toBe(5);
+  for (let i = 1; i < TORMENT.fullRuns; i++) eco.completeStage(stage, 3);
+  const decayed = eco.completeStage(stage, 3);
+  expect(decayed.torment.full).toBe(false);
+  expect(fragsOf(decayed)).toBe(Math.floor(5 * TORMENT.decayMul));
+});
