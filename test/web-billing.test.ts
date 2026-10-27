@@ -143,7 +143,8 @@ describe('웹 결제 intent', () => {
 
   test('없는 상품·Play 전용 상품·구독은 거부', async () => {
     const { a, intent } = await setup();
-    for (const id of ['nope', 'starter_pack_v1', 'monthly_card_v1', 'remove_ads_v1', 'gems_300_v1']) expect((await intent(a.token, id)).body.error).toBe('unknown-product');
+    // 보석 팩은 Play 단독(저장형 재화 충전은 웹에서 팔지 않음), 자동 갱신 구독은 웹 불가, 비활성 상품(웹 30일권·아바타)도 거부.
+    for (const id of ['nope', 'monthly_card_v1', 'gems_300_v1', 'monthly_pass_v1', 'avatar_fullset_knight_v1', 'growth_pack_v1']) expect((await intent(a.token, id)).body.error).toBe('unknown-product');
   });
 
   test('열린 의도는 계정당 시간당 10건까지', async () => {
@@ -499,7 +500,8 @@ describe('Play 흐름 하위호환', () => {
     expect(byId.hero_knight_v1.channels).toEqual(['web', 'play']);
     expect(byId.hero_knight_v1.priceKRW).toBe(5900);
     expect(byId.hero_all_v1.priceKRW).toBe(17900);
-    expect(byId.starter_pack_v1.channels).toEqual(['play']);
+    expect(byId.starter_pack_v1.channels).toEqual(['web', 'play']);
+    expect(byId.gems_300_v1).toBeUndefined(); // 비활성 상품은 카탈로그에 나오지 않는다
     // 그림자 계정은 영웅 상품 Play intent가 거부되고 다른 상품은 기존대로 열린다.
     expect((await h.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, a.token)).body.error).toBe('server-authority-required');
     expect((await h.send('POST', '/iap/intent', { productId: 'hero_all_v1' }, a.token)).status).toBe(403);
@@ -542,7 +544,9 @@ describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바�
     expect(docOf(h, a.accountId).paidGems).toBe(1200);
     expect((await intent(a.token, 'monthly_pass_v1')).body.error).toBe('already-subscribed');
     h.advance(30 * DAY + 1000);
-    expect((await intent(a.token, 'monthly_pass_v1')).status).toBe(200);
+    const again = await h.session(a.deviceKey); // 세션 토큰이 만료돼 같은 기기 키로 다시 로그인(같은 계정)
+    expect(again.accountId).toBe(a.accountId);
+    expect((await intent(again.token, 'monthly_pass_v1')).status).toBe(200);
   });
 
   test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
