@@ -94,7 +94,7 @@ export const TORMENT = frozen({
   // 장비 파워·전설 수련이 한 단계씩 새 단계를 여는 후반을 만든다(진행 시뮬레이터 보정, docs/SPEC_720H.md 7절).
   curve: frozen({ A: 6, tau: 7, B: 0.35 }),
   // 고통 단계 n 에서 나온 장비의 파워 배율 1 + itemPowerStep·n(아이템 인스턴스 필드 tp). 기존 장비는 tp 없음 = 배율 1.
-  itemPowerStep: 0.26,
+  itemPowerStep: 0.265,
   // 장비 이름 접두(표시용): tp 가 이 값 이상이면 고대·태고.
   itemPrefixes: frozen([frozen({ from: 25, name: '태고' }), frozen({ from: 10, name: '고대' })]),
   // EXP 계수: 처치·완료 EXP 가 지옥 × (expBase + expStep×n). 레벨 70→80 에 EXP 약 2.1억이 드는데 SPEC 초안(1 + 0.1n)으로는

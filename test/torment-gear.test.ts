@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { TORMENT, SEASON } from '../src/data/content-90d.js';
-import { ITEMS_OF, itemStats, itemTierMul, itemTierPrefix } from '../src/data/items.js';
+import { ITEMS_OF } from '../src/data/items.js';
+import { itemStats, itemTierMul, itemTierPrefix } from '../src/data/item-tier.js';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
 import { applyDifficulty, resolveDifficulty } from '../src/game/difficulty.js';
@@ -11,7 +12,7 @@ const memory = () => { const m = new Map<string, string>(); return { getItem: (k
 const newEco = (storage = memory()) => new Economy({ now: () => SEASON.startMs + 3 * 86400000, storage, rng: () => .5 });
 const hellCleared = (eco: any) => { eco.s.progress.unlocked = 60; for (let st = 1; st <= 10; st++) eco.s.endgame.peak[`1-${st}`] = 3; return eco; };
 const tormentStage = (eco: any, tier: number) => applyDifficulty(stageDef(1, 5), resolveDifficulty(eco.s, 1, 5, `torment-${tier}`)) as any;
-const weapon = () => ITEMS_OF('L', 'weapon')[0].id;
+const weapon = () => (ITEMS_OF as any)('L', 'weapon')[0].id;
 
 test('장비 파워 배율: tp 가 없으면 1(기존 장비 그대로), 있으면 1 + step×tp', () => {
   expect(itemTierMul(undefined)).toBe(1); expect(itemTierMul(0)).toBe(1); expect(itemTierMul(-3)).toBe(1); expect(itemTierMul(1.5)).toBe(1); expect(itemTierMul(NaN)).toBe(1);

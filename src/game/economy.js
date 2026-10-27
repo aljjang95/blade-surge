@@ -1,6 +1,7 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
-import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
+import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
+import { itemStats } from '../data/item-tier.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt, heroReleased } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';

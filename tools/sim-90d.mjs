@@ -21,7 +21,8 @@ import { normalizeLegend, grantLegendExp, allocate as allocateLegendNode, legend
 import { towerScale, towerFirstClearRewards, towerCap, activeEvents, applyEventRewards, seasonAt } from '../src/game/endgame-core.js';
 import { HEROES, heroStats, levelExp, starShards } from '../src/data/heroes.js';
 import { heroTrainingQuote } from '../src/game/hero-training.js';
-import { ITEMS_OF, itemStats, SLOTS, RARITIES, enhanceCost, enhanceStones, enhanceChance, enhanceDown, destroyChance, enhanceStoneTier, STONE_KEY } from '../src/data/items.js';
+import { ITEMS_OF, SLOTS, RARITIES, enhanceCost, enhanceStones, enhanceChance, enhanceDown, destroyChance, enhanceStoneTier, STONE_KEY } from '../src/data/items.js';
+import { itemStats } from '../src/data/item-tier.js';
 import { lootTable, levelExperienceMultiplier, recommendedLevel, difficultyDepth } from '../src/data/loot-tables.js';
 import { ENERGY } from '../src/data/shop.js';
 import { ECONOMY_PACE } from '../src/data/economy-pace.js';
