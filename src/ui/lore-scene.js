@@ -14,18 +14,23 @@ function defaultStorage() {
 }
 
 /** 본 장 번호 집합. 저장소가 없거나 깨져 있어도 빈 집합으로 동작한다. */
+// 저장소 쓰기가 실패해도(사생활 모드 등) 이 세션 안에서는 같은 장면을 다시 자동 재생하지 않는다.
+// 기본 저장소(실제 localStorage 경로)일 때만 쓴다. 테스트처럼 저장소를 넘기면 그 저장소만 본다.
+const sessionSeen = new Set();
 /** @param {any} [storage] */
-export function loadLoreSeen(storage = defaultStorage()) {
+export function loadLoreSeen(storage) {
+  const isDefault = storage === undefined; if (isDefault) storage = defaultStorage();
   try {
     const raw = storage?.getItem(LORE_SEEN_KEY);
     const list = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(list) ? list.filter((n) => Number.isSafeInteger(n) && n >= 1 && n <= 20) : []);
-  } catch { return new Set(); }
+    return new Set([...(isDefault ? sessionSeen : []), ...(Array.isArray(list) ? list.filter((n) => Number.isSafeInteger(n) && n >= 1 && n <= 20) : [])]);
+  } catch { return new Set(isDefault ? sessionSeen : []); }
 }
 /** @param {number} ch @param {any} [storage] */
 export const hasSeenLore = (ch, storage) => loadLoreSeen(storage).has(ch);
 /** @param {number} ch @param {any} [storage] */
-export function markLoreSeen(ch, storage = defaultStorage()) {
+export function markLoreSeen(ch, storage) {
+  if (storage === undefined) { sessionSeen.add(ch); storage = defaultStorage(); }
   try {
     const seen = loadLoreSeen(storage); seen.add(ch);
     storage?.setItem(LORE_SEEN_KEY, JSON.stringify([...seen].sort((a, b) => a - b)));
@@ -97,7 +102,7 @@ export function playChapterScene(ch, { replay = false, track, storage, onEnd, ar
   const color = /^#[0-9a-f]{3,8}$/i.test(chapter.color || '') ? chapter.color : '#87cbb0';
   const reduced = !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   const root = document.createElement('div');
-  root.className = 'lore-scene'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', `${esc(chapter.name || '')} 장면`);
+  root.className = 'lore-scene'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', `${chapter.name || ''} 장면`);
   root.style.setProperty('--lore-color', color);
   if (reduced) root.classList.add('reduced');
   if (typeof art === 'string' && /^\/[\w./-]+$/.test(art)) root.style.setProperty('--lore-art', `url("${art}")`);
@@ -118,16 +123,19 @@ export function playChapterScene(ch, { replay = false, track, storage, onEnd, ar
       dots.forEach((d, n) => d.classList.toggle('on', n <= i));
     },
     onEnd(act) {
-      clearInterval(timer); active = null;
+      clearInterval(timer); active = null; document.removeEventListener('keydown', onKey);
       root.classList.add('out'); setTimeout(() => root.remove(), reduced ? 0 : 220);
       try { onEnd?.(act); } catch { /* 닫힘 콜백 실패는 무시 */ }
     },
   });
+  // Escape 로도 닫는다. 다른 코드가 오버레이를 떼어 냈으면 건너뛴 것으로 정리해 타이머·active 가 남지 않게 한다.
+  const onKey = (event) => { if (event.key === 'Escape') run.skip(); };
+  document.addEventListener('keydown', onKey);
   root.addEventListener('click', (event) => { if (event.target.closest('.lore-scene-skip')) run.skip(); else run.next(); });
   document.body.append(root); active = root;
   run.start();
   last = Date.now();
-  timer = setInterval(() => { const now = Date.now(); run.tick(Math.min(500, now - last)); last = now; }, 200);
+  timer = setInterval(() => { if (!root.isConnected) { run.skip(); return; } const now = Date.now(); run.tick(Math.min(500, now - last)); last = now; }, 200);
   root.querySelector('.lore-scene-skip').focus({ preventScroll: true });
   return true;
 }

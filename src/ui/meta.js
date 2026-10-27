@@ -30,6 +30,7 @@ import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
 import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying } from './lore-scene.js';
 import { mountCodex } from './lore-codex.js';
+import { isChapterOpen, ecoClock } from '../data/chapter-open.js';
 import { guideHtml } from './guide.js';
 import { isFirstSortie } from './first-sortie.js';
 import { availableDifficulties } from '../game/difficulty.js';
@@ -242,6 +243,8 @@ export class Meta {
   playRegionScene(ch, replay, art) {
     return playChapterScene(ch, { replay, art, track: (name, payload) => this.trackFunnel(name, payload) });
   }
+  /** 진행도와 시간 개방(chapter-open.js)이 모두 열린 지역인가. 장면 자동 재생·다시 보기 조건. */
+  regionOpen(ch) { return this.eco.isUnlocked(ch, 1) && isChapterOpen(ch, ecoClock(this.eco)); }
   renderStages() {
     const townNow = this.eco.campaignTownState().current;
     const clearedIn = (ch) => Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${ch}-${i + 1}`] || 0).filter(Boolean).length;
@@ -259,10 +262,10 @@ export class Meta {
       return `<span class="chapter-route-node${stopStars ? ' done' : ''}${stopStage.boss ? ' boss' : ''}" title="${storyText(stopStage.title)}"><i>${String(stop).padStart(2, '0')}</i><small>${stopStage.boss ? '보스' : '관문'}</small></span>`;
     }).join('');
     const regionArt = REGION_DUNGEON_ART[chapter.encounterPrefix || chapter.theme] || chapterCast.portrait;
-    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3>${sceneLinesFor(this.chapter).length && this.eco.isUnlocked(this.chapter, 1) ? '<button type="button" class="lore-replay" id="lore-replay">장면 다시 보기</button>' : ''}<p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
+    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3>${sceneLinesFor(this.chapter).length && this.regionOpen(this.chapter) ? '<button type="button" class="lore-replay" id="lore-replay">장면 다시 보기</button>' : ''}<p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
     const replayButton = $('lore-replay'); if (replayButton) replayButton.onclick = () => this.playRegionScene(this.chapter, true, regionArt);
     // 그 지역이 열려 있고 아직 안 본 장이면 입장 장면을 자동 재생한다(관문 선택 화면에 있을 때만).
-    if (this.tab === 'stage' && !isScenePlaying() && shouldAutoPlayScene(this.chapter, { unlocked: this.eco.isUnlocked(this.chapter, 1) })) this.playRegionScene(this.chapter, false, regionArt);
+    if (this.tab === 'stage' && !isScenePlaying() && shouldAutoPlayScene(this.chapter, { unlocked: this.regionOpen(this.chapter) })) this.playRegionScene(this.chapter, false, regionArt);
     for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
       const d = stageDef(this.chapter, st); const unlocked = this.eco.isUnlocked(this.chapter, st); const stars = this.eco.s.progress.stars[`${this.chapter}-${st}`] || 0;
       const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (d.midboss ? ' is-midboss' : '') + (d.regionBoss ? ' is-regionboss' : '') + (unlocked ? '' : ' lock') + (stars ? ' cleared' : '') + (this.stage.st === st ? ' on' : '');
