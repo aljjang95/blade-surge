@@ -1,0 +1,131 @@
+/*
+ * 전설 수련 판. 스킬 트리·초월과 같은 성장 오버레이 틀(skill-tree.css 의 .gx-layer · .gx-panel · .gx-card)과 storybook 토큰(--sb-*)만 쓴다.
+ * 배치: 왼쪽 요약(단계 · EXP · 남은 점수 · 재분배) / 가운데 갈래 탭 + 노드 그리드 / 오른쪽 선택 노드(찍기 +1·+5·최대) + 키스톤.
+ * 모든 누르는 곳은 44px 이상. 844×390 · 640×360 에서도 넘침 없이 오른쪽 칸은 안에서 스크롤한다.
+ */
+.lg-layer { grid-template-columns: minmax(0, 24fr) minmax(0, 43fr) minmax(0, 33fr); }
+.lg-summary { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-height: 0; }
+.lg-card { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 0 8px 8px; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.lg-rank { display: flex; align-items: baseline; justify-content: center; gap: 4px; line-height: 1; }
+.lg-rank small { font-size: clamp(10px, 1.3vw, 15px); font-weight: 900; color: var(--sb-gold); }
+.lg-rank-num { font-family: var(--disp); font-size: clamp(26px, 6vh, 44px); color: var(--sb-cream); text-shadow: 0 2px 0 var(--sb-gold-edge); }
+.lg-exp { display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
+.lg-exp-bar { width: 100%; height: 10px; appearance: none; -webkit-appearance: none; border: 1px solid var(--sb-gold-edge); border-radius: 999px; background: var(--sb-night); overflow: hidden; }
+.lg-exp-bar::-webkit-progress-bar { background: var(--sb-night); }
+.lg-exp-bar::-webkit-progress-value { background: linear-gradient(90deg, var(--sb-gold-lo), var(--sb-gold-hi)); border-radius: 999px; }
+.lg-exp-bar::-moz-progress-bar { background: linear-gradient(90deg, var(--sb-gold-lo), var(--sb-gold-hi)); border-radius: 999px; }
+.lg-exp-text { text-align: center; font-size: clamp(10px, 1.25vw, 13px); font-weight: 800; color: var(--sb-cream); font-variant-numeric: tabular-nums; }
+.lg-points {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: center; line-height: 1;
+  width: clamp(58px, 15vh, 96px); aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent;
+  background: radial-gradient(circle at 50% 30%, var(--sb-teal-lo), var(--sb-night) 70%) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--sb-gold) 45%, transparent), inset 0 0 10px rgba(0, 0, 0, .5);
+}
+.lg-points small { font-size: clamp(9px, 1.15vw, 13px); font-weight: 900; color: var(--sb-gold); }
+.lg-points-num { font-family: var(--disp); font-size: clamp(22px, 4.6vh, 36px); color: var(--sb-cream); text-shadow: 0 2px 0 var(--sb-gold-edge); }
+:root:root .btn.lg-respec { flex-direction: column; justify-content: center; align-items: center; gap: 2px; width: 100%; min-height: 44px; padding: 4px 8px; font-size: clamp(12px, 1.5vw, 16px); border-radius: 14px; white-space: nowrap; }
+.lg-respec-name { overflow: hidden; text-overflow: ellipsis; }
+.lg-cost .ic { width: 14px; height: 14px; }
+.lg-cost-none { font-size: .85em; color: var(--muted); }
+.lg-next-keystone { margin: 0; text-align: center; font-size: clamp(10px, 1.25vw, 13px); line-height: 1.35; color: var(--sb-cream); }
+.lg-lock { margin: 0; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--red); background: rgba(0, 0, 0, .3); color: var(--red); font-size: clamp(10px, 1.35vw, 13px); font-weight: 900; line-height: 1.35; text-align: center; }
+.lg-reason { margin: 0; font-size: 11px; line-height: 1.35; color: var(--muted); text-align: center; }
+.lg-reason.is-short { color: var(--red); font-weight: 900; }
+
+.lg-board { gap: 4px; min-height: 0; }
+.lg-tabs { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.lg-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 44px; min-width: 44px; padding: 2px 4px; cursor: pointer;
+  border: 2px solid transparent; border-radius: 12px; color: var(--sb-cream); line-height: 1.1;
+  background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
+}
+.lg-tab.is-on { background: linear-gradient(180deg, var(--sb-teal), var(--sb-night)) padding-box, var(--sb-frame) border-box; box-shadow: 0 0 10px color-mix(in srgb, var(--sb-gold) 55%, transparent); }
+.lg-tab-name { font-family: var(--disp); font-size: clamp(13px, 1.9vw, 20px); color: var(--sb-gold); }
+.lg-tab-sub { font-size: clamp(10px, 1.2vw, 13px); font-weight: 800; color: var(--sb-cream); font-variant-numeric: tabular-nums; }
+.lg-branch-sub { flex: 0 0 auto; margin: 0; font-size: clamp(10px, 1.3vw, 14px); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-branch-sub b { color: var(--sb-cream); }
+.lg-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(60px, 1fr); gap: 6px; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
+.lg-node {
+  position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 2px; min-width: 0; min-height: 60px; padding: 5px 7px; cursor: pointer; text-align: left;
+  border: 2px solid transparent; border-radius: 12px; color: var(--sb-cream);
+  background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
+}
+.lg-node.has-points { background: linear-gradient(180deg, color-mix(in srgb, var(--sb-teal-lo) 85%, transparent), var(--sb-night)) padding-box, var(--sb-frame) border-box; }
+.lg-node.is-selected { transform: scale(1.03); box-shadow: 0 0 0 2px var(--sb-gold-hi), 0 0 16px color-mix(in srgb, var(--sb-gold) 70%, transparent); }
+.lg-node.is-max .lg-node-level::after { content: ' MAX'; color: var(--sb-gold); }
+.lg-node-title { font-size: clamp(11px, 1.55vw, 15px); line-height: 1.15; font-weight: 900; color: #fff; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lg-node-level { font-size: clamp(10px, 1.3vw, 13px); font-weight: 800; color: var(--sb-gold); font-variant-numeric: tabular-nums; }
+.lg-node-bar { display: block; height: 5px; border-radius: 999px; background: rgba(0, 0, 0, .5); overflow: hidden; }
+.lg-node-bar u { display: block; height: 100%; text-decoration: none; background: linear-gradient(90deg, var(--sb-grass-lo), var(--sb-grass)); }
+.lg-node-value { font-size: clamp(10px, 1.35vw, 14px); font-weight: 900; color: var(--sb-grass); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lg-node:not(.has-points) .lg-node-value { color: var(--muted); }
+.lg-node-stat { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.lg-detail { gap: 6px; padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.lg-detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.lg-node-name { margin: 0; font-family: var(--disp); font-size: clamp(14px, 2vw, 24px); color: var(--sb-gold); text-shadow: 0 2px 0 var(--sb-gold-edge); line-height: 1.15; }
+.lg-node-lv { font-weight: 900; font-size: clamp(11px, 1.5vw, 18px); color: var(--sb-cream); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lg-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; margin: 0; padding: 6px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: clamp(11px, 1.5vw, 16px); }
+.lg-rows dt { color: var(--muted); font-weight: 700; }
+.lg-rows dd { margin: 0; display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 2px 6px; font-weight: 900; }
+.lg-delta { font-size: .85em; color: var(--sb-gold); font-weight: 800; }
+.lg-cap { margin: 0; font-size: 11px; color: var(--muted); }
+.lg-power { margin: 0; font-size: clamp(10px, 1.3vw, 13px); font-weight: 800; color: var(--sb-cream); font-variant-numeric: tabular-nums; }
+.lg-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+:root:root .btn.lg-add { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 2px 6px; font-family: var(--disp); font-size: clamp(13px, 1.9vw, 20px); line-height: 1.1; white-space: nowrap; }
+.lg-add-sub { font-family: var(--font); font-size: 11px; font-weight: 800; color: inherit; opacity: .85; }
+.lg-keystones h4 { margin: 0 0 4px; color: var(--sb-gold); font-size: clamp(11px, 1.5vw, 17px); }
+.lg-ks-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lg-ks { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, .25); color: var(--muted); }
+.lg-ks.is-open { border-color: var(--sb-gold); background: color-mix(in srgb, var(--sb-gold) 14%, rgba(0, 0, 0, .25)); color: var(--txt); }
+.lg-ks-name { font-size: clamp(11px, 1.5vw, 15px); font-weight: 900; color: inherit; }
+.lg-ks.is-open .lg-ks-name { color: var(--sb-gold); }
+.lg-ks-rank { font-size: 11px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.lg-ks-effect { grid-column: 1 / -1; font-size: clamp(10px, 1.3vw, 13px); line-height: 1.35; }
+.lg-layer[data-locked="true"] .lg-node-value { opacity: .85; }
+
+#meta .gx-layer .lg-tab, #meta .gx-layer .lg-node { font-size: inherit; }
+@media (max-height: 460px) {
+  .lg-card { gap: 4px; padding: 0 6px 6px; }
+  .lg-grid { gap: 4px; grid-auto-rows: minmax(54px, 1fr); }
+  .lg-node { min-height: 54px; padding: 3px 6px; gap: 1px; }
+  .lg-node-stat { display: none; }
+  .lg-detail { gap: 4px; padding: 6px 8px; }
+  .lg-rows { padding: 3px 0; gap: 2px 6px; }
+  .lg-ks { padding: 3px 6px; }
+}
+@media (max-width: 700px) {
+  .lg-layer { grid-template-columns: minmax(0, 26fr) minmax(0, 42fr) minmax(0, 32fr); }
+  .lg-tab-sub { display: none; }
+  .lg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------------- 영웅 화면 '전설' 탭 본문(legend-pane.js) ---------------- */
+.hs-legend { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; border-radius: 14px; border: 1px solid rgba(255, 216, 112, .4); background: rgba(6, 30, 50, .45); }
+.hl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hl-rank { display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+.hl-rank small, .hl-points small { font-size: 13px; font-weight: 800; color: #ffe39a; }
+.hl-rank b { font-family: var(--disp); font-size: 34px; color: #fff; text-shadow: 0 2px 0 rgba(120, 70, 0, .7); }
+.hl-points { display: flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 2px 12px; border-radius: 12px; border: 1px solid rgba(255, 216, 112, .5); background: rgba(0, 0, 0, .3); }
+.hl-points b { font-family: var(--disp); font-size: 24px; color: #fff; }
+.hl-exp { width: 100%; height: 10px; appearance: none; -webkit-appearance: none; border: 1px solid #8a5a14; border-radius: 999px; background: rgba(0, 0, 0, .4); overflow: hidden; }
+.hl-exp::-webkit-progress-bar { background: rgba(0, 0, 0, .4); }
+.hl-exp::-webkit-progress-value { background: linear-gradient(90deg, #d49a2c, #ffe27a); border-radius: 999px; }
+.hl-exp::-moz-progress-bar { background: linear-gradient(90deg, #d49a2c, #ffe27a); border-radius: 999px; }
+.hl-exp-text { margin: 0; font-size: 13px; font-weight: 800; color: #eaf6fb; font-variant-numeric: tabular-nums; }
+.hl-lock { margin: 0; padding: 6px 10px; border-radius: 10px; border: 1px solid #ff9a84; background: rgba(120, 30, 20, .35); color: #ffd0c6; font-size: 14px; font-weight: 800; line-height: 1.35; }
+.hl-branches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.hl-branch { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; border-radius: 10px; background: rgba(0, 0, 0, .28); border: 1px solid rgba(255, 255, 255, .14); line-height: 1.15; }
+.hl-branch b { font-size: 14px; color: #ffe39a; }
+.hl-branch span { font-size: 13px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.hl-branch small { font-size: 11px; color: #bfe0ec; }
+.hl-next, .hl-hint { margin: 0; font-size: 13px; line-height: 1.4; color: #dcecf3; }
+.hl-hint { color: #bfe0ec; }
+:root:root .btn.hl-open { min-height: 44px; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.hl-open small { font-size: 12px; font-weight: 800; opacity: .85; }
+@media (max-height: 460px) {
+  .hs-legend { gap: 4px; padding: 6px 8px 8px; }
+  .hl-rank b { font-size: 26px; }
+  .hl-points b { font-size: 20px; }
+  .hl-hint { display: none; }
+}
