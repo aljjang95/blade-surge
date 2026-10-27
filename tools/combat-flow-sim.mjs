@@ -66,7 +66,8 @@ export function createCombatFlowFixture(runtime, heroId = 'knight') {
   const stats = { ...hero.base, hp: hero.base.hp * rarity, atk: hero.base.atk * rarity };
   const player = Object.create(runtime.Player.prototype);
   Object.assign(player, actorFields(game, new Vector3(room.x, 0, room.z), runtime.RIGS.kaykit), {
-    def: hero, stats, hp: stats.hp, maxHp: stats.hp, heroLevel: 1,
+    // 기본 스킬·궁극기 단계 해금(Lv8)이 모두 열린 전투 픽스처. 각성(Lv10~)은 그대로 잠긴다.
+    def: hero, stats, hp: stats.hp, maxHp: stats.hp, heroLevel: 8,
     skillLevels: hero.skills.map(() => 1), skillLoadout: [4, 5], cds: hero.skills.map(() => 0),
     maxMp: runtime.MP_BASE, mp: runtime.MP_BASE, mpRegen: runtime.MP_REGEN_PER_SEC, ult: 0, ultMax: 100, ultGainLock: 0, dodgeCd: 0,
     state: 'idle', stateT: 0, auto: false, comboIdx: 0, comboQueued: false, attackBufferT: 0,

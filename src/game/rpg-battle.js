@@ -1,3 +1,4 @@
+import { skillGateLevel } from '../data/skill-tree.js';
 import * as THREE from 'three';
 import { Battle as BaseBattle } from './battle-base.js';
 import { ENEMIES } from '../data/stages.js';
@@ -111,6 +112,9 @@ export class Battle extends BaseBattle {
         for (const [slot, button] of (this.ui.skillBtns || []).entries()) { const i = p.combatSkillIndex ? p.combatSkillIndex(slot) : slot; if (p.def.skills[i]) button.classList.toggle('locked', !p.unlocked(i)); }
         const awakened = p.def.skills.filter(skill => skill.unlock > award.beforeLevel && skill.unlock <= hero.level);
         if (awakened.length) this.ui.awakenBanner(awakened);
+        // 기본 스킬 단계 해금(skill-tree.js BASIC_SKILL_GATES·ULT_GATE_LEVEL): 레벨이 오르는 순간 새 스킬이 열렸음을 알린다.
+        const opened = p.def.skills.filter((skill, i) => !skill.unlock && skillGateLevel(p.def, i) > award.beforeLevel && skillGateLevel(p.def, i) <= hero.level);
+        if (opened.length) { this.ui.waveBanner(`새 스킬 — ${opened[0].name}`); this.ui.toast(`Lv.${hero.level} · <b>${opened.map((sk) => sk.name).join(', ')}</b> 사용 가능`, 'gold'); }
         // Preserve missing health, never revive a dead hero or reset skill cooldowns.
         if (p.alive) p.hp = Math.min(p.maxHp, p.hp + Math.max(0, p.maxHp - oldMax));
         this.rpgView.levelUp(award.level, award.levels);

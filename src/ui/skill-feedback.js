@@ -1,3 +1,4 @@
+import { skillGateLevel } from '../data/skill-tree.js';
 import { MP_BASE, skillMpCost } from '../game/progression.js';
 
 const NEUTRAL = Object.freeze({ status: 'neutral', label: '', detail: '', progress: 0, ready: false, locked: false });
@@ -15,7 +16,7 @@ export function skillFeedback(battle, slot, out = { ...NEUTRAL }) {
   if (!battle.active || !player.alive) return write(out, 'neutral', '', '전투 종료');
   if (battle.paused || battle.input?.enabled === false) return write(out, 'neutral', '', '전투 입력 정지 중');
   const mode = player.auto ? '자동 전투 · ' : '';
-  if (!player.unlocked(index)) return write(out, 'locked', '', `${mode}Lv.${skill.unlock} 해금`, 0, false, true);
+  if (!player.unlocked(index)) return write(out, 'locked', '', `${mode}Lv.${skillGateLevel(player.def, index)} 해금`, 0, false, true);
   const sourceCooldown = player.cds?.[index];
   if (skill.ult ? !Number.isFinite(player.ult) || !Number.isFinite(player.ultMax) || player.ultMax <= 0
     : !Number.isFinite(sourceCooldown) || !Number.isFinite(skill.cd) || skill.cd <= 0) {
