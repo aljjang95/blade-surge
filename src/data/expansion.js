@@ -19,7 +19,7 @@ export const MATERIALS = [
   { id: 'star_dust', name: '별가루', description: '별빛 서고의 얼음 결정' },
 ];
 export const CONSUMABLES = [
-  { id: 'hp_tonic', name: '회복 물약', description: '최대 체력 35% 회복', effect: { heal: 0.35 } },
+  { id: 'hp_tonic', name: '회복 물약', description: '최대 체력·MP 35% 회복', effect: { heal: 0.35, mp: 0.35 } },
   { id: 'overdrive', name: '과충전 물약', description: '12초 동안 공격력 25% 증가', effect: { atk: 0.25, duration: 12 } },
   { id: 'aegis', name: '수호 물약', description: '12초 동안 받는 피해 30% 감소', effect: { reduction: 0.3, duration: 12 } },
 ];

@@ -53,6 +53,14 @@ test('consumables affect HP and independent buff timers, with failure leaving st
   game.active=false; expect(applyBattleConsumable(game,'aegis')).toBe(false);
 });
 
+test('회복 물약은 HP와 함께 MP도 35% 회복하고, HP가 가득해도 MP가 모자라면 쓸 수 있다', () => {
+  const player: any = { alive:true, hp:100, maxHp:100, mp:10, maxMp:100, addMp(n:number){ this.mp = Math.min(this.maxMp, this.mp + n); return this.mp; } };
+  const game: any = { active:true, paused:false, player };
+  expect(applyBattleConsumable(game,'hp_tonic')).toBe(true); expect(player.mp).toBe(45); expect(player.hp).toBe(100);
+  player.mp = 100; expect(applyBattleConsumable(game,'hp_tonic')).toBe(false);
+  player.hp = 20; player.mp = 90; expect(applyBattleConsumable(game,'hp_tonic')).toBe(true); expect(player.hp).toBe(55); expect(player.mp).toBe(100);
+});
+
 test('guardian perfect guard actually cancels incoming damage and earns counter resource', () => {
   let counter = 0;
   const p: any = { alive:true,def:{jobId:'guardian'},guardT:.6,hp:100,atk:20,pos:new THREE.Vector3(),

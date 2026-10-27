@@ -193,7 +193,7 @@ export function expeditionRoster(stage, room) {
 export function canApplyBattleConsumable(game, id) {
   const p = game.player;
   if (!game.active || game.paused || !p?.alive || game.bossDefeated) return false;
-  if (id === 'hp_tonic') return p.hp < p.maxHp;
+  if (id === 'hp_tonic') return p.hp < p.maxHp || p.mp < p.maxMp;
   if (id === 'overdrive') return !(p.tonicAtkT > 0);
   if (id === 'aegis') return !(p.tonicGuardT > 0);
   return false;
@@ -203,10 +203,12 @@ export function applyBattleConsumable(game, id) {
   if (!canApplyBattleConsumable(game, id)) return false;
   const p = game.player;
   if (id === 'hp_tonic') {
-    if (p.hp >= p.maxHp) return false;
+    if (p.hp >= p.maxHp && p.mp >= p.maxMp) return false;
     const effect = frontierEffectForStage(game.stage);
     const healMultiplier = effect?.kind === 'potionHealMultiplier' ? effect.value : 1;
     p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * .35 * healMultiplier));
+    // 회복 물약은 MP도 최대치의 35% 회복한다(MP 전용 물약은 없다).
+    p.addMp?.(Math.round(p.maxMp * .35 * healMultiplier));
   } else if (id === 'overdrive') {
     if ((p.tonicAtkT || 0) > 0) return false;
     p.tonicAtkT = 12;
