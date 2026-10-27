@@ -8,6 +8,7 @@ import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
+import { bossLoreHtml } from './lore-scene.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { resultStrip } from '../game/torment-ui-model.js';
@@ -528,7 +529,9 @@ export class UI {
     this.el.hud.querySelector('.boss-intro')?.remove();
     const node = document.createElement('div');
     node.className = 'boss-intro'; node.dataset.rank = tag.rank; node.setAttribute('role', 'status');
-    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b><span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`;
+    const loreHtml = bossLoreHtml(stage); // 칭호 · 이름 + 외침(세계관 연출). 없으면 기존 띠 그대로.
+    node.classList.toggle('has-lore', !!loreHtml);
+    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b>${loreHtml || `<span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`}`;
     this.el.hud.append(node);
     setTimeout(() => node.remove(), 3400);
     return true;

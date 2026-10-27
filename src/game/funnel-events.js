@@ -59,6 +59,9 @@ const SCHEMA = Object.freeze({
   // 보석으로 영웅을 무료 해금한 순간(서버 결제 아님). step 은 지금까지 무료로 연 영웅 수.
   hero_unlock_free: { required: { hero: oneOf(HERO_LEGACY_IDS), step: int(0, 50) }, optional: {} },
   return_session: { required: { gapDays: int(0, 3650) }, optional: {} },
+  // 세계관 연출(docs/WORLD_BIBLE.md 6장). 장면 view/skip/done/replay 와 도감 탭 열람. 로컬 기록만 하고 서버 전송 목록에는 넣지 않는다.
+  lore_scene: { required: { ch: int(1, 20), act: oneOf(['view', 'skip', 'done', 'replay']) }, optional: { line: int(0, 10) } },
+  codex_open: { required: { tab: oneOf(['region', 'boss', 'monster', 'hero']) }, optional: {} },
 });
 
 /**
