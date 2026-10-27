@@ -233,3 +233,15 @@ test('dispose: 오류 없이 끝나고 그룹을 씬에서 떼며 목록을 비�
     expect(s.game.scene.children.includes(s.rp.group)).toBe(false);
   }
 });
+
+test('update: 장치 효과가 같은 프레임에 방을 정화해 목록이 줄어도 멈추지 않는다', () => {
+  const { game, rp, room } = setup('forge');
+  room.w = room.h = 24; rp.placeFor(room);
+  expect(rp.list.length).toBe(2);
+  const keg = rp.list[1];
+  // 폭발로 적이 쓰러져 방이 정화되는 순간을 흉내 낸다: 피해를 받으면 clearRoom 을 부른다.
+  game.enemies.push(makeEnemy(keg.x + 1, keg.z, { hurt() { rp.clearRoom(room); } }));
+  rp.trigger(keg);
+  expect(() => rp.update(1.1)).not.toThrow();
+  expect(rp.list.length).toBe(0);
+});

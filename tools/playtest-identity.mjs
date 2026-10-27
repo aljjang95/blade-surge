@@ -16,7 +16,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const STAGE = arg('stage', '1-1'), [CH, ST] = STAGE.split('-').map(Number);
-const SHOT = Number(arg('shot-every', 20)), LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
+const SEED = Number(arg('seed', 0)), SHOT = Number(arg('shot-every', 20)), LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
 const OUT = resolve(PROJ, arg('out', `work/qa/playtest/${STAGE}`)), FRAMES = resolve(OUT, 'frames');
 const PORT = 4300 + Math.floor(Math.random() * 400), VIEWPORT = { width: 844, height: 390 };
 rmSync(FRAMES, { recursive: true, force: true }); mkdirSync(FRAMES, { recursive: true });
@@ -36,6 +36,8 @@ page.on('response', (r) => { if (r.status() >= 400 && !new URL(r.url()).pathname
 let report;
 try {
   await installAutoStarter(page);
+  // 같은 픽스처 재생: Math.random 을 시드 고정(mulberry32)한다. 빌드가 바뀌면 소비 순서가 달라질 수 있어 여러 시드로 비교한다.
+  if (SEED) await page.addInitScript((seed) => { let a = seed >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }, SEED);
   await page.goto(`http://localhost:${PORT}/`);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
   await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });
@@ -56,7 +58,19 @@ try {
     let propHits = 0, kills = 0, maxAlive = 0, hits = 0, frames = 0, skillT = 0, dodgeCd = 0, hp0 = p.hp, dmgTaken = 0, deaths = 0;
     const seen = new WeakSet();
     const origHurt = p.hurt.bind(p);
-    p.hurt = (amt, o) => { const before = p.hp; const r = origHurt(amt, o); if (p.hp < before) { hits++; dmgTaken += before - p.hp; } return r; };
+    // 피해 출처: 가장 가까운 살아 있는(또는 방금 터진) 적의 종 + 피해 종류. 원거리 탄은 'proj'.
+    const dmgBy = {};
+    p.hurt = (amt, o) => {
+      const before = p.hp; const r = origHurt(amt, o);
+      if (p.hp < before) {
+        hits++; dmgTaken += before - p.hp;
+        let src = null, best = 5;
+        for (const en of b.enemies) { const d = en.distTo(p); if (d < best && (en.alive || en.fuse >= 0)) { best = d; src = en; } }
+        const key = (o?.kind === 'fire' ? 'fire:' : '') + (src ? (src.runtimeSpeciesId || src.def.name) + (src.fuse >= 0 ? ':fuse' : '') : 'far/proj');
+        dmgBy[key] = +((dmgBy[key] || 0) + (before - p.hp) / p.maxHp * 100).toFixed(1);
+      }
+      return r;
+    };
     window.__pt = {
       stage: { code: stage.code, dungeon: stage.dungeon?.id, theme: stage.chapter?.theme, waves: stage.waves.map((w) => w.length) },
       tick(n, renderEvery) {
@@ -109,7 +123,7 @@ try {
         return { t: +b.elapsed.toFixed(2), alive: b.enemies.filter((x) => x.alive).length, hp: Math.round(p.hp / p.maxHp * 100), kills, done: !!b.bossDefeated || !b.active, dead: !p.alive };
       },
       report() {
-        const props = (b.roomProps?.list || []).length; return { propHits, propsUsed: b._propsUsed || 0, affixes: b._affixSeen ? [...b._affixSeen] : [], kills, maxAlive, hits, dmgTakenPct: +(dmgTaken / p.maxHp * 100).toFixed(1), deaths, frames, elapsed: +b.elapsed.toFixed(1), bossDefeated: !!b.bossDefeated, types, rooms, hero: p.def.id, level: e.hero().level };
+        return { dmgBy, propHits, propsUsed: b._propsUsed || 0, affixes: b._affixSeen ? [...b._affixSeen] : [], kills, maxAlive, hits, dmgTakenPct: +(dmgTaken / p.maxHp * 100).toFixed(1), deaths, frames, elapsed: +b.elapsed.toFixed(1), bossDefeated: !!b.bossDefeated, types, rooms, hero: p.def.id, level: e.hero().level };
       },
     };
     return window.__pt.stage;
@@ -130,5 +144,6 @@ try {
 } finally { await br.close(); srv.kill(); }
 const sum = { kills: report.kills, maxAlive: report.maxAlive, hits: report.hits, dmgTakenPct: report.dmgTakenPct, deaths: report.deaths, elapsed: report.elapsed, cleared: report.bossDefeated, errors: report.errors.length };
 console.log('SUMMARY', JSON.stringify(sum));
+console.log('DMGBY', JSON.stringify(Object.entries(report.dmgBy || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)));
 for (const [id, t] of Object.entries(report.types)) console.log(' ', id.padEnd(22), `n=${t.n}`.padEnd(6), Object.entries(t.acts).map(([k, v]) => `${k}:${v}`).join(' '));
 for (const [id, r] of Object.entries(report.rooms)) console.log('  room', id, r.type, Object.keys(r.types).length + '종', JSON.stringify(r.types));

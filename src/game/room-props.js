@@ -80,8 +80,8 @@ export class RoomProps {
   strike(pos, yaw, range, arcDeg) {
     if (!this.list.length) return;
     const half = THREE.MathUtils.degToRad(arcDeg) / 2;
-    for (const p of this.list) {
-      if (p.used) continue;
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i]; if (!p || p.used) continue;
       const dx = p.x - pos.x, dz = p.z - pos.z, d = Math.hypot(dx, dz);
       if (d > range + 1.1) continue;
       if (arcDeg < 360 && d > .8) { let a = Math.atan2(dx, dz) - yaw; a = Math.atan2(Math.sin(a), Math.cos(a)); if (Math.abs(a) > half + .35) continue; }
@@ -139,7 +139,8 @@ export class RoomProps {
     if (!this.list.length) return;
     const g = this.game;
     for (let i = this.list.length - 1; i >= 0; i--) {
-      const p = this.list[i];
+      // 효과가 방을 정화하면 clearRoom 이 목록을 줄인다(같은 프레임 안에서).
+      const p = this.list[i]; if (!p) continue;
       if (!p.used) { p.t += dt; p.ring.material.opacity = .32 + Math.sin(p.t * 4) * .2; p.ring.scale.setScalar(1 + Math.sin(p.t * 2) * .06); }
       if (p.fuse >= 0) { p.fuse -= dt; if (p.fuse < 0) { if (p.burst) { p.burst = false; _v.set(p.x, 0, p.z); g.fx.shockTex(_v, p.def.color, { r1: 4, life: .4 }); this.hit(p, .18, { kb: 3 }); } else this.effect(p); } }
       if (p.pulses > 0 && (p.pulseT -= dt) <= 0) {
