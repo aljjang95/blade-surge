@@ -16,7 +16,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const STAGE = arg('stage', '1-1'), [CH, ST] = STAGE.split('-').map(Number);
-const SEED = Number(arg('seed', 0)), SHOT = Number(arg('shot-every', 20)), LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
+const ABLATE = String(arg('ablate', '')).split(',').filter(Boolean), SEED = Number(arg('seed', 0)), SHOT = Number(arg('shot-every', 20)), LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
 const OUT = resolve(PROJ, arg('out', `work/qa/playtest/${STAGE}`)), FRAMES = resolve(OUT, 'frames');
 const PORT = 4300 + Math.floor(Math.random() * 400), VIEWPORT = { width: 844, height: 390 };
 rmSync(FRAMES, { recursive: true, force: true }); mkdirSync(FRAMES, { recursive: true });
@@ -43,13 +43,17 @@ try {
   await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
   await page.evaluate(() => window.app.ui.closeModal?.());
-  const entered = await page.evaluate(async ({ ch, st, level, hero }) => {
+  const entered = await page.evaluate(async ({ ch, st, level, hero, ablate }) => {
     const a = window.app, e = a.eco; a.testPause = false; e.s.energy = 9999; e.s.progress.unlocked = (ch - 1) * 10 + st;
     if (hero && e.s.heroes[hero]) e.s.selected = hero;
     if (level > 0) e.hero().level = level;
     e.save(); a.battle?.stop?.();
     const stage = e.nextStage(); await a.startStage(stage); a.testPause = true;
     const b = a.battle, p = b.player; p.auto = false;
+    // 원인 분리용 끄기(--ablate traits,props,affixes): 새 전투 정체성 요소를 하나씩 빼고 같은 시드로 다시 잰다.
+    if (ablate.includes('traits')) b.regionTraits = null;
+    if (ablate.includes('props')) { b.roomProps?.dispose(); b.roomProps = null; }
+    if (ablate.includes('affixes')) { const spawn = b.spawnEnemy.bind(b); b.spawnEnemy = (...args) => { const e = spawn(...args); if (e?.affixes && e.isElite) { e.affixes = null; if (e.pack) e.pack.leader = null; } return e; }; }
     // 봇 상태와 기록기. 키 입력은 window 키 이벤트(실제 input.js 경로)로만 넣는다.
     const held = new Set();
     const key = (code, down) => { if (down === held.has(code)) return; down ? held.add(code) : held.delete(code); window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true })); };
@@ -127,7 +131,7 @@ try {
       },
     };
     return window.__pt.stage;
-  }, { ch: CH, st: ST, level: LEVEL, hero: HERO });
+  }, { ch: CH, st: ST, level: LEVEL, hero: HERO, ablate: ABLATE });
   console.log('stage', JSON.stringify(entered));
   let f = 0, last;
   while (true) {
