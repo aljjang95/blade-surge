@@ -50,6 +50,15 @@ export function heroAppearance(equip = {}, definitions = {}) {
   return { tier, theme: armor && (!armor.slot || armor.slot === 'armor') ? armor.set || null : null };
 }
 
+/**
+ * 몸체 교체에 쓰는 요청. 갑옷은 더 이상 몸을 바꾸지 않으므로(대표님 2026-10-27) 늘 기본 1단계 몸이다.
+ * 갑옷 단계 몸체 자산과 heroAppearance 는 되돌릴 때를 위해 남긴다. 외형 교체는 아바타 풀셋이 맡는다.
+ */
+export const ARMOR_CHANGES_BODY = false;
+export function heroBodyAppearance(equip = {}, definitions = {}) {
+  return ARMOR_CHANGES_BODY ? heroAppearance(equip, definitions) : heroAppearance({}, definitions);
+}
+
 /** 요청 단계부터 낮은 단계 순으로 찾고, 모두 없으면 기존 KayKit 모델을 쓴다. */
 export function heroTierCandidates(tier) {
   const top = Math.min(3, Math.max(1, Number(tier) || 1));

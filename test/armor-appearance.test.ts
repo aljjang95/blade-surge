@@ -6,7 +6,7 @@ import { assembleHeroIdentity } from '../src/engine/hero-identity.js';
 import { disposeCharacter, prepareModel, spawnCharacter } from '../src/engine/assets.js';
 import { applyLook } from '../src/game/look.js';
 import { HEROES } from '../src/data/heroes.js';
-import { armorStyle } from '../src/game/armor-appearance.js';
+import { armorStyle, applyArmorAppearance } from '../src/game/armor-appearance.js';
 import { ITEM_BY_ID } from '../src/data/items.js';
 import { Player } from '../src/game/player.js';
 import { Actor } from '../src/game/actor.js';
@@ -49,7 +49,7 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
     const signatures = new Set<string>();
     for (const [set, itemId] of Object.entries({ storm: 'a_storm', blood: 'a_blood', gravity: 'a_gravity', phoenix: 'a_phoenix',
       frost: 'a_rime', plague: 'a_plague', rune: 'a_sigil', tether: 'a_bind' })) {
-      applyLook(instance.root, def, { armor: { id: itemId, enh: 0 } });
+      wear(instance.root, def, itemId);
       expect(body.geometry).toBe(bodyGeometry);
       expect(instance.root.userData.armorAppearance).toMatchObject({ itemId, identity: 'expedition-v3' });
       const meshes = attachments(instance.root), details = meshes.flatMap(mesh => mesh.userData.armorParts
@@ -80,6 +80,14 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
     disposeCharacter(instance.root, instance.mixer);
   });
 }
+// 새 계약(대표님 2026-10-27): applyLook 은 방어구를 몸에 입히지 않는다. 방어구 함수(applyArmorAppearance) 자체의
+// 리그 맞춤·교체·해제 계약은 그대로 유지하므로 함수를 직접 불러 검증하고, applyLook 경유로는 '입히지 않음'을 검증한다.
+function wear(root: THREE.Object3D, def: any, itemId: string) {
+  applyLook(root, def, { armor: { id: itemId, enh: 0 } });
+  expect(attachments(root)).toHaveLength(0);
+  expect(root.userData.armorAppearance).toBeUndefined();
+  applyArmorAppearance(root, def, (ITEM_BY_ID as any)[itemId]);
+}
 type ArmorPart = { name: string; bone: string; start: number; count: number };
 function attachments(root: THREE.Object3D) {
   const result: THREE.SkinnedMesh[] = [];
@@ -109,7 +117,7 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
     const cuts = new Set();
     const fingerprints = new Set();
     for (const itemId of ['a_leather', 'a_cloth', 'a_knight', 'a_scale', 'a_chain', 'a_padded', 'exp_glasswarden_armor', 'exp_emberknight_armor', 'exp_starreader_armor']) {
-      applyLook(instance.root, def, { armor: { id: itemId, enh: 0 } });
+      wear(instance.root, def, itemId);
       expect(identity.geometry).toBe(originalGeometry);
       expect(identity.visible).toBe(true);
       const meshes = attachments(instance.root);
@@ -144,7 +152,7 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
       bone.quaternion.copy(rotation); instance.root.updateMatrixWorld(true);
       let freed = 0;
       meshes.forEach(mesh => mesh.geometry.addEventListener('dispose', () => freed++));
-      applyLook(instance.root, def, { armor: { id: itemId, enh: 3 } });
+      applyArmorAppearance(instance.root, def, (ITEM_BY_ID as any)[itemId]);
       expect(freed).toBe(meshes.length);
       expect(attachments(instance.root).length).toBe(meshes.length);
     }
@@ -153,7 +161,7 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
     applyLook(instance.root, def, {});
     expect(attachments(instance.root)).toHaveLength(0);
     expect(instance.root.userData.armorAppearance).toBeUndefined();
-    applyLook(instance.root, def, { armor: { id: 'exp_glasswarden_armor', enh: 0 } });
+    wear(instance.root, def, 'exp_glasswarden_armor');
     const finalMeshes = attachments(instance.root); let finalFreed = 0;
     finalMeshes.forEach(mesh => mesh.geometry.addEventListener('dispose', () => finalFreed++));
     disposeCharacter(instance.root, instance.mixer);
@@ -179,35 +187,34 @@ test('named armor uses its material identity across classes; expedition styles r
   }
 });
 
-test('Player outfit materials participate in hit flash, death and revive', async () => {
+test('Player body materials participate in hit flash, death and revive; armor adds no outfit meshes', async () => {
   // No AudioContext means preloadBarks exits without fetching any sound files.
   expect(audio.ctx).toBeNull();
   const gltf = await heroSource('Knight');
   const player = new Player({ scene: new THREE.Scene() }, gltf, HEROES.knight,
     { hp: 100, atk: 10 }, undefined, { armor: { id: 'a_scale', enh: 0 } });
-  const meshes = attachments(player.model);
-  const outfitMaterials = new Set(meshes.map(mesh => mesh.material as THREE.MeshStandardMaterial));
-  expect(outfitMaterials.size).toBe(3);
+  // 새 계약(2026-10-27): 방어구를 입어도 몸에 갑옷 메시가 붙지 않고, 몸이 방어구 등급색으로 물들지도 않는다.
+  expect(attachments(player.model)).toHaveLength(0);
+  expect(player.look.enhMax).toBe(0);
+  const bodyMaterials = new Set(player.mats as THREE.MeshStandardMaterial[]);
+  expect(bodyMaterials.size).toBeGreaterThan(0);
   expect(new Set(player.mats).size).toBe(player.mats.length);
-  for (const material of outfitMaterials) {
-    expect(player.mats).toContain(material);
+  for (const material of bodyMaterials) {
     expect(material.transparent).toBe(false);
+    expect(material.emissive.getHex()).toBe(0);
   }
   player.flash(0xffffff);
   Actor.prototype.update.call(player, .016);
-  // 피격 신호는 남기면서 새 판독 계약의 제한 발광을 의상에도 적용한다.
-  for (const material of outfitMaterials) {
+  // 피격 신호는 남기면서 새 판독 계약의 제한 발광을 몸 재질에 적용한다.
+  for (const material of bodyMaterials) {
     expect(material.emissive.r).toBeGreaterThan(.05);
     expect(material.emissive.r).toBeLessThanOrEqual(.4);
   }
   player.die();
   expect(player.alive).toBe(false);
-  for (const material of outfitMaterials) expect(material.transparent).toBe(true);
+  for (const material of bodyMaterials) expect(material.transparent).toBe(true);
   player.revive();
   expect(player.alive).toBe(true);
-  for (const material of outfitMaterials) expect(material.transparent).toBe(false);
-  let disposed = 0;
-  meshes.forEach(mesh => mesh.geometry.addEventListener('dispose', () => disposed++));
+  for (const material of bodyMaterials) expect(material.transparent).toBe(false);
   player.dispose();
-  expect(disposed).toBe(meshes.length);
 });

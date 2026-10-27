@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { prepareModel, spawnCharacter, disposeCharacter, requiredModelAliases } from '../src/engine/assets.js';
 import { applyLook } from '../src/game/look.js';
+import { applyArmorAppearance } from '../src/game/armor-appearance.js';
+import { ITEM_BY_ID } from '../src/data/items.js';
 import { HEROES } from '../src/data/heroes.js';
 import { createArrowVisual, releaseProjectileVisual } from '../src/engine/arrow-visual.js';
 import { Battle } from '../src/game/battle.js';
@@ -48,7 +50,11 @@ test('Ranger ships a real bow action, required clips, original head and equipmen
   expect(before.distanceTo(after)).toBeGreaterThan(.005);
   instance.mixer.stopAllAction();
   for(const id of ['a_leather','a_chain','a_scale','exp_glasswarden_armor','exp_emberknight_armor','exp_starreader_armor']){
+    // 새 계약: applyLook 은 방어구 메시를 몸에 입히지 않는다. 방어구 함수 자체의 리그 맞춤은 직접 호출로 계속 검증한다.
     applyLook(instance.root,HEROES.ranger,{armor:{id,enh:3}});
+    const worn:THREE.Object3D[]=[];instance.root.traverse(o=>{if(o.userData.equippedArmor)worn.push(o);});
+    expect(worn).toHaveLength(0);
+    applyArmorAppearance(instance.root,HEROES.ranger,(ITEM_BY_ID as any)[id]);
     const meshes:THREE.Mesh[]=[];instance.root.traverse(o=>{if(o instanceof THREE.Mesh&&o.userData.equippedArmor)meshes.push(o);});
     expect(meshes).toHaveLength(3);
     // 파츠별 직접 본 부착 대신 원본 맞춤 스켈레톤과 바인드 행렬을 공유한다.

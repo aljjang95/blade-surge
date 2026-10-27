@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node tools/build-news.mjs && vite --host",
+    "gen:odds": "node tools/gen-odds-page.mjs",
     "build": "vite build && node tools/write-version.mjs",
     "news": "node tools/build-news.mjs",
     "news:draft": "node tools/patch-notes.mjs",

@@ -94,8 +94,9 @@ describe('영웅 상품 카탈로그', () => {
     expect(all.priceKRW).toBe(17900);
     expect(entitlementKeys(all).sort()).toEqual(HERO_LEGACY_IDS.map((id) => 'hero:' + id).sort());
     expect(all.priceKRW).toBeLessThan(5900 * 4); // 4명 개별 대비 할인
-    // 기존 상품은 Play 전용 그대로, 보석 팩 구조는 건드리지 않았다
-    expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(false);
+    // 즉시 지급형(스타터 등)은 웹·Play 둘 다, 보석 팩은 Play 단독(PAYMENT_COMPLIANCE 4.1)
+    expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(true);
+    expect(soldOn(IAP_BY_ID.gems_300_v1, 'web')).toBe(false);
     expect(IAP_BY_ID.gems_300_v1.enabled).toBe(false);
     // 모든 상품의 권한 키와 보상 키가 유효(중복 id 없음)
     expect(new Set(IAP_PRODUCTS.map((p: any) => p.id)).size).toBe(IAP_PRODUCTS.length);
