@@ -91,12 +91,13 @@ ${limit}`;
 // 사업자 정보 푸터(terms/refund/odds 공통 형식)
 const FOOTER = `<footer><h2>사업자 정보</h2>
 <ul>
-<li>상호: {{대표님 입력}}</li>
-<li>대표자: {{대표님 입력}}</li>
-<li>사업자등록번호: {{대표님 입력}}</li>
-<li>통신판매업 신고번호: {{대표님 입력}}</li>
-<li>주소: {{대표님 입력}}</li>
-<li>연락처(이메일): <a href="mailto:aljjang95@gmail.com">aljjang95@gmail.com</a> {{대표님 입력}}</li>
+<li>상호: 더 럭셔리 로드 (The Luxury Lord)</li>
+<li>대표자: 양경렬</li>
+<li>사업자등록번호: 849-09-03410</li>
+<li>통신판매업 신고번호: 제2026-충남서산-0101호</li>
+<li>주소: 충청남도 서산시 석남1로 33-8 (석남동)</li>
+<li>연락처(이메일): <a href="mailto:aljjang95@gmail.com">aljjang95@gmail.com</a> · 전화 010-8804-8903</li>
+<li>게임제작업 등록번호: 제 2026-000002 호 (서산시)</li>
 </ul></footer>`;
 
 export function renderOddsPage() {
@@ -104,7 +105,7 @@ export function renderOddsPage() {
   const m = GACHA_MILEAGE;
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>블레이드 서지 확률 정보</title><style>body{max-width:780px;margin:40px auto;padding:0 24px;font:16px/1.8 system-ui;color:#173d34;background:#f8f1e5}a{color:#215b4b}table{border-collapse:collapse;margin:8px 0}th,td{border:1px solid #b9c9bf;padding:4px 10px;text-align:left}</style></head><body>
 <!-- 이 파일은 tools/gen-odds-page.mjs가 src/data/gacha-banners.js로 생성한다. 직접 고치지 말고 생성기를 실행하세요. -->
-<h1>블레이드 서지 확률 정보</h1><p>시행일: {{대표님 입력: 시행일}} · 운영자: 더럭셔리로드</p>
+<h1>블레이드 서지 확률 정보</h1><p>시행일: 2026년 10월 28일 · 운영자: 더럭셔리로드</p>
 <p>게임산업법 제33조 제2항에 따라 소환(확률형 아이템)의 등급별 확률과 천장 규칙을 공개합니다. 아래 수치는 게임 서버가 쓰는 설정값에서 자동으로 만든 것입니다. 확률을 바꾸면 이 페이지와 게임 안 표시를 함께 고치고 적용 전에 알려 드립니다.</p>
 <p><a href="/terms.html">이용약관</a> · <a href="/refund.html">청약철회·환불 정책</a> · <a href="/privacy.html">개인정보처리방침</a> · <a href="/support.html">고객지원</a></p>
 ${sections}
