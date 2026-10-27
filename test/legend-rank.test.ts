@@ -183,13 +183,13 @@ test('rpg-core grantCombatXp: Lv.80 처치 EXP는 overflow 로 돌려주고 영�
 test('전설 수련 판은 모든 영웅의 전투 스탯에 더해지고 키스톤 플래그를 전투가 읽을 수 있다', () => {
   const eco = newEco();
   const baseline = eco.heroBuildStats('knight');
-  const baseBonus = eco.heroEquipBonus('knight');
+  const baseBonus: any = eco.heroEquipBonus('knight');
   expect(baseBonus.legend).toBeUndefined();
   eco.s.legend = normalizeLegend({ rank: 30, nodes: {} });
   expect(eco.legendAllocate('blade_edge', 10)).toMatchObject({ ok: true, level: 10 });
   expect(eco.legendAllocate('wall_bulk', 10)).toMatchObject({ ok: true });
   expect(eco.legendAllocate('storm_radius', 4)).toMatchObject({ ok: true });
-  const bonus = eco.heroEquipBonus('knight');
+  const bonus: any = eco.heroEquipBonus('knight');
   expect(bonus.atkPct).toBeGreaterThan(baseBonus.atkPct); expect(bonus.hpPct).toBeGreaterThan(baseBonus.hpPct);
   expect(bonus.legend.flags).toContain('storm_afterswirl');
   expect(bonus.legend.radiusPct).toBeGreaterThan(0);

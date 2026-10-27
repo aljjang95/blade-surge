@@ -173,7 +173,7 @@ export const legendKeystones = (rank) => LEGEND_KEYSTONES.filter((k) => k.unlock
  *  flags(열린 키스톤 id), points(남은 점수), rank.
  */
 export function legendStats(state) {
-  const s = normalizeLegend(state), out = { rank: s.rank, points: s.points, flags: legendKeystones(s.rank).map((k) => k.id) };
+  const s = normalizeLegend(state), out = /** @type {Record<string, any>} */ ({ rank: s.rank, points: s.points, flags: legendKeystones(s.rank).map((k) => k.id) });
   for (const node of LEGEND_NODES) out[node.stat] ??= 0;
   for (const [id, level] of Object.entries(s.nodes)) { const node = NODE_BY_ID[id]; out[node.stat] += nodeValue(node, level); }
   out.goldPct = Math.min(LEGEND.caps.goldPct, out.goldPct); out.dropPct = Math.min(LEGEND.caps.dropPct, out.dropPct);

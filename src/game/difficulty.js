@@ -8,7 +8,8 @@ const chapterAtNightmare = (save, key) => {
   for (let st = 1; st <= 10; st++) if (!((peak[`${ch}-${st}`] ?? -1) >= 2)) return false;
   return true;
 };
-export const DIFFICULTIES = {
+/** 난이도 정의. 고통 단계 1~50은 아래에서 'torment-N' 키로 더해진다. */
+export const DIFFICULTIES = /** @type {Record<string, any>} */ ({
   story: {
     id: 'story', name: '스토리', short: 'STORY', tone: 'calm',
     description: '전투 흐름을 익히는 표준 난이도',
@@ -28,7 +29,7 @@ export const DIFFICULTIES = {
     unlock: (save, key) => (save.progress?.stars?.[key] || 0) >= 3,
   },
   hell: { ...HELL_DIFFICULTY, unlock: chapterAtNightmare },
-};
+});
 
 export const DIFFICULTY_ORDER = ['story', 'adept', 'nightmare', 'hell'];
 
