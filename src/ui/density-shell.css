@@ -1,0 +1,43 @@
+/* 짧은 가로 화면 밀도 조정: shell(설정·메뉴·로비 카드·캠페인) 화면 묶음 (docs/UIUX_AUDIT.md). 토큰은 density.css. */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 메뉴: 4열이면 '시스템' 묶음이 둘째 줄로 내려가 첫 화면 아래에 숨는다(331/589px).
+     짧은 가로에서는 창을 넓혀 다섯 묶음을 한 줄에 두고 항목은 44px 한 단계로 맞춘다. */
+  :root:root:root:root:root .oath-menu { width: min(840px, calc(100vw - 12px)); }
+  :root:root:root:root:root .oath-menu-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px 6px 6px; }
+  :root:root:root:root:root .oath-menu-group { padding: 3px; gap: 2px; }
+  :root:root:root:root:root .oath-menu-group > h3 { margin: 0; padding: 1px 4px 2px; }
+  :root:root:root:root:root .oath-menu-list { gap: 3px; }
+  :root:root:root:root:root .oath-menu-list > button { min-height: var(--ui-tap); padding: 2px 6px; gap: 6px; font-size: 13px; }
+
+  /* 설정: 한 줄에 설정 하나(행 65px)라 첫 화면에 다섯 개만 보이고 제목·닫기가 스크롤 위로 사라졌다.
+     짧은 가로에서는 탭 묶음 안을 두 열로 놓고, 설명·구간 선택·음량처럼 넓은 행만 한 줄 전체를 쓴다. */
+  #modal .setting-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; align-content: start; }
+  #modal .setting-panel > :not(.setting-row),
+  #modal .setting-panel > .setting-description { order: 2; grid-column: 1 / -1; }
+  #modal .setting-panel > .setting-row:has(.seg, .setting-help) { grid-column: 1 / -1; order: 1; }
+  #modal .setting-panel > .setting-row:has(.setting-mix) { order: 1; }
+  #modal .setting-panel > .setting-row:has(.setting-mix) .setting-mix { min-width: 0; }
+  #modal .setting-panel > .setting-row:has(.setting-mix) input[type=range] { width: 100px; min-width: 0; }
+  #modal .setting-panel > .setting-row.setting-description:has(#haptic-help) { order: 2; }
+  #modal .setting-panel > #mix-notice, #modal .setting-panel > #pwa-notice { order: 3; margin: 2px 0; }
+  #modal .setting-panel > .setting-legal { order: 4; }
+  #modal .setting-panel > .danger-zone { order: 5; }
+  #modal .modal-box:has(> .setting-tabs) { padding-top: 10px; padding-bottom: 10px; }
+  #modal .modal-box:has(> .setting-tabs) > h2:first-child { margin-bottom: 6px; }
+  #modal .modal-box:has(> .setting-tabs) > .modal-btns { margin-top: 6px; }
+  #modal .setting-panel > .setting-row { min-height: var(--ui-tap); padding-top: 2px; padding-bottom: 2px; }
+  #modal .setting-panel > .setting-row.setting-description { min-height: 0; }
+
+  /* 임무: 아직 못 받는 '받기'가 밝은 버튼으로 보여 누를 수 있는 것처럼 보였다. */
+  #modal .quest-item .btn[disabled] { opacity: .45; filter: grayscale(1); }
+}
+
+/* 제작 공방 레시피: 핵심 효과 한 줄은 접지 않고 본문에 항상 보인다. */
+#tab-stage .exp-recipe .exp-recipe-effect { grid-column: 1 / -1; margin: 4px 0 6px; font-size: 12px; line-height: 1.45; color: #cfdbcd; }
+
+/* 설정 탭: 소리·진동 / 화면 / 카메라 / 조작 / 계정·데이터. 한 번에 한 묶음만 보여 스크롤을 없앤다. */
+#modal .setting-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+#modal .setting-tab { flex: 1 1 auto; min-height: var(--ui-tap, 44px); min-width: 44px; padding: 6px 12px; border-radius: 10px; border: 1px solid #bed0c333; background: #ffffff0d; color: #cfdbcd; font-weight: 700; font-size: 13px; line-height: 1.2; cursor: pointer; }
+#modal .setting-tab.on { background: #e3c0822e; border-color: #e3c082; color: #fff3d6; }
+#modal .setting-tab:focus-visible { outline: 2px solid #e3c082; outline-offset: 2px; }
+#modal .setting-panel[hidden] { display: none; }

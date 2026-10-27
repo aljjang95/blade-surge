@@ -1,15 +1,23 @@
-// 영웅 해금 구매 트리거(수익화 1단계). UI는 app.heroPurchase = { available(), buy(productId) }만 안다.
+// 현금 구매 트리거(수익화 1단계 영웅 해금 → 웹 즉시 지급형 상품 전체). UI는 app.heroPurchase = { available(), buy(productId) }만 안다.
 // - 웹 채널: 서버 intent(paymentId·금액 발급) → 포트원 V2 브라우저 SDK 결제창 → 서버 complete(포트원 조회 검증) → eco.applyIapState(서버 응답).
 //   성공 표시(ok:true)는 서버가 granted/already를 돌려줬고 로컬 반영이 저장된 뒤에만 낸다. 결제창 결과·SDK 응답은 지급 근거가 아니다.
 // - Play 채널(안드로이드): 같은 productId를 기존 billing-service(Play 결제 → 서버 verify)로 넘긴다.
 // - 모바일 리다이렉트 결제: 결제 전에 보류 paymentId를 localStorage에 남기고, 복귀한 페이지에서 resume()이 complete를 다시 보낸다.
 import { STORE_CHANNEL } from './store-channel.js';
-import { IAP_BY_ID } from '../shared/iap-catalog.js';
+import { IAP_BY_ID, soldOn } from '../shared/iap-catalog.js';
 
 export const PORTONE_SDK_URL = 'https://cdn.portone.io/v2/browser-sdk.js';
 export const PENDING_KEY = 'bladesurge_web_pay_pending_v1';
 const PENDING_MAX_AGE_MS = 48 * 3600000;
-const PRODUCT_ID = /^hero_[a-z0-9]+_v1$/;
+const PRODUCT_ID = /^[a-z0-9_]{3,64}$/;
+/**
+ * 이 트리거로 살 수 있는 카탈로그 상품인가. 웹 채널은 웹에서 파는(즉시 지급형) 상품만, Play 채널은 카탈로그 상품이면 billing에 넘긴다.
+ * 판매 여부(enabled)·자격은 서버 intent가 최종 판정한다.
+ */
+export function purchasableProduct(productId, channel = STORE_CHANNEL) {
+  if (typeof productId !== 'string' || !PRODUCT_ID.test(productId) || !Object.hasOwn(IAP_BY_ID, productId)) return false;
+  return channel === 'web' ? soldOn(IAP_BY_ID[productId], 'web') : true;
+}
 const PAYMENT_ID = /^[A-Za-z0-9_-]{16,64}$/;
 
 function defaultStorage() {
@@ -46,7 +54,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
   const readPending = () => {
     try {
       const v = JSON.parse(storage?.getItem(PENDING_KEY) || 'null');
-      if (v && PAYMENT_ID.test(v.paymentId) && PRODUCT_ID.test(v.productId) && now() - Number(v.at) < PENDING_MAX_AGE_MS) return v;
+      if (v && PAYMENT_ID.test(v.paymentId) && purchasableProduct(v.productId, 'web') && now() - Number(v.at) < PENDING_MAX_AGE_MS) return v;
     } catch { /* 저장소 불가·손상은 보류 없음 */ }
     return null;
   };
@@ -121,7 +129,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
       return p && p.sellable === true && typeof p.formattedPrice === 'string' && p.formattedPrice ? p.formattedPrice : null;
     },
     async buy(productId) {
-      if (typeof productId !== 'string' || !PRODUCT_ID.test(productId)) return { ok: false, reason: 'unknown-product' };
+      if (!purchasableProduct(productId, channel)) return { ok: false, reason: 'unknown-product' };
       if (!service.available()) return { ok: false, reason: 'unavailable' };
       if (channel !== 'web') return billing.buy(productId);
       if (busy) return { ok: false, reason: 'busy' };
@@ -138,7 +146,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
         try { intent = await api.request('POST', '/iap/web/intent', { productId }); }
         catch (error) {
           const code = error?.body?.error;
-          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'payout-hold' || code === 'too-many-intents' ? code : 'intent-failed' };
+          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'already-subscribed' || code === 'payout-hold' || code === 'too-many-intents' ? code : 'intent-failed' };
         }
         if (!intent || !PAYMENT_ID.test(intent.paymentId) || intent.productId !== productId) return { ok: false, reason: 'intent-failed' };
         writePending({ paymentId: intent.paymentId, productId, at: now() });

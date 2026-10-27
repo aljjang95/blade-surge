@@ -94,7 +94,7 @@ test('fresh first departure is playable immediately and shows the essential cont
   expect((tutorial as any).phase).toBe('move'); expect(elements.get('tutorial-title')!.textContent).toBe('이동');
   expect(elements.get('tutorial-copy')!.textContent).toContain('조이스틱');
   expect(elements.get('battle-tutorial')!.classes.has('guided')).toBe(true);
-  expect((tutorial as any).toggle.textContent).toBe('안내 접기'); expect(events).toEqual([{ name: 'tutorial_step', data: { step: 1 } }]);
+  expect((tutorial as any).toggle.textContent).toBe('안내 접기'); expect(events).toEqual([{ name: 'tutorial_step', data: { step: 1, foldSec: 15 } }]);
   expect(saves).toBe(0); expect(app.eco.s.tutorial.completed).toBe(false);
 });
 
@@ -108,9 +108,9 @@ test('guided first run advances by the action performed and folds to a pulsing t
   tutorial.end(); tutorial.begin(stage);
   battle.player.state = 'dodge'; tutorial.update(); expect((tutorial as any).phase).toBe('skill');
   battle.player.state = 'attack'; tutorial.update(); expect((tutorial as any).phase).toBe('skill');
-  // 마지막 안내는 10초, 행동 없는 단계는 30초 뒤에 접히고 접힌 버튼은 열어 보기 전까지 맥동한다.
-  battle.elapsed = 29.9; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
-  battle.elapsed = 30; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(true);
+  // 마지막 안내는 10초, 행동 없는 단계는 15초 뒤에 접히고 접힌 버튼은 열어 보기 전까지 맥동한다.
+  battle.elapsed = 14.9; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
+  battle.elapsed = 15; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(true);
   const toggle = (tutorial as any).toggle as ElementStub;
   expect(toggle.dataset.pulse).toBe('true'); expect(elements.get('battle-tutorial')!.classes.has('guided')).toBe(false);
   toggle.dispatchEvent(new Event('click'));

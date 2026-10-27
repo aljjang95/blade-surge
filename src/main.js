@@ -27,6 +27,7 @@ import { Arena } from './game/arena.js';
 import { HEROES, kitOf } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { chapterOpenLabel, ecoClock, isChapterOpen } from './data/chapter-open.js';
+import { playSceneBeforeSortie } from './ui/lore-scene.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 import { runStarterSelect } from './ui/starter-select.js';
@@ -91,9 +92,16 @@ const BOOT_TIPS = [
 ];
 
 import { applyLook, LOOKS } from './game/look.js';
+import { emitWeaponSparks } from './game/weapon-glow.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { startPersonalExpedition } from './ui/blessing-launch.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
+import './ui/density.css';
+import './ui/density-hero.css';
+import './ui/density-result.css';
+import './ui/density-panels.css';
+import './ui/density-shell.css';
+import './ui/density-hud.css';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
 const startup = { stage: 'renderer', failed: false };
@@ -444,6 +452,8 @@ class App {
       if ((stage.difficultyId === 'hell' || tormentTierOf(stage.difficultyId)) && this.account?.authority === 'server') { this.ui.toast(SERVER_HELL_LOCK, 'red'); return false; }
     }
     this.stageStarting = true;
+    // 그 지역에 처음 들어가는 출격이면 입장 장면을 먼저 보여 준다(어느 진입 경로든 한 번, 건너뛰기 가능, docs/WORLD_BIBLE.md 5장).
+    if (!tower) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
     this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
@@ -596,6 +606,7 @@ class App {
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
         if (s.look?.aura && !this.reducedMotion.matches) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
+        if (!this.reducedMotion.matches) emitWeaponSparks(this.fx, s.root, s.look, realDt, s.weaponSpark ||= { t: 0 });
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);

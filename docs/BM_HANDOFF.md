@@ -41,3 +41,14 @@ PR #231 머지(main `419c99b`). 설계·규칙 정본은 [BM_DESIGN.md](BM_DESIG
   4. `play-iap-register --apply`(가격 공개)
   5. 라이선스 테스터 결제 E2E(PC·실기기)
 - **Play 내부 테스트 빌드(2026-10-25, gogo-chunk:play-internal-aab)**: versionCode **3**(1.0.3) 내부 트랙 `completed`, production·alpha·beta 비어 있음. Play 보관 번들 sha256 `2a3f091a8c1f…`(서명본), 서명 전 AAB sha256 `ea6a3b225c363738c6cccf00556eaaeab3c11659a13984dda09292c15b62214d`(63,507,335바이트, META-INF 서명 파일 0). 원인·해법: `repo.maven.apache.org`가 프록시에서 429였고 `~/.gradle/init.d`에 Central을 `maven-central.storage-download.googleapis.com` 미러로 바꾸는 init 스크립트(저장소 밖)를 두자 3분에 빌드됨. `apex play`는 `/usr/local/bin/apex` 옛 캐시 사본이 아니라 `~/.cache/apex/src/claude/cloud/bin/apex`(8MB 조각 업로드)로 실행. 가격·IAP 플래그는 건드리지 않음.
+
+## KG이니시스 심사 준비·상품 확정 (2026-10-28, gogo-chunk:blade-bm#kg)
+- **상품 구성(카탈로그 v3, 가격은 후보)**: 웹(KG)+Play 공통 즉시 지급형 — `remove_ads_v1` ₩4,900 · `starter_pack_v1` ₩1,200(계정당 1회) · `season_pass_s1` ₩9,900 · `growth_pack_v1` ₩12,000(계정당 1회, 확률형 구성품 없음, 신규 `enabled:false`) · `avatar_fullset_<heroId>_v1` ₩14,900(영웅 7명, 신규 `enabled:false`, gate `avatar-system`). 월정액은 Play `monthly_card_v1`(자동 갱신 구독) + 웹 `monthly_pass_v1`(30일 이용권, 자동 갱신 없음, 신규 `enabled:false`).
+  - 고른 이유: 웹 월정액을 빌링키 자동 결제로 하면 PG '장기서비스제공' 심사·해지 다크패턴 위험이 커서 30일권으로 나눴다(다른 선택지: 웹 월정액 미판매, 빌링키 구독). 성장 패키지는 소환권을 빼 확률형 구성품이 없는 즉시 지급형으로 정리(목업의 소환권 30 제거).
+  - 보석 팩(`gems_*_v1`)은 Play 단독·disabled 유지, 영웅 직접 판매는 gacha-only 유지.
+- **서버**: 웹 intent는 B형만(영구 권한·계정당 1회·기간 이용권). 계정당 1회·영구 상품은 결제 **전에** 409(이전에는 결제 뒤 지급 거절로 돈만 나갈 수 있었다). 월정액 이용 중에는 Play 구독·웹 30일권 모두 409 `already-subscribed`. `/iap/state` 요약에 `avatarFullsets`(영웅 id 목록) 추가.
+- **유료/무료 보석**: 이미 구현돼 있음을 확인(문서 `paidGems`·D1 `gems_paid`, 0001 마이그레이션). 정책은 **무료 보석부터 소비**, 환불 회수는 유료 잔액 기준(부족분은 부채로 이후 지급에서 상계). 월정액 매일 100개는 무료 보석으로 본다(환불 회수 대상은 즉시 지급 1,200개) — 7일 철회 시 기간 안분은 운영 절차로(refund.html). 새 마이그레이션 없음.
+- **상점 UI**: 카탈로그 밖 ₩ 목업 삭제(gem4~6·VIP·해골 군주·SSSR 초월·강화 마스터), 하드코딩 가격 문구 삭제(스토어 가격만). 결제 확인 창에 7일 청약철회 고지 + 철회 제한 동의 체크(기본 미체크) + 정책·약관·확률 링크, 월정액 자동 갱신·해지 문구. 상점 하단·설정·로딩 화면·소환 화면에 법적 링크 줄.
+- **공개 페이지**: `public/terms.html`·`refund.html`·`odds.html`(생성기 `bun run gen:odds`, 확률은 `GACHA_BANNERS`에서만). 플레이스홀더 `{{대표님 입력}}`: 시행일, 사업자 정보 6항목, 7일 이후 환불 공제율.
+- **KG 신청**: `docs/KG_APPLICATION.md`. 포트원 API로 대표님 사업자의 **LIVE KG이니시스 일반결제 채널이 이미 있음**을 확인 → 기존 MID에 사이트·업종 추가 질의가 1순위. 금고 세션(portone·kginicis 웹 콘솔)은 만료라 재캡처 필요.
+- **남은 일**: ① 대표님 입력(사업자 정보·시행일·공제율·월 거래액) ② KG 영업 서면 질의 발송(대표님 확인) ③ 금고 재캡처(PC `admin.ps1 -SessionVaultCapture portone`/`kginicis`) ④ 아바타 풀셋 판매 전 **서버 지급** 필요(외형 레인 PR #321 계약): `avatars`는 서버 소유 키라 클라이언트 `grantAvatarFullset`은 서버 권위 계정에서 덮인다 → `grantOnce`(worker/v1/iap.ts)가 영수증 검증 뒤 같은 규칙(영웅 미소유 `locked`, 이미 소유 `already`, 부위 기록 정리)으로 문서의 `avatars`에 지급하고, 로컬 저장 import가 `avatars.owned`를 서버 지급 기록과 대조. 그 전까지 아바타 상품은 disabled ⑤ 상점 웹 채널 구매 연결(지금 상점 현금 버튼은 Play billing만 — 웹은 `app.heroPurchase.buy(productId)`가 모든 웹 상품을 받도록 일반화됨, UI 분기는 웹 결제 개방 때).
