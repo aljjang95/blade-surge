@@ -319,6 +319,38 @@ describe('게시판·신고', () => {
     expect(page1.items.map((p: any) => p.title)).toEqual(['셋째', '둘째']);
     expect(page1.nextCursor).toBeNull();
   });
+  test('반영 완료 글에 패치노트 글 ID 를 연결하고 상태가 바뀌면 숨긴다(하위 호환)', async () => {
+    const h = setup();
+    const a = await h.player('작성자'), admin = await h.player('운영자');
+    const id = ((await h.call('POST', '/board', { key: a.key, body: { category: 'bug', title: '구르기 버그', body: '꺼져요' } })).body as any).id;
+    const mod = (body: unknown) => h.call('POST', '/board/' + id + '/moderate', { key: admin.key, admin: [admin.id], body });
+    const view = async () => ((await h.call('GET', '/board/' + id)).body as any).post;
+    // 필드가 없던 기존 글: 연결 없음(null)
+    expect(await view()).toMatchObject({ status: 'open', patchNoteSlug: null });
+    // 반영 완료가 아닐 때 연결은 거부
+    expect((await mod({ patchNoteSlug: '2026-10-27-patch-1-0-3' })).status).toBe(400);
+    expect((await mod({ status: 'planned', patchNoteSlug: '2026-10-27-patch-1-0-3' })).status).toBe(400);
+    // 형식이 틀린 글 ID 는 거부
+    for (const slug of ['', 'Has Upper', '../x', 'a/b', 'x'.repeat(81), 7, ['a']]) expect((await mod({ status: 'done', patchNoteSlug: slug })).status).toBe(400);
+    // 반영 완료 + 글 ID
+    const done = await mod({ status: 'done', patchNoteSlug: '2026-10-27-patch-1-0-3', devReply: '1.0.3 에서 고쳤어요' });
+    expect(done.status).toBe(200);
+    expect(done.body).toMatchObject({ status: 'done', patchNoteSlug: '2026-10-27-patch-1-0-3', devReply: '1.0.3 에서 고쳤어요' });
+    expect(await view()).toMatchObject({ status: 'done', patchNoteSlug: '2026-10-27-patch-1-0-3' });
+    const listed = ((await h.call('GET', '/board')).body as any).items.find((p: any) => p.id === id);
+    expect(listed.patchNoteSlug).toBe('2026-10-27-patch-1-0-3');
+    // 다른 필드만 바꾸면 연결을 유지한다
+    expect((await mod({ devReply: '감사해요' })).body).toMatchObject({ patchNoteSlug: '2026-10-27-patch-1-0-3' });
+    // 연결 해제
+    expect((await mod({ patchNoteSlug: null })).body).toMatchObject({ status: 'done', patchNoteSlug: null });
+    // 다시 연결한 뒤 상태를 되돌리면 연결도 사라진다
+    await mod({ patchNoteSlug: '2026-10-27-patch-1-0-3' });
+    expect((await mod({ status: 'reviewing' })).body).toMatchObject({ status: 'reviewing', patchNoteSlug: null });
+    // 일반 이용자는 바꿀 수 없다
+    expect((await h.call('POST', '/board/' + id + '/moderate', { key: a.key, body: { status: 'done', patchNoteSlug: 'x' } })).status).toBe(403);
+    // 알 수 없는 필드는 여전히 거부한다
+    expect((await mod({ status: 'done', patchNote: 'x' })).status).toBe(400);
+  });
   test('가입 24시간 이상·서로 다른 IP의 3명이 실제 채팅을 신고하면 10분 음소거', async () => {
     const h = setup({ worldCapacity: 10 });
     const bad = await h.player('시끄러움');

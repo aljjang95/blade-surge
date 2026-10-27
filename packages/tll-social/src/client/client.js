@@ -917,11 +917,11 @@ export function createSocialClient(options) {
     vote(id) { return request('POST', '/board/' + encodeURIComponent(String(id)) + '/vote', { body: {} }); },
     /** @param {number | string} id @param {string} body */
     comment(id, body) { return request('POST', '/board/' + encodeURIComponent(String(id)) + '/comment', { body: { body } }); },
-    /** @param {number | string} id @param {{ status?: string, devReply?: string, hidden?: boolean }} changes */
+    /** @param {number | string} id @param {{ status?: string, devReply?: string | null, hidden?: boolean, patchNoteSlug?: string | null }} changes */
     moderate(id, changes) {
       /** @type {Record<string, any>} */
       const body = {};
-      for (const key of ['status', 'devReply', 'hidden']) if (changes && changes[key] !== undefined) body[key] = changes[key];
+      for (const key of ['status', 'devReply', 'hidden', 'patchNoteSlug']) if (changes && changes[key] !== undefined) body[key] = changes[key];
       return request('POST', '/board/' + encodeURIComponent(String(id)) + '/moderate', { body });
     },
     /** @param {{ kind: 'chat' | 'post' | 'player', target: string, ref?: string, reason?: string }} input */

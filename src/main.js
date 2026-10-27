@@ -42,6 +42,7 @@ import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
+import { NewsView } from './ui/news.js';
 import { setupAccount } from './net/account.js';
 import { setupBilling } from './platform/billing-service.js';
 import { setupFunnelUpload } from './net/funnel-upload.js';
@@ -249,6 +250,7 @@ class App {
     await setupAccount(this).catch(() => null);
     setupBilling(this); setupFunnelUpload(this); // 서버 검증 결제·가입 퍼널 업로드(v1이 닫혀 있으면 아무 것도 바뀌지 않는다)
     setupCommunity(this);
+    this.news = new NewsView(this); // 공지·패치노트·개발 노트(content/news). 로비 메뉴의 '소식'
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
     const suspend = () => { this.input.clear(); this.citadel.clearInput(); if (this.mode === 'battle') this.ui.pause(true); };

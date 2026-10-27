@@ -85,6 +85,8 @@ describe('오류 문구는 항상 한국어', () => {
   test('알려진 코드', () => {
     expect(errorMessage('rename-cooldown')).toContain('24시간');
     expect(errorMessage('link-disabled')).toContain('준비 중');
+    expect(errorMessage('patch-note-status')).toContain('반영 완료');
+    expect(errorMessage('patch-note-slug')).toContain('패치노트');
   });
   test('모르는 코드도 영어를 그대로 보이지 않는다', () => {
     expect(errorMessage('weird-code')).toMatch(/[가-힣]/);

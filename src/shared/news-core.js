@@ -53,6 +53,7 @@ function parseScalar(raw) {
  * `---` 로 둘러싼 머리말과 본문을 나눈다. 알 수 없는 키·잘못된 값은 오탈자를 놓치지 않도록 오류로 알린다.
  * @param {string} source
  * @param {string} [label] 오류 메시지에 붙일 파일 이름
+ * @returns {{ meta: Record<string, any>, body: string }}
  */
 export function parseFrontMatter(source, label = '소식') {
   const text = String(source).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
@@ -188,15 +189,19 @@ export function filterNews(items, type) {
 }
 
 /**
- * 마지막으로 읽은 글 id 이후에 올라온 글 수. 읽은 글 id 가 없거나 목록에서 사라졌으면 전부 새 글이다.
+ * 마지막으로 읽은 글보다 새로운 글의 id 집합. 읽은 글 id 가 없거나 목록에서 사라졌으면 전부 새 글이다.
  * @param {{id: string, date: string}[]} items
  * @param {string|null|undefined} lastReadId
  */
-export function unreadCount(items, lastReadId) {
+export function unreadIds(items, lastReadId) {
   const ordered = sortByDate(items);
-  if (!ordered.length) return 0;
   const index = lastReadId ? ordered.findIndex((item) => item.id === lastReadId) : -1;
-  return index < 0 ? ordered.length : index;
+  return new Set((index < 0 ? ordered : ordered.slice(0, index)).map((item) => item.id));
+}
+
+/** 안 읽은 글 수(로비 버튼의 빨간 점). */
+export function unreadCount(items, lastReadId) {
+  return unreadIds(items, lastReadId).size;
 }
 
 /** 글을 읽었을 때 저장할 id: 이미 읽은 글과 방금 읽은 글 중 더 새로운 쪽. */

@@ -99,7 +99,7 @@ describe('정렬·고정·분류', () => {
   });
   test('분류 탭 필터', () => {
     const rows = [item('a', '2026-10-20', { type: 'patch' }), item('b', '2026-10-21'), item('c', '2026-10-22', { type: 'devnote' })];
-    expect(filterNews(rows, 'patch').map((row) => row.id)).toEqual(['a']);
+    expect(filterNews(rows, 'patch').map((row: any) => row.id)).toEqual(['a']);
     expect(filterNews(rows, 'all')).toHaveLength(3);
     expect(filterNews(rows, '')).toHaveLength(3);
   });
@@ -168,7 +168,7 @@ describe('빌드 산출', () => {
     expect(json.version).toMatch(/^[0-9a-f]{12}$/);
     const dates = json.items.map((row: any) => Date.parse(row.date));
     expect(dates).toEqual([...dates].sort((a, b) => b - a));
-    const season = json.items.find((row: any) => row.id.endsWith('season-1-start'));
+    const season: any = json.items.find((row: any) => row.id.endsWith('season-1-start'));
     expect(season.pinned).toBe(true);
     expect(season.html).toContain('<h2>');
     expect(season.url).toBe('/news/' + season.id + '/');
@@ -235,5 +235,63 @@ describe('빌드 산출', () => {
       write(dir, '2026-10-20-x.md', post('notice', '가', '2026-10-20', '', ''));
       expect(() => readNews(dir)).toThrow('본문이 비어');
     } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+});
+
+describe('게임 안 소식 상태(news-state)', () => {
+  const memory = () => { const map = new Map<string, string>(); return { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); }, map }; };
+  const json = { schema: 'x', version: 'v1', items: [{ id: 'a', type: 'notice', title: '가', date: '2026-10-26', body: '나', pinned: true }, { id: 'b', type: 'patch', title: '다', date: '2026-10-27', version: '1.0.3', body: '라' }] };
+  const bundle = { version: 'bundle-1', items: [{ id: 'old', type: 'devnote', title: '저장본', date: '2026-10-20', body: '본문' }] };
+  const ok = (body: unknown) => async () => ({ ok: true, json: async () => body }) as any;
+
+  test('읽은 글 id 는 UI 전용 키에 저장되고 이상한 값·막힌 저장소는 무시한다', async () => {
+    const { readLastRead, writeLastRead, NEWS_LAST_READ_KEY } = await import('../src/ui/news-state.js');
+    const store: any = memory();
+    expect(readLastRead(store)).toBeNull();
+    expect(writeLastRead('2026-10-27-patch-1-0-3', store)).toBe(true);
+    expect(store.map.get(NEWS_LAST_READ_KEY)).toBe('2026-10-27-patch-1-0-3');
+    expect(readLastRead(store)).toBe('2026-10-27-patch-1-0-3');
+    store.map.set(NEWS_LAST_READ_KEY, '<img onerror=1>');
+    expect(readLastRead(store)).toBeNull();
+    expect(writeLastRead('../x', store)).toBe(false);
+    const blocked = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); } };
+    expect(readLastRead(blocked as any)).toBeNull();
+    expect(writeLastRead('ok-id', blocked as any)).toBe(false);
+  });
+
+  test('정상 응답이면 network, 실패·빈 목록·잘못된 모양이면 오프라인 묶음으로 내려간다', async () => {
+    const { loadNews } = await import('../src/ui/news-state.js');
+    const loadBundle = async () => bundle;
+    expect(await loadNews({ fetchImpl: ok(json) as any, loadBundle })).toMatchObject({ source: 'network', version: 'v1' });
+    expect((await loadNews({ fetchImpl: (async () => { throw new Error('offline'); }) as any, loadBundle })).source).toBe('bundle');
+    expect((await loadNews({ fetchImpl: (async () => ({ ok: false })) as any, loadBundle })).source).toBe('bundle');
+    expect((await loadNews({ fetchImpl: ok({ items: [] }) as any, loadBundle })).source).toBe('bundle');
+    // SPA 폴백이 index.html 을 돌려주면 json() 이 실패한다.
+    expect((await loadNews({ fetchImpl: (async () => ({ ok: true, json: async () => { throw new SyntaxError('html'); } })) as any, loadBundle })).source).toBe('bundle');
+    const none = await loadNews({ fetchImpl: (async () => { throw new Error('offline'); }) as any, loadBundle: async () => { throw new Error('no bundle'); } });
+    expect(none).toEqual({ items: [], source: 'none', version: null });
+  });
+
+  test('응답이 멈추면 시간 초과로 오프라인 묶음을 쓴다', async () => {
+    const { loadNews } = await import('../src/ui/news-state.js');
+    const hang = ((_url: string, init: any) => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted'))))) as any;
+    const result = await loadNews({ fetchImpl: hang, timeoutMs: 20, loadBundle: async () => bundle });
+    expect(result.source).toBe('bundle');
+  });
+
+  test('패널 행: 탭 필터, 고정 먼저, 안 읽은 글 표시', async () => {
+    const { panelRows } = await import('../src/ui/news-state.js');
+    const items = normalizeNewsList(json);
+    const all = panelRows(items, 'all', 'a');
+    expect(all.map((row: any) => [row.id, row.unread])).toEqual([['a', false], ['b', true]]);
+    expect(panelRows(items, 'patch', null).map((row: any) => row.id)).toEqual(['b']);
+    expect(panelRows(items, 'devnote', null)).toEqual([]);
+    expect(panelRows(items, 'all', null).every((row: any) => row.unread)).toBe(true);
+  });
+
+  test('앱은 정식 호스트 절대 주소로 글을 연다', async () => {
+    const { articleHref } = await import('../src/ui/news-state.js');
+    expect(articleHref('a-1', '')).toBe('/news/a-1/');
+    expect(articleHref('a-1', 'https://blade.tllhouse.com')).toBe('https://blade.tllhouse.com/news/a-1/');
   });
 });

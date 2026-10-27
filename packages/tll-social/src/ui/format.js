@@ -141,6 +141,8 @@ export function boardCategory(value) {
 }
 
 const ERRORS = Object.freeze({
+  'patch-note-slug': '패치노트 글 ID 형식이 올바르지 않아요. (영문 소문자·숫자·-)',
+  'patch-note-status': '패치노트 연결은 \'반영 완료\' 상태에서만 할 수 있어요.',
   'bad-key': '기기 정보가 올바르지 않아요. 기기 이전 코드를 다시 확인해 주세요.',
   'no-profile': '먼저 닉네임을 정해 주세요.',
   banned: '이용이 제한된 계정이에요.',
