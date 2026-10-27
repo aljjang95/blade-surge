@@ -16,7 +16,7 @@ test('필요 EXP는 단계마다 선형으로 늘고 상한이 없다', () => {
   expect(legendExpFor(0)).toBe(LEGEND.baseExp);
   expect(legendExpFor(10)).toBe(Math.floor(LEGEND.baseExp * (1 + 10 * LEGEND.growth)));
   for (let r = 1; r < 300; r++) expect(legendExpFor(r)).toBeGreaterThan(legendExpFor(r - 1));
-  expect(legendExpFor(100) - legendExpFor(99)).toBe(legendExpFor(2) - legendExpFor(1));
+  expect(Math.abs((legendExpFor(100) - legendExpFor(99)) - (legendExpFor(2) - legendExpFor(1)))).toBeLessThanOrEqual(1); // 선형(소수점 버림 오차 1)
   expect(legendExpFor(-5)).toBe(LEGEND.baseExp);
   expect(legendExpFor(NaN)).toBe(LEGEND.baseExp);
 });
@@ -223,4 +223,15 @@ test('정산 영수증에 전설 수련 EXP와 단계가 담긴다(completeStage
   // Lv.80 미만이면 영수증에 legend 가 없다
   const lowEco = newEco();
   expect(lowEco.completeStage(lowEco.nextStage(), 3).legend).toBeNull();
+});
+
+test('저장하고 다시 불러와도 전설 수련 단계·EXP·노드가 그대로다', () => {
+  const store = memory();
+  const a = new Economy({ now: () => 1_800_000_000_000, storage: store, rng: () => .5 });
+  a.s.legend = normalizeLegend({ rank: 20, exp: 12345 });
+  expect(a.legendAllocate('blade_edge', 5)).toMatchObject({ ok: true });
+  expect(a.legendAllocate('storm_vacuum', 2)).toMatchObject({ ok: true });
+  const b = new Economy({ now: () => 1_800_000_000_000, storage: store, rng: () => .5 });
+  expect(b.s.legend).toEqual({ version: 1, rank: 20, exp: 12345, points: 13, nodes: { blade_edge: 5, storm_vacuum: 2 } });
+  expect(b.legendEffects().vacuumPct).toBeGreaterThan(0);
 });

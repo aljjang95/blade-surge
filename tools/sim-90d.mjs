@@ -12,11 +12,10 @@
 //  - 등급(초월)은 economy-estimate 의 무과금 초월일(ECONOMY_PACE)을 하루 분량 비율로 옮긴다(소환·결제는 BM 레인).
 //  - marathon(하루 8시간, docs/SPEC_720H.md 3.4): 위 우선순위 뒤에 고통 단계(에너지 0)를 돈다. 최고 단계 도전(가장 쉬운 지역 최종 보스 X-10)
 //    → 남는 시간 고통 단계 반복(하루 fullRuns 판 뒤 골드·재료 35%, EXP 100%). Lv.80 이후 EXP 는 전설 수련으로, 점수는 전투력 최대 노드부터 배분한다.
-//    '할 일 없음 분'(idleMin)은 아무것도 못 한 시간이다. 장 수는 CHAPTERS.length(+CHAPTER_OPEN 이 있으면 개방 주차)를 읽어 자동 반영한다.
+//    '할 일 없음 분'(idleMin)은 아무것도 못 한 시간이다. 장 수는 CHAPTERS.length(7~12장 개방 주차는 아래 CHAPTER_OPEN_WEEKS)를 읽어 자동 반영한다.
 import { perRun, TOTAL_STAGES } from './economy-estimate.mjs';
 import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/stages.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER, tormentId, tormentTierOf } from '../src/game/difficulty.js';
-import * as StagesData from '../src/data/stages.js';
 import { TOWER, POWER_NEED, SEASON, TORMENT } from '../src/data/content-90d.js';
 import { normalizeLegend, grantLegendExp, allocate as allocateLegendNode, legendStats, LEGEND_NODES, LEGEND } from '../src/game/legend-rank.js';
 import { towerScale, towerFirstClearRewards, towerCap, activeEvents, applyEventRewards, seasonAt } from '../src/game/endgame-core.js';
@@ -365,17 +364,15 @@ function bestFarm(st, pw, skill) {
   return best;
 }
 
-// ---------- 장 개방(지역 레인의 CHAPTER_OPEN) ----------
-// CHAPTER_OPEN 이 없으면 모든 장이 처음부터 열려 있다(현재 6장). 있으면 장 ch 의 값이 숫자일 때 시즌 시작 기준 0부터 센 주차(< 1e6)
-// 또는 개방 시각(ms)으로 읽는다(지역 레인이 모양을 바꾸면 이 함수만 맞춘다).
-const CHAPTER_OPEN = StagesData.CHAPTER_OPEN;
+// ---------- 장 개방 ----------
+// 7~12장은 시즌 시작 기준 W1/W1/W1/W5/W8/W11 에 열린다(docs/SPEC_720H.md 3.3). 값은 0부터 센 주차이고 1~6장은 처음부터 열려 있다.
+// TODO: 지역 레인이 머지되면 `src/data/chapter-open.js` 의 같은 표를 읽도록 바꾼다(그 전까지 이 상수가 정본이 아니라 복사본이다).
+// 장 수는 CHAPTERS.length 를 읽으므로 지금처럼 6장이면 이 표는 쓰이지 않는다.
+const CHAPTER_OPEN_WEEKS = Object.freeze({ 7: 0, 8: 0, 9: 0, 10: 4, 11: 7, 12: 10 });
 function chapterOpenIdx(day) {
-  if (!CHAPTER_OPEN) return TOTAL_STAGES;
   let open = 0;
   for (let ch = 1; ch <= CHAPTERS.length; ch++) {
-    const v = Array.isArray(CHAPTER_OPEN) ? CHAPTER_OPEN[ch - 1] : CHAPTER_OPEN[ch];
-    const week = typeof v === 'number' ? (v > 1e6 ? Math.floor((v - SEASON.startMs) / (7 * DAY_MS)) : v) : 0;
-    if (day - 1 >= week * 7) open = ch; else break;
+    if (day - 1 >= (CHAPTER_OPEN_WEEKS[ch] ?? 0) * 7) open = ch; else break;
   }
   return open * STAGES_PER_CHAPTER;
 }
@@ -502,7 +499,8 @@ export function assertBands(report) {
   if (days >= 90) {
     band('미드 D90 무한의 성 p50(층)', mid.checkpoints.D90.tower.p50, 60, 160);
     band('미드 지옥 6-10 p50(일, 미도달=999)', mid.milestones.hell_6_10.p50 ?? 999, 70, 999); // 지옥 완주는 70일 이후
-    band('하드코어 D90 지옥 관문 p50', hard.checkpoints.D90.hell.p50, 15, 60);
+    // 상한은 '전체 지옥 관문 수'다(장이 늘면 함께 늘어난다 — 의미 동일, 약화 아님).
+    band('하드코어 D90 지옥 관문 p50', hard.checkpoints.D90.hell.p50, 15, TOTAL_STAGES);
     band('미드 최장 정체 p50(일)', mid.stalls.longest.p50, 0, 8); // 시드 3·4·8·16 모두 p50 7일 — 시드 수 차이 여유 1일
     band('미드 90일 중 새 진행이 있던 날 p50', mid.newContentDays.p50, 55, 90); // 시드 16에서 62일, 시드 3에서 59일
     band('미드 골드 잔액/일수입 p50(일)', mid.economy.goldBalanceDays.p50, 0, 10);

@@ -1,9 +1,10 @@
 // 엔드게임 상태(무한의 성·난이도 최고 기록·시즌 이벤트)의 순수 규칙. 시계는 호출자가 넘긴다(nowMs).
 // 저장 트랜잭션은 호출자(Economy)가 맡고, 여기서는 상태를 검사·갱신하고 지급할 보상만 돌려준다.
-import { SEASON, TOWER, TORMENT, EVENT_WEEKS, EVENT_EFFECT_KINDS } from '../data/content-90d.js';
+import { SEASON, TOWER, EVENT_WEEKS, EVENT_EFFECT_KINDS } from '../data/content-90d.js';
 import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { DIFFICULTY_ORDER } from './difficulty.js';
 import { recommendedLevel } from '../data/loot-tables.js';
+import { TORMENT } from '../data/content-90d.js';   // 고통 단계 저장 정화용(규칙은 torment-core.js)
 
 const DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS, KST_RESET = 4 * 3600000, VERSION = 1, MAX_FLOOR = 100000;
 const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -27,7 +28,7 @@ export function normalizeEndgame(raw) {
   const tm = object(r.torment) ? r.torment : {}, today = object(tm.today) ? tm.today : {};
   return {
     version: VERSION, peak,
-    // 고통 단계(SPEC_720H 3.2): best = 최고 클리어 단계, today = 오늘(05:00 KST 경계) 완료한 판 수. 일차는 앞으로만 간다.
+    // 고통 단계(SPEC_720H 3.2, 규칙은 torment-core.js): best = 최고 클리어 단계, today = 오늘(05:00 KST 경계) 완료한 판 수. 일차는 앞으로만 간다.
     torment: { best: integer(tm.best, 0, TORMENT.maxTier, 0), today: { day: integer(today.day, 0, MAX_FLOOR, 0), runs: integer(today.runs, 0, MAX_FLOOR, 0) } },
     // week·chestWeek 는 towerWeekId(0 = 기록 없음). 음수 표식은 저장 정규화를 두 번 거치면 바뀌어 쓰지 않는다.
     tower: { best, week: integer(t.week, 0, MAX_FLOOR, 0), weekCleared: integer(t.weekCleared, 0, MAX_FLOOR, 0),
@@ -96,28 +97,6 @@ export function applyEventRewards(rewards, events, source) {
     for (const key of ['gold', 'stones', 'stones2', 'stones3', 'gems', 'transcendStones']) if (Number.isFinite(out[key])) out[key] = Math.floor(out[key] * mul);
   }
   return out;
-}
-
-// ---------- 고통 단계 ----------
-/** 시즌 시작(05:00 KST) 기준 일차 + 1(0 = 기록 없음, 시즌 전은 1). 하루 판 수 감쇠가 이 경계를 쓴다. */
-export const tormentDayId = (nowMs) => Math.min(MAX_FLOOR, Math.max(0, Math.floor(((Number.isFinite(nowMs) ? nowMs : 0) - SEASON.startMs) / DAY_MS)) + 1);
-/** 오늘 판 수에 맞춘 상태(읽기 전용). 풀 보상 판이 몇 번 남았는지 보여 준다. */
-export function tormentStatus(state, nowMs) {
-  const tm = normalizeEndgame(state).torment, runs = tm.today.day >= tormentDayId(nowMs) ? tm.today.runs : 0;
-  return { best: tm.best, nextTier: Math.min(TORMENT.maxTier, tm.best + 1), runsToday: runs, fullRuns: TORMENT.fullRuns, fullLeft: Math.max(0, TORMENT.fullRuns - runs) };
-}
-/**
- * 고통 단계 한 판 완료를 센다. 오늘 첫 fullRuns 판은 full=true(보상 100%), 그 뒤는 false(골드·재료 decayMul, EXP 100%).
- * 일차는 앞으로만 간다: 기기 시계를 되돌려도 오늘 판 수가 0 으로 돌아가지 않는다.
- * 지역 최종 보스(X-10)를 클리어하면 최고 단계가 오른다(요청한 단계가 해금 단계 이하일 때만 — 호출자가 해금을 이미 검사한다).
- */
-export function recordTormentRun(state, { tier, st, nowMs }) {
-  const tm = state.torment, day = tormentDayId(nowMs);
-  if (day > tm.today.day) { tm.today.day = day; tm.today.runs = 0; }
-  const full = tm.today.runs < TORMENT.fullRuns, before = tm.best;
-  tm.today.runs = Math.min(MAX_FLOOR, tm.today.runs + 1);
-  if (st === STAGES_PER_CHAPTER && Number.isSafeInteger(tier) && tier >= 1 && tier <= TORMENT.maxTier && tier <= before + 1) tm.best = Math.max(before, tier);
-  return { full, runs: tm.today.runs, best: tm.best, newBest: tm.best > before };
 }
 
 // ---------- 난이도 최고 기록 ----------
