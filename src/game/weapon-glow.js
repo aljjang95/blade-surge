@@ -21,7 +21,35 @@ function weaponHaloTexture() {
   return haloTexture;
 }
 
-const _box = new THREE.Box3(), _center = new THREE.Vector3(), _size = new THREE.Vector3(), _scale = new THREE.Vector3();
+const _box = new THREE.Box3(), _part = new THREE.Box3(), _center = new THREE.Vector3(), _size = new THREE.Vector3(), _scale = new THREE.Vector3();
+const _inverse = new THREE.Matrix4(), _relative = new THREE.Matrix4();
+
+/**
+ * 무기 노드 좌표계에서 칼날 부분의 중심(_center)과 광륜 크기(_size.x 너비, _size.y 높이)를 구한다.
+ * 손잡이가 원점이라는 무기 계약을 따른다: 원점에서 가장 먼 쪽 끝의 바깥 45% 를 칼날로 본다.
+ */
+function bladeFrame(model, anchor) {
+  model.updateWorldMatrix(true, true);
+  _inverse.copy(anchor.matrixWorld).invert();
+  _box.makeEmpty();
+  anchor.traverse((o) => {
+    if (!o.isMesh || o.isSprite || !o.visible || !o.geometry) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    _relative.multiplyMatrices(_inverse, o.matrixWorld);
+    _box.union(_part.copy(o.geometry.boundingBox).applyMatrix4(_relative));
+  });
+  if (_box.isEmpty()) return false;
+  const ext = _box.getSize(new THREE.Vector3());
+  const axis = ext.x >= ext.y && ext.x >= ext.z ? 'x' : ext.y >= ext.z ? 'y' : 'z';
+  const lo = _box.min[axis], hi = _box.max[axis];
+  const far = Math.abs(hi) >= Math.abs(lo) ? hi : lo, near = far === hi ? Math.max(lo, 0) : Math.min(hi, 0);
+  const length = Math.abs(far - near), blade = length * .45;
+  _box.getCenter(_center); _center[axis] = far - Math.sign(far - near) * blade * .5;
+  const width = Math.max(...['x', 'y', 'z'].filter((k) => k !== axis).map((k) => ext[k]));
+  // 스프라이트는 화면을 향하므로 칼날 길이·너비를 넉넉한 타원으로 쓴다.
+  _size.set(Math.max(width * 1.6, blade * .7), blade * 1.5, 1);
+  return true;
+}
 
 /** 보이는 오른손 무기를 고른다: 병기고 전용 무기 → 등급 무기 노드(보조손 제외) → 활. */
 export function findWeaponAnchor(model, weaponNodes = []) {
@@ -44,12 +72,7 @@ export function syncWeaponHalo(model, tier, color, weaponNodes) {
   // 경계 상자에 광륜 자신이 들어가지 않게 먼저 뗀다.
   halo?.removeFromParent();
   if (!anchor) { removeWeaponHalo(model); return null; }
-  model.updateWorldMatrix(true, true);
-  _box.setFromObject(anchor, true);
-  if (_box.isEmpty()) { removeWeaponHalo(model); return null; }
-  _box.getCenter(_center); _box.getSize(_size);
-  anchor.getWorldScale(_scale);
-  const unit = Math.max(1e-4, Math.abs(_scale.x));
+  if (!bladeFrame(model, anchor)) { removeWeaponHalo(model); return null; }
   if (!halo) {
     halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: weaponHaloTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     halo.name = 'WeaponHalo'; halo.renderOrder = 5; halo.raycast = () => {};
@@ -62,9 +85,9 @@ export function syncWeaponHalo(model, tier, color, weaponNodes) {
     model.userData.weaponHalo = halo;
   }
   anchor.add(halo);
-  halo.position.copy(anchor.worldToLocal(_center.clone()));
-  const length = Math.max(_size.x, _size.y, _size.z) / unit;
-  halo.scale.set(length * .55 * tier.haloScale, length * 1.1 * tier.haloScale, 1);
+  // 칼날(손잡이 반대쪽 끝) 가운데에 칼날 길이만큼. 무기 전체 중심에 두면 자루·몸통 위에 뜬다(2026-10-28 QA).
+  halo.position.copy(_center);
+  halo.scale.set(_size.x * tier.haloScale, _size.y * tier.haloScale, 1);
   halo.material.color.set(color);
   halo.userData.opacity = tier.halo; halo.userData.rate = tier.min >= 13 ? 1.6 : 1;
   halo.userData.still = !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
