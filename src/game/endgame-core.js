@@ -4,6 +4,7 @@ import { SEASON, TOWER, EVENT_WEEKS, EVENT_EFFECT_KINDS } from '../data/content-
 import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { DIFFICULTY_ORDER } from './difficulty.js';
 import { recommendedLevel } from '../data/loot-tables.js';
+import { TORMENT } from '../data/content-90d.js';   // 고통 단계 저장 정화용(규칙은 torment-core.js)
 
 const DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS, KST_RESET = 4 * 3600000, VERSION = 1, MAX_FLOOR = 100000;
 const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -24,8 +25,11 @@ export function normalizeEndgame(raw) {
     if (value >= 0) peak[key] = value;
   }
   const best = integer(t.best, 0, MAX_FLOOR, 0);
+  const tm = object(r.torment) ? r.torment : {}, today = object(tm.today) ? tm.today : {};
   return {
     version: VERSION, peak,
+    // 고통 단계(SPEC_720H 3.2, 규칙은 torment-core.js): best = 최고 클리어 단계, today = 오늘(05:00 KST 경계) 완료한 판 수. 일차는 앞으로만 간다.
+    torment: { best: integer(tm.best, 0, TORMENT.maxTier, 0), today: { day: integer(today.day, 0, MAX_FLOOR, 0), runs: integer(today.runs, 0, MAX_FLOOR, 0) } },
     // week·chestWeek 는 towerWeekId(0 = 기록 없음). 음수 표식은 저장 정규화를 두 번 거치면 바뀌어 쓰지 않는다.
     tower: { best, week: integer(t.week, 0, MAX_FLOOR, 0), weekCleared: integer(t.weekCleared, 0, MAX_FLOOR, 0),
       chestWeek: integer(t.chestWeek, 0, MAX_FLOOR, 0) },

@@ -53,7 +53,7 @@ import './ui/oath-visual.css';
 import { OathShell } from './ui/oath-shell.js';
 import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
-import { applyDifficulty } from './game/difficulty.js';
+import { applyDifficulty, tormentTierOf } from './game/difficulty.js';
 import { CITADEL_HUB } from './data/citadel-hub.js';
 import { activeCampaignTownChapter, setActiveCampaignTownChapter } from './data/campaign-towns.js';
 import { preloadCitadelHubAssets } from './game/citadel-hub-scene.js';
@@ -438,7 +438,7 @@ class App {
       const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');
       stage = applyDifficulty(stage, difficulty);
       // 지옥 해금 기록(endgame)은 아직 서버 문서에 없어 서버 정산이 다른 난이도로 계산한다. 서버 이관 전까지 막는다.
-      if (stage.difficultyId === 'hell' && this.account?.authority === 'server') { this.ui.toast('서버 계정의 지옥 난이도 정산을 준비 중입니다.', 'red'); return false; }
+      if ((stage.difficultyId === 'hell' || tormentTierOf(stage.difficultyId)) && this.account?.authority === 'server') { this.ui.toast('서버 계정의 지옥·고통 단계 정산을 준비 중입니다.', 'red'); return false; }
     }
     this.stageStarting = true;
     this.citadel.clearInput(); this.syncHub();
