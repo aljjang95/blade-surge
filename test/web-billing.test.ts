@@ -553,14 +553,21 @@ describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바�
     expect((await intent(again.token, 'monthly_pass_v1')).status).toBe(200);
   });
 
-  test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
+  test('아바타 풀셋: 운영 표(AVATAR_PREMIUM_BY_HERO)가 비어 있으면 결제 전에 409로 막는다(결제만 되고 미지급 방지)', async () => {
+    const { a, intent } = await setup();
+    expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
+  });
+
+  test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급 + 풀셋 아바타 소유, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
     const { h, pn, a, intent, complete } = await setup();
+    (h.deps as any).avatarPremium = { knight: 'avatar_knight_sakura' };
     const it = (await intent(a.token, 'avatar_fullset_knight_v1')).body;
     expect(it.totalAmount).toBe(14900);
     pn.pay(it);
     const r = (await complete(a.token, it.paymentId)).body;
     expect(r.state).toBe('granted');
     expect(h.db.sqlite.query("SELECT expires_at FROM iap_entitlements WHERE ent_key = 'avatar:knight:fullset'").get()).toEqual({ expires_at: null });
+    expect(docOf(h, a.accountId).avatars.owned).toEqual(['avatar_knight_sakura']);
     const st = (await h.send('GET', '/iap/state', undefined, a.token)).body;
     expect(JSON.stringify(st)).toContain('"avatarFullsets":["knight"]');
     expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');

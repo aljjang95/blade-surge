@@ -13,8 +13,9 @@ import { createPlayApi, type PlayApi, type PlayEnv } from './play';
 import { recordServerMilestone } from './funnel';
 import { heroIdFromEntitlement } from '../../src/data/hero-roster.js';
 import { HERO_ORDER } from '../../src/data/heroes.js';
+import { AVATAR_PREMIUM_BY_HERO } from '../../src/data/avatars.js';
 import {
-  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
+  IAP_BY_ID, IAP_CATALOG_VERSION, heroIdFromAvatarKey, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
   type IapProduct,
 } from '../../src/shared/iap-catalog.js';
 
@@ -34,7 +35,8 @@ export interface IapEnv extends PlayEnv {
   RTDN_AUDIENCE?: string;
   RTDN_PUSH_SUBJECT?: string;
 }
-export interface IapDeps { playApi?: PlayApi }
+/** avatarPremium: 풀셋 상품이 지급할 아바타 표(영웅 id → 아바타 id). 시험에서만 바꾼다(운영은 avatars.js 의 AVATAR_PREMIUM_BY_HERO). */
+export interface IapDeps { playApi?: PlayApi; avatarPremium?: Readonly<Record<string, string>> }
 type IapCtx = Ctx & { deps: Ctx['deps'] & IapDeps };
 
 const iapEnv = (c: Ctx) => c.env as unknown as IapEnv;
@@ -115,6 +117,26 @@ export async function catalog(c: Ctx, auth: Authed) {
   };
 }
 
+/**
+ * 아바타 풀셋 상품은 결제 전에 지급 가능 여부를 서버가 먼저 확인한다(자산 미준비·영웅 미소유면 팔지 않는다).
+ * 결제 뒤 지급 불가가 되면 grantOnce 가 확정 없이 'declined'로 돌리므로, 돈이 나가기 전에 막는 것이 정상 경로다.
+ */
+export async function assertAvatarFullsetDeliverable(c: Ctx, accountId: string, product: IapProduct): Promise<void> {
+  const heroIds = entitlementKeys(product).map((k) => heroIdFromAvatarKey(k)).filter((h): h is string => !!h);
+  if (!heroIds.length) return;
+  const eco = loadEconomy((await loadAccountDoc(c.db, accountId)).state, { now: c.now });
+  const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+  // 보유 영웅 확인은 서버 권한을 얹은 뒤의 상태로 한다(영웅 소유의 정본은 권한 표).
+  setRosterPaid(eco.s, (await entitlementsOf(c.db, accountId, c.now)).heroes);
+  for (const heroId of heroIds) {
+    const avatarId = premium[heroId];
+    if (!avatarId) fail(409, 'not-eligible');
+    // 미리보기: 실제 문서는 저장하지 않는다(loadEconomy 결과는 버린다). 이미 소유한 아바타도 결제 전에 막는다.
+    const r = eco.grantAvatarFullset(heroId, { avatarId });
+    if (!r.ok || r.already) fail(409, 'not-eligible');
+  }
+}
+
 /** 월정액 권한을 주는 상품인가(Play 구독·웹 30일 이용권). 이용 중 중복 구매를 막는다. */
 export function grantsMonthly(product: IapProduct): boolean {
   return entitlementKeys(product).includes('monthly');
@@ -164,6 +186,7 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
     const e = await entitlementsOf(c.db, accountId, c.now);
     if (e.monthlyUntil > c.now) fail(409, 'already-subscribed');
   }
+  await assertAvatarFullsetDeliverable(c, accountId, product);
   const obf = await obfuscatedId(c.db, accountId, c.now, true);
   if (!obf) fail(503, 'unavailable');
   await recordServerMilestone(c.db, accountId, 'purchase_start', c.now);
@@ -371,6 +394,16 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
       const heroes = new Set((await entitlementsOf(c.db, accountId, c.now)).heroes);
       for (const e of o.entitlements) { const id = heroIdFromEntitlement(e.key); if (id && HERO_IDS.includes(id)) heroes.add(id); }
       setRosterPaid(eco.s, [...heroes]);
+    }
+    // 아바타 풀셋 권한은 같은 커밋에서 부위 전체(풀셋 아바타)를 지급한다. 서버 검증이 끝난 이 경로에서만 부른다.
+    // 이미 소유면 중복 지급 없이 통과(멱등). 지급할 수 없으면(자산 미준비·영웅 미소유) 지급·확정(ack)을 하지 않고
+    // 'declined'로 돌려 Play가 자동 환불하게 한다(결제만 되고 아바타가 없는 구매를 만들지 않는다).
+    for (const e of o.entitlements) {
+      const heroId = heroIdFromAvatarKey(e.key);
+      if (!heroId) continue;
+      const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+      const r = eco.grantAvatarFullset(heroId, { avatarId: premium[heroId] });
+      if (!r.ok) return 'declined';
     }
     const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.

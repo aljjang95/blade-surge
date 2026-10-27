@@ -9,7 +9,7 @@ import type { Authed, Ctx } from './auth';
 import { randomHex } from './token';
 import { recordServerMilestone } from './funnel';
 import {
-  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
+  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, assertAvatarFullsetDeliverable, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
 } from './iap';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
 
@@ -170,6 +170,7 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   // 영구 권한 상품은 이미 가진 권한이면 거부한다(영웅 개별 + 전원 해금의 중복 결제 방지).
   const activeKeys = await activeEntitlementKeys(c.db, accountId, c.now);
   if (allKeysActive(product, activeKeys)) fail(409, 'not-eligible');
+  await assertAvatarFullsetDeliverable(c, auth.account.account_id, product);
   // 월정액 이용 중(Play 구독 또는 웹 30일권)에는 웹 30일권을 또 팔지 않는다.
   if (grantsMonthly(product) && activeKeys.has('monthly')) fail(409, 'already-subscribed');
   // 한 번만 받을 수 있는 상품(계정당 1회·영구·월정액)은 결제창이 열려 있을 시간(10분) 안의 같은 계열 의도가 있으면 새 의도를 막는다.
