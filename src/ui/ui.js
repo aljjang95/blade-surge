@@ -250,6 +250,8 @@ export class UI {
     }
     writeHudStyle(hud.style, '--side-banner-top', px(y - box.top));
     if (banner?.classList?.contains('on') && banner.offsetHeight > 0) y += banner.offsetHeight + 6;
+    // 경고·배너가 쌓여 알림이 들어갈 높이(28px)조차 없으면 조이스틱을 덮지 않게 기본 배치로 돌아간다.
+    if (limit - y < 28) { clear(); return; }
     toast.classList?.add('edge-strip');
     writeHudStyle(toast.style, '--battle-notice-top', px(y));
     writeHudStyle(toast.style, '--battle-notice-left', px(left));
