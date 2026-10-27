@@ -213,7 +213,8 @@ try {
     const table = JSON.parse(await fs.readFile(tablePath, 'utf8'));
     const byKey = new Map();
     for (const r of rows) if (r.facts && !r.invalid) { const k = `${r.code}:${r.difficulty}`; (byKey.get(k) || byKey.set(k, []).get(k)).push(r); }
-    const stages = {}, observed = {};
+    // 이번 실행에서 측정한 행만 갈아 끼운다. 이번에 돌리지 않은 기존 행(예: 7장만 돌릴 때의 1~6장)은 그대로 보존한다.
+    const stages = { ...(table.stages || {}) }, observed = {};
     let maxDps = 0;
     for (const [key, list] of [...byKey].sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))) {
       const wins = list.filter((r) => r.facts.win);

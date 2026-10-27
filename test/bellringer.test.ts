@@ -412,3 +412,55 @@ test('리뷰 P2-3: 첫 고리 뒤 간격 중에 종이 깨지면 두 번째 고�
   expect(f.ringer.ringing).toBe(false);
   expect(f.ringer.tolls).toBe(1);
 });
+
+// ---------- 리뷰 2차 P2: 종이 전부 흡수한 타격도 '맞은 것' ----------
+import { Battle as RpgBattle } from '../src/game/rpg-battle.js';
+import { Battle as BaseBattle } from '../src/game/battle-base.js';
+
+function absorbFixture(dmgMul = 1) {
+  const calls = { ult: 0, combo: 0, onHit: 0, damageText: [] as number[], impact: 0, hitstop: 0 };
+  const player: any = { stats: { crit: 0, critDmg: 2, ultGain: 1 }, auto: true, addUlt() { calls.ult++; }, addMp() {}, def: {} };
+  const fx: any = { dmgLayer: { children: [] }, damage(_p: any, v: number) { calls.damageText.push(v); }, flash() {}, directional() {}, burst() {} };
+  const common: any = {
+    active: true, paused: false, player, fx, combo: 0, maxCombo: 0, dmgDealt: 0, elapsed: 1,
+    app: { reducedMotion: { matches: false } }, ui: { setCombo() { calls.combo++; } },
+    sp: { dmgMul: () => dmgMul, onHit() { calls.onHit++; } }, timeCtl: { hitstop() { calls.hitstop++; } },
+  };
+  return { calls, common };
+}
+function bellEnemy(f: ReturnType<typeof realFixture>, bellHp: number) {
+  const enemy: any = f.enemy;
+  enemy.bellringer.bellHp = enemy.bellringer.bellMax = bellHp; enemy.hp = enemy.maxHp = 5000;
+  const base = enemy.receiveImpact?.bind(enemy);
+  return { enemy, impact: { n: 0 }, base };
+}
+
+test('리뷰 2차 P2-1: 종이 피해를 전부 흡수해 몸 피해가 0이어도 hurt 는 흡수량을 남기고, 호출부는 콤보·궁극 게이지·세트 on-hit 를 처리한다', () => {
+  for (const [name, Cls] of [['RpgBattle', RpgBattle], ['Battle', BaseBattle]] as const) {
+    const real = realFixture(7);
+    const enemy: any = real.enemy;
+    enemy.bellringer.bellMax = 10000; enemy.bellringer.bellHp = 10000; enemy.hp = enemy.maxHp = 5000;
+    const hp0 = enemy.hp;
+    // Enemy.hurt 자체: 반환값(몸 체력 피해)은 0 이고 흡수량은 absorbed 로 알린다. 일반 적은 absorbed 가 늘 0 이다.
+    expect(enemy.hurt(100, {})).toBe(0);
+    expect(enemy.absorbed).toBe(100);
+    expect(enemy.hp).toBe(hp0);
+    const plain: any = spawnCombatFlowEnemy(real.f, enemy.pos.x + 3, enemy.pos.z, { id: 'bell_ringer' }); plain.hp = plain.maxHp = 500;
+    expect(plain.hurt(10, {})).toBeGreaterThan(0); expect(plain.absorbed).toBe(0);
+    // 호출부: 종만 맞아도 맞은 것이다.
+    const a = absorbFixture();
+    const battle: any = Object.assign(Object.create((Cls as any).prototype), a.common);
+    battle.damageEnemy(enemy, 100, { basic: true });
+    expect(a.calls.combo, name).toBe(1);
+    expect(battle.combo, name).toBe(1);
+    expect(a.calls.ult, name).toBeGreaterThan(0);
+    expect(a.calls.onHit, name).toBe(1);
+    expect(a.calls.damageText, name).toEqual([]);          // 0 피해 숫자는 띄우지 않는다(종 퍼센트 문구는 absorb 가 따로 띄움)
+    expect(battle.dmgDealt, name).toBe(0);                  // 몸 체력 피해 합계는 그대로
+    // 빗나감(죽은 적·회피)은 여전히 아무것도 하지 않는다.
+    const b = absorbFixture();
+    const miss: any = Object.assign(Object.create((Cls as any).prototype), b.common);
+    miss.damageEnemy({ alive: true, spawning: false, absorbed: 0, hurt: () => 0, pos: enemy.pos, def: { scale: 1 } }, 100, {});
+    expect(b.calls.combo, name).toBe(0); expect(b.calls.ult, name).toBe(0);
+  }
+});

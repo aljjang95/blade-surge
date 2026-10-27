@@ -2,6 +2,7 @@
 // 열기·닫기·ESC·탭 전환·고르기는 저장·에너지를 건드리지 않는다. 입장만 기존 서비스(startStage / 준비창)를 부르고,
 // 에너지는 그 서비스 한 곳에서 1회만 쓴다(캠페인 = startStage, 던전 = 준비창의 '원정 시작').
 import { stageDef } from '../data/stages.js';
+import { ecoClock } from '../data/chapter-open.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { DEFAULT_STAGE_NODES, stageMapFor, layoutStageMap, fitStageMapBox } from '../data/stage-select-maps.js';
@@ -212,7 +213,7 @@ export class StageSelectUI {
     return stageSelectModel({
       progress: eco.s.progress, expedition, power: eco.heroPower(eco.s.selected), heroLevel: eco.hero().level, energy: eco.s.energy,
       memory: this.memory, prefer: this.selection || this.prefer, dungeonRecommended: this.dungeonRecommended, chapter: this.viewChapter,
-      difficulty: (ch, st) => eco.difficultyFor(ch, st),
+      difficulty: (ch, st) => eco.difficultyFor(ch, st), now: ecoClock(eco),
     });
   }
 

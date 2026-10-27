@@ -61,11 +61,14 @@ export function plausibilityFor(stage) {
   const key = `${stage.code}:${stage.difficultyId || 'story'}`;
   const row = PLAUSIBILITY.stages?.[key] || {};
   const d = PLAUSIBILITY.defaults;
+  // 방 수는 맵 배치의 성질이라 난이도와 무관하다(difficulty.js 는 방을 건드리지 않는다). 난이도 행이 아직 없으면 같은 관문의 story 행 방 수를 쓴다 —
+  // 그렇지 않으면 보정된 장도 기본값 17방(기준 13방)으로 폴백해 완전 정화가 나올 수 없다. 처치·시간 상한은 난이도마다 달라 기본값 그대로 둔다.
+  const layoutRooms = row.maxRooms ?? PLAUSIBILITY.stages?.[`${stage.code}:story`]?.maxRooms;
   return {
     minClearMs: row.minClearMs ?? d.minClearMs,
     kills: { normal: row.kills?.normal ?? d.kills.normal, elite: row.kills?.elite ?? d.kills.elite, boss: row.kills?.boss ?? d.kills.boss },
     summonedKills: row.summonedKills ?? d.summonedKills,
-    maxRooms: row.maxRooms ?? d.maxRooms,
+    maxRooms: layoutRooms ?? d.maxRooms,
     dpsPerAtk: PLAUSIBILITY.dpsPerAtk, damageSlack: PLAUSIBILITY.damageSlack,
     maxRevives: PLAUSIBILITY.maxRevives, wallClockSlack: PLAUSIBILITY.wallClockSlack,
   };

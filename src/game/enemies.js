@@ -286,6 +286,7 @@ export class Enemy extends Actor {
     return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
   }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
+    this.absorbed = 0;   // 이번 타격에서 종지기의 종이 받아 낸 양. 몸 체력 피해(반환값)와 별개로 '적중 성공' 판정에 쓴다
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
     packNoise(this.game, this);
@@ -309,7 +310,8 @@ export class Enemy extends Actor {
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
     // 종지기: 매단 종이 피해를 먼저 받아 낸다. 종이 깨진 뒤 무방비 동안은 받는 피해가 늘어난다.
-    if (this.bellringer) dmg = this.bellringer.absorb(dmg);
+    // 종이 전부 흡수하면 반환값(몸 체력 피해)은 0 이지만 타격은 맞은 것이다 — 호출부는 absorbed 로 적중(콤보·궁극 게이지·세트 on-hit·연출)을 처리한다.
+    if (this.bellringer) { const before = dmg; dmg = this.bellringer.absorb(dmg); this.absorbed = Math.max(0, before - dmg); }
     // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 공격자(Battle.damageEnemy 의 영웅)의 위치로 등 뒤·정면을 가른다.
     // 광역기·세트 효과의 dirx·dirz 는 폭발 중심 → 적 방향이라 영웅 위치와 다를 수 있다(BUNDLE-14 리뷰 P1).
     if (this.damageVeil) dmg = this.damageVeil.filter(dmg, attacker);

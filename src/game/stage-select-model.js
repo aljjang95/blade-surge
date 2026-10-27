@@ -168,9 +168,10 @@ const findDungeon = (dungeons, id, depth) => dungeons.dungeons.find((entry) => e
  * 잠긴 위치는 기본 선택이 되지 않는다(목록에서는 고를 수 있지만 입장 불가 사유를 보여 준다).
  * @param {{ progress: any, expedition: any, power: number, heroLevel: number, energy?: number|null, memory?: any,
  *   prefer?: { tab: 'campaign', ch: number, st: number } | { tab: 'dungeon', id: string, depth?: string } | null,
- *   dungeonRecommended?: { id: string, depth?: string } | null, chapter?: number | null, difficulty?: any, source?: any }} input
+ *   dungeonRecommended?: { id: string, depth?: string } | null, chapter?: number | null, difficulty?: any, source?: any, now?: number }} input
  */
-export function stageSelectModel({ progress, expedition, power, heroLevel, energy = null, memory = null, prefer = null, dungeonRecommended = null, chapter = null, difficulty = null, source = undefined }) {
+export function stageSelectModel({ progress, expedition, power, heroLevel, energy = null, memory = null, prefer = null, dungeonRecommended = null, chapter = null, difficulty = null, source = undefined, now = Date.now() }) {
+  // now: 규칙 시계(호출부가 ecoClock(eco) 로 넘긴다). 기기 시계만 쓰면 신뢰 시계와 어긋나 선택 화면과 startStage 의 개방 판정이 갈린다.
   const saved = normalizeStageSelectMemory(memory);
   const next = nextCampaignStage(progress);
   const finished = Number(progress?.stars?.[`${CHAPTERS.length}-${STAGES_PER_CHAPTER}`]) > 0;
@@ -183,7 +184,7 @@ export function stageSelectModel({ progress, expedition, power, heroLevel, energ
   const recommended = finished && recDungeon ? { tab: 'dungeon', ...recDungeon } : { tab: 'campaign', ch: next.ch, st: next.st };
   const usable = (pick) => {
     if (!pick) return null;
-    if (pick.tab === 'campaign' && isInt(pick.ch, 1, CHAPTERS.length) && isInt(pick.st, 1, STAGES_PER_CHAPTER) && campaignUnlocked(progress, pick.ch, pick.st)) return { tab: 'campaign', ch: pick.ch, st: pick.st };
+    if (pick.tab === 'campaign' && isInt(pick.ch, 1, CHAPTERS.length) && isInt(pick.st, 1, STAGES_PER_CHAPTER) && campaignUnlocked(progress, pick.ch, pick.st, now)) return { tab: 'campaign', ch: pick.ch, st: pick.st };
     if (pick.tab === 'dungeon' && typeof pick.id === 'string') {
       const depth = pick.depth === 'deep' ? 'deep' : 'standard';
       if (findDungeon(dungeons, pick.id, depth)?.unlocked) return { tab: 'dungeon', id: pick.id, depth };
@@ -197,7 +198,7 @@ export function stageSelectModel({ progress, expedition, power, heroLevel, energ
   const remembered = saved.last ? (saved.last.followed ? followedPick : saved.last) : null;
   const selection = usable(prefer) || usable(remembered) || usable(recommended) || { tab: 'campaign', ch: next.ch, st: next.st };
   const viewChapter = isInt(chapter, 1, CHAPTERS.length) ? chapter : selection.tab === 'campaign' ? selection.ch : next.ch;
-  const campaign = campaignStages({ progress, chapter: viewChapter, power, heroLevel, energy, difficulty });
+  const campaign = campaignStages({ progress, chapter: viewChapter, power, heroLevel, energy, difficulty, now });
   const anyStars = Object.values(progress?.stars || {}).some((value) => Number(value) > 0);
   return {
     tab: selection.tab, selection, recommended, campaign, dungeons, finished,

@@ -765,7 +765,7 @@ export class Battle {
     if (e.omenBy === p && e.omenUntil > this.elapsed) amount *= BLACKCAT_OMEN.taken;
     // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
     const dealt = e.hurt(amount, { ...opts, crit, attacker: p });
-    if (dealt <= 0) return;
+    if (dealt <= 0 && !(e.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (opts.omen && e.alive) { e.omenBy = p; e.omenUntil = this.elapsed + BLACKCAT_OMEN.time; }
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
     this.dmgDealt += dealt;
@@ -778,7 +778,7 @@ export class Battle {
     }
     const hitPos = e.pos.clone().setY(1.1 * e.def.scale);
     // 다수 타격 시 데미지 숫자 솎아내기 (성능)
-    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, {
+    if (dealt > 0 && (this.fx.dmgLayer.children.length < 26 || crit)) this.fx.damage(hitPos, dealt, {
       crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!e.isBoss,
       heavy: contactProfile(opts, crit, e.isBoss, true)?.heavy,
     });

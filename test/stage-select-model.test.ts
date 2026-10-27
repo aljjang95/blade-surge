@@ -242,3 +242,33 @@ test('selectionSelector: 관문·던전 단계 버튼을 다시 찾는 선택자
   expect(selectionSelector({ tab: 'dungeon', id: 'x', depth: 'weird' })).toBe('[data-dungeon-id="x"][data-depth="standard"]');
   expect(selectionSelector(null)).toBeNull();
 });
+
+// 리뷰 P2: 선택 화면이 기기 시계가 아니라 규칙 시계(ecoClock)로 7장 잠금을 판정한다.
+import { SEASON_START_MS } from '../src/data/chapter-open.js';
+import { StageSelectUI } from '../src/ui/stage-select.js';
+
+test('7장 개방: 기기 시각이 개방 전이어도 신뢰 시계가 개방 뒤면 선택 모델의 7-1 입장이 열린다', () => {
+  const { eco: realEco, expedition } = fresh(); const eco: any = realEco;
+  eco.s.progress.unlocked = 61;
+  const trusted = SEASON_START_MS + 3600_000, device = SEASON_START_MS - 5 * 24 * 3600_000;
+  eco.trustedClock = () => trusted;
+  const realNow = Date.now; Date.now = () => device;
+  try {
+    // 명시 시각이 없으면(기존 호출) 기기 시계로 판정해 잠긴다 — 호출부가 now 를 넘겨야 한다는 계약.
+    const legacy: any = stageSelectModel(inputs(eco, expedition, { chapter: 7, prefer: { tab: 'campaign', ch: 7, st: 1 } }));
+    expect(selectedEntry(legacy)?.unlocked).not.toBe(true);
+    // 실제 화면 경로: StageSelectUI.readModel 이 ecoClock(eco) 를 모델에 넘긴다.
+    const ui: any = Object.create(StageSelectUI.prototype);
+    Object.assign(ui, { app: { eco, expedition }, memory: { introSeen: true, last: null }, selection: { tab: 'campaign', ch: 7, st: 1 }, viewChapter: 7, prefer: null, dungeonRecommended: null });
+    const model: any = ui.readModel();
+    const entry: any = selectedEntry(model);
+    expect(entry.code).toBe('7-1');
+    expect(entry.unlocked).toBe(true);
+    expect(entryAction(entry).enabled).toBe(true);
+    expect(model.campaign.chapters.find((c: any) => c.id === 7).unlocked).toBe(true);
+    // 신뢰 시계도 개방 전이면 잠긴다.
+    eco.trustedClock = () => SEASON_START_MS - 1000;
+    const closed: any = ui.readModel();
+    expect(selectedEntry(closed)?.unlocked).not.toBe(true);
+  } finally { Date.now = realNow; }
+});
