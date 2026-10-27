@@ -63,3 +63,10 @@ html body #tab-stage .chapter-copy .lore-replay, .lore-replay { width: fit-conte
 .lore-codex-empty { padding: 18px 8px; text-align: center; color: #a49ec0; font-size: 13px; }
 @media (max-height: 420px) { .lore-codex { max-height: 80vh; } .lore-card { padding: 8px 10px; } }
 .journal-toolbar-btns { display: flex; gap: 6px; }
+.boss-intro.has-lore.narrow { gap: 5px; padding-right: 10px; }
+.boss-intro.has-lore.narrow > b { display: none; }
+.boss-intro.has-lore.narrow > i { font-size: 10px; padding: 1px 6px; }
+.boss-intro.has-lore.narrow .boss-intro-lore b { font-size: 11px; }
+.boss-intro .boss-intro-lore .lore-slim { display: none; }
+.boss-intro.has-lore.narrow .boss-intro-lore .lore-wide { display: none; }
+.boss-intro.has-lore.narrow .boss-intro-lore .lore-slim { display: block; }

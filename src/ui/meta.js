@@ -30,7 +30,7 @@ import { LOOKS } from '../game/look.js';
 import { createFunnelLog } from '../game/funnel-events.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
-import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying } from './lore-scene.js';
+import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying, REGION_DUNGEON_ART } from './lore-scene.js';
 import { mountCodex } from './lore-codex.js';
 import { isChapterOpen, ecoClock } from '../data/chapter-open.js';
 import { guideHtml } from './guide.js';
@@ -58,14 +58,6 @@ const funnelFor = (app) => (app?.funnel && typeof app.funnel.track === 'function
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
-const REGION_DUNGEON_ART = {
-  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
-  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
-  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
-  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
-  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
-  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
-};
 const dungeonMapSvg = (stage, { compact = false } = {}) => {
   const dungeon = stage?.dungeon;
   const layout = dungeon?.layout;
