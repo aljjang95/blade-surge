@@ -1838,6 +1838,50 @@
       "license": "owner-generated (Tripo subscription)",
       "shared": true,
       "boss": true
+    },
+    {
+      "id": "tll_ch7_bellringer_club",
+      "kind": "prop",
+      "body": "none",
+      "replaces": null,
+      "file": "/models/library/tll_ch7_bellringer_club.glb",
+      "heightM": 1.543,
+      "triangles": 2107,
+      "bytes": 547200,
+      "sha256": "fd061bf9cde2af4bdd1b14c8d74a97649190544b8494f3f657b9b653cac40fb1",
+      "clips": {},
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "ef98f4ca-9215-4142-b30c-c7cd9b00e6cb",
+        "prompt": "[종지기 리토폴 메시(tll_ch7_bellringer)에서 x 기준으로 분리한 종추 곤봉. prep_humanoid.py, 몸 키 1.8m 좌표 그대로(스케일 1.0)]",
+        "createdAt": "2026-10-27T10:42:01.729Z",
+        "rawSha256": "daaa2ca41e96d8a2c7c5dbf99cab23e5a170d8b0abce26545192530f4c2b1114"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
+    },
+    {
+      "id": "tll_ch7_midboss_flail",
+      "kind": "prop",
+      "body": "none",
+      "replaces": null,
+      "file": "/models/library/tll_ch7_midboss_flail.glb",
+      "heightM": 1.699,
+      "triangles": 2337,
+      "bytes": 533480,
+      "sha256": "37d6601a1c4d12b1b96afd8f3c9a45e7e296d68fc858552b4e587d4768bcb71d",
+      "clips": {},
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "93d87883-c2f8-4213-951d-af76c7144938",
+        "prompt": "[수문 기사 리토폴 메시(tll_ch7_midboss)에서 x 기준으로 분리한 쌍종 사슬 플레일. 몸 키 2.6m prep 좌표 그대로(스케일 1.0)]",
+        "createdAt": "2026-10-27T10:42:03.511Z",
+        "rawSha256": "aece7be9c85788993daa176a95e590dce9de1c31c75b4a82f42eba9a428bca68"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
     }
   ]
 }

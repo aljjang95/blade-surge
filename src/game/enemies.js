@@ -7,6 +7,7 @@ import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
 import { Burrow, BURROW } from './burrow.js';
 import { Bellringer, BELL } from './bellringer.js';
+import { attachMonsterWeapon } from './monster-weapon.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
@@ -95,6 +96,21 @@ export class Enemy extends Actor {
       let body = null;
       this.root.traverse((o) => { if (o.isMesh) { const n = o.geometry?.attributes?.position?.count || 0; if (!body || n > body.n) body = { o, n }; } });
       this.root.traverse((o) => { if (o.isMesh) o.castShadow = body && o === body.o; });
+    }
+    // 분리 무기(종지기 곤봉·수문 기사 쌍종 플레일): 로스터의 weapon 항목을 Tripo 몸(대체 실루엣이 아닌)의 오른손 본에 붙인다.
+    const weaponSpec = this.libraryRoster?.weapon;
+    if (weaponSpec && this.libraryAsset?.id === this.libraryRoster.asset) {
+      const held = attachMonsterWeapon(this.model, weaponSpec, game.app?.models);
+      const weaponTint = def.tint || (def.boss ? '#ffb0b0' : null), tintColor = weaponTint ? new THREE.Color(weaponTint) : null;
+      if (held) held.weapon.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = !!(def.boss || def.elite);
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          // 몸과 같은 라이브러리 색조 보정(Actor 생성자의 lerp 0.32)을 무기 재질에도 적용한다.
+          if (tintColor) m.color?.lerp(tintColor, 0.32);
+          if (m.emissive) this.mats.push(m);
+        }
+      });
     }
     // 눈 발광
     this.model.traverse((o) => { if (o.isMesh && /Eyes/.test(o.name)) { o.material.emissive = new THREE.Color(def.boss ? 0xff2020 : def.elite ? 0xffc040 : 0x40ff80); o.material.emissiveIntensity = 2.5; this.eyeMat = o.material; } });

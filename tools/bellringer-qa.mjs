@@ -36,6 +36,8 @@ const enterStage = async (st = 1) => page.evaluate(async (st) => {
   a.battle?.stop?.();
   const stage = e.nextStage();
   await a.startStage(stage); a.testPause = true;
+  // 동행(해골 술사)이 종지기를 때리면 예고가 경직으로 끊겨 타이밍이 흔들린다(원인 실측: state hurt). 이 QA 는 종지기 행동만 보므로 동행은 내린다.
+  a.companionAgent?.endBattle?.();
   const b = a.battle, p = b.player; p.auto = false;
   for (const en of b.enemies) { en.hp = 0; en.alive = false; en.root.visible = false; }
   p.hp = p.maxHp; p.invuln = 0;
@@ -76,14 +78,20 @@ try {
   check('종지기: 예고(toll) → 고리(recover) → 종료 순서', !!(toll && recover && done) && timeline.indexOf(toll) < timeline.indexOf(recover), timeline);
   check('종지기: 예고 중 제자리·예고 링 표시', !!toll && toll.special === 'bell' && toll.vx === 0 && toll.tele > 0, toll);
   check('종지기: 서 있는 플레이어는 고리 두 겹에 맞는다', !!done && done.hits === 2 && done.hpLost > 0, done);
-  // 고리가 화면에 그려지는 순간을 찍는다.
-  await page.evaluate(async () => {
-    const a = window.app, b = a.battle, p = b.player, en = window.__r; p.hp = p.maxHp; en.bellringer.cd = 0; p.invuln = 0;
-    p.pos.x = en.pos.x + 9;
-    for (let k = 0; k < 400 && !en.bellringer.ringing; k++) a.step(1 / 60, false);
+  // 고리가 화면에 그려지는 순간을 찍는다. 고리 슬롯(rings[0]/[1])은 타종마다 번갈아 쓰이므로 슬롯 번호가 아니라 '이번 타종에서 지금 퍼지는 고리'를 본다.
+  // 대기 조건은 프레임 수 상한이 아니라 단계다: 이전 타종이 끝나길 기다림 → 예고(toll) 시작 → 첫 고리 활성 → 그 뒤 40프레임.
+  const shot = await page.evaluate(() => {
+    const a = window.app, b = a.battle, p = b.player, en = window.__r, r = en.bellringer;
+    p.hp = p.maxHp; p.invuln = 0; en.stun = 0; en.atkCd = 999; p.pos.x = en.pos.x + 9;
+    const until = (cond, cap) => { let k = 0; while (k < cap && !cond()) { a.step(1 / 60, false); k++; } return k; };
+    const settle = until(() => !r.busy, 900);
+    r.cd = 0; en.stun = 0; en.state = 'chase';
+    const toToll = until(() => r.phase === 'toll', 300);
+    const toRing = until(() => r.ringing, 120);
     for (let k = 0; k < 40; k++) a.step(1 / 60, k === 39);
+    const ring = r.rings.find((x) => x.active) || null;
+    return { ringing: r.ringing, r0: ring ? +ring.r.toFixed(2) : 0, meshVisible: !!ring?.mesh?.visible, frames: { settle, toToll, toRing }, interrupted: r.interrupted, diag: { state: en.state, phase: r.phase, cd: +r.cd.toFixed(2), tolls: r.tolls } };
   });
-  const shot = await page.evaluate(() => { const r = window.__r.bellringer; return { ringing: r.ringing, r0: +r.rings[0].r.toFixed(2), meshVisible: !!r.rings[0].mesh?.visible }; });
   check('종지기: 고리 충격파가 그려진다', shot.ringing && shot.meshVisible && shot.r0 > 1.4, shot);
   await page.screenshot({ path: `${OUT}/02-ring-wave.png` });
 
@@ -91,7 +99,7 @@ try {
   const dodged = await page.evaluate(() => {
     const a = window.app, b = a.battle, p = b.player, en = window.__r; p.hp = p.maxHp; const hp0 = p.hp;
     for (let k = 0; k < 600 && en.bellringer.busy; k++) { p.invuln = 1; a.step(1 / 60, false); }
-    en.bellringer.cd = 0; en.stun = 0; p.pos.x = en.pos.x + 7;
+    en.bellringer.cd = 0; en.stun = 0; en.atkCd = 999; en.state = 'chase'; p.pos.x = en.pos.x + 7;
     let saw = false, attempts = 0;
     for (let k = 0; k < 800; k++) { p.invuln = 1; a.step(1 / 60, false); saw ||= en.bellringer.ringing; if (saw && !en.bellringer.busy) break; }
     a.step(1 / 60, true);

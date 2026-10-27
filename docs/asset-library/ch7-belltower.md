@@ -71,11 +71,21 @@
 - 키·경로: `tll_ch7_bellringer`, `tll_ch7_midboss`, `tll_ch7_finalboss` / `asset-library/normalized/<키>.glb` (manifest `file`은 `/models/library/<키>.glb`).
 - `monster-roster` `scale`은 라이브러리 `heightM`에 곱하는 배율이다. 기존 항목의 게임 안 실효 높이는 약 1.0~2.6 m(goblin_brute 1.77, demon_lord 1.66, bone_knight 2.58)다. 제안값(실제 카메라 확인 전 초기값, 적 정의의 `def.scale`이 그 위에 곱해진다):
 
-| 키 | heightM | 권장 scale | 실효 높이 |
-|---|---|---|---|
-| `tll_ch7_bellringer` | 1.8 | 0.95 | 약 1.7 m (일반 몬스터 눈높이) |
-| `tll_ch7_midboss` | 2.6 | 0.9 | 약 2.3 m |
-| `tll_ch7_finalboss` | 4.2 | 0.6 | 약 2.5 m (보스용 `def.scale`을 더 곱해 키울 것) |
+| 키 | heightM | 최종 roster scale | 적 정의 scale | 실효 높이(영웅 1.8m 대비) |
+|---|---|---|---|---|
+| `tll_ch7_bellringer` (Bell_Ringer) | 1.8 | 1.05 | 1.05 | 1.98 m (1.10배) |
+| `tll_ch7_midboss` (Bell_Warden) | 2.6 | 0.53 | 1.95(중간 보스 계급) | 2.69 m (1.5배) |
+| `tll_ch7_finalboss` (Bell_Sovereign) | 4.2 | 0.5 | 2.25(최종 보스 계급) | 4.73 m (2.6배) |
+
+- 2026-10-27 실화면 조정: 중간·최종 보스는 계급 scale(1.95/2.25) 때문에 5.6 m·6.8 m 로 화면 밖까지 커서 roster scale 만 낮췄다. 피격 반경(`0.7 × def.scale`)은 게임 규칙이라 건드리지 않았고 그대로 1.36/1.57 이다(시각 반경보다 넉넉하다).
+- 던전 보스(`bell_gate_warden` 2.25, `bell_tollmaster` 2.2, `bell_nave_guardian` 2.4)도 같은 모델을 쓰므로 같은 비율로 줄어든다.
+- 모델 로드 확인: `node tools/ch7-shots.mjs` 가 7-1·7-5·7-10 에서 `enemy.libraryAsset.id`(대체 실루엣이 아닌 `tll_ch7_*`)와 영웅 대비 높이를 JSON 으로 남기고 844×390·640×360 캡처를 찍는다.
+
+## 분리 무기 (손 소켓)
+
+- 종추 곤봉 `tll_ch7_bellringer_club`(2,107 삼각형)과 쌍종 플레일 `tll_ch7_midboss_flail`(2,337)은 `kind: 'prop'` 으로 수집했다(`BLENDER=/opt/blender/blender node tools/asset-library/ingest.mjs --kind prop --height <무기 길이>`; prep 좌표 그대로라 몸과 같은 배율이다).
+- `monster-roster.js` 의 `weapon: { asset, hand, grip, at, rot }` 항목을 `src/game/monster-weapon.js` 가 읽어 Tripo 몸(대체 실루엣이 아닌 경우만)의 `mixamorig*RightHand` 본 아래 소켓에 얹는다. 손 본의 cm 배율은 소켓 배율로 상쇄한다. `grip` 은 무기 로컬에서 손에 쥘 점, `at`/`rot` 는 손 본 기준 위치(m)·오일러(도)다.
+- 같은 모델을 쓰는 던전 보스 정의도 무기를 든다. 최종 보스(대종)는 무기가 없다.
 
 - 최종 보스는 몸 중심이 공중에 뜬 괴수라 발바닥 접지 정규화 기준이 일반 인간형과 다르다. 그림자·피격 반경은 body 본 기준으로 잡는 편이 맞다.
 - 클립 키 14개: idle, walk, run, attack, attack2, attackHeavy, attackSpin, attackJump, cast, raise, summon, hit, hitHeavy, death.
