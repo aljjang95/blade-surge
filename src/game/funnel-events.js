@@ -16,7 +16,8 @@ const MAX_RAW_CHARS = 128 * 1024;
 
 // 영웅 구매 화면 sku 는 서버 카탈로그(영웅 개별 hero_<id>_v1 + 전원 해금)에서 파생한다.
 const HERO_SKU_IDS = Object.freeze([...HERO_ORDER.map(heroProductId), HERO_ALL_PRODUCT_ID].filter((id) => IAP_PRODUCTS.some((p) => p.id === id)));
-const SKU_IDS = Object.freeze([...SKUS.map((sku) => sku.id), ...HERO_SKU_IDS]);
+// 상점 SKU + 영웅 상품 id + 카탈로그 상품(상점 SKU가 있으면 그 SKU, 없으면 상품 id — 웹 30일 이용권·아바타 풀셋 등).
+const SKU_IDS = Object.freeze([...new Set([...SKUS.map((sku) => sku.id), ...HERO_SKU_IDS, ...IAP_PRODUCTS.map((p) => p.shopSku ?? p.id)])]);
 const TAB_IDS = Object.freeze(SHOP_TABS.map((tab) => tab.id));
 
 const int = (min, max) => (v) => Number.isSafeInteger(v) && v >= min && v <= max;
