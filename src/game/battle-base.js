@@ -23,6 +23,7 @@ import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '..
 import { audio } from '../engine/audio.js';
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
+import { bossAppearVoiceName } from '../engine/boss-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
 import { contactFeedback } from './apex-combat.js';
@@ -377,7 +378,7 @@ export class Battle {
     room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
     room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
-      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(bossAppearVoiceName(this.stage, this.bossKey), { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       audio.bossIntro(this.stage); // 등급별 등장 스팅어 + BGM 덕킹(최종/중간·수문장/그 밖)
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
