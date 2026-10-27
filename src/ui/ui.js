@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { legalLinksHtml } from './legal-links.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { audio } from '../engine/audio.js';
 import { ITEM_BY_ID, RARITY_COLOR } from '../data/items.js';
@@ -7,6 +8,7 @@ import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
+import { bossLoreHtml } from './lore-scene.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { resultStrip } from '../game/torment-ui-model.js';
@@ -343,12 +345,13 @@ export class UI {
   closeModal() { this.endModal(); this.show(this.el.modal, false); audio.play('ui_close', { vol: 0.4 }); }
   /** 현재 모달의 수명이 끝날 때(닫힘 · 다른 모달로 교체) 한 번만 정리한다. */
   endModal() { const done = this._modalOnClose; this._modalOnClose = null; this.el.modalBox.onkeydown = null; try { done?.(); } catch (error) { console.error(error); } }
-  confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold' } = {}) {
-    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p><div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => { this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
+  /** check: 동의 문구를 주면 체크박스(기본 미체크)를 보이고, 체크해야 확인 버튼이 켜진다. */
+  confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold', check = '' } = {}) {
+    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p>${check ? `<label class="pay-consent"><input type="checkbox" id="m-consent"><span>${check}</span></label>` : ''}<div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { const okBtn = b.querySelector('#m-ok'), consent = b.querySelector('#m-consent'); if (consent) { okBtn.disabled = true; consent.onchange = () => { okBtn.disabled = !consent.checked; }; } okBtn.onclick = () => { if (okBtn.disabled) return; this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
   }
   /** No store billing provider is connected. Never resolve a simulated purchase success. */
   paySheet(sku) {
-    this.modal('<div class="pay-sheet"><h2>유료 구매 준비 중</h2><p>현재 버전은 스토어 결제가 연결되지 않아 유료 상품과 프리미엄 패스를 구매할 수 없습니다.</p><p>기본 플레이와 획득한 재화 사용은 계속 이용할 수 있습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="p-cancel">돌아가기</button></div></div>', {
+    this.modal('<div class="pay-sheet"><h2>유료 구매 준비 중</h2><p>현재 버전은 스토어 결제가 연결되지 않아 유료 상품과 프리미엄 패스를 구매할 수 없습니다.</p><p>기본 플레이와 획득한 재화 사용은 계속 이용할 수 있습니다.</p>'+legalLinksHtml(['terms','refund','odds'])+'<div class="modal-btns"><button class="btn btn-gold" id="p-cancel">돌아가기</button></div></div>', {
       onOpen: (box) => { box.querySelector('#p-cancel').onclick = () => this.closeModal(); },
     });
     return Promise.resolve(false);
@@ -526,7 +529,9 @@ export class UI {
     this.el.hud.querySelector('.boss-intro')?.remove();
     const node = document.createElement('div');
     node.className = 'boss-intro'; node.dataset.rank = tag.rank; node.setAttribute('role', 'status');
-    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b><span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`;
+    const loreHtml = bossLoreHtml(stage); // 칭호 · 이름 + 외침(세계관 연출). 없으면 기존 띠 그대로.
+    node.classList.toggle('has-lore', !!loreHtml);
+    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b>${loreHtml || `<span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`}`;
     this.el.hud.append(node);
     setTimeout(() => node.remove(), 3400);
     return true;
