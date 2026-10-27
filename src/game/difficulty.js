@@ -119,5 +119,8 @@ export function applyDifficulty(stage, difficulty) {
   } : stage.rewards;
   // 고통 단계는 에너지 0, 권장 레벨은 영웅 레벨 상한(낮은 장 저레벨 EXP 가중 방지). 서버 정산도 같은 함수를 쓴다.
   const torment = d.tormentTier ? { energy: 0, recommendedLevel: TORMENT.recLevel } : null;
-  return { ...stage, ...torment, difficultyId: d.id, difficultyName: d.name, campaignDifficulty: d, rewards };
+  const out = { ...stage, ...torment, difficultyId: d.id, difficultyName: d.name, campaignDifficulty: d, rewards };
+  // 캠페인 전투 편성(stages.js combatRosterFor)은 열거되지 않아 펼침에서 빠진다. 난이도 적용본에도 그대로 잇는다.
+  if (stage.combatRosterFor) Object.defineProperty(out, 'combatRosterFor', { value: stage.combatRosterFor });
+  return out;
 }

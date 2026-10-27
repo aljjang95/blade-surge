@@ -63,6 +63,11 @@ const DUNGEON_ROSTERS = {
   belfry: { trash: ['skel_shield', 'ghost', 'skel_rogue', 'bell_ringer', 'bone_orc', 'bomb_slime', 'skel_minion', 'blob_green'], ranged: ['ghost_skull', 'skel_priest', 'skel_mage'], elite: ['elite_bone_lord', 'elite_wraith', 'elite_skel_captain'] },
   crackedNave: { trash: ['ghost', 'bone_orc', 'skel_minion', 'skel_rogue', 'bell_ringer', 'skel_shield', 'bomb_slime', 'blob_green'], ranged: ['skel_priest', 'skel_mage', 'ghost_skull'], elite: ['elite_wraith', 'elite_skel_captain', 'elite_bone_lord'] },
 };
+// 던전 배치의 고향 지역(테마). 표에 없는 던전은 지역 기본 편성을 쓴다.
+const DUNGEON_HOME = {
+  procession: 'garden', greenhouse: 'garden', tribunal: 'garden', kiln: 'forge', uprising: 'forge', archive: 'frost', reverseRiver: 'frost',
+  beacon: 'tide', lostShip: 'tide', confluence: 'tide', emptyThrones: 'crown', addresses: 'garden', bellstreet: 'crypt', belfry: 'crypt', crackedNave: 'crypt',
+};
 const DUNGEON_BOSS_BASE = {
   procession: 'glass_hour_sovereign', greenhouse: 'verdigris_sentinel', tribunal: 'sable_mirage_empress', confluence: 'comet_bastion',
   kiln: 'cinder_chain_executor', uprising: 'ash_colossus', archive: 'nightglass_archivist', reverseRiver: 'astral_leviathan',
@@ -82,7 +87,13 @@ export function stageDef(ch, st) {
   const dungeon = dungeonForStage(ch, st);
   const rank = st === STAGES_PER_CHAPTER ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
   const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
-  const R = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme], scene = stageStory(ch, st);
+  // 지역 정체성: 경로가 다른 지역의 던전 배치를 빌려도 몬스터는 그 지역 무리다(2-3 용광로에서 정원 해골이 나오던 문제).
+  // 던전 고유 편성은 그 던전의 고향 지역에서만 쓴다. 다섯 지역을 순례하는 귀환 장(homecoming)은 던전 편성을 그대로 둔다.
+  const home = DUNGEON_HOME[dungeon.id];
+  const R = (DUNGEON_ROSTERS[dungeon.id] && (home === chapter.theme || CHAPTER_FLAGS[chapter.id]?.homecoming) ? DUNGEON_ROSTERS[dungeon.id] : null) || ROSTER[chapter.theme], scene = stageStory(ch, st);
+  // rosterFor()(보상·정산 stageRankValues·원정 waves·확장 던전이 펼쳐 쓰는 명단)는 기존 던전 편성을 그대로 둔다.
+  // 캠페인 전투 방 편성만 열거되지 않는 combatRosterFor()로 지역 무리를 쓴다 — 90일 경제 밴드·원정 지문이 움직이지 않는다.
+  const rewardR = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme];
   // Named story encounters retain their authored identity, portrait and finale rig.
   // Dungeon variants belong to the intervening captains and wardens.
   const storyBoss = rank === 'midboss' || rank === 'finalboss';
@@ -93,8 +104,8 @@ export function stageDef(ch, st) {
   const waves = [];
   for (let w = 0; w < (boss ? 2 : 3); w++) {
     const list = [], n = Math.min(28, 10 + Math.floor(idx * 0.6) + w * 4);
-    for (let i = 0; i < n; i++) { const pool = i % 7 === 6 ? R.ranged : R.trash; list.push(pool[(i + w + st) % pool.length]); }
-    for (let e = 0; e < 1 + Math.floor(w / 1.5) + (idx > 10 ? 1 : 0); e++) list.push(R.elite[(e + st + w) % R.elite.length]);
+    for (let i = 0; i < n; i++) { const pool = i % 7 === 6 ? rewardR.ranged : rewardR.trash; list.push(pool[(i + w + st) % pool.length]); }
+    for (let e = 0; e < 1 + Math.floor(w / 1.5) + (idx > 10 ? 1 : 0); e++) list.push(rewardR.elite[(e + st + w) % rewardR.elite.length]);
     waves.push(list);
   }
   const enemy = ENEMIES[enemyId];
@@ -103,7 +114,7 @@ export function stageDef(ch, st) {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: chapter.homecoming && st === STAGES_PER_CHAPTER,
     boss, finale: chapter.finale && st === STAGES_PER_CHAPTER, waves, scale, energy: 6 + Math.floor(idx / 6),
-    rosterFor: () => R, recPower: Math.floor(2600 * scale),
+    rosterFor: () => rewardR, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
@@ -112,6 +123,7 @@ export function stageDef(ch, st) {
   // 캠페인 표식은 열거되지 않는 속성으로 둔다: 원정·아레나 정의가 stageDef 를 펼쳐(spread) 쓰므로 그쪽 필드·지문이 바뀌지 않고,
   // 원정 전투가 캠페인 보스 표식을 물려받지 않는다. 캠페인 UI 는 stageDef 객체에서 직접 읽는다.
   return Object.defineProperties(stage, {
+    combatRosterFor: { value: () => R },
     recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops },
     midboss: { value: rank === 'midboss' }, regionBoss: { value: rank === 'finalboss' },
     unlocksChapter: { value: st === STAGES_PER_CHAPTER && ch < CHAPTERS.length ? ch + 1 : null },

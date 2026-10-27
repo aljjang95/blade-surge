@@ -160,9 +160,10 @@ export class Pack {
 }
 
 /** 방 명단을 무리로 나눈다. 진입 지점에서 먼 쪽부터, 서로 떨어진 앵커를 고정 격자에서 고른다(난수 없음). */
-export function planRoomPacks(world, room, count, entryX, entryZ) {
+export function planRoomPacks(world, room, count, entryX, entryZ, packCount = 0) {
   if (!room || !(count > 0)) return null;
-  const packs = Math.max(1, Math.min(5, Math.round(count / PACK.formation)));
+  // 분대 편성(squads.js)이 분대 수를 정하면 그 수만큼 앵커를 둔다.
+  const packs = packCount > 0 ? Math.min(5, packCount) : Math.max(1, Math.min(5, Math.round(count / PACK.formation)));
   const mx = Math.max(0, room.w / 2 - 3.2), mz = Math.max(0, room.h / 2 - 3.2), cand = [];
   for (const fx of [-1, -.5, 0, .5, 1]) for (const fz of [-1, -.5, 0, .5, 1]) {
     const x = room.x + fx * mx, z = room.z + fz * mz;
