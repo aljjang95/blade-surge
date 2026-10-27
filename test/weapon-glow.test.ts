@@ -49,7 +49,10 @@ test('광륜: 단계가 있으면 보이는 무기 노드에 한 장 붙고, 단
   syncWeaponHalo(model, weaponGlowTier(10), 0xff5500, ['1H_Axe']);
   const halo = model.userData.weaponHalo as THREE.Sprite;
   expect(halo.parent).toBe(axe);
-  expect(halo.scale.y).toBeGreaterThan(.9);
+  // 칼날 계약: 손잡이(원점) 반대쪽 끝의 칼날 가운데에 칼날 크기로 붙는다(무기 전체 중심·전체 크기가 아님).
+  expect(halo.position.y).toBeGreaterThan(.3);
+  expect(halo.scale.y).toBeLessThan(1);
+  expect(halo.scale.y).toBeGreaterThan(.2);
   // 다시 맞춰도 광륜은 하나다.
   syncWeaponHalo(model, weaponGlowTier(15), 0xff5500, ['1H_Axe']);
   let count = 0; model.traverse((o) => { if (o.name === 'WeaponHalo') count++; });
