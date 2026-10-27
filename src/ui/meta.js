@@ -45,6 +45,7 @@ import { heroCompare } from '../data/hero-traits.js';
 import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { campaignTown } from '../data/campaign-towns.js';
+import { isAccountResetPhrase } from '../game/account-reset.js';
 import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
@@ -840,7 +841,7 @@ export class Meta {
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       ${legalLinksHtml(undefined, 'legal-links setting-legal')}
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
-      <details class="danger-zone"><summary>위험 구역 · 데이터 초기화</summary><div class="danger-body"><p>모든 진행 데이터(영웅·장비·재화·진행도)가 삭제되고 되돌릴 수 없습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 초기화할까요?</b> 이 작업은 되돌릴 수 없습니다.</p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes">네, 모두 삭제합니다</button></div></div></div></details>`, { onOpen: (b) => {
+      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 모든 진행(영웅·장비·재화·진행도·튜토리얼)과 기기 계정이 지워지고 새 계정으로 처음부터 시작합니다. 되돌릴 수 없습니다. 결제·구독 확인 기록은 지우지 않습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 처음부터 시작할까요?</b> 아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
       const pwa = this.app.pwa, pwaState = pwa?.getState();
@@ -879,9 +880,15 @@ export class Meta {
       b.querySelectorAll('[data-q]').forEach((q) => q.onclick = () => { st.quality = q.dataset.q; b.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === q)); this.app.applySettings(); this.eco.save(); });
       // 데이터 초기화는 위험 구역 안으로 옮기고, 확인은 창 안의 단계로 둔다(window.confirm 없음).
       const resetBtn = b.querySelector('#m-reset'), resetConfirm = b.querySelector('#m-reset-confirm');
-      resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; b.querySelector('#m-reset-no').focus({ preventScroll: true }); };
+      const resetInput = b.querySelector('#m-reset-input'), resetYes = b.querySelector('#m-reset-yes');
+      resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; resetInput.value = ''; resetYes.disabled = true; resetInput.focus({ preventScroll: true }); };
+      resetInput.oninput = () => { resetYes.disabled = !isAccountResetPhrase(resetInput.value); };
       b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
-      b.querySelector('#m-reset-yes').onclick = () => { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); };
+      resetYes.onclick = async () => {
+        if (!isAccountResetPhrase(resetInput.value)) return;
+        resetYes.disabled = true;
+        if (await this.app.resetAccount()) location.reload(); else { this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); resetYes.disabled = false; }
+      };
       this.groupSettingsTabs(b);
     } });
   }

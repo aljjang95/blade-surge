@@ -1,4 +1,5 @@
 import './style.css';
+import { resetAccountFromScratch } from './game/account-reset.js';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { FrameGovernor, canRenderFrame } from './engine/frame-governor.js';
@@ -417,6 +418,14 @@ class App {
     void this.billing?.sync(); // 로비 진입: Play에 남은 구매를 서버가 다시 검증
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
+  }
+  /** 계정 초기화(처음부터): 세이브·UI 기록·동행·기기 신원을 지운다. 성공하면 호출부가 새로고침해 첫 실행 셋업으로 간다. */
+  async resetAccount() {
+    if (this.stageStarting || this.mode === 'battle') return false;
+    this.companionAgent?.reset();
+    this.eco.reset();
+    const r = await resetAccountFromScratch();
+    return r.ok;
   }
   resetProgress() {
     if (this.stageStarting) return false;
