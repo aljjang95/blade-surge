@@ -10,15 +10,20 @@
 //  - 우선순위: 새 캠페인 관문/난이도 → 무한의 성 다음 층 → 남은 에너지로 가장 높은 클리어 가능 관문 반복.
 //  - 골드는 강화(enhanceCost·enhanceStones·enhanceChance·하락·파괴)에 쓴다. 강화석 3단계는 실제 등급 규칙.
 //  - 등급(초월)은 economy-estimate 의 무과금 초월일(ECONOMY_PACE)을 하루 분량 비율로 옮긴다(소환·결제는 BM 레인).
+//  - marathon(하루 8시간, docs/SPEC_720H.md 3.4): 위 우선순위 뒤에 고통 단계(에너지 0)를 돈다. 최고 단계 도전(가장 쉬운 지역 최종 보스 X-10)
+//    → 남는 시간 고통 단계 반복(하루 fullRuns 판 뒤 골드·재료 35%, EXP 100%). Lv.80 이후 EXP 는 전설 수련으로, 점수는 전투력 최대 노드부터 배분한다.
+//    '할 일 없음 분'(idleMin)은 아무것도 못 한 시간이다. 장 수는 CHAPTERS.length(+CHAPTER_OPEN 이 있으면 개방 주차)를 읽어 자동 반영한다.
 import { perRun, TOTAL_STAGES } from './economy-estimate.mjs';
 import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/stages.js';
-import { DIFFICULTIES, DIFFICULTY_ORDER } from '../src/game/difficulty.js';
-import { TOWER, POWER_NEED, SEASON } from '../src/data/content-90d.js';
+import { DIFFICULTIES, DIFFICULTY_ORDER, tormentId, tormentTierOf } from '../src/game/difficulty.js';
+import * as StagesData from '../src/data/stages.js';
+import { TOWER, POWER_NEED, SEASON, TORMENT } from '../src/data/content-90d.js';
+import { normalizeLegend, grantLegendExp, allocate as allocateLegendNode, legendStats, LEGEND_NODES, LEGEND } from '../src/game/legend-rank.js';
 import { towerScale, towerFirstClearRewards, towerCap, activeEvents, applyEventRewards, seasonAt } from '../src/game/endgame-core.js';
 import { HEROES, heroStats, levelExp, starShards } from '../src/data/heroes.js';
 import { heroTrainingQuote } from '../src/game/hero-training.js';
 import { ITEMS_OF, itemStats, SLOTS, RARITIES, enhanceCost, enhanceStones, enhanceChance, enhanceDown, destroyChance, enhanceStoneTier, STONE_KEY } from '../src/data/items.js';
-import { lootTable, levelExperienceMultiplier, recommendedLevel } from '../src/data/loot-tables.js';
+import { lootTable, levelExperienceMultiplier, recommendedLevel, difficultyDepth } from '../src/data/loot-tables.js';
 import { ENERGY } from '../src/data/shop.js';
 import { ECONOMY_PACE } from '../src/data/economy-pace.js';
 import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../src/data/journey.js';
@@ -33,6 +38,8 @@ export const PERSONAS = Object.freeze({
   light: { id: 'light', name: '라이트', minutes: 15, sessions: 1, skill: 1.1, enhCap: 15, towerShare: .3, hero: 'knight' },
   mid: { id: 'mid', name: '미드(일반)', minutes: 30, sessions: 2, skill: 1, enhCap: 20, towerShare: .3, hero: 'knight' },
   hardcore: { id: 'hardcore', name: '하드코어', minutes: 100, sessions: 3, skill: 0.88, enhCap: 20, towerShare: .3, hero: 'knight' },
+  // 하루 8시간(120분×4세션). 세션 사이 4시간이라 에너지는 세션마다 80(= 4h/180s)만 찬다. 고통 단계(에너지 0)로 남는 시간을 쓴다.
+  marathon: { id: 'marathon', name: '마라톤(8시간)', minutes: 480, sessions: 4, skill: 0.85, enhCap: 20, towerShare: .3, hero: 'knight', torment: true, energyGapH: 4 },
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
 // 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
@@ -54,11 +61,13 @@ export const towerNeed = (floor) => POWER_NEED.k * Math.pow(towerScale(floor), P
 const runCache = new Map();
 function runValue(idx, diffId) {
   const key = idx + diffId; if (runCache.has(key)) return runCache.get(key);
-  const base = perRun(idx, { fullClear: true }), d = DIFFICULTIES[diffId], dRank = DIFFICULTY_ORDER.indexOf(diffId), ch = base.ch;
-  const stage = stageDef(ch, base.st), out = { idx, ch, st: base.st, energy: base.energy, boss: base.boss, firstGems: base.firstGems,
-    stageGold: Math.floor(base.stageGold * d.rewardMul), fieldGold: base.fieldGold * (1 + dRank * .2), combatExp: base.combatExp,
+  // 고통 단계는 깊이 칸(loot-tables difficultyDepth)으로 드랍 표·필드 골드를 읽고, 에너지 0·권장 레벨 80·처치 EXP ×(1 + expStep×n).
+  const base = perRun(idx, { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
+  const dRank = tier ? difficultyDepth(diffId) : DIFFICULTY_ORDER.indexOf(diffId);
+  const stage = stageDef(ch, base.st), out = { idx, ch, st: base.st, energy: tier ? 0 : base.energy, boss: base.boss, firstGems: base.firstGems,
+    stageGold: Math.floor(base.stageGold * d.rewardMul), fieldGold: base.fieldGold * (1 + dRank * .2), combatExp: base.combatExp * (d.combatExpMul || 1),
     stageExp: Math.floor(stage.rewards.exp * 1.5 * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
-    heroShards: base.heroShards, transcendStones: base.transcendStones, kills: base.kills, recLevel: recommendedLevel(ch, base.st) };
+    heroShards: base.heroShards, transcendStones: base.transcendStones, kills: base.kills, recLevel: tier ? TORMENT.recLevel : recommendedLevel(ch, base.st) };
   for (const rank of ['normal', 'elite', 'boss']) {
     const t = lootTable(ch, rank, diffId), n = base.kills[rank];
     out.stones += n * t.stones * t.stoneChance; out.stones2 += n * t.stones2; out.stones3 += n * t.stones3;
@@ -81,10 +90,12 @@ function pickWeighted(weights, rng) {
 }
 
 // ---------- 한 페르소나 × 한 시드 ----------
-export function simulate(personaId, seed, { days = 90 } = {}) {
-  const P = PERSONAS[personaId], rng = createSeededRng(hashSeed('sim-90d', personaId, seed)), def = HEROES[P.hero];
+export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}) {
+  // tormentAll: 민감도 확인용(--torment-all). 기준선 밴드는 고통 단계를 쓰지 않는 라이트·미드·하드코어로 검사한다.
+  const P = tormentAll ? { ...PERSONAS[personaId], torment: true } : PERSONAS[personaId], rng = createSeededRng(hashSeed('sim-90d', personaId, seed)), def = HEROES[P.hero];
   const st = { level: 1, exp: 0, star: 1, shards: 0, grade: def.rarity, gold: 12000, stones: 12, stones2: 0, stones3: 0, gems: 1500, transcendStones: 0,
-    energy: ENERGY.max, gear: Object.fromEntries(SLOTS.map((s) => [s, null])), storyUnlocked: 1, peak: {}, stars: {}, towerBest: 0, towerWeekCleared: 0, towerChestWeek: -1 };
+    energy: ENERGY.max, gear: Object.fromEntries(SLOTS.map((s) => [s, null])), storyUnlocked: 1, peak: {}, stars: {}, towerBest: 0, towerWeekCleared: 0, towerChestWeek: -1,
+    tormentBest: 0, tormentRunsToday: 0, peakCount: 0 };
   const totals = { goldEarned: 0, goldSpent: 0, trainingGold: 0, enhanceTries: 0, destroyed: 0 };
   const sssrDay = Math.round(ECONOMY_PACE.freeDays.SSSR * Math.pow(30 / P.minutes, .6));
   const daysLog = [], milestones = [];
@@ -122,10 +133,38 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
     const items = SLOTS.map((slot, i) => st.gear[slot] ? { grade: st.gear[slot].r, enh: st.gear[slot].enh, sockets: pool.splice(0, open[i]) } : null).filter(Boolean);
     runes.fx = runeEffects(items); runes.dirty = false; return runes.fx;
   };
-  const basePower = () => heroStats(def, { level: st.level, star: st.star, grade: st.grade }, equipBonus(st.gear));
+  // ---------- 전설 수련: Lv.80 이후 EXP, 점수는 전투력이 가장 오르는 노드부터(상한을 시험하는 보수적 배분) ----------
+  const legend = normalizeLegend(null);
+  let legendFx = legendStats(legend);
+  const legendRefresh = () => { legendFx = legendStats(legend); };
+  const withLegend = (b, fx) => ({ ...b, atkPct: fx.atkPct, hpPct: fx.hpPct, def: b.def + fx.def, crit: b.crit + fx.crit, critDmg: fx.critDmg, ultGain: fx.ultGain });
+  const heroNow = () => ({ level: st.level, star: st.star, grade: st.grade });
+  const basePower = () => heroStats(def, heroNow(), withLegend(equipBonus(st.gear), legendFx));
+  const powerWithout = () => heroStats(def, heroNow(), equipBonus(st.gear)).power;
+  const allocLegend = () => {
+    while (legend.points > 0) {
+      let pick = null, gain = -1; const p0 = basePower().power;
+      for (const node of LEGEND_NODES) {
+        if ((legend.nodes[node.id] || 0) >= LEGEND.maxNodeLevel) continue;
+        legend.nodes[node.id] = (legend.nodes[node.id] || 0) + 1; legendRefresh(); const g = basePower().power - p0;
+        legend.nodes[node.id]--; if (!legend.nodes[node.id]) delete legend.nodes[node.id];
+        if (g > gain) { gain = g; pick = node; }
+      }
+      legendRefresh();
+      if (!pick || !allocateLegendNode(legend, pick.id).ok) break;
+      legendRefresh();
+    }
+  };
   const runePower = () => { const b = basePower(), fx = runeFx(); return Object.keys(fx).length ? applyBuildStats(b, fx).power : b.power; };
-  const power = () => basePower().power; // 진행 판정: 보너스층(숙련·세트·옛 각인·룬)은 뺀다
-  const gainExp = (n) => { st.exp += n; while (st.level < 80 && st.exp >= levelExp(st.level)) { st.exp -= levelExp(st.level); st.level++; } };
+  const power = () => basePower().power; // 진행 판정: 보너스층(숙련·세트·옛 각인·룬)은 뺀다. 전설 수련·고통 단계 몫은 S5 밴드로 가드한다.
+  let legendFiveUnits = 0, dayLegendFive = 0;
+  const gainExp = (n) => {
+    st.exp += n; while (st.level < 80 && st.exp >= levelExp(st.level)) { st.exp -= levelExp(st.level); st.level++; }
+    if (st.level >= 80 && st.exp > 0) { // Lv.80 이후 EXP → 전설 수련(게임: Economy.addHeroExp)
+      const before = legend.rank; grantLegendExp(legend, st.exp); st.exp = 0;
+      if (legend.rank > before) { legendRefresh(); allocLegend(); const units = Math.floor(legend.rank / 5); if (units > legendFiveUnits) { dayLegendFive += units - legendFiveUnits; legendFiveUnits = units; } }
+    }
+  };
   const earn = (k, n) => { if (!n) return; st[k] += n; if (k === 'gold') totals.goldEarned += n; };
   const mark = (day, kind, label) => milestones.push({ day, kind, label });
 
@@ -142,17 +181,19 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
       }
     }
   };
-  const playStage = (idx, diffId, events, day) => {
+  // decay: 고통 단계 하루 풀 보상 판 이후의 골드·재료 몫(EXP 는 100%). 약탈 갈래(전설 수련)는 골드·강화석을 더한다(Economy.completeStage 와 같은 식).
+  const playStage = (idx, diffId, events, day, { decay = 1 } = {}) => {
     const v = runValue(idx, diffId), first = diffId === 'story' && !st.stars[idx];
     const comp = applyEventRewards({ gold: v.stageGold, exp: v.stageExp, stones: v.stones }, events, 'campaign');
-    earn('gold', Math.floor(comp.gold + v.fieldGold)); earn('stones', Math.floor(comp.stones)); earn('stones2', Math.floor(v.stones2)); earn('stones3', Math.floor(v.stones3));
+    const mulG = decay * (1 + legendFx.goldPct), mulS = decay * (1 + legendFx.stonePct);
+    earn('gold', Math.floor((comp.gold + v.fieldGold) * mulG)); earn('stones', Math.floor(comp.stones * mulS)); earn('stones2', Math.floor(v.stones2 * mulS)); earn('stones3', Math.floor(v.stones3 * mulS));
     if (first) earn('gems', v.firstGems);
     gainExp(v.combatExp + Math.floor(comp.exp * levelExperienceMultiplier(st.level, v.recLevel)));
-    st.shards += v.heroShards; st.transcendStones += v.transcendStones;
+    st.shards += v.heroShards * decay; st.transcendStones += v.transcendStones * decay;
     // 처치 수는 기댓값을 반올림해 장비 드랍을 굴린다(보스 1·정예·일반).
     dropGear(v.ch, 'boss', diffId, Math.round(v.kills.boss)); dropGear(v.ch, 'elite', diffId, Math.round(v.kills.elite)); dropGear(v.ch, 'normal', diffId, Math.round(v.kills.normal));
     // 룬 드랍·완료 상자 룬 가루: 게임 정산과 같은 rollRuneDrops(정예·보스 처치 수, 지옥 = 심층 보스 판정).
-    const rr = rollRuneDrops({ elite: Math.round(v.kills.elite), boss: Math.round(v.kills.boss) }, { hell: diffId === 'hell', first }, Math.floor(runeRng() * 4294967296));
+    const rr = rollRuneDrops({ elite: Math.round(v.kills.elite), boss: Math.round(v.kills.boss) }, { hell: diffId === 'hell' || tormentTierOf(diffId) > 0, first }, Math.floor(runeRng() * 4294967296));
     for (const d of rr.drops) { addRune(d.id, d.grade); runes.dropped++; }
     runes.dust += rr.dust; craftRunes(); mergeAll();
     return v;
@@ -185,7 +226,9 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
     const weekIndex = season.absoluteWeek;
     if (weekIndex !== st.towerWeek) { st.towerWeek = weekIndex; st.towerWeekCleared = 0; st.weekly = { hard: 0, tower: 0, boss: 0, upgrades: 0 }; }
     if (day === sssrDay && st.grade !== 'SSSR') { st.grade = 'SSSR'; mark(day, 'grade', '주력 영웅 SSSR(무과금 초월)'); }
-    st.dailyUpgrades = 0; let dayHard = 0, dayTower = 0, dayBoss = 0, newContent = 0, usedMin = 0, starvedMin = 0;
+    st.dailyUpgrades = 0; let dayHard = 0, dayTower = 0, dayBoss = 0, newContent = 0, usedMin = 0, starvedMin = 0, dayTormentRuns = 0, dayTormentNew = 0;
+    st.tormentRunsToday = 0; dayLegendFive = 0;
+    const openIdxCap = chapterOpenIdx(day);
     const goldBefore = totals.goldEarned;
     let towerMin = 0;
     const towerTry = (time, overflow = false) => {
@@ -201,17 +244,18 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
       return true;
     };
     for (let session = 0; session < P.sessions; session++) {
-      st.energy = ENERGY.max; // 세션 사이 회복(밤·낮 간격 ≥ 5시간 = 100 에너지)
+      // 세션 사이 회복(밤·낮 간격 ≥ 5시간 = 100 에너지). 마라톤은 세션 간격(energyGapH)만큼만 찬다.
+      st.energy = P.energyGapH && session > 0 ? Math.min(ENERGY.max, st.energy + Math.floor(P.energyGapH * 3600 / ENERGY.regenSec)) : ENERGY.max;
       let time = P.minutes / P.sessions;
       while (time > 0) {
         const pw = power(), ok = (need) => pw >= need * P.skill;
         let acted = false;
         // 1) 새 캠페인 관문(스토리)
-        if (st.storyUnlocked <= TOTAL_STAGES && time >= MIN_STAGE) {
+        if (st.storyUnlocked <= Math.min(TOTAL_STAGES, openIdxCap) && time >= MIN_STAGE) {
           const idx = st.storyUnlocked, v = runValue(idx, 'story');
           if (ok(stageNeed(idx)) && st.energy >= v.energy) {
             st.energy -= v.energy; time -= MIN_STAGE; playStage(idx, 'story', events, day);
-            st.stars[idx] = pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2; st.peak[idx] = 0; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
+            st.stars[idx] = pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2; st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
             if (v.st === STAGES_PER_CHAPTER) mark(day, 'story', `스토리 ${v.ch}-10`);
             acted = true;
           }
@@ -225,7 +269,7 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
             const v = runValue(next.idx, next.diff);
             if (ok(stageNeed(next.idx, next.diff)) && st.energy >= v.energy) {
               st.energy -= v.energy; time -= MIN_HARD; playStage(next.idx, next.diff, events, day);
-              st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = 3;
+              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = 3;
               dayHard++; newContent++; if (v.boss) dayBoss++;
               if (v.st === STAGES_PER_CHAPTER) mark(day, next.diff, `${DIFFICULTIES[next.diff].name} ${v.ch}-10`);
               acted = true;
@@ -244,12 +288,25 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
             acted = true;
           }
         }
-        if (!acted) { starvedMin += time; break; }
+        // 4) 고통 단계(마라톤): 최고 단계 도전 → 남는 시간 반복. 에너지 0, 하루 fullRuns 판 뒤 골드·재료 감쇠.
+        if (!acted && P.torment && time >= TORMENT.minutesPerRun) {
+          const run = tormentChoice(st, pw, P.skill, st.tormentRunsToday < TORMENT.fullRuns);
+          if (run) {
+            const full = st.tormentRunsToday < TORMENT.fullRuns, id = tormentId(run.tier), v = runValue(run.idx, id);
+            time -= TORMENT.minutesPerRun; st.tormentRunsToday++; dayTormentRuns++; dayHard++;
+            playStage(run.idx, id, events, day, { decay: full ? 1 : TORMENT.decayMul });
+            if (v.boss) dayBoss++;
+            if (run.push && v.st === STAGES_PER_CHAPTER && run.tier > st.tormentBest) { st.tormentBest = run.tier; dayTormentNew++; newContent++; mark(day, 'torment', `고통 T${run.tier}`); }
+            acted = true;
+          }
+        }
+        // 세션 끝의 한 판 미만 자투리는 '할 일 없음'이 아니다(마라톤만 — 다른 페르소나의 기준선은 그대로).
+        if (!acted) { if (!(P.torment && time < TORMENT.minutesPerRun)) starvedMin += time; break; }
         train(); enhanceAll();
       }
       usedMin += P.minutes / P.sessions;
     }
-    usedMin -= starvedMin;
+    usedMin -= starvedMin; newContent += dayLegendFive;
     // 일일·주간 임무: 시뮬레이터가 모형화한 통계(탑·하드·보스·강화)만 센다. 재료 던전·소환 임무는 제외(보수적).
     const daily = { towerFloors: dayTower, hardClears: dayHard, bossAttempts: dayBoss, upgrades: st.dailyUpgrades };
     st.weekly.hard += dayHard; st.weekly.tower += dayTower; st.weekly.boss += dayBoss; st.weekly.upgrades += st.dailyUpgrades;
@@ -266,6 +323,8 @@ export function simulate(personaId, seed, { days = 90 } = {}) {
     daysLog.push({ day, level: st.level, power: power(), story: st.storyUnlocked - 1, hard: hardCounts(st), tower: st.towerBest,
       gold: st.gold, goldEarned: totals.goldEarned - goldBefore, stones: st.stones, stones2: st.stones2, stones3: st.stones3,
       enh: SLOTS.map((s) => st.gear[s] ? `${st.gear[s].r}+${st.gear[s].enh}` : '-').join(' '), newContent, usedMin: Math.round(usedMin), starvedMin: Math.round(starvedMin),
+      torment: st.tormentBest, tormentRuns: dayTormentRuns, tormentNew: dayTormentNew, legendRank: legend.rank, legendPoints: legend.points, legendFive: dayLegendFive,
+      legendPowerPct: +(((basePower().power / powerWithout()) - 1) * 100).toFixed(1),
       events: events.map((e) => e.id), runes: runeCounts(), runeDust: runes.dust, runeDropped: runes.dropped, runeCrafted: runes.crafted,
       runePowerPct: +(((runePower() / basePower().power) - 1) * 100).toFixed(1) });
   }
@@ -306,9 +365,75 @@ function bestFarm(st, pw, skill) {
   return best;
 }
 
+// ---------- 장 개방(지역 레인의 CHAPTER_OPEN) ----------
+// CHAPTER_OPEN 이 없으면 모든 장이 처음부터 열려 있다(현재 6장). 있으면 장 ch 의 값이 숫자일 때 시즌 시작 기준 0부터 센 주차(< 1e6)
+// 또는 개방 시각(ms)으로 읽는다(지역 레인이 모양을 바꾸면 이 함수만 맞춘다).
+const CHAPTER_OPEN = StagesData.CHAPTER_OPEN;
+function chapterOpenIdx(day) {
+  if (!CHAPTER_OPEN) return TOTAL_STAGES;
+  let open = 0;
+  for (let ch = 1; ch <= CHAPTERS.length; ch++) {
+    const v = Array.isArray(CHAPTER_OPEN) ? CHAPTER_OPEN[ch - 1] : CHAPTER_OPEN[ch];
+    const week = typeof v === 'number' ? (v > 1e6 ? Math.floor((v - SEASON.startMs) / (7 * DAY_MS)) : v) : 0;
+    if (day - 1 >= week * 7) open = ch; else break;
+  }
+  return open * STAGES_PER_CHAPTER;
+}
+
+// ---------- 고통 단계 선택 ----------
+const HELL_RANK = DIFFICULTY_ORDER.indexOf('hell');
+const NEED_BASE = [0]; for (let idx = 1; idx <= TOTAL_STAGES; idx++) NEED_BASE.push(POWER_NEED.k * Math.pow(stageDef(Math.ceil(idx / STAGES_PER_CHAPTER), ((idx - 1) % STAGES_PER_CHAPTER) + 1).scale, POWER_NEED.exp));
+const TORMENT_PRESSURE = [0]; for (let t = 1; t <= TORMENT.maxTier; t++) TORMENT_PRESSURE.push(pressure(DIFFICULTIES[tormentId(t)]));
+/** 고통 단계 T1 해금: 한 지역의 10관문을 모두 지옥으로 클리어. */
+function tormentOpen(st) {
+  for (let ch = 1; ch <= CHAPTERS.length; ch++) {
+    let all = true;
+    for (let s = 1; s <= STAGES_PER_CHAPTER; s++) if ((st.peak[(ch - 1) * STAGES_PER_CHAPTER + s] ?? -1) < HELL_RANK) { all = false; break; }
+    if (all) return true;
+  }
+  return false;
+}
+let tormentCache = { key: '', value: null };
+/**
+ * 이번 판의 고통 단계 선택. 1) 다음 단계 도전: 지옥으로 클리어한 가장 쉬운 X-10 에서 best+1 (해금 규칙: 지역 최종 보스 클리어)
+ * 2) 반복: 단계 1..best+1 마다 클리어 가능한 가장 높은 지옥 클리어 관문을 잡아 보상(풀 보상 판이면 골드·재료 100%, 아니면 35%)+EXP 가 가장 큰 쪽.
+ */
+function tormentChoice(st, pw, skill, full) {
+  const key = `${Math.floor(pw / 25)}|${st.tormentBest}|${full}|${st.peakCount}`;
+  if (tormentCache.key === key && tormentCache.owner === st) return tormentCache.value;
+  const choose = () => {
+    if (!tormentOpen(st)) return null;
+    const cleared = []; for (let idx = 1; idx <= TOTAL_STAGES; idx++) if ((st.peak[idx] ?? -1) >= HELL_RANK) cleared.push(idx);
+    const top = Math.min(TORMENT.maxTier, st.tormentBest + 1);
+    if (st.tormentBest < TORMENT.maxTier) {
+      const x10 = cleared.find((i) => i % STAGES_PER_CHAPTER === 0);
+      if (x10 && pw >= NEED_BASE[x10] * TORMENT_PRESSURE[top] * skill) return { idx: x10, tier: top, push: true };
+    }
+    const f = full ? 1 : TORMENT.decayMul;
+    let best = null, bestValue = -1;
+    for (let tier = 1; tier <= top; tier++) {
+      const limit = pw / (skill * TORMENT_PRESSURE[tier]);
+      let lo = 0, hi = cleared.length - 1, at = -1;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; if (NEED_BASE[cleared[mid]] <= limit) { at = mid; lo = mid + 1; } else hi = mid - 1; }
+      if (at < 0) break; // 높은 단계일수록 요구치가 커서 더 낮은 관문도 못 깬다
+      const idx = cleared[at], v = runValue(idx, tormentId(tier));
+      const value = (v.stageGold + v.fieldGold + (v.stones + v.stones2 * 6 + v.stones3 * 30) * 400) * f + v.combatExp + v.stageExp;
+      if (value > bestValue) { bestValue = value; best = { idx, tier, push: false }; }
+    }
+    return best;
+  };
+  const value = choose();
+  tormentCache = { key, value, owner: st };
+  return value;
+}
+
 // ---------- 집계 ----------
 const pct = (values, p) => { const a = values.filter((v) => v !== null && Number.isFinite(v)).sort((x, y) => x - y); if (!a.length) return null; return a[Math.min(a.length - 1, Math.floor(p * (a.length - 1) + .5))]; };
 const firstDay = (run, kind, label) => run.milestones.find((m) => m.kind === kind && m.label === label)?.day ?? null;
+/** 도달하지 못한 시드는 무한대(999)로 센다 — null 을 걸러내는 dist 와 달리 '일부만 일찍 도달'을 p10 에 반영한다. */
+const distInf = (runs, fn) => { const a = runs.map((r) => fn(r) ?? 999).sort((x, y) => x - y); const at = (p) => a[Math.min(a.length - 1, Math.floor(p * (a.length - 1) + .5))]; return { p10: at(.1), p50: at(.5), p90: at(.9) }; };
+/** 마라톤 W2~W13(8일 차부터)에서 하루에 '할 일 없음' 분이 가장 컸던 값. */
+const maxIdleFromW2 = (run) => Math.max(0, ...run.days.filter((d) => d.day >= 8).map((d) => d.starvedMin));
 function longestStall(run) {
   let best = { length: 0, from: 0, to: 0 }, cur = 0;
   for (const d of run.days) { if (d.newContent > 0) cur = 0; else { cur++; if (cur > best.length) best = { length: cur, from: d.day - cur + 1, to: d.day }; } }
@@ -330,17 +455,23 @@ export function summarize(runs, days) {
       tower_50: dist((r) => firstDay(r, 'tower', '무한의 성 50층')),
       tower_100: dist((r) => firstDay(r, 'tower', '무한의 성 100층')),
       sssr: runs[0].sssrDay,
+      torment_1: dist((r) => firstDay(r, 'torment', '고통 T1')),
+      torment_18: distInf(runs, (r) => firstDay(r, 'torment', '고통 T18')),
+      torment_30: distInf(runs, (r) => firstDay(r, 'torment', '고통 T30')),
     },
     checkpoints: Object.fromEntries(checkpoints.map((d) => [`D${d}`, {
       level: dist((r) => at(r, d).level).p50, power: dist((r) => at(r, d).power),
       story: dist((r) => at(r, d).story).p50, adept: dist((r) => at(r, d).hard.adept).p50, nightmare: dist((r) => at(r, d).hard.nightmare).p50,
       hell: dist((r) => at(r, d).hard.hell), tower: dist((r) => at(r, d).tower), gold: dist((r) => at(r, d).gold).p50,
       enh: at(runs[0], d).enh,
+      torment: dist((r) => at(r, d).torment), legendRank: dist((r) => at(r, d).legendRank), legendPowerPct: dist((r) => at(r, d).legendPowerPct),
+      idleMin: dist((r) => at(r, d).starvedMin), level80Day: dist((r) => r.days.find((x) => x.level >= 80)?.day ?? null),
       runeII: dist((r) => at(r, d).runes[1]), runeIII: dist((r) => at(r, d).runes[2]), runePowerPct: dist((r) => at(r, d).runePowerPct),
       runeDust: dist((r) => at(r, d).runeDust).p50, runeDropped: dist((r) => at(r, d).runeDropped).p50, runeCrafted: dist((r) => at(r, d).runeCrafted).p50,
     }])),
     stalls: { longest: dist((r) => longestStall(r).length), example: longestStall(runs[0]) },
     newContentDays: dist((r) => r.days.filter((d) => d.newContent > 0).length),
+    idleMinW2toW13: dist((r) => maxIdleFromW2(r)),
     starvedMinutesPerDay: dist((r) => Math.round(r.days.slice(-30).reduce((a, d) => a + d.starvedMin, 0) / 30)),
     economy: {
       goldEarnedPerDayLastWeek: dist((r) => Math.round(lastWeek(r).reduce((a, d) => a + d.goldEarned, 0) / 7)).p50,
@@ -379,14 +510,27 @@ export function assertBands(report) {
     // 라이트(+15에서 멈추는 신중한 강화)는 골드가 쌓인다. 상한 60일을 넘으면 새 골드 소모처가 필요하다는 신호(CONTENT_90D 5절).
     band('라이트 골드 잔액/일수입 p50(일)', light.economy.goldBalanceDays.p50, 0, 60);
   }
+  // ---- 720시간 기준(docs/SPEC_720H.md 2절 S2·S3·S5) ----
+  const mar = S.marathon;
+  if (mar && days >= 90) {
+    band('S2 마라톤 주요 진행일 p50', mar.newContentDays.p50, 80, 90);
+    band('S2 마라톤 주요 진행 없는 최장 연속 p90(일)', mar.stalls.longest.p90, 0, 3);
+    band('S3 마라톤 W2~W13 \'할 일 없음\' 분(일 최댓값) p90', mar.idleMinW2toW13.p90, 0, 0);
+    band('S5 마라톤 D90 고통 단계 p50', mar.checkpoints.D90.torment.p50, 18, 30);
+    band('S5 마라톤 T30 도달 p10(일, 미도달=999)', mar.milestones.torment_30.p10, 75, 999); // 단계 상한 우회 없음
+    band('S5 마라톤 D90 전설 수련 전투력 +% p50', mar.checkpoints.D90.legendPowerPct.p50, 0, 30);
+    band('S5 마라톤 골드 잔액/일수입 p50(일)', mar.economy.goldBalanceDays.p50, 0, 14);
+  }
+  if (days >= 90) band('S5 미드 D90 전설 수련 전투력 +% p50', mid.checkpoints.D90.legendPowerPct.p50, 0, 15);
   for (const id of Object.keys(PERSONAS)) { const s = S[id]; if (s.milestones.tower_100.p10 !== null && s.milestones.tower_100.p10 < 28) f.push(`${id} 무한의 성 100층 p10=${s.milestones.tower_100.p10}일(28일 미만: 시즌 상한 우회)`); }
   return f;
 }
 
-export function run90d({ days = 90, seeds = 16 } = {}) {
+export function run90d({ days = 90, seeds = 16, tormentAll = false, only = null } = {}) {
   const summary = {}, samples = {};
   for (const id of Object.keys(PERSONAS)) {
-    const runs = Array.from({ length: seeds }, (_, seed) => simulate(id, seed, { days }));
+    if (only && !only.includes(id)) continue;
+    const runs = Array.from({ length: seeds }, (_, seed) => simulate(id, seed, { days, tormentAll }));
     summary[id] = summarize(runs, days);
     samples[id] = runs[0].days.filter((d) => d.day % 7 === 0 || d.day === 1);
   }
@@ -398,13 +542,18 @@ export function run90d({ days = 90, seeds = 16 } = {}) {
 
 if (import.meta.main) {
   const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? Number(a.split('=')[1]) : d; };
-  const report = run90d({ days: arg('days', 90), seeds: arg('seeds', 16) });
+  const tormentAll = process.argv.includes('--torment-all');
+  const report = run90d({ days: arg('days', 90), seeds: arg('seeds', 16), tormentAll });
   if (process.argv.includes('--json')) console.log(JSON.stringify(report, null, 2));
   else {
     for (const [id, s] of Object.entries(report.summary)) {
       console.log(`\n## ${PERSONAS[id].name} (${PERSONAS[id].minutes}분×${PERSONAS[id].sessions}세션, 손기술 ${PERSONAS[id].skill}) · 시드 ${s.seeds}`);
       console.table(Object.fromEntries(Object.entries(s.milestones).filter(([k]) => k !== 'sssr')));
       console.table(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { level: c.level, powerP50: c.power.p50, story: c.story, adept: c.adept, nightmare: c.nightmare, hellP50: c.hell.p50, towerP10: c.tower.p10, towerP50: c.tower.p50, towerP90: c.tower.p90, gold: c.gold, gear: c.enh }])));
+      if (PERSONAS[id].torment || tormentAll) {
+        console.table(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { level: c.level, tormentP50: c.torment.p50, tormentP10: c.torment.p10, tormentP90: c.torment.p90, legendRankP50: c.legendRank.p50, legendPct: c.legendPowerPct.p50, idleMin: c.idleMin.p50, lv80Day: c.level80Day.p50 }])));
+        console.log('고통 단계 도달일:', JSON.stringify({ T1: s.milestones.torment_1, T18: s.milestones.torment_18, T30: s.milestones.torment_30 }), '· 할 일 없음 분(W2~W13 일 최댓값):', JSON.stringify(s.idleMinW2toW13));
+      }
       console.log('SSSR(무과금) 일:', s.milestones.sssr, '· 최장 정체:', JSON.stringify(s.stalls), '· 새 진행일:', JSON.stringify(s.newContentDays), '· 남는 시간(분/일, 마지막 30일):', JSON.stringify(s.starvedMinutesPerDay));
       console.log('경제:', JSON.stringify(s.economy));
       console.log('룬:', JSON.stringify(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { II: c.runeII.p50, III: c.runeIII.p50, powerPct: c.runePowerPct.p50, dust: c.runeDust, dropped: c.runeDropped, crafted: c.runeCrafted }]))));

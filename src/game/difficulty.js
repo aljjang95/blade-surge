@@ -43,10 +43,12 @@ export function tormentTierOf(id) {
   const m = typeof id === 'string' ? TORMENT_ID.exec(id) : null, tier = m ? Number(m[1]) : 0;
   return tier >= 1 && tier <= TORMENT.maxTier ? tier : 0;
 }
-/** 단계 n 의 배율: 적 체력·공격 = 지옥 × step^n, 보상 = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). */
+/** 단계 n 의 적 체력·공격 배율(지옥 대비) M(n) = (1 + n/n0)^power. */
+export const tormentMul = (tier) => Math.pow(1 + tier / TORMENT.curve.n0, TORMENT.curve.power);
+/** 단계 n 의 배율: 적 체력·공격 = 지옥 × M(n), 보상 = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). */
 export function tormentScale(tier) {
-  const n = Number.isSafeInteger(tier) ? Math.max(0, Math.min(TORMENT.maxTier, tier)) : 0;
-  return { tier: n, enemyHp: HELL_DIFFICULTY.enemyHp * Math.pow(TORMENT.hpStep, n), enemyAtk: HELL_DIFFICULTY.enemyAtk * Math.pow(TORMENT.atkStep, n),
+  const n = Number.isSafeInteger(tier) ? Math.max(0, Math.min(TORMENT.maxTier, tier)) : 0, mul = tormentMul(n);
+  return { tier: n, enemyHp: HELL_DIFFICULTY.enemyHp * mul, enemyAtk: HELL_DIFFICULTY.enemyAtk * mul,
     enemyDensity: HELL_DIFFICULTY.enemyDensity, rewardMul: HELL_DIFFICULTY.rewardMul * (1 + TORMENT.rewardStep * n), expMul: HELL_DIFFICULTY.expMul * (1 + TORMENT.expStep * n) };
 }
 /** 저장에서 읽은 고통 단계 상태. 해금 단계 = 최고 클리어 단계 + 1(최대 maxTier), 지옥을 한 지역도 못 끝냈으면 0. */

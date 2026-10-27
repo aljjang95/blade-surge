@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { SEASON, TORMENT, HELL_DIFFICULTY } from '../src/data/content-90d.js';
 import {
-  DIFFICULTIES, DIFFICULTY_ORDER, applyDifficulty, resolveDifficulty, availableDifficulties, availableTorments, tormentId, tormentTierOf, tormentScale, tormentUnlockedTier,
+  DIFFICULTIES, DIFFICULTY_ORDER, applyDifficulty, resolveDifficulty, availableDifficulties, availableTorments, tormentId, tormentTierOf, tormentScale, tormentMul, tormentUnlockedTier,
 } from '../src/game/difficulty.js';
 import { normalizeEndgame, recordTormentRun, tormentStatus, tormentDayId } from '../src/game/endgame-core.js';
 import { Economy } from '../src/game/economy.js';
@@ -32,13 +32,13 @@ test('고통 단계 id 해석: torment-1~50 만 인정하고 나머지는 0', ()
   expect(DIFFICULTY_ORDER).toEqual(['story', 'adept', 'nightmare', 'hell']);
 });
 
-test('배율: 적 체력·공격은 지옥 × step^n, 보상 ×(1+0.08n), EXP ×(1+0.1n), 에너지 0', () => {
+test('배율: 적 체력·공격은 지옥 × (1 + n/n0)^power, 보상 ×(1+0.08n), EXP ×(1+0.1n), 에너지 0', () => {
   const t0 = tormentScale(0);
   expect(t0.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp, 10); expect(t0.rewardMul).toBeCloseTo(HELL_DIFFICULTY.rewardMul, 10);
   for (const n of [1, 7, 30, 50]) {
     const t = tormentScale(n), d = DIFFICULTIES[tormentId(n)] as any;
-    expect(t.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp * Math.pow(TORMENT.hpStep, n), 8);
-    expect(t.enemyAtk).toBeCloseTo(HELL_DIFFICULTY.enemyAtk * Math.pow(TORMENT.atkStep, n), 8);
+    expect(t.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp * Math.pow(1 + n / TORMENT.curve.n0, TORMENT.curve.power), 8);
+    expect(t.enemyAtk).toBeCloseTo(HELL_DIFFICULTY.enemyAtk * tormentMul(n), 8);
     expect(t.rewardMul).toBeCloseTo(HELL_DIFFICULTY.rewardMul * (1 + 0.08 * n), 8);
     expect(t.expMul).toBeCloseTo(HELL_DIFFICULTY.expMul * (1 + 0.1 * n), 8);
     expect(t.enemyDensity).toBe(HELL_DIFFICULTY.enemyDensity);

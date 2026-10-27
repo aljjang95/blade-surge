@@ -81,16 +81,20 @@ export const POWER_NEED = frozen({ k: 2700, exp: 0.6, tower: 1 });
 
 /**
  * 고통 단계(TORMENT, docs/SPEC_720H.md 3.2): 지옥 다음 난이도. 에너지 0, 단계 n(1~maxTier)마다 적이 단단해지고 보상·EXP가 커진다.
- *  - 적 체력·공격 = 지옥 × step^n, 보상(골드·재료) = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). 밀도는 지옥 그대로.
+ *  - 적 체력·공격 = 지옥 × M(n) = (1 + n/n0)^power, 보상(골드·재료) = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). 밀도는 지옥 그대로.
  *  - 하루 첫 fullRuns 판은 보상 100%, 그 뒤 판은 골드·재료가 decayMul(35%)이고 EXP(→전설 수련)는 100%.
  *  - 해금: 아무 지역 지옥 10관문 클리어 → T1, T(n)에서 지역 최종 보스(X-10) 클리어 → T(n+1).
- * 단계 배율(step)은 진행 시뮬레이터(tools/sim-90d.mjs marathon)로 보정한다: 1.17^n 은 요구 전투력이 지옥의 T10 에서 이미 5배를 넘어
+ * 단계 배율·EXP 계수는 진행 시뮬레이터(tools/sim-90d.mjs marathon)로 보정했다: SPEC 초안의 1.17^n 은 요구 전투력이 T10 에서 이미 5배를 넘어
  * 8시간 페르소나도 T10 을 못 넘는다(기준 변경 공개: docs/SPEC_720H.md 7절).
  */
 export const TORMENT = frozen({
   maxTier: 50,
-  hpStep: 1.045, atkStep: 1.045,
-  rewardStep: 0.08, expStep: 0.1,
+  // 적 체력·공격 배율 M(n) = (1 + n/n0)^power. 지수식(step^n)은 단계마다 같은 비율이라 전투력이 정체하는 구간에서 단계가 한꺼번에 막히므로,
+  // 오를수록 단계 사이가 완만해지는 거듭제곱 곡선을 쓴다(진행 시뮬레이터 보정, docs/SPEC_720H.md 7절).
+  curve: frozen({ n0: 14, power: 2 }),
+  // EXP 계수: 처치·완료 EXP 가 지옥 × (1 + expStep×n). SPEC 초안 0.1 로는 8시간 페르소나의 Lv.80 도달이 72일째라 전설 수련(S2·S5)이
+  // 증명되지 않는다 — Lv.80 을 16일째로 당기는 5 로 보정했다(docs/SPEC_720H.md 7절).
+  rewardStep: 0.08, expStep: 5,
   fullRuns: 24,
   decayMul: 0.35,
   minutesPerRun: 4.5,       // 시뮬레이터: 한 판 걸리는 시간(분)

@@ -18,12 +18,12 @@ const MAX_EXP = 1_000_000_000_000;            // 한 번에 받을 수 있는 EX
 const MAX_COUNTER = 1_000_000_000;
 
 export const LEGEND = frozen({
-  baseExp: 400000,              // 0→1 단계 필요 EXP
-  growth: 0.10,                 // 단계마다 필요 EXP 증가율(선형)
+  baseExp: 12000000,              // 0→1 단계 필요 EXP
+  growth: 0.001,                 // 단계마다 필요 EXP 증가율(선형)
   k: 10,                        // 체감 감소 계수: 효과 = eff × L / (L + k)
   maxNodeLevel: 20,
   keystoneEvery: 5,             // 5단계마다 키스톤 하나
-  respecBase: 50000, respecPerPoint: 3000,
+  respecBase: 1000000, respecPerPoint: 50000,
   caps: frozen({ goldPct: 0.30, dropPct: 0.20 }),
 });
 
