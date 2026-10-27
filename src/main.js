@@ -91,6 +91,7 @@ const BOOT_TIPS = [
 ];
 
 import { applyLook, LOOKS } from './game/look.js';
+import { emitWeaponSparks } from './game/weapon-glow.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { startPersonalExpedition } from './ui/blessing-launch.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
@@ -596,6 +597,7 @@ class App {
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
         if (s.look?.aura && !this.reducedMotion.matches) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
+        if (!this.reducedMotion.matches) emitWeaponSparks(this.fx, s.root, s.look, realDt, s.weaponSpark ||= { t: 0 });
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);

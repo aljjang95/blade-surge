@@ -23,14 +23,27 @@ export const WEAPON_ELEMENT = {
 // 신규 무기는 표에 명시한 속성명만 쓴다. 아이템 이름을 속성으로 읽지 않는다.
 for (const item of GEAR_ITEMS) if (item.slot === 'weapon') WEAPON_ELEMENT[item.id] = [item.look.weapon.palette.accent, item.look.weapon.element];
 
+/**
+ * 무기 강화 빛 단계(대표님 2026-10-27: 방어구 외형을 끄고 무기는 보이면서 강화가 오를수록 빛나는 것으로 차별점).
+ * 위에서부터 처음 맞는 단계를 쓴다. emissive=무기 발광 가산, halo=칼날 광륜 불투명도, spark=초당 칼날 불씨 수,
+ * sparkLife=불씨 수명(잔광), trail=휘두름 궤적 너비·수명 배율, color=발밑 고유 오라(null 이면 없음).
+ * +0~5 는 등급 발광만 있고 강화 빛이 없다. 성능 예산은 docs/WEAPON_GLOW.md.
+ */
 export const ENHANCE_LOOK = [
-  { min: 20, name: '신화 오라', color: '#ff8af0' },
-  { min: 15, name: '금빛 오라', color: '#ffd060' },
-  { min: 10, name: '속성 오라', color: null },
-  { min: 5, name: '은은한 광', color: null },
+  { min: 20, id: 'myth', name: '신화 오라', color: '#ff8af0', emissive: .5, halo: .9, haloScale: 1.45, spark: 14, sparkLife: 1.1, trail: 1.3 },
+  { min: 15, id: 'aura', name: '금빛 오라', color: '#ffd060', emissive: .45, halo: .8, haloScale: 1.35, spark: 11, sparkLife: 1, trail: 1.25 },
+  { min: 13, id: 'blaze', name: '강한 발광·잔광', color: null, emissive: .4, halo: .65, haloScale: 1.2, spark: 8, sparkLife: .9, trail: 1.2 },
+  { min: 10, id: 'glow', name: '발광', color: null, emissive: .3, halo: .45, haloScale: 1, spark: 3.5, sparkLife: .5, trail: 1.08 },
+  { min: 6, id: 'soft', name: '은은한 광', color: null, emissive: .15, halo: .25, haloScale: .85, spark: 0, sparkLife: 0, trail: 1 },
 ];
-/** 미리보기에서 고를 수 있는 강화 단계 */
-export const ENHANCE_STEPS = [0, 5, 10, 15, 20];
+const NO_GLOW = Object.freeze({ min: 0, id: 'none', name: '', color: null, emissive: 0, halo: 0, haloScale: 0, spark: 0, sparkLife: 0, trail: 1 });
+/** 강화 수치 → 빛 단계. 강화가 없거나 +5 이하면 'none'. */
+export function weaponGlowTier(enh = 0) {
+  const value = Math.max(0, Math.min(20, Math.floor(Number(enh) || 0)));
+  return ENHANCE_LOOK.find((t) => value >= t.min) || NO_GLOW;
+}
+/** 미리보기에서 고를 수 있는 강화 단계(빛 단계마다 하나) */
+export const ENHANCE_STEPS = [0, 6, 10, 13, 15, 20];
 
 // 블룸 때문에 1.5를 넘으면 무기 형체가 뭉개진다 (look.js 주석 참조)
 export const WEAPON_GLOW = { N: 0, S: 0.45, E: 0.75, U: 0.95, L: 1.15 };
@@ -56,10 +69,11 @@ export function weaponLook(rawHeroId, inst, looks) {
   const form = it.summon ? it.summon.name + ' 소환' : ownMesh ? it.name + ' 전용 모델' : (offhand && forms[offhand]) || forms[nodes[0]] || '기본 무기';
   // 양손 무기는 방패를 내려놓는다 (검성의 양손 대검).
   const twoHanded = nodes.some((n) => /^2H_/.test(n));
-  const tier = ENHANCE_LOOK.find((t) => enh >= t.min) || null;
-  const glow = WEAPON_GLOW[it.rarity] + enh * 0.025;
-  const aura = enh >= 10 ? (tier?.color || color) : null;
-  return { id: it.id, name: it.name, rarity: it.rarity, enh, color, element, nodes, form, twoHanded, glow, tier: tier ? tier.name : '', aura };
+  const tier = weaponGlowTier(enh);
+  const glow = WEAPON_GLOW[it.rarity] + tier.emissive;
+  // 발밑 오라는 +15 고유 오라부터. +10~14 는 칼날 광륜·불씨가 차이를 낸다.
+  const aura = tier.color || null;
+  return { id: it.id, name: it.name, rarity: it.rarity, enh, color, element, nodes, form, twoHanded, glow, tier: tier.name, glowTier: tier, aura };
 }
 
 /** 한 줄 설명. 예: "양손 대검 · 용염 발광 · +15 금빛 오라" */

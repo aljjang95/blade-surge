@@ -1,26 +1,26 @@
 import * as THREE from 'three';
-import { RARITY_INFO, ITEM_BY_ID, SETS } from '../data/items.js';
-import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier, loadBootsModel, createBootsMaterial } from '../engine/assets.js';
+import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
+import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier } from '../engine/assets.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
-import { heroAppearance } from '../data/hero-library.js';
+import { heroBodyAppearance } from '../data/hero-library.js';
 import { kitOf } from '../data/heroes.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
 import { acquireItemGeometry, createItemMaterial, ITEM_WEAPON_FORMS } from '../engine/item-forge.js';
 import { excludeFromBloom } from '../engine/character-bloom.js';
-import { applyGearAccents, removeGearAccents } from './gear-accents.js';
-import { syncHeroBoots, removeHeroBoots } from '../engine/hero-boots.js';
-import { syncHeroGearParts, removeHeroGearParts } from '../engine/hero-gear-parts.js';
+import { removeGearAccents } from './gear-accents.js';
+import { removeHeroBoots } from '../engine/hero-boots.js';
+import { removeHeroGearParts } from '../engine/hero-gear-parts.js';
+import { syncWeaponHalo } from './weapon-glow.js';
 const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
  * 장비 외형 (PRD §4-1) — 무기·방어구 장착이 실제 모델에 반영된다.
  *  · 무기 등급 → 보이는 무기 메시가 바뀐다 (KayKit Adventurers 는 리그마다 무기 메시를 2~4종 품고 있다)
- *  · 방어구 → casual-v2 관절에 착용하는 흉갑·어깨·허리 의상 + 방패/보조 메시
- *  · 등급 → 무기 발광색(N 없음 → L 주황), 강화 +마다 더 밝게. 캐주얼 얼굴·피부 색은 유지
- *  · +10 이상이면 오라(잔불) — 성능 영향 없는 순수 외형
- * 무기는 기존 모델 메시, 의상은 원본 체형에 맞춘 프로젝트 자체 지오메트리다.
+ *  · 방어구·반지·신발 → 몸 외형을 바꾸지 않는다(2026-10-27). 방패/마법서처럼 손에 드는 보조 메시만 등급표를 따른다
+ *  · 몸 외형 → 기본 몸 또는 아바타 풀셋(src/data/avatars.js)
+ *  · 등급 → 무기 발광색(N 없음 → L 주황), 강화 단계(ENHANCE_LOOK)마다 광륜·불씨·잔광·발밑 오라 — 성능 영향 없는 순수 외형
  */
 export const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff', 'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'];
 
@@ -54,7 +54,6 @@ export const LOOKS = {
 };
 // 발광 강도 — 블룸이 걸려 있어 1.5 를 넘으면 무기가 형체 없는 덩어리가 되고, 몸통 0.19 는 통짜로 바랜다 (스크린샷 대조)
 // 무기 발광 표(WEAPON_GLOW)와 무기별 속성색은 data/weapon-looks.js 가 정본이다 (소환 구성품·미리보기 화면과 공유).
-const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
 
 /**
  * @param model  spawnCharacter 가 만든 root (재질은 메시별로 이미 클론돼 있다)
@@ -74,25 +73,14 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   if (model.userData.authoredContract?.role === 'hero') {
     const swapped = hasAvatar
       ? applyLibraryHeroBody(model, avatarAsset, () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); })
-      : applyLibraryHeroTier(model, heroAppearance(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
+      : applyLibraryHeroTier(model, heroBodyAppearance(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
     if (swapped) model.userData.onLibraryBodySwap?.();
   }
-  // 아바타 몸체가 흉갑·어깨·허리 장식을 소유하므로 기존 몸통 장식은 겹치지 않게 끈다.
-  // 무기/방패 노드와 병기고의 반지·장화는 외형 계약상 그대로 유지한다.
-  applyArmorAppearance(model, def, hasAvatar ? null : (a?.slot === 'armor' ? a : null));
-  applyLibraryArmoryAppearance(model, hasAvatar ? { ...equip, armor: null } : equip, def);
-  // 라이브러리 영웅은 방어구·반지·신발을 몸체 표면에 맞춘 등급 표식으로도 보여 준다. 아바타는 몸 전체를 덮어쓰므로 끈다.
-  if (model.userData.authoredContract?.role === 'hero' && !hasAvatar) {
-    const slot = (name) => { const item = equip[name] ? ITEM_BY_ID[equip[name].id] : null; return item?.slot === name ? item : null; };
-    applyGearAccents(model, { armor: slot('armor'), ring: slot('ring'), boots: slot('boots') }, { armor: equip.armor?.enh, ring: equip.ring?.enh, boots: equip.boots?.enh });
-    syncHeroBoots(model, slot('boots'), { load: loadBootsModel, makeMaterial: createBootsMaterial, onChange: () => model.userData.onLibraryBodySwap?.() });
-    // 갑옷 외형 파츠(투구·어깨·건틀릿): 갑옷 등급 → 라이브러리 세트, 세트 테마색 → 틴트. docs/GEAR_VISUAL_PIPELINE.md
-    const armor = slot('armor');
-    syncHeroGearParts(model, armor, {
-      load: loadBootsModel, makeMaterial: createBootsMaterial, themeColor: armor && SETS[armor.set]?.themed ? SETS[armor.set].color : null,
-      hide: opts.hideHelm ? ['helm'] : [], onChange: () => model.userData.onLibraryBodySwap?.(),
-    });
-  } else { removeGearAccents(model); removeHeroBoots(model); removeHeroGearParts(model); }
+  // 방어구·반지·신발은 능력치 장비로만 남고 몸 위에 메시를 입히지 않는다(대표님 2026-10-27: 투구·갑옷 착용이 어색해 디자인을 떨어뜨림).
+  // 외형은 기본 몸 또는 아바타 풀셋이 정하고, 무기만 보이며 강화 단계에 따라 빛난다. 방패·마법서는 손에 드는 것이라 유지한다.
+  applyArmorAppearance(model, def, null);
+  applyLibraryArmoryAppearance(model, { weapon: equip.weapon || null }, def);
+  removeGearAccents(model); removeHeroBoots(model); removeHeroGearParts(model);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {
@@ -110,7 +98,6 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   const wLook = weaponLook(def.id, equip.weapon, LOOKS);
   const wCol = w ? new THREE.Color(wLook?.color || RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
   const wGlow = w ? (wLook ? wLook.glow : WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025) : 0;
-  const aGlow = a ? BODY_GLOW[a.rarity] + Math.min(20, equip.armor.enh || 0) * 0.0015 : 0;
   const sGlow = a ? WEAPON_GLOW[a.rarity] * 0.6 + Math.min(20, equip.armor.enh || 0) * 0.02 : 0;   // 방패·보조
   const wNodes = new Set(L ? L.weaponNodes : []), aNodes = new Set(L ? L.armorNodes : []);
   model.traverse((o) => {
@@ -126,14 +113,16 @@ export function applyLook(model, def, equip = {}, opts = {}) {
       }
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
-      else if (model.userData.tllIdentity === 'casual-v2') base.setScalar(0);
-      else base.copy(aCol || new THREE.Color(0)).multiplyScalar(aGlow);
+      // 몸은 방어구 등급색으로 물들이지 않는다(방어구 외형 없음).
+      else base.setScalar(0);
       material.emissive.copy(base);
     }
   });
-  const enhMax = Math.max(...['weapon', 'armor', 'ring', 'boots'].map((s) => equip[s]?.enh || 0));
-  const auraCol = enhMax >= 20 ? 0xff8af0 : enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
-  return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax, weapon: wLook };
+  // 강화 빛은 무기 강화만 본다(방어구 외형을 껐으므로). +6 광륜, +10 불씨, +13 잔광, +15 발밑 고유 오라.
+  const weaponEnh = Math.max(0, Math.min(20, equip.weapon?.enh || 0));
+  syncWeaponHalo(model, wLook?.glowTier, wCol || def.color, L ? L.weaponNodes : []);
+  const auraCol = wLook?.aura ? new THREE.Color(wLook.aura).getHex() : null;
+  return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax: weaponEnh, weapon: wLook };
 }
 
 // 기존 노드의 변환·이름·애니메이션을 유지한다. 원본 버퍼는 빌린 것이므로 해제하지 않는다.
