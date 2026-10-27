@@ -28,9 +28,11 @@ export function pickAffixes(roomId, stageIdx, st, ordinal = 0, eliteRoom = false
 }
 
 export class EliteAffixes {
-  constructor(enemy, keys) {
-    this.e = enemy; this.keys = keys; this.has = Object.fromEntries(keys.map((k) => [k, true]));
-    this.t = { ward: 3 + (enemy.packId % 3), tether: 5, blink: 4, trail: 0 };
+  /** @param {*} enemy @param {string[]} keys @param {{trash?:boolean}} [opts] trash: 지역 전용 일반 몹이 같은 동작을 더 긴 주기로 쓴다(region-traits.js). */
+  constructor(enemy, keys, { trash = false } = {}) {
+    this.e = enemy; this.keys = keys; this.has = Object.fromEntries(keys.map((k) => [k, true])); this.trash = trash;
+    const seed = Number.isInteger(enemy.packId) ? enemy.packId : 0;
+    this.t = { ward: 3 + (seed % 3), tether: trash ? 4 + (seed % 5) * 1.3 : 5, blink: trash ? 3 + (seed % 4) * 1.5 : 4, trail: 0 };
     this.frenzy = 0; this.wardHp = 0; this.wardOn = 0; this.tetherT = -1; this.blinkT = -1; this.deathT = -1;
     this.blinkTo = new THREE.Vector3();
     this.patches = Array.from({ length: PATCHES }, () => ({ x: 0, z: 0, life: 0 })); this.patchI = 0; this.patchTick = 0;
@@ -95,10 +97,11 @@ export class EliteAffixes {
         }
         return true;
       }
-      if ((this.t.tether -= dt) <= 0 && d > 3.5 && d < 12 && e.state === 'chase') {
-        this.t.tether = 8.5; this.tetherT = 1;
+      if ((this.t.tether -= dt) <= 0 && d > 3.5 && d < 12 && e.state === 'chase' && !(g._tetherBusyT > g.elapsed)) {
+        // 여러 마리가 한꺼번에 끌지 않게 전투 전체에서 한 번에 하나만 사슬을 건다.
+        this.t.tether = this.trash ? 11 : 8.5; this.tetherT = 1; g._tetherBusyT = g.elapsed + 1.6;
         g.fx.slashArc?.(e.pos, Math.atan2(p.pos.x - e.pos.x, p.pos.z - e.pos.z), 0xd0a0ff, { radius: d + .5, arc: 9, height: .1, telegraph: true, life: 1, tilt: 0, thickness: 1 });
-        e.game.ui?.combatCue?.(`정예 · 사슬 구속`, 'red');
+        e.game.ui?.combatCue?.(this.trash ? `${e.def.name} · 촉수 낚아채기` : `정예 · 사슬 구속`, 'red');
         return true;
       }
     }
@@ -114,7 +117,7 @@ export class EliteAffixes {
         return true;
       }
       if ((this.t.blink -= dt) <= 0 && d > 6 && d < 16 && e.state === 'chase') {
-        this.t.blink = 7.5; this.blinkT = .7;
+        this.t.blink = this.trash ? 9 : 7.5; this.blinkT = .7;
         const fx = Math.sin(p.yaw || 0), fz = Math.cos(p.yaw || 0);
         this.blinkTo.set(p.pos.x - fx * 2.5, 0, p.pos.z - fz * 2.5);
         g.fx.ring(this.blinkTo, 0x9a7cff, { r0: 1.6, r1: 2, telegraph: true, life: .7, y: .06, width: 1 });

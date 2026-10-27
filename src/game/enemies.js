@@ -327,6 +327,7 @@ export class Enemy extends Actor {
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     // 정예 접두사 방패막: 막이 켜진 정예 곁의 무리는 피해를 덜 받고, 정예가 받은 피해는 막을 깎는다.
     const leader = this.pack?.leader; if (leader?.affixes?.has.warding) dmg = leader.affixes.wardFilter(this, dmg);
+    if (this.pack?.herald) dmg = this.game.regionTraits?.filter(this, dmg) ?? dmg;
     if (this.burrow) dmg *= this.burrow.damageMul();
     // 종지기: 매단 종이 피해를 먼저 받아 낸다. 종이 깨진 뒤 무방비 동안은 받는 피해가 늘어난다.
     // 종이 전부 흡수하면 반환값(몸 체력 피해)은 0 이지만 타격은 맞은 것이다 — 호출부는 absorbed 로 적중(콤보·궁극 게이지·세트 on-hit·연출)을 처리한다.
@@ -391,6 +392,7 @@ export class Enemy extends Actor {
     // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
     if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(_warnColor.set(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0).multiplyScalar(.55).getHex(), 0.26); }   // .55 배: 몸 전체 발광이 덩어리로 보이지 않게
     this.affixes?.onDeath();
+    this.game.regionTraits?.onDeath(this, flair);
     const leader = this.pack?.leader; if (leader && leader !== this) leader.affixes?.allyDied(this);
     this.game.onEnemyDeath(this);
   }
@@ -626,6 +628,7 @@ export class Enemy extends Actor {
   }
   playerHit(target, damage, options, point = target.pos) {
     if (!target?.hurt || !target.hurt(damage, options)) return false;
+    this.game.regionTraits?.onPlayerHit(this, target);
     const size = Math.min(1.7, Math.max(.65, this.def.scale * (this.libraryAsset?.heightM || 1) * .45));
     const hit = _impactPoint.copy(point).setY(Math.max(.8, this.def.scale * .9));
     const g = this.game;

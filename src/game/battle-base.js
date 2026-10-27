@@ -36,6 +36,8 @@ import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
 import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS } from './squads.js';
 import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
+import { RoomProps, roomPropsAllowed } from './room-props.js';
+import { RegionTraits, regionTheme } from './region-traits.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
@@ -156,6 +158,8 @@ export class Battle {
     if (cueTarget) this.exitCue = new ExitCue(this.scene, sr, cueTarget);
     // 실제 경고·드랍 재질을 출격 준비에 포함해 첫 처치/예고 때의 컴파일을 막는다.
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
+    this.roomProps?.dispose(); this.roomProps = roomPropsAllowed(stage) ? new RoomProps(this) : null;
+    this.regionTraits = regionTheme(stage) ? new RegionTraits(this) : null;
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
@@ -390,6 +394,7 @@ export class Battle {
     room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z, squadCount);
     room.entryX = this.player.pos.x; room.entryZ = this.player.pos.z;
     if (room.squadPlan && !isBoss) this.announceSquad(room);
+    if (!isBoss && room.type !== ROOM_TYPE.TREASURE) this.roomProps?.placeFor(room);
     room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
       audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
@@ -479,7 +484,7 @@ export class Battle {
     }
     // Valve operation becomes available only AFTER all authored reinforcements.
     if (this.routeObjectives?.beforeClear(this, room)) return;
-    room.cleared = true; this.roomsCleared++;
+    room.cleared = true; this.roomsCleared++; this.roomProps?.clearRoom(room);
     this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {
       this.ui.toast(`${room.type === ROOM_TYPE.BOSS ? '보스방' : room.type === ROOM_TYPE.ELITE ? '엘리트 구역' : room.type === ROOM_TYPE.TREASURE ? '보물방' : '구역'} 클리어!`, 'gold');
@@ -563,7 +568,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -574,7 +579,7 @@ export class Battle {
       const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
     }
     if (this._spawningFollower) def = packFollowerDef(def);
-    let pos, pack = null, rushing = false;
+    let pos, pack = null, rushing = false, squadRole = null;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
     else if (near) {
       const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3));
@@ -583,7 +588,7 @@ export class Battle {
     }
     else if (this.world && rm) {
       const squadIdx = rm.squadPlan && rm.packAssigned < rm.packQuota ? rm.squadPlan.squadOf[rm.packAssigned] : undefined;
-      const squadRole = squadIdx !== undefined ? rm.squadPlan.roles[rm.packAssigned] : null;
+      squadRole = squadIdx !== undefined ? rm.squadPlan.roles[rm.packAssigned] : null;
       pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? (squadIdx !== undefined ? rm.packs[squadIdx % rm.packs.length] : this.roomPackFor(rm)) : null;
       if (pack) {
         rm.packAssigned++; packSlot(this.world, pack, _slot);
@@ -622,6 +627,7 @@ export class Battle {
       this.announceAffixes(e);
     }
     e.runtimeSpeciesId = runtimeType;
+    this.regionTraits?.attach(e, squadRole);
     // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
     if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
     this.enemies.push(e);
@@ -767,6 +773,8 @@ export class Battle {
 
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
+    // 영웅의 타격은 지역 환경 장치에도 닿는다(room-props.js).
+    if (src === this.player) this.roomProps?.strike(pos, yaw, range, arcDeg);
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
     const reachPad = opts.basic ? 1.5 : opts.precision ? .35 : 1.5;
     const r2 = (range + reachPad) * (range + reachPad);
@@ -973,6 +981,8 @@ export class Battle {
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);
+    this.roomProps?.update(dt);
+    this.regionTraits?.update(dt);
     this.exitCue?.update(dt, this.player.alive, !!this.app.reducedMotion?.matches);
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;

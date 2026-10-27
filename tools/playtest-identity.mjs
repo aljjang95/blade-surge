@@ -16,7 +16,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const STAGE = arg('stage', '1-1'), [CH, ST] = STAGE.split('-').map(Number);
-const LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
+const SHOT = Number(arg('shot-every', 20)), LEVEL = Number(arg('level', 0)), HERO = arg('hero', ''), MAX_SEC = Number(arg('max-sec', 420));
 const OUT = resolve(PROJ, arg('out', `work/qa/playtest/${STAGE}`)), FRAMES = resolve(OUT, 'frames');
 const PORT = 4300 + Math.floor(Math.random() * 400), VIEWPORT = { width: 844, height: 390 };
 rmSync(FRAMES, { recursive: true, force: true }); mkdirSync(FRAMES, { recursive: true });
@@ -53,7 +53,7 @@ try {
     const key = (code, down) => { if (down === held.has(code)) return; down ? held.add(code) : held.delete(code); window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true })); };
     const tap = (code) => { window.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true })); window.dispatchEvent(new KeyboardEvent('keyup', { code, key: code, bubbles: true })); };
     const types = {}, rooms = {}, hitLog = [];
-    let kills = 0, maxAlive = 0, hits = 0, frames = 0, skillT = 0, dodgeCd = 0, hp0 = p.hp, dmgTaken = 0, deaths = 0;
+    let propHits = 0, kills = 0, maxAlive = 0, hits = 0, frames = 0, skillT = 0, dodgeCd = 0, hp0 = p.hp, dmgTaken = 0, deaths = 0;
     const seen = new WeakSet();
     const origHurt = p.hurt.bind(p);
     p.hurt = (amt, o) => { const before = p.hp; const r = origHurt(amt, o); if (p.hp < before) { hits++; dmgTaken += before - p.hp; } return r; };
@@ -81,7 +81,12 @@ try {
             const threat = near.find((x) => x.telegraph > 0 && x.telegraph < .4 && x.distTo(p) < (x.def.ranged ? 3 : (x.def.range || 2) + 2.5));
             const dx = tgt.pos.x - p.pos.x, dz = tgt.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
             const reach = p.def.ranged ? 7 : 2.2;
-            if (threat && dodgeCd <= 0) {
+            // 사람처럼: 무리가 장치 곁에 모이면 장치를 친다(환경 콤보).
+            const prop = b.roomProps?.list.find((q) => !q.used && Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 8 && near.filter((x) => Math.hypot(x.pos.x - q.x, x.pos.z - q.z) < 5).length >= 3);
+            if (prop && !(threat && dodgeCd <= 0)) {
+              const qx = prop.x - p.pos.x, qz = prop.z - p.pos.z, qd = Math.hypot(qx, qz) || 1;
+              if (qd > 1.6) { wx = qx / qd; wz = qz / qd; } else { attack = true; wx = qx / qd * .3; wz = qz / qd * .3; propHits++; }
+            } else if (threat && dodgeCd <= 0) {
               const ax = p.pos.x - threat.pos.x, az = p.pos.z - threat.pos.z, ad = Math.hypot(ax, az) || 1; wx = ax / ad; wz = az / ad; tap('KeyK'); dodgeCd = 1.1;
             } else if (d > reach) { wx = dx / d; wz = dz / d; }
             else { attack = true; if (p.state !== 'attack') { wx = dx / d * .3; wz = dz / d * .3; } }
@@ -101,7 +106,7 @@ try {
         return { t: +b.elapsed.toFixed(2), alive: b.enemies.filter((x) => x.alive).length, hp: Math.round(p.hp / p.maxHp * 100), kills, done: !!b.bossDefeated || !b.active, dead: !p.alive };
       },
       report() {
-        return { kills, maxAlive, hits, dmgTakenPct: +(dmgTaken / p.maxHp * 100).toFixed(1), deaths, frames, elapsed: +b.elapsed.toFixed(1), bossDefeated: !!b.bossDefeated, types, rooms, hero: p.def.id, level: e.hero().level };
+        const props = (b.roomProps?.list || []).length; return { propHits, propsUsed: b._propsUsed || 0, affixes: b._affixSeen ? [...b._affixSeen] : [], kills, maxAlive, hits, dmgTakenPct: +(dmgTaken / p.maxHp * 100).toFixed(1), deaths, frames, elapsed: +b.elapsed.toFixed(1), bossDefeated: !!b.bossDefeated, types, rooms, hero: p.def.id, level: e.hero().level };
       },
     };
     return window.__pt.stage;
@@ -109,15 +114,15 @@ try {
   console.log('stage', JSON.stringify(entered));
   let f = 0, last;
   while (true) {
-    last = await page.evaluate(() => window.__pt.tick(15, 15));
+    last = await page.evaluate((n) => window.__pt.tick(n, n), SHOT);
     await page.screenshot({ path: `${FRAMES}/${String(f++).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 70 });
-    if (f % 40 === 0) console.log(JSON.stringify(last));
+    if (f % 40 === 0) { console.log(JSON.stringify(last)); writeFileSync(resolve(OUT, 'partial.json'), JSON.stringify(await page.evaluate(() => window.__pt.report()))); }
     if (last.done || last.dead || last.t > MAX_SEC) break;
   }
   report = await page.evaluate(() => window.__pt.report());
   report.stage = entered; report.end = last; report.errors = errors; report.build = build;
   writeFileSync(resolve(OUT, 'report.json'), JSON.stringify(report, null, 1));
-  const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '8', '-i', `${FRAMES}/%05d.jpg`, '-vf', 'scale=844:-2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', resolve(OUT, `play-${STAGE}.mp4`)]);
+  const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(Math.round(60 / SHOT * 2)), '-i', `${FRAMES}/%05d.jpg`, '-vf', 'scale=844:-2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', resolve(OUT, `play-${STAGE}.mp4`)]);
   console.log('video', ff.status === 0 ? resolve(OUT, `play-${STAGE}.mp4`) : 'ffmpeg 실패/없음');
 } finally { await br.close(); srv.kill(); }
 const sum = { kills: report.kills, maxAlive: report.maxAlive, hits: report.hits, dmgTakenPct: report.dmgTakenPct, deaths: report.deaths, elapsed: report.elapsed, cleared: report.bossDefeated, errors: report.errors.length };
