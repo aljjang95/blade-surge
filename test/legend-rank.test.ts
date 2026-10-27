@@ -68,7 +68,7 @@ test('노드는 4갈래 × 6개이고 효과는 체감 감소한다', () => {
   const node = LEGEND_NODES[0];
   const step = (l: number) => nodeValue(node, l) - nodeValue(node, l - 1);
   for (let l = 2; l <= LEGEND.maxNodeLevel; l++) expect(step(l)).toBeLessThan(step(l - 1));
-  expect(nodeValue(node, LEGEND.maxNodeLevel)).toBeCloseTo(node.eff * 20 / (20 + LEGEND.k), 8);
+  expect(nodeValue(node, LEGEND.maxNodeLevel)).toBeCloseTo(node.eff * LEGEND.maxNodeLevel / (LEGEND.maxNodeLevel + LEGEND.k), 8);
   expect(nodeValue(node, LEGEND.maxNodeLevel)).toBeLessThan(node.eff);
 });
 
@@ -83,8 +83,8 @@ test('점수 배분: 점수·상한·노드 이름을 검사하고 실패하면 
   expect(s.points).toBe(points);
   expect(allocate(s, 'blade_edge', 2)).toMatchObject({ ok: true, level: 2, points: points - 2 });
   expect(allocate(s, 'wall_bulk')).toMatchObject({ ok: true, level: 1 });
-  const rich = fresh(); rich.rank = 30; rich.points = 30;
-  expect(allocate(rich, 'blade_edge', 20)).toMatchObject({ ok: true, level: 20 });
+  const rich = fresh(); rich.rank = 60; rich.points = 60;
+  expect(allocate(rich, 'blade_edge', LEGEND.maxNodeLevel)).toMatchObject({ ok: true, level: LEGEND.maxNodeLevel });
   expect(allocate(rich, 'blade_edge')).toMatchObject({ ok: false, error: 'max' });
   const poor = fresh();
   expect(allocate(poor, 'blade_edge')).toMatchObject({ ok: false, error: 'points' });
@@ -100,10 +100,10 @@ test('legendStats: 전투 스탯은 노드 합산, 약탈 골드·드랍은 상�
   expect(st.hpPct).toBeGreaterThan(0); expect(st.def).toBeGreaterThan(0);
   expect(st.flags).toHaveLength(8);
   const capped = fresh(); capped.rank = 100; capped.points = 100;
-  allocate(capped, 'plunder_gold', 20); allocate(capped, 'plunder_drop', 20);
+  allocate(capped, 'plunder_gold', LEGEND.maxNodeLevel); allocate(capped, 'plunder_drop', LEGEND.maxNodeLevel);
   expect(legendStats(capped).goldPct).toBeLessThanOrEqual(LEGEND.caps.goldPct);
   expect(legendStats(capped).dropPct).toBeLessThanOrEqual(LEGEND.caps.dropPct);
-  expect(branchPoints(capped)).toMatchObject({ blade: 0, plunder: 40 });
+  expect(branchPoints(capped)).toMatchObject({ blade: 0, plunder: 2 * LEGEND.maxNodeLevel });
 });
 
 test('재분배는 골드를 내야 하고 부족하면 아무것도 바꾸지 않으며 점수를 모두 돌려준다', () => {
@@ -124,7 +124,7 @@ test('저장 정화: 손상 값·모르는 노드·점수 초과는 안전하게
   expect(normalizeLegend('x')).toEqual(normalizeLegend(null));
   expect(normalizeLegend({ rank: -4, exp: -9, points: 77 })).toMatchObject({ rank: 0, exp: 0, points: 0 });
   expect(normalizeLegend({ rank: 1.5, exp: NaN })).toMatchObject({ rank: 0, exp: 0 });
-  expect(normalizeLegend({ rank: 30, points: 999, nodes: { blade_edge: 3, ghost: 5, wall_bulk: 99, ['__proto__']: 2 } }).nodes).toEqual({ blade_edge: 3, wall_bulk: 20 });
+  expect(normalizeLegend({ rank: 60, points: 999, nodes: { blade_edge: 3, ghost: 5, wall_bulk: 99, ['__proto__']: 2 } }).nodes).toEqual({ blade_edge: 3, wall_bulk: LEGEND.maxNodeLevel });
   // 점수보다 많이 쓴 저장은 노드를 되돌려 준다
   expect(normalizeLegend({ rank: 4, nodes: { blade_edge: 3, wall_bulk: 3 } })).toMatchObject({ rank: 4, points: 4, nodes: {} });
   // 한 단계의 EXP가 필요량 이상이면 필요량 직전으로 맞춘다

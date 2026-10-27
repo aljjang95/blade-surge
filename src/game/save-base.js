@@ -91,7 +91,7 @@ export function normalizeSave(raw, fresh) {
   s.inventory = s.inventory.filter((item) => {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
     seen.add(item.uid); return true;
-  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX) }));
+  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}) }));
   const byUid = new Map(s.inventory.map((item) => [item.uid, item]));
   const equipped = new Set();
   for (const h of Object.values(s.heroes)) for (const slot of SLOTS) {

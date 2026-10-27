@@ -3,6 +3,7 @@ import { EXPEDITION_SETS, EXPEDITION_ITEMS } from './expedition-items.js';
 import { SUMMON_GEAR } from './summon-gear.js';
 import { ARMORY_SETS, ARMORY_ITEMS } from './armory.js';
 import { GEAR_ITEMS, assignGearLooks } from './gear-catalog.js';
+import { TORMENT } from './content-90d.js';
 export const SLOTS = ['weapon', 'armor', 'ring', 'boots'];
 export const SLOT_NAME = { weapon: '무기', armor: '방어구', ring: '반지', boots: '신발' };
 
@@ -185,13 +186,18 @@ export const enhanceUnits = (lv) => { let u = 0; for (let i = 1; i <= Math.min(E
 export const enhanceMult = (lv) => 1 + lv * 0.05;
 export const ENH_TIER = (lv) => lv >= 20 ? 'mythic' : lv >= 15 ? 'legend' : lv >= 10 ? 'epic' : lv >= 5 ? 'rare' : '';
 
+/** 고통 단계 장비 파워 배율. 인스턴스의 tp(드랍된 고통 단계, 0~50)가 없으면 1 — 기존 장비·저장은 그대로다. */
+export const itemTierMul = (tp) => Number.isSafeInteger(tp) && tp > 0 ? 1 + TORMENT.itemPowerStep * Math.min(TORMENT.maxTier, tp) : 1;
+/** 장비 이름 앞에 붙는 고대·태고 접두(고통 단계 장비). 없으면 ''. */
+export const itemTierPrefix = (tp) => (Number.isSafeInteger(tp) ? TORMENT.itemPrefixes.find((p) => tp >= p.from)?.name : '') || '';
+
 export function itemStats(inst) {
   const def = ITEM_BY_ID[inst.id]; const lv = inst.enh || 0;
-  const m = enhanceMult(lv), u = enhanceUnits(lv), sb = SLOT_BASE[def.slot];
+  const m = enhanceMult(lv), u = enhanceUnits(lv), sb = SLOT_BASE[def.slot], t = itemTierMul(inst.tp);
   return {
-    atk: Math.floor((def.atk || 0) * m + (sb.atk || 0) * u * 0.6),
-    hp: Math.floor((def.hp || 0) * m + (sb.hp || 0) * u * 0.6),
-    def: Math.floor((def.def || 0) * m + (sb.def || 0) * u * 0.5),
+    atk: Math.floor(((def.atk || 0) * m + (sb.atk || 0) * u * 0.6) * t),
+    hp: Math.floor(((def.hp || 0) * m + (sb.hp || 0) * u * 0.6) * t),
+    def: Math.floor(((def.def || 0) * m + (sb.def || 0) * u * 0.5) * t),
     crit: def.crit || 0,
   };
 }

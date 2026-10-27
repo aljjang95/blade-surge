@@ -33,15 +33,15 @@ test('고통 단계 id 해석: torment-1~50 만 인정하고 나머지는 0', ()
   expect(DIFFICULTY_ORDER).toEqual(['story', 'adept', 'nightmare', 'hell']);
 });
 
-test('배율: 적 체력·공격은 지옥 × (1 + n/n0)^power, 보상 ×(1+rewardStep·n), EXP ×(1+expStep·n), 에너지 0', () => {
+test('배율: 적 체력·공격은 지옥 × M(n), 보상 ×(1+rewardStep·n), EXP ×(expBase+expStep·n), 에너지 0', () => {
   const t0 = tormentScale(0);
   expect(t0.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp, 10); expect(t0.rewardMul).toBeCloseTo(HELL_DIFFICULTY.rewardMul, 10);
   for (const n of [1, 7, 30, 50]) {
     const t = tormentScale(n), d = DIFFICULTIES[tormentId(n)] as any;
-    expect(t.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp * Math.pow(1 + n / TORMENT.curve.n0, TORMENT.curve.power), 8);
+    expect(t.enemyHp).toBeCloseTo(HELL_DIFFICULTY.enemyHp * (1 + TORMENT.curve.A * (1 - Math.exp(-n / TORMENT.curve.tau)) + TORMENT.curve.B * n), 8);
     expect(t.enemyAtk).toBeCloseTo(HELL_DIFFICULTY.enemyAtk * tormentMul(n), 8);
     expect(t.rewardMul).toBeCloseTo(HELL_DIFFICULTY.rewardMul * (1 + TORMENT.rewardStep * n), 8);
-    expect(t.expMul).toBeCloseTo(HELL_DIFFICULTY.expMul * (1 + TORMENT.expStep * n), 8);
+    expect(t.expMul).toBeCloseTo(HELL_DIFFICULTY.expMul * (TORMENT.expBase + TORMENT.expStep * n), 8);
     expect(t.enemyDensity).toBe(HELL_DIFFICULTY.enemyDensity);
     expect(d).toMatchObject({ enemyHp: t.enemyHp, enemyAtk: t.enemyAtk, rewardMul: t.rewardMul, expMul: t.expMul, tormentTier: n, energy: 0 });
   }
@@ -62,7 +62,7 @@ test('applyDifficulty: 고통 단계 스냅샷은 에너지 0·권장 레벨 80�
   expect(t.rewards.gold).toBe(Math.floor(base.rewards.gold * tormentScale(10).rewardMul));
   expect(t.rewards.exp).toBe(Math.floor(base.rewards.exp * tormentScale(10).expMul));
   expect(t.rewards.exp).toBeGreaterThan(hellStage.rewards.exp * 1.9);
-  expect(t.campaignDifficulty.combatExpMul).toBeCloseTo(1 + TORMENT.expStep * 10, 8);
+  expect(t.campaignDifficulty.combatExpMul).toBeCloseTo(TORMENT.expBase + TORMENT.expStep * 10, 8);
 });
 
 test('해금: 지옥 10관문 클리어 → T1, 최고 클리어 단계 +1, 관문별 지옥 클리어 필요', () => {

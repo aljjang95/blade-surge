@@ -2,7 +2,7 @@
 // 보상 수치는 클라이언트 입력이 아니라 서버 데이터(stageDef·lootTable)와 서버 lootSeed로 계산한다.
 // 클라이언트가 바꿀 수 있는 사실은 처치 수·경과 시간·별 등뿐이며 T1 상한이 막는다.
 import { stageDef, ENEMIES, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
-import { applyDifficulty, resolveDifficulty } from '../game/difficulty.js';
+import { applyDifficulty, resolveDifficulty, tormentTierOf } from '../game/difficulty.js';
 import { lootTable } from '../data/loot-tables.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { monsterXp } from '../game/rpg-core.js';
@@ -140,8 +140,8 @@ export function plausibility(stage, facts, ctx) {
 }
 
 /** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. */
-export function grantLootItem(eco, item) {
-  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0 };
+export function grantLootItem(eco, item, tp = 0) {
+  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}) };
   eco.s.inventory.push(inst);
   return inst;
 }
@@ -189,7 +189,7 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
       ledger.heroShards = half(loot.heroShards); ledger.transcendStones = half(loot.transcendStones);
       for (const [id, n] of Object.entries(loot.materials)) ledger.materials[id] = half(n);
     }
-    const items = loot.items.map((item) => grantLootItem(eco, item));
+    const tormentTp = tormentTierOf(stage.difficultyId), items = loot.items.map((item) => grantLootItem(eco, item, tormentTp));
     const rating = serverRating(stage, facts, heroCombatProfile(eco, heroId)?.maxHp ?? 1);
     const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),

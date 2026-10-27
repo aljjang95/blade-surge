@@ -557,12 +557,13 @@ export class Economy {
   }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = rngOf(this)) {
+  addItem(rarity, slot = null, rng = rngOf(this), tp = 0) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
-    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return inst;
+    // tp: 고통 단계 장비 파워(드랍된 단계). 0 이면 필드를 두지 않아 기존 장비와 같은 모양이다.
+    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0, ...(tp > 0 ? { tp } : {}) }; this.s.inventory.push(inst); return inst;
   }
   equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
   unequip(heroId, slot) { if (this.heroLocked(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
@@ -612,7 +613,11 @@ export class Economy {
     return { ok: true, count: items.length, got };
   }
   /** 필드 드랍 아이템 (즉시 인벤토리) */
-  fieldDrop(rarity) { const it = this.addItem(rarity); this.save(); return it; }
+  fieldDrop(rarity) {
+    // 지금 도는 고통 단계 판의 장비는 그 단계의 파워 배율을 달고 나온다(docs/SPEC_720H.md 7절).
+    const led = this._fieldRewards, tp = led && !led.settled ? tormentTierOf(led.stage?.difficultyId) : 0;
+    const it = this.addItem(rarity, null, rngOf(this), tp); this.save(); return it;
+  }
   /** 전투 수집 장부는 저장하지 않는다. 정산 경로만 영웅·계정에 지급한다. */
   beginFieldRewards(stage, heroId = this.s.selected) {
     if (!stage || stage.party || stage.expedition?.kind === 'arena' || !this.hero(heroId)) return null;
@@ -726,13 +731,13 @@ export class Economy {
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
     const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
-    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this))));
-    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier));
+    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier)); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
     if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));
     const prevLv = this.hero(heroId).level;
-    // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (1 + expStep×n)). EXP 는 판 수 감쇠를 받지 않는다.
+    // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (expBase + expStep×n)). EXP 는 판 수 감쇠를 받지 않는다.
     const combatBase = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
     const combatExp = Math.min(100000000, Math.floor(combatBase * (stage.campaignDifficulty?.combatExpMul || 1)));
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));

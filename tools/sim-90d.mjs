@@ -41,6 +41,8 @@ export const PERSONAS = Object.freeze({
   marathon: { id: 'marathon', name: '마라톤(8시간)', minutes: 480, sessions: 4, skill: 0.85, enhCap: 20, towerShare: .3, hero: 'knight', torment: true, energyGapH: 4 },
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
+const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
+const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
 // 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
 // D8 을 맞췄으므로 룬(옛 각인의 대체)도 같은 보너스층으로 진행 판정에서 뺀다. 대신 룬 전투력 몫(runePowerPct)을 상·하한 밴드로 가드한다.
 // (버린 안 2026-10-24: 룬을 진행 판정에 넣고 배율을 줄임 — 배율 0, 공명만 +4.9%여도 미드 D90 탑 161층·지옥 6-10 66일로 밴드 초과.)
@@ -76,10 +78,10 @@ function runValue(idx, diffId) {
 
 // ---------- 장비 ----------
 const ITEM_OF = Object.fromEntries(RARITIES.map((r) => [r, Object.fromEntries(SLOTS.map((s) => [s, ITEMS_OF(r, s)[0]?.id]))]));
-const slotScore = (it) => { if (!it) return 0; const st = itemStats({ id: ITEM_OF[it.r][it.slot], enh: it.enh }); return st.atk * 6 + st.hp * .5 + st.def * 4 + st.crit * 1000; };
+const slotScore = (it) => { if (!it) return 0; const st = itemStats({ id: ITEM_OF[it.r][it.slot], enh: it.enh, tp: it.tp }); return st.atk * 6 + st.hp * .5 + st.def * 4 + st.crit * 1000; };
 function equipBonus(gear) {
   const b = { atk: 0, hp: 0, def: 0, crit: 0 };
-  for (const slot of SLOTS) { const it = gear[slot]; if (!it) continue; const st = itemStats({ id: ITEM_OF[it.r][slot], enh: it.enh }); for (const k in b) b[k] += st[k]; }
+  for (const slot of SLOTS) { const it = gear[slot]; if (!it) continue; const st = itemStats({ id: ITEM_OF[it.r][slot], enh: it.enh, tp: it.tp }); for (const k in b) b[k] += st[k]; }
   return b;
 }
 function pickWeighted(weights, rng) {
@@ -167,15 +169,21 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
   const earn = (k, n) => { if (!n) return; st[k] += n; if (k === 'gold') totals.goldEarned += n; };
   const mark = (day, kind, label) => milestones.push({ day, kind, label });
 
+  // 마라톤은 새 장비를 +15 기준 잠재력으로 비교한다(강화는 다시 올리면 되므로). 4% 넘게 좋을 때만 바꿔 강화를 날리는 잦은 교체를 막는다.
+  // 다른 페르소나는 기존 규칙(+0 신품 대 현재 강화 수치) 그대로다 — 고통 단계 장비(tp)가 없어 기준선이 달라지지 않는다.
+  const POTENTIAL_ENH = 15, SWAP_MARGIN = 1.04;
+  const better = (cand, old) => P.torment
+    ? slotScore({ ...cand, enh: POTENTIAL_ENH }) > slotScore({ ...(old || cand), enh: POTENTIAL_ENH }) * (old ? SWAP_MARGIN : 0)
+    : slotScore(cand) > slotScore(old);
   const dropGear = (ch, rank, diffId, count) => {
-    const t = lootTable(ch, rank, diffId);
+    const t = lootTable(ch, rank, diffId), tp = tormentTierOf(diffId);
     for (let i = 0; i < count; i++) {
       if (rng() >= t.gearChance) continue;
       for (let k = 0; k < t.gearRolls; k++) {
         const r = pickWeighted(t.gearWeights, rng), slot = SLOTS[Math.floor(rng() * SLOTS.length)];
-        const cand = { r, slot, enh: 0 };
+        const cand = { r, slot, enh: 0, tp };
         const old = st.gear[slot];
-        if (slotScore(cand) > slotScore(old && { ...old, slot })) { st.gear[slot] = { r, enh: 0 }; runes.dirty = true; if (old) { runes.dust += RUNE_SOURCES.dismantleDust[old.r] || 0; } }
+        if (better(cand, old && { ...old, slot })) { st.gear[slot] = tp ? { r, enh: 0, tp } : { r, enh: 0 }; runes.dirty = true; if (old) { runes.dust += RUNE_SOURCES.dismantleDust[old.r] || 0; } }
         else runes.dust += RUNE_SOURCES.dismantleDust[r] || 0; // 쓰지 않는 유니크·레전드리는 분해(룬 가루)
       }
     }
@@ -223,7 +231,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
   for (let day = 1; day <= days; day++) {
     const nowMs = SEASON.startMs + (day - 1) * DAY_MS + 12 * 3600000, season = seasonAt(nowMs), events = activeEvents(nowMs);
     const weekIndex = season.absoluteWeek;
-    if (weekIndex !== st.towerWeek) { st.towerWeek = weekIndex; st.towerWeekCleared = 0; st.weekly = { hard: 0, tower: 0, boss: 0, upgrades: 0 }; }
+    if (weekIndex !== st.towerWeek) { st.towerWeek = weekIndex; st.towerWeekCleared = 0; st.legendDaysCounted = 0; st.weekly = { hard: 0, tower: 0, boss: 0, upgrades: 0 }; }
     if (day === sssrDay && st.grade !== 'SSSR') { st.grade = 'SSSR'; mark(day, 'grade', '주력 영웅 SSSR(무과금 초월)'); }
     st.dailyUpgrades = 0; let dayHard = 0, dayTower = 0, dayBoss = 0, newContent = 0, usedMin = 0, starvedMin = 0, dayTormentRuns = 0, dayTormentNew = 0;
     st.tormentRunsToday = 0; dayLegendFive = 0;
@@ -305,7 +313,9 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
       }
       usedMin += P.minutes / P.sessions;
     }
-    usedMin -= starvedMin; newContent += dayLegendFive;
+    // 전설 수련 5단위 돌파는 '전설만으로 채운 날'을 주 3일까지만 '주요 진행'으로 센다(전설만으로 매일을 채우지 못하게, docs/SPEC_720H.md S2). 다른 주요 진행이 있는 날은 상한을 쓰지 않는다.
+    usedMin -= starvedMin; let legendCounted = 0;
+    if (dayLegendFive > 0 && newContent === 0 && st.legendDaysCounted < LEGEND_COUNTED_DAYS_PER_WEEK) { st.legendDaysCounted++; newContent++; legendCounted = 1; }
     // 일일·주간 임무: 시뮬레이터가 모형화한 통계(탑·하드·보스·강화)만 센다. 재료 던전·소환 임무는 제외(보수적).
     const daily = { towerFloors: dayTower, hardClears: dayHard, bossAttempts: dayBoss, upgrades: st.dailyUpgrades };
     st.weekly.hard += dayHard; st.weekly.tower += dayTower; st.weekly.boss += dayBoss; st.weekly.upgrades += st.dailyUpgrades;
@@ -322,7 +332,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     daysLog.push({ day, level: st.level, power: power(), story: st.storyUnlocked - 1, hard: hardCounts(st), tower: st.towerBest,
       gold: st.gold, goldEarned: totals.goldEarned - goldBefore, stones: st.stones, stones2: st.stones2, stones3: st.stones3,
       enh: SLOTS.map((s) => st.gear[s] ? `${st.gear[s].r}+${st.gear[s].enh}` : '-').join(' '), newContent, usedMin: Math.round(usedMin), starvedMin: Math.round(starvedMin),
-      torment: st.tormentBest, tormentRuns: dayTormentRuns, tormentNew: dayTormentNew, legendRank: legend.rank, legendPoints: legend.points, legendFive: dayLegendFive,
+      legendCounted, torment: st.tormentBest, tormentRuns: dayTormentRuns, tormentNew: dayTormentNew, legendRank: legend.rank, legendPoints: legend.points, legendFive: dayLegendFive,
       legendPowerPct: +(((basePower().power / powerWithout()) - 1) * 100).toFixed(1),
       events: events.map((e) => e.id), runes: runeCounts(), runeDust: runes.dust, runeDropped: runes.dropped, runeCrafted: runes.crafted,
       runePowerPct: +(((runePower() / basePower().power) - 1) * 100).toFixed(1) });
@@ -431,9 +441,9 @@ const firstDay = (run, kind, label) => run.milestones.find((m) => m.kind === kin
 const distInf = (runs, fn) => { const a = runs.map((r) => fn(r) ?? 999).sort((x, y) => x - y); const at = (p) => a[Math.min(a.length - 1, Math.floor(p * (a.length - 1) + .5))]; return { p10: at(.1), p50: at(.5), p90: at(.9) }; };
 /** 마라톤 W2~W13(8일 차부터)에서 하루에 '할 일 없음' 분이 가장 컸던 값. */
 const maxIdleFromW2 = (run) => Math.max(0, ...run.days.filter((d) => d.day >= 8).map((d) => d.starvedMin));
-function longestStall(run) {
+function longestStall(run, exLegend = false) {
   let best = { length: 0, from: 0, to: 0 }, cur = 0;
-  for (const d of run.days) { if (d.newContent > 0) cur = 0; else { cur++; if (cur > best.length) best = { length: cur, from: d.day - cur + 1, to: d.day }; } }
+  for (const d of run.days) { if ((exLegend ? d.newContent - (d.legendCounted || 0) : d.newContent) > 0) cur = 0; else { cur++; if (cur > best.length) best = { length: cur, from: d.day - cur + 1, to: d.day }; } }
   return best;
 }
 export function summarize(runs, days) {
@@ -468,6 +478,8 @@ export function summarize(runs, days) {
     }])),
     stalls: { longest: dist((r) => longestStall(r).length), example: longestStall(runs[0]) },
     newContentDays: dist((r) => r.days.filter((d) => d.newContent > 0).length),
+    newContentDaysExLegend: dist((r) => r.days.filter((d) => d.newContent - d.legendCounted > 0).length),
+    stallsExLegend: dist((r) => longestStall(r, true).length),
     idleMinW2toW13: dist((r) => maxIdleFromW2(r)),
     starvedMinutesPerDay: dist((r) => Math.round(r.days.slice(-30).reduce((a, d) => a + d.starvedMin, 0) / 30)),
     economy: {
@@ -511,10 +523,17 @@ export function assertBands(report) {
   // ---- 720시간 기준(docs/SPEC_720H.md 2절 S2·S3·S5) ----
   const mar = S.marathon;
   if (mar && days >= 90) {
-    band('S2 마라톤 주요 진행일 p50', mar.newContentDays.p50, 80, 90);
+    // S2: 주요 진행 = 새 캠페인/난이도 관문 · 새 고통 단계 · 새 탑 층 · 전설 5단위(전설만으로 채운 날은 주 3일까지만). 하한 80일은 7~12장(S6)이
+    // 들어온 상태의 기준이다. 6장뿐인 지금은 그 지역 콘텐츠가 없어 도달할 수 없어 6장 하한을 따로 둔다(docs/SPEC_720H.md 7절, 장이 12개가 되면 자동으로 80).
+    band(`S2 마라톤 주요 진행일 p50(${CHAPTERS.length}장 하한 ${S2_MAJOR_MIN})`, mar.newContentDays.p50, S2_MAJOR_MIN, 90);
     band('S2 마라톤 주요 진행 없는 최장 연속 p90(일)', mar.stalls.longest.p90, 0, 3);
     band('S3 마라톤 W2~W13 \'할 일 없음\' 분(일 최댓값) p90', mar.idleMinW2toW13.p90, 0, 0);
-    band('S5 마라톤 D90 고통 단계 p50', mar.checkpoints.D90.torment.p50, 18, 30);
+    // S5b(지휘 결정 2026-10-27): 고통 단계가 시간에 따라 계속 오르고, 장비 파워·전설 수련으로 전투력이 D30 이후에도 자란다.
+    band('S5b 마라톤 D30 고통 단계 p50', mar.checkpoints.D30.torment.p50, 8, 14);
+    band('S5b 마라톤 D60 고통 단계 p50', mar.checkpoints.D60.torment.p50, 15, 22);
+    band('S5b 마라톤 D90 고통 단계 p50', mar.checkpoints.D90.torment.p50, 22, 32);
+    band('S5b 마라톤 전투력 D60/D30 p50', +(mar.checkpoints.D60.power.p50 / mar.checkpoints.D30.power.p50).toFixed(3), 1.15, 99);
+    band('S5b 마라톤 전투력 D90/D30 p50', +(mar.checkpoints.D90.power.p50 / mar.checkpoints.D30.power.p50).toFixed(3), 1.35, 99);
     band('S5 마라톤 T30 도달 p10(일, 미도달=999)', mar.milestones.torment_30.p10, 75, 999); // 단계 상한 우회 없음
     band('S5 마라톤 D90 전설 수련 전투력 +% p50', mar.checkpoints.D90.legendPowerPct.p50, 0, 30);
     band('S5 마라톤 골드 잔액/일수입 p50(일)', mar.economy.goldBalanceDays.p50, 0, 14);

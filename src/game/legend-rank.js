@@ -2,7 +2,7 @@
 // 순수 규칙이다: 시계·저장·골드는 호출자(Economy 정산 트랜잭션)가 맡고, 여기서는 상태를 검사·갱신해 결과만 돌려준다.
 //  - 계정 공통 저장 키 `legend: { version, rank, exp, points, nodes }`. 영웅을 바꿔도 유지된다.
 //  - 단계 r → r+1 필요 EXP = baseExp × (1 + r × growth)(선형 증가, 단계 상한 없음).
-//  - 단계마다 점수 1. 점수는 네 갈래 판(칼날·철벽·폭풍·약탈)의 노드(갈래당 6개, 최대 20단계)에 넣는다.
+//  - 단계마다 점수 1. 점수는 네 갈래 판(칼날·철벽·폭풍·약탈)의 노드(갈래당 6개, 최대 50단계)에 넣는다.
 //    노드 효과는 체감 감소 eff × L / (L + k): 장비·강화·룬이 계속 주력이 되도록 한 노드를 몰아 올릴수록 효율이 떨어진다.
 //  - 5단계마다 키스톤 하나가 열린다(칼날→철벽→폭풍→약탈 순서로 갈래마다 5개, 단계 100에서 모두 열림).
 //    키스톤은 전투 동사를 바꾸는 효과 플래그일 뿐 스탯을 늘리지 않는다. 전투/연출은 legendStats().flags 를 읽어 켠다.
@@ -18,10 +18,10 @@ const MAX_EXP = 1_000_000_000_000;            // 한 번에 받을 수 있는 EX
 const MAX_COUNTER = 1_000_000_000;
 
 export const LEGEND = frozen({
-  baseExp: 12000000,              // 0→1 단계 필요 EXP
-  growth: 0.001,                 // 단계마다 필요 EXP 증가율(선형)
-  k: 10,                        // 체감 감소 계수: 효과 = eff × L / (L + k)
-  maxNodeLevel: 20,
+  baseExp: 22000000,              // 0→1 단계 필요 EXP
+  growth: 0.002,                 // 단계마다 필요 EXP 증가율(선형)
+  k: 25,                        // 체감 감소 계수: 효과 = eff × L / (L + k)
+  maxNodeLevel: 50,
   keystoneEvery: 5,             // 5단계마다 키스톤 하나
   respecBase: 1000000, respecPerPoint: 50000,
   caps: frozen({ goldPct: 0.30, dropPct: 0.20 }),
@@ -36,8 +36,8 @@ export const LEGEND_BRANCHES = frozen([
 ]);
 
 /**
- * 노드 24개. stat 은 legendStats() 가 합산하는 키, eff 는 이 노드를 20단계까지 올렸을 때의 극한값이 아니라
- * "L→∞ 극한"이다(20단계 효과 = eff × 20/30 ≈ 67%).
+ * 노드 24개. stat 은 legendStats() 가 합산하는 키, eff 는 이 노드를 최대 단계까지 올렸을 때의 값이 아니라
+ * "L→∞ 극한"이다(50단계 효과 = eff × 50/75 ≈ 67%).
  * 전투에 바로 이어지는 키: atkPct·hpPct·def·crit·critDmg·ultGain(heroEquipBonus 에 합산).
  * 정산에 이어지는 키: goldPct·stonePct·fragmentPct(completeStage). 나머지는 전투·UI 레인이 읽는 값이다.
  */

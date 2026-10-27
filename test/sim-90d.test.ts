@@ -31,7 +31,7 @@ test('marathon 30일: 고통 단계가 열리고 Lv.80 이후 EXP가 전설 수�
   expect(run.days).toHaveLength(30);
   const at = (d: number) => run.days[d - 1];
   expect(at(5).torment).toBe(0);                       // 지옥 한 지역을 끝내기 전에는 고통 단계가 없다
-  expect(at(30).torment).toBeGreaterThanOrEqual(15);
+  expect(at(30).torment).toBeGreaterThanOrEqual(8);
   expect(at(30).level).toBe(80);
   expect(at(30).legendRank).toBeGreaterThan(0);
   expect(at(30).legendPowerPct).toBeGreaterThan(0);
@@ -53,14 +53,20 @@ test('3 페르소나 기준선 + marathon 90일 진행이 DoD 밴드 안에 든�
   // 미드: 스토리 1주 안, 90일에도 지옥·탑에 남은 진행이 있다
   expect(mid.milestones.story_6_10.p50).toBeLessThanOrEqual(10);
   expect(mid.checkpoints.D90.tower.p50).toBeLessThan(210);
-  // 마라톤(S2·S3·S5): 90일 내내 주요 진행, 할 일 없음 0, 전설 수련 몫은 장비·강화가 여전히 주력인 수준
-  expect(marathon.newContentDays.p50).toBeGreaterThanOrEqual(80);
+  // 마라톤(S2·S3·S5·S5b): 90일 내내 주요 진행, 할 일 없음 0, 전투력과 고통 단계가 D30 이후에도 계속 자란다
+  const cp = marathon.checkpoints;
+  expect(marathon.newContentDays.p50).toBeGreaterThanOrEqual(CHAPTERS.length >= 12 ? 80 : 70);
   expect(marathon.stalls.longest.p90).toBeLessThanOrEqual(3);
   expect(marathon.idleMinW2toW13.p90).toBe(0);
-  expect(marathon.checkpoints.D90.torment.p50).toBeGreaterThanOrEqual(18);
-  expect(marathon.checkpoints.D90.torment.p50).toBeLessThanOrEqual(30);
-  expect(marathon.checkpoints.D90.legendPowerPct.p50).toBeLessThanOrEqual(30);
+  expect(cp.D30.torment.p50).toBeGreaterThanOrEqual(8); expect(cp.D30.torment.p50).toBeLessThanOrEqual(14);
+  expect(cp.D60.torment.p50).toBeGreaterThanOrEqual(15); expect(cp.D60.torment.p50).toBeLessThanOrEqual(22);
+  expect(cp.D90.torment.p50).toBeGreaterThanOrEqual(22); expect(cp.D90.torment.p50).toBeLessThanOrEqual(32);
+  expect(cp.D60.power.p50 / cp.D30.power.p50).toBeGreaterThanOrEqual(1.15);
+  expect(cp.D90.power.p50 / cp.D30.power.p50).toBeGreaterThanOrEqual(1.35);
+  expect(cp.D90.legendPowerPct.p50).toBeLessThanOrEqual(30);
   expect(mid.checkpoints.D90.legendPowerPct.p50).toBeLessThanOrEqual(15);
+  // 전설만으로 채운 날은 주 3일까지만 센다 — 전설을 빼도 무진행 연속은 6일 안(나머지는 탑·고통 단계·장비 성장)
+  expect(marathon.stallsExLegend.p90).toBeLessThanOrEqual(7);
 }, 240000);
 
 test('밴드 검사는 마라톤의 정체·고갈을 실제로 잡아낸다(기준을 약하게 두지 않았다는 확인)', () => {
@@ -70,10 +76,14 @@ test('밴드 검사는 마라톤의 정체·고갈을 실제로 잡아낸다(기
   broken.summary.marathon.stalls.longest.p90 = 7;
   broken.summary.marathon.idleMinW2toW13.p90 = 12;
   broken.summary.marathon.checkpoints.D90.torment.p50 = 50;
+  broken.summary.marathon.checkpoints.D30.torment.p50 = 30;
+  broken.summary.marathon.checkpoints.D60.torment.p50 = 5;
+  broken.summary.marathon.checkpoints.D60.power.p50 = broken.summary.marathon.checkpoints.D30.power.p50 * 1.01;
+  broken.summary.marathon.checkpoints.D90.power.p50 = broken.summary.marathon.checkpoints.D30.power.p50 * 1.02;
   broken.summary.marathon.checkpoints.D90.legendPowerPct.p50 = 55;
   broken.summary.marathon.milestones.torment_30.p10 = 40;
   const failures = assertBands(broken);
-  for (const needle of ['S2 마라톤 주요 진행일', 'S2 마라톤 주요 진행 없는 최장', 'S3 마라톤', 'S5 마라톤 D90 고통 단계', 'S5 마라톤 T30', 'S5 마라톤 D90 전설']) {
+  for (const needle of ['S2 마라톤 주요 진행일', 'S2 마라톤 주요 진행 없는 최장', 'S3 마라톤', 'S5b 마라톤 D30 고통 단계', 'S5b 마라톤 D60 고통 단계', 'S5b 마라톤 D90 고통 단계', 'S5b 마라톤 전투력 D60/D30', 'S5b 마라톤 전투력 D90/D30', 'S5 마라톤 T30', 'S5 마라톤 D90 전설']) {
     expect(failures.some((f: string) => f.includes(needle))).toBe(true);
   }
   broken.summary.mid.checkpoints.D90.legendPowerPct.p50 = 40;

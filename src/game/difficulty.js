@@ -44,13 +44,15 @@ export function tormentTierOf(id) {
   const m = typeof id === 'string' ? TORMENT_ID.exec(id) : null, tier = m ? Number(m[1]) : 0;
   return tier >= 1 && tier <= TORMENT.maxTier ? tier : 0;
 }
-/** 단계 n 의 적 체력·공격 배율(지옥 대비) M(n) = (1 + n/n0)^power. */
-export const tormentMul = (tier) => Math.pow(1 + tier / TORMENT.curve.n0, TORMENT.curve.power);
-/** 단계 n 의 배율: 적 체력·공격 = 지옥 × M(n), 보상 = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). */
+/** 단계 n 의 적 체력·공격 배율(지옥 대비) M(n) = 1 + A·(1 − e^(−n/τ)) + B·n. */
+export const tormentMul = (tier) => 1 + TORMENT.curve.A * (1 - Math.exp(-tier / TORMENT.curve.tau)) + TORMENT.curve.B * tier;
+/** 단계 n 의 EXP 배율(지옥 대비, 처치·완료 공통) = expBase + expStep×n. */
+export const tormentExpMul = (tier) => TORMENT.expBase + TORMENT.expStep * tier;
+/** 단계 n 의 배율: 적 체력·공격 = 지옥 × M(n), 보상 = 지옥 × (1 + rewardStep×n), EXP = 지옥 × tormentExpMul(n). */
 export function tormentScale(tier) {
   const n = Number.isSafeInteger(tier) ? Math.max(0, Math.min(TORMENT.maxTier, tier)) : 0, mul = tormentMul(n);
   return { tier: n, enemyHp: HELL_DIFFICULTY.enemyHp * mul, enemyAtk: HELL_DIFFICULTY.enemyAtk * mul,
-    enemyDensity: HELL_DIFFICULTY.enemyDensity, rewardMul: HELL_DIFFICULTY.rewardMul * (1 + TORMENT.rewardStep * n), expMul: HELL_DIFFICULTY.expMul * (1 + TORMENT.expStep * n) };
+    enemyDensity: HELL_DIFFICULTY.enemyDensity, rewardMul: HELL_DIFFICULTY.rewardMul * (1 + TORMENT.rewardStep * n), expMul: HELL_DIFFICULTY.expMul * tormentExpMul(n) };
 }
 /** 저장에서 읽은 고통 단계 상태. 해금 단계 = 최고 클리어 단계 + 1(최대 maxTier), 지옥을 한 지역도 못 끝냈으면 0. */
 export function tormentUnlockedTier(save) {
@@ -71,7 +73,7 @@ for (let tier = 1; tier <= TORMENT.maxTier; tier++) {
   DIFFICULTIES[tormentId(tier)] = {
     id: tormentId(tier), name: `고통 ${tier}단계`, short: `T${tier}`, tone: 'blood', tormentTier: tier, energy: 0,
     description: '에너지 없이 끝없이 도는 지옥 위의 난이도. 하루 첫 판 이후는 골드·재료가 줄고 경험치는 그대로',
-    ...tormentScale(tier), combatExpMul: 1 + TORMENT.expStep * tier,
+    ...tormentScale(tier), combatExpMul: tormentExpMul(tier),
     unlock: (save, key) => tier <= tormentUnlockedTier(save) && stageClearedAtHell(save, key),
   };
 }
