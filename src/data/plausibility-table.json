@@ -1,5 +1,5 @@
 {
-  "version": "p1-calibrated-20261022",
+  "version": "p1-calibrated-20261027",
   "note": "MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다.",
   "dpsPerAtk": 40,
   "damageSlack": 0.2,
@@ -12,7 +12,7 @@
       "elite": 34,
       "boss": 3
     },
-    "summonedKills": 120,
+    "summonedKills": 487,
     "maxRooms": 17
   },
   "stages": {
@@ -195,6 +195,106 @@
       },
       "summonedKills": 55,
       "maxRooms": 15
+    },
+    "7-1:story": {
+      "minClearMs": 247138,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 43,
+      "maxRooms": 14
+    },
+    "7-2:story": {
+      "minClearMs": 260199,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 55,
+      "maxRooms": 14
+    },
+    "7-3:story": {
+      "minClearMs": 319614,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 417,
+      "maxRooms": 14
+    },
+    "7-4:story": {
+      "minClearMs": 264756,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 40,
+      "maxRooms": 14
+    },
+    "7-5:story": {
+      "minClearMs": 320618,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 40,
+      "maxRooms": 14
+    },
+    "7-6:story": {
+      "minClearMs": 273078,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 46,
+      "maxRooms": 14
+    },
+    "7-7:story": {
+      "minClearMs": 290882,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 55,
+      "maxRooms": 14
+    },
+    "7-8:story": {
+      "minClearMs": 263455,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 49,
+      "maxRooms": 14
+    },
+    "7-9:story": {
+      "minClearMs": 342631,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 487,
+      "maxRooms": 14
+    },
+    "7-10:story": {
+      "minClearMs": 384826,
+      "kills": {
+        "normal": 333,
+        "elite": 28,
+        "boss": 2
+      },
+      "summonedKills": 69,
+      "maxRooms": 14
     }
   }
 }

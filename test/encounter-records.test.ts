@@ -89,7 +89,7 @@ test('ordinary expedition, daily rift and AI duel display their actual modes', (
 });
 
 test('invalid location payloads are dropped without destroying valid legacy statistics', () => {
-  const bad = [[], { kind: 'campaign', floor: 61 }, { kind: 'campaign', floor: 1.5 }, { kind: 'dungeon', id: '__proto__', depth: 'deep' },
+  const bad = [[], { kind: 'campaign', floor: 71 }, { kind: 'campaign', floor: 1.5 }, { kind: 'dungeon', id: '__proto__', depth: 'deep' },
     { kind: 'dungeon', id: 'glass_garden', depth: 'impossible' }, { kind: 'arena', id: 'missing' },
     { kind: 'dungeon', id: 'glass_garden', depth: 'deep', riftId: 'siege' }, { kind: 'dungeon', id: 'glass_garden', depth: 'standard', riftId: 'missing' }];
   for (const value of bad) {

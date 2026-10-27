@@ -29,13 +29,13 @@ for(const chapter of CHAPTERS) for(let st=1;st<=10;st++) {
     }
   });
 }
-test('twelve routes have distinct graphs and reuse six supported story landmarks', () => {
+test('fifteen routes have distinct graphs and use seven supported story landmarks (belltower added for chapter 7)', () => {
   const maps=Object.values(STORY_DUNGEONS);
-  expect(maps).toHaveLength(12);
-  expect(new Set(maps.map(m=>JSON.stringify([m.layout.cells,m.layout.edges]))).size).toBe(12);
-  expect(new Set(maps.map(m=>m.landmark)).size).toBe(6);
+  expect(maps).toHaveLength(15);
+  expect(new Set(maps.map(m=>JSON.stringify([m.layout.cells,m.layout.edges]))).size).toBe(15);
+  expect(new Set(maps.map(m=>m.landmark)).size).toBe(7);
   const used=new Set(CHAPTERS.flatMap(c=>Array.from({length:10},(_,i)=>stageDef(c.id,i+1).dungeon.id)));
-  expect(used.size).toBe(12);
+  expect(used.size).toBe(15);
   for(const map of maps) {
     const f=new Floor(51,'garden',undefined,map.layout as any), g=buildRegionArchitecture(f,'garden');
     expect(g.userData.landmarks.every((l:any)=>l.kind===map.landmark)).toBe(true);
@@ -83,7 +83,7 @@ test('six added graphs differ topologically from each other and the original rou
     }).sort());
   };
   const maps=Object.values(STORY_DUNGEONS);
-  expect(new Set(maps.map(fingerprint)).size).toBe(12);
+  expect(new Set(maps.map(fingerprint)).size).toBe(15);
   for(const m of maps.slice(6)){
     expect(m.layout.cells.length).toBeGreaterThanOrEqual(10);expect(m.layout.cells.length).toBeLessThanOrEqual(14);
     expect(m.layout.width).toBe(8);

@@ -26,6 +26,7 @@ import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
 import { HEROES, kitOf } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
+import { chapterOpenLabel, ecoClock, isChapterOpen } from './data/chapter-open.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 import { runStarterSelect } from './ui/starter-select.js';
@@ -432,6 +433,8 @@ class App {
       stage = tower;
     } else {
       if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
+      // 시간 개방 지역: 진행도를 채워도 개방 시각(서버·신뢰 시계) 전에는 들어갈 수 없다.
+      if (!isChapterOpen(stage.ch, ecoClock(this.eco))) { this.ui.toast(`아직 열리지 않은 지역입니다. ${chapterOpenLabel(stage.ch)}에 열립니다.`, 'red'); return false; }
       // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
       stage = stageDef(stage.ch, stage.st);
       const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');

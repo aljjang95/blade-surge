@@ -18,9 +18,10 @@ const sources: Record<string, string> = {
   procession: 'glass_hour_sovereign', greenhouse: 'verdigris_sentinel', tribunal: 'sable_mirage_empress', confluence: 'comet_bastion',
   kiln: 'cinder_chain_executor', uprising: 'ash_colossus', archive: 'nightglass_archivist', reverseRiver: 'astral_leviathan',
   beacon: 'obsidian_hydra', lostShip: 'obsidian_hydra', emptyThrones: 'sable_mirage_empress', addresses: 'comet_bastion',
+  bellstreet: 'bell_gate_warden', belfry: 'bell_tollmaster', crackedNave: 'bell_nave_guardian',
 };
 
-test('all 60 campaign objectives, card/detail portraits and catalogue locations select the actual spawned boss', () => {
+test('all campaign objectives, card/detail portraits and catalogue locations select the actual spawned boss', () => {
   const catalogue = buildCatalogue();
   for (const chapter of CHAPTERS) for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(chapter.id, st), id = stage.dungeonBossId || stage.encounter.enemyId;
@@ -34,7 +35,7 @@ test('all 60 campaign objectives, card/detail portraits and catalogue locations 
     expect(stage.objective).toBe(`${stage.dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${actual.name} 처치`);
     expect(actual.model).toBe(source.model);
     expect(actual.portrait).toBe(source.portrait);
-    expect(stageKeyArt(stage)).toBe(actual.portrait);
+    expect(stageKeyArt(stage)).toBe(actual.portrait ?? null); // 전용 초상이 아직 없는 지역(7장 Tripo 슬롯)은 키 아트가 없다.
     const roster = stage.rosterFor();
     const expected = [...new Set([...roster.trash, ...roster.ranged, ...roster.elite, id])].sort();
     const listed = catalogue.filter(entry => entry.locations.some((place: any) => place.code === stage.code)).map(entry => entry.id).sort();
@@ -50,7 +51,7 @@ test('named midpoint and finale bosses preserve the approved narrative, original
     const stage = stageDef(chapter.id, st), id = stage.encounter.enemyId, def = enemies[id];
     expect(stage.dungeonBossId).toBeNull();
     expect(stage.encounter.name).toBe(def.name);
-    expect(stageKeyArt(stage)).toBe(ENCOUNTER_ART[id]);
+    expect(stageKeyArt(stage)).toBe((ENCOUNTER_ART as Record<string, string>)[id] ?? null);
     if (st === 10) expect(def.model).toBe((CAMPAIGN_MODELS as Record<string, string>)[id]);
   }
   expect(stageDef(1, 5)).toMatchObject({ title: '애도의 기사', encounter: { name: '애도의 기사 세렌' } });

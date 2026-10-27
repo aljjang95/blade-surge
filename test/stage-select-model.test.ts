@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
+import { CHAPTERS } from '../src/data/stages.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import {
   STAGE_SELECT_STORAGE_KEY, normalizeStageSelectMemory, readStageSelectMemory, writeStageSelectMemory, refreshStageSelectMemory,
@@ -16,7 +17,7 @@ test('기억 정규화: 잘못된 값은 버리고 멱등이다', () => {
   expect(normalizeStageSelectMemory(null)).toEqual({ introSeen: false, last: null });
   expect(normalizeStageSelectMemory('x')).toEqual({ introSeen: false, last: null });
   expect(normalizeStageSelectMemory([1])).toEqual({ introSeen: false, last: null });
-  expect(normalizeStageSelectMemory({ introSeen: 'true', last: { tab: 'campaign', ch: 7, st: 1 } })).toEqual({ introSeen: false, last: null });
+  expect(normalizeStageSelectMemory({ introSeen: 'true', last: { tab: 'campaign', ch: CHAPTERS.length + 1, st: 1 } })).toEqual({ introSeen: false, last: null });
   expect(normalizeStageSelectMemory({ introSeen: true, last: { tab: 'campaign', ch: 1, st: 2.5 } })).toEqual({ introSeen: true, last: null });
   expect(normalizeStageSelectMemory({ last: { tab: 'dungeon', id: '../x' } }).last).toBeNull();
   const ok = normalizeStageSelectMemory({ introSeen: true, last: { tab: 'dungeon', id: 'glass_garden', depth: 'weird', followed: 1 }, extra: 9 });
@@ -46,7 +47,7 @@ test('전투력 색과 다음 관문', () => {
   expect(nextCampaignStage({ unlocked: 1 })).toEqual({ ch: 1, st: 1 });
   expect(nextCampaignStage({ unlocked: 4 })).toEqual({ ch: 1, st: 4 });
   expect(nextCampaignStage({ unlocked: 11 })).toEqual({ ch: 2, st: 1 });
-  expect(nextCampaignStage({ unlocked: 999 })).toEqual({ ch: 6, st: 10 });
+  expect(nextCampaignStage({ unlocked: 999 })).toEqual({ ch: CHAPTERS.length, st: 10 });
 });
 
 test('신규 저장: 캠페인 탭, 1-1 추천·선택, 나머지 잠김(사유 한 줄), 첫 안내 표시', () => {
@@ -146,7 +147,7 @@ test('던전 탭(지역 판정): 1-10 클리어 저장은 지역 2 던전이 보
 
 test('캠페인 완주 저장은 던전 탭이 추천, 에너지 부족은 입장 가능하되 사유 표시', () => {
   const { eco, expedition } = fresh();
-  eco.s.progress.unlocked = 60; eco.s.progress.stars = { '6-10': 1 };
+  eco.s.progress.unlocked = CHAPTERS.length * 10; eco.s.progress.stars = { [`${CHAPTERS.length}-10`]: 1 };
   const model: any = stageSelectModel(inputs(eco, expedition, { energy: 0, dungeonRecommended: { id: 'glass_garden', depth: 'standard' } }));
   expect(model.finished).toBe(true);
   expect(model.selection).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'standard' });
@@ -197,14 +198,14 @@ test('지도 상자 2.5:1 고정과 노드 크기(최소 40px), 꼬리표가 아
   }
 });
 
-test('캠페인 완주(6-10 클리어) 뒤 추천을 따랐던 캠페인 기억은 던전 추천으로 연다', () => {
+test('캠페인 완주(마지막 지역 X-10 클리어) 뒤 추천을 따랐던 캠페인 기억은 던전 추천으로 연다', () => {
   const { eco, expedition } = fresh();
-  eco.s.progress.unlocked = 60; eco.s.progress.stars = { '6-10': 1 };
-  const model: any = stageSelectModel(inputs(eco, expedition, { memory: { introSeen: true, last: { tab: 'campaign', ch: 6, st: 10, followed: true } }, dungeonRecommended: { id: 'glass_garden', depth: 'standard' } }));
+  eco.s.progress.unlocked = CHAPTERS.length * 10; eco.s.progress.stars = { [`${CHAPTERS.length}-10`]: 1 };
+  const model: any = stageSelectModel(inputs(eco, expedition, { memory: { introSeen: true, last: { tab: 'campaign', ch: CHAPTERS.length, st: 10, followed: true } }, dungeonRecommended: { id: 'glass_garden', depth: 'standard' } }));
   expect(model.selection).toEqual({ tab: 'dungeon', id: 'glass_garden', depth: 'standard' });
   // 추천이 아닌 곳을 골랐던 기억(반복 사냥)은 완주 뒤에도 그 자리 그대로.
-  const exact: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'campaign', ch: 6, st: 10, followed: false } } }));
-  expect(exact.selection).toEqual({ tab: 'campaign', ch: 6, st: 10 });
+  const exact: any = stageSelectModel(inputs(eco, expedition, { memory: { last: { tab: 'campaign', ch: CHAPTERS.length, st: 10, followed: false } } }));
+  expect(exact.selection).toEqual({ tab: 'campaign', ch: CHAPTERS.length, st: 10 });
 });
 
 test('저장 실패·차단: 두 번째 열기에도 세션 기억(introSeen·last)을 유지한다', () => {
@@ -240,4 +241,34 @@ test('selectionSelector: 관문·던전 단계 버튼을 다시 찾는 선택자
   expect(selectionSelector({ tab: 'dungeon', id: 'glass_garden', depth: 'deep' })).toBe('[data-dungeon-id="glass_garden"][data-depth="deep"]');
   expect(selectionSelector({ tab: 'dungeon', id: 'x', depth: 'weird' })).toBe('[data-dungeon-id="x"][data-depth="standard"]');
   expect(selectionSelector(null)).toBeNull();
+});
+
+// 리뷰 P2: 선택 화면이 기기 시계가 아니라 규칙 시계(ecoClock)로 7장 잠금을 판정한다.
+import { SEASON_START_MS } from '../src/data/chapter-open.js';
+import { StageSelectUI } from '../src/ui/stage-select.js';
+
+test('7장 개방: 기기 시각이 개방 전이어도 신뢰 시계가 개방 뒤면 선택 모델의 7-1 입장이 열린다', () => {
+  const { eco: realEco, expedition } = fresh(); const eco: any = realEco;
+  eco.s.progress.unlocked = 61;
+  const trusted = SEASON_START_MS + 3600_000, device = SEASON_START_MS - 5 * 24 * 3600_000;
+  eco.trustedClock = () => trusted;
+  const realNow = Date.now; Date.now = () => device;
+  try {
+    // 명시 시각이 없으면(기존 호출) 기기 시계로 판정해 잠긴다 — 호출부가 now 를 넘겨야 한다는 계약.
+    const legacy: any = stageSelectModel(inputs(eco, expedition, { chapter: 7, prefer: { tab: 'campaign', ch: 7, st: 1 } }));
+    expect(selectedEntry(legacy)?.unlocked).not.toBe(true);
+    // 실제 화면 경로: StageSelectUI.readModel 이 ecoClock(eco) 를 모델에 넘긴다.
+    const ui: any = Object.create(StageSelectUI.prototype);
+    Object.assign(ui, { app: { eco, expedition }, memory: { introSeen: true, last: null }, selection: { tab: 'campaign', ch: 7, st: 1 }, viewChapter: 7, prefer: null, dungeonRecommended: null });
+    const model: any = ui.readModel();
+    const entry: any = selectedEntry(model);
+    expect(entry.code).toBe('7-1');
+    expect(entry.unlocked).toBe(true);
+    expect(entryAction(entry).enabled).toBe(true);
+    expect(model.campaign.chapters.find((c: any) => c.id === 7).unlocked).toBe(true);
+    // 신뢰 시계도 개방 전이면 잠긴다.
+    eco.trustedClock = () => SEASON_START_MS - 1000;
+    const closed: any = ui.readModel();
+    expect(selectedEntry(closed)?.unlocked).not.toBe(true);
+  } finally { Date.now = realNow; }
 });

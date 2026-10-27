@@ -73,12 +73,12 @@ test('실제 onKill은 출격 스냅샷 난이도로 두 재료를 지급하고 
 
 test('장 끝 도달 레벨과 다음 장 권장 차이는 -3~+1이며 하루 시간·에너지 한도를 지킨다', () => {
   const report = progressionEstimate();
-  expect(report.chapters.map(c => c.level)).toEqual([20, 29, 35, 39, 42, 44]);
+  expect(report.chapters.map(c => c.level)).toEqual([20, 29, 35, 39, 42, 44, 46]);
   for (const chapter of report.chapters.filter(c => c.gap !== null)) {
     expect(chapter.gap!).toBeGreaterThanOrEqual(-3); expect(chapter.gap!).toBeLessThanOrEqual(1);
     expect(chapter.nextRecommended).toBe(recommendedLevel(chapter.chapter + 1));
   }
-  expect(report.stages).toHaveLength(60);
+  expect(report.stages).toHaveLength(70);
   for (const day of new Set(report.stages.map(s => s.day))) {
     const stages = report.stages.filter(s => s.day === day);
     expect(stages.length * 3).toBeLessThanOrEqual(30);

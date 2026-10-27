@@ -138,7 +138,7 @@ export class Battle extends BaseBattle {
     if (this.sp) amount *= this.sp.dmgMul(enemy);
     // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
     const dealt = enemy.hurt(amount, { ...opts, crit, attacker: p });
-    if (!(dealt > 0)) return;
+    if (!(dealt > 0) && !(enemy.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
@@ -151,7 +151,7 @@ export class Battle extends BaseBattle {
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
     // 동시 숫자 상한을 키우되 한 프레임에 새로 띄우는 수는 제한해 군중 타격에서 DOM 갱신이 몰리지 않게 한다.
-    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?DMG_CAP_CRIT:DMG_CAP) && (this.dmgFrame = (this.dmgFrame | 0) + 1) <= DMG_PER_FRAME) this.fx.damage(hitPos, dealt, {
+    if (dealt > 0 && this.fx.dmgLayer.children.length < (crit||opts.finisher?DMG_CAP_CRIT:DMG_CAP) && (this.dmgFrame = (this.dmgFrame | 0) + 1) <= DMG_PER_FRAME) this.fx.damage(hitPos, dealt, {
       crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!enemy.isBoss,
       heavy: contactProfile(opts, crit, enemy.isBoss, true)?.heavy,
     });

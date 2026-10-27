@@ -6,6 +6,7 @@ import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
 import { Burrow, BURROW } from './burrow.js';
+import { Bellringer, BELL } from './bellringer.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
@@ -41,6 +42,8 @@ export function enemyImpactIn(enemy, target) {
   // 지원 치유·소환 시전은 영웅에게 피해를 주지 않는다. 예고 링은 보이지만 피할 타격이 없다.
   if (enemy.supportCastKind) return Infinity;
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0) return Math.max(0, BOMBER_FUSE_SEC - enemy.fuse);
+  // 종소리 고리는 예고가 끝난 뒤에도 퍼져 나오는 시간이 있어, 대상에게 닿기까지의 시간으로 회피 타이밍을 준다.
+  if (enemy.bellringer) { const ring = enemy.bellringer.impactIn(target); if (ring !== null) return ring; }
   if (enemy.state !== 'attack' || enemy.attackDone) return enemy.telegraph;
   const plan = enemy.signatures?.plan;
   if (plan) {
@@ -62,7 +65,7 @@ export function enemySkillLabel(enemy) {
   const key = enemy?.special || enemy?.mobRole?.key || (enemy?.def?.ranged ? 'magic' : 'melee');
   return ({
     melee: '적의 공격', magic: '적의 주문', spin: '회전 강타', slam: '지면 강타', dash: '돌진',
-    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고', burrow: '잠행 습격',
+    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고', burrow: '잠행 습격', bell: '종소리 고리',
     support_heal: '치유 준비', support_summon: '소환 준비',
     crusher: '분쇄 강타', charger: '돌진', flanker: '측면 습격', 'role:crusher': '분쇄 강타',
     'role:charger': '돌진', 'role:flanker': '측면 습격',
@@ -109,6 +112,8 @@ export class Enemy extends Actor {
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
     // 잠복형(burrower): 땅속 잠행 → 예고 원 → 솟구침 → 무방비. 보스·정예에는 붙이지 않는다.
     this.burrow = def.behavior === 'burrower' && !def.boss && !def.elite ? new Burrow(this) : null;
+    // 종지기(bellringer): 매단 종을 쳐 고리 충격파를 퍼뜨린다. 종이 먼저 피해를 받고 깨지면 주변 적이 기절한다. 보스·정예에는 붙이지 않는다.
+    this.bellringer = def.behavior === 'bellringer' && !def.boss && !def.elite ? new Bellringer(this) : null;
     this.packId = game._packSpawnSeq = (game._packSpawnSeq || 0) + 1;
     this.packSide = (this.packId & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
@@ -145,6 +150,7 @@ export class Enemy extends Actor {
     this.signatures?.dispose();
     this.mobRole?.dispose();
     this.burrow?.dispose();
+    this.bellringer?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
     if (this.telegraphRing) { this.telegraphRing.geometry.dispose(); this.telegraphRing.material.dispose(); this.telegraphRing = null; }
     super.dispose();
@@ -263,14 +269,15 @@ export class Enemy extends Actor {
     ring.visible = active;
     if (!active) { if (this.supportCastKind) this.clearSupportCue(); return; }
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
-    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' || kind === 'burrow' ? 0xffb04c : 0xff4b63;
+    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' || kind === 'burrow' || kind === 'bell' ? 0xffb04c : 0xff4b63;
     ring.material.color.set(danger);
     // 잠행 습격은 링 하나가 실제 솟구침 반경을 그대로 보여 준다(바닥 예고 원과 크기를 맞춘다).
-    const burrowing = kind === 'burrow';
-    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : burrowing ? BURROW.mark : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
+    const burrowing = kind === 'burrow', tolling = kind === 'bell';
+    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : burrowing ? BURROW.mark : tolling ? BELL.windup : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
     const remaining = Math.max(0, Math.min(1, this.telegraph / max));
     const pulse = Math.abs(Math.sin((this.game.elapsed || 0) * 18));
-    ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
+    // 종소리 고리는 예고 동안 고리가 닿을 가장 바깥 반지름을 그대로 보여 준다.
+    ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : tolling ? BELL.maxRadius / .9 * (1 + pulse * .015) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
   /** 걷기·달리기 클립의 재생 배율(보폭 표에 있으면). 표 조회만 하고 할당하지 않는다. */
@@ -279,6 +286,7 @@ export class Enemy extends Actor {
     return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
   }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
+    this.absorbed = 0;   // 이번 타격에서 종지기의 종이 받아 낸 양. 몸 체력 피해(반환값)와 별개로 '적중 성공' 판정에 쓴다
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
     packNoise(this.game, this);
@@ -301,6 +309,9 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
+    // 종지기: 매단 종이 피해를 먼저 받아 낸다. 종이 깨진 뒤 무방비 동안은 받는 피해가 늘어난다.
+    // 종이 전부 흡수하면 반환값(몸 체력 피해)은 0 이지만 타격은 맞은 것이다 — 호출부는 absorbed 로 적중(콤보·궁극 게이지·세트 on-hit·연출)을 처리한다.
+    if (this.bellringer) { const before = dmg; dmg = this.bellringer.absorb(dmg); this.absorbed = Math.max(0, before - dmg); }
     // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 공격자(Battle.damageEnemy 의 영웅)의 위치로 등 뒤·정면을 가른다.
     // 광역기·세트 효과의 dirx·dirz 는 폭발 중심 → 적 방향이라 영웅 위치와 다를 수 있다(BUNDLE-14 리뷰 P1).
     if (this.damageVeil) dmg = this.damageVeil.filter(dmg, attacker);
@@ -316,6 +327,7 @@ export class Enemy extends Actor {
     if (stun > 0 && !guarded) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
     // 예고 중 기절은 피격 순간 바로 솟구치기를 끊는다(한 프레임보다 짧은 기절도 놓치지 않는다).
     if (stun > 0) this.burrow?.interrupt();
+    if (stun > 0) this.bellringer?.interrupt();
     if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
@@ -341,6 +353,7 @@ export class Enemy extends Actor {
     this.signatures?.clear();
     this.mobRole?.clear();
     this.burrow?.dispose();
+    this.bellringer?.dispose();
     // 사망 변주: 시체는 공격자를 향해 돌아선 뒤 넘어져 맞은 방향으로 쓰러지고, 처치 등급마다 쓰러지는 박자가 다르다(난수 없음).
     const style = deathStyle({ dirx, dirz, kb, crit: !!flair?.crit, finisher: !!flair?.finisher, elite: this.isElite, boss: this.isBoss });
     if (style.faceYaw !== null) {
@@ -407,6 +420,8 @@ export class Enemy extends Actor {
     }
     // 경계 중인 잠복형은 발각 전에는 파고들지 않는다. 이미 시작한 잠행은 끝까지 진행한다.
     if (this.burrow && (this.burrow.phase || this.pack?.aggro !== false) && this.burrow.update(dt, d)) return;
+    // 종지기는 발각 전에는 치지 않는다. 이미 퍼지는 고리는 발각과 무관하게 계속 진행한다.
+    if (this.bellringer && (this.bellringer.busy || this.pack?.aggro !== false) && this.bellringer.update(dt, d)) return;
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
@@ -666,6 +681,8 @@ export function enemyPartyWarnings(enemy) {
   const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}${enemy.isBoss ? ':boss' : ''}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:enemy.isBoss ? 0xff3030 : 0xff6040};
   const burrowWarning = enemy.burrow?.partyWarning(enemy.partyId);
   if (burrowWarning) return [burrowWarning];
+  const bellWarning = enemy.bellringer?.partyWarning(enemy.partyId);
+  if (bellWarning) return [bellWarning];
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0 && enemy.fuse < .7) return [{...base,id:`${enemy.partyId}:fuse`,radius:3.4,duration:.7,remaining:.7-enemy.fuse}];
   if (enemy.state !== 'attack' || enemy.attackDone) return [];
   const duration = enemy.attackDur * enemy.hitAt, remaining = Math.max(0,duration-enemy.stateT);

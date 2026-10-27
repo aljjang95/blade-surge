@@ -12,9 +12,10 @@
 //  - 등급(초월)은 economy-estimate 의 무과금 초월일(ECONOMY_PACE)을 하루 분량 비율로 옮긴다(소환·결제는 BM 레인).
 //  - marathon(하루 8시간, docs/SPEC_720H.md 3.4): 위 우선순위 뒤에 고통 단계(에너지 0)를 돈다. 최고 단계 도전(가장 쉬운 지역 최종 보스 X-10)
 //    → 남는 시간 고통 단계 반복(하루 fullRuns 판 뒤 골드·재료 35%, EXP 100%). Lv.80 이후 EXP 는 전설 수련으로, 점수는 전투력 최대 노드부터 배분한다.
-//    '할 일 없음 분'(idleMin)은 아무것도 못 한 시간이다. 장 수는 CHAPTERS.length(7~12장 개방 주차는 아래 CHAPTER_OPEN_WEEKS)를 읽어 자동 반영한다.
+//    '할 일 없음 분'(idleMin)은 아무것도 못 한 시간이다. 장 수는 CHAPTERS.length(장 개방 시각은 아래 chapterOpenDay: src/data/chapter-open.js 우선, 없으면 SPEC 3.3 주차)를 읽어 자동 반영한다.
 import { perRun, TOTAL_STAGES } from './economy-estimate.mjs';
 import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/stages.js';
+import { chapterOpensAt, SEASON_START_MS } from '../src/data/chapter-open.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER, tormentId, tormentTierOf } from '../src/game/difficulty.js';
 import { TOWER, POWER_NEED, SEASON, TORMENT } from '../src/data/content-90d.js';
 import { normalizeLegend, grantLegendExp, allocate as allocateLegendNode, legendStats, LEGEND_NODES, LEGEND } from '../src/game/legend-rank.js';
@@ -39,7 +40,7 @@ export const PERSONAS = Object.freeze({
   mid: { id: 'mid', name: '미드(일반)', minutes: 30, sessions: 2, skill: 1, enhCap: 20, towerShare: .3, hero: 'knight' },
   hardcore: { id: 'hardcore', name: '하드코어', minutes: 100, sessions: 3, skill: 0.88, enhCap: 20, towerShare: .3, hero: 'knight' },
   // 하루 8시간(120분×4세션). 세션 사이 4시간이라 에너지는 세션마다 80(= 4h/180s)만 찬다. 고통 단계(에너지 0)로 남는 시간을 쓴다.
-  marathon: { id: 'marathon', name: '마라톤(8시간)', minutes: 480, sessions: 4, skill: 0.85, enhCap: 20, towerShare: .3, hero: 'knight', torment: true, energyGapH: 4 },
+  marathon: { id: 'marathon', name: '마라톤(8시간)', minutes: 480, sessions: 4, skill: 0.85, enhCap: 20, towerShare: .3, hero: 'knight', torment: true, energyGapH: 4, regionFirst: true },
 });
 const MIN_STAGE = 3, MIN_HARD = 4;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
@@ -272,7 +273,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
         if (!acted && towerTry(time)) { time -= TOWER.minutesPerFloor; acted = true; }
         // 1b) 새 난이도 관문: 숙련(스토리 클리어) → 악몽(별 3) → 지옥(지역 악몽 전부). 지역 순서대로.
         if (!acted && time >= MIN_HARD) {
-          const next = nextHard(st);
+          const next = nextHard(st, !!P.regionFirst);
           if (next) {
             const v = runValue(next.idx, next.diff);
             if (ok(stageNeed(next.idx, next.diff)) && st.energy >= v.energy) {
@@ -346,11 +347,25 @@ function hardCounts(st) {
   for (const rank of Object.values(st.peak)) for (const d of HARD) if (rank >= DIFFICULTY_ORDER.indexOf(d)) out[d]++;
   return out;
 }
-/** 다음 새 난이도 관문: 낮은 난이도부터, 같은 난이도에서는 낮은 관문부터. 지옥은 지역 악몽 10관문 완료 필요. */
-function nextHard(st) {
+/**
+ * 다음 새 난이도 관문: 낮은 난이도부터, 같은 난이도에서는 낮은 관문부터. 지옥은 지역 악몽 10관문 완료 필요.
+ * regionFirst(마라톤): 고통 단계 T1(= 한 지역 지옥 10관문)을 가장 빨리 여는 것이 8시간 플레이어의 현실적인 행동이라, T1 이 열리기 전에는
+ * 지역 하나씩 숙련→악몽→지옥을 끝낸다. 장이 늘어도(7장+) 모든 지역의 숙련·악몽을 다 거친 뒤에야 첫 지옥이 열려 S3 가 밀리지 않는다
+ * (docs/SPEC_720H.md 7절). 다른 페르소나는 기존 순서 그대로다(기준선 보존).
+ */
+function nextHard(st, regionFirst = false) {
+  if (regionFirst && !tormentOpen(st)) {
+    for (let ch = 1; ch <= CHAPTERS.length; ch++) {
+      const found = nextHardIn(st, (ch - 1) * STAGES_PER_CHAPTER + 1, Math.min(st.storyUnlocked - 1, ch * STAGES_PER_CHAPTER));
+      if (found) return found;
+    }
+  }
+  return nextHardIn(st, 1, st.storyUnlocked - 1);
+}
+function nextHardIn(st, from, to) {
   for (const diff of HARD) {
     const rank = DIFFICULTY_ORDER.indexOf(diff);
-    for (let idx = 1; idx < st.storyUnlocked; idx++) {
+    for (let idx = from; idx <= to; idx++) {
       if ((st.peak[idx] ?? -1) >= rank) continue;
       if ((st.peak[idx] ?? -1) < rank - 1) break; // 이전 난이도를 먼저
       if (diff === 'nightmare' && (st.stars[idx] || 0) < 3) break;
@@ -376,14 +391,18 @@ function bestFarm(st, pw, skill) {
 }
 
 // ---------- 장 개방 ----------
-// 7~12장은 시즌 시작 기준 W1/W1/W1/W5/W8/W11 에 열린다(docs/SPEC_720H.md 3.3). 값은 0부터 센 주차이고 1~6장은 처음부터 열려 있다.
-// TODO: 지역 레인이 머지되면 `src/data/chapter-open.js` 의 같은 표를 읽도록 바꾼다(그 전까지 이 상수가 정본이 아니라 복사본이다).
-// 장 수는 CHAPTERS.length 를 읽으므로 지금처럼 6장이면 이 표는 쓰이지 않는다.
-const CHAPTER_OPEN_WEEKS = Object.freeze({ 7: 0, 8: 0, 9: 0, 10: 4, 11: 7, 12: 10 });
+// 개방표(`src/data/chapter-open.js` CHAPTER_OPEN)에 있는 장은 그 시각을 쓰고, 아직 표에 없는 장(8~12장)은 SPEC 3.3 주차를 쓴다
+// (7~9장 W1, 10장 W5, 11장 W8, 12장 W11 → 0부터 센 주차 0/0/0/4/7/10). 1~6장과 표·SPEC에 없는 장은 처음부터 열려 있다.
+const SPEC_OPEN_WEEKS = Object.freeze({ 7: 0, 8: 0, 9: 0, 10: 4, 11: 7, 12: 10 });
+function chapterOpenDay(ch) {
+  const at = chapterOpensAt(ch);
+  if (at > 0 && Number.isFinite(at)) return Math.max(0, (at - SEASON_START_MS) / DAY_MS);
+  return (SPEC_OPEN_WEEKS[ch] ?? 0) * 7;
+}
 function chapterOpenIdx(day) {
   let open = 0;
   for (let ch = 1; ch <= CHAPTERS.length; ch++) {
-    if (day - 1 >= (CHAPTER_OPEN_WEEKS[ch] ?? 0) * 7) open = ch; else break;
+    if (day - 1 >= chapterOpenDay(ch)) open = ch; else break;
   }
   return open * STAGES_PER_CHAPTER;
 }

@@ -6,6 +6,8 @@ import { isStarArchive, mulberry32 } from './world.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
+  // 7장 종탑 도시: 흐린 청동·석회·안개빛 청록.
+  belltower: [0xa7a28f, 0x8a6f45, 0x7fa3a8],
   throne: [0xab9480, 0xc6a061, 0xd9a26f],
   abyss: [0x817a98, 0xa497b7, 0x9c85cf],
   garden: [0x7f9690, 0xb39156, 0x7fb8a0],
@@ -46,7 +48,8 @@ function architectureBatches(floor) {
 export function buildRegionArchitecture(floor, theme) {
   if (isStarArchive(floor)) return buildStarArchiveArchitecture(floor);
   const group = new THREE.Group(); group.name = `region-${theme}`;
-  const colors = PALETTES[theme];
+  // 종탑 경로(landmark belltower)는 crypt 테마 구조에 흐린 청동·석회 팔레트를 입힌다.
+  const colors = PALETTES[floor.layout?.landmark === 'belltower' ? 'belltower' : theme];
   const ownedGeometry = [], materials = [];
   let disposed = false;
   group.userData.dispose = () => {
@@ -434,6 +437,14 @@ export function buildRegionArchitecture(floor, theme) {
         box(x,5.2,rear,8,.35,1.3,1);
         ring(x,3.3,rear,1.3,.1,2,0);
         box(x,1.1,rear,2.6,.5,1.6,1);
+      } else if (mark === 'belltower') {
+        // 두 석회 기둥 사이에 매달린 금 간 청동 종: 들보, 종 몸체, 혀, 갈라진 틈.
+        for(const side of [-1,1]) { box(x+side*3,2.6,rear,.9,5.2,.9); box(x+side*3,5.3,rear,1.3,.3,1.3,1); }
+        box(x,5.1,rear,6.4,.4,.7,1);
+        cylinder(x,3.1,rear+.2,.7,1.55,2.4,1,12);
+        cylinder(x,1.75,rear+.2,1.75,1.75,.3,1,12);
+        add(new THREE.SphereGeometry(.28,8,6),0,x,1.45,rear+.2);
+        box(x+.35,3.0,rear+1.4,.1,2.1,.06,2,0,.1);
       } else if (mark === 'confluence') {
         for(let i=-1;i<=1;i++) {
           add(new THREE.TorusGeometry(1,.16,6,18,Math.PI),1,x+i*2.6,3.2,rear);

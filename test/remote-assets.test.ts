@@ -205,7 +205,8 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
   expect(nextRegionGroup({ unlocked: 8 })).toBe('region-2');
   expect(nextRegionGroup({ unlocked: 18 })).toBe('region-3');
   expect(nextRegionGroup({ unlocked: 28 })).toBe('region-4');
-  expect(nextRegionGroup({ unlocked: 58 })).toBe(null);   // 6지역 다음은 없다
+  expect(nextRegionGroup({ unlocked: 58 })).toBe('region-7');   // 6지역 다음은 7지역(아직 묶음 파일이 없어도 이름은 만든다)
+  expect(nextRegionGroup({ unlocked: 68 })).toBe(null);   // 7지역 다음은 없다
   const run = async (connection: any, unlocked: number) => {
     const { assets } = setup(); await assets.init();
     const asked: string[] = [];

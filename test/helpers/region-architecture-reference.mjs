@@ -35,8 +35,10 @@ architectureCases.push(['campaign-1-1', 'garden', () => {
 }]);
 architectureCases.push(['garden-loop', 'garden', () => buildExpeditionWorld(buildExpeditionStage('dungeon', 'glass_garden', null))]);
 const storyMarks = new Set();
+// 역사 원본(ae2260e) 뒤에 생긴 랜드마크는 원본과 바이트를 대조할 수 없다. 7장 종탑(belltower)은 test/chapter7.test.ts 가 따로 검사한다.
+const POST_HISTORICAL_LANDMARKS = new Set(['belltower']);
 for (const map of Object.values(STORY_DUNGEONS)) {
-  if (storyMarks.has(map.landmark)) continue;
+  if (storyMarks.has(map.landmark) || POST_HISTORICAL_LANDMARKS.has(map.landmark)) continue;
   storyMarks.add(map.landmark);
   architectureCases.push([`story-${map.landmark}`, 'garden', () => new Floor(51, 'garden', undefined, map.layout)]);
 }

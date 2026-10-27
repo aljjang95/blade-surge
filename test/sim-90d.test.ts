@@ -30,7 +30,10 @@ test('marathon 30일: 고통 단계가 열리고 Lv.80 이후 EXP가 전설 수�
   const run = simulate('marathon', 1, { days: 30 });
   expect(run.days).toHaveLength(30);
   const at = (d: number) => run.days[d - 1];
-  expect(at(5).torment).toBe(0);                       // 지옥 한 지역을 끝내기 전에는 고통 단계가 없다
+  // 지옥 한 지역(10관문)을 끝내기 전에는 고통 단계가 없다. 마라톤은 T1 을 가장 빨리 여는 지역 우선 순서(regionFirst)라 며칠 안에 열린다.
+  for (const d of run.days) if (d.hard.hell < 10) expect(d.torment).toBe(0);
+  expect(at(1).torment).toBe(0);
+  expect(run.days.find((d: any) => d.torment >= 1)?.day ?? 99).toBeLessThanOrEqual(5);
   expect(at(30).torment).toBeGreaterThanOrEqual(8);
   expect(at(30).level).toBe(80);
   expect(at(30).legendRank).toBeGreaterThan(0);

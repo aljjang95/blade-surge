@@ -126,9 +126,15 @@ export function towerCap(nowMs, best = 0) {
   return Math.max(seasonCap, integer(best, 0, MAX_FLOOR, 0));
 }
 /** 층이 빌려 쓰는 캠페인 관문(지역 순환, 5층 중간 보스·10층 최종 보스). */
+/**
+ * 무한의 성이 순환하는 지역 수. 탑은 시간 개방과 무관한 상설 콘텐츠이고 층 번호별 난이도·보상·시뮬레이터 밴드가
+ * 이 순환(1~6지역)을 전제로 조정돼 있어, 시간 개방 지역(7장~)이 늘어도 순환 길이는 그대로 둔다.
+ * 새 지역을 탑에 넣을 때는 이 값을 올리고 content-90d 의 탑 밴드를 함께 다시 잰다.
+ */
+export const TOWER_CYCLE_CHAPTERS = 6;
 export function towerFloorSource(floor) {
   const f = integer(floor, 1, MAX_FLOOR, 1), block = Math.floor((f - 1) / STAGES_PER_CHAPTER);
-  return { ch: (block % CHAPTERS.length) + 1, st: ((f - 1) % STAGES_PER_CHAPTER) + 1, cycle: Math.floor(block / CHAPTERS.length) };
+  return { ch: (block % TOWER_CYCLE_CHAPTERS) + 1, st: ((f - 1) % STAGES_PER_CHAPTER) + 1, cycle: Math.floor(block / TOWER_CYCLE_CHAPTERS) };
 }
 export const towerScale = (floor) => TOWER.baseScale * Math.pow(integer(floor, 1, MAX_FLOOR, 1), TOWER.exponent);
 

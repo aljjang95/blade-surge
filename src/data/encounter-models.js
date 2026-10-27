@@ -18,4 +18,7 @@ export const CAMPAIGN_MODELS = {
   tide_finalboss: 'Flying_AbyssRegent',
   crown_finalboss: 'Skeleton_HollowRegent',
   homecoming_finalboss: 'Skeleton_OathRemnant',
+  // 7장: Tripo 모델 슬롯(tll_ch7_midboss / tll_ch7_finalboss). 들어오기 전에는 로스터의 대체 실루엣이 선다.
+  belltower_midboss: 'Bell_Warden',
+  belltower_finalboss: 'Bell_Sovereign',
 };

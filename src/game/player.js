@@ -820,7 +820,9 @@ export class Player extends Actor {
       const clock = this.game.timeCtl, frameDt = clock?.scale > 0 ? dt / clock.scale : dt;
       let threat = null, lead = Infinity;
       for (const x of list) {
-        if (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4)) continue;
+        // 종지기는 고리를 친 뒤 telegraph 가 0 이어도 고리가 퍼져 오는 동안 위협이다. 근접 거리 대신 고리 도달 시간(impactIn)으로 판단한다.
+        const bellRing = x.alive && x.bellringer?.busy;
+        if (!bellRing && (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4))) continue;
         // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다.
         if (x === this._autoDodgeFrom && now < this._autoDodgeUntil) continue;
         const t = enemyImpactIn(x, this);

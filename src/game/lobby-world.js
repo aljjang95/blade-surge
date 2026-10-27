@@ -552,4 +552,38 @@ const REGION_KITS = {
       return [sun, halo];
     },
   },
+  // ---- 7지역 금 간 종탑의 도시: 석회 몸체와 청동 종루, 금 간 대종, 낮게 깔린 안개
+  belltower: {
+    names: ['base', 'trim', 'lime', 'limeDark', 'bronze', 'slate', 'wood', 'crack', 'window', 'mote'],
+    solid: [0x6b665a, 0x9a937f, 0xc9c1ab, 0x8b8472, 0x8a6a3c, 0x464a52, 0x5a4a3a, 0x1c1a1e], glow: [0xe0c68c, 0xc9d6d2],
+    tint: [0xd8d0b8, .45],
+    build({ b, S, low, placements }) {
+      // 뒤편 대종탑: 석회 몸체, 슬레이트 뾰족지붕, 열린 종루와 금 간 대종
+      b.box(9, 24, 9, S.lime, 0, 11.4, -38); b.box(10.4, .8, 10.4, S.trim, 0, 6, -38); b.box(10.4, .8, 10.4, S.trim, 0, 23.8, -38);
+      b.cone(6.8, 9, S.slate, 0, 28.7, -38, 4, Math.PI / 4);
+      b.box(5, 6.4, .3, S.crack, 0, 18, -33.4); b.box(5.6, .5, .6, S.bronze, 0, 21.4, -33.3);
+      b.cyl(2.4, 4.2, S.bronze, 0, 17.2, -32.6, 14, 1.1); b.cyl(2.7, .5, S.bronze, 0, 14.9, -32.6, 14); b.ball(.5, S.bronze, 0, 14.4, -32.6);
+      b.box(.16, 3.4, .08, S.crack, .6, 17.2, -31.4, .12);
+      // 가운데 광장 바닥의 깨진 종 파편 고리
+      for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, [x, z] = ringPoint(a, 9); b.box(1.6, .16, .5, i % 3 ? S.trim : S.bronze, x, -.45, z, a); }
+      // 종탑 마을의 석회 집들
+      const houses = low ? 7 : 11;
+      for (let i = 0; i < houses; i++) {
+        const angle = (i + .45) * Math.PI * 2 / houses + .12, [x, z] = ringPoint(angle, 24 + (i % 3) * 3);
+        if (z < -20 && Math.abs(x) < 9) continue;
+        regionHouse(b, { x, z, w: 5 + (i % 2), h: 3.4 + (i % 3) * .6, d: 4.8, wall: i % 2 ? S.lime : S.limeDark, roof: S.slate, trim: S.bronze, glow: S.window, door: S.wood, yaw: angle + Math.PI, roofH: 3 });
+        if (i % 4 === 0) { b.cyl(.35, 7, S.lime, x + 1.4, 3.6, z, 8, .28); b.cone(.8, 1.6, S.slate, x + 1.4, 7.9, z, 4, Math.PI / 4); }
+      }
+      // 광장 좌우의 작은 종 기둥
+      for (const side of [-1, 1]) for (const z of [-12, -2, 8]) { b.cyl(.2, 3.6, S.wood, side * 15.2, 1.2, z, 6); b.cone(.65, .9, S.bronze, side * 15.2, 3.4, z, 10); b.ball(.14, S.window, side * 15.2, 2.8, z); }
+      // 낮게 깔린 안개 덩어리
+      for (let i = 0; i < 10; i++) { const angle = i * .66, [x, z] = ringPoint(angle, 44 + (i % 3) * 8); b.ball(1, S.limeDark, x, 1.2 + (i % 2), z, 11, 1.1, 6); }
+      lanternRow(placements, 14.8);
+      placements.push({ asset: 'village-gate', x: 0, z: -27, y: -.4, yaw: 0, scale: 1.1, chunk: 'gate' });
+    },
+    sky({ low }) {
+      const sun = glowDisc(0xe8e0c8, 5.5, -28, 15, -74, .75), halo = glowDisc(0xcfd6d2, 22, -27.5, 15, -73.5, .2);
+      return [sun, halo, regionPoints(low ? 100 : 200, 70, 1, 18, 0xcfd6d2, 1.3, 77)];
+    },
+  },
 };

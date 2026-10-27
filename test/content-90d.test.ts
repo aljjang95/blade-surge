@@ -6,7 +6,7 @@ import {
   towerCap, towerFloorSource, towerScale, towerStage, towerFirstClearRewards, recordTowerClear, towerChest, claimTowerChest, towerSummary,
 } from '../src/game/endgame-core.js';
 import { Economy } from '../src/game/economy.js';
-import { stageDef } from '../src/data/stages.js';
+import { CHAPTERS, stageDef } from '../src/data/stages.js';
 import { lootTable } from '../src/data/loot-tables.js';
 import { normalizeSave } from '../src/game/save.js';
 import { contractRows, claimContract } from '../src/game/journey-core.js';
@@ -70,7 +70,7 @@ test('난이도 최고 기록은 낮아지지 않고 지역 전체 클리어를 
   expect(recordDifficultyClear(s, 1, 1, 'nightmare')).toBe(true);
   expect(recordDifficultyClear(s, 1, 1, 'adept')).toBe(false);
   expect(s.peak['1-1']).toBe(2);
-  expect(recordDifficultyClear(s, 7, 1, 'story')).toBe(false);
+  expect(recordDifficultyClear(s, CHAPTERS.length + 1, 1, 'story')).toBe(false);
   expect(recordDifficultyClear(s, 1, 1, 'mythic')).toBe(false);
   expect(chapterClearedAt(s, 1, 'nightmare')).toBe(false);
   for (let st = 2; st <= 10; st++) recordDifficultyClear(s, 1, st, 'hell');

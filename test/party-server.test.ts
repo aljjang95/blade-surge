@@ -3,6 +3,8 @@ import { PartyState } from '../worker/party-state';
 import { handlePartyRequest, PartyRoom } from '../worker/party';
 import { PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from '../src/party/protocol.js';
 import { capturePartyVisual } from '../src/party/visual-protocol.js';
+import { CAMPAIGN_STAGE_COUNT } from '../src/data/campaign-shape.js';
+import { SEASON_START_MS } from '../src/data/chapter-open.js';
 
 const now = 100000;
 function lobby() {
@@ -93,13 +95,31 @@ describe('party state membership and lifecycle', () => {
     expect(() => room.join('late','mage',null,now)).toThrow('already-started');
     expect(room.run?.seed).toBe(35);
   });
-  test('start accepts only the sixty one-based stage ids', () => {
+  test('start accepts only the one-based campaign stage ids (open chapters)', () => {
     const {room,host,guest}=lobby();
     send(room,host,{type:'stage',stageIdx:60});
     for (const id of [host,guest]) send(room,id,{type:'ready',ready:true});
-    for (const stageIdx of [0,61]) expect(() => send(room,host,{type:'start',stageIdx,seed:1})).toThrow('start-schema');
+    for (const stageIdx of [0,CAMPAIGN_STAGE_COUNT+1]) expect(() => send(room,host,{type:'start',stageIdx,seed:1})).toThrow('start-schema');
     expect(room.status).toBe('lobby');
     send(room,host,{type:'start',stageIdx:60,seed:1}); expect(room.run?.stageIdx).toBe(60);
+  });
+  test('time-gated chapter stages are refused by the server clock before the opening and accepted at it', () => {
+    const open=(at:number)=>{
+      const room=new PartyState('B'.repeat(20),'host-secret',at+PARTY_LIMITS.ttlMs,()=>'m'+Math.random());
+      const host=room.join('대표','knight','host-secret',at).id, guest=room.join('동료','ranger',null,at).id;
+      return {room,host,guest,at};
+    };
+    const before=open(SEASON_START_MS-1000);
+    expect(() => send(before.room,before.host,{type:'stage',stageIdx:61},before.at)).toThrow('chapter-closed');
+    expect(before.room.view().stageIdx).toBe(1);
+    for (const id of [before.host,before.guest]) send(before.room,id,{type:'ready',ready:true},before.at);
+    expect(() => send(before.room,before.host,{type:'start',stageIdx:1,seed:1},before.at)).not.toThrow();
+    const after=open(SEASON_START_MS);
+    send(after.room,after.host,{type:'stage',stageIdx:61},after.at);
+    expect(after.room.view().stageIdx).toBe(61);
+    for (const id of [after.host,after.guest]) send(after.room,id,{type:'ready',ready:true},after.at);
+    send(after.room,after.host,{type:'start',stageIdx:61,seed:1},after.at);
+    expect(after.room.run?.stageIdx).toBe(61);
   });
   test('host selection broadcasts the stage and resets readiness', () => {
     const {room,host,guest}=lobby();
@@ -117,7 +137,7 @@ describe('party state membership and lifecycle', () => {
   test('guest, invalid stage and mid-run stage changes cannot alter the selection', () => {
     const {room,host,guest}=lobby();
     expect(() => send(room,guest,{type:'stage',stageIdx:60})).toThrow('host-only');
-    for(const stageIdx of [0,61,1.5,'2',null]) expect(() => send(room,host,{type:'stage',stageIdx})).toThrow('stage-schema');
+    for(const stageIdx of [0,CAMPAIGN_STAGE_COUNT+1,1.5,'2',null]) expect(() => send(room,host,{type:'stage',stageIdx})).toThrow('stage-schema');
     expect(room.view().stageIdx).toBe(1);
     const run=running();
     expect(() => send(run.room,run.host,{type:'stage',stageIdx:60})).toThrow('state');

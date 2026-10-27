@@ -70,7 +70,7 @@ test('every authored chapter including homecoming records one persisted campaign
     expect(make().x.recordCampaign({ ...result }, stage).ok).toBe(false);
   }
   expect(make().x.s.stats.campaignWins).toBe(CHAPTERS.length);
-  for (const code of ['0-1', '7-1', '6-0', '6-11', '06-1', '6-1.5', '6-1x', '1-1\n']) {
+  for (const code of ['0-1', `${CHAPTERS.length + 1}-1`, '6-0', '6-11', '06-1', '6-1.5', '6-1x', '1-1\n']) {
     expect(x.recordCampaign({ win: true }, { code }).ok).toBe(false);
   }
   expect(x.recordCampaign({ win: true }, { code: '6-1', expedition: { kind: 'dungeon' } }).ok).toBe(false);

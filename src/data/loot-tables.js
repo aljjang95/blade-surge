@@ -1,9 +1,11 @@
 import { DIFFICULTY_ORDER, tormentTierOf } from '../game/difficulty.js';
+import { CHAPTER_COUNT, STAGES_PER_CHAPTER } from './campaign-shape.js';
 
 // 기존 재료 3종만 사용한다. 후반 지역은 두 종류를 함께 주어 정련 선택지가 넓어진다.
 const MATERIALS = [
   ['glass_leaf'], ['ember_core'], ['star_dust'],
   ['glass_leaf', 'ember_core'], ['ember_core', 'star_dust'], ['star_dust', 'glass_leaf'],
+  ['ember_core', 'glass_leaf'],
 ];
 const BASE_WEIGHTS = {
   normal: { N: 70, S: 24, E: 5.5, U: .4, L: .1 },
@@ -18,7 +20,7 @@ export const difficultyDepth = (difficulty) => {
 };
 function buildTables(difficulty = 'story') {
   const d = difficultyDepth(difficulty);
-  return Object.freeze(Array.from({ length: 6 }, (_, i) => {
+  return Object.freeze(Array.from({ length: CHAPTER_COUNT }, (_, i) => {
     const ch = i + 1;
     return Object.freeze(Object.fromEntries(['normal', 'elite', 'boss'].map(rank => {
       const boss = rank === 'boss', elite = rank === 'elite', weights = { ...BASE_WEIGHTS[rank] };
@@ -60,7 +62,7 @@ function tablesFor(difficulty) {
   return TORMENT_TABLES.get(depth);
 }
 export function lootTable(chapter = 1, rank = 'normal', difficulty = 'story') {
-  const ch = Math.max(1, Math.min(6, Math.floor(Number(chapter) || 1)));
+  const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1)));
   const tables = tablesFor(difficulty);
   return Object.hasOwn(tables[ch - 1], rank) ? tables[ch - 1][rank] : tables[ch - 1].normal;
 }
@@ -75,10 +77,10 @@ export function levelExperienceMultiplier(heroLevel, recommendedLevel) {
   return 1 + Math.max(-.5, Math.min(.5, delta * .05));
 }
 // RPG 즉시 처치 XP + 정화 포함 클리어 XP로 검증한다(tools/progression-estimate.mjs).
-// 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다.
-const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46];
+// 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다(7장은 46→50).
+const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46, 50];
 export function recommendedLevel(chapter, stage = 1) {
-  const ch = Math.max(1, Math.min(6, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(10, Math.floor(Number(stage) || 1)));
+  const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(STAGES_PER_CHAPTER, Math.floor(Number(stage) || 1)));
   const from = CHAPTER_START_LEVEL[ch - 1], to = CHAPTER_START_LEVEL[ch];
   return from + Math.floor((st - 1) * (to - from) / 10);
 }

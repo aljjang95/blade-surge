@@ -31,7 +31,7 @@ test('each campaign finale has two exclusive techniques and three authored phase
     for(const key of techniques){expect(used.has(key)).toBe(false);used.add(key);}
     for(let phase=0;phase<3;phase++)expect(config.phases[phase].map((_,i)=>nextBossPattern(def,i,phase))).toEqual(config.phases[phase]);
   }
-  expect(used.size).toBe(12);
+  expect(used.size).toBe(CHAPTERS.length*2);
   expect(nextBossPattern({pattern:['spin','slam']},0,1)).toBe('slam');
 });
 
