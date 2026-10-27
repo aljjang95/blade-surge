@@ -45,7 +45,7 @@ test('아바타 저장 데이터는 존재·소유·영웅 일치 조건으로 �
     knight: 'avatar_knight_sakura', barbarian: 'avatar_knight_sakura', mage: 'missing', rogue: 'avatar_rogue_crow',
   }, showGear: { knight: true, mage: 1, nobody: true } };
   const migrated = normalizeSave(raw, eco.fresh());
-  expect(migrated.avatars).toEqual({ owned: ['avatar_knight_sakura'], equipped: { knight: 'avatar_knight_sakura' }, showGear: { knight: true } });
+  expect(migrated.avatars).toEqual({ owned: ['avatar_knight_sakura'], equipped: { knight: 'avatar_knight_sakura' }, showGear: { knight: true }, parts: {} });
 });
 
 test('아바타 구매·착용은 보석과 소유 상태를 검사하고 저장한다', () => {
@@ -82,7 +82,7 @@ test('저장에 실패한 아바타 구매는 보석과 소유를 되돌린다',
 test('손상된 아바타 저장 값은 예외 없이 빈 상태로 정규화된다', () => {
   const eco = new Economy();
   const raw: any = eco.fresh(); raw.avatars = { owned: 'avatar_knight_sakura', equipped: [] };
-  expect(normalizeSave(raw, eco.fresh()).avatars).toEqual({ owned: [], equipped: {}, showGear: {} });
+  expect(normalizeSave(raw, eco.fresh()).avatars).toEqual({ owned: [], equipped: {}, showGear: {}, parts: {} });
 });
 
 test('아바타 착용 전후 전투력과 스탯은 동일하다', () => {

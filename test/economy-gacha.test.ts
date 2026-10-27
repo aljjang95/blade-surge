@@ -161,7 +161,7 @@ describe('cash commerce stays closed without a verified receipt', () => {
   test('cash SKU purchase and premium pass mutate nothing', () => {
     const eco = new Economy();
     const before = JSON.stringify(eco.s);
-    for (const id of ['starter', 'monthly', 'gem1', 'vip_pass', 'enh_pack']) expect(eco.purchase(id)).toEqual({ ok: false, reason: 'payment-unavailable' });
+    for (const id of ['starter', 'monthly', 'gem1', 'growth']) expect(eco.purchase(id)).toEqual({ ok: false, reason: 'payment-unavailable' });
     expect(eco.buyPass()).toEqual({ ok: false, reason: 'payment-unavailable' });
     expect(JSON.stringify(eco.s)).toBe(before);
     eco.s.pass.xp = 10_000; expect(eco.claimPass(1, true)).toBeNull();

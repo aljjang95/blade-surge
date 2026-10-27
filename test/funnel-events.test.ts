@@ -15,7 +15,7 @@ function memStorage(initial: Record<string, string> = {}) {
 const fixedClock = (start = 1_800_000_000_000) => { let t = start; return { now: () => t, advance: (ms: number) => { t += ms; } }; };
 
 test('exposes exactly the funnel events; purchase success only as purchase_verified (server-verified) and no pass/ad success events', () => {
-  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'hero_unlock_free', 'paysheet_open', 'purchase_verified', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
+  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'codex_open', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'hero_unlock_free', 'lore_scene', 'paysheet_open', 'purchase_verified', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
   for (const name of ['purchase_success', 'purchase_complete', 'pass_purchase', 'ad_reward', 'ad_complete', 'grant']) {
     expect(validateFunnelEvent(name, {})).toEqual({ ok: false, reason: 'unknown_event' });
   }
@@ -38,7 +38,7 @@ test('valid events are recorded in order with deterministic clock and sequence',
   const log = createFunnelLog({ storage, now: clock.now });
   expect(log.track('first_run').ok).toBe(true);
   clock.advance(1500);
-  expect(log.track('tutorial_step', { step: 1 }).ok).toBe(true);
+  expect(log.track('tutorial_step', { step: 1, foldSec: 15 }).ok).toBe(true);
   expect(log.track('gacha_pull', { count: 10, currency: 'gems', pityBefore: 59, ssr: 1, sr: 2, dupes: 1 }).ok).toBe(true);
   expect(log.track('shop_view', { tab: SHOP_TABS[0].id }).ok).toBe(true);
   expect(log.track('paysheet_open', { sku: SKUS[0].id }).ok).toBe(true);
@@ -56,6 +56,7 @@ test('rejects unknown keys, freeform strings, PII-like fields, wrong types and m
     ['first_run', { email: 'a@b.c' }],
     ['tutorial_step', { step: 1, note: 'hello' }],
     ['tutorial_step', { step: '1' }],
+    ['tutorial_step', { step: 1, foldSec: 999 }],
     ['tutorial_step', { step: 1.5 }],
     ['tutorial_step', {}],
     ['gacha_pull', { count: 5, currency: 'gems' }],

@@ -19,6 +19,7 @@ import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
 import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
+import { removeWeaponHalo } from '../game/weapon-glow.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
@@ -600,6 +601,7 @@ export function disposeCharacter(root, mixer) {
   disposeHeroBodyMotion(root);
   removeHeroBoots(root);   // 부츠 지오메트리는 인스턴스 소유
   removeHeroGearParts(root);
+  removeWeaponHalo(root);   // 광륜은 Sprite 라 아래 메시 순회에 걸리지 않는다
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {

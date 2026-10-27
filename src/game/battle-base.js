@@ -16,12 +16,14 @@ import { ExitCue, exitCueTarget } from './exit-cue.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel, preloadHeroBody } from '../engine/assets.js';
-import { heroAppearance } from '../data/hero-library.js';
+import { heroBodyAppearance } from '../data/hero-library.js';
+import { withAvatarSpeed } from '../data/avatars.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
+import { bossAppearVoiceName } from '../engine/boss-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
 import { contactFeedback } from './apex-combat.js';
@@ -112,7 +114,7 @@ export class Battle {
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
-    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
+    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = withAvatarSpeed(heroStats(def, heroState, equipBonus), equipBonus, { party: !!stage.party });
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
     this.holes = []; this.rebirthUsed = false;
@@ -142,9 +144,10 @@ export class Battle {
     const gltf = await loadModel(def.model);
     const avatar = stage.party ? avatarId : this.app.eco.displayAvatar(heroId);
     const equip = stage.party ? {} : this.app.eco.heroEquipInsts(heroId);
-    await preloadHeroBody(heroId, heroAppearance(equip, ITEM_BY_ID), avatar);
+    await preloadHeroBody(heroId, heroBodyAppearance(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
+    this.player.magnetMul = 1 + (!stage.party && equipBonus.avatar?.pickupPct || 0);   // 아바타 풀셋: 줍기 범위
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
@@ -375,7 +378,7 @@ export class Battle {
     room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
     room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
-      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(bossAppearVoiceName(this.stage, this.bossKey), { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       audio.bossIntro(this.stage); // 등급별 등장 스팅어 + BGM 덕킹(최종/중간·수문장/그 밖)
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)

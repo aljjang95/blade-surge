@@ -1,0 +1,72 @@
+/* 세계관 연출 UI: 챕터 입장 장면 · 도감. 가로 모바일(844x390, 640x360) 우선. 플레이 영역 위 팝업은 없다(전투 밖 화면). */
+.lore-scene { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; overflow: hidden; cursor: pointer;
+  padding: calc(8px + var(--sat, 0px)) calc(14px + var(--sar, 0px)) calc(14px + var(--sab, 0px)) calc(14px + var(--sal, 0px));
+  background: radial-gradient(120% 90% at 50% 20%, color-mix(in srgb, var(--lore-color, #87cbb0) 46%, #0b0a12) 0%, #0b0a12 78%); animation: lore-in .35s ease both; }
+.lore-scene.out { opacity: 0; transition: opacity .2s; pointer-events: none; }
+.lore-scene > .lore-scene-art { position: absolute; inset: 0; background: var(--lore-art, none) center / cover no-repeat; opacity: .38; filter: saturate(.8) blur(1px); }
+.lore-scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #0b0a1288 0%, transparent 35%, #0b0a12cc 100%); }
+.lore-scene > * { position: relative; z-index: 1; }
+.lore-scene-title { position: absolute; left: calc(14px + var(--sal, 0px)); top: calc(10px + var(--sat, 0px)); display: grid; gap: 1px; color: #fff3d6; text-shadow: 0 2px 6px #000a; z-index: 2; }
+.lore-scene-title small { font-size: 10px; letter-spacing: .12em; color: color-mix(in srgb, var(--lore-color, #87cbb0) 70%, #fff); }
+.lore-scene-title b { font-size: 16px; }
+.lore-scene-skip { position: absolute; right: calc(14px + var(--sar, 0px)); top: calc(8px + var(--sat, 0px)); z-index: 3; min-width: 88px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #ffffff55; background: #0b0a12b8; color: #f4efe6; font-size: 13px; font-weight: 800; }
+.lore-scene-skip:focus-visible { outline: 2px solid #f1d59c; outline-offset: 2px; }
+.lore-scene-stage { width: min(560px, 100%); display: flex; justify-content: center; padding-bottom: 10px; z-index: 2; }
+.lore-bubble { --speaker: #d8d2c4; width: 100%; padding: 12px 18px 14px; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--speaker) 70%, #000); background: linear-gradient(180deg, #1c1830f2, #0e0b1af2); box-shadow: 0 8px 24px #000a; text-align: center; }
+.lore-bubble .lore-name { display: inline-block; margin-bottom: 4px; padding: 1px 12px 2px; border-radius: 999px; font-size: 12px; font-weight: 900; color: #1a1020; background: var(--speaker); }
+.lore-bubble p { margin: 0; font-size: 19px; line-height: 1.45; font-weight: 800; color: #f4efe6; word-break: keep-all; text-align: center; }
+.lore-bubble.narration p { font-style: italic; color: var(--speaker); }
+.lore-bubble.pop { animation: lore-pop .28s ease both; }
+.lore-scene-hint { z-index: 2; font-size: 11px; color: #c9c2dcb0; }
+.lore-scene-dots { z-index: 2; display: flex; gap: 5px; margin-top: 6px; }
+.lore-scene-dots i { width: 6px; height: 6px; border-radius: 50%; background: #ffffff33; }
+.lore-scene-dots i.on { background: var(--lore-color, #87cbb0); }
+.lore-scene.reduced, .lore-scene.reduced .lore-bubble.pop { animation: none; }
+@keyframes lore-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lore-pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-height: 420px) {
+  .lore-scene-stage { padding-bottom: 4px; }
+  .lore-bubble { padding: 8px 14px 10px; }
+  .lore-bubble p { font-size: 17px; }
+  .lore-scene-title b { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .lore-scene, .lore-bubble.pop { animation: none; } }
+
+/* 지역 머리 '장면 다시 보기' */
+html body #tab-stage .chapter-copy .lore-replay, .lore-replay { width: fit-content; max-width: 100%; display: inline-flex; align-items: center; min-height: 32px; margin-top: 6px; padding: 2px 12px; border-radius: 999px; border: 1px solid #b49a68; background: #2a2540; color: #f1d59c; font-size: 12px; font-weight: 800; }
+.lore-replay:focus-visible, .lore-codex-tabs button:focus-visible, .lore-codex-back:focus-visible { outline: 2px solid #f1d59c; outline-offset: 2px; }
+
+/* 보스 등장 띠 확장: 칭호 · 이름 + 외침 한 줄(위쪽 가장자리 띠, 입력 없음). 이름 칸은 `칭호 · 이름`이 대신한다. */
+.boss-intro.has-lore { flex-wrap: wrap; row-gap: 1px; max-width: 46%; padding-bottom: 4px; border-radius: 16px; white-space: normal; }
+.boss-intro .boss-intro-lore { display: contents; }
+.boss-intro .boss-intro-lore b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #fff3d6; font-weight: 800; }
+.boss-intro .boss-intro-lore em { flex: 1 1 100%; padding-left: 4px; font-style: italic; font-size: 11px; color: #ffd98a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 도감 */
+.lore-codex { display: flex; flex-direction: column; max-height: 78vh; }
+.lore-codex-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lore-codex-head h2 { margin: 0; font-size: 18px; text-align: left; }
+.lore-codex-back { min-height: 40px; padding: 0 14px; }
+.lore-codex-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; }
+.lore-codex-tabs button { min-height: 44px; border-radius: 10px; border: 1px solid #ffffff33; background: #ffffff10; font-size: 13px; font-weight: 800; color: #d8d2c4; }
+.lore-codex-tabs button[aria-pressed="true"] { border-color: #f1c15a; background: #f1c15a22; color: #ffe2a0; }
+.lore-codex-list { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 8px; padding-right: 2px; -webkit-overflow-scrolling: touch; }
+.lore-card { display: grid; gap: 3px; padding: 10px 12px; text-align: left; border-radius: 12px; border: 1px solid #ffffff2a; background: #ffffff0d; }
+.lore-card h3 { margin: 0; font-size: 15px; color: #f1e3c3; }
+.lore-card h3 small { margin-left: 6px; font-size: 11px; color: #ffd98a; font-weight: 700; }
+.lore-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #c9c2dc; text-align: left; word-break: keep-all; white-space: pre-line; }
+.lore-card.locked { opacity: .78; }
+.lore-card.locked h3 { color: #8f89a8; letter-spacing: .12em; }
+.lore-card.locked h3 small { display: none; }
+.lore-card.locked p { color: #a49ec0; }
+.lore-card .lore-replay { justify-self: start; }
+.lore-codex-empty { padding: 18px 8px; text-align: center; color: #a49ec0; font-size: 13px; }
+@media (max-height: 420px) { .lore-codex { max-height: 80vh; } .lore-card { padding: 8px 10px; } }
+.journal-toolbar-btns { display: flex; gap: 6px; }
+.boss-intro.has-lore.narrow { gap: 5px; padding-right: 10px; }
+.boss-intro.has-lore.narrow > b { display: none; }
+.boss-intro.has-lore.narrow > i { font-size: 10px; padding: 1px 6px; }
+.boss-intro.has-lore.narrow .boss-intro-lore b { font-size: 11px; }
+.boss-intro .boss-intro-lore .lore-slim { display: none; }
+.boss-intro.has-lore.narrow .boss-intro-lore .lore-wide { display: none; }
+.boss-intro.has-lore.narrow .boss-intro-lore .lore-slim { display: block; }

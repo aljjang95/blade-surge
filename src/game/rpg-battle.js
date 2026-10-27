@@ -15,6 +15,7 @@ import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.
 import { RpgView } from '../ui/rpg.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import '../ui/rpg.css';
+import { withAvatarSpeed } from '../data/avatars.js';
 
 const direction = new THREE.Vector3();
 // 데미지 숫자 동시 표시 상한(fx.maxDmg 40 이내)과 프레임당 신규 표시 상한
@@ -106,7 +107,9 @@ export class Battle extends BaseBattle {
       if (award.levels) {
         this.app.funnel?.track('hero_level_up', { source: 'combat', level: hero.level });
         const p = this.player, oldMax = p.maxHp;
-        const nextStats = heroStats(p.def || HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
+        const bonus = this.app.eco.heroEquipBonus(this.heroId);
+        // 출격 때와 같은 아바타 이동속도를 다시 얹는다(레벨업 재계산이 지우지 않게).
+        const nextStats = withAvatarSpeed(heroStats(p.def || HEROES[this.heroId], hero, bonus), bonus, { party: !!this.stage?.party });
         p.stats = this.upgradeHeroStats?.(nextStats) || nextStats;
         p.maxHp = p.stats.hp; p.heroLevel = hero.level;
         for (const [slot, button] of (this.ui.skillBtns || []).entries()) { const i = p.combatSkillIndex ? p.combatSkillIndex(slot) : slot; if (p.def.skills[i]) button.classList.toggle('locked', !p.unlocked(i)); }

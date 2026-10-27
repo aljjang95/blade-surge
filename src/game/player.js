@@ -6,6 +6,7 @@ import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
 import { skillGateLevel } from '../data/skill-tree.js';
 import { applyLook } from './look.js';
+import { emitWeaponSparks } from './weapon-glow.js';
 import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
 import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
@@ -357,10 +358,10 @@ export class Player extends Actor {
     if (this.game.app?.reducedMotion?.matches) { this.trail = null; return; }
     const hand = 'handslot.r', heavy = this.def.weapon === '2h', dual = this.def.weapon === 'dual';
     const len = heavy ? 1.6 : dual ? .95 : 1.2;
-    const combo = this.current;
+    const combo = this.current, glow = this.look.weapon?.glowTier?.trail || 1;   // 강화 +10 이상은 궤적이 넓고 길게 남는다(잔광)
     this.trail = this.game.fx.trail(points => this.weaponPoints(hand, len, points), this.look.trailColor, {
-      segs: this.game.fx.lite ? 10 : 22, life: this.game.fx.lite ? .14 : heavy ? .29 : dual ? .18 : .24,
-      width: heavy ? .88 : dual ? .66 : .76,
+      segs: this.game.fx.lite ? 10 : 22, life: (this.game.fx.lite ? .14 : heavy ? .29 : dual ? .18 : .24) * glow,
+      width: (heavy ? .88 : dual ? .66 : .76) * Math.min(1.15, glow),
       getGain: () => this.current === combo && this.state === 'attack' && !this.game.app?.reducedMotion?.matches
         ? weaponTrailGain(this.attackProgress(), combo.hitAt, combo.move === 'spin') : 0,
     });
@@ -946,7 +947,8 @@ export class Player extends Actor {
     if (this.perfectCd > 0) this.perfectCd -= dt;
     if (this.drT > 0) { this.drT -= dt; if (this.drT <= 0) { this.dr = 0; this.sanctum = null; } }
     if (this.comboResume) { this.comboResume.t -= dt; if (this.comboResume.t <= 0) this.comboResume = null; }
-    if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 15 ? 0.12 : 0.22; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // +10 이상 강화: 잔불 오라
+    if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 20 ? 0.1 : 0.14; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // 무기 +15 이상: 발밑 고유 오라
+    if (this.alive && !this.game.app?.reducedMotion?.matches) emitWeaponSparks(this.game.fx, this.model, this.look, dt, this._weaponSpark ||= { t: 0 });   // 무기 +10 이상: 칼날 불씨·잔광
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
     for (let i = 0; i < this.cds.length; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);   // 4로 박아두면 각성 슬롯(4·5)이 영원히 안 돌아온다

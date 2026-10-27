@@ -1,0 +1,23 @@
+/* 화면 밀도 공통 규칙(2026-10-28 UI·UX 점검, docs/UIUX_AUDIT.md).
+   짧은 가로 화면(높이 500px 이하)에서 버튼·탭·머리글이 본문을 밀어내지 않게 크기 단계를 정한다.
+   터치 최소 44px는 지키고, 주 행동만 52px까지 키운다. 화면별 조정은 이 파일의 토큰을 쓴다.
+   main.js 의 마지막 import 라서 앞선 화면 CSS 보다 뒤에 적용된다. */
+:root {
+  --ui-tap: 44px;
+  --ui-btn-h: 44px;
+  --ui-btn-h-main: 52px;
+  --ui-tab-h: 44px;
+  --ui-head-h: 56px;
+  --ui-gap: 8px;
+  --ui-pad: 12px;
+  --ui-font-min: 11px;
+  --ui-font-body: 13px;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  :root { --ui-gap: 6px; --ui-pad: 10px; }
+  /* 기본 버튼: 12px 22px·17px 글자(약 50~60px)를 44px 단계로. 작은 설명 줄이 있으면 그만큼만 늘어난다. */
+  .btn:not(.btn-battle) { min-height: var(--ui-btn-h); padding: 6px 16px; font-size: 15px; border-radius: 12px; }
+  .btn small { font-size: 11px; }
+  .btn-sm { min-height: var(--ui-tap); padding: 4px 12px; font-size: 13px; }
+  .btn-xl { min-height: var(--ui-btn-h-main); padding: 8px 30px; font-size: 19px; }
+}

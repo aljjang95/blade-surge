@@ -95,3 +95,14 @@ test('keyboard selection restores focus to the replacement card, pointer selecti
     else Reflect.deleteProperty(globalThis,'document');
   }
 });
+
+test('영웅 화면은 미보유 영웅에 머물지 않고 출전 영웅으로 연다(시작 영웅 선택 뒤 기본값 검성 문제)', () => {
+  const eco = new Economy();
+  const starter = Object.keys(HEROES).find((id) => id !== eco.s.selected && !eco.ownHero(id))!;
+  eco.s.roster = { ...eco.s.roster, owned: [starter] }; eco.s.selected = starter;
+  const meta = Object.create(Meta.prototype);
+  Object.assign(meta, { eco, heroSel: 'knight' });
+  if (!eco.ownHero('knight')) expect(meta.focusOwnedHero()).toBe(starter);
+  // 보유 영웅을 보고 있으면 그대로 둔다.
+  meta.heroSel = starter; expect(meta.focusOwnedHero()).toBe(starter);
+});

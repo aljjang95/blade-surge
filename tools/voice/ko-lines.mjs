@@ -20,7 +20,7 @@ const HERO_LINE_DATA = {
     lines: [
       line('select', '나는 광전사 드라칸이다. 피가 끓는구나. 오늘 이 전장을 전부 부숴 버리겠다.', 'excited'),
       line('atk0', '라아!', 'excited', 'bark'), line('atk1', '흐읏!', 'angry', 'bark'), line('atk2', '그라아!', 'excited', 'bark'), line('atk3', '으랴아!', 'angry', 'bark'),
-      line('fin0', '으아아아!', 'excited', 'bark'), line('fin1', '부숴라!', 'angry', 'bark'),
+      line('fin0', '박살이다!', 'excited', 'bark'), line('fin1', '부숴라!', 'angry', 'bark'),
       line('skill0', '회오리 참격!', 'excited', 'bark'), line('skill1', '대지 분쇄!', 'angry', 'bark'), line('skill2', '광폭화!', 'angry', 'bark'),
       line('skill6', '혈왕, 대지붕괴!', 'angry', 'bark'), line('ult', '지옥의 도끼다!', 'excited'),
       line('hurt0', '크윽!', 'pain', 'bark'), line('hurt1', '그흑!', 'pain', 'bark'), line('hurt2', '아악!', 'pain', 'bark'),
@@ -59,7 +59,7 @@ const HERO_LINE_DATA = {
     lines: [
       line('select', '나는 바람추적자 실바. 숲의 바람이 길을 알려 주는 한, 내 화살은 한 번도 빗나가지 않아.', 'confident'),
       line('atk0', '하!', 'determined', 'bark'), line('atk1', '타앗!', 'excited', 'bark'), line('atk2', '흐읍!', 'determined', 'bark'), line('atk3', '놓치지 않아!', 'excited', 'bark'),
-      line('fin0', '꿰뚫어라!', 'excited', 'bark'), line('fin1', '바람과 함께!', 'determined', 'bark'),
+      line('fin0', '받아라!', 'excited', 'bark'), line('fin1', '바람과 함께!', 'determined', 'bark'),
       line('skill0', '바람 관통화살!', 'excited', 'bark'), line('skill1', '삼중 추적화살!', 'confident', 'bark'), line('skill2', '바람의 이탈!', 'determined', 'bark'),
       line('skill6', '질풍, 사냥각인!', 'excited', 'bark'), line('ult', '폭풍의 일곱 화살!', 'excited'),
       line('hurt0', '아!', 'pain', 'bark'), line('hurt1', '큭!', 'pain', 'bark'), line('hurt2', '흣!', 'pain', 'bark'),

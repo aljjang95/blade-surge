@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { legalLinksHtml } from './legal-links.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { audio } from '../engine/audio.js';
 import { ITEM_BY_ID, RARITY_COLOR } from '../data/items.js';
@@ -7,6 +8,7 @@ import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
+import { bossLoreHtml } from './lore-scene.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { resultStrip } from '../game/torment-ui-model.js';
@@ -239,7 +241,9 @@ export class UI {
     for (const el of [this.comboEl, this.killStreakEl]) { const r = rect(el); if (r && !el.classList?.contains('hidden')) top = Math.max(top, r.bottom); }
     top += 8;
     const limit = joy ? joy.top - 6 : height * .7;
-    if (right - left < 150 || limit - top < 60) { clear(); return; }
+    // COMBO 배지가 떠서 남는 세로 공간이 좁아도 기본 위치(화면 위 가운데·플레이어 카드 위)로 돌아가지 않는다.
+    // 그 경우 알림 띠는 높이만 줄어든다(최소 28px). 폭이 모자랄 때만 기본 배치로 돌아간다.
+    if (right - left < 150) { clear(); return; }
     hud.classList?.add('side-stack');
     const box = hud.getBoundingClientRect?.() || { left: 0, top: 0 };
     writeHudStyle(hud.style, '--side-left', px(left - box.left));
@@ -253,11 +257,14 @@ export class UI {
     }
     writeHudStyle(hud.style, '--side-banner-top', px(y - box.top));
     if (banner?.classList?.contains('on') && banner.offsetHeight > 0) y += banner.offsetHeight + 6;
+    // 경고·배너가 쌓여 알림이 들어갈 높이(28px)조차 없으면 조이스틱을 덮지 않게 기본 배치로 돌아간다.
+    if (limit - y < 28) { clear(); return; }
     toast.classList?.add('edge-strip');
     writeHudStyle(toast.style, '--battle-notice-top', px(y));
     writeHudStyle(toast.style, '--battle-notice-left', px(left));
     writeHudStyle(toast.style, '--battle-notice-right', px(width - right));
-    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(44, limit - y))));
+    // 보스 전술 안내처럼 긴 문장은 세 줄(58px)까지 보이게 한다.
+    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(58, limit - y))));
   }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
@@ -350,12 +357,13 @@ export class UI {
   closeModal() { this.endModal(); this.show(this.el.modal, false); audio.play('ui_close', { vol: 0.4 }); }
   /** 현재 모달의 수명이 끝날 때(닫힘 · 다른 모달로 교체) 한 번만 정리한다. */
   endModal() { const done = this._modalOnClose; this._modalOnClose = null; this.el.modalBox.onkeydown = null; try { done?.(); } catch (error) { console.error(error); } }
-  confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold' } = {}) {
-    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p><div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => { this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
+  /** check: 동의 문구를 주면 체크박스(기본 미체크)를 보이고, 체크해야 확인 버튼이 켜진다. */
+  confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold', check = '' } = {}) {
+    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p>${check ? `<label class="pay-consent"><input type="checkbox" id="m-consent"><span>${check}</span></label>` : ''}<div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { const okBtn = b.querySelector('#m-ok'), consent = b.querySelector('#m-consent'); if (consent) { okBtn.disabled = true; consent.onchange = () => { okBtn.disabled = !consent.checked; }; } okBtn.onclick = () => { if (okBtn.disabled) return; this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
   }
   /** No store billing provider is connected. Never resolve a simulated purchase success. */
   paySheet(sku) {
-    this.modal('<div class="pay-sheet"><h2>유료 구매 준비 중</h2><p>현재 버전은 스토어 결제가 연결되지 않아 유료 상품과 프리미엄 패스를 구매할 수 없습니다.</p><p>기본 플레이와 획득한 재화 사용은 계속 이용할 수 있습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="p-cancel">돌아가기</button></div></div>', {
+    this.modal('<div class="pay-sheet"><h2>유료 구매 준비 중</h2><p>현재 버전은 스토어 결제가 연결되지 않아 유료 상품과 프리미엄 패스를 구매할 수 없습니다.</p><p>기본 플레이와 획득한 재화 사용은 계속 이용할 수 있습니다.</p>'+legalLinksHtml(['terms','refund','odds'])+'<div class="modal-btns"><button class="btn btn-gold" id="p-cancel">돌아가기</button></div></div>', {
       onOpen: (box) => { box.querySelector('#p-cancel').onclick = () => this.closeModal(); },
     });
     return Promise.resolve(false);
@@ -533,10 +541,32 @@ export class UI {
     this.el.hud.querySelector('.boss-intro')?.remove();
     const node = document.createElement('div');
     node.className = 'boss-intro'; node.dataset.rank = tag.rank; node.setAttribute('role', 'status');
-    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b><span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`;
+    const loreHtml = bossLoreHtml(stage); // 칭호 · 이름 + 외침(세계관 연출). 없으면 기존 띠 그대로.
+    node.classList.toggle('has-lore', !!loreHtml);
+    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b>${loreHtml || `<span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`}`;
     this.el.hud.append(node);
+    this.placeBossIntro(node);
     setTimeout(() => node.remove(), 3400);
     return true;
+  }
+  /**
+   * 짧은 가로 화면(640×360 등)에서는 화면 가운데 46% 띠가 영웅 HP 카드 오른쪽 끝과 AUTO·일시정지 버튼에 닿는다.
+   * 띠가 들어갈 때 한 번만 실제 카드 오른쪽 끝과 오른쪽 위 버튼 왼쪽 끝을 읽어 그 사이 빈칸에 가운데 정렬한다.
+   */
+  placeBossIntro(node) {
+    const hud = this.el?.hud; if (!hud?.getBoundingClientRect || !node?.style) return;
+    const box = hud.getBoundingClientRect(), gap = 6;
+    const card = hud.querySelector('.hud-player')?.getBoundingClientRect?.();
+    const rights = ['btn-auto', 'btn-pause'].map((id) => document.getElementById(id)?.getBoundingClientRect?.()).filter((r) => r && r.width > 0 && r.top < box.top + 60);
+    const left = card && card.width > 0 && card.top < box.top + 60 ? card.right - box.left + gap : 0;
+    const right = rights.length ? Math.min(...rights.map((r) => r.left)) - box.left - gap : box.width;
+    const room = right - left;
+    // 측정이 실패하면(빈칸이 너무 좁거나 요소가 없음) 기존 가운데 배치를 그대로 쓴다. 폭은 기존 상한 46%를 넘기지 않는다.
+    if (!(room > 120)) return;
+    writeHudStyle(node.style, 'left', `${Math.round(left + room / 2)}px`);
+    writeHudStyle(node.style, 'max-width', `${Math.floor(Math.min(room, box.width * 0.46))}px`);
+    // 빈칸이 좁으면 관문 코드를 숨겨 칭호·이름이 잘리지 않게 한다(코드는 체력 막대 계급 표식에도 있다).
+    node.classList.toggle('narrow', room < 260);
   }
   /** 콤보 칩은 영웅 HP 카드(EXP 막대 포함) 바로 아래 가장자리 띠에 둔다. 가로 화면에서만 실제 카드 하단을 읽어 --combo-top 을 정한다. */
   placeComboChip() {
@@ -811,7 +841,8 @@ export class UI {
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
-      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
+      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
+      lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
