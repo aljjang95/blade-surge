@@ -45,7 +45,7 @@ import { heroCompare } from '../data/hero-traits.js';
 import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { campaignTown } from '../data/campaign-towns.js';
-import { isAccountResetPhrase } from '../game/account-reset.js';
+import { isAccountResetPhrase, PAYMENT_PENDING_MESSAGE } from '../game/account-reset.js';
 import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
@@ -841,7 +841,7 @@ export class Meta {
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       ${legalLinksHtml(undefined, 'legal-links setting-legal')}
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
-      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 모든 진행(영웅·장비·재화·진행도·튜토리얼)과 기기 계정이 지워지고 새 계정으로 처음부터 시작합니다. 되돌릴 수 없습니다. 결제·구독 확인 기록은 지우지 않습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 처음부터 시작할까요?</b> 아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
+      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 모든 진행(영웅·장비·재화·진행도·튜토리얼)과 기기 계정이 지워지고 새 계정으로 처음부터 시작합니다. 되돌릴 수 없습니다. 결제·구독 확인 기록은 지우지 않습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 처음부터 시작할까요?</b> 구매한 상품 권한은 옛 계정에 남고 새 계정으로 이어지지 않습니다. 아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
       const pwa = this.app.pwa, pwaState = pwa?.getState();
@@ -885,9 +885,12 @@ export class Meta {
       resetInput.oninput = () => { resetYes.disabled = !isAccountResetPhrase(resetInput.value); };
       b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
       resetYes.onclick = async () => {
-        if (!isAccountResetPhrase(resetInput.value)) return;
-        resetYes.disabled = true;
-        if (await this.app.resetAccount()) location.reload(); else { this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); resetYes.disabled = false; }
+        if (!isAccountResetPhrase(resetInput.value) || this._resetting) return;
+        this._resetting = true; resetYes.disabled = true; resetInput.disabled = true; resetBtn.disabled = true; b.querySelector('#m-reset-no').disabled = true;
+        const out = await this.app.resetAccount();
+        if (out.ok) { location.reload(); return; }
+        this._resetting = false; resetInput.disabled = false; resetBtn.disabled = false; b.querySelector('#m-reset-no').disabled = false; resetYes.disabled = !isAccountResetPhrase(resetInput.value);
+        this.ui.toast(out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
       };
       this.groupSettingsTabs(b);
     } });
