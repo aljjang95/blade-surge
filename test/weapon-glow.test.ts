@@ -80,6 +80,7 @@ test('칼날 불씨: +10 이상만 기존 파티클 풀로 뿌린다', () => {
 
 // 리뷰 P1: 강화 발광이 다른 발광 갈래를 끊거나, 다시 불렀을 때 쌓이면 안 된다.
 import { applyLook } from '../src/game/look.js';
+import { itemForgeCacheSize } from '../src/engine/item-forge.js';
 import { HEROES } from '../src/data/heroes.js';
 
 function lookModel(authored: boolean) {
@@ -99,6 +100,12 @@ function lookModel(authored: boolean) {
   };
   return { model, bodyMat, axeMat, weaponMat };
 }
+// 대장간 무기 지오메트리는 공유 임대라, 재질 폐기(= Actor 해제 경로)로 반납해야 다른 테스트의 캐시 검사가 깨지지 않는다.
+function release(model: THREE.Object3D) {
+  const mats = new Set<THREE.Material>();
+  model.traverse((o: any) => { if (o.isMesh) for (const m of [].concat(o.material)) mats.add(m); });
+  for (const m of mats) m.dispose();
+}
 const plainWeapon = () => (ITEMS_OF as any)('E', 'weapon').find((it: any) => !it.modelNode && !it.summon);
 
 test('전용(authored) 모델의 몸 발광은 원본을 유지하고 무기만 강화 빛을 받는다', () => {
@@ -110,6 +117,7 @@ test('전용(authored) 모델의 몸 발광은 원본을 유지하고 무기만 
   expect(bodyMat.emissive.getHex()).toBe(new THREE.Color(0.2, 0.1, 0.05).getHex());
   const lit = weaponMat().emissive;
   expect(lit.r + lit.g + lit.b).toBeGreaterThan(plain.r + plain.g + plain.b + 0.3);
+  release(model);
 });
 
 test('applyLook 을 다시 불러도 무기 발광이 쌓이지 않는다', () => {
@@ -121,5 +129,7 @@ test('applyLook 을 다시 불러도 무기 발광이 쌓이지 않는다', () =
     expect(first.r + first.g + first.b).toBeGreaterThan(0);
     applyLook(model, HEROES.barbarian, equip); applyLook(model, HEROES.barbarian, equip);
     expect(weaponMat().emissive.equals(first)).toBe(true);
+    release(model);
   }
+  expect(itemForgeCacheSize()).toBe(0);
 });
