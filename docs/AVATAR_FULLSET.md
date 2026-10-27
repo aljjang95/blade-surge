@@ -15,7 +15,7 @@
 
 | 효과 | 값 | 적용 위치 |
 |---|---|---|
-| 이동속도 | +5% | `battle-base.start`가 `stats.spd`에 곱함(혼자 하는 전투) |
+| 이동속도 | +5% | `withAvatarSpeed`: 출격(`battle-base.start`)과 전투 중 레벨업 재계산(`rpg-battle`) 모두(혼자 하는 전투) |
 | 줍기 범위 | +30% | `player.magnetMul` |
 
 - 공격·체력·방어·드랍·골드·경험치는 건드리지 않는다. 그래서 전투력 계산과 `sim:90d` 진행 밴드에 영향이 없다(sim은 아바타를 모델링하지 않는다).
@@ -28,7 +28,8 @@
 - 상품 id: `avatar_fullset_<heroId>_v1` (`avatarFullsetSku(heroId)`). 가격 후보 ₩14,900, 카탈로그·결제·환불·상점 UI는 BM 레인 소유.
 - 지급: 결제 확인 뒤 `economy.grantAvatarFullset(heroId)`만 부른다. 영웅마다 지급할 아바타는 `AVATAR_PREMIUM_BY_HERO`에 있고, 몸체 자산이 준비된 영웅만 들어간다. 준비 전이면 `{ ok: false, reason: 'not-ready' }`.
 - 반환 `{ ok, avatarId, already }`. 이미 소유면 `already: true`로 중복 지급하지 않는다(보상 처리는 BM 레인).
-- 저장 실패면 소유를 되돌리고 `{ ok: false, reason: 'storage' }`.
+- 저장 실패면 소유를 되돌리고 `{ ok: false, reason: 'storage' }`. 영웅을 소유하지 않았으면 `{ ok: false, reason: 'locked' }`(결제 전에 BM이 같은 값을 확인).
+- **유료 SKU를 켜기 전 필수(PR #321 리뷰):** `avatars`는 서버 소유 키(`src/shared/state-hash.js` `SERVER_OWNED_KEYS`)라 서버 권위 계정에서는 클라이언트 `grantAvatarFullset`·`grantAvatarPart` 결과가 다음 동기화 때 서버 문서로 덮인다. 결제 지급과 부위 지급은 서버 명령(`src/shared/v1-ops.js`, `worker/v1`)으로 영수증 검증 뒤 같은 규칙을 적용해야 하고, 클라이언트에서 직접 부르는 것은 로컬 권위 계정의 개발·테스트 경로로만 쓴다. 또 로컬 저장 가져오기(`worker/v1/import.ts`가 `normalizeSave` 재사용)는 `avatars.owned`를 아바타 id 존재만으로 받으므로, 유료 풀셋 SKU 활성화 전에 서버 지급 기록과 대조해야 한다(기존부터 있던 구조).
 
 ## 외형 제작
 

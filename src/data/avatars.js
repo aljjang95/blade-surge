@@ -36,6 +36,15 @@ export const AVATAR_FULLSET_SKU_PREFIX = 'avatar_fullset_';
 export const avatarFullsetSku = (heroId) => AVATAR_FULLSET_SKU_PREFIX + heroId + '_v1';
 export const AVATAR_PREMIUM_BY_HERO = Object.freeze({});
 
+/**
+ * 전투 스탯에 풀셋 이동속도를 얹는다(새 객체 반환, 원본 불변). 출격과 전투 중 레벨업 재계산이 같은 함수를 쓴다.
+ * 파티는 장비를 싣지 않는 기존 규칙대로 적용하지 않는다.
+ */
+export function withAvatarSpeed(stats, bonus, { party = false } = {}) {
+  const pct = party ? 0 : bonus?.avatar?.speedPct || 0;
+  return pct ? { ...stats, spd: stats.spd * (1 + pct) } : stats;
+}
+
 /** 착용 중인 아바타의 풀셋 효과. 아바타가 없으면 null. */
 export function avatarFullsetEffect(avatarId) {
   return avatarId && AVATAR_BY_ID[avatarId] ? AVATAR_FULLSET_EFFECT : null;

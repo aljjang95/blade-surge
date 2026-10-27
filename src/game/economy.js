@@ -1035,11 +1035,14 @@ export class Economy {
   grantAvatarFullset(heroId, { avatarId = AVATAR_PREMIUM_BY_HERO[heroId] } = {}) {
     const avatar = AVATAR_BY_ID[avatarId];
     if (!avatar || avatar.heroId !== heroId) return { ok: false, reason: 'not-ready' };
+    // 결제 전 선검증용: 영웅을 소유하지 않았으면 입을 수 없으므로 지급하지 않는다(BM 이 결제 전에 같은 값을 확인).
+    if (this.heroLocked(heroId)) return { ok: false, reason: 'locked' };
     const s = this.s;
     if (s.avatars.owned.includes(avatarId)) return { ok: true, avatarId, already: true };
+    const before = structuredClone(s.avatars);
     s.avatars.owned.push(avatarId);
     if (s.avatars.parts) delete s.avatars.parts[avatarId];
-    if (!this.save()) { s.avatars.owned.pop(); return { ok: false, reason: 'storage' }; }
+    if (!this.save()) { s.avatars = before; return { ok: false, reason: 'storage' }; }
     this.emit(); return { ok: true, avatarId, already: false };
   }
   /**

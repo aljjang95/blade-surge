@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { AVATARS, AVATAR_PARTS, AVATAR_FULLSET_EFFECT, avatarFullsetSku, avatarFullsetEffect } from '../src/data/avatars.js';
+import { AVATARS, AVATAR_PARTS, AVATAR_FULLSET_EFFECT, avatarFullsetSku, avatarFullsetEffect, withAvatarSpeed } from '../src/data/avatars.js';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
 
@@ -16,6 +16,7 @@ beforeEach(() => {
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
 const fresh = () => { const eco: any = new Economy(); eco.s = eco.fresh(); return eco; };
+const own = (eco: any, ...ids: string[]) => { eco.s.roster = { ...eco.s.roster, owned: [...new Set([...(eco.s.roster?.owned || []), ...ids])] }; return eco; };
 const target = AVATARS.find((a) => a.heroId === 'barbarian')!;
 
 test('부위 넷을 모으면 풀셋으로 소유되고 중간 저장 실패는 되돌린다', () => {
@@ -38,14 +39,20 @@ test('유료 풀셋 지급 계약: 상품 id 규칙, 준비 안 된 영웅 거�
   expect(avatarFullsetSku('barbarian')).toBe('avatar_fullset_barbarian_v1');
   const eco = fresh();
   expect(eco.grantAvatarFullset('mage', { avatarId: target.id })).toMatchObject({ ok: false, reason: 'not-ready' });
+  // 영웅을 소유하지 않았으면 입을 수 없으므로 지급하지 않는다.
+  if (eco.heroLocked('barbarian')) expect(eco.grantAvatarFullset('barbarian', { avatarId: target.id })).toMatchObject({ ok: false, reason: 'locked' });
+  own(eco, 'barbarian');
+  failWrites = true;
+  expect(eco.grantAvatarFullset('barbarian', { avatarId: target.id })).toMatchObject({ ok: false, reason: 'storage' });
+  expect(eco.s.avatars.owned).not.toContain(target.id);
+  failWrites = false;
   expect(eco.grantAvatarFullset('barbarian', { avatarId: target.id })).toMatchObject({ ok: true, already: false, avatarId: target.id });
   expect(eco.grantAvatarFullset('barbarian', { avatarId: target.id })).toMatchObject({ ok: true, already: true });
   expect(eco.s.avatars.owned.filter((id: string) => id === target.id).length).toBe(1);
 });
 
 test('풀셋 효과는 착용한 영웅에게만, 장비 외형 표시를 켜도 유지된다', () => {
-  const eco = fresh();
-  eco.s.roster = { ...eco.s.roster, owned: [...new Set([...(eco.s.roster?.owned || []), 'barbarian', 'knight'])] };
+  const eco = own(fresh(), 'barbarian', 'knight');
   eco.grantAvatarFullset('barbarian', { avatarId: target.id });
   expect(eco.heroEquipBonus('barbarian').avatar).toBeNull();
   expect(eco.equipAvatar('barbarian', target.id).ok).toBe(true);
@@ -69,4 +76,13 @@ test('저장 정규화: 알 수 없는 부위·소유한 풀셋·네 부위가 �
   const s = normalizeSave(raw, eco.fresh());
   expect(s.avatars.parts).toEqual({ [target.id]: ['head', 'top'] });
   expect(s.avatars.owned).toEqual([AVATARS[0]!.id]);
+});
+
+test('이동속도는 출격·레벨업 재계산 모두 같은 함수로 얹고 파티는 제외한다', () => {
+  const stats = { spd: 6, hp: 100 };
+  const bonus = { avatar: AVATAR_FULLSET_EFFECT };
+  expect(withAvatarSpeed(stats, bonus).spd).toBeCloseTo(6.3);
+  expect(withAvatarSpeed(stats, bonus, { party: true })).toBe(stats);
+  expect(withAvatarSpeed(stats, { avatar: null })).toBe(stats);
+  expect(stats.spd).toBe(6);
 });
