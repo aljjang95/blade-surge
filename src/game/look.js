@@ -100,7 +100,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
   const wCol = w ? new THREE.Color(wLook?.color || RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
   const wGlow = w ? (wLook ? wLook.glow : WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025) : 0;
   const sGlow = a ? WEAPON_GLOW[a.rarity] * 0.6 + Math.min(20, equip.armor.enh || 0) * 0.02 : 0;   // 방패·보조
-  const enhGlow = (wLook?.glowTier?.emissive || 0) * 1.4;
+  // 발광 비율이 높을수록 캐릭터 블룸 표식이 무기만 번지게 한다(character-bloom.js). +6 은 은은하게, +13 부터 확실히 번진다.
+  const enhGlow = (wLook?.glowTier?.emissive || 0) * 3.2;
   const wNodes = new Set(L ? L.weaponNodes : []), aNodes = new Set(L ? L.armorNodes : []);
   model.traverse((o) => {
     if (!o.isMesh) return;

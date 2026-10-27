@@ -22,6 +22,7 @@ function weaponHaloTexture() {
 }
 
 const _box = new THREE.Box3(), _part = new THREE.Box3(), _center = new THREE.Vector3(), _size = new THREE.Vector3(), _scale = new THREE.Vector3();
+const _white = new THREE.Color(0xffffff);
 const _inverse = new THREE.Matrix4(), _relative = new THREE.Matrix4();
 
 /**
@@ -88,7 +89,8 @@ export function syncWeaponHalo(model, tier, color, weaponNodes) {
   // 칼날(손잡이 반대쪽 끝) 가운데에 칼날 길이만큼. 무기 전체 중심에 두면 자루·몸통 위에 뜬다(2026-10-28 QA).
   halo.position.copy(_center);
   halo.scale.set(_size.x * tier.haloScale, _size.y * tier.haloScale, 1);
-  halo.material.color.set(color);
+  // 같은 색끼리 더하면 금색 무기 위에서 묻히므로 가운데를 흰빛 쪽으로 당긴다.
+  halo.material.color.set(color).lerp(_white, .35);
   halo.userData.opacity = tier.halo; halo.userData.rate = tier.min >= 13 ? 1.6 : 1;
   halo.userData.still = !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   return halo;
