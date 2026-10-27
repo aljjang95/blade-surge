@@ -38,6 +38,7 @@ import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './sq
 import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
 import { RoomProps, roomPropsAllowed } from './room-props.js';
 import { RegionTraits, regionTheme } from './region-traits.js';
+import { bossShortcutRule } from './boss-shortcut.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
@@ -160,6 +161,9 @@ export class Battle {
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.roomProps?.dispose(); this.roomProps = roomPropsAllowed(stage) ? new RoomProps(this) : null;
     this.regionTraits = regionTheme(stage) ? new RegionTraits(this) : null;
+    // 보스 직행은 출격 시점의 별·전투력으로 한 번 정한다(전투 중 별이 바뀌어도 이번 판 조건은 같다).
+    { const eco = this.app?.eco, key = `${stage.ch}-${stage.st}`;
+      this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 }); }
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
@@ -526,7 +530,7 @@ export class Battle {
     this.openPortal();
   }
   canBossShortcut() {
-    return !!(this.active && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
+    return !!(this.active && this.bossShortcut?.ok && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
   }
   shortcutBoss() {
     if (!this.canBossShortcut()) return false;
