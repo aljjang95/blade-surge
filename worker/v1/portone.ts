@@ -194,7 +194,8 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
 }
 
 // ── 완료: 포트원 조회 → 검증 → 멱등 지급 ──────────────────────────
-type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed'; productId: string; paymentId: string; granted: string[] };
+/** 'refund-pending' = 결제됨 · 환불 처리 중(아바타 지급 불가). 포트원 취소는 운영자가 한다(자동 취소 호출 없음). */
+type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed' | 'refund-pending'; productId: string; paymentId: string; granted: string[] };
 
 async function audit(c: Ctx, accountId: string, kind: string, detail: unknown) {
   await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
@@ -253,6 +254,15 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
     await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state = 'intent'")
       .bind(hash, c.now, c.now, row.payment_id).run();
     return { ...base, state: 'cancelled', granted: [] };
+  }
+  if (result === 'undeliverable') {
+    // 결제는 검증됐지만 아바타 풀셋을 줄 수 없다(자산 미준비·영웅 미소유 등, 사유는 grantOnce 의 avatar-undeliverable 감사 플래그).
+    // 돈이 나갔으므로 운영자 환불 큐로 남긴다: 감사 플래그 web-avatar-undeliverable + 행 failed(스키마 CHECK 에 별도 상태가 없다).
+    // 포트원 취소는 실제 돈이 움직이므로 자동 호출하지 않는다. 같은 결제를 다시 확인해도 플래그는 한 번만 남긴다.
+    if (row.state !== 'failed') await audit(c, row.account_id, 'web-avatar-undeliverable', { paymentId: row.payment_id, productId: product.id, action: 'refund-required' });
+    await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','failed')")
+      .bind(hash, c.now, c.now, row.payment_id).run();
+    return { ...base, state: 'refund-pending', granted: [] };
   }
   if (result === 'refunded') return { ...base, state: 'cancelled', granted: [] };
   await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted')")

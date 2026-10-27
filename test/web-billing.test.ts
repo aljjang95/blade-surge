@@ -558,6 +558,26 @@ describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바�
     expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
   });
 
+  test('아바타 풀셋: 결제 확인 뒤 지급 불가면 지급·권한 없이 환불 필요 큐(web-avatar-undeliverable)로 남고 클라이언트는 refund-pending 을 받는다', async () => {
+    const { h, pn, a, intent, complete, count } = await setup();
+    (h.deps as any).avatarPremium = { knight: 'avatar_knight_sakura' };
+    const it = (await intent(a.token, 'avatar_fullset_knight_v1')).body;
+    pn.pay(it);
+    delete (h.deps as any).avatarPremium; // 결제창이 열린 사이 지급 불가가 된 경우(자산 표 회수 등)
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('refund-pending');
+    expect(r.granted).toEqual([]);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-avatar-undeliverable'")).toBe(1);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'avatar-undeliverable'")).toBe(1);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-once-declined'")).toBe(0);
+    expect(h.db.sqlite.query('SELECT state FROM iap_web_payments WHERE payment_id = ?').get(it.paymentId)).toEqual({ state: 'failed' });
+    expect(count('SELECT COUNT(*) AS n FROM iap_entitlements')).toBe(0);
+    expect(docOf(h, a.accountId).avatars.owned).toEqual([]);
+    // 같은 결제를 다시 확인해도 운영자 큐 항목은 늘지 않는다. 포트원 취소 API는 이 계층에 없다(자동 취소 없음).
+    await complete(a.token, it.paymentId);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-avatar-undeliverable'")).toBe(1);
+  });
+
   test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급 + 풀셋 아바타 소유, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
     const { h, pn, a, intent, complete } = await setup();
     (h.deps as any).avatarPremium = { knight: 'avatar_knight_sakura' };

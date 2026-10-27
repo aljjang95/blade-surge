@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test as bunTest } from 'bun:test';
 import { v1Harness } from './helpers/v1-harness';
 import { V1Error } from '../worker/v1/db';
 import type { PlayApi, ProductPurchase } from '../worker/v1/play';
-import { grantOnce } from '../worker/v1/iap';
+import { grantOnce, reverseToken } from '../worker/v1/iap';
 import { IAP_BY_ID, avatarFullsetKey, avatarFullsetProductId } from '../src/shared/iap-catalog.js';
 
 // 아바타 풀셋 상품(avatar_fullset_<heroId>_v1) 서버 검증 지급 연결 시험.
@@ -28,7 +28,7 @@ function fakePlay() {
 }
 
 async function setup({ premium = true } = {}) {
-  const h = await v1Harness({ env: { IAP_ENABLED: 'true' } as any });
+  const h = await v1Harness({ env: { IAP_ENABLED: 'true', V1_SERVER_AUTHORITY_PERCENT: '100' } as any });
   const play = fakePlay();
   (h.deps as any).playApi = play.api;
   if (premium) (h.deps as any).avatarPremium = { [HERO]: AVATAR };
@@ -40,13 +40,23 @@ async function setup({ premium = true } = {}) {
   return { h, play, a, intent, verify, doc, count };
 }
 
-let wasEnabled: boolean;
-beforeEach(() => { wasEnabled = IAP_BY_ID[PID].enabled; (IAP_BY_ID[PID] as any).enabled = true; });
-afterEach(() => { (IAP_BY_ID[PID] as any).enabled = wasEnabled; });
+// 상품 enabled 를 시험 안에서만 켜고, 실패해도 try/finally 로 반드시 원복한다(다른 시험 파일로 새지 않게).
+const IDS = [PID, avatarFullsetProductId('barbarian')];
+const test = (name: string, fn: () => Promise<void>) => bunTest(name, async () => {
+  const was = IDS.map((id) => IAP_BY_ID[id].enabled);
+  try { for (const id of IDS) (IAP_BY_ID[id] as any).enabled = true; await fn(); }
+  finally { IDS.forEach((id, i) => { (IAP_BY_ID[id] as any).enabled = was[i]; }); }
+});
+const docRow = (h: any, accountId: string) => JSON.parse((h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(accountId) as any).doc);
+const patchDoc = (h: any, accountId: string, fn: (d: any) => void) => {
+  const d = docRow(h, accountId); fn(d);
+  h.db.sqlite.query('UPDATE account_docs SET doc = ? WHERE account_id = ?').run(JSON.stringify(d), accountId);
+};
+const ctxOf = (h: any) => ({ env: h.env, db: h.db, deps: h.deps, now: h.now(), request: new Request('https://x/') }) as any;
 
 describe('아바타 풀셋: 서버 영수증 검증 → grantAvatarFullset 연결', () => {
   test('운영 기본값은 비활성이다(실결제 미개방): 의도·검증 모두 unknown-product, 지급 없음', async () => {
-    (IAP_BY_ID[PID] as any).enabled = false;
+    (IAP_BY_ID[PID] as any).enabled = false; // test 래퍼가 끝에 원복한다
     const { play, a, intent, verify, doc, h } = await setup();
     expect((await intent()).body.error).toBe('unknown-product');
     play.add(TOK('d1'), 'x'.repeat(48));
@@ -123,5 +133,64 @@ describe('아바타 풀셋: 서버 영수증 검증 → grantAvatarFullset 연�
     const r = await h.cmd(a.token, 'grantAvatarFullset', [HERO]);
     expect(r.status).toBe(400);
     expect((await doc()).avatars.owned).toEqual([]);
+  });
+
+  test('환불: 결제로 얻은 아바타만 같은 커밋에서 소유·착용이 회수되고, 권한도 철회된다', async () => {
+    const { h, a, play, intent, verify, doc } = await setup();
+    const it = (await intent()).body;
+    play.add(TOK('rf1'), it.obfuscatedAccountId);
+    expect((await verify(TOK('rf1'))).body.state).toBe('granted');
+    expect(docRow(h, a.accountId).avatars.paid).toEqual({ [AVATAR]: expect.stringMatching(/^iap:/) });
+    expect((await h.cmd(a.token, 'equipAvatar', [HERO, AVATAR])).status).toBe(200);
+    expect((await doc()).avatars.equipped).toEqual({ [HERO]: AVATAR });
+    const row = h.db.sqlite.query('SELECT token_hash FROM iap_grants').get() as { token_hash: string };
+    expect(await reverseToken(ctxOf(h), a.accountId, row.token_hash, 'test-refund')).toBe(1);
+    const d = docRow(h, a.accountId);
+    expect(d.avatars.owned).toEqual([]);
+    expect(d.avatars.equipped).toEqual({});
+    expect(d.avatars.paid).toBeUndefined();
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM iap_entitlements WHERE revoked_at IS NULL').get()).toEqual({ n: 0 });
+    // 같은 환불을 한 번 더 처리해도 변화 없음(멱등)
+    expect(await reverseToken(ctxOf(h), a.accountId, row.token_hash, 'test-refund')).toBe(0);
+  });
+
+  test('환불: 이벤트·부위·보석으로 먼저 얻은 아바타는 결제 지급이 겹쳐도 회수하지 않는다', async () => {
+    const { h, a, play, intent, verify } = await setup();
+    const it = (await intent()).body;
+    patchDoc(h, a.accountId, (d) => { d.avatars.owned.push(AVATAR); }); // 결제 전 다른 출처로 이미 소유
+    play.add(TOK('rf2'), it.obfuscatedAccountId);
+    expect((await verify(TOK('rf2'))).body.state).toBe('granted');
+    expect(docRow(h, a.accountId).avatars.paid).toBeUndefined(); // 출처를 덮어쓰지 않는다
+    const row = h.db.sqlite.query('SELECT token_hash FROM iap_grants').get() as { token_hash: string };
+    await reverseToken(ctxOf(h), a.accountId, row.token_hash, 'test-refund');
+    expect(docRow(h, a.accountId).avatars.owned).toEqual([AVATAR]);
+  });
+
+  test('영웅이 잠겨 있으면 지급 없이 declined(확정 없음)이고 사유 locked 가 감사 플래그에 남는다', async () => {
+    const { h, a, play, intent, verify, doc } = await setup();
+    const obf = (await intent()).body.obfuscatedAccountId; // 계정 결박 값은 상품과 무관
+    (h.deps as any).avatarPremium = { [HERO]: AVATAR, barbarian: 'avatar_barbarian_oni' };
+    const bid = avatarFullsetProductId('barbarian');
+    play.add(TOK('lk'), obf, { productId: bid });
+    const r = await h.send('POST', '/iap/verify', { productId: bid, purchaseToken: TOK('lk') }, a.token);
+    expect(r.body.state).toBe('declined');
+    expect(r.body.acked).toBe(false);
+    expect((await doc()).avatars.owned).toEqual([]);
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM iap_entitlements').get()).toEqual({ n: 0 });
+    const flag = h.db.sqlite.query("SELECT detail FROM audit_flags WHERE kind = 'avatar-undeliverable'").get() as { detail: string };
+    expect(JSON.parse(flag.detail)).toMatchObject({ heroId: 'barbarian', reason: 'locked' });
+  });
+
+  test('경합: 같은 grantId 지급이 동시에 두 번 들어와도 한 번만 지급된다', async () => {
+    const { h, a, doc, count } = await setup();
+    const p = IAP_BY_ID[PID] as any, hash = 'h'.repeat(64), grantId = 'iap:' + hash;
+    const run = () => grantOnce(ctxOf(h), a.accountId, p, hash, grantId, {}, {
+      purchase: { state: 'granted', test: false }, entitlements: [{ key: avatarFullsetKey(HERO), expiresAt: null }] });
+    const results = await Promise.all([run(), run()]);
+    expect(results.filter((x) => x === 'granted')).toHaveLength(1);
+    expect(results.filter((x) => x === 'duplicate')).toHaveLength(1);
+    expect((await doc()).avatars.owned).toEqual([AVATAR]);
+    expect(count('SELECT COUNT(*) AS n FROM iap_grants')).toBe(1);
+    expect(count(`SELECT COUNT(*) AS n FROM wallet_ledger WHERE kind = 'iap:${PID}'`)).toBe(1);
   });
 });

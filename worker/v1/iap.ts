@@ -119,7 +119,7 @@ export async function catalog(c: Ctx, auth: Authed) {
 
 /**
  * 아바타 풀셋 상품은 결제 전에 지급 가능 여부를 서버가 먼저 확인한다(자산 미준비·영웅 미소유면 팔지 않는다).
- * 결제 뒤 지급 불가가 되면 grantOnce 가 확정 없이 'declined'로 돌리므로, 돈이 나가기 전에 막는 것이 정상 경로다.
+ * 결제 뒤 지급 불가가 되면 grantOnce 가 확정 없이 'undeliverable'로 돌리므로, 돈이 나가기 전에 막는 것이 정상 경로다.
  */
 export async function assertAvatarFullsetDeliverable(c: Ctx, accountId: string, product: IapProduct): Promise<void> {
   const heroIds = entitlementKeys(product).map((k) => heroIdFromAvatarKey(k)).filter((h): h is string => !!h);
@@ -175,7 +175,7 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
   // 영웅 상품(권한 hero:*)은 서버 권위 계정에게만 판다. 다른 상품은 기존 동작 그대로.
-  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k))) fail(403, 'server-authority-required');
+  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k) || heroIdFromAvatarKey(k))) fail(403, 'server-authority-required');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
   const owned = await ownedProducts(c.db, accountId);
@@ -273,7 +273,7 @@ export async function processPurchase(c: Ctx, product: IapProduct, token: string
     purchase: { state: 'granted', test: p.test },
     entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
-  if (result === 'declined') return declinePurchase(c, hash, accountId, product, p.test);
+  if (result === 'declined' || result === 'undeliverable') return declinePurchase(c, hash, accountId, product, p.test);
   if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test: p.test };
   const granted = result === 'granted';
   // DB 지급이 확정된 뒤에만 Play에 소유를 확정한다. 실패하면 acked=false로 응답하고 다음 verify/RTDN이 재시도한다.
@@ -354,7 +354,8 @@ async function upsertPurchase(c: Ctx, hash: string, accountId: string, product: 
     .bind(hash, accountId, product.id, product.type, stateName, o.expiresAt ?? null, o.test ? 1 : 0, c.now, c.now).run();
 }
 
-type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded';
+/** 'undeliverable' = 결제는 검증됐지만 아바타 풀셋을 지급할 수 없음(지급·확정 없음, 환불 대상). */
+type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded' | 'undeliverable';
 
 /** 미상환 부채를 이 문서(eco.s)에서 먼저 갚는다. 같은 배치에 실을 쓰기와 상환량을 돌려준다(서버 지급·서버 정산 공용). */
 export async function debtRepayment(db: D1Database, accountId: string, state: Record<string, any>, now: number): Promise<{ writes: GuardedWrite[]; repaid: Record<string, number> }> {
@@ -396,14 +397,26 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
       setRosterPaid(eco.s, [...heroes]);
     }
     // 아바타 풀셋 권한은 같은 커밋에서 부위 전체(풀셋 아바타)를 지급한다. 서버 검증이 끝난 이 경로에서만 부른다.
-    // 이미 소유면 중복 지급 없이 통과(멱등). 지급할 수 없으면(자산 미준비·영웅 미소유) 지급·확정(ack)을 하지 않고
-    // 'declined'로 돌려 Play가 자동 환불하게 한다(결제만 되고 아바타가 없는 구매를 만들지 않는다).
-    for (const e of o.entitlements) {
-      const heroId = heroIdFromAvatarKey(e.key);
-      if (!heroId) continue;
+    // - 이미 소유(이벤트·부위·보석 출처)면 중복 지급 없이 통과하고 출처(avatars.paid)는 덮어쓰지 않는다 → 환불해도 회수하지 않는다.
+    //   (결제 전에는 이미 소유를 409로 막는다: assertAvatarFullsetDeliverable. 여기까지 온 이미 소유는 결제 사이 경합뿐이다.)
+    // - 지급할 수 없으면(not-ready·locked·storage 등) 지급·확정(ack)을 하지 않고 'undeliverable'로 돌린다.
+    //   Play 는 확정하지 않아 자동 환불되고, 웹은 환불 필요 큐(감사 플래그)로 남긴다. 사유는 감사 플래그에 남긴다.
+    const avatarHeroes = o.entitlements.map((e) => heroIdFromAvatarKey(e.key)).filter((h): h is string => !!h);
+    if (avatarHeroes.length) {
+      // 영웅 소유의 정본은 서버 권한이다: 풀셋 지급 판정(영웅 잠김)을 서버 권한 기준으로 맞춘 뒤 한다.
+      setRosterPaid(eco.s, [...(await entitlementsOf(c.db, accountId, c.now)).heroes]);
+      // deps.avatarPremium 은 시험 전용 주입점이다. 운영 deps 는 비어 있어 전역 상수(AVATAR_PREMIUM_BY_HERO)를 쓴다.
       const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
-      const r = eco.grantAvatarFullset(heroId, { avatarId: premium[heroId] });
-      if (!r.ok) return 'declined';
+      for (const heroId of avatarHeroes) {
+        const r = eco.grantAvatarFullset(heroId, { avatarId: premium[heroId], paidBy: grantId });
+        if (!r.ok) {
+          const reason = String((r as { reason?: unknown }).reason ?? 'unknown');
+          console.warn('avatar fullset undeliverable', { productId: product.id, heroId, reason });
+          await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
+            .bind(accountId, 'avatar-undeliverable', JSON.stringify({ productId: product.id, heroId, reason, grantId }).slice(0, 1000), c.now).run().catch(() => {});
+          return 'undeliverable';
+        }
+      }
     }
     const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
@@ -475,6 +488,8 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
       const doc = await loadAccountDoc(c.db, accountId);
       const eco = loadEconomy(doc.state, { now: c.now });
       const rewards = JSON.parse(g.rewards) as Record<string, number>, debt: Record<string, number> = {};
+      // 이 지급(grant_id)으로 결제해 얻은 아바타만 같은 커밋에서 회수한다(소유·착용). 다른 출처의 아바타는 그대로.
+      const revokedAvatars: string[] = eco.revokePaidAvatars(g.grant_id);
       for (const [key, amount] of Object.entries(rewards)) {
         const field = IAP_REWARD_FIELD[key];
         if (!field) continue;
@@ -495,7 +510,7 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
         values: [accountId, key, amount, c.now] });
       const next = docOf(eco);
       const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why }, receipt: { grantId: g.grant_id, debt } },
+        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why, revokedAvatars }, receipt: { grantId: g.grant_id, debt, revokedAvatars } },
         projection: next.projection, writes });
       if (outcome.ok) { reversed++; break; }
       if (outcome.reason === 'duplicate') break;
