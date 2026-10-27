@@ -69,7 +69,10 @@ export class Bellringer {
     this.bell = new THREE.Mesh(sharedBellGeometry(), this.bellMaterial);
     this.bell.name = 'BellringerBell'; this.bell.castShadow = false;
     // 머리 위로 짧은 막대에 매달린 종. root 는 확대되지 않는 월드 단위다.
-    this.bellY = 2.2 * (enemy.def?.scale || 1) + .6;
+    // 라이브러리 모델이면 실제 모델 키(규격 키 × 최종 배율) 바로 위에 달아 몸과 떨어져 떠 보이지 않게 하고, 종도 몸에 맞게 줄인다.
+    const modelHeight = (enemy.libraryAsset?.heightM || 0) * (enemy.modelScale || 1);
+    this.bellY = modelHeight > 0 ? modelHeight + .2 : 2.2 * (enemy.def?.scale || 1) + .6;
+    if (modelHeight > 0) this.bell.scale.setScalar(.7);
     this.bell.position.set(0, this.bellY, 0);
     enemy.root.add(this.bell);
     this.ringMaterials = this.rings.map((ring) => {
