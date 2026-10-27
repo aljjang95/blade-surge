@@ -35,7 +35,7 @@
 /* 제작 공방 레시피: 핵심 효과 한 줄은 접지 않고 본문에 항상 보인다. */
 #tab-stage .exp-recipe .exp-recipe-effect { grid-column: 1 / -1; margin: 4px 0 6px; font-size: 12px; line-height: 1.45; color: #cfdbcd; }
 
-/* 설정 탭: 소리·진동 / 화면·카메라 / 조작 / 계정·데이터. 한 번에 한 묶음만 보여 스크롤을 없앤다. */
+/* 설정 탭: 소리·진동 / 화면 / 카메라 / 조작 / 계정·데이터. 한 번에 한 묶음만 보여 스크롤을 없앤다. */
 #modal .setting-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 #modal .setting-tab { flex: 1 1 auto; min-height: var(--ui-tap, 44px); min-width: 44px; padding: 6px 12px; border-radius: 10px; border: 1px solid #bed0c333; background: #ffffff0d; color: #cfdbcd; font-weight: 700; font-size: 13px; line-height: 1.2; cursor: pointer; }
 #modal .setting-tab.on { background: #e3c0822e; border-color: #e3c082; color: #fff3d6; }
