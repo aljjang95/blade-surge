@@ -1,4 +1,4 @@
-import { DIFFICULTY_ORDER } from '../game/difficulty.js';
+import { DIFFICULTY_ORDER, tormentTierOf } from '../game/difficulty.js';
 
 // 기존 재료 3종만 사용한다. 후반 지역은 두 종류를 함께 주어 정련 선택지가 넓어진다.
 const MATERIALS = [
@@ -10,8 +10,14 @@ const BASE_WEIGHTS = {
   elite: { N: 25, S: 50, E: 20, U: 4, L: 1 },
   boss: { N: 0, S: 35, E: 45, U: 15, L: 5 },
 };
+// 난이도 깊이 d: story 0 · adept 1 · nightmare 2 · hell 3, 고통 단계는 지옥 위에서 5단계마다 한 칸씩 더 깊어진다(T1~5 = 4 ... T46~50 = 13).
+// 깊을수록 상급·전설 강화석·초월석·장비 등급 가중이 커진다(docs/SPEC_720H.md 3.2).
+export const difficultyDepth = (difficulty) => {
+  const tier = tormentTierOf(difficulty);
+  return tier ? 4 + Math.floor((tier - 1) / 5) : Math.max(0, DIFFICULTY_ORDER.indexOf(difficulty));
+};
 function buildTables(difficulty = 'story') {
-  const d = Math.max(0, DIFFICULTY_ORDER.indexOf(difficulty));
+  const d = difficultyDepth(difficulty);
   return Object.freeze(Array.from({ length: 6 }, (_, i) => {
     const ch = i + 1;
     return Object.freeze(Object.fromEntries(['normal', 'elite', 'boss'].map(rank => {
@@ -43,9 +49,19 @@ function buildTables(difficulty = 'story') {
 }
 const TABLES_BY_DIFFICULTY = Object.freeze(Object.fromEntries(DIFFICULTY_ORDER.map(id => [id, buildTables(id)])));
 export const LOOT_TABLES = TABLES_BY_DIFFICULTY.story;
+// 고통 단계 표는 깊이 칸(5단계)마다 하나이고 처음 쓸 때 만든다. 드랍 보고서(DIFFICULTY_ORDER 행)에는 들어가지 않는다.
+const TORMENT_TABLES = new Map();
+function tablesFor(difficulty) {
+  if (Object.hasOwn(TABLES_BY_DIFFICULTY, difficulty)) return TABLES_BY_DIFFICULTY[difficulty];
+  const tier = tormentTierOf(difficulty);
+  if (!tier) return LOOT_TABLES;
+  const depth = difficultyDepth(difficulty);
+  if (!TORMENT_TABLES.has(depth)) TORMENT_TABLES.set(depth, buildTables(difficulty));
+  return TORMENT_TABLES.get(depth);
+}
 export function lootTable(chapter = 1, rank = 'normal', difficulty = 'story') {
   const ch = Math.max(1, Math.min(6, Math.floor(Number(chapter) || 1)));
-  const tables = Object.hasOwn(TABLES_BY_DIFFICULTY, difficulty) ? TABLES_BY_DIFFICULTY[difficulty] : LOOT_TABLES;
+  const tables = tablesFor(difficulty);
   return Object.hasOwn(tables[ch - 1], rank) ? tables[ch - 1][rank] : tables[ch - 1].normal;
 }
 export function representativeDrops(chapter) {

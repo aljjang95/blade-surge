@@ -78,3 +78,30 @@ export const EVENT_EFFECT_KINDS = frozen(['campaignGold', 'campaignExp', 'stoneB
  * 게임 판정에는 쓰지 않는다(전투는 실제 조작으로 승패가 난다). 로비의 권장 전투력 표시는 기존 recPower 그대로다.
  */
 export const POWER_NEED = frozen({ k: 2700, exp: 0.6, tower: 1 });
+
+/**
+ * 고통 단계(TORMENT, docs/SPEC_720H.md 3.2): 지옥 다음 난이도. 에너지 0, 단계 n(1~maxTier)마다 적이 단단해지고 보상·EXP가 커진다.
+ *  - 적 체력·공격 = 지옥 × M(n)(TORMENT.curve), 보상(골드·재료) = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (expBase + expStep×n). 밀도는 지옥 그대로.
+ *  - 하루 첫 fullRuns 판은 보상 100%, 그 뒤 판은 골드·재료가 decayMul(35%)이고 EXP(→전설 수련)는 100%.
+ *  - 해금: 아무 지역 지옥 10관문 클리어 → T1, T(n)에서 지역 최종 보스(X-10) 클리어 → T(n+1).
+ * 단계 배율·EXP 계수는 진행 시뮬레이터(tools/sim-90d.mjs marathon)로 보정했다: SPEC 초안의 1.17^n 은 요구 전투력이 T10 에서 이미 5배를 넘어
+ * 8시간 페르소나도 T10 을 못 넘는다(기준 변경 공개: docs/SPEC_720H.md 7절).
+ */
+export const TORMENT = frozen({
+  maxTier: 50,
+  // 적 체력·공격 배율 M(n) = 1 + A·(1 − e^(−n/τ)) + B·n. 앞 단계(T1~T6)는 한 칸이 크게 벽이고(약 +20%), 그 뒤는 B 만큼씩 완만하게 오른다.
+  // 지수식(step^n)은 단계마다 같은 비율이라 전투력이 정체하는 구간에서 단계가 한꺼번에 막히므로, 오를수록 단계 사이가 촘촘해지는 곡선으로
+  // 장비 파워·전설 수련이 한 단계씩 새 단계를 여는 후반을 만든다(진행 시뮬레이터 보정, docs/SPEC_720H.md 7절).
+  curve: frozen({ A: 6, tau: 7, B: 0.35 }),
+  // 고통 단계 n 에서 나온 장비의 파워 배율 1 + itemPowerStep·n(아이템 인스턴스 필드 tp). 기존 장비는 tp 없음 = 배율 1.
+  itemPowerStep: 0.265,
+  // 장비 이름 접두(표시용): tp 가 이 값 이상이면 고대·태고.
+  itemPrefixes: frozen([frozen({ from: 25, name: '태고' }), frozen({ from: 10, name: '고대' })]),
+  // EXP 계수: 처치·완료 EXP 가 지옥 × (expBase + expStep×n). 레벨 70→80 에 EXP 약 2.1억이 드는데 SPEC 초안(1 + 0.1n)으로는
+  // 8시간 페르소나의 Lv.80 이 D72 라 전설 수련을 증명할 수 없다 — Lv.80 을 D12~25 로 당기도록 보정했다(docs/SPEC_720H.md 7절).
+  rewardStep: 0.08, expBase: 50, expStep: 5,
+  fullRuns: 24,
+  decayMul: 0.35,
+  minutesPerRun: 4.5,       // 시뮬레이터: 한 판 걸리는 시간(분)
+  recLevel: 80,             // 고통 단계 권장 레벨(= 영웅 레벨 상한). 낮은 장 저레벨 EXP 가중(levelExperienceMultiplier)을 막는다
+});

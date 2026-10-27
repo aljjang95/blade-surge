@@ -3,6 +3,7 @@ import { sanitizeLegacySave, trustedRoster } from '../src/shared/legacy-sanitize
 import { EconomyCore } from '../src/game/economy-core.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementKeys, summarizeEntitlements, soldOn } from '../src/shared/iap-catalog.js';
+import { ITEM_BY_ID } from '../src/data/items.js';
 import { heroEntitlementKey, heroIdFromEntitlement, HERO_LEGACY_IDS } from '../src/data/hero-roster.js';
 
 const NOW = Date.UTC(2026, 10, 3);
@@ -109,5 +110,17 @@ describe('영웅 상품 카탈로그', () => {
     expect([...e.heroes].sort()).toEqual(['knight', 'mage']);
     expect(e.adsRemoved).toBe(true);
     expect(summarizeEntitlements([], now).heroes).toEqual([]);
+  });
+});
+
+describe('고통 단계 장비 파워·전설 수련 정화', () => {
+  test('가져오기는 장비 tp와 전설 수련을 버린다(서버 명령 전, 조작 세이브 주입 방지)', () => {
+    const inventory = Object.keys(ITEM_BY_ID).slice(0, 3).map((id, i) => ({ uid: i + 1, id, enh: 0, tp: 50 }));
+    const forged = save({ inventory, invSeq: 4, legend: { version: 1, rank: 999, exp: 0, points: 999, nodes: {} } });
+    const r = run(forged);
+    expect(r.state.inventory.length).toBe(3);
+    for (const it of r.state.inventory) expect('tp' in it).toBe(false);
+    expect(r.state.legend.rank).toBe(0);
+    expect(r.state.legend.points).toBe(0);
   });
 });
