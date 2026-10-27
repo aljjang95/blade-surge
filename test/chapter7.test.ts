@@ -219,13 +219,13 @@ describe('7장: 지역 기믹·음악·마을·건축·자산 슬롯', () => {
     }
   });
 
-  test('Tripo 슬롯: asset 은 예정 키, fallback 은 이미 저장소에 있는 라이브러리 자산이다', () => {
+  test('Tripo 슬롯: asset 은 수집된 에셋(#305), fallback 은 이미 저장소에 있는 라이브러리 자산이다', () => {
     const slots: Record<string, string> = { Bell_Ringer: 'tll_ch7_bellringer', Bell_Warden: 'tll_ch7_midboss', Bell_Sovereign: 'tll_ch7_finalboss' };
     for (const [model, asset] of Object.entries(slots)) {
       const entry = (MONSTER_ROSTER as Record<string, any>)[model];
       expect(entry.asset).toBe(asset);
       expect(assets.has(entry.fallback), model).toBe(true);
-      expect(assets.has(entry.asset)).toBe(false);   // 아직 수집 전. 수집되면 코드 변경 없이 이 키가 우선한다.
+      expect(assets.has(entry.asset), entry.asset).toBe(true);   // #305 로 수집됨. 이 키가 fallback 보다 우선한다(없어져도 fallback 으로 동작).
       expect(entry.scale).toBeGreaterThan(0);
     }
     expect((CAMPAIGN_MODELS as Record<string, string>).belltower_finalboss).toBe('Bell_Sovereign');
