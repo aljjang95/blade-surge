@@ -1,0 +1,75 @@
+/* 게임 안 '소식' 패널(src/ui/news.js). 로비에서만 열리는 모달이라 전투 화면을 가리지 않는다.
+   확인 크기: 844x390 · 640x360(가로 모바일) · 1280x720. 짧은 화면에서는 머리말·탭·여백을 줄이고 본문만 스크롤한다. */
+.news-dialog { --news-gold: #e1c389; --news-ink: #ebefe7; --news-mute: #a9bdb9; box-sizing: border-box; width: min(720px, calc(100vw - 16px - var(--sal, 0px) - var(--sar, 0px))); max-height: min(92dvh, 640px); margin: auto; padding: 0; border: 1px solid #b69b6880; border-radius: 16px; background: #101a1e; color: var(--news-ink); font: 14px/1.6 var(--font-ui, sans-serif); box-shadow: 0 24px 80px #000c; overflow: hidden; }
+.news-dialog[open] { display: flex; flex-direction: column; }
+.news-dialog::backdrop { background: #071012dc; }
+.news-dialog * { box-sizing: border-box; }
+.news-dialog button { font: inherit; color: inherit; cursor: pointer; min-height: 44px; }
+.news-dialog button:focus-visible, .news-dialog a:focus-visible { outline: 3px solid #a0ddce; outline-offset: 2px; }
+
+.news-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #ffffff12; flex: none; }
+.news-header h2 { flex: 1; min-width: 0; margin: 0; font-size: 20px; font-weight: 900; line-height: 1.25; }
+.news-back, .news-close { flex: none; border: 1px solid #ffffff30; background: #ffffff08; border-radius: 9px; padding: 6px 14px; }
+.news-back[hidden] { display: none; }
+
+.news-tabs { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; flex: none; }
+.news-tabs[hidden] { display: none; }
+.news-tab { flex: none; border: 1px solid #ffffff1c; background: transparent; border-radius: 999px; padding: 6px 16px; white-space: nowrap; color: #aebfbc; }
+.news-tab[aria-selected=true] { background: #b8d0bf1f; border-color: var(--news-gold); color: var(--news-gold); font-weight: 800; }
+
+.news-notice { margin: 0; padding: 0 14px 4px; font-size: 12px; color: #e5c989; flex: none; }
+.news-notice:empty { display: none; }
+
+.news-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 14px 16px; -webkit-overflow-scrolling: touch; }
+.news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.news-row { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 72px; text-align: left; padding: 10px 14px; border: 1px solid #bed5c025; border-radius: 12px; background: linear-gradient(135deg, #ffffff0a, #ffffff03); }
+.news-row:hover { border-color: #9fcabb; }
+.news-row.unread { border-color: #e1c38999; }
+.news-row.pinned { background: linear-gradient(135deg, #e1c38920, #ffffff03); }
+.news-row-title { font-size: 16px; line-height: 1.35; font-weight: 800; }
+.news-row-sum { font-size: 13px; line-height: 1.5; color: #c4d2cd; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.news-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--news-mute); }
+.news-tag { display: inline-block; padding: 0 8px; border-radius: 999px; border: 1px solid #ffffff2a; background: #ffffff0d; font-size: 11px; font-weight: 800; line-height: 20px; color: #d6e3de; }
+.news-tag.type-notice { color: #ffd98a; border-color: #ffd98a66; }
+.news-tag.type-patch { color: #9fe3c2; border-color: #9fe3c266; }
+.news-tag.type-devnote { color: #9fc8ff; border-color: #9fc8ff66; }
+.news-tag.pin { color: #ff9aa8; border-color: #ff9aa866; }
+.news-tag.new { color: #fff; background: var(--red, #ff3b5c); border-color: transparent; padding: 0 7px; }
+
+.news-article-title { margin: 8px 0 4px; font-size: 20px; line-height: 1.35; font-weight: 900; }
+.news-body { font-size: 15px; line-height: 1.75; word-break: keep-all; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+.news-body h2 { margin: 18px 0 6px; font-size: 17px; color: var(--news-gold); padding-bottom: 4px; border-bottom: 1px solid #ffffff18; }
+.news-body h3 { margin: 14px 0 4px; font-size: 15px; }
+.news-body p { margin: 8px 0; }
+.news-body ul, .news-body ol { margin: 6px 0; padding-left: 20px; }
+.news-body li { margin: 4px 0; }
+.news-body strong { color: #fff3cf; }
+.news-body a { color: #8fd3ff; }
+.news-web { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 0 16px; border: 1px solid #ffffff30; border-radius: 9px; background: #ffffff08; color: var(--news-ink); text-decoration: none; font-size: 14px; }
+
+.news-empty { padding: 28px 8px; text-align: center; color: #c4d2cd; }
+.news-empty p { margin: 4px 0; }
+.news-sub { font-size: 12px; color: var(--news-mute); }
+.news-retry { margin-top: 10px; padding: 6px 18px; border: 1px solid #d1b985; border-radius: 9px; background: #d1b985; color: #152020 !important; font-weight: 800; }
+
+/* 로비 메뉴 안의 소식 버튼 점 */
+.news-open { position: relative; }
+
+/* 가로 모바일(844x390, 640x360): 머리말·탭·여백을 줄여 본문 영역을 넓힌다. */
+@media (max-height: 460px) {
+  .news-dialog { max-height: calc(100dvh - 12px); border-radius: 12px; }
+  .news-header { padding: 4px 10px; }
+  .news-header h2 { font-size: 17px; }
+  .news-back, .news-close { padding: 2px 12px; }
+  .news-tabs { padding: 4px 10px; }
+  .news-tab { padding: 2px 14px; }
+  .news-content { padding: 2px 10px 10px; }
+  .news-row { min-height: 60px; padding: 6px 12px; }
+  .news-row-title { font-size: 15px; }
+  .news-row-sum { -webkit-line-clamp: 1; }
+  .news-article-title { font-size: 18px; margin-top: 4px; }
+  .news-body { font-size: 14px; line-height: 1.65; }
+}
+@media (max-width: 380px) { .news-dialog { border-radius: 10px; } .news-tab { padding: 6px 12px; } }
+@media (prefers-reduced-motion: reduce) { .news-dialog * { transition: none !important; animation: none !important; } }

@@ -15,6 +15,7 @@ const expectedColumns: Record<string, Record<string, string>> = {
   players: { created_ip_hash: 'TEXT', hero: 'TEXT' },
   clears: { summary: 'TEXT', rank_summary: 'TEXT', subject_hash: 'TEXT', last_at: 'INTEGER' },
   ws_tickets: { key_hash: 'TEXT' },
+  posts: { patch_note_slug: 'TEXT' },
 };
 const expectedIndexes: Record<string, [string, string[]]> = {
   player_keys_player: ['player_keys', ['player_id', 'last_seen']],
@@ -41,7 +42,7 @@ const expectedIndexes: Record<string, [string, string[]]> = {
 };
 
 function expectLatestSchema(db: Database) {
-  expect(db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 4 });
+  expect(db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 5 });
   for (const [table, columns] of Object.entries(expectedColumns)) {
     const actual = db.query(`PRAGMA table_info(${table})`).all() as { name: string; type: string }[];
     for (const [name, type] of Object.entries(columns)) expect(actual).toContainEqual(expect.objectContaining({ name, type }));
