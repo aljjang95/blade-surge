@@ -94,6 +94,10 @@ import { applyLook, LOOKS } from './game/look.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { startPersonalExpedition } from './ui/blessing-launch.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
+import './ui/density.css';
+import './ui/density-hero.css';
+import './ui/density-result.css';
+import './ui/density-panels.css';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
 const startup = { stage: 'renderer', failed: false };
