@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { LOGICAL_CLIPS, validateManifest } from './manifest.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
-const blender = 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
+const blender = process.env.BLENDER || 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe';
 const args = process.argv.slice(2).reduce((out, value, index, all) => {
   if (value.startsWith('--')) out[value.slice(2)] = all[index + 1]?.startsWith('--') ? true : all[index + 1];
   return out;

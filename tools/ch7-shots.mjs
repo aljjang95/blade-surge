@@ -47,7 +47,7 @@ const measure = () => page.evaluate(() => {
     const hm = a.libraryAsset?.heightM ?? null, sc = a.model.scale.x;
     return { boneMinY: +minY.toFixed(2), boneH: +(maxY - minY).toFixed(2), heightM: hm, modelScale: +sc.toFixed(3), effH: hm ? +(hm * sc * (a.model.parent?.scale?.x || 1)).toFixed(2) : null };
   };
-  const info = (e) => ({ type: e.type, model: e.def?.model, asset: e.libraryAsset?.id || null, rosterAsset: e.libraryRoster?.asset || null, rosterScale: e.libraryRoster?.scale ?? null, defScale: e.def?.scale, radius: +e.radius.toFixed(2), clips: Object.keys(e.clips).length, ...box(e) });
+  const info = (e) => ({ type: e.type, model: e.def?.model, asset: e.libraryAsset?.id || null, rosterAsset: e.libraryRoster?.asset || null, rosterScale: e.libraryRoster?.scale ?? null, defScale: e.def?.scale, radius: +e.radius.toFixed(2), clips: Object.keys(e.clips).length, weaponSocket: !!e.model.getObjectByName('MonsterWeaponSocket'), ...box(e) });
   return { hero: { ...box(p), radius: +p.radius.toFixed(2), asset: p.libraryAsset?.id || null }, enemies: b.enemies.filter((e) => e.alive).map(info) };
 });
 const shoot = async (scene) => {
