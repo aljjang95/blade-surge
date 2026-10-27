@@ -58,6 +58,7 @@ export function playEnhanceStage(host, art, { from, result }) {
   const at = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
   // 망치질: 박자마다 금속음, 뒤로 갈수록 높고 세게. 심장 저음은 처음과 중간에 한 번씩.
   beats.forEach((t, i) => at(t, () => {
+    if (!stage.isConnected) return;
     const p = beats.length > 1 ? i / (beats.length - 1) : 1;
     audio.clang({ vol: 0.18 + 0.22 * p, freq: 1500 + 1300 * p, dur: 0.12 });
     weapon.classList.remove('beat'); void weapon.offsetWidth; weapon.classList.add('beat');
@@ -71,10 +72,17 @@ export function playEnhanceStage(host, art, { from, result }) {
       if (done) return; done = true;
       for (const t of timers) clearTimeout(t);
       stage.removeEventListener('pointerdown', skip); host.removeEventListener('keydown', skipKey, true);
+      // 시트가 닫히거나 다른 모달로 바뀌었으면 소리·진동 없이 끝낸다(결과는 이미 저장됨).
+      if (!stage.isConnected) { lastEnd = performance.now(); resolve({ skipped: true, aborted: true }); return; }
       reveal();
     };
     const skip = (event) => { event.preventDefault(); skipped = true; finish(); };
-    const skipKey = (event) => { if (event.key === 'Escape') return; event.preventDefault(); event.stopPropagation(); skipped = true; finish(); };
+    // 건너뛰기는 Space·Enter 만. Tab·Esc 등은 시트(포커스 순환·닫기)에 그대로 넘긴다. 공유 모달 상자에 붙으므로 연출이 사라졌으면 즉시 떼어 낸다.
+    const skipKey = (event) => {
+      if (!stage.isConnected) { finish(); return; }
+      if (event.key !== ' ' && event.key !== 'Enter') return;
+      event.preventDefault(); event.stopPropagation(); skipped = true; finish();
+    };
     stage.addEventListener('pointerdown', skip); host.addEventListener('keydown', skipKey, true);
     at(tension, finish);
 

@@ -403,8 +403,11 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         meta.refreshTop();
         // 결과는 이미 저장됐다. 긴장 → 결과 연출이 끝난 뒤에만 문구를 띄우고 시트를 다시 그린다(탭하면 건너뜀).
         staging = true; go.disabled = true;
+        // 공유 모달 상자에 기준 위치를 잠깐만 준다(다른 모달에 남지 않게 원래 값으로 되돌림).
+        const position = b.style.position;
         if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
         await playEnhanceStage(b, b.querySelector('.is-head-art'), { from: lv, result: r });
+        b.style.position = position;
         staging = false;
         if (ui.modalSeq !== seq) return;
         if (r.destroyed) { ui.toast('장비가 파괴되었습니다…', 'red'); later(0); }
