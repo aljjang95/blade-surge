@@ -1,0 +1,11 @@
+.legal-links { font-size: 10px; line-height: 1.4; color: var(--muted); text-align: center; margin: 4px 0 0; }
+.legal-links a { color: inherit; text-decoration: underline; padding: 2px 1px; }
+#tab-shop .legal-links { margin-top: 6px; }
+.boot-legal { position: absolute; bottom: calc(26px + var(--sab)); z-index: 1; color: rgba(255,255,255,.45); }
+.pay-notice { display: block; margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); text-align: left; }
+.pay-notice > span { display: block; margin-top: 3px; }
+.pay-notice a { color: var(--blue); text-decoration: underline; }
+.pay-consent { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; font-size: 12px; line-height: 1.4; text-align: left; }
+.pay-consent input { margin-top: 2px; flex: none; }
+.setting-legal { margin-top: 8px; }
+.gacha-foot .link-odds { text-decoration: underline; }

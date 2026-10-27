@@ -21,6 +21,8 @@ import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/b
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
+import { paymentNoticeHtml, legalLinksHtml, INSTANT_GRANT_CONSENT } from './legal-links.js';
+import './legal-links.css';
 import { revealPlan } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
@@ -715,7 +717,10 @@ export class Meta {
   async payWithBilling(sku, productId) {
     const product = this.cashProduct(sku.id), billing = this.eco.billing;
     if (!product || !billing) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
-    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · Google Play 결제`, { ok: '구매하기', cancel: '취소' });
+    // 청약철회 고지(PAYMENT_COMPLIANCE 4.2): 모든 현금 상품은 구매 즉시 지급되므로 제한 사실에 동의(기본 미체크)해야 구매 버튼이 켜진다. 구독은 자동 갱신·해지 문구를 더한다.
+    const subscription = product.type === 'subscription' || sku.id === 'monthly';
+    const notice = paymentNoticeHtml({ ...sku, rewards: this.eco.sku(sku.id)?.rewards ?? sku.rewards }, { subscription });
+    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · Google Play 결제${notice}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
     if (!ok) return null;
     const r = await billing.buy(productId);
     if (r.reason === 'cancelled') return null;
@@ -812,6 +817,7 @@ export class Meta {
       <div class="setting-row setting-description"><span id="cam-desc" class="setting-help">${CAM_DESC[st.camera || 'auto']}</span></div>
       ${row('cameraAuto', '전투 카메라 자동(AUTO)')}${row('cameraInvertX', '카메라 좌우 반전')}${row('cameraInvertY', '카메라 상하 반전')}<div class="setting-row setting-description"><span class="setting-help">시점을 끌어 돌릴 때 기본은 손가락을 끄는 쪽으로 화면이 따라옵니다. 반대가 편하면 켜세요. 로비·마을·전투에 바로 적용됩니다.</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
+      ${legalLinksHtml(undefined, 'legal-links setting-legal')}
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
       <details class="danger-zone"><summary>위험 구역 · 데이터 초기화</summary><div class="danger-body"><p>모든 진행 데이터(영웅·장비·재화·진행도)가 삭제되고 되돌릴 수 없습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 초기화할까요?</b> 이 작업은 되돌릴 수 없습니다.</p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes">네, 모두 삭제합니다</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
