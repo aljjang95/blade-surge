@@ -18,6 +18,9 @@ beforeEach(() => {
 });
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
+const PRE_ROTATION = Date.UTC(2026, 9, 20, 3);  // 10-20: 교대 전 픽업 = GACHA.featured(광전사)
+const POST_ROTATION = Date.UTC(2026, 9, 27, 3); // 10-27: 회차 0 픽업 = 늑대인간 족장
+
 describe('gacha rarity contract', () => {
   test('100k seeded pulls: SSR never exceeds hard pity 80 and matches the published rates', () => {
     const rng = createSeededRng(20260928);
@@ -37,8 +40,16 @@ describe('gacha rarity contract', () => {
     expect(Math.abs(soft70Ssr / soft70 - gachaChances(70).SSR)).toBeLessThan(0.08);
   });
 
+  test('픽업 교대 뒤에도 현재 픽업은 비픽업 SSR 목록에 들지 않는다', () => {
+    const rates = gachaRates('hero', POST_ROTATION);
+    expect(rates.featured).toBe(heroPickup(POST_ROTATION)); expect(rates.featured).not.toBe(GACHA.featured);
+    expect(rates.ssrSplit.otherHeroes).not.toContain(rates.featured);
+    expect(rates.ssrSplit.otherHeroes).toContain(GACHA.featured); // 교대 전 픽업(광전사)은 이제 일반 SSR 풀이다
+  });
+
   test('published table is derived from the same curve the pull uses', () => {
-    const rates = gachaRates();
+    const rates = gachaRates('hero', PRE_ROTATION); // 교대 전(광전사 픽업) 고정. 실제 시계에 의존하지 않는다.
+    expect(rates.featured).toBe(GACHA.featured);
     expect(rates.base.SSR).toBeCloseTo(2 / 100, 10);
     // ssrByPull[i]는 (i+1)번째 소환. 60번째는 기본 확률, 61번째부터 상승한다.
     expect(rates.ssrByPull[GACHA.softPity - 1]).toBeCloseTo(rates.base.SSR, 10);

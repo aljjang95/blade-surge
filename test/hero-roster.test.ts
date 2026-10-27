@@ -15,6 +15,9 @@ import { Meta } from '../src/ui/meta.js';
 import { starterChoices, needsStarterSelect } from '../src/ui/starter-select.js';
 import { audio } from '../src/engine/audio.js';
 
+// 규칙 시계: 실제 시각이 아니라 고정 시각을 주입한다. 픽업 교대(2026-10-26 KST)·시즌 이벤트가 테스트에 끼어들지 않게 한다.
+const PRE_ROTATION = Date.UTC(2026, 9, 20, 3);  // 10-20: 교대 전(회차 -1) 픽업 = 광전사
+const POST_ROTATION = Date.UTC(2026, 9, 27, 3); // 10-27: 회차 0 픽업 = 늑대인간 족장
 const IDS = Object.keys(HEROES);
 // 정책 1 이 소유하는 영웅은 원래 다섯뿐이다(소환 전용 영웅 늑대인간 족장은 소환으로만 해금).
 const LEGACY = [...HERO_LEGACY_IDS];
@@ -150,13 +153,13 @@ describe('무료 해금', () => {
     expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'gacha', step: 0 });
   });
   test('저장이 실패하면 소환·마일리지 교환의 소유·보석·조각이 되돌아간다', () => {
-    const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0 });
+    const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0, now: () => PRE_ROTATION });
     eco.chooseStarter('mage'); eco.s.gems = 5000; eco.gachaState().mileage = GACHA_MILEAGE.cost;
     const before = JSON.stringify(eco.s);
     storage.setItem = () => { throw new Error('quota'); };
     expect(eco.exchangeMileage()).toBeNull(); expect(eco.lastGachaError).toBe('storage');
     expect(eco.pull(10)).toBeNull(); expect(eco.lastGachaError).toBe('storage');
-    expect(JSON.stringify(eco.s)).toBe(before); expect(eco.s.roster.owned).toEqual(['mage']); expect(eco.ownHero(heroPickup())).toBe(false);
+    expect(JSON.stringify(eco.s)).toBe(before); expect(eco.s.roster.owned).toEqual(['mage']); expect(eco.ownHero(heroPickup(PRE_ROTATION))).toBe(false);
   });
   test('정책 1 은 무료 해금 대상이 없다', () => {
     expect(withStore(legacyRaw()).heroUnlockQuote('mage').reason).toBe('owned');
@@ -173,17 +176,21 @@ describe('가챠', () => {
     expect(eco.s.heroes[target].shards).toBe(before + GACHA.dupShards);
     expect(eco.ownHero(target)).toBe(false); expect(eco.s.roster.owned).toEqual(['knight']);
   });
-  test('시작 영웅을 고른 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0)이다', () => {
-    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter('mage'); const target = heroPickup(); expect(eco.ownHero(target)).toBe(false);
+  // 픽업 교대 전(광전사)과 교대 뒤(늑대인간 족장) 모두 같은 계약: 시작 영웅 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0).
+  test.each([['교대 전', PRE_ROTATION, 'barbarian'], ['교대 뒤', POST_ROTATION, 'werewolf']] as const)('시작 영웅을 고른 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0)이다 (%s)', (_name, at, pickup) => {
+    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0, now: () => at });
+    eco.chooseStarter('mage'); const target = heroPickup(at); expect(target).toBe(pickup); expect(eco.ownHero(target)).toBe(false);
     const res = eco.rollResult('SSR');
     expect(res).toMatchObject({ type: 'hero', id: target, dup: false, unlocked: true, shards: 0, featured: true }); expect('locked' in res).toBe(false);
     expect(eco.ownHero(target)).toBe(true); expect(eco.s.roster.owned).toEqual(['mage', target]);
     expect(eco.s.heroes[target].shards).toBe(0);
   });
-  test('보유 영웅은 중복 조각이고 locked 표시가 없다', () => {
-    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter(heroPickup());
+  test.each([['교대 전', PRE_ROTATION], ['교대 뒤', POST_ROTATION]] as const)('보유 영웅은 중복 조각이고 locked 표시가 없다 (%s)', (_name, at) => {
+    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0, now: () => at });
+    // 교대 뒤 픽업(늑대인간 족장)은 소환 전용이라 시작 영웅으로 못 고른다 → 한 번 뽑아 해금한 뒤 다시 뽑으면 중복이다.
+    const pickup = heroPickup(at);
+    if ((HEROES as any)[pickup].gachaOnly) { eco.chooseStarter('mage'); eco.rollResult('SSR'); } else eco.chooseStarter(pickup);
+    expect(eco.ownHero(pickup)).toBe(true);
     const res = eco.rollResult('SSR');
     expect(res).toMatchObject({ dup: true, shards: GACHA.dupShards }); expect('locked' in res).toBe(false); expect('unlocked' in res).toBe(false);
   });
