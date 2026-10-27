@@ -119,3 +119,12 @@ test('아바타 상점 초상은 정해진 경로 형식이고 실제 512² webp
     expect((AVATAR_BY_ID as any)[id].portrait).toBe(portraitPath(id));
   }
 });
+
+test('결제 지급 출처(avatars.paid)는 소유 중인 알려진 아바타만 남기고, 비면 필드를 만들지 않는다', () => {
+  const eco = new Economy();
+  const raw: any = eco.fresh();
+  raw.avatars = { owned: ['avatar_knight_sakura'], equipped: {}, showGear: {}, parts: {}, paid: { avatar_knight_sakura: 'iap:abc', avatar_mage_astral: 'iap:def', nope: 'x', avatar_rogue_crow: 7 } };
+  expect(normalizeSave(raw, eco.fresh()).avatars.paid).toEqual({ avatar_knight_sakura: 'iap:abc' });
+  raw.avatars = { owned: [], equipped: {}, showGear: {}, parts: {}, paid: { avatar_knight_sakura: 'iap:abc' } };
+  expect(normalizeSave(raw, eco.fresh()).avatars).toEqual({ owned: [], equipped: {}, showGear: {}, parts: {} });
+});
