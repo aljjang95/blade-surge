@@ -5,6 +5,9 @@ import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
 import { recommendedLevel, representativeDrops } from './loot-tables.js';
+import { CHAPTER_COUNT, STAGES_PER_CHAPTER } from './campaign-shape.js';
+
+export { STAGES_PER_CHAPTER };
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -15,8 +18,16 @@ export const CHAPTERS = [
   { id: 5, name: '새벽을 먹는 왕관', theme: 'crown', color: '#e0c184', boss: 'crown_finalboss', tagline: '세상을 구하기 위해, 너를 잃어야 한다는 거짓말.', summary: '네브의 기억을 노리는 왕관으로 향한다. 누군가의 희생에 기대는 승리 대신 함께 살아갈 내일을 선택한다.', oath: '한 사람의 짐을 함께 나누겠다는 맹세', mechanic: { name: '왕관의 심판', description: '대각선 십자 경고 뒤에 빛이 떨어집니다. 중앙의 작은 안전 원이나 십자 밖으로 피하세요.' } },
   { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
 ];
-export const STAGES_PER_CHAPTER = 10;
+if (CHAPTERS.length !== CHAPTER_COUNT) throw new Error(`CHAPTERS(${CHAPTERS.length})와 campaign-shape.js CHAPTER_COUNT(${CHAPTER_COUNT})가 다릅니다.`);
+// 의미 분기는 장 번호가 아니라 데이터 플래그로 읽는다. 표시·저장 지문을 바꾸지 않도록 열거되지 않는 속성으로 붙인다.
+//  - finale: 다섯 왕의 이야기가 끝나는 장(최종 관문이 월드 피날레 연출을 켠다)
+//  - homecoming: 후일담 장(최종 관문이 에필로그 피날레 연출을 켠다)
+const CHAPTER_FLAGS = { 5: { finale: true }, 6: { homecoming: true } };
 for (const chapter of CHAPTERS) {
+  Object.defineProperties(chapter, {
+    finale: { value: !!CHAPTER_FLAGS[chapter.id]?.finale },
+    homecoming: { value: !!CHAPTER_FLAGS[chapter.id]?.homecoming },
+  });
   // 표시용 진행 정보는 열거하지 않는다. 기존 경로·스테이지 JSON 지문과 저장 계약을 바꾸지 않는다.
   Object.defineProperties(chapter, { recommendedLevel: { value: recommendedLevel(chapter.id) }, representativeDrops: { value: representativeDrops(chapter.id) } });
 }
@@ -58,7 +69,7 @@ export function stageDef(ch, st) {
   if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError(`스테이지는 1-1부터 ${CHAPTERS.length}-${STAGES_PER_CHAPTER}까지입니다.`);
   const chapter = CHAPTERS[ch - 1], idx = (ch - 1) * STAGES_PER_CHAPTER + st;
   const dungeon = dungeonForStage(ch, st);
-  const rank = st === 10 ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
+  const rank = st === STAGES_PER_CHAPTER ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
   const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
   const R = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme], scene = stageStory(ch, st);
   // Named story encounters retain their authored identity, portrait and finale rig.
@@ -79,8 +90,8 @@ export function stageDef(ch, st) {
   const dungeonBoss = (dungeonBossId && ENEMIES[dungeonBossId]) || enemy;
   const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
-    dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
-    boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
+    dungeon, dungeonBossId, epilogueFinale: chapter.homecoming && st === STAGES_PER_CHAPTER,
+    boss, finale: chapter.finale && st === STAGES_PER_CHAPTER, waves, scale, energy: 6 + Math.floor(idx / 6),
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
@@ -276,6 +287,9 @@ const CAMPAIGN_ENCOUNTERS = {
     finalboss: ['boss_dragon', '새벽을 먹는 빈 왕관', ['slam', 'fan', 'soulrain', 'dash', 'summon', 'spin'], '다섯 왕의 공격이 순서대로 이어집니다. 십자 심판의 중앙 안전 원을 활용하세요.'],
   },
 };
+// 귀환로(6장)는 정원(1장)의 전투 틀을 그대로 쓰고 이름만 후일담 조우로 바꾼다. 장 번호가 아니라 조우 키(encounterPrefix)로 고른다.
+const HOMECOMING_NAMES = { captain: '귀환로를 막는 잔병장', warden: '끊어진 명령의 파수꾼', midboss: '공허한 서약의 잔향', finalboss: '마지막 고립의 잔향' };
+CAMPAIGN_ENCOUNTERS.homecoming = Object.fromEntries(Object.entries(CAMPAIGN_ENCOUNTERS.garden).map(([rank, [baseId, , pattern, tactic]]) => [rank, [baseId, HOMECOMING_NAMES[rank], pattern, tactic]]));
 const RANK_STATS = {
   // 관문도 궁극기 한 번 뒤에 패턴을 보여줄 체력이 필요하다.
   // 기존 첫 보스(31,200)를 기준으로 계급 간 6k/8k/8k 차이를 보존한다.
@@ -287,10 +301,10 @@ const RANK_STATS = {
 for (const chapter of CHAPTERS) {
   const theme = chapter.theme;
   const summon = ROSTER[theme].trash[0];
-  for (const [rank, [baseId, name, pattern, tactic]] of Object.entries(CAMPAIGN_ENCOUNTERS[theme])) {
+  for (const [rank, [baseId, name, pattern, tactic]] of Object.entries(CAMPAIGN_ENCOUNTERS[chapter.encounterPrefix || theme])) {
     const base = ENEMIES[baseId];
     ENEMIES[(chapter.encounterPrefix || theme) + '_' + rank] = {
-      ...base, ...RANK_STATS[rank], name: chapter.id === 6 ? ({ captain: '귀환로를 막는 잔병장', warden: '끊어진 명령의 파수꾼', midboss: '공허한 서약의 잔향', finalboss: '마지막 고립의 잔향' })[rank] : name, boss: true, elite: false, ranged: false,
+      ...base, ...RANK_STATS[rank], name, boss: true, elite: false, ranged: false,
       behavior: undefined, rank, pattern, tactic, summon, tint: chapter.color, range: 3.2,
       armor: rank === 'captain' ? 0.12 : 0.2, atkTime: rank === 'finalboss' ? 1.7 : 1.9,
       kit: theme === 'garden' || theme === 'crown' ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',

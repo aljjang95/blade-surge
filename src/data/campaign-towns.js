@@ -52,7 +52,7 @@ export const CAMPAIGN_TOWNS = frozen([
     sky: frozen({ horizon: 0xf0a860, zenith: 0x1a0c34, ground: 0x2a1a3a }), ground: frozen({ inner: 0x4a3c58, outer: 0x1c1228, y: -1 }),
   }),
   frozen({
-    chapter: 6, id: 'homeward', name: '함께 잇는 귀환 마을', subtitle: 'HOMEWARD', theme: 'garden', scenery: 'homeward',
+    chapter: 6, id: 'homeward', name: '함께 잇는 귀환 마을', subtitle: 'HOMEWARD', theme: 'garden', musicRegion: 'homecoming', scenery: 'homeward',
     mood: '아침 햇살이 드는 다리와 들판', accent: '#ffd27a', waystone: 0xffd78a,
     palette: palette(0x8a8f78, 0x6c7260, 0xf4ecd0, 0xe9b85a, 0x3f4a3a, 0x7b5a3c, 0x6cbf8a),
     atmosphere: atmosphere(0x7fb6d8, 0xbfd9dc, .011, [0xfff0cf, 0x4f6b4a], 1.1, 0xffe0a0, 2.8, [-12, 18, 10], 0xffd0a0, 1.2),
@@ -99,7 +99,7 @@ export function regionUnlockedBy(stage) {
 /** 지역 마을이 로비에 흘리는 배경음. 1지역은 기존 로비 곡을 그대로 쓴다. */
 export function campaignTownMusic(chapter) {
   const town = campaignTown(chapter);
-  return town.chapter === 1 ? 'regions/lobby' : `regions/${chapter === 6 ? 'homecoming' : town.theme}`;
+  return town.chapter === 1 ? 'regions/lobby' : `regions/${town.musicRegion || town.theme}`;
 }
 
 // 로비 장면이 읽는 현재 마을. 저장이 아니라 화면 상태이며 Economy → app 이 동기화한다.

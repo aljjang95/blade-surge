@@ -1,5 +1,6 @@
 import { PARTY_HEROES, PARTY_LIMITS, sanitizePartyName, validPartyInput, validPartySnapshot, validPartyStats } from '../src/party/protocol.js';
 import { AVATAR_BY_ID } from '../src/data/avatars.js';
+import { CAMPAIGN_STAGE_COUNT } from '../src/data/campaign-shape.js';
 
 export class PartyError extends Error {
   constructor(public readonly code: string, public readonly status = 400) { super(code); }
@@ -67,7 +68,7 @@ export class PartyState {
     if (m.type === 'stage') {
       if (id !== this.hostId) throw new PartyError('host-only', 403);
       if (this.status !== 'lobby') throw new PartyError('state', 409);
-      if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > 60) throw new PartyError('stage-schema');
+      if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > CAMPAIGN_STAGE_COUNT) throw new PartyError('stage-schema');
       if (m.stageIdx !== this.stageIdx) {
         this.stageIdx = m.stageIdx;
         for (const member of this.members.values()) member.ready = false;
@@ -78,7 +79,7 @@ export class PartyState {
       if (id !== this.hostId) throw new PartyError('host-only', 403);
       if (this.status !== 'lobby') throw new PartyError('state', 409);
       if (this.members.size < 2 || [...this.members.values()].some(p => !p.ready)) throw new PartyError('not-ready', 409);
-      if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > 60
+      if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > CAMPAIGN_STAGE_COUNT
         || !Number.isInteger(m.seed) || m.seed < 1 || m.seed > 2147483647) throw new PartyError('start-schema');
       if (m.stageIdx !== this.stageIdx) throw new PartyError('stage-mismatch', 409);
       this.run = { runId: this.uuid(), stageIdx: m.stageIdx, seed: m.seed, startedAt: now };

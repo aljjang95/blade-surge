@@ -7,6 +7,17 @@ const OPUS_CHANNELS = new Set(['googleplay', 'onestore']);
 /** 곡 이름 -> 공개 URL. 지역곡(regions/*)만 Opus 파일이 있고, 가챠곡(80kbps mp3)은 모든 채널에서 mp3 다. */
 export const bgmUrl = (name, channel = STORE_CHANNEL) => `/bgm/${name}.${OPUS_CHANNELS.has(channel) && String(name).startsWith('regions/') ? 'ogg' : 'mp3'}`;
 const REGIONS = new Set(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
+// 장 번호나 조우 접두사로 고르는 지역(테마와 다른 곡·보스 계획을 쓰는 장). 새 지역은 여기 한 줄을 더한다.
+const CHAPTER_REGION = Object.freeze({ 6: 'homecoming' });
+const PREFIX_REGIONS = Object.freeze(['homecoming']);
+/** 테마가 아니라 장 번호·조우 접두사로 정해지는 지역 id(없으면 null). */
+function campaignRegionId(stage) {
+  for (const n of [stage?.ch, stage?.chapter?.id]) if (Object.hasOwn(CHAPTER_REGION, n)) return CHAPTER_REGION[n];
+  for (const prefix of [stage?.encounterPrefix, stage?.chapter?.encounterPrefix]) if (PREFIX_REGIONS.includes(prefix)) return prefix;
+  return null;
+}
+/** 지역 id 의 지역 곡. */
+const regionTrack = region => `regions/${region}`;
 
 // FLOW web generation brief.  `fallback` is the verified shipped cue used
 // until the authenticated FlowMusic GUI exports the replacement master; a
@@ -52,7 +63,8 @@ export function musicForScene({ scene = 'battle', stage = null, boss = false } =
     if (routeCue?.fallback) return routeCue.fallback;
   }
   if (stage?.expedition?.kind === 'dungeon' && REGIONS.has(stage?.theme)) return `regions/${stage.theme}`;
-  if (stage?.ch === 6 || stage?.chapter?.id === 6 || stage?.encounterPrefix === 'homecoming' || stage?.chapter?.encounterPrefix === 'homecoming') return 'regions/homecoming';
+  const special = campaignRegionId(stage);
+  if (special) return regionTrack(special);
   const theme = stage?.theme || stage?.chapter?.theme;
   return `regions/${REGIONS.has(theme) ? theme : 'garden'}`;
 }
@@ -79,7 +91,8 @@ export const BOSS_CUE_PLAN = Object.freeze(REGION_IDS.flatMap(region => [
 /** 배송된 곡이 있으면 그 곡, 아니면 검증된 대체 곡. 생성 대기 항목이 깨진 URL 이 되지 않는다. */
 const cueTrack = cue => cue.status === 'shipped' && cue.file ? cue.file : cue.fallback;
 function stageRegion(stage) {
-  if (stage?.ch === 6 || stage?.chapter?.id === 6 || stage?.encounterPrefix === 'homecoming' || stage?.chapter?.encounterPrefix === 'homecoming') return 'homecoming';
+  const special = campaignRegionId(stage);
+  if (special) return special;
   const theme = stage?.theme || stage?.chapter?.theme;
   return REGION_IDS.includes(theme) ? theme : 'garden';
 }

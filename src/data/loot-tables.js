@@ -1,4 +1,5 @@
 import { DIFFICULTY_ORDER } from '../game/difficulty.js';
+import { CHAPTER_COUNT, STAGES_PER_CHAPTER } from './campaign-shape.js';
 
 // 기존 재료 3종만 사용한다. 후반 지역은 두 종류를 함께 주어 정련 선택지가 넓어진다.
 const MATERIALS = [
@@ -12,7 +13,7 @@ const BASE_WEIGHTS = {
 };
 function buildTables(difficulty = 'story') {
   const d = Math.max(0, DIFFICULTY_ORDER.indexOf(difficulty));
-  return Object.freeze(Array.from({ length: 6 }, (_, i) => {
+  return Object.freeze(Array.from({ length: CHAPTER_COUNT }, (_, i) => {
     const ch = i + 1;
     return Object.freeze(Object.fromEntries(['normal', 'elite', 'boss'].map(rank => {
       const boss = rank === 'boss', elite = rank === 'elite', weights = { ...BASE_WEIGHTS[rank] };
@@ -44,7 +45,7 @@ function buildTables(difficulty = 'story') {
 const TABLES_BY_DIFFICULTY = Object.freeze(Object.fromEntries(DIFFICULTY_ORDER.map(id => [id, buildTables(id)])));
 export const LOOT_TABLES = TABLES_BY_DIFFICULTY.story;
 export function lootTable(chapter = 1, rank = 'normal', difficulty = 'story') {
-  const ch = Math.max(1, Math.min(6, Math.floor(Number(chapter) || 1)));
+  const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1)));
   const tables = Object.hasOwn(TABLES_BY_DIFFICULTY, difficulty) ? TABLES_BY_DIFFICULTY[difficulty] : LOOT_TABLES;
   return Object.hasOwn(tables[ch - 1], rank) ? tables[ch - 1][rank] : tables[ch - 1].normal;
 }
@@ -62,7 +63,7 @@ export function levelExperienceMultiplier(heroLevel, recommendedLevel) {
 // 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다.
 const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46];
 export function recommendedLevel(chapter, stage = 1) {
-  const ch = Math.max(1, Math.min(6, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(10, Math.floor(Number(stage) || 1)));
+  const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(STAGES_PER_CHAPTER, Math.floor(Number(stage) || 1)));
   const from = CHAPTER_START_LEVEL[ch - 1], to = CHAPTER_START_LEVEL[ch];
   return from + Math.floor((st - 1) * (to - from) / 10);
 }
