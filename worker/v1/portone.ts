@@ -9,7 +9,7 @@ import type { Authed, Ctx } from './auth';
 import { randomHex } from './token';
 import { recordServerMilestone } from './funnel';
 import {
-  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
+  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, assertAvatarFullsetDeliverable, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
 } from './iap';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
 
@@ -170,6 +170,7 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   // 영구 권한 상품은 이미 가진 권한이면 거부한다(영웅 개별 + 전원 해금의 중복 결제 방지).
   const activeKeys = await activeEntitlementKeys(c.db, accountId, c.now);
   if (allKeysActive(product, activeKeys)) fail(409, 'not-eligible');
+  await assertAvatarFullsetDeliverable(c, auth.account.account_id, product);
   // 월정액 이용 중(Play 구독 또는 웹 30일권)에는 웹 30일권을 또 팔지 않는다.
   if (grantsMonthly(product) && activeKeys.has('monthly')) fail(409, 'already-subscribed');
   // 한 번만 받을 수 있는 상품(계정당 1회·영구·월정액)은 결제창이 열려 있을 시간(10분) 안의 같은 계열 의도가 있으면 새 의도를 막는다.
@@ -193,7 +194,8 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
 }
 
 // ── 완료: 포트원 조회 → 검증 → 멱등 지급 ──────────────────────────
-type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed'; productId: string; paymentId: string; granted: string[] };
+/** 'refund-pending' = 결제됨 · 환불 처리 중(아바타 지급 불가). 포트원 취소는 운영자가 한다(자동 취소 호출 없음). */
+type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed' | 'refund-pending'; productId: string; paymentId: string; granted: string[] };
 
 async function audit(c: Ctx, accountId: string, kind: string, detail: unknown) {
   await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
@@ -252,6 +254,15 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
     await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state = 'intent'")
       .bind(hash, c.now, c.now, row.payment_id).run();
     return { ...base, state: 'cancelled', granted: [] };
+  }
+  if (result === 'undeliverable') {
+    // 결제는 검증됐지만 아바타 풀셋을 줄 수 없다(자산 미준비·영웅 미소유 등, 사유는 grantOnce 의 avatar-undeliverable 감사 플래그).
+    // 돈이 나갔으므로 운영자 환불 큐로 남긴다: 감사 플래그 web-avatar-undeliverable + 행 failed(스키마 CHECK 에 별도 상태가 없다).
+    // 포트원 취소는 실제 돈이 움직이므로 자동 호출하지 않는다. 같은 결제를 다시 확인해도 플래그는 한 번만 남긴다.
+    if (row.state !== 'failed') await audit(c, row.account_id, 'web-avatar-undeliverable', { paymentId: row.payment_id, productId: product.id, action: 'refund-required' });
+    await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','failed')")
+      .bind(hash, c.now, c.now, row.payment_id).run();
+    return { ...base, state: 'refund-pending', granted: [] };
   }
   if (result === 'refunded') return { ...base, state: 'cancelled', granted: [] };
   await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted')")
