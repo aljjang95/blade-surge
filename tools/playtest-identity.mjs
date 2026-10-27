@@ -82,10 +82,13 @@ try {
             const dx = tgt.pos.x - p.pos.x, dz = tgt.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
             const reach = p.def.ranged ? 7 : 2.2;
             // 사람처럼: 무리가 장치 곁에 모이면 장치를 친다(환경 콤보).
-            const prop = b.roomProps?.list.find((q) => !q.used && Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 8 && near.filter((x) => Math.hypot(x.pos.x - q.x, x.pos.z - q.z) < 5).length >= 3);
+            let keg; const prop = b.roomProps?.list.find((q) => !q.used && Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 8 && near.filter((x) => Math.hypot(x.pos.x - q.x, x.pos.z - q.z) < 5).length >= 3);
             if (prop && !(threat && dodgeCd <= 0)) {
               const qx = prop.x - p.pos.x, qz = prop.z - p.pos.z, qd = Math.hypot(qx, qz) || 1;
               if (qd > 1.6) { wx = qx / qd; wz = qz / qd; } else { attack = true; wx = qx / qd * .3; wz = qz / qd * .3; propHits++; }
+            } else if ((keg = b.roomProps?.list.find((q) => q.kind === 'keg' && q.fuse >= 0 && Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 6))) {
+              // 불붙은 화약 통에서는 물러선다.
+              const qx = p.pos.x - keg.x, qz = p.pos.z - keg.z, qd = Math.hypot(qx, qz) || 1; wx = qx / qd; wz = qz / qd;
             } else if (threat && dodgeCd <= 0) {
               const ax = p.pos.x - threat.pos.x, az = p.pos.z - threat.pos.z, ad = Math.hypot(ax, az) || 1; wx = ax / ad; wz = az / ad; tap('KeyK'); dodgeCd = 1.1;
             } else if (d > reach) { wx = dx / d; wz = dz / d; }

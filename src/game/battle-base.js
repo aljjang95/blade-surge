@@ -34,7 +34,7 @@ import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
-import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS } from './squads.js';
+import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './squads.js';
 import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
 import { RoomProps, roomPropsAllowed } from './room-props.js';
 import { RegionTraits, regionTheme } from './region-traits.js';
@@ -326,12 +326,15 @@ export class Battle {
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
     // 정예는 첫 분대(방 테마)의 대장으로 앞줄에 선다.
     if (room.squadPlan) for (let i = room.squadPlan.list.length; i < list.length; i++) { room.squadPlan.squadOf.push(0); room.squadPlan.roles.push('elite'); }
-    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
+    // 보스방 호위와 증원도 이번 단계까지 소개된 종만 쓴다.
+    const C = squads ? stageCurve(R, st) : R;
+    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, C.trash[0], C.trash[1], C.trash[0], C.trash[2 % C.trash.length], C.ranged[0], C.trash[1]);
     return list;
   }
   /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
   callReinforcements(room) {
-    const R = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type); let wave = 0;
+    const R0 = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type); let wave = 0;
+    const R = Number.isInteger(this.stage.st) && !this.stage.expedition ? stageCurve(R0, this.stage.st) : R0;
     for (const nid of room.links || []) {
       const nb = this.world.rooms[nid];
       if (!nb || nb.cleared || nb.spawned || nb.type === ROOM_TYPE.BOSS || nb.type === ROOM_TYPE.START) continue;

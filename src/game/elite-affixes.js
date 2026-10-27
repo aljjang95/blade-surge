@@ -19,11 +19,14 @@ const PATCHES = 10;
 const _v = new THREE.Vector3();
 
 /** 정예 하나에 붙일 접두사. 4단계부터·정예방은 둘. */
+// 1~2관문은 읽기 쉬운 접두사(피격·처치에 반응)만, 3관문부터 영웅을 직접 노리는 접두사(불길·사슬·도약·지휘)까지 연다.
+const EARLY = ['frenzy', 'splitting', 'volatile', 'warding'];
 export function pickAffixes(roomId, stageIdx, st, ordinal = 0, eliteRoom = false) {
-  const count = st >= 4 || eliteRoom ? 2 : 1;
-  const a = ((roomId * 7 + stageIdx * 3 + ordinal * 5) % ORDER.length + ORDER.length) % ORDER.length;
-  const out = [ORDER[a]];
-  if (count > 1) out.push(ORDER[(a + 3 + (stageIdx % 3)) % ORDER.length]);
+  const pool = st <= 2 ? EARLY : ORDER;
+  const count = st >= 4 || (eliteRoom && st >= 3) ? 2 : 1;
+  const a = ((roomId * 7 + stageIdx * 3 + ordinal * 5) % pool.length + pool.length) % pool.length;
+  const out = [pool[a]];
+  if (count > 1) out.push(pool[(a + 1 + (stageIdx % (pool.length - 1))) % pool.length]);
   return out;
 }
 
