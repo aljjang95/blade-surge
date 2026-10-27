@@ -27,7 +27,10 @@ test('세 페이지 모두 사업자 정보 푸터 6항목이 있다', () => {
   for (const p of PAGES) {
     const html = read(p);
     for (const l of labels) expect(html).toContain(`<li>${l}:`);
-    expect(html).toContain('{{대표님 입력}}');
+    // 사업자 정보는 Drive 정본(사업자 정보 — 더 럭셔리 로드)과 같아야 하고 빈칸이 남으면 안 된다.
+    expect(html).not.toContain('{{');
+    expect(html).toContain('849-09-03410');
+    expect(html).toContain('제2026-충남서산-0101호');
   }
 });
 
@@ -40,10 +43,10 @@ test('세 페이지가 서로 링크한다', () => {
   for (const p of PAGES) for (const l of links[p]) expect(read(p)).toContain(`href="${l}"`);
 });
 
-test('환불 정책에 가격 숫자가 없고 공제율은 플레이스홀더다', () => {
+test('환불 정책에 가격 숫자가 없고 7일 이후 공제 상한이 적혀 있다', () => {
   const html = read('refund');
   expect(html).toContain('가격은 구매 화면에 표시');
-  expect(html).toContain('{{대표님 입력: 7일 이후 환불 공제율}}');
+  expect(html).toContain('결제금액의 10% 이내');
   expect(/[0-9,]+\s*원/.test(html)).toBe(false);
 });
 
