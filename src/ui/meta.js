@@ -392,6 +392,10 @@ export class Meta {
   async buyHero(productId, heroId) {
     if (!this.heroPurchaseOn()) { await this.ui.paySheet({ id: productId, name: HEROES[heroId]?.name }); return; }
     if (this._heroBuying) return;
+    // 웹·Play 공통: 결제 전에 청약철회 고지 + 즉시 지급 동의 체크(기본 미체크)를 거친다.
+    const price = (() => { try { return this.app.heroPurchase.price?.(productId) || ''; } catch { return ''; } })();
+    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
+    if (!ok) return;
     this._heroBuying = true; this.trackFunnel('paysheet_open', { sku: productId });
     try {
       const r = await this.app.heroPurchase.buy(productId);

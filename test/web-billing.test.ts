@@ -88,7 +88,7 @@ describe('웹 결제 스위치·채널 설정', () => {
     const t = await setup({ PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true', IAP_TEST_ACCOUNTS: '' });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: CHANNEL, test: false });
     (t.h.env as any).IAP_TEST_ACCOUNTS = t.a.accountId;
-    expect((await t.intent(t.a.token, 'hero_mage_v1')).body).toMatchObject({ channelKey: CHANNEL, test: false });
+    expect((await t.intent(t.a.token, 'hero_ranger_v1')).body).toMatchObject({ channelKey: CHANNEL, test: false });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: 'channel-key-test-0001', test: true });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: 'yes' }, t.a.token)).status).toBe(400);
   });
@@ -148,9 +148,13 @@ describe('웹 결제 intent', () => {
   });
 
   test('열린 의도는 계정당 시간당 10건까지', async () => {
-    const { a, intent } = await setup();
-    for (let i = 0; i < 10; i++) expect((await intent(a.token, 'hero_rogue_v1')).status).toBe(200);
-    expect((await intent(a.token, 'hero_rogue_v1')).body.error).toBe('too-many-intents');
+    const { h, a, intent } = await setup();
+    // 같은 1회성 상품은 결제창 10분 안에 또 낼 수 없으므로 상품을 돌려 가며 낸다(10분 넘긴 뒤 같은 상품 재발급).
+    const ids = ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1'];
+    for (const id of ids) expect((await intent(a.token, id)).status).toBe(200);
+    h.advance(11 * 60000);
+    for (const id of ids.slice(0, 4)) expect((await intent(a.token, id)).status).toBe(200);
+    expect((await intent(a.token, 'hero_ranger_v1')).body.error).toBe('too-many-intents');
   });
 });
 
@@ -560,5 +564,38 @@ describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바�
     const st = (await h.send('GET', '/iap/state', undefined, a.token)).body;
     expect(JSON.stringify(st)).toContain('"avatarFullsets":["knight"]');
     expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
+  });
+});
+
+describe('웹 1회성 상품 동시 결제 방어', () => {
+  const LATER = ['monthly_pass_v1', 'growth_pack_v1'].map((id) => IAP_BY_ID[id] as any);
+  beforeAll(() => { for (const p of LATER) p.enabled = true; });
+  afterAll(() => { for (const p of LATER) p.enabled = false; });
+
+  test('결제창이 열린 10분 안에는 같은 1회성 상품 의도를 또 낼 수 없고, 그 뒤엔 낼 수 있다', async () => {
+    const { h, a, intent } = await setup();
+    expect((await intent(a.token, 'growth_pack_v1')).status).toBe(200);
+    expect((await intent(a.token, 'growth_pack_v1')).body.error).toBe('payment-in-progress');
+    expect((await intent(a.token, 'monthly_pass_v1')).status).toBe(200);
+    expect((await intent(a.token, 'monthly_pass_v1')).body.error).toBe('payment-in-progress');
+    h.advance(11 * 60000);
+    expect((await intent(a.token, 'growth_pack_v1')).status).toBe(200);
+  });
+
+  test('두 의도가 모두 결제되면: 1회 상품 둘째 건은 지급 없이 failed + 감사 플래그, 30일권 둘째 건은 중복 감사 플래그', async () => {
+    const { h, pn, a, intent, complete, count } = await setup();
+    const g1 = (await intent(a.token, 'growth_pack_v1')).body; h.advance(11 * 60000);
+    const g2 = (await intent(a.token, 'growth_pack_v1')).body;
+    pn.pay(g1); pn.pay(g2);
+    expect((await complete(a.token, g1.paymentId)).body.state).toBe('granted');
+    expect((await complete(a.token, g2.paymentId)).body.state).toBe('cancelled');
+    expect(h.db.sqlite.query('SELECT state FROM iap_web_payments WHERE payment_id = ?').get(g2.paymentId)).toEqual({ state: 'failed' });
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-once-declined'")).toBe(1);
+    const m1 = (await intent(a.token, 'monthly_pass_v1')).body; h.advance(11 * 60000);
+    const m2 = (await intent(a.token, 'monthly_pass_v1')).body;
+    pn.pay(m1); pn.pay(m2);
+    expect((await complete(a.token, m1.paymentId)).body.state).toBe('granted');
+    expect((await complete(a.token, m2.paymentId)).body.state).toBe('granted');
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-duplicate-payment'")).toBe(1);
   });
 });
