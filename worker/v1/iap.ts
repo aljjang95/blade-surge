@@ -101,15 +101,23 @@ export async function catalog(c: Ctx, auth: Authed) {
   const reason = await billingReason(c);
   const owned = reason ? new Set<string>() : await ownedProducts(c.db, auth.account.account_id);
   const activeKeys = reason ? new Set<string>() : await activeEntitlementKeys(c.db, auth.account.account_id, c.now);
+  // 월정액 권한('monthly')이 살아 있으면 월정액 계열(Play 구독·웹 30일 이용권)은 다시 살 수 없다(intent와 같은 기준).
+  const monthlyActive = activeKeys.has('monthly');
   return {
     version: IAP_CATALOG_VERSION, billing: !reason, ...(reason ? { reason } : {}),
     products: IAP_PRODUCTS.filter((p) => p.enabled).map((p) => ({
       id: p.id, type: p.type, playType: p.type === 'subscription' ? 'subs' : 'inapp', basePlanId: p.basePlanId ?? null,
       priceKRW: p.priceKRW, title: p.title, description: p.description, shopSku: p.shopSku, once: !!p.once, channels: p.channels ?? ['play'],
-      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys),
+      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys)
+        && !(monthlyActive && grantsMonthly(p)),
     })),
     serverTime: c.now,
   };
+}
+
+/** 월정액 권한을 주는 상품인가(Play 구독·웹 30일 이용권). 이용 중 중복 구매를 막는다. */
+export function grantsMonthly(product: IapProduct): boolean {
+  return entitlementKeys(product).includes('monthly');
 }
 
 /** 지금 유효한 권한 키 집합(철회·만료 제외). */
@@ -123,7 +131,7 @@ export function allKeysActive(product: IapProduct, active: Set<string>): boolean
   return product.type === 'non_consumable' && keys.length > 0 && keys.every((k) => active.has(k));
 }
 
-async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
+export async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
   const rows = await db.prepare("SELECT DISTINCT product_id FROM iap_grants WHERE account_id = ? AND reversed_at IS NULL").bind(accountId).all<{ product_id: string }>();
   return new Set((rows.results ?? []).map((r) => r.product_id));
 }
@@ -152,7 +160,7 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
   if ((product.once || product.type === 'non_consumable') && owned.has(product.id)) fail(409, 'not-eligible');
   if (!soldOn(product, 'play')) fail(400, 'unknown-product');
   if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
-  if (product.type === 'subscription') {
+  if (grantsMonthly(product)) {
     const e = await entitlementsOf(c.db, accountId, c.now);
     if (e.monthlyUntil > c.now) fail(409, 'already-subscribed');
   }
