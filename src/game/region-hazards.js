@@ -8,6 +8,7 @@ const RULES = {
   frost: { color: 0x85dfff, name: '지연 기록 · 기록된 자리에서 이동', period: 12 },
   tide: { color: 0x48dabd, name: '밀물 · 파도 사이로 이동', period: 11 },
   crown: { color: 0xe9c785, name: '왕관의 심판 · 중앙 원 또는 십자 밖으로', period: 10 },
+  crypt: { color: 0xe0c68c, name: '어긋난 타종 · 고리가 겹치는 한가운데로', period: 11 },
 };
 
 /** 예고와 피격에 같은 도형을 사용한다. 회피 중 무적은 Player.hurt가 처리한다. */
@@ -39,6 +40,14 @@ export function hazardPattern(theme, room, player, cycle, full = true) {
       x: Math.max(room.x - room.w / 2 + 3, Math.min(room.x + room.w / 2 - 3, player.x + (i ? Math.cos(angle) * 4 : 0))),
       z: Math.max(room.z - room.h / 2 + 3, Math.min(room.z + room.h / 2 - 3, player.z + (i ? Math.sin(angle) * 4 : 0))) };
   });
+  // 7장 종탑 도시: 방 가운데에서 어긋난 세 점에서 종이 차례로 고리를 퍼뜨린다. 세 고리 안쪽이 겹치는 한가운데는 비어 있다.
+  if (theme === 'crypt') {
+    const d = short * .2, radius = d * 1.8, start = (cycle % 2) * Math.PI / 3 - Math.PI / 2;
+    return Array.from({ length: count }, (_, i) => {
+      const a = start + i * Math.PI * 2 / 3;
+      return { ...base, type: 'ring', x: room.x + Math.cos(a) * d, z: room.z + Math.sin(a) * d, radius, delay: 1.5 + i * .8, push: 4 };
+    });
+  }
   if (theme === 'crown') return [0, 1].map(i => ({ ...base, type: 'lane', angle: Math.PI / 4 + i * Math.PI / 2 + (cycle % 2) * Math.PI / 4,
     width: 3, length: short * 1.2, safeRadius: 2.8, delay: 1.8 + (full ? i * .3 : 0) }));
   return [];

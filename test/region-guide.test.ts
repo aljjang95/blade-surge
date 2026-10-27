@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { nextGuide, levelStatus, levelStatusLabel, lootGuide, bossLootSummary, epicOrBetterChance, NEAR_GAP, OVER_GAP } from '../src/data/region-guide.js';
 import { recommendedLevel, lootTable, levelExperienceMultiplier } from '../src/data/loot-tables.js';
-import { stageDef } from '../src/data/stages.js';
+import { CHAPTERS, stageDef } from '../src/data/stages.js';
+
+const LAST = CHAPTERS.length, LAST_CODE = `${LAST}-10`;
 
 describe('권장 레벨 대비 상태', () => {
   test('권장 이상은 ready, 미만은 under, 크게 높으면 over', () => {
@@ -48,14 +50,14 @@ describe('다음 출격 안내', () => {
     expect(nextGuide({ unlocked: 15 }, 30).newRegion).toBe(false);
   });
   test('모든 장 클리어 뒤에는 마지막 스테이지에 머물고 allCleared', () => {
-    const g = nextGuide({ unlocked: 60, stars: { '6-10': 3 } }, 80);
-    expect(g.stage.code).toBe('6-10');
+    const g = nextGuide({ unlocked: LAST * 10, stars: { [LAST_CODE]: 3 } }, 80);
+    expect(g.stage.code).toBe(LAST_CODE);
     expect(g.allCleared).toBe(true);
-    expect(nextGuide({ unlocked: 60, stars: {} }, 80).allCleared).toBe(false);
+    expect(nextGuide({ unlocked: LAST * 10, stars: {} }, 80).allCleared).toBe(false);
   });
   test('범위 밖·누락 진행도는 1-1로 안전하게', () => {
     expect(nextGuide(undefined, undefined).stage.code).toBe('1-1');
-    expect(nextGuide({ unlocked: 999 }, 5).stage.code).toBe('6-10');
+    expect(nextGuide({ unlocked: 999 }, 5).stage.code).toBe(LAST_CODE);
     expect(nextGuide({ unlocked: -4 }, 5).stage.code).toBe('1-1');
   });
   test('대표 보상은 선택한 난이도의 보스 표에서 계산한다', () => {
@@ -83,7 +85,7 @@ describe('전리품 안내', () => {
   });
   test('장이 오르면 에픽 이상 확률도 오른다(UI에 보이는 값 단조)', () => {
     for (const d of ['story', 'adept', 'nightmare']) {
-      for (let ch = 2; ch <= 6; ch++) expect(bossLootSummary(ch, d).epicChance).toBeGreaterThanOrEqual(bossLootSummary(ch - 1, d).epicChance);
+      for (let ch = 2; ch <= LAST; ch++) expect(bossLootSummary(ch, d).epicChance).toBeGreaterThanOrEqual(bossLootSummary(ch - 1, d).epicChance);
     }
   });
   test('알 수 없는 난이도는 story와 같다', () => {

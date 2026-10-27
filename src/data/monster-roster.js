@@ -54,6 +54,12 @@ export const MONSTER_ROSTER = Object.freeze({
   Flying_AbyssRegent: { asset: 'ember_drake', fallback: 'demon_lord', scale: 1.04 },
   Skeleton_HollowRegent: { asset: 'treant', fallback: 'goblin_chief', scale: 0.92 },
   Skeleton_OathRemnant: { asset: 'goblin_chief', fallback: 'goblin_brute', scale: 1.03 },
+  // ---- 7장 종탑 도시(2026-10-27): asset 은 Tripo 로 만들 예정인 라이브러리 ID 이고, 아직 manifest 에 없으면 fallback 실루엣을 쓴다.
+  // 에셋 레인이 GLB 를 asset-library 에 수집해 manifest 에 같은 ID 를 올리면 코드 변경 없이 바뀐다(docs/SPEC_720H.md S7).
+  // 종지기: 두건 쓴 해골 사제 실루엣. 수문 기사: 갑주 해골 기사. 대종의 주인: 큰 돌덩이 몸통의 거신.
+  Bell_Ringer: { asset: 'tll_ch7_bellringer', fallback: 'skeleton_mage', scale: 1.05 },
+  Bell_Warden: { asset: 'tll_ch7_midboss', fallback: 'bone_knight', scale: 1.1 },
+  Bell_Sovereign: { asset: 'tll_ch7_finalboss', fallback: 'frost_golem', scale: 0.72 },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },

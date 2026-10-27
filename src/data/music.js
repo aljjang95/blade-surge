@@ -8,16 +8,26 @@ const OPUS_CHANNELS = new Set(['googleplay', 'onestore']);
 export const bgmUrl = (name, channel = STORE_CHANNEL) => `/bgm/${name}.${OPUS_CHANNELS.has(channel) && String(name).startsWith('regions/') ? 'ogg' : 'mp3'}`;
 const REGIONS = new Set(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
 // 장 번호나 조우 접두사로 고르는 지역(테마와 다른 곡·보스 계획을 쓰는 장). 새 지역은 여기 한 줄을 더한다.
-const CHAPTER_REGION = Object.freeze({ 6: 'homecoming' });
-const PREFIX_REGIONS = Object.freeze(['homecoming']);
+const CHAPTER_REGION = Object.freeze({ 6: 'homecoming', 7: 'belltower' });
+const PREFIX_REGIONS = Object.freeze(['homecoming', 'belltower']);
 /** 테마가 아니라 장 번호·조우 접두사로 정해지는 지역 id(없으면 null). */
 function campaignRegionId(stage) {
   for (const n of [stage?.ch, stage?.chapter?.id]) if (Object.hasOwn(CHAPTER_REGION, n)) return CHAPTER_REGION[n];
   for (const prefix of [stage?.encounterPrefix, stage?.chapter?.encounterPrefix]) if (PREFIX_REGIONS.includes(prefix)) return prefix;
   return null;
 }
-/** 지역 id 의 지역 곡. */
-const regionTrack = region => `regions/${region}`;
+/**
+ * 전용 곡이 아직 없는 지역의 곡 계획. 배송 전에는 fallback(이미 배송된 곡)을 쓰고, 생성한 파일이 들어오면 file 과 status: 'shipped' 를 적는다.
+ * 7장 종탑 도시는 안개 낀 차가운 석조 도시라 서리 서고 곡이 가장 맞는 대체다. todo 는 FlowMusic 생성 대기 표시다.
+ */
+export const REGION_CUE_PLAN = Object.freeze([
+  Object.freeze({ id: 'region-belltower', region: 'belltower', fallback: 'regions/frost', status: 'external-gui-pending', todo: '전용 BGM' }),
+]);
+/** 지역 id 의 지역 곡(전용 곡 계획이 있으면 배송 상태를 따른다). */
+const regionTrack = region => {
+  const cue = REGION_CUE_PLAN.find(entry => entry.region === region);
+  return cue ? cueTrack(cue) : `regions/${region}`;
+};
 
 // FLOW web generation brief.  `fallback` is the verified shipped cue used
 // until the authenticated FlowMusic GUI exports the replacement master; a
@@ -83,7 +93,7 @@ export function musicAfterIntro({ mode, active, stage, expectedStage, boss = fal
 // 생성된 파일을 public/bgm 에 넣으면 해당 항목에 file 과 status: 'shipped' 를 적는다(브리프: docs/audio/flowmusic-brief-h2.md).
 const MIDBOSS_TRACK = 'expansion/flow-combat';
 const BOSS_RANKS = Object.freeze({ midboss: 'midboss', warden: 'midboss', finalboss: 'finale' });
-const REGION_IDS = Object.freeze(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
+const REGION_IDS = Object.freeze(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming', 'belltower']);
 export const BOSS_CUE_PLAN = Object.freeze(REGION_IDS.flatMap(region => [
   Object.freeze({ id: `boss-${region}-finale`, scene: 'boss', region, rank: 'finale', fallback: 'regions/boss', status: 'external-gui-pending' }),
   Object.freeze({ id: `boss-${region}-midboss`, scene: 'boss', region, rank: 'midboss', fallback: MIDBOSS_TRACK, status: 'external-gui-pending' }),
@@ -131,7 +141,7 @@ export const bgmTrimGain = name => Math.pow(10, (BGM_LOOPS[name]?.trimDb || 0) /
 
 // ---------- 캠페인 마을 곡 (X-1..X-10 지역 마을, 캠페인 마을 레인 c3 의 CAMPAIGN_TOWNS 와 같은 id) ----------
 // 마을 전용 곡은 FlowMusic 생성 대기다(docs/audio/flowmusic-brief-h2.md). 대기 중에는 c3 의 campaignTownMusic 과 같은 대체 곡:
-// 1지역은 기존 로비곡, 2~6지역은 그 지역 던전곡. 로비(musicForScene)는 townMusic 을 써서 생성곡이 오면 status 만 바꾸면 된다.
+// 1지역은 기존 로비곡, 2~7지역은 그 지역 던전곡(7지역은 서리 서고 곡 대체). 로비(musicForScene)는 townMusic 을 써서 생성곡이 오면 status 만 바꾸면 된다.
 export const TOWN_CUE_PLAN = Object.freeze([
   Object.freeze({ id: 'town-bellgarden', chapter: 1, town: 'bellgarden', fallback: 'regions/lobby', status: 'external-gui-pending' }),
   Object.freeze({ id: 'town-emberforge', chapter: 2, town: 'emberforge', fallback: 'regions/forge', status: 'external-gui-pending' }),
@@ -139,10 +149,11 @@ export const TOWN_CUE_PLAN = Object.freeze([
   Object.freeze({ id: 'town-tidelight', chapter: 4, town: 'tidelight', fallback: 'regions/tide', status: 'external-gui-pending' }),
   Object.freeze({ id: 'town-dawncrown', chapter: 5, town: 'dawncrown', fallback: 'regions/crown', status: 'external-gui-pending' }),
   Object.freeze({ id: 'town-homeward', chapter: 6, town: 'homeward', fallback: 'regions/homecoming', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-bellspire', chapter: 7, town: 'bellspire', fallback: 'regions/frost', status: 'external-gui-pending', todo: '전용 BGM' }),
 ]);
-/** 캠페인 지역(1~6) 마을의 배경음. 배송 전에는 대체 곡, 범위 밖은 1지역. */
+/** 캠페인 지역(1~7) 마을의 배경음. 배송 전에는 대체 곡, 범위 밖은 1지역. */
 export const townMusic = chapter => cueTrack(TOWN_CUE_PLAN.find(c => c.chapter === chapter) || TOWN_CUE_PLAN[0]);
-/** 캠페인 지역(1~6)의 X-1..X-10 전체 곡 지도: 마을·일반 관문·중간 보스(X-3, X-5, X-7)·최종 보스(X-10). 재고표·QA 용. */
+/** 캠페인 지역(1~7)의 X-1..X-10 전체 곡 지도: 마을·일반 관문·중간 보스(X-3, X-5, X-7)·최종 보스(X-10). 재고표·QA 용. */
 export function campaignMusicMap(chapter, { stageDef, perChapter = 10 }) {
   const stages = Array.from({ length: perChapter }, (_, i) => {
     const stage = stageDef(chapter, i + 1);
@@ -154,6 +165,6 @@ export function campaignMusicMap(chapter, { stageDef, perChapter = 10 }) {
 /** musicForScene 이 돌려줄 수 있는 모든 곡(배송 검사·채널 산출물 검사용). */
 export const MUSIC_TRACKS = Object.freeze([...new Set([
   'bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', MIDBOSS_TRACK,
-  ...REGION_IDS.map(r => `regions/${r}`),
-  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack),
+  ...REGION_IDS.map(regionTrack),
+  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack), ...REGION_CUE_PLAN.map(cueTrack),
 ])].sort());

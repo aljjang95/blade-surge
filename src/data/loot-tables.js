@@ -5,6 +5,7 @@ import { CHAPTER_COUNT, STAGES_PER_CHAPTER } from './campaign-shape.js';
 const MATERIALS = [
   ['glass_leaf'], ['ember_core'], ['star_dust'],
   ['glass_leaf', 'ember_core'], ['ember_core', 'star_dust'], ['star_dust', 'glass_leaf'],
+  ['ember_core', 'glass_leaf'],
 ];
 const BASE_WEIGHTS = {
   normal: { N: 70, S: 24, E: 5.5, U: .4, L: .1 },
@@ -60,8 +61,8 @@ export function levelExperienceMultiplier(heroLevel, recommendedLevel) {
   return 1 + Math.max(-.5, Math.min(.5, delta * .05));
 }
 // RPG 즉시 처치 XP + 정화 포함 클리어 XP로 검증한다(tools/progression-estimate.mjs).
-// 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다.
-const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46];
+// 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다(7장은 46→50).
+const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46, 50];
 export function recommendedLevel(chapter, stage = 1) {
   const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(STAGES_PER_CHAPTER, Math.floor(Number(stage) || 1)));
   const from = CHAPTER_START_LEVEL[ch - 1], to = CHAPTER_START_LEVEL[ch];

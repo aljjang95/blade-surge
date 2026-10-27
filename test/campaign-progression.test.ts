@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save-base.js';
-import { stageDef } from '../src/data/stages.js';
+import { CHAPTERS, stageDef } from '../src/data/stages.js';
 import { campaignTown } from '../src/data/campaign-towns.js';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -24,7 +24,7 @@ describe('지역 진행과 마을 해금', () => {
   test('새 저장은 1지역 마을만 열려 있다', () => {
     const eco: any = new Economy();
     expect(eco.campaignTownState()).toEqual({ latest: 1, current: 1, celebrated: 1 });
-    expect(eco.campaignTownList().map((t: any) => t.unlocked)).toEqual([true, false, false, false, false, false]);
+    expect(eco.campaignTownList().map((t: any) => t.unlocked)).toEqual(CHAPTERS.map(c => c.id === 1));
     expect(eco.campaignTownList()[1].unlockHint).toBe('1-10 클리어 시 해금');
     expect(eco.isUnlocked(2, 1)).toBe(false);
   });
@@ -70,14 +70,14 @@ describe('지역 진행과 마을 해금', () => {
     expect(eco.campaignTownState()).toEqual({ latest: 1, current: 1, celebrated: 1 });
   });
 
-  test('지역을 차례로 모두 깨면 마을 2~6 이 순서대로 열리고 마지막 지역은 더 열지 않는다', () => {
+  test('지역을 차례로 모두 깨면 마을 2부터 마지막까지 순서대로 열리고 마지막 지역은 더 열지 않는다', () => {
     const eco: any = new Economy();
     const unlocked: number[] = [];
-    for (let ch = 1; ch <= 6; ch++) { const r = clearRegion(eco, ch); if (r.regionUnlock) unlocked.push(r.regionUnlock.chapter); }
-    expect(unlocked).toEqual([2, 3, 4, 5, 6]);
-    expect(eco.campaignTownState().latest).toBe(6);
-    expect(eco.nextStage().code).toBe('6-10');
-    expect(Object.keys(eco.s.progress.stars)).toHaveLength(60);
+    for (let ch = 1; ch <= CHAPTERS.length; ch++) { const r = clearRegion(eco, ch); if (r.regionUnlock) unlocked.push(r.regionUnlock.chapter); }
+    expect(unlocked).toEqual(CHAPTERS.slice(1).map(c => c.id));
+    expect(eco.campaignTownState().latest).toBe(CHAPTERS.length);
+    expect(eco.nextStage().code).toBe(`${CHAPTERS.length}-10`);
+    expect(Object.keys(eco.s.progress.stars)).toHaveLength(CHAPTERS.length * 10);
   });
 
   test('이전 마을을 다시 고를 수 있고 선택은 저장·재시작 뒤에도 유지된다. 새 지역이 열리면 최신 마을로 돌아간다', () => {
@@ -103,11 +103,11 @@ describe('저장 이관: 기존 진행은 그대로, 마을만 따라온다', ()
   const stars = (chapters: number) => Object.fromEntries(Array.from({ length: chapters * 10 }, (_, i) => [`${Math.floor(i / 10) + 1}-${(i % 10) + 1}`, 3]));
 
   test('마을 기록이 없는 기존 저장은 이미 해금한 가장 먼 마을을 보여 주고 축하를 다시 하지 않는다', () => {
-    for (const [cleared, expected] of [[0, 1], [1, 2], [2, 3], [5, 6]] as const) {
+    for (const [cleared, expected] of [[0, 1], [1, 2], [2, 3], [5, 6], [6, 7]] as const) {
       const legacy = { progress: { unlocked: cleared * 10 + 1, stars: stars(cleared), difficulty: 'story' }, gold: 777 };
       const saved = normalizeSave(legacy, fresh());
       expect(saved.campaignTown).toEqual({ current: expected, celebrated: expected });
-      expect(saved.progress.unlocked).toBe(Math.min(60, cleared * 10 + 1));
+      expect(saved.progress.unlocked).toBe(Math.min(CHAPTERS.length * 10, cleared * 10 + 1));
       expect(saved.progress.stars).toEqual(stars(cleared));
       expect(saved.gold).toBe(777);
     }

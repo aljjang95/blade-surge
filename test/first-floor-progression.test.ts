@@ -29,7 +29,7 @@ test('첫 원정 2000개 로스터의 성장은 각성 구간을 건너뛰지 �
 test('관문 보스는 기존 첫 보스의 체력 기준과 계급별 증가를 유지한다', () => {
   const defs = ENEMIES as unknown as Record<string, { hp: number; atk: number }>;
   for (const chapter of CHAPTERS) {
-    const ranks = ['captain', 'warden', 'midboss', 'finalboss'].map(rank => defs[`${chapter.theme}_${rank}`]);
+    const ranks = ['captain', 'warden', 'midboss', 'finalboss'].map(rank => defs[`${(chapter as any).encounterPrefix || chapter.theme}_${rank}`]);
     expect(ranks[0].hp).toBeGreaterThanOrEqual(defs.boss_warlord.hp);
     for (let i = 1; i < ranks.length; i++) {
       expect(ranks[i].hp).toBeGreaterThan(ranks[i - 1].hp);

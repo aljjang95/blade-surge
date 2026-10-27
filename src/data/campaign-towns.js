@@ -11,7 +11,7 @@ const atmosphere = (bg, fog, density, hemi, hemiI, sun, sunI, sunPos, rim, rimI)
 });
 
 /**
- * chapter 1 은 기존 성채 광장·숲 마을을 그대로 쓴다(skin 없음). 2~6 은 지역 던전의 색과 소품에서 만든 새 마을이다.
+ * chapter 1 은 기존 성채 광장·숲 마을을 그대로 쓴다(skin 없음). 2~7 은 지역 던전의 색과 소품에서 만든 새 마을이다.
  * scenery 는 lobby-world.js 의 지역 마을 풍경 이름이다.
  */
 export const CAMPAIGN_TOWNS = frozen([
@@ -57,6 +57,14 @@ export const CAMPAIGN_TOWNS = frozen([
     palette: palette(0x8a8f78, 0x6c7260, 0xf4ecd0, 0xe9b85a, 0x3f4a3a, 0x7b5a3c, 0x6cbf8a),
     atmosphere: atmosphere(0x7fb6d8, 0xbfd9dc, .011, [0xfff0cf, 0x4f6b4a], 1.1, 0xffe0a0, 2.8, [-12, 18, 10], 0xffd0a0, 1.2),
     sky: frozen({ horizon: 0xffd9a8, zenith: 0x4f93c8, ground: 0x6f9a5a }), ground: frozen({ inner: 0x8fc36a, outer: 0x4f7a42, y: -.8 }),
+  }),
+  // 7지역 종탑 도시: 흐린 청동·석회 팔레트와 낮게 깔린 안개. 곡은 전용 BGM 생성 전까지 서리 서고 곡(music.js TOWN_CUE_PLAN)을 쓴다.
+  frozen({
+    chapter: 7, id: 'bellspire', name: '금 간 종탑 마을', subtitle: 'BELL SPIRE', theme: 'crypt', musicRegion: 'frost', scenery: 'belltower',
+    mood: '낮게 깔린 석회 안개와 금 간 대종', accent: '#d9c08a', waystone: 0xe0c68c,
+    palette: palette(0x7a7766, 0x5b5d63, 0xe4dcc6, 0xcaa862, 0x2c2c31, 0x5a4a3a, 0x8fb0ae),
+    atmosphere: atmosphere(0x3a3f46, 0x8c9490, .019, [0xdfe0d2, 0x3a3f46], .95, 0xf0e2bd, 2, [-10, 16, 12], 0xb8c8c4, 1.1),
+    sky: frozen({ horizon: 0xb9b9a8, zenith: 0x3b4650, ground: 0x5a5d58 }), ground: frozen({ inner: 0x9a9684, outer: 0x4a4d48, y: -.8 }),
   }),
 ]);
 

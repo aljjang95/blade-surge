@@ -45,7 +45,10 @@ export function validPartySnapshot(v) {
       && array(p.cds, 12, cd => num(cd, 0, 3600))) && v.players.length >= 2 && unique(v.players.map(p => p.id))
     && array(v.enemies, PARTY_LIMITS.enemies, e => actor(e) && str(e.key) && bool(e.boss) && bool(e.elite)
       && (e.sub === undefined || num(e.sub, 0, 1))
-      && keys(e, ['id','key','x','z','yaw','hp','maxHp','state','anim','boss','elite','sub']))
+      // 종지기: 종 체력(bh) · 예고 진행(ph) · 고리 반경(rr, rs). 모두 호스트가 계산한 표시 값이다.
+      && (e.bh === undefined || num(e.bh, 0, 1)) && (e.ph === undefined || num(e.ph, 0, 1))
+      && (e.rr === undefined || num(e.rr, 0, 32)) && (e.rs === undefined || num(e.rs, 0, 32))
+      && keys(e, ['id','key','x','z','yaw','hp','maxHp','state','anim','boss','elite','sub','bh','ph','rr','rs']))
     && unique(v.enemies.map(e => e.id))
     && array(v.rooms, PARTY_LIMITS.rooms, r => obj(r) && (str(r.id) || int(r.id, 0, 64))
       && bool(r.discovered) && bool(r.cleared) && bool(r.activated)

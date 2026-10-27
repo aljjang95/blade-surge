@@ -2,7 +2,7 @@ import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
 import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
-import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
+import { BOSS_ENCOUNTERS, BOSS_RANK_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
 import { recommendedLevel, representativeDrops } from './loot-tables.js';
 import { CHAPTER_COUNT, STAGES_PER_CHAPTER } from './campaign-shape.js';
@@ -17,12 +17,15 @@ export const CHAPTERS = [
   { id: 4, name: '별이 잠긴 심해', theme: 'tide', color: '#65c5d1', boss: 'tide_finalboss', tagline: '돌아갈 곳은 땅이 아니라, 기다리는 사람이다.', summary: '카인이 잃어버린 항로를 따라 가라앉은 선단을 구한다. 서로의 이름으로 등대를 이어 해왕의 사슬을 끊는다.', oath: '붙잡지 않고 귀환을 믿겠다는 맹세', mechanic: { name: '밀물', description: '세 물결 띠가 방을 순서대로 휩쓸며 밀쳐 냅니다. 다음 경고선을 보고 빈 구역으로 이동하세요.' } },
   { id: 5, name: '새벽을 먹는 왕관', theme: 'crown', color: '#e0c184', boss: 'crown_finalboss', tagline: '세상을 구하기 위해, 너를 잃어야 한다는 거짓말.', summary: '네브의 기억을 노리는 왕관으로 향한다. 누군가의 희생에 기대는 승리 대신 함께 살아갈 내일을 선택한다.', oath: '한 사람의 짐을 함께 나누겠다는 맹세', mechanic: { name: '왕관의 심판', description: '대각선 십자 경고 뒤에 빛이 떨어집니다. 중앙의 작은 안전 원이나 십자 밖으로 피하세요.' } },
   { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
+  { id: 7, name: '금 간 종탑의 도시', theme: 'crypt', encounterPrefix: 'belltower', color: '#c9b07a', boss: 'belltower_finalboss', tagline: '울리는 소리가 멈추기 전에, 박자를 세어라.', summary: '귀환의 아침 이후 균열이 종탑 도시를 덮쳤다. 박자를 잃은 종이 고리 충격파를 퍼뜨리는 거리를 지나, 금 간 대종의 주인에게 마지막 박자를 돌려준다.', oath: '울림을 막지 않고 함께 박자를 세겠다는 맹세', mechanic: { name: '어긋난 타종', description: '세 개의 종이 어긋난 박자로 고리를 퍼뜨립니다. 고리가 겹치는 한가운데나 고리 사이 빈틈으로 이동하세요.' } },
 ];
 if (CHAPTERS.length !== CHAPTER_COUNT) throw new Error(`CHAPTERS(${CHAPTERS.length})와 campaign-shape.js CHAPTER_COUNT(${CHAPTER_COUNT})가 다릅니다.`);
 // 의미 분기는 장 번호가 아니라 데이터 플래그로 읽는다. 표시·저장 지문을 바꾸지 않도록 열거되지 않는 속성으로 붙인다.
 //  - finale: 다섯 왕의 이야기가 끝나는 장(최종 관문이 월드 피날레 연출을 켠다)
 //  - homecoming: 후일담 장(최종 관문이 에필로그 피날레 연출을 켠다)
 const CHAPTER_FLAGS = { 5: { finale: true }, 6: { homecoming: true } };
+// 장 테마 → 보스 전투 틀(kit)·음성. 표에 없는 테마는 reaper/boss_demon.
+const WARLORD_THEMES = new Set(['garden', 'crown', 'crypt']);
 for (const chapter of CHAPTERS) {
   Object.defineProperties(chapter, {
     finale: { value: !!CHAPTER_FLAGS[chapter.id]?.finale },
@@ -37,6 +40,8 @@ const ROSTER = {
   frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard', 'frost_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
   tide: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['glub', 'abyss_seer', 'armabee_evo'], elite: ['elite_golem', 'elite_mushroom_king', 'elite_dragonling'] },
   crown: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_skel_captain', 'elite_dragonling'] },
+  // 7장 종탑 도시: 종지기(bellringer)가 무리에 섞인다. 나머지는 이미 검증된 언데드 틀이다.
+  crypt: { trash: ['skel_minion', 'ghost', 'skel_shield', 'bomb_slime', 'skel_rogue', 'bone_orc', 'bell_ringer', 'blob_green'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
 };
 // The dungeon route is also a combat identity. Each authored layout gets its own
 // pack composition so a different map changes the pressure, silhouettes and ranged mix.
@@ -53,16 +58,22 @@ const DUNGEON_ROSTERS = {
   lostShip: { trash: ['blob_pink', 'squidle', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub'], ranged: ['glub', 'armabee_evo', 'abyss_seer'], elite: ['elite_mushroom_king', 'elite_dragonling', 'elite_golem'] },
   emptyThrones: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain'] },
   addresses: { trash: ['skel_rogue', 'ghost', 'imp', 'bomb_slime', 'ninja', 'bone_orc'], ranged: ['ghost_skull', 'tribal_shaman', 'skel_mage'], elite: ['elite_wraith', 'elite_bluedemon', 'elite_skel_captain'] },
+  // 7장 세 경로: 종지기를 무리마다 다른 자리에 섞고 원거리·정예 구성도 달리한다. 일반 몹 칸은 서로 다른 8종으로 두어 7칸 주기의 원거리 칸과 어긋나게 한다(종지기가 한 번도 안 나오는 방이 없게).
+  bellstreet: { trash: ['skel_minion', 'bell_ringer', 'ghost', 'skel_shield', 'bomb_slime', 'skel_rogue', 'bone_orc', 'blob_green'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
+  belfry: { trash: ['skel_shield', 'ghost', 'skel_rogue', 'bell_ringer', 'bone_orc', 'bomb_slime', 'skel_minion', 'blob_green'], ranged: ['ghost_skull', 'skel_priest', 'skel_mage'], elite: ['elite_bone_lord', 'elite_wraith', 'elite_skel_captain'] },
+  crackedNave: { trash: ['ghost', 'bone_orc', 'skel_minion', 'skel_rogue', 'bell_ringer', 'skel_shield', 'bomb_slime', 'blob_green'], ranged: ['skel_priest', 'skel_mage', 'ghost_skull'], elite: ['elite_wraith', 'elite_skel_captain', 'elite_bone_lord'] },
 };
 const DUNGEON_BOSS_BASE = {
   procession: 'glass_hour_sovereign', greenhouse: 'verdigris_sentinel', tribunal: 'sable_mirage_empress', confluence: 'comet_bastion',
   kiln: 'cinder_chain_executor', uprising: 'ash_colossus', archive: 'nightglass_archivist', reverseRiver: 'astral_leviathan',
   beacon: 'obsidian_hydra', lostShip: 'obsidian_hydra', emptyThrones: 'sable_mirage_empress', addresses: 'comet_bastion',
+  bellstreet: 'bell_gate_warden', belfry: 'bell_tollmaster', crackedNave: 'bell_nave_guardian',
 };
 const DUNGEON_BOSS_NAMES = {
   procession: '시계종의 주권자', greenhouse: '녹청 온실의 성역수', tribunal: '왕좌를 삼킨 환영왕', confluence: '합류 수로의 유성기사',
   kiln: '쌍화구 쇠사슬 집행자', uprising: '탈출 작업장의 재벼림 거수', archive: '밤유리 기록관', reverseRiver: '역류를 거스르는 레비아탄',
   beacon: '귀항 등대의 흑요룡', lostShip: '선실을 지키는 흑요룡', emptyThrones: '네 왕좌의 환영 여왕', addresses: '귀환문 앞 혜성 기사',
+  bellstreet: '어긋난 거리의 수문 감시자', belfry: '종루의 타종 관리인', crackedNave: '금 간 대예배당의 종 수호자',
 };
 const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
 export function stageDef(ch, st) {
@@ -135,6 +146,9 @@ export const ENEMIES = {
   grave_burrower: { name: '무덤 균사 잠행꾼', model: 'Blob_Mushnub_Evolved', hp: 640, atk: 24, spd: 4.4, range: 1.9, atkTime: 1.2, exp: 13, scale: 0.6, gold: 1, behavior: 'burrower', tint: '#c9a27a' },
   ash_burrower: { name: '잿더미 굴착꾼', model: 'Big_Cactoro', hp: 900, atk: 33, spd: 4.2, range: 2.0, atkTime: 1.25, exp: 16, scale: 0.95, gold: 2, behavior: 'burrower', tint: '#ff9a62' },
   frost_burrower: { name: '서리굴 잠행꾼', model: 'Blob_Orc', hp: 820, atk: 28, spd: 4.3, range: 2.0, atkTime: 1.2, exp: 15, scale: 1.0, gold: 2, behavior: 'burrower', tint: '#9fd8ff' },
+  // bellringer: 종을 매단 채 다가와 10 이내에서 멈추고 0.9초 예고 뒤 고리 충격파 두 겹을 바깥으로 퍼뜨린다(고리 사이 빈틈·회피 무적으로 피함).
+  // 매단 종이 피해를 먼저 받아 깨질 때까지는 쓰러지지 않고, 종이 깨지면 주변 적이 2초 기절하고 종지기는 무방비가 된다.
+  bell_ringer: { name: '종지기', model: 'Bell_Ringer', hp: 1260, atk: 31, spd: 3.5, range: 2.3, atkTime: 1.4, exp: 17, scale: 1.05, gold: 2, behavior: 'bellringer', tint: '#e0c68c' },
   // ================= 2장 · 불타는 왕좌 (오크 · 악마) =================
   orc:      { name: '오크 전사', model: 'Big_Orc', hp: 1050, atk: 29, spd: 4.0, range: 2.2, atkTime: 1.3, exp: 12, scale: 1.0, gold: 2 },
   orc_blob: { name: '꼬마 오크', model: 'Blob_Orc', hp: 595, atk: 22, spd: 4.8, range: 1.8, atkTime: 1.0, exp: 10, scale: 1.0, gold: 1 },
@@ -252,6 +266,14 @@ export const ENEMIES = {
   pulley_colossus: { name: '도르래 거수', model: 'Big_PulleyColossus', hp: 20400, atk: 75, spd: 3.4, range: 3.6, atkTime: 1.6, exp: 320, scale: 2.45, boss: true, armor: 0.29, gold: 66, kit: 'reaper', signatureBoss: true, tint: '#ffb35c',
     phasePatterns: [['pulley_ore_fall','slam','pulley_chain_line','spin'], ['pulley_chain_line','pulley_ore_fall','fan','slam'], ['pulley_ore_fall','pulley_chain_line','dash']],
     projColor: 0xffb35c },
+  // 7장 종탑 도시 경로 보스의 바탕. 관문 대장·수문장 변형(dungeon_<경로>_<계급>)이 이 몸과 기술을 물려받는다(수치는 계급표가 덮어쓴다).
+  // 모델은 Tripo 슬롯(monster-roster Bell_*)을 쓰고, 세 박자 종소리(bell_threefold)는 지역 최종 보스만 쓴다.
+  bell_gate_warden: { name: '종탑 수문의 감시자', model: 'Bell_Warden', hp: 15200, atk: 64, spd: 3.6, range: 3.2, atkTime: 1.65, exp: 250, scale: 2.25, boss: true, armor: 0.24, gold: 50, kit: 'warlord', summon: 'skel_minion', signatureBoss: true, tint: '#e0c68c',
+    phasePatterns: [['bell_pair','slam','spin'], ['bell_pair','summon','bell_pair','slam'], ['bell_pair','spin','bell_pair']], projColor: 0xe0c68c },
+  bell_tollmaster: { name: '타종 관리인', model: 'Bell_Ringer', hp: 14800, atk: 62, spd: 3.5, range: 3.2, atkTime: 1.65, exp: 245, scale: 2.2, boss: true, armor: 0.22, gold: 49, kit: 'warlord', summon: 'skel_priest', signatureBoss: true, tint: '#d9c08a',
+    phasePatterns: [['bell_pair','bell_crack','slam'], ['bell_crack','bell_pair','summon','spin'], ['bell_pair','bell_crack','bell_pair']], projColor: 0xd9c08a },
+  bell_nave_guardian: { name: '대예배당의 종 수호자', model: 'Bell_Sovereign', hp: 16200, atk: 66, spd: 3.4, range: 3.4, atkTime: 1.7, exp: 255, scale: 2.4, boss: true, armor: 0.26, gold: 52, kit: 'warlord', summon: 'skel_shield', signatureBoss: true, tint: '#cfb27a',
+    phasePatterns: [['bell_crack','slam','spin'], ['bell_pair','bell_crack','summon','slam'], ['bell_crack','spin','bell_crack']], projColor: 0xcfb27a },
 };
 
 // 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
@@ -286,6 +308,13 @@ const CAMPAIGN_ENCOUNTERS = {
     midboss: ['boss_warlord', '첫 기사 아스텔', ['spin', 'dash', 'summon', 'slam'], '소환 병사를 정리한 뒤 회전과 돌진이 끝나는 순간을 노리세요.'],
     finalboss: ['boss_dragon', '새벽을 먹는 빈 왕관', ['slam', 'fan', 'soulrain', 'dash', 'summon', 'spin'], '다섯 왕의 공격이 순서대로 이어집니다. 십자 심판의 중앙 안전 원을 활용하세요.'],
   },
+  // 7장 종탑 도시: 조우 키는 encounterPrefix(belltower). 중간·최종 보스의 실제 기술은 BOSS_ENCOUNTERS 가 덮어쓴다.
+  belltower: {
+    captain: ['elite_skel_captain', '종탑 순찰대장', ['slam'], '어긋난 종소리의 고리를 확인하고 강타 뒤 후방을 공격하세요.'],
+    warden: ['elite_bone_lord', '시청 종루의 종지기', ['slam', 'spin'], '종이 울리면 고리 사이 빈틈이나 한가운데로 이동한 뒤 반격하세요.'],
+    midboss: ['boss_warlord', '종탑 수문 기사 오르벤', ['spin', 'slam', 'summon'], '왼쪽 종과 오른쪽 종이 번갈아 울립니다. 두 고리가 닿지 않는 가운데에서 박자를 세세요.'],
+    finalboss: ['boss_warlord', '금 간 대종의 주인 카델', ['slam', 'summon', 'spin', 'slam'], '세 박자 종소리의 고리가 겹치는 한가운데만 안전합니다. 마지막 울림 뒤에 반격하세요.'],
+  },
 };
 // 귀환로(6장)는 정원(1장)의 전투 틀을 그대로 쓰고 이름만 후일담 조우로 바꾼다. 장 번호가 아니라 조우 키(encounterPrefix)로 고른다.
 const HOMECOMING_NAMES = { captain: '귀환로를 막는 잔병장', warden: '끊어진 명령의 파수꾼', midboss: '공허한 서약의 잔향', finalboss: '마지막 고립의 잔향' };
@@ -298,17 +327,20 @@ const RANK_STATS = {
   midboss: { hp: 45200, atk: 48, scale: 1.95, exp: 160, gold: 40 },
   finalboss: { hp: 53200, atk: 53, scale: 2.25, exp: 220, gold: 55 },
 };
+// 층 배율의 증가가 완만해지는 후반에는 지역 보스 → 다음 지역 중간 보스의 실효 체력이 8% 넘게 내려간다(test/campaign-structure.test.ts 의 곡선 보호선).
+// 7장 중간·최종 보스는 계급 체력에 이 배율을 곱해 6-10 → 7-5 경계를 보호선 안에 둔다. 최종 보스 > 중간 보스 순서는 그대로다.
+const BOSS_HP_MUL = { 7: 1.05 };
 for (const chapter of CHAPTERS) {
   const theme = chapter.theme;
   const summon = ROSTER[theme].trash[0];
   for (const [rank, [baseId, name, pattern, tactic]] of Object.entries(CAMPAIGN_ENCOUNTERS[chapter.encounterPrefix || theme])) {
     const base = ENEMIES[baseId];
     ENEMIES[(chapter.encounterPrefix || theme) + '_' + rank] = {
-      ...base, ...RANK_STATS[rank], name, boss: true, elite: false, ranged: false,
+      ...base, ...RANK_STATS[rank], ...((rank === 'midboss' || rank === 'finalboss') && BOSS_HP_MUL[chapter.id] ? { hp: Math.round(RANK_STATS[rank].hp * BOSS_HP_MUL[chapter.id]) } : {}), name, boss: true, elite: false, ranged: false,
       behavior: undefined, rank, pattern, tactic, summon, tint: chapter.color, range: 3.2,
       armor: rank === 'captain' ? 0.12 : 0.2, atkTime: rank === 'finalboss' ? 1.7 : 1.9,
-      kit: theme === 'garden' || theme === 'crown' ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',
-      voiceKey: theme === 'garden' || theme === 'crown' ? 'boss_warlord' : theme === 'tide' ? 'boss_dragon' : 'boss_demon',
+      kit: WARLORD_THEMES.has(theme) ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',
+      voiceKey: WARLORD_THEMES.has(theme) ? 'boss_warlord' : theme === 'tide' ? 'boss_dragon' : 'boss_demon',
       portrait: ENCOUNTER_ART[(chapter.encounterPrefix || theme) + '_' + rank],
       projColor: Number.parseInt(chapter.color.slice(1), 16),
     };
@@ -318,7 +350,7 @@ for (const chapter of CHAPTERS) {
 for (const id of ['boss_warlord', 'boss_demon', 'boss_dragon']) ENEMIES[id].portrait = ENCOUNTER_ART[id];
 for (const [id, portrait] of Object.entries(MOB_ART)) if (ENEMIES[id]) ENEMIES[id].portrait = portrait;
 for (const [id, model] of Object.entries(CAMPAIGN_MODELS)) ENEMIES[id].model = model;
-for (const [id, encounter] of Object.entries(BOSS_ENCOUNTERS)) {
+for (const [id, encounter] of Object.entries({ ...BOSS_ENCOUNTERS, ...BOSS_RANK_ENCOUNTERS })) {
   Object.assign(ENEMIES[id], { signatureBoss:true, pattern:encounter.phases[0], phasePatterns:encounter.phases, phaseHints:encounter.phaseHints, tactic:encounter.tactic });
 }
 // The empty crown now has its own humanoid silhouette and real rig weapon socket.

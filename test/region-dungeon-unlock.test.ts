@@ -31,9 +31,10 @@ const REGION1 = ['glass_garden', 'bellfall_crypt', 'rootbound_grotto', 'hollowbe
 const run = (id: string, outcome = 'defeat') => ({ runId: 1, floor: 1, outcome, boonIds: [], details: { route: { kind: 'dungeon', id, depth: 'standard', conquestId: null, riftId: null } } });
 
 describe('던전 → 지역 배정표', () => {
-  test('모든 던전이 지역 1~6 중 하나에 배정되고 지역마다 하나 이상이다', () => {
+  test('모든 던전이 지역 1~6 중 하나에 배정되고 지역마다 하나 이상이다(7장 종탑 도시는 원정 던전 없이 캠페인만)', () => {
     expect(Object.keys(DUNGEON_REGION).sort()).toEqual(ALL_DUNGEONS.map((d: any) => d.id).sort());
-    for (const town of CAMPAIGN_TOWNS) expect(regionDungeonIds(town.chapter).length).toBeGreaterThan(0);
+    for (const town of CAMPAIGN_TOWNS.filter((t: any) => t.chapter <= 6)) expect(regionDungeonIds(town.chapter).length).toBeGreaterThan(0);
+    expect(regionDungeonIds(7)).toEqual([]);   // 종탑 도시 원정 던전은 후속 덩어리
     expect(regionDungeonIds(1)).toEqual(REGION1);
     expect(dungeonRegion('windmeadow')).toBe(0); // 야외 필드는 지역 잠금이 없다
   });

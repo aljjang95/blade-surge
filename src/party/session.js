@@ -233,8 +233,8 @@ export class PartySession {
     const events = this.events.splice(0, Math.max(0, PARTY_LIMITS.events - mpEvents.length)); events.push(...mpEvents);
     return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),visuals:this.visuals.splice(0),
       players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,...(m.avatar ? {avatar:m.avatar} : {}),ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
-      // 잠행 중인 적만 숨은 깊이(sub)를 싣는다. 평소 스냅샷 크기는 그대로다.
-      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite,...(e.burrow?.phase ? {sub:+e.burrow.depth().toFixed(3)} : {})})),
+      // 잠행 중인 적만 숨은 깊이(sub)를, 종지기는 종 체력(bh)과 예고 진행(ph)·고리 반경(rr·rs)을 싣는다. 평소 스냅샷 크기는 거의 그대로다.
+      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite,...(e.burrow?.phase ? {sub:+e.burrow.depth().toFixed(3)} : {}),...(e.bellringer ? e.bellringer.partyState() : {})})),
       rooms:b.world.rooms.map((r,i) => ({id:i,discovered:!!r.discovered,cleared:!!r.cleared,activated:!!r.spawned})), roomsCleared:b.roomsCleared,
       bossDefeated:!!b.bossDefeated,portal:b.portal ? {x:b.portal.pos.x,z:b.portal.pos.z} : null,events,
       projectiles:b.projectiles.slice(0,160).map((p,i)=>({id:'p'+i,x:p.pos.x,y:p.pos.y,z:p.pos.z,yaw:Math.atan2(p.dir.x,p.dir.z)})) };
@@ -278,7 +278,8 @@ export class PartySession {
         enemy.partyId=item.id; enemy.speciesId=item.key; enemy.spawning=false; this.replicas.set(item.id,enemy);
       }
       this.applyPose(enemy,item,dt);
-      if (item.sub !== undefined || enemy.burrow) applyBurrowDepth(enemy,item.sub);
+      if (enemy.bellringer) enemy.bellringer.applyParty(item,dt);
+      else if (item.sub !== undefined || enemy.burrow) applyBurrowDepth(enemy,item.sub);
     }
     for (const [id, enemy] of this.replicas) if (!ids.has(id)) { enemy.dispose(); this.replicas.delete(id); }
     b.enemies = [...this.replicas.values()]; b.boss = b.enemies.find(e => e.isBoss && e.alive) || null;
