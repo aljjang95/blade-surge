@@ -5,8 +5,10 @@
   "packageManager": "bun@1.4.2",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "build": "vite build && node tools/write-version.mjs",
+    "dev": "node tools/build-news.mjs && vite --host",
+    "build": "node tools/build-news.mjs && vite build && node tools/write-version.mjs",
+    "news": "node tools/build-news.mjs",
+    "news:draft": "node tools/patch-notes.mjs",
     "typecheck": "tsc --noEmit",
     "test": "bun test --timeout 30000",
     "check": "bun run typecheck && bun run test && bun run build",
