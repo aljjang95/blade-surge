@@ -38,6 +38,8 @@ interface Ctx { req: CoreRequest; keyHash: string | null; out: CoreResult; pre: 
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
+/** 소식 글 id(게임의 content/news 파일 이름). 게임 비종속 패키지라 형식만 검사한다. */
+const PATCH_NOTE_SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const LIMITS = { friends: 100, incoming: 50, blocks: 200, openRuns: 5, inbox: 100, keys: 5, sockets: 3, perSecond: 10, presenceMs: 2000, nonceMs: 600000 };
 const ADMIN_PATHS = new Set(['/admin/mute', '/admin/ban', '/admin/revoke-clear']);
 
@@ -621,6 +623,8 @@ export class SocialCore {
     return {
       id: r.id, category: r.category, title: r.title, body: r.body, status: r.status, votes: r.votes, comments: r.comments,
       createdAt: r.created_at, updatedAt: r.updated_at, devReply: r.dev_reply ?? null, author: author ?? null, voted,
+      // 패치노트 연결은 '반영 완료' 글에서만 보인다(상태가 바뀌면 자동으로 숨는다).
+      patchNoteSlug: r.status === 'done' ? (r.patch_note_slug ?? null) : null,
       ...(withDiag ? { diag: r.diag ? JSON.parse(r.diag) : null, hidden: !!r.hidden } : {}),
     };
   }
@@ -702,15 +706,24 @@ export class SocialCore {
     return { id: row.id, body, createdAt: now, dev: admin, author: this.mini(me.id) };
   }
   private moderate(_admin: any, id: number, c: Ctx) {
-    const body = object(c.req.body, ['status', 'devReply', 'hidden']);
-    if (body.status === undefined && body.devReply === undefined && body.hidden === undefined) throw new SocialError('schema');
+    const body = object(c.req.body, ['status', 'devReply', 'hidden', 'patchNoteSlug']);
+    if (body.status === undefined && body.devReply === undefined && body.hidden === undefined && body.patchNoteSlug === undefined) throw new SocialError('schema');
     const r = this.one('SELECT * FROM posts WHERE id = ?', id);
     if (!r) throw new SocialError('post-not-found', 404);
     const status = body.status === undefined ? r.status : body.status;
     if (!(POST_STATUSES as readonly string[]).includes(status)) throw new SocialError('status');
     const reply = body.devReply === undefined ? r.dev_reply : (body.devReply === null ? null : text(body.devReply, 0, 1000, 'devReply') || null);
     const hidden = body.hidden === undefined ? r.hidden : (bool(body.hidden) ? 1 : 0);
-    this.run('UPDATE posts SET status = ?, dev_reply = ?, hidden = ?, updated_at = ? WHERE id = ?', status, reply, hidden, this.d.now(), id);
+    // 패치노트 연결: 소식 글 id(영문 소문자·숫자·-)만 받고 '반영 완료'일 때만 둔다. 상태가 done 이 아니게 되면 연결을 지운다.
+    let patchNoteSlug: string | null = r.patch_note_slug ?? null;
+    if (body.patchNoteSlug !== undefined) {
+      if (body.patchNoteSlug === null) patchNoteSlug = null;
+      else if (typeof body.patchNoteSlug !== 'string' || !PATCH_NOTE_SLUG.test(body.patchNoteSlug)) throw new SocialError('patch-note-slug');
+      else patchNoteSlug = body.patchNoteSlug;
+      if (patchNoteSlug !== null && status !== 'done') throw new SocialError('patch-note-status');
+    }
+    if (status !== 'done') patchNoteSlug = null;
+    this.run('UPDATE posts SET status = ?, dev_reply = ?, hidden = ?, patch_note_slug = ?, updated_at = ? WHERE id = ?', status, reply, hidden, patchNoteSlug, this.d.now(), id);
     const updated = this.one('SELECT * FROM posts WHERE id = ?', id);
     return this.postView(updated, this.minis([updated.author_id]).get(updated.author_id), false, true);
   }

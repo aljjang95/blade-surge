@@ -8,6 +8,7 @@ import { HEROES } from '../data/heroes.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { buildIdentity } from '../platform/startup-compat.js';
 import { apiBase, isNativeBuild } from '../platform/api-base.js';
+import { articleHref } from '../ui/news-state.js';
 import { SOCIAL_CONFIG } from './config.js';
 import { googleSignIn } from './google-signin.js';
 
@@ -168,6 +169,8 @@ function build(app) {
     // 구글 웹 로그인(GSI 팝업)은 앱 WebView(https://localhost)에서 동작이 확인되지 않아 앱에서는 연결하지 않는다(화면에는 '준비 중'으로 표시).
     googleSignIn: native ? undefined : googleSignIn,
     discordInvite: typeof config.discordInvite === 'string' ? config.discordInvite : null,
+    // 게시판 '반영 완료' 글의 패치노트 링크: 소식 글 id → 웹 읽기 페이지(/news/<id>/). 앱은 정식 호스트 절대 주소.
+    patchNoteUrl: slug => articleHref(slug, apiBase() || globalThis.location?.origin || ''),
   };
 
   const ui = createCommunityUI({ client, config, mount: document.body, hooks });

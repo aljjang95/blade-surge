@@ -6,9 +6,9 @@ export const MENU_GROUPS=[
  {id:'character',title:'성장 · 정비',order:['mw-open','arsenal-open','rpg-open','journey-lobby','menu-forge','citadel-command-supply']},
  {id:'reward',title:'보상 · 임무',order:['btn-daily','btn-mail','btn-quest','menu-town-quests','tab:pass']},
  {id:'shop',title:'상점 · 소환',order:['tab:gacha','tab:shop','store-options']},
- {id:'system',title:'시스템',order:['menu-companion','btn-guide','btn-settings','app-mode-open']},
+ {id:'system',title:'시스템',order:['menu-companion','news-open','btn-guide','btn-settings','app-mode-open']},
 ];
-const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','arsenal-open':'nav-jobs','tab:stage':'nav-quests','menu-fields':'nav-journey','menu-tower':'nav-arena','menu-forge':'nav-forge','citadel-command-supply':'treasure-chest','menu-town-quests':'nav-quests','menu-companion':'nav-heroes'};
+const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','arsenal-open':'nav-jobs','tab:stage':'nav-quests','menu-fields':'nav-journey','menu-tower':'nav-arena','menu-forge':'nav-forge','citadel-command-supply':'treasure-chest','menu-town-quests':'nav-quests','menu-companion':'nav-heroes','news-open':'calendar'};
 // 타인 의존 콘텐츠(파티)는 기본 솔로 로비에서 숨긴다. 기능·저장은 그대로 두고 입구만 감춘다.
 const HIDDEN_ENTRIES=new Set(['party-open']);
 const CLASS_KEYS=['rpg-open','mw-open','journey-lobby','arsenal-open'];

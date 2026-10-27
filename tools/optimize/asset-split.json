@@ -54,6 +54,8 @@
 
     { "class": "remote", "group": "starter-village", "glob": "models/starter-village-v1/*.glb", "reason": "초보자 마을 Tripo 소품 8종(약 4.1MB). AAB 60MB 여유 0.49MB 라 core 금지. 로비 진입 때 바로 받고(EARLY), 못 받으면 절차 모델 폴백" },
 
+    { "class": "core", "glob": "news/**", "reason": "소식 웹 읽기 페이지(/news, tools/build-news.mjs 산출물). 글 몇 편 분량의 정적 HTML 이라 크기가 작아 core 로 둔다(remote 로 두면 _headers CORS 규칙이 필요)" },
+
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },
     { "class": "core", "glob": "models/**", "reason": "영웅 1단계·로비·성채·무기·환경 모델" },
     { "class": "core", "glob": "img/**", "reason": "UI·아이콘·초상·장비·재질" },
