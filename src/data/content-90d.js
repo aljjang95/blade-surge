@@ -78,3 +78,21 @@ export const EVENT_EFFECT_KINDS = frozen(['campaignGold', 'campaignExp', 'stoneB
  * 게임 판정에는 쓰지 않는다(전투는 실제 조작으로 승패가 난다). 로비의 권장 전투력 표시는 기존 recPower 그대로다.
  */
 export const POWER_NEED = frozen({ k: 2700, exp: 0.6, tower: 1 });
+
+/**
+ * 고통 단계(TORMENT, docs/SPEC_720H.md 3.2): 지옥 다음 난이도. 에너지 0, 단계 n(1~maxTier)마다 적이 단단해지고 보상·EXP가 커진다.
+ *  - 적 체력·공격 = 지옥 × step^n, 보상(골드·재료) = 지옥 × (1 + rewardStep×n), EXP = 지옥 × (1 + expStep×n). 밀도는 지옥 그대로.
+ *  - 하루 첫 fullRuns 판은 보상 100%, 그 뒤 판은 골드·재료가 decayMul(35%)이고 EXP(→전설 수련)는 100%.
+ *  - 해금: 아무 지역 지옥 10관문 클리어 → T1, T(n)에서 지역 최종 보스(X-10) 클리어 → T(n+1).
+ * 단계 배율(step)은 진행 시뮬레이터(tools/sim-90d.mjs marathon)로 보정한다: 1.17^n 은 요구 전투력이 지옥의 T10 에서 이미 5배를 넘어
+ * 8시간 페르소나도 T10 을 못 넘는다(기준 변경 공개: docs/SPEC_720H.md 7절).
+ */
+export const TORMENT = frozen({
+  maxTier: 50,
+  hpStep: 1.045, atkStep: 1.045,
+  rewardStep: 0.08, expStep: 0.1,
+  fullRuns: 24,
+  decayMul: 0.35,
+  minutesPerRun: 4.5,       // 시뮬레이터: 한 판 걸리는 시간(분)
+  recLevel: 80,             // 고통 단계 권장 레벨(= 영웅 레벨 상한). 낮은 장 저레벨 EXP 가중(levelExperienceMultiplier)을 막는다
+});

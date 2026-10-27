@@ -10,7 +10,7 @@ import { dropUnownedJob } from './expedition-economy.js';
 import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
-import { resolveDifficulty } from './difficulty.js';
+import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
@@ -25,7 +25,10 @@ import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvail
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
 import { applyBuildStats } from './masterworks-combat.js';
-import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
+import { normalizeEndgame, recordDifficultyClear, recordTormentRun, tormentStatus, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
+import { HERO_LEVEL_CAP } from './rpg-core.js';
+import { TORMENT } from '../data/content-90d.js';
+import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
 const IAP_APPLIED_MAX = 300;
@@ -174,7 +177,7 @@ export class Economy {
   }
   fresh() {
     return {
-      expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), actionSequence: 0,
+      expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), legend: normalizeLegend(), actionSequence: 0,
       schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
@@ -354,6 +357,14 @@ export class Economy {
       const apply = (o, tier) => { b.atkPct += o.atk || 0; b.hpPct += o.hp || 0; b.crit += o.crit || 0; b.critDmg += o.critDmg || 0; b.ultGain += o.ultGain || 0; for (const pr of o.procs || []) if (!b.procs.includes(pr)) b.procs.push(pr); b.active.push({ set: S, tier, n }); };
       if (n >= 4) apply(S.four, 4); else if (n >= 2) apply(S.two, 2);
     }
+    // 전설 수련 판(계정 공통): 공격·체력·방어·치명 몫은 모든 영웅에게 더한다. 키스톤 플래그는 b.legend.flags 로 전투가 읽는다.
+    const leg = this.s.legend;
+    if (leg && leg.rank > 0) {
+      const ls = legendStats(leg);
+      b.atkPct += ls.atkPct; b.hpPct += ls.hpPct; b.def += ls.def; b.crit += ls.crit; b.critDmg += ls.critDmg; b.ultGain += ls.ultGain;
+      b.legend = { rank: ls.rank, flags: ls.flags, radiusPct: ls.radiusPct, vacuumPct: ls.vacuumPct, cdr: ls.cdr, speedPct: ls.speedPct, bossDmgPct: ls.bossDmgPct,
+        regenPct: ls.regenPct, dodgeRecoverPct: ls.dodgeRecoverPct, openShieldPct: ls.openShieldPct, pickupPct: ls.pickupPct, dropPct: ls.dropPct, rarityPct: ls.rarityPct };
+    }
     return b;
   }
   /** 세이브를 건드리지 않고 실제 장착/해제 계산으로 비교한다. */
@@ -404,7 +415,45 @@ export class Economy {
   blessingPick(index) { return Runes.blessingPick(this, index); }
   blessingConsume() { return Runes.blessingConsume(this); }
   blessingRestore(held) { return Runes.blessingRestore(this, held); }
-  addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
+  addHeroExp(id, exp, { silent = false } = {}) {
+    const h = this.hero(id), wasCap = h.level >= HERO_LEVEL_CAP; h.exp += exp; let ups = 0;
+    while (h.exp >= levelExp(h.level) && h.level < HERO_LEVEL_CAP) { h.exp -= levelExp(h.level); h.level++; ups++; }
+    // Lv.80 이후 EXP 는 영웅 레벨이 아니라 계정 공통 전설 수련으로 흘러간다(docs/SPEC_720H.md 3.1). 옛 저장의 80 레벨 잔여 EXP 는 받지 않는다.
+    if (h.level >= HERO_LEVEL_CAP) { const over = wasCap ? exp : h.exp; h.exp = 0; if (over > 0) this.grantLegend(over); }
+    if (!silent) this.emit();
+    return ups;
+  }
+  /** 전설 수련 EXP 지급. 정산 트랜잭션 안에서만 부른다. 결과는 takeLegendGrant 로 영수증에 한 번 옮긴다. */
+  grantLegend(exp) {
+    this.s.legend = normalizeLegend(this.s.legend);
+    const grant = grantLegendExp(this.s.legend, exp), prev = this._legendGrant;
+    this._legendGrant = prev ? { ...grant, gained: prev.gained + grant.gained, ranks: prev.ranks + grant.ranks, keystones: [...prev.keystones, ...grant.keystones] } : grant;
+    return grant;
+  }
+  takeLegendGrant() { const grant = this._legendGrant || null; this._legendGrant = null; return grant && grant.gained > 0 ? grant : null; }
+  // ---------- 전설 수련 (규칙은 legend-rank.js) ----------
+  legendState() { return this.s.legend = normalizeLegend(this.s.legend); }
+  legendEffects() { return legendStats(this.legendState()); }
+  legendRespecCost() { return legendRespecCost(this.legendState()); }
+  /** 점수를 노드에 넣는다. 저장에 실패하면 되돌린다. */
+  legendAllocate(nodeId, n = 1) {
+    const before = structuredClone(this.s); this.legendState();
+    const res = allocateLegendNode(this.s.legend, nodeId, n);
+    if (!res.ok) return res;
+    if (!this._commit(before)) return { ok: false, error: 'storage' };
+    return res;
+  }
+  /** 점수 재분배(골드 비용). 골드가 부족하면 아무것도 바꾸지 않는다. */
+  legendRespec() {
+    const before = structuredClone(this.s); this.legendState();
+    const res = respecLegendNodes(this.s.legend, this.s.gold);
+    if (!res.ok) return res;
+    this.s.gold -= res.cost;
+    if (!this._commit(before)) return { ok: false, error: 'storage', cost: res.cost };
+    return res;
+  }
+  /** 고통 단계 상태(최고 단계·오늘 판 수·풀 보상 남은 판). */
+  tormentStatus() { this.s.endgame = normalizeEndgame(this.s.endgame); return tormentStatus(this.s.endgame, endgameNow(this)); }
   /** 미소유 영웅은 성장·장비·외형 명령을 모두 거절한다(미리 키워 두는 우회 차단). 로컬과 서버 /cmd가 같은 Economy 메서드를 부르므로 한 곳에서 막는다. */
   trainingQuote(id) { if (this.heroLocked(id)) return { ...heroTrainingQuote(null, 0), reason: 'locked' }; return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
   levelUpHero(id) {
@@ -585,6 +634,12 @@ export class Economy {
     const ledger = this._fieldRewards;
     return ledger && !ledger.settled && (ticket ? ledger.ticketId === ticket.id : ledger.stage === stage) ? ledger : null;
   }
+  /** 고통 단계 감쇠: 영웅 조각·초월석·지역 재료를 mul 배로(작은 수는 기댓값이 같도록 확률 올림). 원본 장부는 바꾸지 않는다. */
+  decayedExtras(field, mul) {
+    const rng = rngOf(this), part = (n) => { const q = (Number.isSafeInteger(n) && n > 0 ? n : 0) * mul, base = Math.floor(q); return base + (rng() < q - base ? 1 : 0); };
+    return { ...field, heroShards: part(field.heroShards), transcendStones: part(field.transcendStones),
+      materials: Object.fromEntries(Object.entries(field.materials || {}).map(([key, n]) => [key, part(n)])) };
+  }
   applyFieldExtras(field, heroId) {
     const count = (n, cap) => Number.isSafeInteger(n) && n > 0 ? Math.min(n, cap) : 0;
     const got = this.addRewards({ transcendStones: count(field?.transcendStones, 100) }, { silent: true, applyVip: false });
@@ -654,8 +709,18 @@ export class Economy {
     const difficultyId = stage.difficultyId || 'story';
     recordDifficultyClear(s.endgame, stage.ch, stage.st, difficultyId);
     if (difficultyId !== 'story') this.recordJourneyAction('hardClears');
+    // 고통 단계(에너지 0): 하루 첫 fullRuns 판은 보상 100%, 그 뒤는 골드·재료 decayMul 이고 EXP 는 100%. 판 수는 이 트랜잭션 안에서 센다.
+    // 전설 수련 약탈 갈래는 골드·강화석·조각 몫을 더한다(서버 정산도 이 함수를 지나 같은 값이다).
+    const tormentTier = tormentTierOf(difficultyId);
+    const tormentRun = tormentTier ? recordTormentRun(s.endgame, { tier: tormentTier, st: stage.st, nowMs: endgameNow(this) }) : null;
+    const decay = tormentRun && !tormentRun.full ? TORMENT.decayMul : 1;
+    const leg = s.legend && s.legend.rank > 0 ? legendStats(s.legend) : null;
+    const mulGold = decay * (1 + (leg?.goldPct || 0)), mulStone = decay * (1 + (leg?.stonePct || 0)), mulFrag = decay * (1 + (leg?.fragmentPct || 0));
+    const scaled = (n, mul) => mul === 1 ? n : Math.floor(n * mul);
     const m = double ? 2 : 1; const r = applyEventRewards(stage.rewards, activeEvents(endgameNow(this)), 'campaign'); const loot = [];
-    const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
+    r.gold = scaled(r.gold, mulGold); r.stones = scaled(r.stones || 0, mulStone);
+    fieldGold = scaled(fieldGold, mulGold); fieldStones = scaled(fieldStones, mulStone); fieldStones2 = scaled(fieldStones2, mulStone); fieldStones3 = scaled(fieldStones3, mulStone); fieldFragments = scaled(fieldFragments, mulFrag);
+    const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: scaled(10, mulFrag), eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
     const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
@@ -664,9 +729,11 @@ export class Economy {
     if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
-    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell', first }));
+    if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));
     const prevLv = this.hero(heroId).level;
-    const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
+    // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (1 + expStep×n)). EXP 는 판 수 감쇠를 받지 않는다.
+    const combatBase = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
+    const combatExp = Math.min(100000000, Math.floor(combatBase * (stage.campaignDifficulty?.combatExpMul || 1)));
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));
     const ups = this.addHeroExp(heroId, stageExp + combatExp, { silent: true });
     const nowLv = this.hero(heroId).level;
@@ -676,7 +743,8 @@ export class Economy {
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; const saved = this.emit();
     const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock,
-      ok: saved, saveError: !saved };
+      torment: tormentRun ? { tier: tormentTier, full: tormentRun.full, runs: tormentRun.runs, best: tormentRun.best, newBest: tormentRun.newBest, fullLeft: Math.max(0, TORMENT.fullRuns - tormentRun.runs) } : null,
+      legend: this.takeLegendGrant(), ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;
   }
@@ -725,7 +793,7 @@ export class Economy {
     const got = this.addRewards(claim.rewards, { silent: true });
     return { ok: true, got, saveError: !this.emit() };
   }
-  sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
+  sweep(stage) { const s = this.s; if (tormentTierOf(stage?.difficultyId) || s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------
   /** 배너 상태(천장·픽업 확정·초보자 사용 횟수). 저장 정화(save-base)와 같은 모양. */
   gachaState() {
