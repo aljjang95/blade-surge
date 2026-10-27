@@ -9,7 +9,7 @@ import { audio } from '../engine/audio.js';
 // 고리는 종지기가 죽으면 거둔다. 난수는 쿨다운 흔들림에만 쓰고(주입), 나머지는 전투 시간(dt)만으로 진행한다.
 export const BELL = Object.freeze({
   firstCooldown: 1.2, firstJitter: .8, cooldown: 7.5, cooldownJitter: 2, retryCooldown: 3,
-  minDistance: 3.2, maxDistance: 11, maxActive: 2,
+  minDistance: 0, maxDistance: 11, maxActive: 2,
   windup: .9,
   // 고리: 시작 반지름에서 최대 반지름까지 일정 속도로 퍼진다. 두 번째 고리는 gap 초 뒤에 출발해 사이에 빈틈이 생긴다.
   startRadius: 1.4, maxRadius: 10, speed: 5.2, gap: .75, band: .78,

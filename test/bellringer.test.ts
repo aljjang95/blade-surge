@@ -254,3 +254,62 @@ test('종지기가 죽거나 전투가 끝나면 고리를 거두고 시각 자�
   expect(f.enemy.root.children.length).toBe(0);
   f.ringer.dispose();   // 두 번 불러도 안전
 });
+
+// ---------- 실제 Enemy · Player 통합 ----------
+import { enemyImpactIn, enemyPartyWarnings } from '../src/game/enemies.js';
+import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
+
+const runtime = await loadCombatFlowRuntime();
+
+function realFixture(distance = 7) {
+  const f: any = createCombatFlowFixture(runtime);
+  const enemy: any = spawnCombatFlowEnemy(f, f.room.x, f.room.z, { id: 'bell_ringer', partyId: 'bell-1' });
+  enemy.bellringer = new Bellringer(enemy, () => 0);
+  enemy.packId = 1;
+  f.player.pos.set(enemy.pos.x + distance, 0, enemy.pos.z);
+  f.player.hp = f.player.maxHp = 1e9;
+  return { f, enemy };
+}
+
+test('실제 Enemy 에서: 예고 중 제자리에 서고, AUTO 도달 시간이 유한하며, 파티 경고가 나가고, 고리가 실제 Player 를 친다', () => {
+  const { f, enemy } = realFixture(7);
+  let frames = 0, warnedRing = false, finite = false;
+  while (frames++ < 600 && !(enemy.bellringer.tolls > 0 && !enemy.bellringer.busy)) {
+    stepCombatFlow(f, 1 / 60);
+    if (enemy.bellringer.phase === 'toll') {
+      expect(enemy.state).toBe('chase');
+      expect(enemy.vel.length()).toBe(0);
+      const warning = enemyPartyWarnings(enemy)[0];
+      if (warning) { warnedRing = warning.kind === 'ring' && validPartyWarning(warning); }
+      finite ||= Number.isFinite(enemyImpactIn(enemy, f.player));
+    }
+  }
+  expect(warnedRing).toBe(true);
+  expect(finite).toBe(true);
+  expect(enemy.bellringer.hits).toBe(2);
+  expect(f.events.incoming.filter((hit: any) => hit.kb === BELL.knockback)).toHaveLength(2);
+  expect(f.events.damageTaken).toBeGreaterThan(0);
+});
+
+test('실제 Enemy.hurt: 종이 피해를 먼저 받아 몸 체력이 그대로이고, 깨지면 무방비로 체력이 깎이며, 기절 타격은 예고를 끊는다', () => {
+  const { f, enemy } = realFixture(7);
+  const bellHp = enemy.bellringer.bellHp;
+  enemy.hurt(bellHp * .5, { kb: 0 });
+  expect(enemy.hp).toBe(enemy.maxHp);
+  expect(enemy.bellringer.bellHp).toBeCloseTo(bellHp * .5);
+  // 예고 시작 후 기절 타격이 즉시 끊는다.
+  for (let i = 0; i < 400 && enemy.bellringer.phase !== 'toll'; i++) stepCombatFlow(f, 1 / 60);
+  expect(enemy.bellringer.phase).toBe('toll');
+  enemy.hurt(1, { kb: 0, stun: .6 });
+  expect(enemy.bellringer.phase).toBeNull();
+  expect(enemy.bellringer.interrupted).toBe(1);
+  // 종을 깨는 타격.
+  const neighbour: any = spawnCombatFlowEnemy(f, enemy.pos.x + 2, enemy.pos.z, { id: 'skel_minion' });
+  enemy.hurt(enemy.bellringer.bellHp + 10, { kb: 0 });
+  expect(enemy.bellringer.intact).toBe(false);
+  expect(neighbour.stun).toBeGreaterThanOrEqual(BELL.stunSeconds - 1e-9);
+  expect(enemy.hp).toBeLessThan(enemy.maxHp);        // 넘친 피해 10 은 몸에 닿는다
+  const before = enemy.hp;
+  enemy.hurt(100, { kb: 0 });
+  expect(before - enemy.hp).toBeGreaterThan(100 * (1 - (enemy.def.armor || 0)) * 1.4);   // 무방비 1.5배
+});
