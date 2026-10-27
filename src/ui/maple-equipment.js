@@ -3,6 +3,7 @@ import { HEROES, heroStats } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME } from '../data/items.js';
 import { resourceArt, uiArt } from './illustrated.js';
 import { itemVisual } from './item-presentation.js';
+import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
 
 // 왼쪽 열 · 오른쪽 열에 놓을 부위 순서(위 → 아래).
 export const EQUIPMENT_LAYOUT = Object.freeze({ left: ['weapon', 'ring'], right: ['armor', 'boots'] });
@@ -13,7 +14,7 @@ export function buildEquipmentModel(eco, heroId = eco.s.selected) {
   const slots = SLOTS.map((slot) => {
     const inst = eco.s.inventory.find((x) => x.uid === hero.equip[slot]), it = inst && ITEM_BY_ID[inst.id];
     if (!it) return { slot, slotName: SLOT_NAME[slot], empty: true, art: uiArt('slot-' + slot) };
-    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it, { heroId }).iconUrl, fallbackIcon: itemVisual(it, { heroId }).fallbackUrl, visual: itemVisual(it, { heroId }).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
+    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: tierName(it.name, inst), tierTag: tierTag(inst), tierTone: tierTone(inst), tierNote: tierNote(inst), icon: itemVisual(it, { heroId }).iconUrl, fallbackIcon: itemVisual(it, { heroId }).fallbackUrl, visual: itemVisual(it, { heroId }).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
   });
   return { heroId, name: def.name, title: def.title, portrait: def.portrait, level: hero.level, star: hero.star, power: stats.power, slots, gold: eco.s.gold, gems: eco.s.gems };
 }
@@ -73,7 +74,8 @@ export class MapleEquipment {
       button.addEventListener('click', () => { this.inventory.openFiltered(slotModel.slot, { keepFocus: false }); });
     } else {
       if (slotModel.enh > 0) button.append(el('span', 'mpl-badge mpl-enh', '+' + slotModel.enh));
-      button.title = slotModel.name; button.setAttribute('aria-label', slotModel.slotName + ': ' + slotModel.name + ' +' + slotModel.enh + ', 비교와 강화 열기');
+      if (slotModel.tierTag) { button.classList.add('tier-' + slotModel.tierTone); button.append(el('span', 'mpl-badge mpl-tier tier-tag', slotModel.tierTag)); }
+      button.title = slotModel.name; button.setAttribute('aria-label', slotModel.slotName + ': ' + slotModel.name + ' +' + slotModel.enh + (slotModel.tierNote ? ', ' + slotModel.tierNote : '') + ', 비교와 강화 열기');
       button.addEventListener('click', () => { this.sheetSlot = slotModel.slot; this.meta.showItem(slotModel.uid, model.heroId); });
     }
     return button;

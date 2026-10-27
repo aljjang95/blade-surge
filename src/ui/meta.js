@@ -2,6 +2,8 @@ import { $, fmt } from './ui.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { SkillTreeView } from './skill-tree.js';
 import { TranscendView } from './transcend.js';
+import { LegendView } from './legend-rank.js';
+import { DifficultyPicker } from './difficulty-picker.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
@@ -272,7 +274,11 @@ export class Meta {
       <p class="stage-loot-guide" data-loot-difficulty="${selectedDifficulty.id}"><b>사냥 전리품 · ${selectedDifficulty.name}</b>${lootInfo.lines.map((line) => '<span>' + line + '</span>').join('')}<span class="stage-loot-note">${levelInfo.detail} · 처치 경험치는 전투 중 즉시 쌓입니다.</span></p>
       ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}</div>`;
     // 출격 버튼은 스크롤 밖 하단 고정 바에 둔다(낮은 가로 화면에서도 항상 보인다). id 와 동작은 그대로다.
-    $('campaign-sortie').innerHTML = `<div class="sortie-info"><b>${d.code} ${storyText(d.title)}</b><small>권장 전투력 <span style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</span> · 내 ${fmt(power)}</small></div><div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 -' + d.energy : '이전 관문을 먼저 정화하세요'}</small></button></div>`;
+    $('campaign-sortie').innerHTML = `<div class="sortie-info"><b>${d.code} ${storyText(d.title)}</b><small>권장 전투력 <span style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</span> · 내 ${fmt(power)}</small></div><div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked || selectedDifficulty.tormentTier ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 ' + (selectedDifficulty.tormentTier ? '0' : '-' + d.energy) : '이전 관문을 먼저 정화하세요'}</small></button></div>`;
+    // 고통 단계(지옥 위 난이도): 기존 난이도 카드 아래에 단계 선택 줄을 붙인다. 닫힌 이유·배율·에너지 0·오늘 풀 보상 판은 그 줄이 보여 준다.
+    this.tormentPicker ||= new DifficultyPicker(this.app, { includeBase: false, onChange: () => this.renderStages() });
+    this.tormentPicker.setStage(d.ch, d.st); this.tormentPicker.refresh();
+    $('stage-detail').querySelector('.difficulty-picker')?.append(this.tormentPicker.root);
     $('stage-detail').querySelectorAll('[data-difficulty]').forEach((button) => button.onclick = () => {
       const next = this.eco.setDifficulty(button.dataset.difficulty, d.ch, d.st);
       this.selectedDifficulty = next.id;
@@ -428,13 +434,22 @@ export class Meta {
     if (!this.eco.ownHero(id)) return false;
     this.skillTree ||= new SkillTreeView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
     this.transcendView?.close({ rerender: false, restoreFocus: false });
+    this.legendView?.close({ rerender: false, restoreFocus: false });
     return this.skillTree.open(id, i);
   }
   openTranscend(id = this.heroSel || this.eco.s.selected) {
     if (!this.eco.ownHero(id)) return false;
     this.transcendView ||= new TranscendView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
     this.skillTree?.close({ rerender: false, restoreFocus: false });
+    this.legendView?.close({ rerender: false, restoreFocus: false });
     return this.transcendView.open(id);
+  }
+  /** 전설 수련 판(계정 공통, 영웅 Lv.80 이후). 영웅 화면의 '전설' 탭에서 연다. */
+  openLegend(trigger) {
+    this.legendView ||= new LegendView(this);
+    this.skillTree?.close({ rerender: false, restoreFocus: false });
+    this.transcendView?.close({ rerender: false, restoreFocus: false });
+    return this.legendView.open(trigger);
   }
   /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
   showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }
