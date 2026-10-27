@@ -68,7 +68,7 @@ export class EliteAffixes {
     if (this.has.molten) {
       this.patchTick -= dt; let burn = false;
       for (const pt of this.patches) if (pt.life > 0) { pt.life -= dt; if (pt.life > 0 && Math.hypot(p.pos.x - pt.x, p.pos.z - pt.z) < 1.2) burn = true; }
-      if (burn && this.patchTick <= 0) { this.patchTick = .5; p.hurt(e.atk * .3, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
+      if (burn && this.patchTick <= 0) { this.patchTick = .5; p.hurt(e.atk * .2, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
       if (e.alive && (this.t.trail -= dt) <= 0 && Math.hypot(e.vel.x, e.vel.z) > .5) {
         this.t.trail = .7; const pt = this.patches[this.patchI++ % PATCHES]; pt.x = e.pos.x; pt.z = e.pos.z; pt.life = 3.5;
         g.fx.groundTex(_v.set(pt.x, 0, pt.z), 'circle_demon', 0xff7a2a, { r0: 1.1, r1: 1.25, life: 3.5, spin: .3, fadeIn: .1, hold: 2.7 });

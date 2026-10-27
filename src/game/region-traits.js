@@ -117,7 +117,7 @@ export class RegionTraits {
       if (pl.life <= 0) continue;
       pl.life -= dt; if (pl.arm > 0 && (pl.arm -= dt) > 0) continue;
       if (pl.kind === 'slag') {
-        if (p?.alive && this.burnT <= 0 && Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z) < 1.3) { this.burnT = .5; p.hurt(p.maxHp * .015, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
+        if (p?.alive && this.burnT <= 0 && Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z) < 1.3) { this.burnT = .5; p.hurt(p.maxHp * .01, { dirx: 0, dirz: 0, kb: 0, kind: 'fire' }); }
       } else if (pl.kind === 'undertow') {
         for (const e of g.enemies) if (e.alive && !e.spawning && !e.isBoss && Math.hypot(e.pos.x - pl.x, e.pos.z - pl.z) < 5) e.gather?.(pl.x, pl.z, 6, .12);
       }

@@ -106,7 +106,7 @@ test('echo: 방이 이미 클리어됐으면 부활 없이 settleRoomSpawn 만 �
   expect(game.settled.length).toBe(1);
 });
 
-test('slag: packId%4===0 일 때만 쇳물, 0.9초 예고 뒤에만 1.3 안 영웅을 0.5초마다 maxHp*0.015 데운다', () => {
+test('slag: packId%4===0 일 때만 쇳물, 0.9초 예고 뒤에만 1.3 안 영웅을 0.5초마다 maxHp*0.01 데운다', () => {
   const { hero, game, rt } = setup('forge');
   rt.onDeath(makeEnemy(game, 0, 0, { packId: 1 }), null);
   rt.update(0.1);
@@ -116,7 +116,7 @@ test('slag: packId%4===0 일 때만 쇳물, 0.9초 예고 뒤에만 1.3 안 영�
   expect(hero.hurts.length).toBe(0);   // 예고 중
   rt.update(0.2);
   expect(hero.hurts.length).toBe(1);
-  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.015);
+  expect(hero.hurts[0].dmg).toBeCloseTo(200 * 0.01);
   rt.update(0.3);
   expect(hero.hurts.length).toBe(1);
   rt.update(0.3);
