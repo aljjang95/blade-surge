@@ -1,6 +1,7 @@
 import { $, fmt } from './ui.js';
 import { resourceArt, uiArt } from './illustrated.js';
 import { audio } from '../engine/audio.js';
+import { playEnhanceStage } from './enhance-stage.js';
 import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown } from '../data/items.js';
@@ -387,7 +388,9 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         audio.play('ui_click', { vol: 0.4 });
       });
       const go = b.querySelector('#e-go');
-      if (go) go.onclick = () => {
+      let staging = false;
+      if (go) go.onclick = async () => {
+        if (staging) return;
         const lv = inst.enh, r = eco.enhance(uid, opts);
         if (!r.ok) {
           if (r.reason === 'gold') { ui.toast('골드 부족', 'red'); meta.offerGold(); }
@@ -397,11 +400,16 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         }
         meta.trackFunnel('upgrade', { kind: 'item_enhance', level: r.enh, success: r.success });
         meta._sheetDirty = true;
-        const art = b.querySelector('.is-head-art');
-        if (r.destroyed) { audio.shatter({ vol: 0.75 }); audio.voice('enh_destroy'); audio.vibe([120, 60, 120]); ui.toast('장비가 파괴되었습니다…', 'red'); later(350); }
-        else if (r.success) { audio.levelUp({ vol: 0.4, base: 440 + r.enh * 18 }); if (r.enh >= 8) audio.voice('enh_success', { min: 3 }); if (r.enh >= 12) audio.play('jingle_legend', { vol: 0.55 }); audio.vibe([20, 20, 50]); art?.classList.add('enh-flash'); ui.toast('강화 성공! +' + r.enh, 'gold'); later(380); }
-        else { audio.fail({ vol: 0.55 }); audio.vibe(60); if (lv >= 8) audio.voice('enh_fail', { min: 3 }); art?.classList.add('enh-fail'); ui.toast(r.down ? '강화 실패… +' + r.enh + '로 하락' : '강화 실패…', 'red'); later(380); }
         meta.refreshTop();
+        // 결과는 이미 저장됐다. 긴장 → 결과 연출이 끝난 뒤에만 문구를 띄우고 시트를 다시 그린다(탭하면 건너뜀).
+        staging = true; go.disabled = true;
+        if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+        await playEnhanceStage(b, b.querySelector('.is-head-art'), { from: lv, result: r });
+        staging = false;
+        if (ui.modalSeq !== seq) return;
+        if (r.destroyed) { ui.toast('장비가 파괴되었습니다…', 'red'); later(0); }
+        else if (r.success) { ui.toast('강화 성공! +' + r.enh, 'gold'); later(0); }
+        else { ui.toast(r.down ? '강화 실패… +' + r.enh + '로 하락' : '강화 실패…', 'red'); later(0); }
       };
       // 키보드: 시트 안에서 Tab이 순환하고 Esc로 닫힌다. 처리기는 ui.endModal() 이 모달 교체 · 닫힘 때 해제한다.
       b.onkeydown = (event) => {
