@@ -804,7 +804,8 @@ export class UI {
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
-      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
+      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
+      lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
