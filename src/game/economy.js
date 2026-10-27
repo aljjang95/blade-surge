@@ -16,7 +16,7 @@ import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
-import { AVATAR_BY_ID } from '../data/avatars.js';
+import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
 import { skuGate } from '../data/shop-gates.js';
 import { THEMED_SETS } from '../data/items.js';
 import { createSeededRng } from '../shared/rng.js';
@@ -184,7 +184,7 @@ export class Economy {
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
-      inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
+      inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
@@ -359,6 +359,8 @@ export class Economy {
       const apply = (o, tier) => { b.atkPct += o.atk || 0; b.hpPct += o.hp || 0; b.crit += o.crit || 0; b.critDmg += o.critDmg || 0; b.ultGain += o.ultGain || 0; for (const pr of o.procs || []) if (!b.procs.includes(pr)) b.procs.push(pr); b.active.push({ set: S, tier, n }); };
       if (n >= 4) apply(S.four, 4); else if (n >= 2) apply(S.two, 2);
     }
+    // 아바타 풀셋 효과: 착용(장비 외형 표시와 무관)한 영웅만. 이동속도·줍기 범위 편의만이라 전투력 계산에는 들어가지 않는다.
+    b.avatar = avatarFullsetEffect(this.equippedAvatar(id));
     // 전설 수련 판(계정 공통): 공격·체력·방어·치명 몫은 모든 영웅에게 더한다. 키스톤 플래그는 b.legend.flags 로 전투가 읽는다.
     const leg = this.s.legend;
     if (leg && leg.rank > 0) {
@@ -1024,6 +1026,43 @@ export class Economy {
     if (!this.save()) { s.gems += avatar.price; s.avatars.owned.pop(); return { ok: false, reason: 'storage' }; }
     for (const f of this.listeners) f(this.s);
     return { ok: true };
+  }
+  /**
+   * 유료 풀셋 상품(avatar_fullset_<heroId>_v1) 지급 계약. BM 레인의 결제 확인 뒤 이 함수만 부른다.
+   * 반환 { ok, avatarId, already }. already 면 이미 소유(중복 지급 없음, 보상 처리는 BM 레인 몫).
+   * @param {string} heroId @param {{ avatarId?: string }} [opts]
+   */
+  grantAvatarFullset(heroId, { avatarId = AVATAR_PREMIUM_BY_HERO[heroId] } = {}) {
+    const avatar = AVATAR_BY_ID[avatarId];
+    if (!avatar || avatar.heroId !== heroId) return { ok: false, reason: 'not-ready' };
+    const s = this.s;
+    if (s.avatars.owned.includes(avatarId)) return { ok: true, avatarId, already: true };
+    s.avatars.owned.push(avatarId);
+    if (s.avatars.parts) delete s.avatars.parts[avatarId];
+    if (!this.save()) { s.avatars.owned.pop(); return { ok: false, reason: 'storage' }; }
+    this.emit(); return { ok: true, avatarId, already: false };
+  }
+  /**
+   * 이벤트·업적이 주는 아바타 부위 하나. 네 부위가 모이면 풀셋으로 바뀌어 소유된다.
+   * @param {string} avatarId @param {string} part
+   */
+  grantAvatarPart(avatarId, part) {
+    if (!AVATAR_BY_ID[avatarId] || !AVATAR_PARTS.includes(part)) return { ok: false, reason: 'avatar' };
+    const s = this.s;
+    if (s.avatars.owned.includes(avatarId)) return { ok: true, avatarId, complete: true, already: true };
+    const before = structuredClone(s.avatars);
+    const parts = s.avatars.parts || (s.avatars.parts = {});
+    const have = new Set(parts[avatarId] || []); have.add(part);
+    const complete = AVATAR_PARTS.every((p) => have.has(p));
+    if (complete) { delete parts[avatarId]; s.avatars.owned.push(avatarId); }
+    else parts[avatarId] = AVATAR_PARTS.filter((p) => have.has(p));
+    if (!this.save()) { s.avatars = before; return { ok: false, reason: 'storage' }; }
+    this.emit(); return { ok: true, avatarId, complete };
+  }
+  /** 모은 부위(풀셋 소유면 네 부위 전부). */
+  avatarParts(avatarId) {
+    if (this.s.avatars.owned.includes(avatarId)) return [...AVATAR_PARTS];
+    return [...(this.s.avatars.parts?.[avatarId] || [])];
   }
   /** @param {string} heroId @param {string|null} [id] */
   equipAvatar(heroId, id = null) {

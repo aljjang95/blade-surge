@@ -10,7 +10,7 @@ import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { resolveCampaignTown } from '../data/campaign-towns.js';
 import { normalizeRegionGate } from './region-dungeon-gate.js';
-import { AVATAR_BY_ID } from '../data/avatars.js';
+import { AVATAR_BY_ID, AVATAR_PARTS } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
@@ -133,7 +133,14 @@ export function normalizeSave(raw, fresh) {
   }
   const showGear = {};
   for (const [heroId, on] of Object.entries(record(raw.avatars?.showGear) ? raw.avatars.showGear : {})) if (Object.hasOwn(HEROES, heroId) && on === true) showGear[heroId] = true;
-  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear };
+  // 모으는 중인 부위: 알려진 아바타·부위만, 풀셋 소유분과 네 부위가 다 찬 비정상 값은 버린다(부위만으로 소유를 만들지 않는다).
+  const parts = {};
+  for (const [avatarId, list] of Object.entries(record(raw.avatars?.parts) ? raw.avatars.parts : {})) {
+    if (!AVATAR_BY_ID[avatarId] || ownedAvatars.includes(avatarId) || !Array.isArray(list)) continue;
+    const kept = AVATAR_PARTS.filter((part) => list.includes(part));
+    if (kept.length && kept.length < AVATAR_PARTS.length) parts[avatarId] = kept;
+  }
+  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear, parts };
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
