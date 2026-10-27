@@ -181,7 +181,8 @@ ${foot}
 }
 
 /** 생성물을 디스크에 쓴다. public/news(폴더 전체가 생성물)는 매번 새로 만든다. */
-export function writeNews({ root = ROOT, items = readNews(path.join(root, 'content/news')) } = {}) {
+// bundle=false: 배포 빌드(vite 플러그인)는 공개 산출물만 다시 만든다. 커밋된 src/data/news-bundle.json 은 바꾸지 않는다(빌드 중 추적 파일 수정 → dirty 방지).
+export function writeNews({ root = ROOT, items = readNews(path.join(root, 'content/news')), bundle = true } = {}) {
   const publicDir = path.join(root, 'public');
   const newsDir = path.join(publicDir, 'news');
   fs.rmSync(newsDir, { recursive: true, force: true });
@@ -195,10 +196,11 @@ export function writeNews({ root = ROOT, items = readNews(path.join(root, 'conte
   fs.writeFileSync(path.join(newsDir, 'index.html'), renderIndexPage(ordered));
   const json = buildNewsJson(ordered);
   fs.writeFileSync(path.join(publicDir, 'news.json'), `${JSON.stringify(json)}\n`);
-  const bundle = buildNewsBundle(ordered);
-  const bundlePath = path.join(root, 'src/data/news-bundle.json');
-  fs.mkdirSync(path.dirname(bundlePath), { recursive: true });
-  fs.writeFileSync(bundlePath, `${JSON.stringify(bundle, null, 1)}\n`);
+  if (bundle) {
+    const bundlePath = path.join(root, 'src/data/news-bundle.json');
+    fs.mkdirSync(path.dirname(bundlePath), { recursive: true });
+    fs.writeFileSync(bundlePath, `${JSON.stringify(buildNewsBundle(ordered), null, 1)}\n`);
+  }
   return { items: ordered.length, version: json.version };
 }
 

@@ -295,3 +295,26 @@ describe('게임 안 소식 상태(news-state)', () => {
     expect(articleHref('a-1', 'https://blade.tllhouse.com')).toBe('https://blade.tllhouse.com/news/a-1/');
   });
 });
+
+describe('리뷰 반영: 배포 빌드·오프라인 묶음', () => {
+  test('기본 오프라인 묶음은 정적 import라 네트워크 없이 바로 쓴다(리뷰 P2)', async () => {
+    const { loadNews } = await import('../src/ui/news-state.js');
+    const offline = await loadNews({ fetchImpl: (async () => { throw new Error('offline'); }) as any });
+    expect(offline.source).toBe('bundle');
+    expect(offline.items.length).toBeGreaterThan(0);
+  });
+  test('vite 빌드 플러그인이 소식을 생성한다(배포 컨트롤러는 vite를 직접 부른다, 리뷰 P2)', () => {
+    const cfg = readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8');
+    expect(cfg).toContain("name: 'build-news'");
+    expect(cfg).toContain('writeNews({ bundle: false })');
+  });
+  test('bundle:false는 커밋된 묶음을 건드리지 않고 공개 산출물만 만든다', () => {
+    const root = mkdtempSync(join(tmpdir(), 'news-'));
+    try {
+      mkdirSync(join(root, 'public'), { recursive: true });
+      writeNews({ root, items: readNews(), bundle: false });
+      expect(existsSync(join(root, 'public/news.json'))).toBe(true);
+      expect(existsSync(join(root, 'src/data/news-bundle.json'))).toBe(false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+});

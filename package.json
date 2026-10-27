@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node tools/build-news.mjs && vite --host",
-    "build": "node tools/build-news.mjs && vite build && node tools/write-version.mjs",
+    "build": "vite build && node tools/write-version.mjs",
     "news": "node tools/build-news.mjs",
     "news:draft": "node tools/patch-notes.mjs",
     "typecheck": "tsc --noEmit",

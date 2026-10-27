@@ -4,11 +4,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { optimizeDist } from './tools/optimize/optimize-dist.mjs';
 import { writeAssetManifests } from './tools/optimize/asset-split.mjs';
+import { writeNews } from './tools/build-news.mjs';
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 const scratchRoot = path.resolve(projectRoot, 'work');
 let assetOutDir = '', assetChannel = 'web';
 export default defineConfig({
   plugins: [{
+    // 소식 공개 산출물(public/news.json·public/news/**)은 gitignore 생성물이라 모든 빌드(배포 컨트롤러의 직접 vite build 포함)가 먼저 만든다.
+    name: 'build-news', apply: 'build',
+    buildStart() { writeNews({ bundle: false }); },
+  }, {
     // 공개 소스(public/, asset-library/)는 그대로 두고 산출물 사본에서만 미사용 자산을 빼고 GLB·WebP 를 줄인다(tools/optimize).
     name: 'optimize-shipped-assets', apply: 'build', enforce: 'post',
     configResolved(config) { assetOutDir = path.resolve(config.root, config.build.outDir); assetChannel = ['googleplay', 'onestore', 'apps-in-toss'].includes(config.mode) ? config.mode : 'web'; },

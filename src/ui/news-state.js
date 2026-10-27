@@ -1,5 +1,6 @@
 // 게임 안 '소식' 패널의 상태 규칙(DOM 없음): 읽은 글 기억, 불러오기(네트워크 → 오프라인 묶음), 탭별 행 만들기.
 // 게임 세이브 스키마는 건드리지 않고 UI 전용 localStorage 키 하나만 쓴다(저장소가 막혀도 이번 접속에서만 기억한다).
+import NEWS_BUNDLE from '../data/news-bundle.json';
 import { NEWS_ID_PATTERN, filterNews, normalizeNewsList, sortNews, unreadIds } from '../shared/news-core.js';
 
 export const NEWS_LAST_READ_KEY = 'blade-surge:news:last-read:v1';
@@ -33,7 +34,7 @@ export function writeLastRead(id, storage = defaultStorage()) {
  * @param {{ fetchImpl?: typeof fetch, url?: string, timeoutMs?: number, loadBundle?: () => Promise<unknown> }} [options]
  * @returns {Promise<{ items: any[], source: 'network' | 'bundle' | 'none', version: string | null }>}
  */
-export async function loadNews({ fetchImpl = globalThis.fetch?.bind(globalThis), url = '/news.json', timeoutMs = NEWS_FETCH_TIMEOUT_MS, loadBundle = async () => (await import('../data/news-bundle.json')).default } = {}) {
+export async function loadNews({ fetchImpl = globalThis.fetch?.bind(globalThis), url = '/news.json', timeoutMs = NEWS_FETCH_TIMEOUT_MS, loadBundle = async () => NEWS_BUNDLE } = {}) {
   let timer = 0;
   try {
     if (typeof fetchImpl !== 'function') throw new Error('fetch 없음');
