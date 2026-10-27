@@ -167,3 +167,6 @@
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-copy small { display: inline; font-size: 12px; color: #dbeaf5; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-mark { flex: none; width: 28px; height: 28px; font-size: 16px; }
 #pause-overlay .pause-btns .companion-launcher > .companion-link-dot { display: inline-block; }
+.danger-zone .danger-confirm textarea, .danger-zone .danger-confirm input[type="text"] { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 10px; border: 1px solid #d26a6a99; border-radius: 8px; background: #1b1213; color: #f6dede; font-size: 13px; }
+.danger-zone .danger-confirm textarea[hidden] { display: none; }
+.danger-zone .danger-confirm-btns .btn:disabled { opacity: .45; }

@@ -29,6 +29,7 @@ import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 import { runStarterSelect } from './ui/starter-select.js';
+import { clearRestartKeys } from './ui/restart-progress.js';
 import { createCompanion } from './companion/bootstrap.ts';
 import { ExpeditionEconomy } from './game/expedition-economy.js';
 import { buildExpeditionStage } from './game/expedition-combat.js';
@@ -406,17 +407,23 @@ class App {
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
+  /**
+   * 처음부터 다시 시작. 서버 권한 계정은 서버 진행이 정본이라 이 기기에서 지우지 않는다(소셜 게스트 신원·결제 대기·화면 설정도 유지).
+   * 결제 원장·권한은 새 저장에 남기고 서버 영수증 재검증이 맞춘다.
+   */
   resetProgress() {
-    if (this.stageStarting) return false;
+    if (this.stageStarting || this.account?.authority === 'server') return false;
     const companionReset = this.companionAgent?.reset() ?? true;
-    const gameReset = this.eco.reset();
+    let keysCleared = true;
+    try { keysCleared = clearRestartKeys(window.localStorage); } catch { keysCleared = false; }
+    const gameReset = this.eco.reset({ keepEntitlements: true });
     if (gameReset) {
       this.funnel.clear();
       this.funnel.track('first_run');
       this.funnel.track('session_start');
     }
     this.toLobby();
-    return companionReset && gameReset;
+    return companionReset && gameReset && keysCleared;
   }
   async startStage(stage) {
     if (this.store?.busy) return false;

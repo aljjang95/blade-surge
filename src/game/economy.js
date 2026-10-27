@@ -28,6 +28,7 @@ import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
 
 const KEY = 'bladesurge_save_v1';
+export const SAVE_STORAGE_KEY = KEY;
 const IAP_APPLIED_MAX = 300;
 // 서버가 준 opId만 받는다(길이·문자 제한). 이 밖의 값은 무시한다.
 const validOpId = (v) => typeof v === 'string' && v.length >= 1 && v.length <= 200;
@@ -229,11 +230,21 @@ export class Economy {
       this._lastGoodSave = raw; this.storageStatus = 'ready'; this.hasStoredSave = true; return true;
     } catch { this.s.paidGems = paidBefore; this.storageStatus = 'unavailable'; return false; }
   }
-  reset() {
+  /** 처음부터 다시 시작해도 남기는 결제 원장·권한 필드. 지우면 영수증 재검증이 같은 결제를 다시 지급할 수 있다. */
+  static ENTITLEMENT_FIELDS = ['iapApplied', 'adsRemoved', 'purchases', 'spentKRW', 'vip', 'vipUntil', 'monthlyUntil', 'monthlyClaimed', 'paidGems', 'firstPurchaseUsed'];
+  reset({ keepEntitlements = false } = {}) {
     let cleared = true;
     try { for (const key of [KEY, KEY + '_backup', KEY + '_recovery']) this.storage.removeItem(key); }
     catch { cleared = false; }
-    this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
+    const previous = this.s;
+    this.s = this.fresh();
+    if (keepEntitlements && previous) {
+      for (const field of Economy.ENTITLEMENT_FIELDS) if (previous[field] !== undefined) this.s[field] = structuredClone(previous[field]);
+      if (Array.isArray(previous.roster?.paid)) this.s.roster.paid = [...previous.roster.paid];
+    }
+    this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
+    // 남긴 결제 권한은 새로 읽을 저장이 있어야 재시작 뒤에도 유지된다.
+    if (keepEntitlements) cleared = this.save() !== false && cleared;
     return cleared && this.storageStatus === 'ready';
   }
   rollbackEnergy(snapshot) {
