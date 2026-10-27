@@ -23,7 +23,7 @@ const _v = new THREE.Vector3();
 const EARLY = ['frenzy', 'splitting', 'volatile', 'warding'];
 export function pickAffixes(roomId, stageIdx, st, ordinal = 0, eliteRoom = false) {
   const pool = st <= 2 ? EARLY : ORDER;
-  const count = st >= 4 || (eliteRoom && st >= 3) ? 2 : 1;
+  const count = st >= 6 || (eliteRoom && st >= 5) ? 2 : 1;
   const a = ((roomId * 7 + stageIdx * 3 + ordinal * 5) % pool.length + pool.length) % pool.length;
   const out = [pool[a]];
   if (count > 1) out.push(pool[(a + 1 + (stageIdx % (pool.length - 1))) % pool.length]);

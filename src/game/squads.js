@@ -31,7 +31,7 @@ const FALLBACK = { tank: ['line'], support: ['ranged', 'line'], ranged: ['line']
 
 /** 분대 틀. key 는 이 분대가 성립하려면 반드시 있어야 하는 역할이다. */
 export const SQUADS = {
-  vanguard: { name: '방패 전열', key: 'tank', slots: ['tank', 'tank', 'line', 'line', 'ranged'], hint: '방패는 정면을 막습니다. 옆·뒤로 돌거나 마무리 타격으로 가드를 깨세요.' },
+  vanguard: { name: '방패 전열', key: 'tank', slots: ['tank', 'line', 'line', 'ranged', 'tank'], hint: '방패는 정면을 막습니다. 옆·뒤로 돌거나 마무리 타격으로 가드를 깨세요.' },
   artillery: { name: '포격진', key: 'ranged', need: 2, slots: ['tank', 'ranged', 'ranged', 'line', 'ranged'], hint: '뒷줄 원거리부터 노리세요. 방패병을 돌아 들어가면 사격이 멎습니다.' },
   ritual: { name: '주술 의식', key: 'support', slots: ['support', 'line', 'line', 'tank', 'line'], hint: '녹색 고리의 주술사가 치유하고 소환합니다. 먼저 쓰러뜨리세요.' },
   ambush: { name: '매복', key: 'ambush', slots: ['ambush', 'ambush', 'line', 'ambush', 'line'], hint: '땅이 갈라지는 원에서 솟구칩니다. 원 밖으로 비킨 뒤 솟은 직후의 무방비를 치세요.' },
@@ -96,7 +96,7 @@ export function composeRoom(R, st, roomId, stageIdx, n, { featuredRoom = false }
   const featuredTheme = featuredRole && avail.find(([, s]) => s.key === featuredRole)?.[0];
   const theme = featuredRoom && featuredTheme ? featuredTheme : avail.length ? pick(hash(roomId, stageIdx, 1)) : 'rabble';
   const secondary = avail.length > 1 ? pick(hash(roomId, stageIdx, 2), theme) : 'rabble';
-  const squads = Math.max(1, Math.min(5, Math.round(n / 5)));
+  const squads = Math.max(1, Math.min(5, Math.round(n / 4)));
   const turn = {}, list = [], squadOf = [], roles = [];
   const choose = (role) => {
     for (const r of [role, ...(FALLBACK[role] || []), 'line']) {

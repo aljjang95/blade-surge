@@ -41,11 +41,13 @@ test('pickAffixes: 결과 키는 모두 ELITE_AFFIXES 안에 있다', () => {
   }
 });
 
-test('pickAffixes: 4단계 미만 일반방은 1개, 4단계 이상 또는 3단계 이상 정예방은 서로 다른 2개, 1~2단계는 읽기 쉬운 접두사만', () => {
+test('pickAffixes: 6단계 미만 일반방은 1개, 6단계 이상 또는 5단계 이상 정예방은 서로 다른 2개, 1~2단계는 읽기 쉬운 접두사만', () => {
   for (let r = 0; r < 20; r++) for (let s = 0; s < 6; s++) {
     expect(pickAffixes(r, s, 3, 0, false).length).toBe(1);
+    expect(pickAffixes(r, s, 5, 0, false).length).toBe(1);
+    expect(pickAffixes(r, s, 4, 0, true).length).toBe(1);
     expect(pickAffixes(r, s, 1, 2, false).length).toBe(1);
-    for (const out of [pickAffixes(r, s, 4, 0, false), pickAffixes(r, s, 9, 1, false), pickAffixes(r, s, 3, 0, true)]) {
+    for (const out of [pickAffixes(r, s, 6, 0, false), pickAffixes(r, s, 9, 1, false), pickAffixes(r, s, 5, 0, true)]) {
       expect(out.length).toBe(2);
       expect(out[0]).not.toBe(out[1]);
     }

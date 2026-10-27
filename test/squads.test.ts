@@ -90,7 +90,7 @@ test('composeRoom: 크기·분대 수·곡선 안의 종·결정성', () => {
         const r = composeRoom(R, st, 7, 4, n);
         expect(r.list.length).toBe(n);
         expect(r.squadOf.length).toBe(n);
-        expect(new Set(r.squadOf).size).toBe(Math.max(1, Math.min(5, Math.round(n / 5))));
+        expect(new Set(r.squadOf).size).toBe(Math.max(1, Math.min(5, Math.round(n / 4))));
         for (const id of r.list) expect(allowed).toContain(id);
         expect(composeRoom(R, st, 7, 4, n)).toEqual(r);
       }
