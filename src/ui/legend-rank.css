@@ -37,18 +37,18 @@
 .lg-tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 44px; min-width: 44px; padding: 2px 4px; cursor: pointer;
   border: 2px solid transparent; border-radius: 12px; color: var(--sb-cream); line-height: 1.1;
-  background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
+  background: linear-gradient(var(--sb-night), var(--sb-night)) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
 }
 .lg-tab.is-on { background: linear-gradient(180deg, var(--sb-teal), var(--sb-night)) padding-box, var(--sb-frame) border-box; box-shadow: 0 0 10px color-mix(in srgb, var(--sb-gold) 55%, transparent); }
 .lg-tab-name { font-family: var(--disp); font-size: clamp(13px, 1.9vw, 20px); color: var(--sb-gold); }
 .lg-tab-sub { font-size: clamp(10px, 1.2vw, 13px); font-weight: 800; color: var(--sb-cream); font-variant-numeric: tabular-nums; }
 .lg-branch-sub { flex: 0 0 auto; margin: 0; font-size: clamp(10px, 1.3vw, 14px); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lg-branch-sub b { color: var(--sb-cream); }
-.lg-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(60px, 1fr); gap: 6px; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
+.lg-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(64px, 108px); align-content: start; gap: 6px; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
 .lg-node {
   position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 2px; min-width: 0; min-height: 60px; padding: 5px 7px; cursor: pointer; text-align: left;
   border: 2px solid transparent; border-radius: 12px; color: var(--sb-cream);
-  background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
+  background: linear-gradient(var(--sb-night), var(--sb-night)) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box;
 }
 .lg-node.has-points { background: linear-gradient(180deg, color-mix(in srgb, var(--sb-teal-lo) 85%, transparent), var(--sb-night)) padding-box, var(--sb-frame) border-box; }
 .lg-node.is-selected { transform: scale(1.03); box-shadow: 0 0 0 2px var(--sb-gold-hi), 0 0 16px color-mix(in srgb, var(--sb-gold) 70%, transparent); }
@@ -87,7 +87,7 @@
 #meta .gx-layer .lg-tab, #meta .gx-layer .lg-node { font-size: inherit; }
 @media (max-height: 460px) {
   .lg-card { gap: 4px; padding: 0 6px 6px; }
-  .lg-grid { gap: 4px; grid-auto-rows: minmax(54px, 1fr); }
+  .lg-grid { gap: 4px; grid-auto-rows: minmax(54px, 100px); }
   .lg-node { min-height: 54px; padding: 3px 6px; gap: 1px; }
   .lg-node-stat { display: none; }
   .lg-detail { gap: 4px; padding: 6px 8px; }

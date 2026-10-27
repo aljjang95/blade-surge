@@ -18,6 +18,7 @@
 .oath-visual .ss-dialog .ss-diff-close, .ss-dialog .ss-diff-close { flex: none; min-height: 44px; min-width: 76px; margin: 0; padding: 0 16px; border: 2px solid #ffd79a; border-radius: 22px; background: linear-gradient(180deg, #ffb24f, #d96a17); color: #fff; font-size: 16px; font-weight: 800; text-shadow: 0 1px 0 rgba(90, 30, 0, .7); }
 @media (orientation: landscape) and (max-height: 430px) {
   .ss-region { padding: 0 8px 0 10px; }
+  .ss-diff-label { display: none; }
   .oath-visual .ss-dialog .ss-diff-open, .ss-dialog .ss-diff-open { padding: 0 10px; gap: 4px; }
   .ss-diff { gap: 4px; padding: 6px 8px 8px; }
 }

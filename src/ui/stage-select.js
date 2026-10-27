@@ -480,7 +480,7 @@ export class StageSelectUI {
     } else {
       if (entry.kind === 'campaign') {
         this.detailName.textContent = `${entry.code}  ${entry.title}`;
-        this.detailTag.textContent = entry.tormentTier ? `고통 T${entry.tormentTier}` : entry.midboss || entry.regionBoss ? entry.rankLabel : entry.recommended ? '추천' : entry.cleared ? `★${entry.stars}` : '';
+        this.detailTag.textContent = entry.midboss || entry.regionBoss ? entry.rankLabel : entry.recommended ? '추천' : entry.cleared ? `★${entry.stars}` : '';
         this.detailLevel.textContent = `추천 레벨 Lv.${entry.recommendedLevel}`;
         this.detailLevel.dataset.tone = entry.levelTone;
       } else {
