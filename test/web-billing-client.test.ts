@@ -132,7 +132,7 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     expect((await t.hp.buy('gems_300_v1')).reason).toBe('unknown-product'); // 보석 팩은 웹에서 팔지 않는다(Play 단독)
     expect((await t.hp.buy('starter_pack_v1')).reason).toBe('not-eligible'); // 즉시 지급형은 웹 상품이라 서버까지 간다
     expect((await t.hp.buy(42 as any)).reason).toBe('unknown-product');
-    expect(t.calls).toHaveLength(1);
+    expect(t.calls).toHaveLength(2);
     const off = rig({ intent: apiErr(503, 'web-billing-disabled') });
     await off.hp.init();
     expect((await off.hp.buy('hero_knight_v1')).reason).toBe('billing-disabled');
