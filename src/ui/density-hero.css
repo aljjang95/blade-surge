@@ -36,8 +36,12 @@
   .hs-go .btn small { font-size: 11px; line-height: 1.1; }
   .hs-go .hs-on { font-size: 11px; }
 
-  /* 캐시 아바타 줄: 설명 없이 버튼 세 개만 한 줄. 동작·문구·가격은 그대로. */
-  .hero-avatar-row > div { display: none; }
+  /* 캐시 아바타 줄: 버튼 세 개를 한 줄에. 보석 가격 버튼이 무엇을 사는지 알 수 있게 '캐시 아바타 · 착용 중/보유' 제목은
+     착용 모습 칸 아래 가장자리에 작은 띠로 남기고 설명 small 줄만 숨긴다. 동작·문구·가격은 그대로. */
+  #tab-heroes:not(.lock-view) .hero-avatar-row { position: relative; }
+  .hero-avatar-row > div { position: absolute; left: 6px; bottom: calc(100% + 2px); display: block; padding: 1px 6px; border-radius: 6px; background: rgba(6, 30, 50, .72); pointer-events: none; }
+  .hero-avatar-row > div b { font-size: 11px; line-height: 1.3; white-space: nowrap; }
+  .hero-avatar-row > div small { display: none; }
   .hero-avatar-buttons { flex: 1 1 auto; flex-wrap: nowrap; justify-content: space-between; gap: 4px; margin: 0; width: 100%; }
   .hero-avatar-row .btn { flex: 1 1 auto; min-width: var(--ui-tap); min-height: var(--ui-tap); padding: 2px 6px; font-size: 12px; line-height: 1.1; white-space: nowrap; }
   .hero-avatar-row .btn .ic { display: inline-block; vertical-align: middle; margin-right: 2px; }
