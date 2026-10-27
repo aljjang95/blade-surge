@@ -11,7 +11,7 @@ const regen = new Set(readFileSync(opt('regen'), 'utf8').split('\n').map(s => s.
 const receipt = opt('receipt') ? JSON.parse(readFileSync(opt('receipt'), 'utf8')) : { files: {}, calls: 0 };
 const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 
-const voices = Object.fromEntries(Object.entries(VOICES).map(([owner, v]) => [owner, { id: v.id, ref: v.ref, refSha256: sha(v.ref), refText: v.refText }]));
+const voices = Object.fromEntries(Object.entries(VOICES).map(([owner, v]) => [owner, v.referenceId ? { id: v.id, referenceId: v.referenceId, label: v.label } : { id: v.id, ref: v.ref, refSha256: sha(v.ref), refText: v.refText }]));
 const files = ALL_LINES.map(line => {
   const path = `${VOICE_DIR}/${line.file}.mp3`;
   const a = asr[line.file];

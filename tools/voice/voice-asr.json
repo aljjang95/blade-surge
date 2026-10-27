@@ -832,5 +832,89 @@
   "p": 0.99,
   "text": "돌아왔군, 전사여! 끝없는 성이 기다린다!",
   "dur": 3.63
+ },
+ "boss_c1_fin_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "아무도 있지 않게 가둔다",
+  "dur": 2.25
+ },
+ "boss_c1_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "다시는 보내지 않는다.",
+  "dur": 1.46
+ },
+ "boss_c2_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "불이 꺼지면 다 죽는다",
+  "dur": 1.54
+ },
+ "boss_c2_mid_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "살아 돌아와라",
+  "dur": 1.88
+ },
+ "boss_c3_fin_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "쓰지 않은 내일도 지킨다",
+  "dur": 2.25
+ },
+ "boss_c3_mid_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "읽히지 않으면 안전하다.",
+  "dur": 1.96
+ },
+ "boss_c4_fin_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "다시는 잃지 않는다!",
+  "dur": 1.23
+ },
+ "boss_c4_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "불빛을 따라와 제발",
+  "dur": 2.9
+ },
+ "boss_c5_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "바쳐라. 그러면 끝난다.",
+  "dur": 2.9
+ },
+ "boss_c5_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "한 사람이면 모두가 산다",
+  "dur": 2.14
+ },
+ "boss_c6_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "혼자 남아라. 그게 명령이다.",
+  "dur": 2.25
+ },
+ "boss_c6_mid_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "누구를 안 치겠는가",
+  "dur": 1.78
+ },
+ "boss_c7_fin_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "모두 같은 박자로 올려라",
+  "dur": 2.14
+ },
+ "boss_c7_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "이문은 내가 닿는다",
+  "dur": 1.65
  }
 }

@@ -30,7 +30,9 @@ const attempt = Number(opt('attempt') || 0);
 const only = opt('only')?.split(',');
 const owner = opt('owner');
 let targets = ALL_LINES.filter(l => !REFERENCE_FILES.has(l.file));
-if (only) targets = ALL_LINES.filter(l => only.includes(l.file));
+const prefix = opt('prefix');
+if (prefix) targets = ALL_LINES.filter(l => l.file.startsWith(prefix));
+else if (only) targets = ALL_LINES.filter(l => only.includes(l.file));
 else if (owner) targets = targets.filter(l => l.owner === owner);
 else if (!args.includes('--all')) { console.error('need --only, --owner or --all'); process.exit(2); }
 for (const l of targets) if (REFERENCE_FILES.has(l.file)) { console.error('reference clip cannot be regenerated: ' + l.file); process.exit(2); }
@@ -40,12 +42,13 @@ if (!base) { console.error('APEX_CLOUD_URL not set'); process.exit(2); }
 mkdirSync(outdir, { recursive: true });
 const refCache = {};
 const refOf = v => (refCache[v.ref] ??= readFileSync(v.ref));
+const voiceFields = v => v.referenceId ? { reference_id: v.referenceId } : { references: [{ audio: refOf(v), text: v.refText }] };
 const receiptPath = join(outdir, 'gen-receipt.json');
 const receipt = existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, 'utf8')) : { model: FISH_MODEL, endpoint: '/p/fish/v1/tts via Cloud TLL proxy', postProcessing: 'none', format: 'mp3', calls: 0, files: {} };
 for (const line of targets) {
   const voice = VOICES[line.owner];
   const temperature = [0.7, 0.55, 0.85, 0.4][attempt % 4];
-  const body = pack({ text: `[${line.emotion}] ${line.text}`, references: [{ audio: refOf(voice), text: voice.refText }], format: 'mp3', normalize: false, latency: 'balanced', temperature, top_p: 0.7 });
+  const body = pack({ text: `[${line.emotion}] ${line.text}`, ...voiceFields(voice), format: 'mp3', normalize: false, latency: 'balanced', temperature, top_p: 0.7 });
   let ok = false;
   for (let tries = 0; tries < 3 && !ok; tries++) {
     const res = await fetch(`${base}/p/fish/v1/tts`, { method: 'POST', headers: { 'content-type': 'application/msgpack', model: FISH_MODEL, 'user-agent': 'curl/8.5' }, body });

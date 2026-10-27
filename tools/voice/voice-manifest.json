@@ -5,7 +5,7 @@
  "endpoint": "Cloud TLL proxy /p/fish/v1/tts (ICL references, format=mp3)",
  "postProcessing": "none",
  "billing": "무료 티어(s2.1-pro-free). 유료 s2.1-pro 는 API 크레딧 0 으로 402",
- "fishCalls": 155,
+ "fishCalls": 172,
  "voices": {
   "knight": {
    "id": "fish-icl:hero-knight",
@@ -60,6 +60,76 @@
    "ref": "tools/voice/refs/boss_dragon.mp3",
    "refSha256": "36998872b9d9bb4307ce8a8beaa651177ee5bd6a3a93c627cb8a949c1e6354d3",
    "refText": "A thousand years I have slept… and you wake me for THIS?"
+  },
+  "boss_c1_mid": {
+   "id": "fish-lib:a9574d6184714eac96a0a892b719289f",
+   "referenceId": "a9574d6184714eac96a0a892b719289f",
+   "label": "세렌 세렌(남)"
+  },
+  "boss_c1_fin": {
+   "id": "fish-lib:bb07cfc53e0f4e3d91ee823a825c35d4",
+   "referenceId": "bb07cfc53e0f4e3d91ee823a825c35d4",
+   "label": "에일른 에일른(남·노년)"
+  },
+  "boss_c2_mid": {
+   "id": "fish-lib:7b0e100da67d49ad81bd63a407d2f964",
+   "referenceId": "7b0e100da67d49ad81bd63a407d2f964",
+   "label": "이그란 이그란(남·노년)"
+  },
+  "boss_c2_fin": {
+   "id": "fish-lib:fa7d528141974d3ba794e4482b153dc6",
+   "referenceId": "fa7d528141974d3ba794e4482b153dc6",
+   "label": "발드 발드(남)"
+  },
+  "boss_c3_mid": {
+   "id": "fish-lib:73da877014f349c0ad3eb136c7f1a0c7",
+   "referenceId": "73da877014f349c0ad3eb136c7f1a0c7",
+   "label": "오르딘 오르딘(남)"
+  },
+  "boss_c3_fin": {
+   "id": "fish-lib:2f06c7a428e9431fadd60af4dfe91763",
+   "referenceId": "2f06c7a428e9431fadd60af4dfe91763",
+   "label": "이셀 이셀(여)"
+  },
+  "boss_c4_mid": {
+   "id": "fish-lib:ff2945cbfd274c85b440bd39d8cb3729",
+   "referenceId": "ff2945cbfd274c85b440bd39d8cb3729",
+   "label": "마렌 마렌(여)"
+  },
+  "boss_c4_fin": {
+   "id": "fish-lib:d4c65d5860504eb197b6943c3ff0f289",
+   "referenceId": "d4c65d5860504eb197b6943c3ff0f289",
+   "label": "네레이스 네레이스(남)"
+  },
+  "boss_c5_mid": {
+   "id": "fish-lib:29da56534ac84ccd81092be4359a1639",
+   "referenceId": "29da56534ac84ccd81092be4359a1639",
+   "label": "아스텔 아스텔(남)"
+  },
+  "boss_c5_fin": {
+   "id": "fish-lib:d5a885f492854e068d8a72e14c851771",
+   "referenceId": "d5a885f492854e068d8a72e14c851771",
+   "label": "빈 왕관 빈 왕관(무성·낮게)"
+  },
+  "boss_c6_mid": {
+   "id": "fish-lib:ddda1d00f3684054a7e971b2dde89b5f",
+   "referenceId": "ddda1d00f3684054a7e971b2dde89b5f",
+   "label": "빈 의자의 증인 빈 의자의 증인(중성)"
+  },
+  "boss_c6_fin": {
+   "id": "fish-lib:9aae54921dd944948ee08d35f6b5f984",
+   "referenceId": "9aae54921dd944948ee08d35f6b5f984",
+   "label": "고립의 잔향 고립의 잔향(중성)"
+  },
+  "boss_c7_mid": {
+   "id": "fish-lib:061a013646d04f0297560d4354d595fd",
+   "referenceId": "061a013646d04f0297560d4354d595fd",
+   "label": "오르벤 오르벤(남)"
+  },
+  "boss_c7_fin": {
+   "id": "fish-lib:35856f20bd4a4896af91cee863519e6a",
+   "referenceId": "35856f20bd4a4896af91cee863519e6a",
+   "label": "카델 카델(남·거인)"
   }
  },
  "files": [
@@ -2561,6 +2631,272 @@
     "langProb": 0.98,
     "text": "천 년이 네 놈 손에 끝나는구나",
     "durationSec": 4.15
+   }
+  },
+  {
+   "file": "boss_c1_mid_appear",
+   "owner": "boss_c1_mid",
+   "voice": "fish-lib:a9574d6184714eac96a0a892b719289f",
+   "kind": "line",
+   "text": "다시는 보내지 않는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "97e272395f9c1d7b495f41cd37ad1377b5845dce26bcf3baf47067337892f437",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "다시는 보내지 않는다.",
+    "durationSec": 1.46
+   }
+  },
+  {
+   "file": "boss_c1_fin_appear",
+   "owner": "boss_c1_fin",
+   "voice": "fish-lib:bb07cfc53e0f4e3d91ee823a825c35d4",
+   "kind": "line",
+   "text": "아무도 잊지 않게, 가둔다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "4b03235ec3962b43c7f27e99785e014e403a0282109d92235e880ed6d58611c6",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "아무도 있지 않게 가둔다",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c2_mid_appear",
+   "owner": "boss_c2_mid",
+   "voice": "fish-lib:7b0e100da67d49ad81bd63a407d2f964",
+   "kind": "line",
+   "text": "살아 돌아와라…!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "9e59ea49a4d2070e987e3e67ca6421e31e6db471c20795c369feda1106c1bfa4",
+   "emotion": "sad",
+   "attempt": 1,
+   "temperature": 0.55,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "살아 돌아와라",
+    "durationSec": 1.88
+   }
+  },
+  {
+   "file": "boss_c2_fin_appear",
+   "owner": "boss_c2_fin",
+   "voice": "fish-lib:fa7d528141974d3ba794e4482b153dc6",
+   "kind": "line",
+   "text": "불이 꺼지면 다 죽는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0627aba70c47ed08d433b9cabea3413c8febcf4562ed3a3cd2b90aeba4ea803b",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "불이 꺼지면 다 죽는다",
+    "durationSec": 1.54
+   }
+  },
+  {
+   "file": "boss_c3_mid_appear",
+   "owner": "boss_c3_mid",
+   "voice": "fish-lib:73da877014f349c0ad3eb136c7f1a0c7",
+   "kind": "line",
+   "text": "읽히지 않으면 안전하다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "35df371f57fbf27b158554ec66186d0c667a775f5c85730435940bcded82c557",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "읽히지 않으면 안전하다.",
+    "durationSec": 1.96
+   }
+  },
+  {
+   "file": "boss_c3_fin_appear",
+   "owner": "boss_c3_fin",
+   "voice": "fish-lib:2f06c7a428e9431fadd60af4dfe91763",
+   "kind": "line",
+   "text": "쓰지 않은 내일도 지킨다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0e60fe7fbdb0a90fb1744ea97738ce8c0cdda834e1a5fcb95f697662751e660e",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "쓰지 않은 내일도 지킨다",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c4_mid_appear",
+   "owner": "boss_c4_mid",
+   "voice": "fish-lib:ff2945cbfd274c85b440bd39d8cb3729",
+   "kind": "line",
+   "text": "불빛을 따라와… 제발.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "20e783580877aeff333cdd157934ab97a6b45031f192c0046074c2f019a5a913",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "불빛을 따라와 제발",
+    "durationSec": 2.9
+   }
+  },
+  {
+   "file": "boss_c4_fin_appear",
+   "owner": "boss_c4_fin",
+   "voice": "fish-lib:d4c65d5860504eb197b6943c3ff0f289",
+   "kind": "line",
+   "text": "다시는 잃지 않는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "cfda4448b82f726d788d6f2c31e1490ca480ea84ba7ce62f0e4c7fb397911bbb",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "다시는 잃지 않는다!",
+    "durationSec": 1.23
+   }
+  },
+  {
+   "file": "boss_c5_mid_appear",
+   "owner": "boss_c5_mid",
+   "voice": "fish-lib:29da56534ac84ccd81092be4359a1639",
+   "kind": "line",
+   "text": "한 사람이면 모두가 산다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0df3335454811405625b91973fe4ec64db5734f5d863043cc134c6d46a051ee4",
+   "emotion": "tired",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "한 사람이면 모두가 산다",
+    "durationSec": 2.14
+   }
+  },
+  {
+   "file": "boss_c5_fin_appear",
+   "owner": "boss_c5_fin",
+   "voice": "fish-lib:d5a885f492854e068d8a72e14c851771",
+   "kind": "line",
+   "text": "바쳐라. 그러면 끝난다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "254027436ba7168e064262cee7c6269f4591d3167cadbe623dc3e5d1c9e9803a",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "바쳐라. 그러면 끝난다.",
+    "durationSec": 2.9
+   }
+  },
+  {
+   "file": "boss_c6_mid_appear",
+   "owner": "boss_c6_mid",
+   "voice": "fish-lib:ddda1d00f3684054a7e971b2dde89b5f",
+   "kind": "line",
+   "text": "누구를 앉히겠는가?",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "214d2b24f2a26787953292e3813f92bc7511b01b252f86b151ef4a9b72afed30",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "누구를 안 치겠는가",
+    "durationSec": 1.78
+   }
+  },
+  {
+   "file": "boss_c6_fin_appear",
+   "owner": "boss_c6_fin",
+   "voice": "fish-lib:9aae54921dd944948ee08d35f6b5f984",
+   "kind": "line",
+   "text": "혼자 남아라. 그게 명령이다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ff5dde3e567027967173c22544270c26d674b7bf685dda35a231a19c5a7f3782",
+   "emotion": "whispering",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "혼자 남아라. 그게 명령이다.",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c7_mid_appear",
+   "owner": "boss_c7_mid",
+   "voice": "fish-lib:061a013646d04f0297560d4354d595fd",
+   "kind": "line",
+   "text": "이 문은 내가 닫는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c5eb72de276f0cc9d75e61d032d85d585cd6383c9e0e3bf6c7376100005eccae",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "이문은 내가 닿는다",
+    "durationSec": 1.65
+   }
+  },
+  {
+   "file": "boss_c7_fin_appear",
+   "owner": "boss_c7_fin",
+   "voice": "fish-lib:35856f20bd4a4896af91cee863519e6a",
+   "kind": "line",
+   "text": "모두 같은 박자로 울려라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c1daa2c3022d0f43620982f8e45c2821f68a6d76915238b57dee305ca992ecad",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "모두 같은 박자로 올려라",
+    "durationSec": 2.14
    }
   }
  ]

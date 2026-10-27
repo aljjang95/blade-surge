@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { auditVoiceManifest } from '../tools/voice/voice-audit.mjs';
 import { HEROES } from '../src/data/heroes.js';
+import { existsSync } from 'node:fs';
+import { CHAPTER_LORE } from '../src/data/lore.js';
+import { bossAppearVoiceName } from '../src/engine/boss-voice.js';
 import { heroVoiceName } from '../src/engine/hero-voice.js';
 
 describe('보이스 통일 (직업별 한국어 한 목소리)', () => {
@@ -30,5 +33,17 @@ describe('보이스 통일 (직업별 한국어 한 목소리)', () => {
     expect(heroVoiceName('blackcat', 'atk')).toBe('hero_ranger_atk');
     expect(heroVoiceName('werewolf', 'ult')).toBe('hero_barbarian_ult');
     expect(stats.borrowers).toEqual({ blackcat: 'ranger', werewolf: 'barbarian' });
+  });
+
+  test('챕터 보스 14명의 등장 외침 파일이 있고 런타임이 그 파일을 고른다', () => {
+    let n = 0;
+    for (const row of CHAPTER_LORE) for (const rank of ['midboss', 'finalboss']) {
+      const name = bossAppearVoiceName({ ch: row.ch, encounter: { rank } }, 'boss_warlord');
+      expect(name).toMatch(/^boss_c\d_(mid|fin)_appear$/);
+      expect(existsSync(`public/sfx/voice/${name}.mp3`)).toBe(true);
+      n++;
+    }
+    expect(n).toBe(14);
+    expect(bossAppearVoiceName({ ch: 1, encounter: { rank: 'boss' } }, 'boss_warlord')).toBe('boss_warlord_appear');
   });
 });

@@ -4,6 +4,7 @@
 //   · 아나운서(공용 대사): tools/voice/refs/narrator.mp3 (기존 아나운서 목소리, Seed 캐스팅 원본).
 //   · 보스 3종: tools/voice/refs/boss_*.mp3 (보스별 한 목소리).
 import { HERO_LINES, HERO_IDS } from './ko-lines.mjs';
+import { CHAPTER_LORE } from '../../src/data/lore.js';
 
 export const VOICE_DIR = 'public/sfx/voice';
 export const FISH_MODEL = 's2.1-pro-free';   // Fish Audio S2.1 Pro 계열(무료 티어). 유료 s2.1-pro 는 크레딧 0 으로 402.
@@ -16,6 +17,31 @@ export const VOICES = {
   boss_demon: { id: 'fish-icl:boss-demon', ref: 'tools/voice/refs/boss_demon.mp3', refText: 'Ahh… your soul smells delicious. Come closer. Let me taste your fear.' },
   boss_dragon: { id: 'fish-icl:boss-dragon', ref: 'tools/voice/refs/boss_dragon.mp3', refText: 'A thousand years I have slept… and you wake me for THIS?' },
 };
+
+// 챕터 보스 14명(lore.js CHAPTER_LORE[].bosses): 보스마다 Fish 라이브러리 보이스 1개(reference_id) — 영웅·다른 보스와 겹치지 않는다.
+// 파일명 규칙: boss_c<장>_<mid|fin>_appear (런타임은 src/engine/boss-voice.js 가 `${키}_appear` 로 부른다).
+const CH_VOICE = {
+  'c1_mid': ['a9574d6184714eac96a0a892b719289f', 'sad', '세렌(남)'],
+  'c1_fin': ['bb07cfc53e0f4e3d91ee823a825c35d4', 'serious', '에일른(남·노년)'],
+  'c2_mid': ['7b0e100da67d49ad81bd63a407d2f964', 'sad', '이그란(남·노년)'],
+  'c2_fin': ['fa7d528141974d3ba794e4482b153dc6', 'angry', '발드(남)'],
+  'c3_mid': ['73da877014f349c0ad3eb136c7f1a0c7', 'serious', '오르딘(남)'],
+  'c3_fin': ['2f06c7a428e9431fadd60af4dfe91763', 'calm', '이셀(여)'],
+  'c4_mid': ['ff2945cbfd274c85b440bd39d8cb3729', 'sad', '마렌(여)'],
+  'c4_fin': ['d4c65d5860504eb197b6943c3ff0f289', 'angry', '네레이스(남)'],
+  'c5_mid': ['29da56534ac84ccd81092be4359a1639', 'tired', '아스텔(남)'],
+  'c5_fin': ['d5a885f492854e068d8a72e14c851771', 'serious', '빈 왕관(무성·낮게)'],
+  'c6_mid': ['ddda1d00f3684054a7e971b2dde89b5f', 'calm', '빈 의자의 증인(중성)'],
+  'c6_fin': ['9aae54921dd944948ee08d35f6b5f984', 'whispering', '고립의 잔향(중성)'],
+  'c7_mid': ['061a013646d04f0297560d4354d595fd', 'determined', '오르벤(남)'],
+  'c7_fin': ['35856f20bd4a4896af91cee863519e6a', 'serious', '카델(남·거인)'],
+};
+export const CHAPTER_BOSS_LINES = [];
+for (const row of CHAPTER_LORE) for (const [rank, tag] of [['midboss', 'mid'], ['finalboss', 'fin']]) {
+  const key = `c${row.ch}_${tag}`, [referenceId, emotion] = CH_VOICE[key];
+  VOICES[`boss_${key}`] = { id: `fish-lib:${referenceId}`, referenceId, label: `${row.bosses[rank].name} ${CH_VOICE[key][2]}` };
+  CHAPTER_BOSS_LINES.push({ file: `boss_${key}_appear`, owner: `boss_${key}`, text: row.bosses[rank].shout, emotion, kind: 'line' });
+}
 
 const L = (file, owner, text, emotion, kind = 'line') => ({ file, owner, text, emotion, kind });
 
@@ -63,6 +89,6 @@ export const BOSS_LINES = Object.entries(BOSS).flatMap(([boss, lines]) => Object
 export const HERO_FILE_LINES = HERO_IDS.flatMap(id => HERO_LINES[id].lines
   .map(({ id: key, text, emotion, kind }) => L(`hero_${id}_${key}`, id, text, emotion, kind)));
 
-export const ALL_LINES = [...HERO_FILE_LINES, ...ANNOUNCER_LINES, ...BOSS_LINES];
+export const ALL_LINES = [...HERO_FILE_LINES, ...ANNOUNCER_LINES, ...BOSS_LINES, ...CHAPTER_BOSS_LINES];
 // 참조 클립이므로 재생성 금지.
 export const REFERENCE_FILES = new Set(HERO_IDS.map(id => `hero_${id}_select`));

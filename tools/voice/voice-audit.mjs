@@ -30,7 +30,7 @@ export function auditVoiceManifest({ manifestPath = 'tools/voice/voice-manifest.
   for (const [owner, v] of Object.entries(VOICES)) {
     const m = manifest.voices[owner];
     if (!m || m.id !== v.id) err(`소유자 ${owner}: 매니페스트 목소리 id 불일치`);
-    else if (m.refSha256 !== sha(v.ref)) err(`소유자 ${owner}: 레퍼런스 클립 ${v.ref} 가 바뀌었다(해시 불일치)`);
+    else if (v.ref && m.refSha256 !== sha(v.ref)) err(`소유자 ${owner}: 레퍼런스 클립 ${v.ref} 가 바뀌었다(해시 불일치)`);
   }
   const voicesByOwner = {};
   const stats = { files: 0, english: 0, nonKorean: 0, asrChecked: 0, asrNonKorean: 0, regenerated: 0, kept: 0, owners: {} };
