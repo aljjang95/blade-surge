@@ -512,3 +512,49 @@ describe('Play 흐름 하위호환', () => {
     expect(it.body.obfuscatedAccountId).toMatch(/^[0-9a-f]{48}$/);
   });
 });
+
+describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바타 풀셋', () => {
+  // 판매 전 상품(웹 30일권·성장 패키지·아바타)은 이 블록 안에서만 켰다가 원복한다(카탈로그 기본값은 enabled:false).
+  const LATER = ['monthly_pass_v1', 'growth_pack_v1', 'avatar_fullset_knight_v1'].map((id) => IAP_BY_ID[id] as any);
+  beforeAll(() => { for (const p of LATER) p.enabled = true; });
+  afterAll(() => { for (const p of LATER) p.enabled = false; });
+  const docOf = (h: any, accountId: string) => JSON.parse((h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(accountId) as any).doc);
+
+  test('스타터 팩: 웹 결제 지급 보석은 유료 몫(paidGems)이고, 받은 뒤 다시 사려 하면 결제 전에 409', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    const it = (await intent(a.token, 'starter_pack_v1')).body;
+    expect(it.totalAmount).toBe(1200);
+    pn.pay(it);
+    expect((await complete(a.token, it.paymentId)).body.state).toBe('granted');
+    const doc = docOf(h, a.accountId);
+    expect(doc.paidGems).toBe(1000);
+    expect((await intent(a.token, 'starter_pack_v1')).body.error).toBe('not-eligible');
+  });
+
+  test('웹 월정액 30일권: monthly 권한이 30일 뒤 끝나고, 이용 중에는 다시 못 사며, 만료 뒤에는 살 수 있다', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    const it = (await intent(a.token, 'monthly_pass_v1')).body;
+    pn.pay(it);
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('granted');
+    const ent = h.db.sqlite.query("SELECT expires_at FROM iap_entitlements WHERE ent_key = 'monthly'").get() as any;
+    expect(ent.expires_at).toBe(h.now() + 30 * DAY);
+    expect(docOf(h, a.accountId).paidGems).toBe(1200);
+    expect((await intent(a.token, 'monthly_pass_v1')).body.error).toBe('already-subscribed');
+    h.advance(30 * DAY + 1000);
+    expect((await intent(a.token, 'monthly_pass_v1')).status).toBe(200);
+  });
+
+  test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    const it = (await intent(a.token, 'avatar_fullset_knight_v1')).body;
+    expect(it.totalAmount).toBe(14900);
+    pn.pay(it);
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('granted');
+    expect(h.db.sqlite.query("SELECT expires_at FROM iap_entitlements WHERE ent_key = 'avatar:knight:fullset'").get()).toEqual({ expires_at: null });
+    const st = (await h.send('GET', '/iap/state', undefined, a.token)).body;
+    expect(JSON.stringify(st)).toContain('"avatarFullsets":["knight"]');
+    expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
+  });
+});

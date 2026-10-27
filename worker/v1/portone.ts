@@ -9,7 +9,7 @@ import type { Authed, Ctx } from './auth';
 import { randomHex } from './token';
 import { recordServerMilestone } from './funnel';
 import {
-  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, grantOnce, payoutHeld, reverseToken, stateFor, webTokenHash,
+  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
 } from './iap';
 import { IAP_BY_ID, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
 
@@ -157,11 +157,17 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   // 서버가 roster를 강제하는 계정(authority=server)에만 현금 판매를 연다. 그림자·로컬은 저장 편집으로 소유를 늘릴 수 있다.
   if (auth.account.authority !== 'server') fail(403, 'server-authority-required');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
-  if (!product || !soldOn(product, 'web') || product.type === 'subscription' || product.type === 'consumable' && !product.once) fail(400, 'unknown-product');
+  // 웹은 즉시 지급형(B형)만: 영구 권한(non_consumable), 계정당 1회 패키지(once), 기간 이용권(periodDays). 자동 갱신 구독·반복 충전형은 거부.
+  if (!product || !soldOn(product, 'web') || product.type === 'subscription' || product.type === 'consumable' && !product.once && !((product.periodDays ?? 0) > 0)) fail(400, 'unknown-product');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
+  // 계정당 1회·영구 상품을 이미 받았으면 결제 전에 거부한다(결제 뒤 지급 거절로 돈만 나가지 않게).
+  if ((product.once || product.type === 'non_consumable') && (await ownedProducts(c.db, accountId)).has(product.id)) fail(409, 'not-eligible');
   // 영구 권한 상품은 이미 가진 권한이면 거부한다(영웅 개별 + 전원 해금의 중복 결제 방지).
-  if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
+  const activeKeys = await activeEntitlementKeys(c.db, accountId, c.now);
+  if (allKeysActive(product, activeKeys)) fail(409, 'not-eligible');
+  // 월정액 이용 중(Play 구독 또는 웹 30일권)에는 웹 30일권을 또 팔지 않는다.
+  if (grantsMonthly(product) && activeKeys.has('monthly')) fail(409, 'already-subscribed');
   const open = await c.db.prepare("SELECT COUNT(*) AS n FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?").bind(accountId, c.now - 3600000).first<{ n: number }>();
   if ((open?.n ?? 0) >= OPEN_INTENT_CAP) fail(429, 'too-many-intents');
   const paymentId = 'bsw_' + randomHex(16);
