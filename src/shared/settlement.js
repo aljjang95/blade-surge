@@ -9,6 +9,7 @@ import { monsterXp } from '../game/rpg-core.js';
 import { seededStream } from './rng.js';
 import { rollKillLoot, sumLoot } from './loot-roll.js';
 import PLAUSIBILITY from '../data/plausibility-table.json';
+import { ecoClock, isChapterOpen } from '../data/chapter-open.js';
 
 export const RULES_VERSION = 'p1-1';
 export const KILL_RANKS = Object.freeze(['normal', 'elite', 'boss']);
@@ -171,6 +172,8 @@ export function heroCombatProfile(eco, heroId) {
  */
 export function applySettlement(eco, stage, ticket, facts, verdict) {
   if (verdict === 'rejected') return { got: [], loot: [], ups: 0, first: false, exp: 0, combatExp: 0 };
+  // 아직 열리지 않은 지역의 판은 보상 없이 거부한다(서버는 요청 시각, 클라이언트는 신뢰 시계로 같은 함수를 쓴다).
+  if (!isChapterOpen(stage.ch, ecoClock(eco))) return { got: [], loot: [], ups: 0, first: false, exp: 0, combatExp: 0, closed: true };
   const heroId = ticket.heroId;
   const loot = rollRunLoot(stage, ticket.lootSeed, facts);
   const half = (n) => verdict === 'soft' ? Math.floor(n / 2) : n;

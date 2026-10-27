@@ -11,6 +11,7 @@ import { applySettlement, campaignStage, heroCombatProfile, parseStageCode, plau
 import { applyDifficulty, DIFFICULTIES } from '../../src/game/difficulty.js';
 import { stageDef } from '../../src/data/stages.js';
 import { hashValue, parityHash } from '../../src/shared/state-hash.js';
+import { isChapterOpen } from '../../src/data/chapter-open.js';
 
 export const TICKET_TTL_MS = 2 * 3600 * 1000;
 export const MAX_OPEN_TICKETS = 5;
@@ -41,6 +42,8 @@ export async function startRun(c: Ctx, auth: Authed, body: Record<string, unknow
   const eco = loadEconomy(doc.state, { now: c.now });
   const stage = campaignStage(eco.s, body.contentId, (body.difficulty as string) ?? 'story');
   if (!stage || !eco.isUnlocked(stage.ch, stage.st)) fail(403, 'locked');
+  // 시간 개방 지역은 진행도를 채워도 개방 시각 전에는 티켓을 주지 않는다(서버 시계만 쓴다).
+  if (!isChapterOpen(stage.ch, c.now)) fail(403, 'chapter-closed');
   const heroId = body.heroId as string, profile = heroCombatProfile(eco, heroId);
   if (!profile) fail(403, 'hero');
   // 미소유 영웅으로는 티켓을 발급하지 않는다(해금 전 영웅으로 보상 판을 돌리는 우회 차단).
@@ -100,6 +103,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   const eco = loadEconomy(doc.state, { now: c.now });
   const at = parseStageCode(ticket.content_id)!;
   const stage = applyDifficulty(stageDef(at.ch, at.st), (DIFFICULTIES as Record<string, unknown>)[ticket.difficulty] ?? DIFFICULTIES.story);
+  if (!isChapterOpen(at.ch, c.now)) fail(403, 'chapter-closed');
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
   const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed }, facts, check.verdict);

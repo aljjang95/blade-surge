@@ -1,6 +1,7 @@
 import { PARTY_HEROES, PARTY_LIMITS, sanitizePartyName, validPartyInput, validPartySnapshot, validPartyStats } from '../src/party/protocol.js';
 import { AVATAR_BY_ID } from '../src/data/avatars.js';
-import { CAMPAIGN_STAGE_COUNT } from '../src/data/campaign-shape.js';
+import { CAMPAIGN_STAGE_COUNT, STAGES_PER_CHAPTER } from '../src/data/campaign-shape.js';
+import { isChapterOpen } from '../src/data/chapter-open.js';
 
 export class PartyError extends Error {
   constructor(public readonly code: string, public readonly status = 400) { super(code); }
@@ -69,6 +70,8 @@ export class PartyState {
       if (id !== this.hostId) throw new PartyError('host-only', 403);
       if (this.status !== 'lobby') throw new PartyError('state', 409);
       if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > CAMPAIGN_STAGE_COUNT) throw new PartyError('stage-schema');
+      // 시간 개방 지역은 개방 시각(서버 시계) 전에 파티 출격 대상으로 고를 수 없다.
+      if (!isChapterOpen(Math.ceil(m.stageIdx / STAGES_PER_CHAPTER), now)) throw new PartyError('chapter-closed', 403);
       if (m.stageIdx !== this.stageIdx) {
         this.stageIdx = m.stageIdx;
         for (const member of this.members.values()) member.ready = false;
@@ -81,6 +84,7 @@ export class PartyState {
       if (this.members.size < 2 || [...this.members.values()].some(p => !p.ready)) throw new PartyError('not-ready', 409);
       if (!Number.isInteger(m.stageIdx) || m.stageIdx < 1 || m.stageIdx > CAMPAIGN_STAGE_COUNT
         || !Number.isInteger(m.seed) || m.seed < 1 || m.seed > 2147483647) throw new PartyError('start-schema');
+      if (!isChapterOpen(Math.ceil(m.stageIdx / STAGES_PER_CHAPTER), now)) throw new PartyError('chapter-closed', 403);
       if (m.stageIdx !== this.stageIdx) throw new PartyError('stage-mismatch', 409);
       this.run = { runId: this.uuid(), stageIdx: m.stageIdx, seed: m.seed, startedAt: now };
       this.status = 'running';

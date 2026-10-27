@@ -1,6 +1,7 @@
 // 스테이지 선택 화면의 순수 모델. 저장·진행·해금 판정을 읽기만 하고 아무것도 쓰지 않는다.
 // 화면(src/ui/stage-select.js)은 이 결과만 그리고, 입장은 기존 startStage / 준비창(openDestination)이 맡는다.
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
+import { chapterOpenLabel, isChapterOpen } from '../data/chapter-open.js';
 import { MATERIALS } from '../data/expansion.js';
 import { expeditionDepth } from '../data/expedition-depths.js';
 import { dungeonJourney } from '../ui/dungeon-journey.js';
@@ -66,21 +67,22 @@ export function nextCampaignStage(progress) {
   return { ch: Math.ceil(idx / STAGES_PER_CHAPTER), st: ((idx - 1) % STAGES_PER_CHAPTER) + 1 };
 }
 const stageIndex = (ch, st) => (ch - 1) * STAGES_PER_CHAPTER + st;
-const campaignUnlocked = (progress, ch, st) => stageIndex(ch, st) <= Math.max(1, Number(progress?.unlocked) || 1);
-const stageLockReason = (ch, st) => st === 1 ? `${ch - 1}-10 클리어 시 해금` : `${ch}-${st - 1} 클리어 시 해금`;
+const campaignUnlocked = (progress, ch, st, now = Date.now()) => stageIndex(ch, st) <= Math.max(1, Number(progress?.unlocked) || 1) && isChapterOpen(ch, now);
+// 시간 개방 지역은 개방 시각 전이면 진행도와 무관하게 개방 시각을 안내한다.
+const stageLockReason = (ch, st, now = Date.now()) => !isChapterOpen(ch, now) ? `${chapterOpenLabel(ch)} 개방` : st === 1 ? `${ch - 1}-10 클리어 시 해금` : `${ch}-${st - 1} 클리어 시 해금`;
 
 /**
  * 한 지역의 관문 X-1 … X-10. X-5 중간 보스, X-10 지역 보스.
- * @param {{ progress: any, chapter: number, power: number, heroLevel: number, energy?: number|null, difficulty?: { name?: string, rewardMul?: number, expMul?: number } | ((ch: number, st: number) => { name?: string, rewardMul?: number, expMul?: number }) }} input
+ * @param {{ progress: any, chapter: number, power: number, heroLevel: number, energy?: number|null, difficulty?: { name?: string, rewardMul?: number, expMul?: number } | ((ch: number, st: number) => { name?: string, rewardMul?: number, expMul?: number }), now?: number }} input
  */
-export function campaignStages({ progress, chapter, power, heroLevel, energy = null, difficulty = null }) {
+export function campaignStages({ progress, chapter, power, heroLevel, energy = null, difficulty = null, now = Date.now() }) {
   const ch = isInt(chapter, 1, CHAPTERS.length) ? chapter : 1;
   const next = nextCampaignStage(progress);
   const stars = progress?.stars || {};
   const list = [];
   for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(ch, st);
-    const unlocked = campaignUnlocked(progress, ch, st), got = Math.max(0, Math.min(3, Number(stars[stage.code]) || 0));
+    const unlocked = campaignUnlocked(progress, ch, st, now), got = Math.max(0, Math.min(3, Number(stars[stage.code]) || 0));
     const mode = (typeof difficulty === 'function' ? difficulty(ch, st) : difficulty) || {};
     const rewardMul = Number(mode.rewardMul) || 1, expMul = Number(mode.expMul) || 1;
     const rewards = [{ id: 'gold', name: '골드', amount: Math.floor(stage.rewards.gold * rewardMul) }, { id: 'exp', name: '경험치', amount: Math.floor(stage.rewards.exp * expMul) }];
@@ -91,7 +93,7 @@ export function campaignStages({ progress, chapter, power, heroLevel, energy = n
       enemyName: stage.encounter.name, midboss: !!stage.midboss, regionBoss: !!stage.regionBoss, boss: !!stage.boss,
       unlocksChapter: stage.unlocksChapter || null,
       unlocked, stars: got, cleared: got > 0, recommended: next.ch === ch && next.st === st,
-      lockReason: unlocked ? '' : stageLockReason(ch, st),
+      lockReason: unlocked ? '' : stageLockReason(ch, st, now),
       recommendedLevel: stage.recommendedLevel, heroLevel: Number(heroLevel) || 1,
       levelTone: (Number(heroLevel) || 1) >= stage.recommendedLevel ? 'ok' : (Number(heroLevel) || 1) >= stage.recommendedLevel - 2 ? 'close' : 'low',
       recPower: stage.recPower, power: Number(power) || 0, powerTone: powerTone(power, stage.recPower),
@@ -100,9 +102,9 @@ export function campaignStages({ progress, chapter, power, heroLevel, energy = n
     });
   }
   const chapters = CHAPTERS.map((entry) => ({
-    id: entry.id, name: entry.name, color: entry.color, unlocked: campaignUnlocked(progress, entry.id, 1),
+    id: entry.id, name: entry.name, color: entry.color, unlocked: campaignUnlocked(progress, entry.id, 1, now),
     cleared: Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => Number(stars[`${entry.id}-${i + 1}`]) > 0).filter(Boolean).length,
-    lockReason: campaignUnlocked(progress, entry.id, 1) ? '' : `${entry.id - 1}-10 클리어 시 열림`,
+    lockReason: campaignUnlocked(progress, entry.id, 1, now) ? '' : !isChapterOpen(entry.id, now) ? `${chapterOpenLabel(entry.id)} 개방` : `${entry.id - 1}-10 클리어 시 열림`,
   }));
   return { chapter: ch, chapterName: CHAPTERS[ch - 1].name, chapters, stages: list, next };
 }
