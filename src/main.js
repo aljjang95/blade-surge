@@ -548,8 +548,10 @@ class App {
       if (refund.ok) this.expeditionTicket = null;
       this.expeditionRefundPending = !refund.ok;
       this.toLobby();
-      this.ui.toast(refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.', 'red');
-      console.warn('expedition preparation failed', error?.message);
+      this.ui.toast((refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.') + ` (${id}${options.depth === 'deep' ? ' 심층' : ''})`, 'red');
+      // 원인을 남겨 둔다: 어느 던전·단계에서 어떤 예외였는지(제보 재현용). 화면에는 짧은 코드만 덧붙인다.
+      this.lastExpeditionError = { kind, id, depth: options.depth || 'standard', message: String(error?.message || error).slice(0, 200), at: Date.now() };
+      console.warn('expedition preparation failed', kind, id, options.depth || 'standard', error?.stack || error?.message);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
