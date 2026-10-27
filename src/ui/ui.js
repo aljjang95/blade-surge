@@ -529,7 +529,7 @@ export class UI {
     node.className = 'boss-intro'; node.dataset.rank = tag.rank; node.setAttribute('role', 'status');
     const loreHtml = bossLoreHtml(stage); // 칭호 · 이름 + 외침(세계관 연출). 없으면 기존 띠 그대로.
     node.classList.toggle('has-lore', !!loreHtml);
-    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b><span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>${loreHtml}`;
+    node.innerHTML = `<i>${tag.label}</i><b>${stage.code}</b>${loreHtml || `<span>${String(name || stage.encounter?.name || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])}</span>`}`;
     this.el.hud.append(node);
     setTimeout(() => node.remove(), 3400);
     return true;

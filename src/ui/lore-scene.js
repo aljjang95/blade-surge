@@ -14,6 +14,7 @@ function defaultStorage() {
 }
 
 /** 본 장 번호 집합. 저장소가 없거나 깨져 있어도 빈 집합으로 동작한다. */
+/** @param {any} [storage] */
 export function loadLoreSeen(storage = defaultStorage()) {
   try {
     const raw = storage?.getItem(LORE_SEEN_KEY);
@@ -21,7 +22,9 @@ export function loadLoreSeen(storage = defaultStorage()) {
     return new Set(Array.isArray(list) ? list.filter((n) => Number.isSafeInteger(n) && n >= 1 && n <= 20) : []);
   } catch { return new Set(); }
 }
+/** @param {number} ch @param {any} [storage] */
 export const hasSeenLore = (ch, storage) => loadLoreSeen(storage).has(ch);
+/** @param {number} ch @param {any} [storage] */
 export function markLoreSeen(ch, storage = defaultStorage()) {
   try {
     const seen = loadLoreSeen(storage); seen.add(ch);
@@ -38,11 +41,16 @@ export function sceneLinesFor(ch) {
 }
 
 /** 장면을 지금 자동 재생해야 하는가: 그 장이 열려 있고 대사가 있고 아직 안 봤을 때. */
+/** @param {number} ch @param {{ unlocked?: boolean, storage?: any }} [opts] */
 export const shouldAutoPlayScene = (ch, { unlocked, storage } = {}) => !!unlocked && sceneLinesFor(ch).length > 0 && !hasSeenLore(ch, storage);
 
 /**
  * 시간 없는 장면 진행기. next()=탭, skip()=건너뛰기, tick(ms)=자동 진행.
  * track(name, payload) 로 view/skip/done/replay 를 남긴다(실패해도 진행).
+ */
+/**
+ * @param {number} ch @param {any[]} lines
+ * @param {{ replay?: boolean, storage?: any, track?: Function, onLine?: Function, onEnd?: Function, lineMs?: number }} [opts]
  */
 export function createSceneRun(ch, lines, { replay = false, storage, track, onLine, onEnd, lineMs = LINE_MS } = {}) {
   let index = 0, elapsed = 0, ended = false;
