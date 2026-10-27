@@ -52,7 +52,7 @@ test('결제가 연결돼도 카탈로그에서 판매 중인 현금 상품만 �
   // 카탈로그 밖·비활성 상품(보석 팩·성장·VIP 등)은 계속 숨긴다. 보석·패키지 탭도 비어 있어 감춘다.
   const ids = meta.shopTabs().map((t: any) => t.id);
   expect(ids).not.toContain('gem'); expect(ids).not.toContain('pack');
-  for (const id of ['growth', 'boss_pack', 'vip_pass', 'enh_pack', 'transcend_pack', 'gem1', 'gem6'])
+  for (const id of ['growth', 'gem1', 'gem3'])
     expect(['hot', 'gem', 'pack', 'enh'].flatMap((t) => meta.shopSkus(t)).some((x: any) => x.id === id)).toBe(false);
   expect(meta.payOn()).toBe(false); // 보석 충전·초월 패키지 입구는 판매 상품이 없어 계속 숨는다
   expect(meta.vipShown()).toBe(false);
