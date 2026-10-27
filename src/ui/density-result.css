@@ -16,14 +16,14 @@
   :root:root #result .result-scroll > .result-endless { grid-area: endless; margin: 0; font-size: 11px; }
   /* 패배: 보상 단이 비므로 성장 요약(왼쪽)과 다음 출격 준비(오른쪽)를 나란히 */
   :root:root #result.is-defeat .result-scroll { grid-template-areas: 'title stars' 'stats endless' 'growth growth' 'story story' 'ad ad'; }
-  :root:root #result.is-defeat .result-growth { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+  :root:root #result.is-defeat .result-growth:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
   :root:root #result.is-defeat .result-growth > .growth-summary { grid-column: 1; grid-row: 1 / span 3; }
   :root:root #result.is-defeat .result-growth > :not(.growth-summary) { grid-column: 2; }
   :root:root #result .result-scroll > .result-growth { grid-area: growth; }
   :root:root #result .result-scroll > #result-loot-details { grid-area: loot; border-top: 0; }
   :root:root #result .result-scroll > #result-story-details { grid-area: story; }
   :root:root #result .result-scroll > .btn-ad { grid-area: ad; justify-self: center; min-height: 44px; padding: 6px 16px; margin-top: 0; font-size: 13px; }
-  /* 보상 목록은 결정 값이라 항상 펼쳐 둔다.  */
+  /* 보상 목록은 결정 값이라 첫 화면에 둔다. 펼침은 ui.js showResult 가 보상 8개 이하일 때 연다. */
   :root:root #result #result-loot-details > summary { min-height: var(--ui-tap); padding: 12px 4px 8px; font-size: 12px; line-height: 20px; }
   :root:root #result .result-box .loot { min-height: 0; padding: 2px; gap: 6px; justify-content: flex-start; }
   :root:root #result .result-box .loot-item { flex: 0 0 60px; width: 60px; height: 64px; }
