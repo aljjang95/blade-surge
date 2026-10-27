@@ -21,3 +21,6 @@
   /* 임무: 아직 못 받는 '받기'가 밝은 버튼으로 보여 누를 수 있는 것처럼 보였다. */
   #modal .quest-item .btn[disabled] { opacity: .45; filter: grayscale(1); }
 }
+
+/* 제작 공방 레시피: 핵심 효과 한 줄은 접지 않고 본문에 항상 보인다. */
+#tab-stage .exp-recipe .exp-recipe-effect { grid-column: 1 / -1; margin: 4px 0 6px; font-size: 12px; line-height: 1.45; color: #cfdbcd; }
