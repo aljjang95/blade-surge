@@ -6,8 +6,8 @@ import { Meta } from '../src/ui/meta.js';
 import { Economy } from '../src/game/economy.js';
 import { WITHDRAWAL_NOTICE, INSTANT_GRANT_CONSENT, SUBSCRIPTION_NOTICE, LEGAL_PAGES, paymentNoticeHtml, legalLinksHtml } from '../src/ui/legal-links.js';
 
-// 카탈로그(IAP_BY_SHOP_SKU)에 아직 없지만 짝 상품(growth_pack_v1)이 별도 작업으로 추가되는 중인 SKU. 카탈로그에 들어오면 이 목록에서 뺀다.
-const PENDING_CATALOG = ['growth'];
+// 카탈로그(IAP_BY_SHOP_SKU)에 아직 없는 현금 SKU 허용 목록(지금은 없음 — 모든 현금 SKU가 카탈로그 정본과 짝이다).
+const PENDING_CATALOG: string[] = [];
 
 test('상점의 현금(kind:cash) SKU는 전부 카탈로그 shopSku에 있다 (카탈로그 밖 목업 금지)', () => {
   const cash = SKUS.filter((s: any) => s.kind === 'cash').map((s: any) => s.id);

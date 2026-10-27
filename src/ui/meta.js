@@ -670,7 +670,7 @@ export class Meta {
     this.renderShopFlow();
     const notice = $('shop-notice');
     const gemSplit = (() => { const st = this.eco.s, paid = Math.min(Math.max(0, Math.floor(st.paidGems || 0)), st.gems); return `<b>보석 유료 ${fmt(paid)} · 무료 ${fmt(st.gems - paid)}</b> (무료부터 사용) · `; })();
-    if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
+    if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 외형 상품입니다.</b> 착용 시 풀셋 효과(이동속도·줍기 범위 편의)만 있고 전투력에는 영향이 없습니다.'
       : `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`);
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
