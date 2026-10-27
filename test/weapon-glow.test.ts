@@ -20,7 +20,7 @@ test('강화 빛 단계: +0~5 없음, +6 은은, +10 발광, +13 잔광, +15 고
 });
 
 test('weaponLook: 발밑 오라는 +15 부터, 강화 발광은 +6 부터 더해진다', () => {
-  const weapon = (ITEMS_OF as any)('E', 'weapon')[0]!;
+  const weapon = ITEMS_OF('E', 'weapon')[0]!;
   const at = (enh: number) => weaponLook('barbarian', { id: weapon.id, enh }, {});
   expect(at(5)!.glow).toBe(at(0)!.glow);
   expect(at(6)!.glow).toBeGreaterThan(at(5)!.glow);
@@ -31,7 +31,7 @@ test('weaponLook: 발밑 오라는 +15 부터, 강화 발광은 +6 부터 더해
 });
 
 test('방어구는 몸체 단계를 바꾸지 않는다', () => {
-  const armor = (ITEMS_OF as any)('L', 'armor')[0]!;
+  const armor = ITEMS_OF('L', 'armor')[0]!;
   expect(heroAppearance({ armor: { id: armor.id } }, ITEM_BY_ID).tier).toBeGreaterThan(1);
   expect(heroBodyAppearance({ armor: { id: armor.id } }, ITEM_BY_ID)).toEqual({ tier: 1, theme: null });
 });
