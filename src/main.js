@@ -100,6 +100,7 @@ import './ui/density-hero.css';
 import './ui/density-result.css';
 import './ui/density-panels.css';
 import './ui/density-shell.css';
+import './ui/density-hud.css';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
 const startup = { stage: 'renderer', failed: false };

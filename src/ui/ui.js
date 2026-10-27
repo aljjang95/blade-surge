@@ -234,7 +234,9 @@ export class UI {
     for (const el of [this.comboEl, this.killStreakEl]) { const r = rect(el); if (r && !el.classList?.contains('hidden')) top = Math.max(top, r.bottom); }
     top += 8;
     const limit = joy ? joy.top - 6 : height * .7;
-    if (right - left < 150 || limit - top < 60) { clear(); return; }
+    // COMBO 배지가 떠서 남는 세로 공간이 좁아도 기본 위치(화면 위 가운데·플레이어 카드 위)로 돌아가지 않는다.
+    // 그 경우 알림 띠는 높이만 줄어든다(최소 28px). 폭이 모자랄 때만 기본 배치로 돌아간다.
+    if (right - left < 150) { clear(); return; }
     hud.classList?.add('side-stack');
     const box = hud.getBoundingClientRect?.() || { left: 0, top: 0 };
     writeHudStyle(hud.style, '--side-left', px(left - box.left));
@@ -252,7 +254,8 @@ export class UI {
     writeHudStyle(toast.style, '--battle-notice-top', px(y));
     writeHudStyle(toast.style, '--battle-notice-left', px(left));
     writeHudStyle(toast.style, '--battle-notice-right', px(width - right));
-    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(44, limit - y))));
+    // 보스 전술 안내처럼 긴 문장은 세 줄(58px)까지 보이게 한다.
+    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(58, limit - y))));
   }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
