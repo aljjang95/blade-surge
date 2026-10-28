@@ -1,3 +1,4 @@
+import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
 import { describe, expect, test } from 'bun:test';
 import { Economy, heroPickup } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
@@ -126,12 +127,12 @@ describe('무료 해금', () => {
     const eco = fresh(); eco.s.gems = 99999; eco.s.progress.unlocked = 60;
     expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'starter-pending' });
   });
-  test('보석 해금 사다리는 닫혔다: 진행·보석이 충분해도 사유 gacha이고 상태는 그대로다(영웅은 소환으로만)', () => {
-    const eco = chosen('knight', { unlocked: 60, gems: 99999 });
+  test('보석 해금 사다리는 닫혔다: 원래 다섯 영웅은 캠페인 합류(campaign) 견적이고 보석으로 열 수 없다', () => {
+    const eco = chosen('knight', { unlocked: 70, gems: 99999 });
     const before = JSON.stringify(eco.s);
     for (const id of ['mage', 'rogue', 'ranger', 'barbarian']) {
-      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'gacha', canFree: false, owned: false });
-      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'gacha' });
+      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'campaign-pending', canFree: false, owned: false, need: (HERO_CAMPAIGN_JOIN as Record<string, number>)[id] });
+      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'campaign-pending' });
     }
     expect(JSON.stringify(eco.s)).toBe(before);
     expect(eco.heroUnlockQuote('knight').reason).toBe('owned'); expect(eco.heroUnlockQuote('ghost').reason).toBe('unknown');
@@ -150,7 +151,25 @@ describe('무료 해금', () => {
     const eco = chosen('knight', { unlocked: 60 });
     eco.applyIapState({ entitlements: { heroes: ['mage'] } });
     expect(eco.ownHero('mage')).toBe(true); expect(eco.heroUnlockQuote('mage').reason).toBe('owned');
-    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'gacha', step: 0 });
+    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'campaign-pending', needLabel: '3-10' });
+  });
+  test('성장형 합류: 방금 클리어한 관문이 합류 관문 이상일 때만, 시작 영웅·소환 전용·시작 전은 건드리지 않는다', () => {
+    const eco = chosen('rogue', { unlocked: 20 });
+    expect(eco.grantCampaignHeroes(19)).toEqual([]);
+    expect(eco.grantCampaignHeroes(20)).toEqual(['mage']);            // 2-10(idx 20) 클리어
+    expect(eco.grantCampaignHeroes(40)).toEqual(['ranger']);          // rogue 는 시작 영웅이라 건너뜀
+    expect(eco.grantCampaignHeroes(69)).toEqual(['knight', 'barbarian']);
+    expect(eco.grantCampaignHeroes(69)).toEqual([]);
+    expect(eco.ownHero('werewolf')).toBe(false); expect(eco.ownHero('blackcat')).toBe(false);
+    const fresh = new Economy({ storage: createMemoryStorage(), now: () => PRE_ROTATION });
+    expect(fresh.grantCampaignHeroes(69)).toEqual([]);   // 시작 영웅을 고르기 전
+  });
+  test('성장형 합류: 부풀린 저장 진행만으로는 합류하지 않는다(가져오기·그림자 스냅샷 방어), 합류 대기 견적은 결제 대상이 아니다', () => {
+    const eco = chosen('knight', { unlocked: 70 });
+    expect(eco.grantCampaignHeroes(1)).toEqual([]);   // 1-1 만 깨면 아무도 오지 않는다
+    expect(eco.heroUnlockQuote('mage')).toMatchObject({ reason: 'campaign-pending' });
+    const early = chosen('knight', { unlocked: 5 });
+    expect(early.heroUnlockQuote('mage')).toMatchObject({ reason: 'campaign', needLabel: '2-10' });
   });
   test('저장이 실패하면 소환·마일리지 교환의 소유·보석·조각이 되돌아간다', () => {
     const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0, now: () => PRE_ROTATION });
