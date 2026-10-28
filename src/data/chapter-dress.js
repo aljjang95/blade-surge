@@ -132,7 +132,7 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_yeti: { props: ['keyRing', 'bookStackBack'] },
       elite_wraith: { ...FROST_SPIRIT, props: ['openTome', 'spiritHalo'] },
       // 기록관 오르딘(중간 보스)·서리왕 이셀(최종 보스).
-      frost_midboss: { props: ['bookStackBack', 'openTome'] },
+      frost_midboss: { props: ['censorSeal', 'openTome'] },
       frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
     },
     assets: {
