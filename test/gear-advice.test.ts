@@ -98,3 +98,11 @@ test('성장 안내(eco 전달)는 장비 교체·가방 정리 항목을 추가
   expect(options.find((o) => o.kind === 'gear' && o.mode === 'equipBest')).toBeTruthy();
   expect(growthOptions(eco.s).some((o: any) => o.kind === 'gear')).toBe(false);   // eco 없이는 기존 항목만
 });
+
+test('가방 정리: 단독 점수는 낮아도 세트를 완성해 빌드가 오르는 장비는 정리·자동 분해 후보가 아니다', () => {
+  const eco = make(), hero = eco.s.selected;
+  for (const itemId of ['w_steel', 'a_leather', 'r_copper', 'b_cloth']) eco.equip(hero, give(eco, itemId).uid);
+  const iron = give(eco, 'w_iron');
+  expect(eco.isUpgrade(hero, iron)).toBe(true);   // 신병 세트 완성
+  expect(junkItems(eco, { heroId: hero }).some((j: any) => j.uid === iron.uid)).toBe(false);
+});

@@ -144,11 +144,12 @@ export function renderGrowthPreparation(container, app, result) {
       app.toLobby();
       if (app.mode !== 'lobby') return;
       if (current.kind === 'gear' || current.kind === 'training' || current.kind === 'transcend') {
-        app.meta.heroSel = current.heroId; app.meta.heroPane = current.kind === 'gear' ? 'gear' : app.meta.heroPane;
+        app.meta.heroSel = current.heroId; app.meta.heroPane = current.kind === 'gear' ? 'gear' : 'growth';   // 훈련·초월 버튼은 성장 칸에만 있다
         if (current.mode === 'cleanup') app.meta.bagClean = { open: true, step: 0, includeE: false };
         app.meta.openTab('heroes');
+        if (current.kind === 'transcend') app.meta.openTranscend?.(current.heroId);   // 초월은 성장 칸 아래 별도 창
       } else if (current.kind === 'summon') {
-        app.meta.openTab('gacha', current.banner === 'gear' ? 'gear' : 'hero');
+        app.meta.openTab('gacha', current.banner || 'hero');   // 초심자 배너 견적(1,350)을 낸 제안은 초심자 배너로
       } else if (current.kind === 'mastery') {
         app.meta.openTab('home'); app.battle.chronicle.open('mastery');
         app.battle.chronicle.dialog.querySelector('button')?.focus();

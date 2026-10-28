@@ -101,7 +101,8 @@ export function junkItems(eco, { rarities = ['N', 'S'], heroId = eco.s.selected 
     for (const inst of bag) {
       if (slotOf(inst) !== slot || worn.has(inst.uid)) continue;
       const rarity = ITEM_BY_ID[inst.id].rarity, score = gearScore(inst);
-      if (!allowed.has(rarity) || score > floor) continue;
+      // 단독 점수가 낮아도 세트를 완성해 실제 빌드가 오르는 장비는 정리(특히 자동 분해)에서 뺀다.
+      if (!allowed.has(rarity) || score > floor || eco.isUpgrade?.(heroId, inst)) continue;
       junk.push({ uid: inst.uid, id: inst.id, rarity, slot, score: Math.round(score) });
     }
   }
