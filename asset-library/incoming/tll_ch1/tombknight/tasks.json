@@ -43,12 +43,13 @@
    "file": "tll_ch1_clapper.glb",
    "workspace_task_id": "048d50f5-3ef1-4856-9774-248e136cea17",
    "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes and clean painted rendering as the reference image. Do not copy the reference character. Object: a broken bell clapper mace: a heavy iron bell clapper (a long iron rod with a big round iron ball head) used as a mace, the ball head chipped and cracked, black blackened iron with teal glow in the cracks, a short wrapped leather grip, a bit of broken bronze bell rim fragment fused to the shaft. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
-   "tris": 4002,
+   "tris": 3880,
    "credits": {
     "image_to_3d": 40,
     "retopology": 35
    },
-   "rigging": "none"
+   "rigging": "none",
+   "tris_note": "Tripo retopo returned 4,002; reduced to 3,880 with Blender 5.2 headless Decimate (collapse, ratio 0.969) to meet the <=4,000 limit; UV/textures kept, original not retained"
   }
  },
  "tpose_history": "first attempt 7-head heroic discarded (chain 95 credits spent before coordinator chibi guidance); this is the 3.5-head chibi retake"
