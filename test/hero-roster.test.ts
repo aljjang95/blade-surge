@@ -1,4 +1,5 @@
 import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
+import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'bun:test';
 import { Economy, heroPickup } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
@@ -447,4 +448,11 @@ describe('v1-ops 새 명령', () => {
     const r2 = OPS.pull.run(eco, 1, 'hero'); expect(OPS.pull.ok(r2)).toBe(true); expect(eco.s.tickets).toBe(9);
     expect(OPS.pull.ok(OPS.pull.run(eco, 5, 'hero'))).toBe(false);
   });
+});
+
+test('동료 합류 알림이 쓰는 HEROES 를 결과 화면 UI 가 실제로 가져온다', () => {
+  // 1-1→3-10 연속 플레이에서 합류 순간 'HEROES is not defined' 로 알림이 통째로 사라졌다(#340 회귀).
+  const src = readFileSync(new URL('../src/ui/ui.js', import.meta.url), 'utf8');
+  expect(src).toContain('rw.heroJoin.map((id) => HEROES[id]');
+  expect(/import\s*\{[^}]*\bHEROES\b[^}]*\}\s*from\s*'\.\.\/data\/heroes\.js'/.test(src)).toBe(true);
 });

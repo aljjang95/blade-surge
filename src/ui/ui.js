@@ -10,7 +10,7 @@ import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
 import { bossLoreHtml } from './lore-scene.js';
-import { levelExp } from '../data/heroes.js';
+import { HEROES, levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { resultStrip } from '../game/torment-ui-model.js';
 import { tierName, tierTag, tierTone } from '../game/item-tier-label.js';
