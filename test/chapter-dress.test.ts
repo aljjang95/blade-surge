@@ -64,10 +64,33 @@ test('5장 의상은 crown·tribunal 로스터와 중간·최종 보스를 덮�
   }
 });
 
+test('6장 잔향은 경로의 고향 장 의상에 귀환 청록 발광을 덧입히고 보스는 직접 정한다', () => {
+  // procession(1장 고향)·kiln(2장 고향) 경로.
+  const garden = chapterDressFor({ chapter: { id: 6 }, dungeon: { id: 'procession' } }, 'skel_minion', 'bone_knight')!;
+  expect(garden.props).toEqual(CHAPTER_DRESS[1].species.skel_minion.props);
+  expect(garden.emissive).toBe('#13403a');
+  const forge = chapterDressFor({ chapter: { id: 6 }, dungeon: { id: 'kiln' } }, 'orc', 'goblin_brute')!;
+  expect(forge.props).toEqual(CHAPTER_DRESS[2].species.orc.props);
+  // 고향 장에 없는 종은 1~5장 중 먼저 찾은 의상.
+  expect(chapterDressFor({ chapter: { id: 6 }, dungeon: { id: 'kiln' } }, 'squidle', 'star_owl')!.props).toEqual(CHAPTER_DRESS[4].species.squidle.props);
+  expect(chapterDressFor({ chapter: { id: 6 }, dungeon: { id: 'kiln' } }, 'homecoming_finalboss', 'goblin_chief')!.props).toContain('brokenBellLarge');
+  for (const id of Object.keys(CHAPTER_DRESS[6].species)) expect((ENEMIES as Record<string, unknown>)[id], id).toBeTruthy();
+});
+
+test('7장 의상은 종탑 로스터를 덮고 Tripo 전용 몸(종지기·오르벤·카델)은 비운다', () => {
+  const bell = CHAPTER_DRESS[7];
+  for (const id of Object.keys(bell.species)) expect((ENEMIES as Record<string, unknown>)[id], id).toBeTruthy();
+  for (const spec of [...Object.values(bell.species), ...Object.values(bell.assets)]) for (const key of spec.props || []) expect(DRESS_PROP_KEYS).toContain(key);
+  const def: any = stageDef(7, 1);
+  const roster = def.combatRosterFor?.();
+  for (const id of roster ? [...roster.trash, ...roster.ranged, ...roster.elite] : []) if (!['bell_ringer', 'bomb_slime'].includes(id)) expect(bell.species[id], id).toBeTruthy();
+  expect(chapterDressFor({ chapter: { id: 7 } }, 'bell_ringer', 'tll_ch7_bellringer')).toBeNull();
+});
+
 test('의상은 캠페인 장에만 입히고 원정은 제외한다', () => {
   expect(chapterDressFor({ chapter: { id: 1 } }, 'skel_minion', 'bone_knight')?.props).toContain('coffin');
   expect(chapterDressFor({ chapter: { id: 1 }, expedition: { id: 'x' } }, 'skel_minion', 'bone_knight')).toBeNull();
-  expect(chapterDressFor({ chapter: { id: 6 } }, 'skel_minion', 'bone_knight')).toBeNull();
+  expect(chapterDressFor({ chapter: { id: 8 } }, 'skel_minion', 'bone_knight')).toBeNull();
   // 종 표에 없는 1장 경로 보스는 몸 기준 의상.
   expect(chapterDressFor({ chapter: { id: 1 } }, 'dungeon_tribunal_captain', 'ember_drake')).toBeTruthy();
   expect(CHAPTERS[0].theme).toBe('garden');
@@ -98,7 +121,7 @@ test('1장 대기 보정은 경로 색을 장 색 쪽으로 섞고 다른 장은
   expect(graded.fog).not.toBe(tribunal.fog);
   const g = new THREE.Color(graded.fog), target = new THREE.Color(CHAPTER_GRADES[1].fog), from = new THREE.Color(tribunal.fog);
   expect(Math.abs(g.g - target.g)).toBeLessThan(Math.abs(from.g - target.g));
-  expect(gradeAtmosphere(tribunal, 6)).toBe(tribunal);
+  expect(gradeAtmosphere(tribunal, 7)).toBe(tribunal);
 });
 
 test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적으로 놓인다', () => {
@@ -114,5 +137,5 @@ test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적�
     expect(edge).toBeLessThanOrEqual(1.81);
     expect(Math.abs(it.x - 10) < 3.2 && Math.abs(it.z) < 6.2).toBe(false);
   }
-  expect(sceneryPlacements(floor, 6)).toEqual({});
+  expect(sceneryPlacements(floor, 8)).toEqual({});
 });

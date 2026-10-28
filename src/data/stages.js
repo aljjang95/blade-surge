@@ -64,7 +64,7 @@ const DUNGEON_ROSTERS = {
   crackedNave: { trash: ['ghost', 'bone_orc', 'skel_minion', 'skel_rogue', 'bell_ringer', 'skel_shield', 'bomb_slime', 'blob_green'], ranged: ['skel_priest', 'skel_mage', 'ghost_skull'], elite: ['elite_wraith', 'elite_skel_captain', 'elite_bone_lord'] },
 };
 // 던전 배치의 고향 지역(테마). 표에 없는 던전은 지역 기본 편성을 쓴다.
-const DUNGEON_HOME = {
+export const DUNGEON_HOME = {
   procession: 'garden', greenhouse: 'garden', tribunal: 'garden', kiln: 'forge', uprising: 'forge', archive: 'frost', reverseRiver: 'frost',
   beacon: 'tide', lostShip: 'tide', confluence: 'tide', emptyThrones: 'crown', addresses: 'garden', bellstreet: 'crypt', belfry: 'crypt', crackedNave: 'crypt',
 };
