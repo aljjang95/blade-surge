@@ -223,7 +223,7 @@ export const CHAPTER_DRESS = Object.freeze({
       bone_orc: { ...CROWN_SKIN, props: ['goldChains'] },
       imp: { ...CROWN_MUSH, props: ['soldierCirclet'] },
       bomb_abyss: { props: ['crownRing'] },
-      bomb_slime: { ...CROWN_SLIME, props: ['crownRing'] },
+      bomb_slime: { props: ['crownRing'] },
       // 심연 주시자: 왕관 고리. 원거리·주술사는 금관.
       abyss_seer: { ...CROWN_SKIN, props: ['crownRing'] },
       ghost: { ...CROWN_SKIN, props: ['crownRing'] },
