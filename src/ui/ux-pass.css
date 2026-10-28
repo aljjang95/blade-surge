@@ -363,3 +363,18 @@
   .citadel-hub-ui .citadel-hub-near-name { font-size: 14px; line-height: 1.25; }
   .citadel-hub-ui[data-near-collapsed="false"] .citadel-hub-near-detail { font-size: 11px; line-height: 1.4; }
 }
+
+/* 가방: 더 좋은 장비 표시·한 번에 장착·가방 정리 (2026-10-28) */
+.bag-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.bag-tools .btn { min-height: 44px; flex: 1 1 auto; }
+.bag-tools .btn small { font-size: 12px; opacity: .85; font-weight: 700; margin-left: 4px; }
+.bag-best-none { flex: 1 1 160px; min-width: 0; font-size: 12px; opacity: .75; }
+.bag-clean { display: grid; gap: 6px; margin-bottom: 8px; padding: 10px; border: 1px solid rgba(255, 216, 112, .45); border-radius: 10px; background: rgba(6, 30, 50, .72); font-size: 13px; line-height: 1.45; }
+.bag-clean p { margin: 0; }
+.bag-clean-e { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; }
+.bag-clean-e input { width: 20px; height: 20px; }
+.bag-clean-warn { color: #ffb4a8; font-weight: 800; }
+.bag-clean-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.bag-clean-btns .btn { flex: 1 1 120px; min-height: 44px; }
+.bag-item .bag-up { position: absolute; right: 3px; bottom: 3px; max-width: 70%; padding: 0 5px; border-radius: 6px; background: #3fdc7a; color: #052a14; font-style: normal; font-size: 12px; font-weight: 900; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+@media (max-width: 400px) { .bag-clean { padding: 8px; } }

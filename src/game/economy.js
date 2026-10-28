@@ -2,7 +2,7 @@
 import { isAccountResetting } from './reset-lock.js';
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
-import { itemStats } from '../data/item-tier.js';
+import { itemStats, validItemLevel } from '../data/item-tier.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt, heroReleased } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
@@ -24,7 +24,7 @@ import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
-import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel } from '../data/loot-tables.js';
+import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel, dropItemLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
 import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
@@ -198,7 +198,7 @@ export class Economy {
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false },
         // 장비 귀속·금고 안내(docs/GEAR_OWNERSHIP_VAULT.md). 보상 없는 안내 우편이라 경제·정산에는 영향이 없다.
         { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
     };
   }
   load() {
@@ -609,20 +609,22 @@ export class Economy {
   }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault()) {
+  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault(), il = 0) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
     // tp: 고통 단계 장비 파워(드랍된 단계). 0 이면 필드를 두지 않아 기존 장비와 같은 모양이다.
-    return this.pushItem(def.id, { tp, owner });
+    // il: 스테이지 장비 레벨(필드 드랍이 나온 스테이지의 권장 레벨). 없으면 필드를 두지 않아 기존 장비와 같다. 고통 단계(tp) 장비에는 붙이지 않는다.
+    return this.pushItem(def.id, { tp, owner, il });
   }
   // ---------- 장비 귀속 · 금고 (docs/GEAR_OWNERSHIP_VAULT.md) ----------
   /** 새 장비의 주인: 진행 중인 전투 장부의 영웅, 없으면 지금 고른 영웅. */
   gearOwnerDefault() { const led = this._fieldRewards; return led && !led.settled && this.s.heroes[led.heroId] ? led.heroId : this.s.selected; }
   /** 장비 인스턴스 하나를 인벤토리에 넣는다(모든 획득 경로의 단일 형태). */
-  pushItem(id, { tp = 0, owner = this.gearOwnerDefault() } = {}) {
-    const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
+  pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = 0 } = {}) {
+    const lv = tp > 0 ? 0 : validItemLevel(il);   // il = 스테이지 장비 레벨(item-tier.js). 없으면 필드를 두지 않는다.
+    const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(lv ? { il: lv } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
     this.s.inventory.push(inst); return inst;
   }
   /** 그 영웅 소유 장비(가방에 보이는 것). */
@@ -712,7 +714,7 @@ export class Economy {
   fieldDrop(rarity) {
     // 지금 도는 고통 단계 판의 장비는 그 단계의 파워 배율을 달고 나온다(docs/SPEC_720H.md 7절).
     const led = this._fieldRewards, tp = led && !led.settled ? tormentTierOf(led.stage?.difficultyId) : 0;
-    const it = this.addItem(rarity, null, rngOf(this), tp); this.save(); return it;
+    const it = this.addItem(rarity, null, rngOf(this), tp, this.gearOwnerDefault(), dropItemLevel(led && !led.settled ? led.stage : null)); this.save(); return it;
   }
   /** 전투 수집 장부는 저장하지 않는다. 정산 경로만 영웅·계정에 지급한다. */
   beginFieldRewards(stage, heroId = this.s.selected) {
@@ -829,8 +831,8 @@ export class Economy {
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
     const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? scaled(5, mulFrag) : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
-    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier, heroId));
-    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier, heroId)); }
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier, heroId, dropItemLevel(stage)));
+    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier, heroId, dropItemLevel(stage))); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
     if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));

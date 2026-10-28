@@ -1,5 +1,6 @@
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
+import { ITEM_LEVEL_MAX } from '../data/item-tier.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { GACHA_BANNERS } from '../data/gacha-banners.js';
@@ -92,7 +93,8 @@ export function normalizeSave(raw, fresh) {
   s.inventory = s.inventory.filter((item) => {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
     seen.add(item.uid); return true;
-  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}) }));
+  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}),
+    ...(integer(item.tp, 0, 0, 50) === 0 && integer(item.il, 0, 0, ITEM_LEVEL_MAX) > 1 ? { il: integer(item.il, 0, 0, ITEM_LEVEL_MAX) } : {}) }));
   const byUid = new Map(s.inventory.map((item) => [item.uid, item]));
   const equipped = new Set();
   for (const h of Object.values(s.heroes)) for (const slot of SLOTS) {
@@ -160,6 +162,8 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
+  // 노말 장비 자동 분해(장착 중보다 약한 노말만). 기본 꺼짐, 직접 켠 true/false 만 저장한다.
+  s.settings.autoSalvageN = raw.settings?.autoSalvageN === true;
   // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
   s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;

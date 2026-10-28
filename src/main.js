@@ -1,4 +1,5 @@
 import './style.css';
+import { autoSalvageNormal } from './game/gear-advice.js';
 import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
 import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
@@ -489,6 +490,9 @@ class App {
           if (ok) this.meta.openTab('shop', 'energy');
           return false;
         }
+        // 설정 "노말 장비 자동 분해": 출격이 확정된 뒤(에너지 지불 뒤)에만 착용 중보다 약한 노말을 정리한다(거부된 출격에서 되돌릴 수 없는 분해가 일어나지 않게).
+        const swept = autoSalvageNormal(this.eco);
+        if (swept) this.ui.toast(`노말 장비 ${swept.count}개 자동 분해 · 골드 +${swept.gold.toLocaleString('ko-KR')} · 강화석 +${swept.stones.toLocaleString('ko-KR')}`, 'gold');
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
