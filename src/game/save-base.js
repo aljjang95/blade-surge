@@ -141,6 +141,12 @@ export function normalizeSave(raw, fresh) {
     if (kept.length && kept.length < AVATAR_PARTS.length) parts[avatarId] = kept;
   }
   s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear, parts };
+  // 결제 지급 출처(avatarId → grantId). 소유 중인 알려진 아바타만 남기고, 비어 있으면 필드를 만들지 않는다(기존 저장·해시와 호환).
+  const paid = {};
+  for (const [avatarId, grantId] of Object.entries(record(raw.avatars?.paid) ? raw.avatars.paid : {})) {
+    if (AVATAR_BY_ID[avatarId] && ownedAvatars.includes(avatarId) && typeof grantId === 'string' && grantId.length > 0 && grantId.length <= 100) paid[avatarId] = grantId;
+  }
+  if (Object.keys(paid).length) s.avatars.paid = paid;
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));

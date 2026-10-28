@@ -1032,9 +1032,11 @@ export class Economy {
   /**
    * 유료 풀셋 상품(avatar_fullset_<heroId>_v1) 지급 계약. BM 레인의 결제 확인 뒤 이 함수만 부른다.
    * 반환 { ok, avatarId, already }. already 면 이미 소유(중복 지급 없음, 보상 처리는 BM 레인 몫).
-   * @param {string} heroId @param {{ avatarId?: string }} [opts]
+   * paidBy(결제 지급 id)를 주면 새로 얻은 경우에만 avatars.paid[avatarId]=paidBy 로 출처를 남긴다(환불 때 결제로 얻은 것만 회수).
+   * 이미 가진 아바타(이벤트·부위·보석 출처)에는 출처를 덮어쓰지 않는다.
+   * @param {string} heroId @param {{ avatarId?: string, paidBy?: string }} [opts]
    */
-  grantAvatarFullset(heroId, { avatarId = AVATAR_PREMIUM_BY_HERO[heroId] } = {}) {
+  grantAvatarFullset(heroId, { avatarId = AVATAR_PREMIUM_BY_HERO[heroId], paidBy } = {}) {
     const avatar = AVATAR_BY_ID[avatarId];
     if (!avatar || avatar.heroId !== heroId) return { ok: false, reason: 'not-ready' };
     // 결제 전 선검증용: 영웅을 소유하지 않았으면 입을 수 없으므로 지급하지 않는다(BM 이 결제 전에 같은 값을 확인).
@@ -1044,8 +1046,28 @@ export class Economy {
     const before = structuredClone(s.avatars);
     s.avatars.owned.push(avatarId);
     if (s.avatars.parts) delete s.avatars.parts[avatarId];
+    if (typeof paidBy === 'string' && paidBy) (s.avatars.paid || (s.avatars.paid = {}))[avatarId] = paidBy;
     if (!this.save()) { s.avatars = before; return { ok: false, reason: 'storage' }; }
     this.emit(); return { ok: true, avatarId, already: false };
+  }
+  /**
+   * 환불·역분개: 그 결제 지급(paidBy)으로 얻은 아바타만 소유·착용에서 뺀다. 이벤트·부위·보석 출처는 건드리지 않는다.
+   * @param {string} paidBy @returns {string[]} 회수한 아바타 id
+   */
+  revokePaidAvatars(paidBy) {
+    const a = this.s.avatars, paid = a.paid;
+    if (!paid || typeof paidBy !== 'string') return [];
+    const ids = Object.keys(paid).filter((id) => paid[id] === paidBy);
+    if (!ids.length) return [];
+    const before = structuredClone(a);
+    for (const id of ids) {
+      a.owned = a.owned.filter((x) => x !== id);
+      for (const [heroId, eq] of Object.entries(a.equipped)) if (eq === id) delete a.equipped[heroId];
+      delete paid[id];
+    }
+    if (!Object.keys(paid).length) delete a.paid;
+    if (!this.save()) { this.s.avatars = before; return []; }
+    this.emit(); return ids;
   }
   /**
    * 이벤트·업적이 주는 아바타 부위 하나. 네 부위가 모이면 풀셋으로 바뀌어 소유된다.
