@@ -1,4 +1,8 @@
 import './style.css';
+import { resetAccountFromScratch } from './game/account-reset.js';
+import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
+import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
+const dungeonLabel = (kind, id) => [...__ALL_DUNGEONS, ...__FIELD_DUNGEONS].find((d) => d.id === id)?.name || (kind === 'arena' ? '결투장' : '던전');
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { FrameGovernor, canRenderFrame } from './engine/frame-governor.js';
@@ -418,6 +422,14 @@ class App {
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
+  /** 계정 초기화(처음부터): 세이브·UI 기록·동행·기기 신원을 지운다. 성공하면 호출부가 새로고침해 첫 실행 셋업으로 간다. */
+  async resetAccount() {
+    if (this.stageStarting || this.mode === 'battle') return { ok: false, reason: 'busy' };
+    // 신원·저장 삭제가 모두 검증된 뒤에만 메모리 상태를 비운다(실패하면 지금 상태 그대로).
+    const r = await resetAccountFromScratch();
+    if (r.ok) { this.companionAgent?.reset(); this.eco.reset(); }
+    return r;
+  }
   resetProgress() {
     if (this.stageStarting) return false;
     const companionReset = this.companionAgent?.reset() ?? true;
@@ -539,8 +551,10 @@ class App {
       if (refund.ok) this.expeditionTicket = null;
       this.expeditionRefundPending = !refund.ok;
       this.toLobby();
-      this.ui.toast(refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.', 'red');
-      console.warn('expedition preparation failed', error?.message);
+      this.ui.toast((refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.') + ` (${dungeonLabel(kind, id)}${options.depth === 'deep' ? ' 심층' : ''})`, 'red');
+      // 원인을 남겨 둔다: 어느 던전·단계에서 어떤 예외였는지(제보 재현용). 화면에는 짧은 코드만 덧붙인다.
+      this.lastExpeditionError = { kind, id, depth: options.depth || 'standard', message: String(error?.message || error).slice(0, 200), at: Date.now() };
+      console.warn('expedition preparation failed', kind, id, options.depth || 'standard', error?.stack || error?.message);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }

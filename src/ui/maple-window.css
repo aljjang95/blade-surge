@@ -163,6 +163,7 @@
 .danger-zone { margin: 18px 0 4px; padding: 0; border: 1px dashed #d26a6a99; border-radius: 10px; background: #3a1b2218; }
 .danger-zone > summary { min-height: 44px; display: flex; align-items: center; padding: 0 14px; color: #f0a3a3; font-size: 12px; font-weight: 800; cursor: pointer; }
 .danger-zone .danger-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.danger-zone .danger-input { min-height: 44px; padding: 0 12px; border: 1px solid #d26a6a99; border-radius: 8px; background: #1a0f13; color: #fff; font-size: 16px; }
 .danger-zone .danger-body > p, .danger-zone .danger-confirm > p { margin: 0; color: #e8c3c3; font-size: 12px; line-height: 1.6; }
 .danger-zone .danger-body .btn { min-height: 44px; }
 .danger-zone .danger-confirm { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #d26a6a; border-radius: 8px; background: #4a1c24; }

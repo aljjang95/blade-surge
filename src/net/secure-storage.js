@@ -5,7 +5,8 @@ import { createDeviceKey, isDeviceKey } from '../../packages/tll-social/src/clie
 
 export const DEVICE_KEY_NAME = 'tll-social:blade-surge:key';
 export const INSTALL_ID_NAME = 'bladesurge_install_id';
-const DB = 'bladesurge-secure', STORE = 'kv';
+export const SECURE_DB_NAME = 'bladesurge-secure';
+const DB = SECURE_DB_NAME, STORE = 'kv';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function idb(mode, fn) {
