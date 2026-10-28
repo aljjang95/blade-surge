@@ -47,6 +47,26 @@ WORLD_BIBLE 1장: "해골 병사는 빈 관을 나르는 장례 행렬, 원령�
 
 Tripo 전용 몸 요청(지휘 세션, 2026-10-28): `tll_ch1_coffinbearer`(관꾼 해골), `tll_ch1_mourner`(곡하는 원령 + 손종 prop), `tll_ch1_tombknight`(애도의 기사 + 묘비 방패·부러진 종추 prop). 들어오면 1장 잡몹·원거리·중간 보스의 asset을 교체한다.
 
-## 3. 다음 장 진행 순서
+## 3. 2장 상세 (멈추지 못한 장인)
+
+WORLD_BIBLE 2장: "오크·임프는 같은 하루의 노동에 굳어 버린 장인들, 화염 정령은 회수된 집집의 난롯불". 팔레트 그을린 갈색·쇳물 주황, 발광은 쇳물 주황 하나.
+
+| 적 id | 의상 소품 | 읽히는 것 |
+|---|---|---|
+| orc | 가죽 앞치마 + 등에 멘 대장 망치 | 장인 |
+| orc_blob | 풀무 | 불 지피는 화부 |
+| tribal | 미완성 칼 다발(달군 날) | 끝나지 않는 일 |
+| cacto_wall | 모루 방패 | 정면이 단단함 |
+| bomb_imp / imp / ash_burrower | 머리 심지 불(자폭) / 숯 덩이 | 불씨 |
+| tribal_shaman | 깨진 질그릇 등잔 | 먼저 잡을 후열 |
+| hywirl / armabee | 없음(이미 불새 실루엣) | 난롯불 |
+| elite_orc_chief | 앞치마 + 미완성 대검 | 정예 |
+| elite_bluedemon | 달군 사슬 | 정예 |
+| forge_midboss 이그란 | 앞치마 + 칼 다발 + 망치 | 중간 보스 |
+| forge_finalboss 화왕 발드 | 용광로 왕관 + 달군 사슬 | 최종 보스 |
+
+환경: 대기·색 보정 kiln 기준 70%, 방 가장자리 식은 쇳물 웅덩이·미완성 칼 걸이·모루·빈 그릇 식탁. Tripo 2차 요청: `tll_ch2_smith`, `tll_ch2_emberimp`, `tll_ch2_igran`(기존 몬스터 비율 참조 이미지 `asset-library/concepts/goblin_0.png` 등).
+
+## 4. 다음 장 진행 순서
 
 1장 운영 배포 → 전후 캡처 → 2장(용광로: 앞치마·망치·모루 방패·쇳물 발광) → 3장 → 4장 → 5장 → 6장(잔향 색) 순. 장마다 의상 표 추가 → 캡처 → 배포 → Tripo 묶음 요청.
