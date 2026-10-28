@@ -4,6 +4,7 @@ import { gatherEnemies, gatherWarriorWindup } from './crowd-gather.js';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
+import { skillGateLevel } from '../data/skill-tree.js';
 import { applyLook } from './look.js';
 import { emitWeaponSparks } from './weapon-glow.js';
 import { materialsOf, poseRangerBowString } from '../engine/assets.js';
@@ -523,12 +524,12 @@ export class Player extends Actor {
     }
   }
   /** 각성 스킬 해금 여부 — 레벨 구간(unlock)을 넘겼는가 */
-  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || (this.heroLevel >= sk.unlock && (this.skillLevels?.[i] ?? 1) >= 1)); }
+  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (sk.unlock ? (this.heroLevel >= sk.unlock && (this.skillLevels?.[i] ?? 1) >= 1) : this.heroLevel >= skillGateLevel(this.def, i)); }
 
   // ---------------- 스킬 ----------------
   tryCastSkill(i, aim = null) {
     const sk = this.def.skills[i]; if (!sk) return false;
-    if (!this.unlocked(i)) { this.game.ui.toast(this.heroLevel < sk.unlock ? `Lv.${sk.unlock} 각성으로 해금됩니다` : 'SP로 스킬을 먼저 습득하세요', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    if (!this.unlocked(i)) { this.game.ui.toast(this.heroLevel < skillGateLevel(this.def, i) ? `Lv.${skillGateLevel(this.def, i)}${sk.unlock ? ' 각성으로' : '에'} 해금됩니다` : 'SP로 스킬을 먼저 습득하세요', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
     else if (this.cds[i] > 0) return false;
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;

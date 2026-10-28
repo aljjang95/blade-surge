@@ -110,7 +110,8 @@ function fixture(heroId: string) {
   const names = new Set(['Idle', 'Running_A', 'Dodge_Forward', 'Dodge_Backward', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B',
     ...def.combo.map((c: any) => c.anim), ...def.skills.map((s: any) => s.anim).filter(Boolean)]);
   const gltf = { scene: new THREE.Group(), animations: [...names].map(name => new THREE.AnimationClip(name, 1, [])) };
-  f.player = f.game.player = new Player(f.game, gltf, def, f.player.stats);
+  // 기본 스킬·궁극기 단계 해금(Lv8)이 열린 전투 픽스처(combat-flow-sim 과 같다).
+  f.player = f.game.player = new Player(f.game, gltf, def, f.player.stats, undefined, {}, 8);
   f.player.pos.copy(position);
   players.push(f.player);
   return f;

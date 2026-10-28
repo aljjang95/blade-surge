@@ -105,6 +105,13 @@ export class UI {
     document.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !b.classList.contains('skill-btn') && !b.classList.contains('attack-btn') && !b.classList.contains('dodge-btn')) audio.play('ui_click', { vol: 0.35, min: 0.05 }); }, true);
     $('btn-pause').addEventListener('click', () => this.pause(true));
     $('btn-resume').addEventListener('click', () => this.pause(false));
+    // PC: 전투 중 Esc 는 일시정지 창을 열고 닫는다. 다른 창·대화가 Esc 를 먼저 처리했으면(defaultPrevented) 건드리지 않는다.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.repeat || e.defaultPrevented || !this.el.hud.classList.contains('show')) return;
+      if (this.el.modal?.classList.contains('show') || document.querySelector('dialog[open], .mpl-win:not([hidden])')) return;
+      const b = this.app.battle; if (!b?.active || !b.player) return;
+      e.preventDefault(); this.pause(!this.el.pause.classList.contains('show'));
+    });
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
     $('btn-boss-shortcut').addEventListener('click', () => { const b = this.app.battle; if (b?.shortcutBoss()) { $('btn-boss-shortcut').hidden = true; this.setObjective(b.world); } });
     $('btn-auto').addEventListener('click', (event) => {

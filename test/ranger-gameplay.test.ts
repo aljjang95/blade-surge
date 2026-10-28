@@ -136,6 +136,9 @@ test('actual skill entry enforces Ranger ultimate gauge and awakening levels', (
   Object.assign(p, { heroLevel: 1, state: 'idle', ult: 99, ultMax: 100, cds: [0,0,0,0,0,0],
     skillLevels: [1,1,1,1,1,1], unlocked: Player.prototype.unlocked, stopTrail() {}, autoAim() {}, playTimed() {} });
   game.ultCinematic = () => cinematic++;
+  // 궁극기는 Lv8 단계 해금(skill-tree.js ULT_GATE_LEVEL): Lv1 에서는 게이지가 차도 막힌다.
+  p.ult = 100; expect(Player.prototype.tryCastSkill.call(p, 3)).toBe(false); expect(p.ult).toBe(100);
+  p.heroLevel = 8; p.ult = 99;
   expect(Player.prototype.tryCastSkill.call(p, 3)).toBe(false);
   expect(Player.prototype.tryCastSkill.call(p, 4)).toBe(false);
   p.ult = 100;

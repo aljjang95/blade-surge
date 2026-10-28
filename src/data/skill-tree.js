@@ -11,6 +11,19 @@ export const FREE_RESET_BELOW_LEVEL = 20;
 /** 처음부터 배운 상태(기본 스킬·궁극기 1레벨)인지, 레벨 해금 뒤 SP로 배워야 하는 각성 스킬(0레벨)인지. */
 export function skillBaseLevel(skill) { return skill?.unlock ? 0 : 1; }
 export function skillRequiredLevel(skill) { return skill?.unlock || 1; }
+// 기본 스킬 단계 해금(2026-10-27 대표님 피드백 '처음부터 먼치킨'): Lv1 은 평타 + 첫 스킬, Lv3 둘째, Lv5 셋째, Lv8 궁극기, Lv10 부터 각성.
+// SP 비용·저장 스킬 레벨은 그대로이고, 레벨이 오를 때 쓸 수 있는 시점만 늦춘다(1-1 한 판에 Lv3~5 까지 올라 둘째·셋째가 열린다).
+export const BASIC_SKILL_GATES = Object.freeze([1, 3, 5]);
+export const ULT_GATE_LEVEL = 8;
+/** i번 스킬을 쓸 수 있는 최소 영웅 레벨(각성은 unlock, 기본은 단계 해금, 궁극기는 Lv8). */
+export function skillGateLevel(def, i) {
+  const skills = def?.skills || [], sk = skills[i];
+  if (!sk) return 1;
+  if (sk.unlock) return sk.unlock;
+  if (sk.ult) return ULT_GATE_LEVEL;
+  let k = 0; for (let j = 0; j < i; j++) if (!skills[j].unlock && !skills[j].ult) k++;
+  return BASIC_SKILL_GATES[Math.min(k, BASIC_SKILL_GATES.length - 1)];
+}
 /** toLevel 로 올릴 때 드는 SP. 각성 첫 습득·궁극기·6레벨 이상은 2, 나머지는 1. */
 export function spCostForLevel(skill, toLevel) {
   if (!skill || toLevel < 1 || toLevel > SKILL_MAX_LV) return Infinity;
