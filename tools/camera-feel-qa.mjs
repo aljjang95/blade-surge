@@ -2,7 +2,7 @@
 // 사용: node tools/camera-feel-qa.mjs --out <폴더> [--view 844x390] [--scenes 1-1,2-4,7-10b] [--seconds 14] [--video 1]
 // 장면: 'c-s'는 일반 진행 전투, 끝에 b 가 붙으면 봉인을 풀고 보스방 문 앞에서 시작해 보스전을 잰다.
 // 산출(커밋 금지): <out>/<scene>.mp4(--video), <out>/<scene>-*.png, <out>/metrics.json
-// 지표: 카메라 방위(yaw) 이동량·최대 회전 속도, 영웅까지 거리·FOV 의 변동 폭(줌 펌핑), 영웅 화면 위치의 중심 이탈,
+// 지표: AUTO 시점 방위(autoYaw, 의도적 회전)와 실제 시선 방위(yaw, 추적 흔들림 포함) 이동량·최대 회전 속도, 영웅까지 거리·FOV 의 변동 폭(줌 펌핑), 영웅 화면 위치의 중심 이탈,
 //       영웅 화면 위치의 프레임간 급변(카메라가 시선을 빼앗는 순간), 화면 안 적 비율.
 // 주입: 스테이지 직접 시작, 영웅 무적·레벨, Math.random 시드. 판정·피해·카메라 코드는 건드리지 않는다.
 // 헤드리스 SwiftShader 결과다. 실기기 터치·GPU·손맛 증거가 아니다.
@@ -32,8 +32,11 @@ const report = { origin, view: `${width}x${height}`, hero, seconds, scope: 'head
 
 const pct = (arr, q) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : 0; };
 const round = (v, n = 3) => Number.isFinite(v) ? +v.toFixed(n) : null;
-function summarize(rows) {
-  const dt = 1 / 60;
+function summarize(all) {
+  // 스테이지 시작 직후 카메라가 자리 잡는 1.5초는 뺀다(전후 공통).
+  const rows = all.slice(90), dt = 1 / 60;
+  let autoYawTravel = 0;
+  for (let i = 1; i < rows.length; i++) { let d = rows[i].autoYaw - rows[i - 1].autoYaw; d = ((d + 180) % 360 + 360) % 360 - 180; autoYawTravel += Math.abs(d); }
   let yawTravel = 0, maxYawRate = 0;
   const yawRates = [], screenJumps = [];
   for (let i = 1; i < rows.length; i++) {
@@ -45,7 +48,7 @@ function summarize(rows) {
   const inCombat = rows.filter(r => r.near > 0);
   return {
     frames: rows.length, combatFrames: inCombat.length,
-    yawTravelDeg: round(yawTravel, 1), maxYawRateDegPerSec: round(maxYawRate, 1), p95YawRateDegPerSec: round(pct(yawRates, .95), 1),
+    autoYawTravelDeg: round(autoYawTravel, 1), yawTravelDeg: round(yawTravel, 1), maxYawRateDegPerSec: round(maxYawRate, 1), p95YawRateDegPerSec: round(pct(yawRates, .95), 1),
     distRange: round(Math.max(...dist) - Math.min(...dist)), distMin: round(Math.min(...dist)), distMax: round(Math.max(...dist)),
     fovRange: round(Math.max(...fov) - Math.min(...fov), 2),
     heroOffCenterP95: round(pct(off, .95)), heroOffCenterMax: round(Math.max(...off)),
@@ -113,7 +116,7 @@ try {
           near++; const v = new V(e.pos.x, .8, e.pos.z).project(cam);
           if (v.z <= 1 && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1) onScreen++;
         }
-        window.__feel.rows.push({ t: +bb.elapsed.toFixed(3), camYaw: Math.atan2(fwd.x, fwd.z) * 180 / Math.PI, dist: cam.position.distanceTo(pl.pos), fov: cam.fov,
+        window.__feel.rows.push({ t: +bb.elapsed.toFixed(3), autoYaw: r.battleCamera?.yaw || 0, camYaw: Math.atan2(fwd.x, fwd.z) * 180 / Math.PI, dist: cam.position.distanceTo(pl.pos), fov: cam.fov,
           heroX, heroY, centerX: q.x, centerY: q.y, near, onScreen: near ? onScreen / near : 1, boss: !!(bb.boss?.alive && !bb.boss.spawning) });
       };
       window.__run = (frames, renderLast) => { for (let i = 0; i < frames; i++) { app.step(1 / 60, !renderLast || i === frames - 1); window.__sample(); } };
