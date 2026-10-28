@@ -44,6 +44,11 @@ export interface PortoneEnv {
   IAP_ALLOW_TEST?: string;
   /** 테스트 채널을 쓸 수 있는 account_id 허용 목록(쉼표 구분, 기본 비어 있음). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제를 받는다. */
   IAP_TEST_ACCOUNTS?: string;
+  /**
+   * 웹 결제창에서 고를 수 있는 결제수단(쉼표 구분, 기본 'CARD'). KAKAOPAY·NAVERPAY·TOSSPAY는 KG이니시스 간편결제(포트원 EASY_PAY)로,
+   * KG 가맹 계약에 그 간편결제가 추가된 뒤에만 켠다.
+   */
+  WEB_PAY_METHODS?: string;
   /** 포트원 API 시크릿(Secrets Store 바인딩). 값은 어디에도 출력하지 않는다. */
   PORTONE_API_SECRET?: string | { get(): Promise<string> };
 }
@@ -77,6 +82,19 @@ export function webChannel(env: PortoneEnv, accountId?: string | null, wantTest 
   if (tester) return { key: env.PORTONE_TEST_CHANNEL_KEY as string, test: true };
   return null;
 }
+/** 웹 결제수단: CARD(신용·체크카드 일반결제) + KG이니시스 간편결제 공급자(포트원 V2 easyPayProvider 값). */
+export const WEB_PAY_METHODS = Object.freeze(['CARD', 'KAKAOPAY', 'NAVERPAY', 'TOSSPAY'] as const);
+export type WebPayMethod = typeof WEB_PAY_METHODS[number];
+/** 설정이 켠 결제수단(알 수 없는 값은 버림). 카드는 항상 맨 앞이고, 설정이 비면 카드만. */
+export function webPayMethods(env: PortoneEnv): WebPayMethod[] {
+  const on = new Set((env.WEB_PAY_METHODS ?? 'CARD').split(',').map((v) => v.trim().toUpperCase()));
+  return WEB_PAY_METHODS.filter((m) => m === 'CARD' || on.has(m));
+}
+/** 결제창 요청에 넣을 결제수단 필드. 간편결제는 payMethod EASY_PAY + easyPay.easyPayProvider. */
+export function payMethodFields(method: WebPayMethod): { payMethod: string; easyPay?: { easyPayProvider: string } } {
+  return method === 'CARD' ? { payMethod: 'CARD' } : { payMethod: 'EASY_PAY', easyPay: { easyPayProvider: method } };
+}
+
 /** 클라이언트에 알리는 웹 결제 켜짐 표시(설정만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
 export function webBillingOn(env: PortoneEnv, accountId?: string | null): boolean {
   return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!webChannel(env, accountId);
@@ -150,8 +168,11 @@ const ROW_COLUMNS = 'payment_id, account_id, product_id, amount_krw, store_id, c
 
 // ── 의도: 서버가 paymentId·금액을 정한다 ─────────────────────────
 export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['productId', 'test'], ['productId']);
+  onlyKeys(body, ['productId', 'test', 'method'], ['productId']);
   if (body.test !== undefined && typeof body.test !== 'boolean') fail(400, 'test');
+  // 결제수단은 설정이 켠 것만(기본 카드). 지급 검증은 수단과 무관하게 금액·상점·채널·상품으로만 한다.
+  const method = (body.method ?? 'CARD') as WebPayMethod;
+  if (typeof body.method !== 'undefined' && (typeof body.method !== 'string' || !webPayMethods(penv(c)).includes(method))) fail(400, 'pay-method');
   const reason = await webReason(c);
   if (reason) fail(503, reason);
   const env = penv(c);
@@ -189,7 +210,7 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   await recordServerMilestone(c.db, accountId, 'purchase_start', c.now);
   return {
     paymentId, productId: product.id, storeId: env.PORTONE_STORE_ID, channelKey: channel.key, orderName: product.title,
-    totalAmount: product.priceKRW, currency: 'KRW', payMethod: 'CARD', customData: JSON.stringify({ productId: product.id }), test: channel.test, serverTime: c.now,
+    totalAmount: product.priceKRW, currency: 'KRW', ...payMethodFields(method), customData: JSON.stringify({ productId: product.id }), test: channel.test, serverTime: c.now,
   };
 }
 

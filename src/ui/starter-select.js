@@ -1,5 +1,6 @@
 // 첫 실행 시작 영웅 선택(정책 2). 새 저장에서 튜토리얼·로비보다 먼저 한 번 뜬다. 고른 영웅이 무료 소유 영웅이 되고 바꿀 수 없다.
 // 설계도 시안: 상단 상세 판 + 비교 목록(공격·생존·난이도). 막대 수치는 src/data/hero-traits.js 에서 계산한다.
+import { HERO_UNLOCK_VIA_GACHA } from '../data/hero-roster.js';
 import { HEROES, HERO_ORDER } from '../data/heroes.js';
 import { heroCompare, DIFFICULTY_MAX } from '../data/hero-traits.js';
 
@@ -44,7 +45,7 @@ export function runStarterSelect(app, { root = document } = {}) {
     const el = root.createElement('div');
     el.id = 'starter-select'; el.className = 'starter-select'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ss-title');
     const row = (c) => `<button type="button" class="ss-card" role="radio" aria-checked="false" data-hero="${esc(c.id)}" style="--hc:${esc(c.color)}"><span class="ss-sigil">${SIGIL}</span><span class="ss-art"><img src="${esc(c.portrait)}" alt="" onerror="this.style.visibility='hidden'"></span><span class="ss-info"><b>${esc(c.name)}</b><small>${esc(c.role)}</small>${difficultyStarsHtml(c.difficulty)}</span>${compareBarsHtml(c)}</button>`;
-    el.innerHTML = `<div class="ss-panel"><div class="ss-head"><h2 id="ss-title">시작 영웅 선택</h2><p>처음 함께할 영웅 한 명을 고르세요. 나머지 영웅은 나중에 해금할 수 있어요.</p></div>
+    el.innerHTML = `<div class="ss-panel"><div class="ss-head"><h2 id="ss-title">시작 영웅 선택</h2><p>처음 함께할 영웅 한 명을 무료로 고르세요. ${HERO_UNLOCK_VIA_GACHA ? '나머지 영웅은 영웅 소환에서 만날 수 있어요(첫 소환권 지급).' : '나머지 영웅은 나중에 해금할 수 있어요.'}</p></div>
       <div class="ss-detail" aria-live="polite"><img class="ss-hero" src="" alt="" onerror="this.style.visibility='hidden'"><div class="ss-dtext"><h3></h3><span class="ss-drole"></span><p></p></div></div>
       <div class="ss-list" role="radiogroup" aria-labelledby="ss-title">${choices.map(row).join('')}</div>
       <div class="ss-foot"><p class="ss-note" role="status" aria-live="polite"></p><button type="button" class="ss-go" disabled>이 영웅으로 시작</button><span class="ss-free">시작 영웅 1명 무료 선택</span></div></div>`;

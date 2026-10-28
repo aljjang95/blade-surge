@@ -43,6 +43,8 @@
     // 웹 결제(포트원 V2): 기본 꺼짐. 켜는 순서는 docs/BM_DESIGN.md '영웅 해금' 개방 순서(D1 0004 원격 적용 → 실채널 키 → 이 스위치 → 대표님 금액 확인).
     // storeId·channelKey는 비밀이 아니다. PORTONE_CHANNEL_KEY가 비면 intent를 거부한다. 테스트 채널('신기충만 - KG이니시스 테스트')은 IAP_ALLOW_TEST=true일 때만 쓰며 실결제 채널로 쓰지 않는다.
     "WEB_BILLING_ENABLED": "false",
+    // 웹 결제수단(쉼표 구분). KAKAOPAY·NAVERPAY·TOSSPAY는 KG이니시스 간편결제 계약 추가 뒤에만 넣는다.
+    "WEB_PAY_METHODS": "CARD",
     "PORTONE_STORE_ID": "store-75d3b0fa-c6c8-4e9e-b848-8025e4bb7503",
     "PORTONE_CHANNEL_KEY": "",
     "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
