@@ -70,8 +70,11 @@ export const CHAPTER_SPECIES = Object.freeze({
   // 2-1 일반 방에 새 몸이 하나도 없었다. 처음 소개되는 주력 종도 장 전용 몸으로 바꾼다(수치·행동은 각 원본 복사).
   1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp' }),
   2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
+  // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
+  // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
+  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
 });
-/** 캠페인 1·2장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
+/** 캠페인 1·2·3장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
   if (!stage || stage.expedition) return id;
   return CHAPTER_SPECIES[stage.chapter?.id]?.[id] || id;
@@ -449,11 +452,27 @@ const CHAPTER_SPECIES_DEFS = {
   ch1_mourner_dirge: ['skel_mage', '만가 부르는 원령', 'Ch1_Mourner'],
   ch2_anvilguard: ['cacto_wall', '모루 방패 장인', 'Ch2_Smith'],
   ch2_ashimp: ['ash_burrower', '잿불 굴착 임프', 'Ch2_EmberImp'],
+  ch3_censor: ['ghost', '망령 검열관', 'Ch3_Censor'],
+  ch3_censor_slip: ['ghost_skull', '쪽지 날리는 검열관', 'Ch3_Censor'],
+  ch3_censor_tome: ['skel_mage', '금서 낭독 검열관', 'Ch3_CensorTome'],
+  ch3_censor_quill: ['skel_priest', '깃펜 든 검열관', 'Ch3_CensorTome'],
+  // 깃펜 검열관(skel_priest 자리)이 부르는 지원병(summon skel_minion)도 3장 사서 몸으로 나온다.
+  ch3_pagebearer: ['skel_minion', '책 나르는 사서', 'Ch3_Librarian'],
+  ch3_librarian: ['skel_rogue', '서리 해골 사서', 'Ch3_Librarian'],
+  ch3_shelfguard: ['skel_shield', '서가 방패 사서', 'Ch3_ShelfGuard'],
+  ch3_keykeeper: ['bone_orc', '열쇠지기 사서', 'Ch3_Librarian'],
+  ch3_icecrawler: ['frost_burrower', '얼음 밑 사서', 'Ch3_Librarian'],
+  ch3_moldkeeper: ['blob_green', '곰팡이 핀 사서', 'Ch3_Librarian'],
 };
-for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
-// 1·2장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
+// 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome']);
+for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
+  ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
+  if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
+}
+// 1·2·3장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
 for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {
-  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2]]) {
+  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3]]) {
     const def = ENEMIES[`${prefix}_${rank}`];
     if (def && CHAPTER_SPECIES[chapterId][def.summon]) def.summon = CHAPTER_SPECIES[chapterId][def.summon];
   }

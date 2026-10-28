@@ -140,10 +140,10 @@ test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적�
   expect(sceneryPlacements(floor, 8)).toEqual({});
 });
 
-test('도감은 1·2장 전용 종의 실제 출현 위치를 잡는다', async () => {
+test('도감은 1·2·3장 전용 종의 실제 출현 위치를 잡는다', async () => {
   const { buildCatalogue } = await import('../src/game/rpg-catalogue.js');
   const byId = new Map(buildCatalogue().map((e: any) => [e.id, e]));
-  for (const id of ['ch1_coffinbearer', 'ch1_mourner', 'ch1_tombguard', 'ch1_mourner_wail', 'ch2_smith', 'ch2_emberimp', 'ch2_smith_line', 'ch2_emberimp_line', 'ch2_emberimp_bomb', 'ch1_mourner_dirge', 'ch1_hoodbearer', 'ch1_gravewisp', 'ch2_anvilguard', 'ch2_ashimp']) {
+  for (const id of ['ch1_coffinbearer', 'ch1_mourner', 'ch1_tombguard', 'ch1_mourner_wail', 'ch2_smith', 'ch2_emberimp', 'ch2_smith_line', 'ch2_emberimp_line', 'ch2_emberimp_bomb', 'ch1_mourner_dirge', 'ch1_hoodbearer', 'ch1_gravewisp', 'ch2_anvilguard', 'ch2_ashimp', 'ch3_censor', 'ch3_censor_slip', 'ch3_censor_tome', 'ch3_censor_quill', 'ch3_librarian', 'ch3_shelfguard', 'ch3_keykeeper', 'ch3_icecrawler', 'ch3_moldkeeper']) {
     const entry: any = byId.get(id);
     expect(entry, id).toBeTruthy();
     expect(entry.locations.length, id).toBeGreaterThan(0);
@@ -157,4 +157,24 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'skel_minion')).toBe('skel_minion');
   expect(chapterSpeciesId({ chapter: { id: 1 }, expedition: {} }, 'skel_minion')).toBe('skel_minion');
   expect(chapterSpeciesId({ chapter: { id: 1 } }, 'bone_orc')).toBe('bone_orc');
+  // 3장: 서리 해골 사서·망령 검열관 갈래. 같은 종이 나오는 6·7장과 원정은 그대로다.
+  expect(chapterSpeciesId({ chapter: { id: 3 } }, 'ghost')).toBe('ch3_censor');
+  expect(chapterSpeciesId({ chapter: { id: 3 } }, 'skel_shield')).toBe('ch3_shelfguard');
+  expect(chapterSpeciesId({ chapter: { id: 3 } }, 'bone_orc')).toBe('ch3_keykeeper');
+  expect(chapterSpeciesId({ chapter: { id: 3 } }, 'golem_guard')).toBe('golem_guard');
+  expect(chapterSpeciesId({ chapter: { id: 3 }, expedition: {} }, 'ghost')).toBe('ghost');
+  expect(chapterSpeciesId({ chapter: { id: 6 } }, 'ghost')).toBe('ghost');
+  expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('skel_shield');
+});
+
+test('3장 중간 보스는 오르딘 몸, 3장 관문·보스 지원병은 검열관 몸으로 나온다', async () => {
+  const { ENEMIES: E } = await import('../src/data/stages.js');
+  const ENEMIES = E as Record<string, any>;
+  expect(ENEMIES.frost_midboss.model).toBe('Ch3_Ordin');
+  for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) expect(ENEMIES[`frost_${rank}`].summon, rank).toBe('ch3_censor');
+  // 원본 종 수치를 그대로 복사한다(보상·경제 불변).
+  for (const [id, src] of [['ch3_censor', 'ghost'], ['ch3_shelfguard', 'skel_shield'], ['ch3_censor_tome', 'skel_mage'], ['ch3_icecrawler', 'frost_burrower']]) {
+    expect(ENEMIES[id].hp, id).toBe(ENEMIES[src].hp);
+    expect(ENEMIES[id].behavior, id).toBe(ENEMIES[src].behavior);
+  }
 });

@@ -86,6 +86,21 @@ export const MONSTER_ROSTER = Object.freeze({
     weapon: { asset: 'tll_ch2_lantern', hand: 'right', grip: [0, 0.28, 0], at: [0, 0.05, 0.01], rot: [0, 0, 180] } },
   Ch2_Igran: { asset: 'tll_ch2_igran', fallback: 'goblin_brute', scale: 0.75, fallbackScale: 0.77,
     weapon: { asset: 'tll_ch2_anvil_hammer', hand: 'right', grip: [0, 0.3, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] } },
+  // ---- 3장 전용 Tripo 몸(2026-10-28, docs/asset-library/ch3-tripo.md) ----
+  // 서리 해골 사서 1.6m(등에 얼어붙은 책 더미)·망령 검열관 1.7m(눈가리개 띠, 두루마리 자락으로 떠 있음)·기록관 오르딘 2.2m(frost_midboss).
+  // scale 은 heightM × scale × def.scale 이 영웅(1.8m)의 0.9~1.0배가 되게 맞췄다. 검열관은 원본 종 크기(원령 1.25, 주술사 1.0)가 달라 항목을 나눴다.
+  // rot 은 2026-10-28 근접 후보 캡처(같은 장면에 4개 세워 비교)로 골랐다: 서가 방패는 책 면이 앞(묘비 방패와 손 축이 달라 180° 돌림),
+  // 금서는 펼친 면이 위·앞, 봉인 도장 철퇴는 머리가 위로 서서 몸 바깥으로 40° 기운다.
+  Ch3_Librarian: { asset: 'tll_ch3_librarian', fallback: 'shadow_soldier', scale: 1.05, fallbackScale: 1 },
+  // 서가 방패 사서: 왼손에 책이 꽂힌 얼음 서가 방패(skel_shield 자리).
+  Ch3_ShelfGuard: { asset: 'tll_ch3_librarian', fallback: 'bone_knight', scale: 1.05, fallbackScale: 1.03,
+    offhand: { asset: 'tll_ch3_shelfshield', hand: 'left', grip: [0, 0.4, 0.05], at: [0, 0.05, 0.08], rot: [90, 180, 0] } },
+  Ch3_Censor: { asset: 'tll_ch3_censor', fallback: 'void_wisp', scale: 0.8, fallbackScale: 1.17 },
+  // 금서를 든 검열관(주술사·사제 자리): 오른손에 펼친 금서.
+  Ch3_CensorTome: { asset: 'tll_ch3_censor', fallback: 'skeleton_mage', scale: 1.0, fallbackScale: 1.05,
+    weapon: { asset: 'tll_ch3_tome', hand: 'right', grip: [0, 0.1, 0], at: [0, 0.08, 0.04], rot: [90, 0, 0] } },
+  Ch3_Ordin: { asset: 'tll_ch3_ordin', fallback: 'frost_golem', scale: 0.8, fallbackScale: 0.63,
+    weapon: { asset: 'tll_ch3_seal', hand: 'right', grip: [0, 0.25, 0], at: [0, 0.08, 0.02], rot: [90, 0, 40] } },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },

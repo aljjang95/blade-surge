@@ -181,7 +181,26 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_yeti: { props: ['keyRing', 'bookStackBack'] },
       elite_wraith: { ...FROST_SPIRIT, props: ['openTome', 'spiritHalo'] },
       // 기록관 오르딘(중간 보스)·서리왕 이셀(최종 보스).
-      frost_midboss: { props: ['censorSeal', 'openTome'] },
+      // 오르딘은 Tripo 몸(tll_ch3_ordin)의 가슴에 얼음 석판이 있고 봉인 도장 철퇴를 손에 들어(로스터 weapon) 도장·금서 소품을 뺀다.
+      frost_midboss: { emissive: '#0a1c30' },
+      // 3장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 백지 흰색·서리 하늘색이라 색은 장 팔레트 그대로 두고,
+      // 사서 등의 책 더미·검열관의 두루마리 자락처럼 몸에 있는 실루엣과 겹치는 소품(bookStackBack·shelfShield·openTome)은 뺀다.
+      ch3_librarian: { ...FROST_BONE },
+      ch3_pagebearer: { ...FROST_BONE, props: ['frozenPages'] },
+      // 서가 방패는 로스터 offhand(tll_ch3_shelfshield)로 왼손에 든다.
+      ch3_shelfguard: { ...FROST_BONE },
+      // 뼈 오크 자리: 금서실 열쇠 꾸러미를 찬 사서, 몸빛을 한 톤 어둡게.
+      ch3_keykeeper: { ...FROST_BONE, color: '#9fb4c8', amount: 0.3, props: ['keyRing'] },
+      // 서리굴 잠행꾼 자리: 얼음 바닥 밑에서 솟는 사서 — 몸에 얼음 결정.
+      ch3_icecrawler: { ...FROST_BONE, props: ['iceShards'] },
+      // 부패 슬라임 자리: 서고 습기의 곰팡이가 번진 사서 — 몸빛을 푸른 이끼색으로 물들인다.
+      ch3_moldkeeper: { ...FROST_BONE, color: '#9cc7b4', amount: 0.38, emissive: '#06180f' },
+      // 검열관은 전용 몸이 이미 서리 청색이라 재배치(원령 공용 baseMix 0.5)가 무늬를 지운다 — 발광만 준다.
+      ch3_censor: { emissive: '#16365a' },
+      ch3_censor_slip: { emissive: '#1d4470', props: ['frozenPages'] },
+      // 금서는 로스터 weapon(tll_ch3_tome)으로 오른손에 든다. 사제 자리는 얼음 깃펜 관으로 구분한다.
+      ch3_censor_tome: { emissive: '#16365a' },
+      ch3_censor_quill: { emissive: '#16365a', props: ['iceQuillCrown'] },
       frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
     },
     assets: {

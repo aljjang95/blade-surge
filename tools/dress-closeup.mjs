@@ -42,6 +42,10 @@ const LINEUPS = {
     ['ghost', 'ghost_skull', 'skel_mage', 'skel_priest'],
     ['blob_green', 'frost_burrower', 'elite_yeti', 'elite_golem'],
     ['elite_wraith', 'frost_midboss', 'frost_finalboss'],
+    // 3장 전용 Tripo 몸(서리 해골 사서·망령 검열관)·오르딘(tll_ch3_ordin).
+    ['ch3_librarian', 'ch3_shelfguard', 'ch3_keykeeper', 'ch3_icecrawler'],
+    ['ch3_censor', 'ch3_censor_slip', 'ch3_censor_tome', 'ch3_censor_quill'],
+    ['ch3_moldkeeper', 'frost_midboss'],
   ],
   4: [
     ['squidle', 'glub', 'abyss_seer', 'blob_pink'],
