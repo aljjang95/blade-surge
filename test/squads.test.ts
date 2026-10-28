@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ENEMIES, stageDef, CHAPTERS, recommendedPowerFor } from '../src/data/stages.js';
-import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, LATE_CHAPTER_ATK } from '../src/game/squads.js';
+import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, campaignHpMul, CH1_RAMP, LATE_CHAPTER_ATK } from '../src/game/squads.js';
 import { Battle } from '../src/game/battle.js';
 import { towerStage } from '../src/game/endgame-core.js';
 
@@ -170,4 +170,13 @@ test('후반 곡선: 권장 전투력은 배율^0.7, 5장부터 캠페인 적 �
   const tower = towerStage(41);   // 원본 5-1
   expect(tower.ch).toBe(5); expect(tower.tower).toBeTruthy(); expect(campaignAtkMul(tower)).toBe(1);
   expect(tower.recPower).toBe(recommendedPowerFor(tower.scale));
+});
+
+test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력 ×1.15, 2장·원정·파티는 1', () => {
+  expect(campaignAtkMul(stageDef(1, 1))).toBe(1); expect(campaignHpMul(stageDef(1, 1))).toBe(1);
+  expect(campaignAtkMul(stageDef(1, 2))).toBe(1.8); expect(campaignAtkMul(stageDef(1, 10))).toBe(1.3);
+  for (let st = 2; st <= 10; st++) { expect(campaignHpMul(stageDef(1, st))).toBe(1.15); if (st > 2) expect(CH1_RAMP[st - 1].atk).toBeLessThan(CH1_RAMP[st - 2].atk); }
+  expect(campaignAtkMul(stageDef(2, 1))).toBe(1); expect(campaignHpMul(stageDef(2, 1))).toBe(1);
+  expect(campaignHpMul(stageDef(5, 1))).toBe(1);
+  expect(campaignAtkMul({ ...stageDef(1, 5), party: true })).toBe(1); expect(campaignHpMul({ ...stageDef(1, 5), expedition: true })).toBe(1);
 });
