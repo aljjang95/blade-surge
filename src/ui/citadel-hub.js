@@ -7,6 +7,8 @@ import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 import { mountBlessingSlot } from './blessing-reel.js';
 import { StarterVillageUI } from './starter-village-ui.js';
+import { townLine } from '../data/town-lines.js';
+import { activeCampaignTownChapter } from '../data/campaign-towns.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용',
@@ -68,6 +70,7 @@ export class CitadelHubUI {
       <div class="citadel-hub-near"><div class="citadel-hub-near-copy"><small>가까운 입구</small><strong class="citadel-hub-near-name">성채의 길</strong><span class="citadel-hub-near-detail" id="citadel-hub-near-detail">던전과 안내관에게 다가가세요</span></div><button type="button" class="citadel-hub-near-toggle" aria-controls="citadel-hub-near-detail"><span class="citadel-hub-near-toggle-text">안내</span><span class="citadel-hub-near-toggle-caret" aria-hidden="true"></span></button><button type="button" class="citadel-hub-interact" disabled><kbd>E</kbd><span>대화 · 입장</span></button></div>
       <div class="citadel-hub-stick" role="group" aria-label="성채 이동 조이스틱"><span class="citadel-hub-stick-cross" aria-hidden="true"></span><span class="citadel-hub-knob" aria-hidden="true"></span><span class="citadel-hub-stick-label" aria-hidden="true">이동</span></div>`;
     document.body.append(this.root);
+    this.eyebrow = this.root.querySelector('.citadel-hub-near-copy small');
     this.name = this.root.querySelector('.citadel-hub-near-name');
     this.detail = this.root.querySelector('.citadel-hub-near-detail');
     this.interactButton = this.root.querySelector('.citadel-hub-interact');
@@ -146,6 +149,9 @@ export class CitadelHubUI {
     this.nearest = spot || null;
     this.root.dataset.nearby = spot ? 'true' : 'false';
     this.name.textContent = spot?.label || this.app.townUI?.placeName() || '성채의 길';
+    // NPC 앞에서는 머리 줄이 그 지역 마을 사람의 한 줄 대사가 된다(src/data/town-lines.js).
+    const line = spot && townLine(activeCampaignTownChapter(), spot.kind);
+    if (this.eyebrow) { this.eyebrow.textContent = line ? `“${line}”` : '가까운 입구'; this.eyebrow.toggleAttribute('data-line', !!line); }
     this.detail.textContent = spot ? spot.kind === 'dungeon'
       ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.kind === 'waystone' && this.app.townUI
         ? `${spot.description} ${this.app.townUI.waystoneSummary()}` : spot.description : '던전과 안내관에게 다가가세요';

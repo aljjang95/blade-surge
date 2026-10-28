@@ -22,10 +22,16 @@ export const TOWN_REQUESTS = Object.freeze([
 ]);
 export const TOWN_REQUEST_BY_ID = Object.freeze(Object.fromEntries(TOWN_REQUESTS.map(request => [request.id, request])));
 
+// 마을 이야기 장마다 한 줄(18자 이하, docs/WORLD_BIBLE.md 0장). 긴 글 대신 장면 하나만 떠올리게 한다.
+const TOWN_STORY_TEXT = Object.freeze({
+  oathhold: ['이름 없는 묘비에 꽃이 놓였다', '바람 들판에 지워진 길이 있다', '모두의 이름을 다시 부른다'],
+  emberport: ['꺼지지 않는 화로가 운다', '항구 뒷골목에 식은 그릇', '불씨를 나눠 들고 돌아간다'],
+  starcrest: ['별 하나가 얼어 있다', '설원 아래 거꾸로 흐르는 길', '얼린 별을 함께 녹인다'],
+});
 export const TOWN_STORY = Object.freeze(Object.fromEntries(TOWNS.map(town => [town.id, Object.freeze([
-  { id: `${town.id}_chapter_1`, name: `${town.name}의 첫 증언`, target: { type: 'dungeon', amount: 1 }, rewards: { gold: 500, xp: 40 } },
-  { id: `${town.id}_chapter_2`, name: `${town.name}의 숨은 길`, target: { type: 'field', amount: 1 }, rewards: { gold: 800, materials: { [town.id === 'oathhold' ? 'glass_leaf' : town.id === 'emberport' ? 'ember_core' : 'star_dust']: 2 } } },
-  { id: `${town.id}_chapter_3`, name: `${town.name}의 귀환 맹세`, target: { type: 'dungeon', amount: 4 }, rewards: { gold: 1400, xp: 100 } },
+  { id: `${town.id}_chapter_1`, name: `${town.name}의 첫 증언`, text: TOWN_STORY_TEXT[town.id][0], target: { type: 'dungeon', amount: 1 }, rewards: { gold: 500, xp: 40 } },
+  { id: `${town.id}_chapter_2`, name: `${town.name}의 숨은 길`, text: TOWN_STORY_TEXT[town.id][1], target: { type: 'field', amount: 1 }, rewards: { gold: 800, materials: { [town.id === 'oathhold' ? 'glass_leaf' : town.id === 'emberport' ? 'ember_core' : 'star_dust']: 2 } } },
+  { id: `${town.id}_chapter_3`, name: `${town.name}의 귀환 맹세`, text: TOWN_STORY_TEXT[town.id][2], target: { type: 'dungeon', amount: 4 }, rewards: { gold: 1400, xp: 100 } },
 ])] )));
 
 export const TOWN_BLACKSMITH = Object.freeze({
