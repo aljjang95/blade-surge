@@ -42,10 +42,20 @@ test('3장 의상은 3장 로스터 전부와 중간·최종 보스를 덮는다
   expect((ENEMIES as Record<string, unknown>).forge_finalboss).toBeTruthy();
 });
 
+test('4장 의상은 4장 로스터와 confluence 경로 적, 중간·최종 보스를 덮는다', () => {
+  const deep = CHAPTER_DRESS[4];
+  for (const id of Object.keys(deep.species)) expect((ENEMIES as Record<string, unknown>)[id], id).toBeTruthy();
+  for (const spec of [...Object.values(deep.species), ...Object.values(deep.assets)]) for (const key of spec.props || []) expect(DRESS_PROP_KEYS).toContain(key);
+  const def: any = stageDef(4, 1);
+  const roster = def.combatRosterFor?.();
+  // 진화한 독침벌은 이미 불새 실루엣이라 몸 기준 색만 받는다.
+  for (const id of roster ? [...roster.trash, ...roster.ranged, ...roster.elite] : []) if (id !== 'armabee_evo') expect(deep.species[id], id).toBeTruthy();
+});
+
 test('의상은 캠페인 장에만 입히고 원정은 제외한다', () => {
   expect(chapterDressFor({ chapter: { id: 1 } }, 'skel_minion', 'bone_knight')?.props).toContain('coffin');
   expect(chapterDressFor({ chapter: { id: 1 }, expedition: { id: 'x' } }, 'skel_minion', 'bone_knight')).toBeNull();
-  expect(chapterDressFor({ chapter: { id: 4 } }, 'skel_minion', 'bone_knight')).toBeNull();
+  expect(chapterDressFor({ chapter: { id: 5 } }, 'skel_minion', 'bone_knight')).toBeNull();
   // 종 표에 없는 1장 경로 보스는 몸 기준 의상.
   expect(chapterDressFor({ chapter: { id: 1 } }, 'dungeon_tribunal_captain', 'ember_drake')).toBeTruthy();
   expect(CHAPTERS[0].theme).toBe('garden');
@@ -76,7 +86,7 @@ test('1장 대기 보정은 경로 색을 장 색 쪽으로 섞고 다른 장은
   expect(graded.fog).not.toBe(tribunal.fog);
   const g = new THREE.Color(graded.fog), target = new THREE.Color(CHAPTER_GRADES[1].fog), from = new THREE.Color(tribunal.fog);
   expect(Math.abs(g.g - target.g)).toBeLessThan(Math.abs(from.g - target.g));
-  expect(gradeAtmosphere(tribunal, 4)).toBe(tribunal);
+  expect(gradeAtmosphere(tribunal, 5)).toBe(tribunal);
 });
 
 test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적으로 놓인다', () => {
@@ -92,5 +102,5 @@ test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적�
     expect(edge).toBeLessThanOrEqual(1.81);
     expect(Math.abs(it.x - 10) < 3.2 && Math.abs(it.z) < 6.2).toBe(false);
   }
-  expect(sceneryPlacements(floor, 4)).toEqual({});
+  expect(sceneryPlacements(floor, 5)).toEqual({});
 });
