@@ -11,6 +11,8 @@
   pointer-events: none;
 }
 #battle-tutorial[hidden], #battle-tutorial [hidden] { display: none; }
+/* 첫 조작 뒤에는 설명을 접어 제목 한 줄만 남긴다(가로·세로 공통). */
+#battle-tutorial.compact .tutorial-copy-wrap p { display: none; }
 #battle-tutorial .tutorial-toggle {
   align-self: center;
   min-height: 44px;
@@ -105,22 +107,21 @@
   #battle-tutorial.guided #tutorial-next { display: none; }
 }
 /* 가로 화면의 펼친 안내는 아래 띠(조이스틱·공격 버튼 사이)가 아니라 상단 가장자리 띠에 둔다(실화면 844×390에서 아래 띠가 플레이 영역을 가렸다).
-   왼쪽은 체력 카드(오른쪽 끝 198px)와 스테이지·웨이브, 오른쪽은 미니맵·목표 카드(오른쪽에서 237px)를 피하고 접기 버튼·직행 버튼 줄(위쪽 56px) 아래에 둔다.
+   왼쪽은 체력 카드(실측 오른쪽 끝 234px), 오른쪽은 봉인 해제 띠·미니맵 묶음(실측 오른쪽에서 274px)을 피하고 접기 버튼·직행 버튼 줄(위쪽 56px) 아래에 둔다.
    버튼은 오른쪽 끝에 붙여 조이스틱 터치 영역(42%) 밖에 둔다. 첫 조작 뒤에는 설명을 접어 제목 한 줄만 남긴다(.compact). */
 @media (orientation: landscape) {
   #battle-tutorial .tutorial-card {
-    left: calc(206px + var(--sal));
+    left: calc(242px + var(--sal));
     top: calc(60px + var(--sat));
     bottom: auto;
     transform: none;
-    width: min(420px, calc(100vw - 451px - var(--sal) - var(--sar)));
+    width: min(420px, calc(100vw - 524px - var(--sal) - var(--sar)));
     gap: 6px;
     padding: 5px 7px;
   }
   #battle-tutorial .tutorial-copy-wrap > span { display: inline-block; margin-right: 5px; font-size: 9px; }
   #battle-tutorial .tutorial-copy-wrap h2 { display: inline; margin: 0; font-size: 12px; }
   #battle-tutorial .tutorial-copy-wrap p { margin: 2px 0 0; font-size: 10px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  #battle-tutorial.compact .tutorial-copy-wrap p { display: none; }
   #battle-tutorial .tutorial-actions { gap: 3px; }
   #battle-tutorial .tutorial-actions .btn { min-height: 40px; min-width: 52px; padding: 2px 6px; font-size: 10px; }
 }
