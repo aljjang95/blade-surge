@@ -128,6 +128,8 @@ def erase_texture(meshes, spec, report):
       x, y = min(width - 1, max(0, int(c.x * width))), min(height - 1, max(0, int(c.y * height)))
       samples.append(pixels[y, x, :3])
     fill = np.median(np.array(samples), axis=0)
+    if spec.get('debugColor'):
+      fill = np.array(spec['debugColor'], dtype=np.float32)
     mask = np.zeros((height, width), dtype=bool)
     for uvs in targets:
       pts = np.array([[u.x * width, u.y * height] for u in uvs])
@@ -151,7 +153,7 @@ def erase_texture(meshes, spec, report):
     # 손으로 칠한 질감이 남도록 원래 밝기 변화를 조금 섞는다.
     lum = pixels[..., :3].mean(axis=2, keepdims=True)
     base = lum[mask].mean() if mask.any() else 0.5
-    shaded = np.clip(fill[None, :] * (1 + (lum[mask] - base) * 0.35), 0, 1)
+    shaded = np.clip(fill[None, :] * (1 + np.clip(lum[mask] - base, -0.15, 0.05) * 0.5), 0, 1) if not spec.get('debugColor') else fill[None, :]
     pixels[mask, :3] = shaded
     image.pixels.foreach_set(pixels.ravel())
     image.update()

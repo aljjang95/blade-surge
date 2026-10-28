@@ -41,6 +41,10 @@ const map = args.map || (kind === 'prop' || avatar ? '{}' : JSON.stringify(role 
   ? { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }
   : { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' }));
 
+// --rawSource: 클립 이식 등 중간 파일을 넣을 때 provenance.rawSha256 은 Tripo 원본 파일로 계산한다.
+// 몬스터 메타: 프로필·비행 높이·타격 시점. --impactsFrom <기증자 id> 는 클립을 이식한 기증자 manifest 의 impacts 를 그대로 쓴다.
+const profile = args.profile === undefined ? undefined : String(args.profile);
+const hover = args.hover === undefined ? undefined : Number(args.hover);
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 // 갑옷 단계 메시를 1단계 정규화 골격에 다시 묶은 파일은 재정규화하면 골격 배율·원점이 1단계와 어긋나므로 그대로 들인다.
 const prenormalized = args.prenormalized === true || args.prenormalized === 'true';
@@ -74,12 +78,15 @@ try {
   const clips = kind === 'prop' ? [] : Object.keys(JSON.parse(map));
   for (const clip of clips) if (!animations.has(clip)) throw new Error(`missing required clip: ${clip}`);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const donorImpacts = args.impactsFrom ? manifest.assets.find((asset) => asset.id === args.impactsFrom)?.impacts : undefined;
+  if (args.impactsFrom && !donorImpacts) throw new Error(`no impacts on ${args.impactsFrom}`);
+  const impacts = args.impacts ? JSON.parse(args.impacts) : donorImpacts ? Object.fromEntries(Object.entries(donorImpacts).filter(([key]) => clips.includes(key))) : undefined;
   manifest.assets = manifest.assets.filter((asset) => asset.id !== assetId);
   manifest.assets.push({
     id: assetId, kind, body, replaces: args.replaces || null, file: `/models/library/${assetId}.glb`, heightM, triangles,
     bytes: bytes.length, sha256: sha256(bytes),
-    clips: Object.fromEntries(clips.map((key) => [key, key])),
-    provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: args.taskId || '', prompt: args.prompt || '', createdAt: new Date().toISOString(), rawSha256: sha256(rawBytes) },
+    clips: Object.fromEntries(clips.map((key) => [key, key])), ...(impacts ? { impacts } : {}), ...(profile ? { profile } : {}), ...(hover !== undefined ? { hover } : {}),
+    provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: args.taskId || '', prompt: args.prompt || '', createdAt: new Date().toISOString(), rawSha256: sha256(args.rawSource ? await readFile(resolve(args.rawSource)) : rawBytes) },
     license: 'owner-generated (Tripo subscription)', shared: args.shared !== 'false', ...(role ? { role, heroId } : {}), ...(armorTier ? { armorTier } : {}), ...(armorTheme ? { armorTheme } : {}), ...(avatar ? { avatar: true } : {}), ...(boss ? { boss: true } : {}),
   });
   validateManifest(manifest);
