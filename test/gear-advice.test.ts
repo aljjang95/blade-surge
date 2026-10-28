@@ -120,3 +120,12 @@ test('가방 정리: 보고 있는 영웅의 가방만 후보로 잡는다(출�
   eco.equip(lead, give(eco, id('weapon', 'E')).uid); const leadJunk = give(eco, id('weapon', 'N'), 0, { owner: lead });
   expect(junkItems(eco, { heroId: other }).some((j: any) => j.uid === leadJunk.uid)).toBe(false);
 });
+
+test('최선 장착: 같은 고점수 중복 장비가 쌓여도 세트 완성 업그레이드를 계획한다', () => {
+  const eco = make(), hero = eco.s.selected;
+  for (const itemId of ['w_steel', 'a_leather', 'r_copper', 'b_cloth']) eco.equip(hero, give(eco, itemId).uid);
+  for (let i = 0; i < 8; i++) give(eco, 'w_steel');
+  const iron = give(eco, 'w_iron');
+  expect(betterItems(eco, hero).get(iron.uid)).toBeGreaterThan(0);
+  expect(planBestEquip(eco, hero).some((p: any) => p.uid === iron.uid)).toBe(true);
+});

@@ -19,6 +19,14 @@ function wornMap(eco) {
 }
 const byUid = (eco) => new Map((eco.s.inventory || []).map((x) => [x.uid, x]));
 
+/** 같은 장비·강화·장비 레벨·룬 구성의 중복은 하나만 남긴다(후보 상한을 변화 없는 중복이 다 차지하지 않게). */
+const dupKey = (x) => x.id + '|' + (x.enh || 0) + '|' + (x.il || 0) + '|' + (x.tp || '') + '|' + JSON.stringify(x.sockets || null);
+function slotCandidates(list, keep) {
+  const seen = new Set(), out = [];
+  for (const x of list) { const k = dupKey(x); if (seen.has(k)) continue; seen.add(k); if (keep(x)) out.push(x); }
+  return out;
+}
+
 /**
  * 영웅 한 명의 슬롯별 "더 좋은 장비" 후보. 다른 영웅이 끼고 있는 장비는 뺏지 않는다.
  * @returns {Map<number, number>} uid → 장착 시 전투력 증가(정수, 양수만)
@@ -31,7 +39,7 @@ export function betterItems(eco, heroId, { perSlot = 12 } = {}) {
     const cur = inv.get(hero.equip?.[slot]), curScore = cur ? gearScore(cur) : -1;
     // 단독 점수가 낮아도 다른 부위와 세트를 완성하는 장비는 실제 빌드 비교까지 보낸다.
     const sets = new Set(SLOTS.filter((s) => s !== slot).map((s) => ITEM_BY_ID[inv.get(hero.equip?.[s])?.id]?.set).filter(Boolean));
-    const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && (gearScore(x) > curScore || sets.has(ITEM_BY_ID[x.id]?.set)))
+    const cands = slotCandidates(bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid)), (x) => gearScore(x) > curScore || sets.has(ITEM_BY_ID[x.id]?.set))
       .sort((a, b) => gearScore(b) - gearScore(a)).slice(0, perSlot);
     for (const inst of cands) {
       const delta = Math.round(eco.heroBuildStats(heroId, { ...hero.equip, [slot]: inst.uid }, eco.s.inventory).power - basePower);
@@ -55,7 +63,10 @@ export function planBestEquip(eco, heroId) {
     let best = null;
     for (const slot of SLOTS) {
       const curScore = inv.get(equip[slot]) ? gearScore(inv.get(equip[slot])) : -1;
-      const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && x.uid !== equip[slot] && !worn.has(x.uid) && !plan.some((p) => p.uid === x.uid) && gearScore(x) > curScore * 0.6)
+      // 세트 동료(다른 부위 착용 세트)는 점수와 무관하게 후보, 중복은 하나만 — betterItems 와 같은 후보 규칙.
+      const sets = new Set(SLOTS.filter((s) => s !== slot).map((s) => ITEM_BY_ID[inv.get(equip[s])?.id]?.set).filter(Boolean));
+      const cands = slotCandidates(bagOf(eco, heroId).filter((x) => slotOf(x) === slot && x.uid !== equip[slot] && !worn.has(x.uid) && !plan.some((p) => p.uid === x.uid)),
+        (x) => gearScore(x) > curScore * 0.6 || sets.has(ITEM_BY_ID[x.id]?.set))
         .sort((a, b) => gearScore(b) - gearScore(a)).slice(0, 8);
       for (const inst of cands) {
         const delta = eco.heroBuildStats(heroId, { ...equip, [slot]: inst.uid }).power - base;
