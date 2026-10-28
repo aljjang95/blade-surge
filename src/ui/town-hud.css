@@ -7,3 +7,7 @@
 :root:root:root:root .citadel-hub-active .citadel-hub-place .town-place-row > strong { display: none; }
 :root:root:root:root .citadel-hub-place .town-place-row { gap: 6px; }
 :root:root:root:root .citadel-hub-place .town-map-chip { min-height: 44px; min-width: 44px; padding: 0 12px; font-size: 13px; box-shadow: 0 2px 0 #874a0e, 0 3px 10px #0004; }
+/* NPC 한 줄 대사(src/data/town-lines.js)는 안내를 접어 둔 가로 화면에서도 이름 위에 보인다. 세로 화면은 카드 높이 제한(82px) 때문에 기존대로 숨긴다. */
+@media (orientation: landscape) {
+  :root:root:root:root .citadel-hub-ui .citadel-hub-near-copy small[data-line] { display: block; font-size: 12px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

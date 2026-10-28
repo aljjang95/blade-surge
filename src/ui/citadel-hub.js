@@ -151,7 +151,7 @@ export class CitadelHubUI {
     this.name.textContent = spot?.label || this.app.townUI?.placeName() || '성채의 길';
     // NPC 앞에서는 머리 줄이 그 지역 마을 사람의 한 줄 대사가 된다(src/data/town-lines.js).
     const line = spot && townLine(activeCampaignTownChapter(), spot.kind);
-    if (this.eyebrow) this.eyebrow.textContent = line ? `“${line}”` : '가까운 입구';
+    if (this.eyebrow) { this.eyebrow.textContent = line ? `“${line}”` : '가까운 입구'; this.eyebrow.toggleAttribute('data-line', !!line); }
     this.detail.textContent = spot ? spot.kind === 'dungeon'
       ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.kind === 'waystone' && this.app.townUI
         ? `${spot.description} ${this.app.townUI.waystoneSummary()}` : spot.description : '던전과 안내관에게 다가가세요';
