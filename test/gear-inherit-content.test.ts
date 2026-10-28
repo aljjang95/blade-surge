@@ -29,7 +29,7 @@ const receive = (eco: any, rarity = 'L', slot = 'weapon') => {
   expect(eco.vaultRitual(it.uid, 'mage').ok).toBe(true); eco.equip('mage', it.uid); return it.uid as number;
 };
 const win = (eco: any, heroId = 'mage') => { eco.s.selected = heroId; return eco.completeStage(applyDifficulty(stageDef(1, 1), DIFFICULTIES.story), 3); };
-const relayCount = (eco: any, kind: 'daily' | 'weekly' = 'daily') => { eco.s.journey = normalizeJourney(eco.s.journey); return contractRows(eco.s.journey, clock)[kind].find((r: any) => r.stat === 'vaultRelay').cur; };
+const relayCount = (eco: any, kind: 'daily' | 'weekly' = 'daily') => { eco.s.journey = normalizeJourney(eco.s.journey); return contractRows(eco.s.journey, clock)[kind].find((r: any) => r.stat === 'vaultRelay')!.cur; };
 
 describe('vaultRelay (받은 장비로 클리어)', () => {
   test('계승 의식으로 받은 장비를 끼고 이기면 1, 같은 uid 는 하루 한 번만', () => {
