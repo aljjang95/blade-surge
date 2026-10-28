@@ -88,6 +88,20 @@ describe('새 저장 · 진행 저장의 노출', () => {
     expect(state.gateIds).toEqual(regionDungeonIds(3));
   });
 
+  test('귀환로(6지역): 고유 관문 하나에 앞 지역마다 대표 관문 하나씩을 함께 세운다(docs/TOWN_AUDIT.md)', () => {
+    const s = load({ ...fresh(), progress: { unlocked: 51, stars: { ...stars(1), ...stars(2), ...stars(3), ...stars(4), ...stars(5) }, difficulty: 'story' } });
+    const state = regionDungeonState(s);
+    expect(state.current).toBe(6);
+    expect(state.gateIds[0]).toBe('comet_bastion');
+    expect(state.gateIds).toHaveLength(6);
+    expect(state.gateIds.slice(1).map((id: string) => dungeonRegion(id))).toEqual([5, 4, 3, 2, 1]);
+    for (const id of state.gateIds) expect(state.visibleIds).toContain(id);
+    // 5지역 마을로 돌아가면 그 지역 관문만 선다.
+    const back = regionDungeonState({ ...s, campaignTown: { current: 5, celebrated: 6 } });
+    expect(back.current).toBe(5);
+    expect(back.gateIds.every((id: string) => dungeonRegion(id) === 5)).toBe(true);
+  });
+
   test('별 기록만 있는 옛 저장(unlocked·campaignTown·regionGate 없음): 별에서 진행을 복원해 마을과 던전을 연다', () => {
     const raw: any = { gold: 100, progress: { stars: stars(1) } };
     const s = load(raw);

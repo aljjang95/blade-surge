@@ -286,3 +286,31 @@ export function buildChapterScenery(floor, ch) {
   group.userData.dispose = () => { group.removeFromParent(); for (const c of group.children) c.dispose?.(); };
   return group;
 }
+
+/** 장마다 쓸 수 있는 소품 키(마을 광장 배치가 고른다). */
+export const CHAPTER_PROP_KEYS = Object.freeze(Object.fromEntries(Object.entries(KITS).map(([ch, spec]) => [ch, Object.freeze(spec.mix.map(([key]) => key))])));
+
+/**
+ * 정해진 자리에 장 소품을 세운다(지역 마을 광장, docs/TOWN_AUDIT.md). 던전과 같은 공유 지오메트리·재질을 쓰고 키마다 인스턴스 메시 하나다.
+ * @param {number} ch @param {{ key: string, x: number, z: number, yaw?: number, s?: number }[]} items
+ * @returns {THREE.Group | null}
+ */
+export function buildChapterProps(ch, items) {
+  if (!KITS[ch] || !items?.length) return null;
+  const group = new THREE.Group(); group.name = `chapter-props-${ch}`;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const byKey = new Map();
+  for (const it of items) if (KITS[ch].kit[it.key]) { if (!byKey.has(it.key)) byKey.set(it.key, []); byKey.get(it.key).push(it); }
+  for (const [key, list] of byKey) {
+    const geo = kitGeometry(ch, key), mats = sceneryMaterials();
+    for (const [k, g] of [[0, geo.solid], [1, geo.glow]]) {
+      if (!g) continue;
+      const mesh = new THREE.InstancedMesh(g, mats[k], list.length);
+      list.forEach((it, i) => mesh.setMatrixAt(i, m.compose(p.set(it.x, 0, it.z), q.setFromAxisAngle(up, it.yaw || 0), s.setScalar(it.s || 1))));
+      mesh.instanceMatrix.needsUpdate = true; mesh.castShadow = false; mesh.receiveShadow = !k; mesh.computeBoundingSphere();
+      mesh.name = `chapter-props-${key}${k ? '-glow' : ''}`;
+      group.add(mesh);
+    }
+  }
+  return group;
+}
