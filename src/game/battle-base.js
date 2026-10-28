@@ -45,6 +45,7 @@ import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
+import { chapterVisual } from './chapter-scenery.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
@@ -131,7 +132,7 @@ export class Battle {
     this.routeObjectives = createRouteObjectives(stage, this.world);
     this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
-    this.visual = dungeonVisualFor(stage);
+    this.visual = chapterVisual(dungeonVisualFor(stage), stage);
     if (stage.field) await preloadFieldSurface();
     if (this.world.expeditionRouteId === 'glass_garden') await preloadGlassGardenKit();
     if (this._startGeneration !== startGeneration) return;

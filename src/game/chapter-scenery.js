@@ -9,8 +9,18 @@ import { mulberry32 } from './world.js';
 
 /** 장 대기 보정: 경로 대기값(T)을 장 색 쪽으로 weight 만큼 섞는다. 1장은 청록·묘비 회색(WORLD_BIBLE 2장 표). */
 export const CHAPTER_GRADES = Object.freeze({
-  1: { weight: .55, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4 },
+  1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
+
+/**
+ * 화면 색 보정(렌더러 grade)과 안개 지평선도 장 기준으로 맞춘 전투 시각 프로필. 하늘·카메라·랜드마크는 경로 것을 유지한다.
+ * @param {*} visual dungeonVisualFor 결과 @param {*} stage
+ */
+export function chapterVisual(visual, stage) {
+  const grade = !stage || stage.expedition || stage.field ? null : CHAPTER_GRADES[stage.chapter?.id];
+  if (!visual || !grade?.look) return visual;
+  return Object.freeze({ ...visual, grade: grade.look, fogHorizon: grade.fogHorizon });
+}
 
 const _a = new THREE.Color(), _b = new THREE.Color();
 const mixHex = (from, to, k) => _a.setHex(from).lerp(_b.setHex(to), k).getHex();
