@@ -21,6 +21,7 @@ import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { EliteAffixes } from './elite-affixes.js';
 import { sizeBandMul } from '../data/size-bands.js';
 import { campaignAtkMul, campaignHpMul } from './squads.js';
+import { dressEnemy } from './chapter-dress.js';
 const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
@@ -86,7 +87,7 @@ export function nextBossPattern(def, turn, phase = 0) {
 }
 
 export class Enemy extends Actor {
-  constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
+  constructor(game, gltf, weaponsGltf, def, scaleMult, pos, species = null) {
     const rig = rigOf(def.model, gltf.scene.userData.libraryAsset);
     // visualScale 은 모델 크기만 줄인다. 반경·피격 높이·자폭 범위는 def.scale 기준으로 그대로다(큰 슬라임이 뒤의 적을 가리던 문제).
     super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (rig === 'library' && gltf.scene.userData.libraryAsset?.id === monsterRosterEntry(def.model)?.asset ? sizeBandMul(def) : 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
@@ -122,6 +123,10 @@ export class Enemy extends Actor {
     if (def.elite) this.tintEmissive = new THREE.Color(0.06, 0.04, 0.0);
     // 원령은 반투명 몸을 유지하되 깊이를 써서, 뭉쳤을 때 서로의 몸·뒤의 적이 비쳐 보이지 않게 한다(밀집 시 '투명해져 타격감이 사라짐').
     if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = GHOST_OPACITY; m.depthWrite = true; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
+    // 장별 의상(docs/MONSTER_ART_BIBLE.md): 같은 Tripo 몸이라도 그 지역에 묶인 이유가 보이게 색·발광·뼈 소품을 입힌다.
+    // 애니메이션 재생 전(휴식 자세)에 붙여야 소품이 뼈 축에 맞는다.
+    this.dress = species ? dressEnemy(this, game.stage, species) : null;
+    if (this.dress?.ghostGlow && def.ghostly) this.tintEmissive = new THREE.Color(this.dress.ghostGlow).multiplyScalar(.55);
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */

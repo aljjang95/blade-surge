@@ -633,7 +633,7 @@ export class Battle {
         pos = new THREE.Vector3(best.x, 0, best.z);
       }
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
-    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
+    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos, runtimeType);
     e.homeRoom = rm;
     if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
     // 캠페인 정예는 행동형 접두사 1~2개를 달고 자기 분대의 대장이 된다.
