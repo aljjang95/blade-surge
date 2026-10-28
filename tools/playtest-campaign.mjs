@@ -289,7 +289,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
     if (a.mode !== 'lobby') a.toLobby?.();
     a.ui.closeModal?.();
     const id = e.s.selected;
-    const gold0 = e.s.gold;
+    const gold0 = e.s.gold, gems0 = e.s.gems;
     try {
       // 1) 보상 수령: 출석·우편·임무·여정·패스
       if (e.dailyAvailable?.()) { const r = e.claimDaily(); did('claimDaily', { r: r && JSON.stringify(r).slice(0, 80) }); }
@@ -299,12 +299,14 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (let lv = 1; lv <= e.passLevel; lv++) if (!e.s.pass.claimedFree.includes(lv)) { const r = e.claimPass(lv, false); if (r) did('claimPass', { lv }); }
       // 2) 소환: 게임 견적이 가능한 배너(초보자 → 영웅)를 10연으로
       for (let g = 0; g < 4 && pullEnabled; g++) {
-        const banner = ['beginner', 'hero'].find((bid) => e.pullQuote(10, bid).ok);
+        const banner = ['beginner', 'hero', 'gear'].find((bid) => e.pullQuote(10, bid).ok);
         if (!banner) break;
         const q = e.pullQuote(10, banner), res = e.pull(10, banner);
         if (!res) break;
         did('pull10', { banner, currency: q.currency, results: res.map((x) => (x.id || x.item?.id || x.hero || '?') + (x.rar ? '/' + x.rar : '')) });
       }
+      // 2b) 초월: 성장 가이드가 제안할 때(견적 ok) 같은 함수로 실행
+      for (let g = 0; g < 3; g++) { const tq = e.transcendQuote?.(id); if (!tq?.ok || !tq.next) break; const tr = e.transcend(id); if (!tr?.ok) { did('transcendBlocked', { reason: tr?.reason }); break; } did('transcend', { to: tq.next, cost: JSON.stringify(tq.cost) }); }
       // 3a) 장비(새 UI 그대로): 영웅 탭 가방의 "더 좋은 장비 장착" → "가방 정리"(확인 단계 포함)를 사람이 누르듯 눌러 본다.
       {
         a.meta.heroSel = id; a.meta.heroPane = 'gear'; a.meta.bagClean = null; a.meta.openTab('heroes');
@@ -371,7 +373,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (const x of e.s.inventory) { const slot = itemSlot[x.id]; if (!slot || h.equip[slot] === x.uid) continue; const d = e.heroBuildStats(id, { ...h.equip, [slot]: x.uid }, e.s.inventory).power - base; if (bestDelta[slot] === undefined || d > bestDelta[slot]) bestDelta[slot] = d; }
       inv = { total: e.s.inventory.length, byRarity, worn: Object.entries(h.equip || {}).map(([slot, uid]) => { const x = e.s.inventory.find((y) => y.uid === uid); return x ? `${slot}:${x.id}(${itemRarity[x.id]}+${x.enh})` : `${slot}:-`; }), bestUnwornPowerDelta: bestDelta, stones: [e.s.stones, e.s.stones2, e.s.stones3], fragments: e.s.fragments };
     } catch (err) { inv = { err: String(err).slice(0, 80) }; }
-    return { acts, inv, gold: [gold0, e.s.gold], gems: e.s.gems, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
+    return { acts, inv, gold: [gold0, e.s.gold], gems: e.s.gems, gems0, bag: e.s.inventory.length, res: { stones: e.s.stones, stones2: e.s.stones2, stones3: e.s.stones3, fragments: e.s.fragments, tickets: e.s.tickets, transcendStones: e.s.transcendStones }, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
   };
 
   C.state = () => { const hid = e.s.selected; return { mode: a.mode, hero: hid, level: e.hero().level, exp: e.hero().exp, power: e.heroPower(hid), unlocked: e.s.progress.unlocked, gold: e.s.gold, gems: e.s.gems, energy: e.s.energy, energyMax: e.energyMax, owned: [...(e.s.roster?.owned || [])], inventory: e.s.inventory.length, equip: e.hero().equip, levels: Object.fromEntries(Object.entries(e.s.heroes).map(([k, v]) => [k, v.level])) }; };
@@ -432,7 +434,7 @@ async function playStage(code, attempt, { tag = '' } = {}) {
 
 async function doMeta(label) {
   const r = await page.evaluate(() => window.__C.meta());
-  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, gems: r.gems, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
+  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, gems: r.gems, gems0: r.gems0, bag: r.bag, res: r.res, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
   return r;
 }
 
