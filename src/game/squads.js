@@ -14,7 +14,21 @@ export function campaignCombat(stage) { return !!stage && Number.isInteger(stage
 // 5장부터 캠페인 적 공격 ×1.3. 적 공격은 배율^0.7, 영웅 체력·방어는 전투력에 비례해 커져 7-10 보스가 영웅을 쓰러뜨리는 데
 // 처치 시간의 10배가 걸렸다(권장 전투력 61%로도 승리). 보상·정산·배율(scale)은 그대로 두고 위협만 되살린다. 원정·파티·무한의 성(자체 층 배율) 제외.
 export const LATE_CHAPTER_FROM = 5, LATE_CHAPTER_ATK = 1.3;
-export function campaignAtkMul(stage) { return campaignCombat(stage) && !stage.tower && (stage.chapter?.id ?? stage.ch) >= LATE_CHAPTER_FROM ? LATE_CHAPTER_ATK : 1; }
+// 1장 램프: 1-1 한 판의 레벨(1→5)·장비·강화(+8까지 100%)로 전투력이 약 2.5배가 되어 1-2~1-10이 체력 2~10%만 깎이는 무위협 구간이었다
+// (신규 계정 연속 실입력 플레이). 1-1(첫 판·PRD 지표 측정 관문)은 그대로 두고 1-2부터 공격 ×1.8 → 1-10 ×1.3, 체력 ×1.15로 압박을 되살린다.
+// 보상·배율·드랍표·정산은 그대로(전투 생성자에서만 곱한다). 원정·파티·무한의 성 제외.
+export const CH1_RAMP = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze(i === 0 ? { atk: 1, hp: 1 } : { atk: +(1.8 - (i - 1) * .0625).toFixed(4), hp: 1.15 })));
+export function campaignAtkMul(stage) {
+  if (!campaignCombat(stage) || stage.tower) return 1;
+  const ch = stage.chapter?.id ?? stage.ch;
+  if (ch >= LATE_CHAPTER_FROM) return LATE_CHAPTER_ATK;
+  return ch === 1 ? CH1_RAMP[stage.st - 1]?.atk ?? 1 : 1;
+}
+/** 1장 체력 배율(1-1은 1). 공격과 같은 이유로 1-2~1-10에만. */
+export function campaignHpMul(stage) {
+  if (!campaignCombat(stage) || stage.tower || (stage.chapter?.id ?? stage.ch) !== 1) return 1;
+  return CH1_RAMP[stage.st - 1]?.hp ?? 1;
+}
 
 export function speciesRole(def) {
   if (!def) return 'line';
