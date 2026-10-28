@@ -299,7 +299,8 @@ export function updatePursuit(enemy, game, player, distance, dt, route) {
   if (pack) {
     pack.sumNow += d; pack.cntNow++;
     if (pack.cntPrev > 1 && d > PACK.paceRange) {
-      const ahead = pack.meanPrev - d;
+      // 분대 대형(squads.js ROLE_FORMATION): 방패·분쇄는 무리 평균보다 앞에서, 원거리·주술사는 뒤에서 걷는다.
+      const ahead = pack.meanPrev - d - (enemy.formFront || 0);
       route.pace = ahead > PACK.paceAhead ? PACK.paceSlow : -ahead > PACK.paceBehind ? PACK.paceFast : 1;
     }
     // 발각한 무리는 걷는 영웅을 놓치지 않을 만큼 따라붙는다. 느린 종일수록 더 서두르되 영웅 기본 속도는 넘지 않는다.

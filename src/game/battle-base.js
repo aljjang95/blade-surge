@@ -433,6 +433,13 @@ export class Battle {
   /** 방 테마(주 분대) 안내. 같은 판에서 같은 테마는 한 번만, 새로 소개되는 적이 있으면 그 이름을 앞세운다. */
   announceSquad(room) {
     const plan = room.squadPlan, squad = SQUADS[plan.theme];
+    // 분대 깃발: 무리마다 앵커에 고리와 분대 이름을 띄워 화면 밖 대형도 어디에 무엇이 있는지 보이게 한다(월드 위 표시, 플레이 영역 팝업 아님).
+    room.packs?.forEach((pk, i) => {
+      const tpl = SQUADS[i % 2 === 0 ? plan.theme : plan.secondary] || squad; 
+      const at = new THREE.Vector3(pk.x, 0, pk.z);
+      this.fx.castCircle(at, i % 2 === 0 ? 0xffc060 : 0x9fd0ff, { radius: 2.6, life: 1.8, telegraph: false });
+      if (tpl?.name) this.fx.damage(at.setY(1.6), 0, { text: tpl.name });
+    });
     if (!squad?.hint) return;
     const seen = this._squadSeen || (this._squadSeen = new Set());
     const fresh = plan.featured && plan.list.includes(plan.featured) && !seen.has('new:' + plan.featured);
@@ -638,6 +645,7 @@ export class Battle {
       this.announceAffixes(e);
     }
     e.runtimeSpeciesId = runtimeType;
+    if (squadRole) e.formFront = squadRole === 'elite' ? 1.4 : ROLE_FORMATION[squadRole] || 0;
     this.regionTraits?.attach(e, squadRole);
     // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
     if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
