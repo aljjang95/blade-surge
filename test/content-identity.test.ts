@@ -139,7 +139,7 @@ test('preview uses real Enemy visuals, including weapons, ghost/elite treatment 
         instanceMaterials.add(material);
       }
     });
-    if (def.ghostly) expect((enemy.model.getObjectByName('Body') as THREE.Mesh).material).toMatchObject({ transparent: true, opacity: .8, depthWrite: false });
+    if (def.ghostly) expect((enemy.model.getObjectByName('Body') as THREE.Mesh).material).toMatchObject({ transparent: true, opacity: .85, depthWrite: true });
     for (const material of instanceMaterials) material.addEventListener('dispose', () => instanceDisposals++);
     enemy.dispose();
     expect(scene.children).toHaveLength(0);

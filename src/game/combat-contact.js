@@ -18,6 +18,9 @@ export function contactProfile(opts, crit, boss, reduced, weapon = '') {
   };
 }
 
+// 한 60ms 창 안에서 첫 접점 뒤로 섬광만 더 받는 적 수(군중 타격이 첫 적만 번쩍이지 않게).
+export const CROWD_SPARKS = 3;
+
 // Pure window decision: one emission and at most one finisher upgrade per 60 ms.
 export function contactBudget(previous, now, contact) {
   if (!contact) return null;
