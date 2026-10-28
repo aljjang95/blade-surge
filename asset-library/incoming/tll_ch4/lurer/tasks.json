@@ -1,0 +1,29 @@
+{
+ "id": "tll_ch4_lurer",
+ "workspace_task_id": "9c811150-36e7-48a8-91d1-67b4f402a0bc",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, stylized chunky chibi, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: deep navy and dark teal, with glowing deep-sea teal #58e0d2 accent points. No religious symbols, no crosses. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: a lure anglerfish creature, a small deep-sea anglerfish monster standing upright on two short thick legs like a chibi humanoid: a big round head with a huge wide mouth full of small sharp teeth, small round side eyes, dark navy-blue fish skin with fins on the back of the head and forearms, thick short arms with webbed hands and big fingers, and a glowing teal #58e0d2 lure lantern bulb on a short curved stalk growing from the front of its forehead (the lure is part of the body, compact, not too long), a tiny tail fin, bare webbed feet.",
+ "image_refs": [
+  "goblin_0.png (asset-library/concepts, origin/main)",
+  "goblin_1.png (asset-library/concepts, origin/main)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0, target 11000",
+ "retopo_tris": 10456,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "raw_glb": "lost: the raw export failed (export dialog format-combobox mis-detected; browser CDP timeouts) before the chain proceeded to retopology, and Tripo replaces the HD model in-place on retopo; not recoverable without regenerating (75 credits)"
+}
