@@ -165,6 +165,9 @@ export class CitadelHubUI {
       if (this.openDestination(canonical, trigger)) return true;
       // 출격 준비창은 옛 12관문만 안다. 지역 마을이 세운 그 밖의 관문(뿌리 동굴 등)은 스테이지 선택의 그 던전으로 연다.
       if (CITADEL_HUB_HOTSPOTS.some(item => item.id === canonical.id) || !this.app.stageSelect || this.opened) return false;
+      // 잠긴 던전은 선택창이 다른 곳(다음 관문)을 고르므로, 관문 앞에서 잠긴 이유를 바로 알린다.
+      const access = this.app.expedition?.dungeonAccess?.(canonical.route);
+      if (access && !access.ok) { this.app.ui?.toast?.(`${canonical.label} · ${access.error || '입장 조건을 확인하세요.'}`, 'red'); return true; }
       return this.app.stageSelect.open({ trigger, prefer: { tab: 'dungeon', id: canonical.route, depth: 'standard' } });
     }
     if (canonical.kind === 'merchant') {
