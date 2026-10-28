@@ -139,3 +139,13 @@ test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적�
   }
   expect(sceneryPlacements(floor, 8)).toEqual({});
 });
+
+test('도감은 1·2장 전용 종의 실제 출현 위치를 잡는다', async () => {
+  const { buildCatalogue } = await import('../src/game/rpg-catalogue.js');
+  const byId = new Map(buildCatalogue().map((e: any) => [e.id, e]));
+  for (const id of ['ch1_coffinbearer', 'ch1_mourner', 'ch2_smith', 'ch2_emberimp']) {
+    const entry: any = byId.get(id);
+    expect(entry, id).toBeTruthy();
+    expect(entry.locations.length, id).toBeGreaterThan(0);
+  }
+});
