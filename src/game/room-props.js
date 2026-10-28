@@ -21,8 +21,9 @@ export function roomPropsAllowed(stage) { return !!stage && Number.isInteger(sta
 /** 방 하나의 장치 자리: 방 중심에서 진입 쪽으로 30%(+큰 방은 반대편 하나 더). */
 export function propSpots(room, entryX, entryZ) {
   const dx = entryX - room.x, dz = entryZ - room.z, l = Math.hypot(dx, dz) || 1, k = Math.min(room.w, room.h) * .3;
-  const out = [{ x: room.x + dx / l * k * .6 - dz / l * k * .5, z: room.z + dz / l * k * .6 + dx / l * k * .5 }];
-  if (room.w * room.h >= 380) out.push({ x: room.x - dx / l * k * .4 + dz / l * k * .7, z: room.z - dz / l * k * .4 - dx / l * k * .7 });
+  // 입구→중심 직선(영웅이 걸어 들어오는 길) 옆으로 비켜 세운다(영웅과 장치가 겹쳐 보이던 1-3 실측). 무리 쪽으로 약간 들어가 몰아 쓰기 좋다.
+  const out = [{ x: room.x - dx / l * k * .15 - dz / l * k * 1.1, z: room.z - dz / l * k * .15 + dx / l * k * 1.1 }];
+  if (room.w * room.h >= 380) out.push({ x: room.x - dx / l * k * .5 + dz / l * k * 1.1, z: room.z - dz / l * k * .5 - dx / l * k * 1.1 });
   return out;
 }
 

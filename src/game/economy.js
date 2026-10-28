@@ -354,7 +354,8 @@ export class Economy {
     if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
     // 원래 다섯 영웅은 캠페인 지역 끝을 넘기면 합류한다(HERO_CAMPAIGN_JOIN). 그 전에는 소환·상품으로도 얻는다.
     const join = HERO_CAMPAIGN_JOIN[id];
-    if (join) return { ...base, need: join, needLabel: stageLabelFromUnlocked(join, STAGES_PER_CHAPTER), reason: 'campaign' };
+    // 진행이 이미 합류 관문을 지났으면 '합류 대기'(다음 관문 클리어 때 합류) — 곧 무료로 올 영웅에 결제하지 않게 화면이 결제를 닫는다.
+    if (join) return { ...base, need: join, needLabel: stageLabelFromUnlocked(join, STAGES_PER_CHAPTER), reason: base.progress >= join ? 'campaign-pending' : 'campaign' };
     // 영웅은 소환으로 얻는다(BM 12장). 보석 해금 사다리(HERO_FREE_UNLOCK)는 초보자 배너·진행 소환권으로 대체해 닫았다.
     if (HERO_UNLOCK_VIA_GACHA) return { ...base, reason: 'gacha' };
     const step = Math.max(0, r.owned.length - 1), tier = HERO_FREE_UNLOCK[step];
@@ -374,11 +375,13 @@ export class Economy {
     return { ok: true, id, gems: q.gems };
   }
   /**
-   * 성장형 합류: 지금 진행(progress.unlocked)이 닿은 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만). 더한 영웅 id 목록을 돌려준다.
-   * 진행만 보는 순수 규칙이라 지난 진행도 다음 클리어 때 한꺼번에 맞춰지고, 서버 정산도 같은 값을 만든다. 저장은 호출자가 한다.
+   * 성장형 합류: 방금 클리어한 관문(clearedIdx)이 합류 관문 이상이면 그 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만).
+   * 저장된 progress 가 아니라 이번에 실제로 깬 관문으로 판정한다: 가져오기·그림자 스냅샷이 부풀린 progress 만으로 영웅을
+   * 받지 못하게 한다(독립 리뷰 P1). 진행이 이미 지난 이용자는 그 관문 이상을 다시 깰 때 한꺼번에 합류한다. 저장은 호출자가 한다.
+   * @param {number} clearedIdx 이번에 클리어한 관문 번호(stageDef idx, 1부터)
    */
-  grantCampaignHeroes() {
-    const r = this.s.roster, progress = this.s.progress?.unlocked || 1, joined = [];
+  grantCampaignHeroes(clearedIdx) {
+    const r = this.s.roster, progress = Number.isSafeInteger(clearedIdx) ? clearedIdx + 1 : 0, joined = [];
     if (!r || r.policy !== HERO_POLICY.STARTER || !r.starterChosen || !Array.isArray(r.owned)) return joined;
     for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
       if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
@@ -752,7 +755,7 @@ export class Economy {
     // 지역 마지막 관문(X-10)을 처음 클리어해 다음 지역이 열리면 로비 마을도 그 지역 마을로 바뀐다(저장됨). 축하는 한 번만 보여 준다.
     const regionUnlock = this.unlockRegionTown(stage, townBefore);
     // 지역 끝을 넘기면 이야기 속 동료가 합류한다(성장형 영웅 해금).
-    const heroJoin = this.grantCampaignHeroes();
+    const heroJoin = this.grantCampaignHeroes(stage.idx);
     // 난이도 최고 기록(지옥 해금)과 숙련 이상 승리 임무. 시즌 이벤트는 완료 보상(골드·EXP·강화석)에만 붙는다(서버 정산도 같은 시계).
     s.endgame = normalizeEndgame(s.endgame);
     const difficultyId = stage.difficultyId || 'story';
