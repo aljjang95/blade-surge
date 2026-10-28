@@ -168,7 +168,8 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
 });
 
 test('3장 중간 보스는 오르딘 몸, 3장 관문·보스 지원병은 검열관 몸으로 나온다', async () => {
-  const { ENEMIES } = await import('../src/data/stages.js');
+  const { ENEMIES: E } = await import('../src/data/stages.js');
+  const ENEMIES = E as Record<string, any>;
   expect(ENEMIES.frost_midboss.model).toBe('Ch3_Ordin');
   for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) expect(ENEMIES[`frost_${rank}`].summon, rank).toBe('ch3_censor');
   // 원본 종 수치를 그대로 복사한다(보상·경제 불변).

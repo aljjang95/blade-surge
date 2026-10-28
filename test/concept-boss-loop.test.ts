@@ -107,9 +107,9 @@ test('전용 보스 외형 자산은 다른 던전·심층·캠페인 최종 보
   const mine = Object.values(BOSSES).map(asset);
   expect(new Set(mine).size).toBe(2);
   for (const a of mine) expect(others.has(a)).toBe(false);
-  // 정직한 경계: 얼음 골렘 자산은 캠페인 4장 1관문 대장·3장 중간 보스(최종 보스 아님)도 쓴다.
+  // 정직한 경계: 얼음 골렘 자산은 캠페인 4장 1관문 대장(최종 보스 아님)도 쓴다. 3장 중간 보스는 2026-10-28부터 전용 Tripo 몸(기록관 오르딘)이다.
   const sharing = Object.entries(enemies).filter(([id, def]) => def.boss && !Object.values(BOSSES).includes(id as any) && mine.includes(MONSTER_ROSTER[def.model as keyof typeof MONSTER_ROSTER]?.asset)).map(([id]) => id).sort();
-  expect(sharing).toEqual(['frost_midboss', 'tide_captain']);
+  expect(sharing).toEqual(['tide_captain']);
 });
 
 test('페이즈 순서는 저작 순서대로 결정적이고 같은 입력의 기술 계획은 항상 같다', () => {
