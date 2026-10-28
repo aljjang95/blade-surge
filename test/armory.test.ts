@@ -292,5 +292,13 @@ test('RPG crowd swing sparks each struck enemy while hitstop and sound stay once
  g.elapsed+=.061;g.feedbackCount=0;const one=mk();
  for(let i=0;i<5;i++)RpgBattle.prototype.damageEnemy.call(g,one,10,{quietStop:true});
  expect(contacts).toBe(2);expect(flashes).toBe(CROWD_SPARKS);
+ // 두 적을 번갈아 맞혀도 섬광은 서로 다른 적에게만 간다.
+ g.elapsed+=.061;g.feedbackCount=0;const a=mk(),b=mk(),c=mk();
+ for(const e of [a,b,a,b,c])RpgBattle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
+ expect(contacts).toBe(3);expect(flashes).toBe(CROWD_SPARKS+2);
+ // 동작 줄이기: 군중 섬광 없음.
+ g.elapsed+=.061;g.feedbackCount=0;g.app.reducedMotion.matches=true;
+ for(const e of [mk(),mk(),mk()])RpgBattle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
+ expect(contacts).toBe(4);expect(flashes).toBe(CROWD_SPARKS+2);
  }finally{audio.hit=original;}
 });

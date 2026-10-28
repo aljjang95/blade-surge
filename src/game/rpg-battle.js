@@ -181,8 +181,12 @@ export class Battle extends BaseBattle {
     if (!budget) {
       // 같은 60ms 창에 함께 맞은 다른 적도 접점 섬광을 받는다(정지·소리·진동은 창당 한 번 그대로).
       // 휘두르기 한 번에 여럿이 맞으면 첫 적만 번쩍여 군중 타격이 비어 보였다. 각도를 정해 난수 흐름은 건드리지 않는다.
-      if (enemy !== this._contactLast && (this._crowdSparks | 0) < CROWD_SPARKS && this.feedbackCount++ < 6) {
-        this._crowdSparks = (this._crowdSparks | 0) + 1; this._contactLast = enemy;
+      // 동작 줄이기에서는 주 접점 하나만 남긴다. 이번 창에서 이미 번쩍인 적(고정 3칸)은 다시 쓰지 않는다.
+      const sparked = this._crowdSparked || (this._crowdSparked = new Array(CROWD_SPARKS).fill(null)), n = this._crowdSparks | 0;
+      let seen = enemy === this._contactLast;
+      for (let i = 0; i < n && !seen; i++) seen = sparked[i] === enemy;
+      if (!seen && contact.particles > 0 && n < CROWD_SPARKS && this.feedbackCount++ < 6) {
+        sparked[n] = enemy; this._crowdSparks = n + 1;
         this.fx.flash(hitPos, color, { size: contact.size * .75, life: .09, angle: this._crowdSparks * 1.9 });
       }
       return;
