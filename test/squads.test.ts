@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
-import { ENEMIES, stageDef, CHAPTERS } from '../src/data/stages.js';
-import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS } from '../src/game/squads.js';
+import { ENEMIES, stageDef, CHAPTERS, recommendedPowerFor } from '../src/data/stages.js';
+import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, LATE_CHAPTER_ATK } from '../src/game/squads.js';
 import { Battle } from '../src/game/battle.js';
+import { towerStage } from '../src/game/endgame-core.js';
 
 const STAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -152,4 +153,21 @@ test('campaignCombat: 캠페인 혼자 플레이만(원정·파티 제외) — �
   const room: any = { id: 3, type: 'normal', reinforced: 0 };
   Battle.prototype.roomRoster.call({ stage: { ...stage, party: { runId: 'x' } }, rosterSize: () => 16 }, room);
   expect(room.squadPlan).toBeNull();
+});
+
+test('후반 곡선: 권장 전투력은 배율^0.7, 5장부터 캠페인 적 공격 ×1.3(원정·파티 제외)', () => {
+  expect(stageDef(1, 1).recPower).toBe(2600);
+  let prev = 0;
+  for (let ch = 1; ch <= 7; ch++) for (let st = 1; st <= 10; st++) { const r = stageDef(ch, st).recPower; expect(r).toBeGreaterThan(prev); prev = r; }
+  expect(stageDef(7, 10).recPower).toBe(recommendedPowerFor(stageDef(7, 10).scale));
+  expect(stageDef(7, 10).recPower).toBeLessThan(30000);
+  expect(campaignAtkMul(stageDef(4, 10))).toBe(1);
+  expect(campaignAtkMul(stageDef(5, 1))).toBe(LATE_CHAPTER_ATK);
+  expect(campaignAtkMul(stageDef(7, 10))).toBe(1.3);
+  expect(campaignAtkMul({ ...stageDef(7, 10), party: true })).toBe(1);
+  expect(campaignAtkMul({ ...stageDef(7, 10), expedition: true })).toBe(1);
+  expect(campaignAtkMul(null)).toBe(1);
+  const tower = towerStage(41);   // 원본 5-1
+  expect(tower.ch).toBe(5); expect(tower.tower).toBeTruthy(); expect(campaignAtkMul(tower)).toBe(1);
+  expect(tower.recPower).toBe(recommendedPowerFor(tower.scale));
 });
