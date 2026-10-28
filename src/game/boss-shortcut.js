@@ -15,3 +15,9 @@ export function bossShortcutLabel(rule) {
   if (rule.ok) return rule.reason === 'stars' ? '보스 직행 가능 · 별 3 정복 관문' : '보스 직행 가능 · 전투력 권장의 1.5배 이상';
   return `보스 직행 조건 · 별 3 정복 또는 전투력 ${rule.need.toLocaleString('ko-KR')} 이상`;
 }
+
+/** 하단 출격 띠용 짧은 안내(작은 화면에서도 한 줄). */
+export function bossShortcutShort(rule) {
+  if (rule.ok) return rule.reason === 'stars' ? '보스 직행 가능 · ★3 정복' : '보스 직행 가능 · 전투력 충족';
+  return `보스 직행: ★3 또는 전투력 ${rule.need.toLocaleString('ko-KR')}`;
+}

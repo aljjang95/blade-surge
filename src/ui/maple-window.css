@@ -176,3 +176,7 @@
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-copy small { display: inline; font-size: 12px; color: #dbeaf5; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-mark { flex: none; width: 28px; height: 28px; font-size: 16px; }
 #pause-overlay .pause-btns .companion-launcher > .companion-link-dot { display: inline-block; }
+.danger-zone .danger-confirm textarea.danger-input { width: 100%; box-sizing: border-box; }
+.danger-zone .danger-confirm textarea[hidden] { display: none; }
+.danger-zone .danger-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.4; color: #e8c3c3; min-height: 44px; }
+.danger-zone .danger-check input { margin-top: 2px; width: 20px; height: 20px; flex: none; }
