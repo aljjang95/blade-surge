@@ -31,7 +31,7 @@ import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventReward
 import { recordTormentRun, tormentStatus } from './torment-core.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
-import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, expandGold, normalizeVault } from './gear-vault.js';
+import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, VAULT_INHERIT } from './gear-vault.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -654,6 +654,30 @@ export class Economy {
     if (!q.free) this.s.vault = { ...normalizeVault(this.s.vault), day: q.daily.day, used: q.daily.used + 1 };
     inst.owner = heroId; delete inst.from; delete inst.legacy;
     this.emit(); return { ok: true, gold: q.gold, free: q.free, heroId };
+  }
+  vaultRitualQuote(uid, heroId) { return ritualQuote(this.s, uid, heroId, nowOf(this), { ownsHero: (id) => this.ownHero(id) }); }
+  /** 계승 의식(docs/GEAR_VAULT_INHERIT.md 3.4): 금고 장비를 소유 영웅에게. 골드+계승 문장, 하루 2회(일반 꺼내기와 별도), 확정. */
+  vaultRitual(uid, heroId) {
+    const q = this.vaultRitualQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, sigil: q.sigil };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    const before = { gold: this.s.gold, sigil: this.s.lineageSigil, vault: this.s.vault, inst: { ...inst } };
+    try {
+      const from = inst.from, hops = Math.min(VAULT_INHERIT.hopsMax, (inst.hops || 0) + 1);
+      this.s.gold -= q.gold;
+      const left = (this.s.lineageSigil || 0) - q.sigil;
+      if (left > 0) this.s.lineageSigil = left; else delete this.s.lineageSigil;
+      this.s.vault = { ...normalizeVault(this.s.vault), rday: q.daily.day, rused: q.daily.used + 1 };
+      inst.owner = heroId; delete inst.from; delete inst.legacy;
+      inst.hops = hops;
+      const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));
+      if (lin.length) inst.lin = lin; else delete inst.lin;
+    } catch (e) {
+      this.s.gold = before.gold; this.s.vault = before.vault;
+      if (before.sigil === undefined) delete this.s.lineageSigil; else this.s.lineageSigil = before.sigil;
+      for (const k of Object.keys(inst)) delete inst[k]; Object.assign(inst, before.inst);
+      return { ok: false, reason: 'error', gold: q.gold, sigil: q.sigil };
+    }
+    this.emit(); return { ok: true, gold: q.gold, sigil: q.sigil, heroId, hops: inst.hops };
   }
   /** 금고 칸 확장(골드). */
   vaultExpand() {

@@ -113,6 +113,9 @@ export function normalizeSave(raw, fresh) {
     for (const item of s.inventory) item.uid = remap.get(item.uid);
     s.invSeq = s.inventory.length + 1;
   }
+  // 계승 문장(docs/GEAR_VAULT_INHERIT.md 5.1): 최상위 정수 재료. 0이면 필드를 두지 않아 이전 저장은 정규화 뒤에도 같다.
+  delete s.lineageSigil;
+  if (integer(raw.lineageSigil, 0, 0) > 0) s.lineageSigil = integer(raw.lineageSigil, 0, 0);
   const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
   s.progress.unlocked = integer(s.progress.unlocked, 1, 1, floors);
   s.progress.stars = {};
