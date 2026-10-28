@@ -411,6 +411,13 @@ class App {
    * 처음부터 다시 시작. 서버 권한 계정은 서버 진행이 정본이라 이 기기에서 지우지 않는다(소셜 게스트 신원·결제 대기·화면 설정도 유지).
    * 결제 원장·권한은 새 저장에 남기고 서버 영수증 재검증이 맞춘다.
    */
+  /** 출격 준비 실패 원인을 콘솔(전체 스택)과 화면 토스트(짧은 코드)로 남겨 실기기에서도 보고할 수 있게 한다. */
+  recordPrepFailure(kind, id, error) {
+    console.error('출격 준비 실패', kind, id, error);
+    const reason = String(error?.message || error || '알 수 없음').slice(0, 60);
+    this.lastPrepFailure = { kind, id, reason, stack: String(error?.stack || '').slice(0, 800), at: Date.now() };
+    this.ui.toast(`준비 실패 원인: ${kind}/${id} · ${reason}`, 'red');
+  }
   resetProgress() {
     if (this.stageStarting || this.account?.authority === 'server') return false;
     const companionReset = this.companionAgent?.reset() ?? true;
@@ -473,7 +480,7 @@ class App {
       const rollbackSaved = !spent || this.eco.rollbackEnergy(energyBefore);
       this.toLobby();
       this.ui.toast(rollbackSaved ? '던전을 준비하지 못했습니다. 에너지는 복구됐습니다. 다시 출격해 주세요.' : '현재 창의 에너지는 복구했지만 저장하지 못했습니다. 저장 권한을 확인해 주세요.', 'red');
-      console.warn('stage preparation failed', error?.message);
+      this.recordPrepFailure('stage', stage?.code, error);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
@@ -531,7 +538,7 @@ class App {
       this.expeditionRefundPending = !refund.ok;
       this.toLobby();
       this.ui.toast(refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.', 'red');
-      console.warn('expedition preparation failed', error?.message);
+      this.recordPrepFailure(kind, id, error);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
