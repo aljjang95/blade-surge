@@ -9,7 +9,7 @@ import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
 import { dropUnownedJob } from './expedition-economy.js';
-import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_CAMPAIGN_JOIN, HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
@@ -352,6 +352,9 @@ export class Economy {
     if (HEROES[id].gachaOnly) return { ...base, reason: r && r.policy === HERO_POLICY.STARTER && !r.starterChosen ? 'starter-pending' : 'gacha' };
     if (!r || r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
     if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
+    // 원래 다섯 영웅은 캠페인 지역 끝을 넘기면 합류한다(HERO_CAMPAIGN_JOIN). 그 전에는 소환·상품으로도 얻는다.
+    const join = HERO_CAMPAIGN_JOIN[id];
+    if (join) return { ...base, need: join, needLabel: stageLabelFromUnlocked(join, STAGES_PER_CHAPTER), reason: 'campaign' };
     // 영웅은 소환으로 얻는다(BM 12장). 보석 해금 사다리(HERO_FREE_UNLOCK)는 초보자 배너·진행 소환권으로 대체해 닫았다.
     if (HERO_UNLOCK_VIA_GACHA) return { ...base, reason: 'gacha' };
     const step = Math.max(0, r.owned.length - 1), tier = HERO_FREE_UNLOCK[step];
@@ -369,6 +372,19 @@ export class Economy {
     this.s.gems -= q.gems; this.s.roster.owned = [...this.s.roster.owned, id];
     if (!this._commit(before)) return { ok: false, reason: 'storage' };
     return { ok: true, id, gems: q.gems };
+  }
+  /**
+   * 성장형 합류: 지금 진행(progress.unlocked)이 닿은 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만). 더한 영웅 id 목록을 돌려준다.
+   * 진행만 보는 순수 규칙이라 지난 진행도 다음 클리어 때 한꺼번에 맞춰지고, 서버 정산도 같은 값을 만든다. 저장은 호출자가 한다.
+   */
+  grantCampaignHeroes() {
+    const r = this.s.roster, progress = this.s.progress?.unlocked || 1, joined = [];
+    if (!r || r.policy !== HERO_POLICY.STARTER || !r.starterChosen || !Array.isArray(r.owned)) return joined;
+    for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
+      if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
+      r.owned = [...r.owned, id]; joined.push(id);
+    }
+    return joined;
   }
   /** 환불·회수·정화 뒤 출전 영웅과 직업이 소유 영웅 안에 있게 맞춘다. */
   reconcileOwnership() { reconcileSelectedHero(this.s); dropUnownedJob(this.s); }
@@ -735,6 +751,8 @@ export class Economy {
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
     // 지역 마지막 관문(X-10)을 처음 클리어해 다음 지역이 열리면 로비 마을도 그 지역 마을로 바뀐다(저장됨). 축하는 한 번만 보여 준다.
     const regionUnlock = this.unlockRegionTown(stage, townBefore);
+    // 지역 끝을 넘기면 이야기 속 동료가 합류한다(성장형 영웅 해금).
+    const heroJoin = this.grantCampaignHeroes();
     // 난이도 최고 기록(지옥 해금)과 숙련 이상 승리 임무. 시즌 이벤트는 완료 보상(골드·EXP·강화석)에만 붙는다(서버 정산도 같은 시계).
     s.endgame = normalizeEndgame(s.endgame);
     const difficultyId = stage.difficultyId || 'story';
@@ -773,7 +791,7 @@ export class Economy {
     const awakened = (HEROES[heroId].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; const saved = this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock,
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock, heroJoin,
       torment: tormentRun ? { tier: tormentTier, full: tormentRun.full, runs: tormentRun.runs, best: tormentRun.best, newBest: tormentRun.newBest, fullLeft: Math.max(0, TORMENT.fullRuns - tormentRun.runs) } : null,
       legend: this.takeLegendGrant(), ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);

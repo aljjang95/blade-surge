@@ -1,3 +1,4 @@
+import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
 import { describe, expect, test } from 'bun:test';
 import { Economy, heroPickup } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
@@ -126,12 +127,12 @@ describe('무료 해금', () => {
     const eco = fresh(); eco.s.gems = 99999; eco.s.progress.unlocked = 60;
     expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'starter-pending' });
   });
-  test('보석 해금 사다리는 닫혔다: 진행·보석이 충분해도 사유 gacha이고 상태는 그대로다(영웅은 소환으로만)', () => {
+  test('보석 해금 사다리는 닫혔다: 원래 다섯 영웅은 캠페인 합류(campaign) 견적이고 보석으로 열 수 없다', () => {
     const eco = chosen('knight', { unlocked: 60, gems: 99999 });
     const before = JSON.stringify(eco.s);
     for (const id of ['mage', 'rogue', 'ranger', 'barbarian']) {
-      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'gacha', canFree: false, owned: false });
-      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'gacha' });
+      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'campaign', canFree: false, owned: false, need: HERO_CAMPAIGN_JOIN[id] });
+      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'campaign' });
     }
     expect(JSON.stringify(eco.s)).toBe(before);
     expect(eco.heroUnlockQuote('knight').reason).toBe('owned'); expect(eco.heroUnlockQuote('ghost').reason).toBe('unknown');
@@ -150,7 +151,18 @@ describe('무료 해금', () => {
     const eco = chosen('knight', { unlocked: 60 });
     eco.applyIapState({ entitlements: { heroes: ['mage'] } });
     expect(eco.ownHero('mage')).toBe(true); expect(eco.heroUnlockQuote('mage').reason).toBe('owned');
-    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'gacha', step: 0 });
+    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'campaign', needLabel: '3-10' });
+  });
+  test('성장형 합류: 지역 끝 진행에 닿은 원래 영웅만 합류하고 시작 영웅·소환 전용·정책 1은 건드리지 않는다', () => {
+    const eco = chosen('rogue', { unlocked: 20 });
+    expect(eco.grantCampaignHeroes()).toEqual([]);
+    eco.s.progress.unlocked = 21; expect(eco.grantCampaignHeroes()).toEqual(['mage']);
+    eco.s.progress.unlocked = 41; expect(eco.grantCampaignHeroes()).toEqual(['ranger']);   // rogue 는 시작 영웅이라 건너뜀
+    eco.s.progress.unlocked = 70; expect(eco.grantCampaignHeroes()).toEqual(['knight', 'barbarian']);
+    expect(eco.grantCampaignHeroes()).toEqual([]);
+    expect(eco.ownHero('werewolf')).toBe(false); expect(eco.ownHero('blackcat')).toBe(false);
+    const fresh = new Economy({ storage: createMemoryStorage(), now: () => PRE_ROTATION });
+    fresh.s.progress.unlocked = 70; expect(fresh.grantCampaignHeroes()).toEqual([]);   // 시작 영웅을 고르기 전
   });
   test('저장이 실패하면 소환·마일리지 교환의 소유·보석·조각이 되돌아간다', () => {
     const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0, now: () => PRE_ROTATION });

@@ -833,6 +833,8 @@ export class UI {
       this.paintEndlessStrip(rw);
       // X-10 첫 클리어로 다음 지역이 열렸다면 위쪽 가장자리 띠로 축하한다(한 번만). 마을은 로비로 돌아갈 때 바뀐다.
       if (rw.regionUnlock && !r.regionCelebrated) { r.regionCelebrated = true; later(() => this.app.townChip?.celebrate(rw.regionUnlock), 1200); }
+      // 성장형 합류: 지역 끝을 넘겨 새 동료가 합류했으면 한 번 알린다.
+      if (rw.heroJoin?.length && !r.heroJoinShown) { r.heroJoinShown = true; later(() => this.toast(`새 동료 합류 · <b>${rw.heroJoin.map((id) => HEROES[id]?.name || id).join(', ')}</b> — 영웅 화면에서 출전시킬 수 있어요`, 'gold'), 1800); }
       if (!rw.saveError && rw.ok !== false && !r.funnelRewardRecorded) {
         this.app.funnel?.track('reward_claim', { source: 'stage' }); r.funnelRewardRecorded = true;
         if (rw.ups) this.app.funnel?.track('hero_level_up', { source: 'stage', level: Math.min(200, Math.max(1, this.eco.hero(b.heroId)?.level || 1)) });
