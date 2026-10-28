@@ -40,6 +40,12 @@ const LINEUPS = {
     ['elite_golem', 'elite_mushroom_king', 'elite_dragonling', 'armabee_evo'],
     ['tide_midboss', 'tide_finalboss', 'skel_minion'],
   ],
+  5: [
+    ['ninja', 'alien', 'skel_shield', 'bone_orc'],
+    ['imp', 'bomb_abyss', 'abyss_seer', 'tribal_shaman'],
+    ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain', 'skel_priest'],
+    ['crown_midboss', 'crown_finalboss', 'ghost'],
+  ],
 };
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;

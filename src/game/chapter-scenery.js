@@ -15,6 +15,8 @@ export const CHAPTER_GRADES = Object.freeze({
   3: { weight: .7, fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], torch: 0x86d7ff, tint: 0xb7cbed, look: 'archive', fogHorizon: 0x6f98ca },
   // 4장 별이 잠긴 심해: 남색·청록. beacon 기준.
   4: { weight: .7, fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], torch: 0x4be6d2, tint: 0x9adbd1, look: 'beacon', fogHorizon: 0x55c4c2 },
+  // 5장 새벽을 먹는 왕관: 새벽 보라·금. tribunal 기준에 금빛 횃불.
+  5: { weight: .6, fog: 0x2a2139, bg: 0x171323, hemi: [0xd8c0e0, 0x342743], torch: 0xffd27a, tint: 0xd8c4d6, look: 'tribunal', fogHorizon: 0xc77da9 },
   1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
 
@@ -146,7 +148,25 @@ const DEEP_KIT = {
     glow: [piece(new THREE.SphereGeometry(.2, 8, 5), D.glow, [0, .45, 0])],
   }),
 };
+const K = { stone: 0x6e6378, stoneDark: 0x4a4256, violet: 0x4a2f6a, gold: 0xd8b25a, goldDark: 0x9a7a34, steel: 0x8a8e94, bronze: 0x7d6136, glow: 0xffd27a };
+/** 5장 소품: 빈 왕좌, 성벽에 꽂힌 검들, 끊긴 아침 종. */
+const CROWN_KIT = {
+  throne: () => ({
+    solid: [piece(new THREE.BoxGeometry(.9, .2, .8), K.stoneDark, [0, .1, 0]), piece(new THREE.BoxGeometry(.8, .5, .7), K.stone, [0, .45, 0]), piece(new THREE.BoxGeometry(.8, 1.4, .14), K.stone, [0, 1.1, -.3]), piece(new THREE.BoxGeometry(.7, .9, .04), K.violet, [0, .95, -.22]), piece(new THREE.BoxGeometry(.86, .06, .2), K.gold, [0, 1.8, -.3]), piece(new THREE.ConeGeometry(.08, .25, 4), K.gold, [0, 1.95, -.3])],
+    glow: [piece(new THREE.SphereGeometry(.06, 5, 3), K.glow, [0, 1.62, -.21])],
+  }),
+  swords: () => {
+    const solid = [piece(new THREE.CylinderGeometry(.5, .6, .08, 8), K.stoneDark, [0, .04, 0])];
+    for (let i = 0; i < 4; i++) { const a = i * 1.6, x = Math.sin(a) * .3, z = Math.cos(a) * .3, tilt = 8 + i * 5; solid.push(piece(new THREE.BoxGeometry(.07, .9, .02), K.steel, [x, .45, z], [tilt, a * 57, 0])); solid.push(piece(new THREE.BoxGeometry(.24, .04, .05), K.gold, [x, .92, z], [tilt, a * 57, 0])); }
+    return solid;
+  },
+  bell: () => ({
+    solid: [piece(bellGeometry(.5, 10), K.bronze, [0, .35, 0], [0, 0, 70], [1, .8, 1]), piece(new THREE.BoxGeometry(1.2, .12, .12), K.goldDark, [-.2, .06, .4], [0, 30, 0])],
+    glow: [piece(new THREE.BoxGeometry(.04, .4, .02), K.glow, [.1, .45, .32], [0, 0, 20])],
+  }),
+};
 const KITS = Object.freeze({
+  5: { kit: CROWN_KIT, mix: [['throne', .3], ['swords', .45], ['bell', .25]], perRoom: 7 },
   4: { kit: DEEP_KIT, mix: [['ribs', .35], ['anchor', .35], ['lens', .3]], perRoom: 7 },
   3: { kit: FROST_KIT, mix: [['pillar', .35], ['shelf', .3], ['pages', .35]], perRoom: 8 },
   1: { kit: GARDEN_KIT, mix: [['tomb', .5], ['lilies', .35], ['bell', .15]], perRoom: 9 },

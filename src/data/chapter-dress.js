@@ -34,6 +34,11 @@ const DEEP_DRAKE = { emissive: '#021a1c', remap: { dark: '#0e2a44', light: '#86e
 const DEEP_MUSH = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#8ef0e2', hues: [330, 40], mix: 0.85, baseMix: 0.1 } };
 const DEEP_SLIME = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#9af2e6', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
 
+/** 5장 새벽을 먹는 왕관 — 새벽 보라와 금. 보라는 그대로 두고(장 색) 금 소품과 새벽빛 발광으로 왕관의 집행관을 표시한다. */
+const CROWN_SKIN = { color: '#d9c9e8', amount: 0.14, emissive: '#120a1c' };
+// 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
+const CROWN_HOLLOW = { emissive: '#120a1c', remap: { dark: '#24163a', light: '#c9a8f2', hues: [50, 170], mix: 0.9, baseMix: 0.2 } };
+
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
@@ -200,6 +205,54 @@ export const CHAPTER_DRESS = Object.freeze({
       demon_lord: { ...DEEP_SKIN, props: ['tideCrown'] },
       treant: { ...DEEP_SKIN, props: ['coralGrowth'] },
       fire_phoenix: { ...DEEP_SKIN },
+    },
+  },
+  5: {
+    name: '집행관의 손발',
+    species: {
+      // 그림자 닌자: 새벽빛 가면. 이계 침입자·해골 병사 → 왕관 병사(작은 금관).
+      ninja: { ...CROWN_SKIN, props: ['dawnMask'] },
+      alien: { ...CROWN_SKIN, props: ['soldierCirclet', 'swordWallShield'] },
+      skel_minion: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_rogue: { ...CROWN_SKIN, props: ['dawnMask'] },
+      // 성벽 검 방패.
+      skel_shield: { ...CROWN_SKIN, props: ['soldierCirclet', 'swordWallShield'] },
+      bone_orc: { ...CROWN_SKIN, props: ['goldChains'] },
+      imp: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      bomb_abyss: { props: ['crownRing'] },
+      bomb_slime: { props: ['crownRing'] },
+      // 심연 주시자: 왕관 고리. 원거리·주술사는 금관.
+      abyss_seer: { ...CROWN_SKIN, props: ['crownRing'] },
+      ghost: { ...CROWN_SKIN, props: ['crownRing'] },
+      ghost_skull: { ...CROWN_SKIN, props: ['crownRing'] },
+      tribal_shaman: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_mage: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_priest: { ...CROWN_SKIN, props: ['hornCrown'] },
+      // 정예: 왕관 뿔의 푸른 악마, 금 사슬의 새끼 용, 맹세 깃발의 해골 대장.
+      elite_bluedemon: { ...CROWN_SKIN, props: ['hornCrown', 'goldChains'] },
+      elite_dragonling: { ...CROWN_SKIN, props: ['goldChains'] },
+      elite_skel_captain: { ...CROWN_SKIN, props: ['soldierCirclet', 'oathBanner'] },
+      elite_bone_lord: { ...CROWN_SKIN, props: ['goldChains'] },
+      elite_wraith: { ...CROWN_SKIN, props: ['crownRing'] },
+      // 첫 기사 아스텔(중간 보스)·빈 왕관(최종 보스: 몸 위에 떠 있는 빈 금관).
+      crown_midboss: { ...CROWN_SKIN, props: ['hornCrown', 'swordWallShield', 'oathBanner'] },
+      crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
+    },
+    assets: {
+      shadow_soldier: { ...CROWN_SKIN, props: ['dawnMask'] },
+      bone_knight: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      goblin_chief: { ...CROWN_SKIN, props: ['goldChains'] },
+      mushroom_shaman: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      slime: { props: ['crownRing'] },
+      star_owl: { ...CROWN_SKIN, props: ['crownRing'] },
+      goblin_raider: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      demon_lord: { ...CROWN_SKIN, props: ['hornCrown'] },
+      ember_drake: { ...CROWN_SKIN, props: ['goldChains'] },
+      void_wisp: { ...CROWN_SKIN, props: ['crownRing'] },
+      skeleton_mage: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      treant: { ...CROWN_HOLLOW, props: ['emptyCrown'] },
+      frost_yeti: { ...CROWN_SKIN, props: ['hornCrown'] },
+      frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
 });

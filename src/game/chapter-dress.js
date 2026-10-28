@@ -16,6 +16,7 @@ const C = {
   glowTeal: 0x8ff5dc, glowFlame: 0xfff1c2, glowName: 0x6fe0c4,
   paper: 0xf1f4f6, ice: 0xbfe6f7, iceDark: 0x7fb4d4, ink: 0x22344a, bookRed: 0x7a3a3a, bookBlue: 0x35507a, bookGreen: 0x3f6a52, glowFrost: 0x9fe4ff, glowWhite: 0xeefaff,
   seaWood: 0x4a3a2a, barnacle: 0xc9c3b0, coral: 0xd9785e, kelp: 0x2f5a46, rust: 0x6a4a36, brass: 0x9a7a3c, glowAbyss: 0x58e0d2, glowLure: 0xd8fff4,
+  gold: 0xd8b25a, goldDark: 0x9a7a34, violet: 0x4a2f6a, violetDark: 0x2a1a40, glowDawn: 0xffd27a, glowViolet: 0xd9a8ff,
   leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
 };
 
@@ -359,6 +360,47 @@ const PROPS = {
     solid.push(piece(new THREE.TorusGeometry(.05 * h, .006 * h, 3, 8), C.iron, [0, -.02 * h, -.07 * h], [0, 90, 0]));
     return { solid, glow };
   } },
+  // ---- 5장 새벽을 먹는 왕관: 집행관의 손발 ----
+  dawnMask: { bones: ['Head', 'head'], at: [0, .1, .13], rot: [0, 0, 0], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.075 * h, .075 * h, .09 * h, 10, 1, true, -Math.PI / 2.4, Math.PI / 1.2), C.gold, [0, 0, -.06 * h]), piece(new THREE.ConeGeometry(.012 * h, .05 * h, 4), C.goldDark, [0, .065 * h, .01 * h])],
+    // 새벽빛 눈구멍.
+    glow: [piece(new THREE.BoxGeometry(.03 * h, .008 * h, .006 * h), C.glowDawn, [-.025 * h, .01 * h, .016 * h], [0, 0, -10]), piece(new THREE.BoxGeometry(.03 * h, .008 * h, .006 * h), C.glowDawn, [.025 * h, .01 * h, .016 * h], [0, 0, 10])],
+  }) },
+  soldierCirclet: { bones: ['Head', 'head'], at: [0, .25, 0], rot: [0, 0, 0], scale: 1.9, build: (h) => {
+    const solid = [piece(new THREE.CylinderGeometry(.07 * h, .066 * h, .022 * h, 10, 1, true), C.gold)];
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; solid.push(piece(new THREE.ConeGeometry(.01 * h, .035 * h, 4), C.gold, [Math.sin(a) * .07 * h, .028 * h, Math.cos(a) * .07 * h])); }
+    return { solid, glow: [piece(new THREE.SphereGeometry(.01 * h, 4, 3), C.glowViolet, [0, .01 * h, .07 * h])] };
+  } },
+  crownRing: { root: true, at: [0, .95, 0], rot: [90, 0, 0], scale: 1.4, build: (h) => {
+    const glow = [piece(new THREE.TorusGeometry(.14 * h, .008 * h, 3, 20), C.glowDawn)], solid = [];
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; solid.push(piece(new THREE.ConeGeometry(.012 * h, .045 * h, 4), C.gold, [Math.cos(a) * .14 * h, Math.sin(a) * .14 * h, -.02 * h], [-90, 0, 0])); }
+    return { solid, glow };
+  } },
+  swordWallShield: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.08, -.06, .17], rot: [0, -12, 0], scale: 1.45, build: (h) => {
+    const solid = [piece(new THREE.BoxGeometry(.2 * h, .26 * h, .02 * h), C.violetDark)];
+    for (const a of [-28, 0, 28]) { const r = THREE.MathUtils.degToRad(a); solid.push(piece(new THREE.BoxGeometry(.025 * h, .3 * h, .008 * h), C.steel, [Math.sin(r) * .02 * h, 0, .016 * h], [0, 0, a])); solid.push(piece(new THREE.BoxGeometry(.07 * h, .015 * h, .012 * h), C.gold, [-Math.sin(r) * .14 * h, Math.cos(r) * -.14 * h, .02 * h], [0, 0, a])); }
+    return { solid, glow: [piece(new THREE.SphereGeometry(.014 * h, 5, 3), C.glowDawn, [0, 0, .024 * h])] };
+  } },
+  goldChains: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .02, .05], rot: [0, 0, -35], scale: 1.4, build: (h) => {
+    const solid = [], glow = [];
+    for (let i = 0; i < 7; i++) (i === 3 ? glow : solid).push(piece(new THREE.TorusGeometry(.02 * h, .006 * h, 3, 8), i === 3 ? C.glowDawn : C.gold, [0, (i - 3) * .045 * h, .12 * h], [0, i % 2 ? 90 : 0, 0]));
+    solid.push(piece(new THREE.TorusGeometry(.1 * h, .012 * h, 4, 12), C.goldDark, [0, .17 * h, 0], [90, 0, 35]));
+    return { solid, glow };
+  } },
+  hornCrown: { bones: ['Head', 'head'], at: [0, .25, 0], rot: [0, 0, 0], scale: 2, build: (h) => {
+    const solid = [piece(new THREE.TorusGeometry(.075 * h, .01 * h, 4, 14), C.gold, [0, 0, 0], [90, 0, 0])], glow = [];
+    for (const x of [-.06, .06]) { solid.push(piece(new THREE.ConeGeometry(.018 * h, .1 * h, 5), C.gold, [x * h, .05 * h, 0], [0, 0, x < 0 ? 18 : -18])); glow.push(piece(new THREE.SphereGeometry(.01 * h, 4, 3), C.glowViolet, [x * 1.45 * h, .1 * h, 0])); }
+    return { solid, glow };
+  } },
+  emptyCrown: { root: true, at: [0, 1.06, 0], rot: [0, 0, 0], scale: 1.6, build: (h) => {
+    const solid = [piece(new THREE.CylinderGeometry(.13 * h, .11 * h, .05 * h, 14, 1, true), C.gold)], glow = [piece(new THREE.TorusGeometry(.12 * h, .006 * h, 3, 20), C.glowDawn, [0, -.02 * h, 0], [90, 0, 0])];
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, tall = (.06 + (i % 2) * .04) * h; solid.push(piece(new THREE.ConeGeometry(.02 * h, tall, 4), C.gold, [Math.sin(a) * .125 * h, .025 * h + tall / 2, Math.cos(a) * .125 * h])); glow.push(piece(new THREE.SphereGeometry(.012 * h, 4, 3), C.glowViolet, [Math.sin(a) * .125 * h, .03 * h + tall, Math.cos(a) * .125 * h])); }
+    return { solid, glow };
+  } },
+  oathBanner: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.09, .1, -.16], rot: [-6, 0, -6], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .62 * h, 5), C.goldDark, [0, .12 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .26 * h, .006 * h), C.violet, [-.085 * h, .27 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .03 * h, .008 * h), C.gold, [-.085 * h, .41 * h, 0]), piece(new THREE.ConeGeometry(.012 * h, .05 * h, 4), C.gold, [0, .45 * h, 0])],
+    glow: [piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 10), C.glowDawn, [-.085 * h, .28 * h, .005 * h])],
+  }) },
 };
 export const DRESS_PROP_KEYS = Object.freeze(Object.keys(PROPS));
 
