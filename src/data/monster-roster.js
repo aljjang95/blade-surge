@@ -74,6 +74,9 @@ export const MONSTER_ROSTER = Object.freeze({
   Ch1_TombKnight: { asset: 'tll_ch1_tombknight', fallback: 'bone_knight', scale: 0.85, fallbackScale: 1.03,
     weapon: { asset: 'tll_ch1_clapper', hand: 'right', grip: [0, 0.22, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] },
     offhand: { asset: 'tll_ch1_tombshield', hand: 'left', grip: [0, 0.42, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
+  // 묘비 방패병: 관꾼 해골 몸에 세렌의 묘비 방패를 왼손에 들린다(1장 방패 역할 skel_shield 자리).
+  Ch1_TombGuard: { asset: 'tll_ch1_coffinbearer', fallback: 'bone_knight', scale: 1.05, fallbackScale: 1.03,
+    offhand: { asset: 'tll_ch1_tombshield', hand: 'left', grip: [0, 0.42, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
   Ch2_Smith: { asset: 'tll_ch2_smith', fallback: 'goblin_brute', scale: 1, fallbackScale: 0.77,
     weapon: { asset: 'tll_ch2_hammer', hand: 'right', grip: [0, 0.17, 0], at: [0, 0.07, 0.02], rot: [0, 0, -90] } },
   // rot 은 2026-10-28 근접 캡처(work/tmp/weapon-tune.mjs)로 고른 값: 철퇴·모루 철퇴는 머리가 위, 장인 망치는 머리가 아래로 늘어지고,

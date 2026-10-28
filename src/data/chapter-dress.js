@@ -85,6 +85,14 @@ export const CHAPTER_DRESS = Object.freeze({
       ch1_coffinbearer: { ...GARDEN_BONE },
       // 곡하는 원령은 전용 몸이 이미 청록 상복이라 텍스처 재배치(원령 공용 baseMix 0.6)가 무늬를 지워 단색처럼 보였다 — 발광만 준다.
       ch1_mourner: { emissive: '#174a40' },
+      // 같은 몸의 역할 갈래: 묘비 방패병은 로스터 offhand로 묘비 방패를 들고, 울부짖는 원령은 머리 위 영혼 고리로 구분한다.
+      ch1_tombguard: { ...GARDEN_BONE },
+      // 해골 자객 자리: 관꾼 몸에 검은 두건을 씌워 앞길을 여는 척후로 읽히게 한다.
+      ch1_hoodbearer: { ...GARDEN_BONE, color: '#8a9690', props: ['darkHood'] },
+      ch1_mourner_wail: { emissive: '#1d5a4e', props: ['spiritHalo'] },
+      // 무덤 균사 잠행꾼 자리: 묘혈에서 솟는 원령 — 몸에 묘지 백합이 엉켜 있다.
+      ch1_gravewisp: { emissive: '#12382f', props: ['graveLilies'] },
+      ch1_mourner_dirge: { emissive: '#174a40', props: ['candleCrown'] },
       garden_finalboss: { ...GARDEN_BONE, emissive: '#0e2c25', props: ['bellCrown', 'brokenBellLarge'] },
     },
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.
@@ -127,6 +135,13 @@ export const CHAPTER_DRESS = Object.freeze({
       // 2장 전용 Tripo 몸: 장인은 앞치마가 몸에 있고 대장 망치를 손에 들어(로스터 weapon) 소품 없음, 불씨 임프는 머리 불꽃·손 등잔이 있어 소품 없음.
       ch2_smith: { ...FORGE_SKIN },
       ch2_emberimp: { ...FORGE_SKIN },
+      // 같은 몸의 역할 갈래: 풀무 장인은 등에 미완성 칼 다발, 폭발 불씨 임프는 붉은 발광과 심지(자폭 경고)로 구분한다.
+      ch2_smith_line: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
+      ch2_emberimp_line: { ...FORGE_SKIN },
+      // 가시 방벽(나무 몸) 대신 장인 몸에 모루 방패, 잿더미 굴착꾼 대신 불씨 임프 몸에 불씨 모자.
+      ch2_anvilguard: { ...FORGE_SKIN, props: ['anvilShield'] },
+      ch2_ashimp: { ...FORGE_SKIN, props: ['emberCap'] },
+      ch2_emberimp_bomb: { ...FORGE_SKIN, emissive: '#3a0a00', props: ['emberWick'] },
       forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
     },
     assets: {
