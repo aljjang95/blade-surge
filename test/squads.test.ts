@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ENEMIES, stageDef, CHAPTERS } from '../src/data/stages.js';
-import { speciesRole, stageCurve, composeRoom, SQUADS } from '../src/game/squads.js';
+import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS } from '../src/game/squads.js';
 import { Battle } from '../src/game/battle.js';
 
 const STAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -142,4 +142,14 @@ test('roomRoster: 1-1 대형 방도 서로 다른 종이 6종 이하', () => {
   expect(list.length).toBe(16);
   expect(new Set(list).size).toBeLessThanOrEqual(6);
   expect(room.squadPlan.squadOf.length).toBe(16);
+});
+
+test('campaignCombat: 캠페인 혼자 플레이만(원정·파티 제외) — 파티 방은 분대 편성을 쓰지 않는다', () => {
+  const stage: any = stageDef(1, 4);
+  expect(campaignCombat(stage)).toBe(true);
+  expect(campaignCombat({ ...stage, party: { runId: 'x' } })).toBe(false);
+  expect(campaignCombat({ ...stage, expedition: { kind: 'dungeon' } })).toBe(false);
+  const room: any = { id: 3, type: 'normal', reinforced: 0 };
+  Battle.prototype.roomRoster.call({ stage: { ...stage, party: { runId: 'x' } }, rosterSize: () => 16 }, room);
+  expect(room.squadPlan).toBeNull();
 });

@@ -138,12 +138,19 @@ export class EliteAffixes {
     }
     if (this.has.splitting && !e.summoned) {
       const R = g.stage?.combatRosterFor?.() || g.stage?.rosterFor?.();
-      const t = R?.trash?.[0];
-      if (t) for (let i = 0; i < 3; i++) g.after?.(.15 + i * .08, () => {
-        if (!g.active) return;
-        const a = i / 3 * Math.PI * 2, c = g.spawnEnemy(t, null, e.homeRoom, new THREE.Vector3(e.pos.x + Math.cos(a) * 1.4, 0, e.pos.z + Math.sin(a) * 1.4));
-        if (c) { c.summoned = true; c.xpReward = 0; c.reactT = 0; if (c.pack) c.pack.aggro = true; }
-      });
+      const t = R?.trash?.[0], room = e.homeRoom;
+      // 분신은 정산 장부 밖(noLoot)이고, 다 설 때까지 방 정화를 미룬다(잔향 부활과 같은 spawnsDue 계약).
+      if (t && room) {
+        room.spawnsDue = (room.spawnsDue || 0) + 3;
+        const ox = e.pos.x, oz = e.pos.z;
+        for (let i = 0; i < 3; i++) g.after?.(.15 + i * .08, () => {
+          if (g.active && !room.cleared) {
+            const a = i / 3 * Math.PI * 2, c = g.spawnEnemy(t, null, room, new THREE.Vector3(ox + Math.cos(a) * 1.4, 0, oz + Math.sin(a) * 1.4));
+            if (c) { c.summoned = true; c.noLoot = true; c.xpReward = 0; c.reactT = 0; if (c.pack) c.pack.aggro = true; }
+          }
+          g.settleRoomSpawn?.(room);
+        });
+      }
       g.fx.burst?.(e.pos.clone().setY(1), 0xc6ff7a, { n: 18, speed: 7, size: .3 });
     }
     if (this.has.commander) for (const o of g.enemies) if (o !== e && o.alive && o.pack === e.pack && o.distTo(e) < 10) { o.stun = Math.max(o.stun, .9); }
