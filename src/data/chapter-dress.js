@@ -27,6 +27,13 @@ const FROST_MAGE_REMAP = { ...FROST_REMAP, hues: [190, 345] };
 const FROST_SPIRIT = { remap: { dark: '#1b3a5a', light: '#dff4ff', hues: [180, 360], mix: 1, baseMix: 0.5 }, emissive: '#16365a' };
 const FROST_SLIME_REMAP = { dark: '#2a5a7a', light: '#e2f6ff', hues: [50, 190], mix: 0.9, baseMix: 0.2 };
 
+/** 4장 별이 잠긴 심해 — 남색·청록, 심해 청록 발광. 보라·분홍 몸은 심해 청록으로, 붉은 용은 남청으로. */
+const DEEP_SKIN = { emissive: '#021a1c', remap: { dark: '#0d2a3a', light: '#7fe8dc', hues: [235, 345], mix: 0.95, baseMix: 0.12 } };
+const DEEP_DRAKE = { emissive: '#021a1c', remap: { dark: '#0e2a44', light: '#86e6dc', hues: [330, 60], mix: 0.85, baseMix: 0.15 } };
+// 심해 버섯·슬라임: 붉은 갓·연두 몸을 심해 청록으로(빛 주머니 발광과 같은 색 계열).
+const DEEP_MUSH = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#8ef0e2', hues: [330, 40], mix: 0.85, baseMix: 0.1 } };
+const DEEP_SLIME = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#9af2e6', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
+
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
@@ -148,6 +155,51 @@ export const CHAPTER_DRESS = Object.freeze({
       mushroom_shaman: { props: ['iceShards'] },
       treant: { props: ['iceShards'] },
       ember_drake: { remap: { dark: '#1a3350', light: '#d6f0ff', hues: [0, 70], mix: .85, baseMix: .2 } },
+    },
+  },
+  4: {
+    name: '조난 신호의 형체',
+    species: {
+      // 부유 촉수·심연 눈알: 가짜 등대 빛을 매단 심해 생물.
+      squidle: { ...DEEP_SKIN, props: ['lureLamp'] },
+      glub: { ...DEEP_SKIN, props: ['lureLamp'] },
+      abyss_seer: { ...DEEP_SKIN, props: ['lureLamp', 'glowPouches'] },
+      // 심연 슬라임: 분홍을 심해 청록으로, 따개비가 붙는다. 심연 폭탄은 자폭 경고 색(자홍)을 유지한다.
+      blob_pink: { ...DEEP_SLIME, props: ['barnaclesTop'] },
+      bomb_abyss: { props: ['barnaclesTop'] },
+      // 이계 침입자 → 난파선 판자 방패를 든 수부.
+      alien: { ...DEEP_SKIN, props: ['plankShield', 'barnacles'] },
+      // 포자 괴물: 심해 빛 주머니를 단 버섯.
+      mushnub: { ...DEEP_MUSH, props: ['glowPouches'] },
+      // 골렘 수호자 → 산호 골렘.
+      golem_guard: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      elite_golem: { ...DEEP_SKIN, props: ['coralGrowth', 'anchorChain'] },
+      elite_mushroom_king: { ...DEEP_MUSH, props: ['glowPouches', 'coralGrowth'] },
+      elite_dragonling: { ...DEEP_DRAKE, props: ['glowPouches'] },
+      // 4장 confluence 경로에 섞이는 해골·원령: 따개비 해골·익사한 원령.
+      skel_minion: { ...DEEP_SKIN, props: ['anchorChain', 'barnacles'] },
+      elite_skel_captain: { ...DEEP_SKIN, props: ['plankShield', 'anchorChain'] },
+      ghost: { ...DEEP_SKIN, props: ['lureLamp'] },
+      ghost_skull: { ...DEEP_SKIN, props: ['lureLamp'] },
+      // 등대지기 마렌(중간 보스)·해왕 네레이스(최종 보스).
+      tide_midboss: { ...DEEP_MUSH, props: ['lighthouseLens', 'glowPouches'] },
+      tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
+    },
+    assets: {
+      star_owl: { ...DEEP_SKIN, props: ['lureLamp'] },
+      slime: { ...DEEP_SLIME, props: ['barnaclesTop'] },
+      shadow_soldier: { ...DEEP_SKIN, props: ['plankShield'] },
+      mushroom_shaman: { ...DEEP_MUSH, props: ['glowPouches'] },
+      frost_golem: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      ember_drake: { ...DEEP_DRAKE, props: ['glowPouches'] },
+      bone_knight: { ...DEEP_SKIN, props: ['anchorChain', 'barnacles'] },
+      void_wisp: { ...DEEP_SKIN, props: ['lureLamp'] },
+      skeleton_mage: { ...DEEP_SKIN, props: ['lureLamp'] },
+      goblin_chief: { ...DEEP_SKIN, props: ['anchorChain'] },
+      frost_yeti: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      demon_lord: { ...DEEP_SKIN, props: ['tideCrown'] },
+      treant: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      fire_phoenix: { ...DEEP_SKIN },
     },
   },
 });

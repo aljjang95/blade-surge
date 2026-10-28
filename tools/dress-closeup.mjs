@@ -34,6 +34,12 @@ const LINEUPS = {
     ['blob_green', 'frost_burrower', 'elite_yeti', 'elite_golem'],
     ['elite_wraith', 'frost_midboss', 'frost_finalboss'],
   ],
+  4: [
+    ['squidle', 'glub', 'abyss_seer', 'blob_pink'],
+    ['bomb_abyss', 'alien', 'mushnub', 'golem_guard'],
+    ['elite_golem', 'elite_mushroom_king', 'elite_dragonling', 'armabee_evo'],
+    ['tide_midboss', 'tide_finalboss', 'skel_minion'],
+  ],
 };
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
