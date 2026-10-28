@@ -91,8 +91,8 @@ export const CHAPTER_DRESS = Object.freeze({
       // 대장장이 이그란(중간 보스)·화왕 발드(최종 보스, 왕관 용광로).
       // 이그란은 Tripo 몸(tll_ch2_igran)에 앞치마와 등의 미완성 칼 다발이 있어 소품을 얹지 않는다.
       forge_midboss: { ...FORGE_SKIN },
-      // 2장 전용 Tripo 몸: 장인은 앞치마가 몸에 있어 등 망치만, 불씨 임프는 머리 불꽃이 몸에 있어 소품 없음.
-      ch2_smith: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
+      // 2장 전용 Tripo 몸: 장인은 앞치마가 몸에 있고 대장 망치를 손에 들어(로스터 weapon) 소품 없음, 불씨 임프는 머리 불꽃·손 등잔이 있어 소품 없음.
+      ch2_smith: { ...FORGE_SKIN },
       ch2_emberimp: { ...FORGE_SKIN },
       forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
     },
