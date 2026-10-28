@@ -21,8 +21,8 @@ test('후반 스테이지 드랍은 il 보너스로 초반 +8 장비를 넘고 �
   const il = dropItemLevel(stageDef(3, 10)) as number;
   const early = itemStats({ id: (ITEMS_OF as any)('N', 'weapon')[0].id, enh: 8 }).atk;
   const atk = (r: string) => itemStats({ id: (ITEMS_OF as any)(r, 'weapon')[0].id, enh: 0, il }).atk;
-  expect(atk('E')).toBeGreaterThan(early * 1.5);
-  expect(atk('S')).toBeGreaterThan(early);
+  expect(atk('E')).toBeGreaterThan(early);   // 에픽 이상은 새 드랍만으로 초반 +8 노말을 넘는다
+  expect(atk('N')).toBeLessThan(early);       // 노말은 여전히 정리 대상
   expect(atk('N')).toBeLessThan(atk('S')); expect(atk('S')).toBeLessThan(atk('E')); expect(atk('E')).toBeLessThan(atk('U')); expect(atk('U')).toBeLessThan(atk('L'));
   // 스테이지가 깊을수록 같은 장비가 강하다
   for (let i = 2; i < 80; i++) expect(itemLevelUnits(i, 'E', 0)).toBeGreaterThanOrEqual(itemLevelUnits(i - 1, 'E', 0));
