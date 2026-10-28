@@ -50,9 +50,9 @@ function bellGeometry(r, segments = 10) {
   const g = new THREE.LatheGeometry(pts, segments); return g;
 }
 
-// 소품: bone 후보(앞이 우선), at(몸 키 비율, 뼈 휴식 위치 기준 모델 축), rot(도), build(h) → { solid: [], glow: [] }
+// 소품: bones 후보(앞이 우선) 또는 root(모델 원점=발밑 기준, 뼈 없는 슬라임·원령), at(몸 키 비율, 모델 축), rot(도), scale(배), build(h) → { solid: [], glow: [] }
 const PROPS = {
-  coffin: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .02, -.1], rot: [-8, 0, 0], build: (h) => ({
+  coffin: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .02, -.12], rot: [-8, 0, 0], scale: 1.25, build: (h) => ({
     solid: [
       piece(extrude(coffinShape(.2 * h, .44 * h), .07 * h), C.wood),
       piece(new THREE.BoxGeometry(.21 * h, .025 * h, .075 * h), C.woodDark, [0, .1 * h, 0]),
@@ -63,7 +63,7 @@ const PROPS = {
     ],
     glow: [piece(new THREE.BoxGeometry(.012 * h, .16 * h, .004 * h), C.glowName, [0, .02 * h, -.037 * h]), piece(new THREE.BoxGeometry(.09 * h, .012 * h, .004 * h), C.glowName, [0, .06 * h, -.037 * h])],
   }) },
-  mourningHood: { bones: ['Head', 'head'], at: [0, .045, -.012], rot: [-6, 0, 0], build: (h) => ({
+  mourningHood: { bones: ['Head', 'head'], at: [0, .2, -.01], rot: [-6, 0, 0], scale: 2.2, build: (h) => ({
     solid: [
       piece(new THREE.ConeGeometry(.085 * h, .17 * h, 8, 1, true), C.cloth, [0, .02 * h, 0]),
       // 등 뒤로 늘어진 두건 자락.
@@ -80,7 +80,7 @@ const PROPS = {
     ],
     glow: [],
   }) },
-  mourningVeil: { bones: ['Head', 'head'], at: [0, .05, -.01], rot: [-6, 0, 0], build: (h) => ({
+  mourningVeil: { bones: ['Head', 'head'], at: [0, .19, -.02], rot: [-6, 0, 0], scale: 2.2, build: (h) => ({
     solid: [
       piece(new THREE.ConeGeometry(.09 * h, .14 * h, 10, 1, true), C.clothDark, [0, .03 * h, 0]),
       piece(new THREE.BoxGeometry(.18 * h, .32 * h, .012 * h), C.clothDark, [0, -.15 * h, -.07 * h], [10, 0, 0]),
@@ -88,7 +88,7 @@ const PROPS = {
     ],
     glow: [],
   }) },
-  tombShield: { bones: ['LeftHand', 'LeftForeArm'], at: [0, 0, .04], rot: [0, 0, 90], build: (h) => ({
+  tombShield: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.1, -.1, .17], rot: [-6, -14, 0], scale: 1.5, build: (h) => ({
     solid: [
       piece(extrude(tombShape(.2 * h, .32 * h), .045 * h), C.stone),
       piece(new THREE.BoxGeometry(.23 * h, .04 * h, .06 * h), C.stoneDark, [0, -.16 * h, 0]),
@@ -97,7 +97,7 @@ const PROPS = {
     // 지워진 이름 자리: 희미하게 빛나는 긁힌 줄 세 개.
     glow: [-.01, .04, .09].map((y, i) => piece(new THREE.BoxGeometry((.11 - i * .02) * h, .01 * h, .004 * h), C.glowName, [0, y * h, .024 * h])),
   }) },
-  candleCrown: { bones: ['Head', 'head'], at: [0, .075, 0], rot: [0, 0, 0], build: (h) => {
+  candleCrown: { bones: ['Head', 'head'], at: [0, .25, 0], rot: [0, 0, 0], scale: 1.9, build: (h) => {
     const solid = [piece(new THREE.TorusGeometry(.07 * h, .012 * h, 4, 12), C.bronze, [0, 0, 0], [90, 0, 0])], glow = [];
     for (let i = 0; i < 5; i++) {
       const a = i / 5 * Math.PI * 2, x = Math.sin(a) * .07 * h, z = Math.cos(a) * .07 * h, tall = (.05 + (i % 2) * .025) * h;
@@ -106,7 +106,7 @@ const PROPS = {
     }
     return { solid, glow };
   } },
-  brokenBell: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.12], rot: [-15, 0, 12], build: (h) => ({
+  brokenBell: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .04, -.17], rot: [-15, 0, 12], scale: 1.7, build: (h) => ({
     solid: [
       piece(bellGeometry(.13 * h), C.bronze, [0, -.1 * h, 0], [0, 0, 0], [1, .24 * h, 1]),
       piece(new THREE.TorusGeometry(.03 * h, .008 * h, 4, 8), C.bronzeDark, [0, .15 * h, 0]),
@@ -115,7 +115,7 @@ const PROPS = {
     // 종 몸통의 금(빛나는 균열).
     glow: [piece(new THREE.BoxGeometry(.008 * h, .12 * h, .006 * h), C.glowName, [.04 * h, -.02 * h, .085 * h], [0, 0, 18])],
   }) },
-  brokenBellLarge: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .03, -.14], rot: [-12, 0, -10], build: (h) => ({
+  brokenBellLarge: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .05, -.2], rot: [-12, 0, -10], scale: 1.8, build: (h) => ({
     solid: [
       piece(bellGeometry(.17 * h, 12), C.bronze, [0, -.13 * h, 0], [0, 0, 0], [1, .32 * h, 1]),
       piece(new THREE.TorusGeometry(.04 * h, .01 * h, 4, 8), C.bronzeDark, [0, .2 * h, 0]),
@@ -123,7 +123,7 @@ const PROPS = {
     ],
     glow: [piece(new THREE.BoxGeometry(.01 * h, .17 * h, .006 * h), C.glowName, [.05 * h, -.03 * h, .11 * h], [0, 0, 16]), piece(new THREE.BoxGeometry(.01 * h, .08 * h, .006 * h), C.glowName, [.03 * h, .04 * h, .1 * h], [0, 0, -30])],
   }) },
-  bellCrown: { bones: ['Head', 'head'], at: [0, .08, 0], rot: [0, 0, 0], build: (h) => {
+  bellCrown: { bones: ['Head', 'head'], at: [0, .26, 0], rot: [0, 0, 0], scale: 2.1, build: (h) => {
     const solid = [piece(new THREE.CylinderGeometry(.085 * h, .075 * h, .04 * h, 10, 1, true), C.bronze)], glow = [];
     for (let i = 0; i < 6; i++) {
       const a = i / 6 * Math.PI * 2, x = Math.sin(a) * .085 * h, z = Math.cos(a) * .085 * h;
@@ -133,7 +133,7 @@ const PROPS = {
     glow.push(piece(new THREE.TorusGeometry(.086 * h, .006 * h, 3, 18), C.glowTeal, [0, .02 * h, 0], [90, 0, 0]));
     return { solid, glow };
   } },
-  funeralBanner: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.07, .1, -.12], rot: [-6, 0, -6], build: (h) => ({
+  funeralBanner: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.09, .1, -.16], rot: [-6, 0, -6], scale: 1.6, build: (h) => ({
     solid: [
       piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .62 * h, 5), C.woodDark, [0, .12 * h, 0]),
       piece(new THREE.BoxGeometry(.16 * h, .26 * h, .006 * h), C.clothDark, [-.085 * h, .27 * h, 0]),
@@ -141,18 +141,18 @@ const PROPS = {
     ],
     glow: [piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 10), C.glowName, [-.085 * h, .28 * h, .005 * h])],
   }) },
-  spiritBell: { bones: ['head', 'Head', 'Hips'], at: [0, -.2, .05], rot: [0, 0, 0], build: (h) => ({
+  spiritBell: { root: true, at: [0, .32, .16], rot: [0, 0, 0], scale: 2.2, build: (h) => ({
     solid: [
       piece(bellGeometry(.06 * h, 8), C.bronze, [0, -.02 * h, 0], [0, 0, 0], [1, .09 * h, 1]),
       piece(new THREE.CylinderGeometry(.004 * h, .004 * h, .12 * h, 3), C.bronzeDark, [0, .12 * h, 0]),
     ],
     glow: [piece(new THREE.SphereGeometry(.018 * h, 6, 4), C.glowTeal, [0, -.035 * h, 0])],
   }) },
-  spiritHalo: { bones: ['head', 'Head'], at: [0, .12, -.03], rot: [80, 0, 0], build: (h) => ({
+  spiritHalo: { root: true, at: [0, .98, -.04], rot: [90, 0, 0], scale: 1.5, build: (h) => ({
     solid: [],
     glow: [piece(new THREE.TorusGeometry(.16 * h, .008 * h, 3, 24), C.glowTeal)],
   }) },
-  graveLilies: { bones: ['head', 'Head', 'Spine2', 'Hips'], at: [0, .16, 0], rot: [0, 0, 0], build: (h) => {
+  graveLilies: { root: true, at: [0, .86, 0], rot: [0, 0, 0], scale: 2.6, build: (h) => {
     const solid = [], glow = [];
     for (let i = 0; i < 4; i++) {
       const a = i / 4 * Math.PI * 2 + .4, x = Math.sin(a) * .06 * h, z = Math.cos(a) * .06 * h, tilt = 18 + i * 6;
@@ -219,16 +219,16 @@ function findBone(root, names) {
 export function attachDressProp(model, key, heightM) {
   const prop = PROPS[key];
   if (!prop) return null;
-  const bone = findBone(model, prop.bones);
+  const bone = prop.root ? model : findBone(model, prop.bones);
   if (!bone) return null;
   const h = heightM > 0 ? heightM : 2;
   model.updateWorldMatrix(true, true);
   // 뼈의 모델 공간 휴식 행렬. 모델 배율은 양변에서 지워지므로 등장 연출(배율 0.01)과 무관하다.
-  _inv.copy(model.matrixWorld).invert();
-  _boneM.multiplyMatrices(_inv, bone.matrixWorld);
+  if (prop.root) _boneM.identity();
+  else { _inv.copy(model.matrixWorld).invert(); _boneM.multiplyMatrices(_inv, bone.matrixWorld); }
   _p.setFromMatrixPosition(_boneM).add(new THREE.Vector3(prop.at[0] * h, prop.at[1] * h, prop.at[2] * h));
   _e.set(THREE.MathUtils.degToRad(prop.rot[0]), THREE.MathUtils.degToRad(prop.rot[1]), THREE.MathUtils.degToRad(prop.rot[2]));
-  _want.compose(_p, _q.setFromEuler(_e), _s);
+  _want.compose(_p, _q.setFromEuler(_e), new THREE.Vector3().setScalar(prop.scale || 1));
   const socket = new THREE.Group(); socket.name = `ChapterDress_${key}`;
   socket.matrix.copy(_boneM.invert().multiply(_want)); socket.matrixAutoUpdate = false;
   const [solidMat, glowMat] = materials(), geo = propGeometry(key, h);
@@ -236,6 +236,54 @@ export function attachDressProp(model, key, heightM) {
   if (geo.glow) { const m = new THREE.Mesh(geo.glow, glowMat); m.castShadow = false; m.frustumCulled = false; socket.add(m); }
   bone.add(socket);
   return socket;
+}
+
+const remapCache = new Map();
+/**
+ * 손그림 텍스처의 색상(hue) 범위를 장 팔레트로 옮긴 복제 텍스처. 밝기는 보존해 무늬·음영을 살린다.
+ * hue 범위 안 픽셀은 mix, 밖은 baseMix 만큼 섞는다. 텍스처·팔레트별로 한 번만 만들고 공유한다(브라우저 전용).
+ * @param {THREE.Texture} map @param {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} remap
+ */
+export function remapTexture(map, remap) {
+  const image = map?.image;
+  if (!image || typeof document === 'undefined' || !(image.width > 0)) return null;
+  const key = `${map.uuid}|${remap.dark}|${remap.light}|${remap.hues}|${remap.mix}|${remap.baseMix || 0}`;
+  if (remapCache.has(key)) return remapCache.get(key);
+  let texture = null;
+  try {
+    const scale = Math.min(1, 1024 / Math.max(image.width, image.height));
+    const w = Math.max(1, Math.round(image.width * scale)), h = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h), px = data.data;
+    // 텍스처 바이트는 sRGB 이므로 팔레트도 '#rrggbb' 그대로 0~255 로 섞는다.
+    const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+    const d = rgb(remap.dark), l = rgb(remap.light);
+    const [h0, h1] = remap.hues, mix = remap.mix, base = remap.baseMix || 0;
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), c = max - min;
+      let hue = 0;
+      if (c > 0) hue = max === r ? 60 * (((g - b) / c) % 6) : max === g ? 60 * ((b - r) / c + 2) : 60 * ((r - g) / c + 4);
+      if (hue < 0) hue += 360;
+      // 채도가 낮은 픽셀(뼈·회색)은 범위 밖으로 본다.
+      const inRange = c > 24 && hue >= h0 && hue <= h1;
+      const k = inRange ? mix : base;
+      if (!k) continue;
+      const lum = (0.3 * r + 0.59 * g + 0.11 * b) / 255;
+      px[i] = r + ((d[0] + (l[0] - d[0]) * lum) - r) * k;
+      px[i + 1] = g + ((d[1] + (l[1] - d[1]) * lum) - g) * k;
+      px[i + 2] = b + ((d[2] + (l[2] - d[2]) * lum) - b) * k;
+    }
+    ctx.putImageData(data, 0, 0);
+    texture = new THREE.CanvasTexture(canvas);
+    texture.flipY = map.flipY; texture.colorSpace = map.colorSpace; texture.wrapS = map.wrapS; texture.wrapT = map.wrapT;
+    texture.channel = map.channel; texture.offset.copy(map.offset); texture.repeat.copy(map.repeat); texture.rotation = map.rotation; texture.center.copy(map.center);
+    texture.anisotropy = map.anisotropy; texture.userData.sharedDress = true;
+  } catch { texture = null; }
+  remapCache.set(key, texture);
+  return texture;
 }
 
 /**
@@ -247,6 +295,7 @@ export function attachDressProp(model, key, heightM) {
 export function dressEnemy(enemy, stage, species) {
   const spec = chapterDressFor(stage, species, enemy.libraryAsset?.id);
   if (!spec) return null;
+  if (spec.remap) for (const m of enemy.mats) { const t = m.map && remapTexture(m.map, spec.remap); if (t) { m.map = t; m.needsUpdate = true; } }
   if (spec.color && spec.amount) { const c = new THREE.Color(spec.color); for (const m of enemy.mats) m.color?.lerp(c, spec.amount); }
   if (spec.emissive) { const c = new THREE.Color(spec.emissive); for (const m of enemy.mats) if (m.emissive) { m.userData.baseEmissive = c.clone(); m.emissive.copy(c); } }
   const props = [];

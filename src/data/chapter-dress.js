@@ -5,11 +5,17 @@
 // 소품 키는 src/game/chapter-dress.js PROP_BUILDERS 에 있다. 새 Tripo 몸이 오면 monster-roster.js 의 asset 만 바꾸고
 // 여기서 그 종의 소품을 빼면 된다(소품은 몸에 이미 있는 실루엣을 대신하던 것).
 
-/** @typedef {{ color?: string, amount?: number, emissive?: string, ghostGlow?: string, props?: string[] }} DressSpec */
+/** @typedef {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} DressRemap */
+/** @typedef {{ color?: string, amount?: number, emissive?: string, ghostGlow?: string, remap?: DressRemap, props?: string[] }} DressSpec */
 
 /** 1장 잊힌 종의 정원 — 장례 행렬. 청록·묘비 회색, 관을 멘 해골, 떠도는 원령, 이름 없는 묘비·부서진 종·시들지 않는 꽃. */
-const GARDEN_BONE = { color: '#a7beb6', amount: 0.3, emissive: '#071a16' };
-const GARDEN_SPIRIT = { color: '#bff5e6', amount: 0.35, ghostGlow: '#2b7a69' };
+// remap: 몸 텍스처의 보라·자주(해골 깃털·천, 원령 몸) 색을 상복 청록으로 옮긴다. 뼈(무채색)는 그대로 둔다.
+const GARDEN_REMAP = { dark: '#16352f', light: '#a9e6d4', hues: [235, 345], mix: 0.95, baseMix: 0.12 };
+const GARDEN_BONE = { color: '#a7beb6', amount: 0.22, emissive: '#071a16', remap: GARDEN_REMAP };
+// 원령은 몸 전체가 보라라 색상 범위를 넓히고 거의 전부 옮긴다.
+// 해골 주술사 몸의 파란 두건도 장례 사제의 청록 상복으로.
+const MAGE_REMAP = { ...GARDEN_REMAP, hues: [190, 345] };
+const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 360], mix: 1, baseMix: 0.6 }, ghostGlow: '#2b7a69' };
 
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
@@ -18,13 +24,13 @@ export const CHAPTER_DRESS = Object.freeze({
     species: {
       // 관꾼 해골: 빈 관을 메고 상복 두건을 쓴 행렬의 맨 앞줄.
       skel_minion: { ...GARDEN_BONE, props: ['mourningHood', 'coffin'] },
-      // 곡꾼: 짙은 두건과 상장 띠. 빠르게 옆으로 파고드는 자객 역할.
-      skel_rogue: { ...GARDEN_BONE, color: '#7f938d', amount: 0.36, props: ['darkHood'] },
+      // 곡꾼: 이미 두건 쓴 몸이라 보라 천·검기를 상복 청록으로만 바꾼다(소품을 얹으면 실루엣이 탑처럼 솟는다).
+      skel_rogue: { ...GARDEN_BONE, color: '#7f938d', amount: 0.3 },
       // 묘비 방패병: 이름이 지워진 묘비를 방패로 든다.
       skel_shield: { ...GARDEN_BONE, props: ['mourningHood', 'tombShield'] },
       // 장례 사제: 촛불 관을 쓰고 행렬을 이끈다.
-      skel_mage: { ...GARDEN_BONE, props: ['candleCrown'] },
-      skel_priest: { ...GARDEN_BONE, color: '#d7e8df', amount: 0.3, props: ['candleCrown', 'mourningHood'] },
+      skel_mage: { ...GARDEN_BONE, remap: MAGE_REMAP, props: ['candleCrown'] },
+      skel_priest: { ...GARDEN_BONE, remap: { ...MAGE_REMAP, light: '#e4f5ee' }, props: ['candleCrown'] },
       // 묘지기: 부서진 종을 등에 지고 다닌다.
       bone_orc: { ...GARDEN_BONE, props: ['brokenBell'] },
       // 원령: 아무도 부르지 않은 이름의 마지막 목소리 — 작은 조종(弔鐘)을 매달고 청록으로 빛난다.
@@ -44,8 +50,8 @@ export const CHAPTER_DRESS = Object.freeze({
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.
     assets: {
       bone_knight: { ...GARDEN_BONE, props: ['mourningHood', 'coffin'] },
-      shadow_soldier: { ...GARDEN_BONE, color: '#7f938d', amount: 0.36, props: ['darkHood'] },
-      skeleton_mage: { ...GARDEN_BONE, props: ['candleCrown'] },
+      shadow_soldier: { ...GARDEN_BONE, color: '#7f938d', amount: 0.36 },
+      skeleton_mage: { ...GARDEN_BONE, remap: MAGE_REMAP, props: ['candleCrown'] },
       goblin_chief: { ...GARDEN_BONE, props: ['brokenBell'] },
       void_wisp: { ...GARDEN_SPIRIT, props: ['spiritBell'] },
       slime: { props: ['graveLilies'] },

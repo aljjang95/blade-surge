@@ -54,7 +54,7 @@ const settle = (st) => page.evaluate((st) => {
   if (lst.filter(onScreen).length < Math.min(3, lst.length)) {
     lst.slice(0, 6).forEach((en, i) => { if (onScreen(en)) return; const d = 4 + (i % 4) * 0.9, z = (i - 2.5) * 1.3; en.pos.set(p.pos.x + d, p.pos.y, p.pos.z + z); en.vel?.set(0, 0, 0); moved++; });
   }
-  for (let k = 0; k < 30; k++) { freeze(); a.step(1 / 60, false); }
+  for (let k = 0; k < 30; k++) { freeze(); a.step(1 / 60, k === 29); }
   const col = (c) => c?.isColor ? '#' + c.getHexString() : (c ?? null);
   const scene = a.scene, lights = {};
   scene.traverse((o) => { if (o.isLight) { const t = o.type; (lights[t] ||= []).push({ color: col(o.color), i: +o.intensity.toFixed(2) }); } });
@@ -86,7 +86,7 @@ try {
       const info = await settle(st);
       const sk = await page.evaluate(() => { const t = window.app.battle.stage; return { expedition: t.expedition ? { id: t.expedition.id } : undefined, dungeon: t.dungeon ? { id: t.dungeon.id, landmark: t.dungeon.landmark } : undefined, chapter: { theme: t.chapter?.theme } }; });
       info.dungeonVisual = dungeonVisualFor(sk)?.key ?? null;
-      await page.waitForTimeout(400);
+      await page.evaluate(() => { for (let k = 0; k < 3; k++) window.app.step(1 / 60, true); }); await page.waitForTimeout(500);
       const f = `${OUT}/${TAG}-${name}.png`; await page.screenshot({ path: f });
       report.scenes[name] = { code, shot: f, ...info };
     } catch (err) { report.scenes[name] = { error: String(err).slice(0, 300) }; errors.push(`${name}: ${err}`); }
