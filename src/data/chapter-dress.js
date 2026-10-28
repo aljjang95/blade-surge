@@ -47,7 +47,11 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_bone_lord: { ...GARDEN_BONE, props: ['brokenBellLarge'] },
       elite_wraith: { ...GARDEN_SPIRIT, props: ['spiritBell', 'spiritHalo'] },
       // 애도의 기사 세렌(중간 보스)·종왕 에일른(최종 보스).
-      garden_midboss: { ...GARDEN_BONE, props: ['mourningVeil', 'tombShield', 'funeralBanner'] },
+      // 세렌은 Tripo 몸(tll_ch1_tombknight)에 베일·상복 리본이 있고 묘비 방패를 실제 왼손 소품으로 든다 → 조기만 남긴다.
+      garden_midboss: { ...GARDEN_BONE, props: ['funeralBanner'] },
+      // 1장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 색은 원래 종과 같고, 몸에 이미 있는 관·두건·조종 소품은 뺀다.
+      ch1_coffinbearer: { ...GARDEN_BONE },
+      ch1_mourner: { ...GARDEN_SPIRIT },
       garden_finalboss: { ...GARDEN_BONE, emissive: '#0e2c25', props: ['bellCrown', 'brokenBellLarge'] },
     },
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.
@@ -85,7 +89,11 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_orc_chief: { ...FORGE_SKIN, props: ['smithApron', 'unfinishedGreatsword'] },
       elite_bluedemon: { props: ['emberChains'] },
       // 대장장이 이그란(중간 보스)·화왕 발드(최종 보스, 왕관 용광로).
-      forge_midboss: { ...FORGE_SKIN, props: ['smithApron', 'unfinishedBlades', 'forgeHammerBack'] },
+      // 이그란은 Tripo 몸(tll_ch2_igran)에 앞치마와 등의 미완성 칼 다발이 있어 소품을 얹지 않는다.
+      forge_midboss: { ...FORGE_SKIN },
+      // 2장 전용 Tripo 몸: 장인은 앞치마가 몸에 있어 등 망치만, 불씨 임프는 머리 불꽃이 몸에 있어 소품 없음.
+      ch2_smith: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
+      ch2_emberimp: { ...FORGE_SKIN },
       forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
     },
     assets: {

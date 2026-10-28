@@ -64,6 +64,19 @@ export const MONSTER_ROSTER = Object.freeze({
     weapon: { asset: 'tll_ch7_midboss_flail', hand: 'right', grip: [-0.12, 1.45, -0.22], at: [0, 0.12, 0], rot: [0, 0, -90] } },
   // scale 은 Tripo 몸 기준이다. 몸 로드 실패로 대체 모델이 서면 예전 값(fallbackScale)을 쓴다(대체 모델 키·판정 반경 유지).
   Bell_Sovereign: { asset: 'tll_ch7_finalboss', fallback: 'frost_golem', scale: 0.5, fallbackScale: 0.72 },
+  // ---- 1·2장 전용 Tripo 몸(2026-10-28, docs/asset-library/ch1-ch2-tripo.md) ----
+  // 장 전용 적 id(stages.js CHAPTER_SPECIES)와 1·2장 중간 보스만 쓴다. scale 은 heightM × scale × def.scale 이
+  // 목표 키(관꾼 1.6m·원령 1.7m·장인 1.7m·임프 1.2m)가 되게 맞췄다. 보스는 크기 띠(size-bands)가 영웅×1.8 이상을 보장한다.
+  // fallback 은 몸 로드 실패 때 서던 예전 몸이고, fallbackScale 은 그때의 예전 배율이다.
+  Ch1_CoffinBearer: { asset: 'tll_ch1_coffinbearer', fallback: 'bone_knight', scale: 1.05, fallbackScale: 0.86 },
+  Ch1_Mourner: { asset: 'tll_ch1_mourner', fallback: 'void_wisp', scale: 0.8, fallbackScale: 1.17,
+    weapon: { asset: 'tll_ch1_handbell', hand: 'right', grip: [0, 0.33, 0], at: [0, 0.07, 0.02], rot: [0, 0, -90] } },
+  Ch1_TombKnight: { asset: 'tll_ch1_tombknight', fallback: 'bone_knight', scale: 0.85, fallbackScale: 1.03,
+    weapon: { asset: 'tll_ch1_clapper', hand: 'right', grip: [0, 0.22, 0], at: [0, 0.08, 0.02], rot: [0, 0, -90] },
+    offhand: { asset: 'tll_ch1_tombshield', hand: 'left', grip: [0, 0.42, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
+  Ch2_Smith: { asset: 'tll_ch2_smith', fallback: 'goblin_brute', scale: 1, fallbackScale: 0.77 },
+  Ch2_EmberImp: { asset: 'tll_ch2_emberimp', fallback: 'goblin_raider', scale: 1.2, fallbackScale: 1.07 },
+  Ch2_Igran: { asset: 'tll_ch2_igran', fallback: 'goblin_brute', scale: 0.75, fallbackScale: 0.77 },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
