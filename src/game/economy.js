@@ -231,7 +231,7 @@ export class Economy {
     } catch { this.s.paidGems = paidBefore; this.storageStatus = 'unavailable'; return false; }
   }
   /** 처음부터 다시 시작해도 남기는 결제 원장·권한 필드. 지우면 영수증 재검증이 같은 결제를 다시 지급할 수 있다. */
-  static ENTITLEMENT_FIELDS = ['iapApplied', 'adsRemoved', 'purchases', 'spentKRW', 'vip', 'vipUntil', 'monthlyUntil', 'monthlyClaimed', 'paidGems', 'firstPurchaseUsed'];
+  static ENTITLEMENT_FIELDS = ['iapApplied', 'adsRemoved', 'purchases', 'spentKRW', 'vip', 'vipUntil', 'monthlyUntil', 'monthlyClaimed', 'firstPurchaseUsed'];
   reset({ keepEntitlements = false } = {}) {
     let cleared = true;
     try { for (const key of [KEY, KEY + '_backup', KEY + '_recovery']) this.storage.removeItem(key); }
