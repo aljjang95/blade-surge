@@ -14,6 +14,7 @@ const C = {
   wood: 0x4a3626, woodDark: 0x2f2219, cloth: 0x4f7d72, clothDark: 0x2c3b38, stone: 0x8f9894, stoneDark: 0x6c7471,
   bronze: 0x8b6a3c, bronzeDark: 0x5c4426, ivory: 0xe9e1c8, lily: 0xf4f7ef, leaf: 0x5f8f6a, iron: 0x4b5254,
   glowTeal: 0x8ff5dc, glowFlame: 0xfff1c2, glowName: 0x6fe0c4,
+  leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
 };
 
 /** 정점색을 칠하고 위치·회전을 굽는다. */
@@ -160,6 +161,81 @@ const PROPS = {
       solid.push(piece(new THREE.ConeGeometry(.03 * h, .05 * h, 6, 1, false), C.lily, [x * 1.4, .095 * h, z * 1.4], [180 + Math.cos(a) * tilt, 0, -Math.sin(a) * tilt]));
       glow.push(piece(new THREE.SphereGeometry(.007 * h, 4, 3), C.glowFlame, [x * 1.4, .085 * h, z * 1.4]));
     }
+    return { solid, glow };
+  } },
+  // ---- 2장 용광로: 멈추지 못한 장인 ----
+  smithApron: { bones: ['Spine1', 'Spine', 'Spine2'], at: [0, -.06, .13], rot: [6, 0, 0], scale: 1.3, build: (h) => ({
+    solid: [
+      piece(new THREE.BoxGeometry(.24 * h, .3 * h, .018 * h), C.leather),
+      piece(new THREE.BoxGeometry(.1 * h, .06 * h, .022 * h), C.leatherDark, [.05 * h, -.06 * h, .004 * h]),
+      piece(new THREE.BoxGeometry(.25 * h, .02 * h, .02 * h), C.leatherDark, [0, .15 * h, 0]),
+    ],
+    // 쇳물이 튄 그을음 자국.
+    glow: [piece(new THREE.SphereGeometry(.008 * h, 4, 3), C.glowEmber, [-.06 * h, -.08 * h, .012 * h]), piece(new THREE.SphereGeometry(.006 * h, 4, 3), C.glowEmber, [.03 * h, .05 * h, .012 * h])],
+  }) },
+  forgeHammerBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .03, -.15], rot: [0, 0, 35], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.012 * h, .014 * h, .42 * h, 6), C.woodDark), piece(new THREE.BoxGeometry(.15 * h, .08 * h, .08 * h), C.soot, [0, .22 * h, 0])],
+    glow: [piece(new THREE.BoxGeometry(.012 * h, .07 * h, .07 * h), C.glowEmber, [.08 * h, .22 * h, 0])],
+  }) },
+  bellowsBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, 0, -.14], rot: [-10, 0, 0], scale: 1.4, build: (h) => ({
+    solid: [
+      piece(new THREE.CylinderGeometry(.11 * h, .03 * h, .2 * h, 4), C.leather, [0, 0, 0], [0, 45, 0], [1, 1, .35]),
+      piece(new THREE.BoxGeometry(.16 * h, .012 * h, .05 * h), C.woodDark, [0, .1 * h, 0]),
+      piece(new THREE.ConeGeometry(.02 * h, .08 * h, 5), C.steel, [0, -.14 * h, 0], [180, 0, 0]),
+    ],
+    glow: [piece(new THREE.SphereGeometry(.014 * h, 5, 3), C.glowEmber, [0, -.19 * h, 0])],
+  }) },
+  unfinishedBlades: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .05, -.15], rot: [-6, 0, 0], scale: 1.4, build: (h) => {
+    const solid = [piece(new THREE.BoxGeometry(.2 * h, .03 * h, .04 * h), C.leatherDark, [0, -.08 * h, 0])], glow = [];
+    for (const [i, a] of [-18, 0, 18].entries()) {
+      const len = (.34 + i * .03) * h, r = THREE.MathUtils.degToRad(a), x = Math.sin(r) * len / 2, y = Math.cos(r) * len / 2 - .08 * h;
+      solid.push(piece(new THREE.BoxGeometry(.035 * h, len, .008 * h), C.steel, [x, y, 0], [0, 0, -a]));
+      glow.push(piece(new THREE.BoxGeometry(.01 * h, len * .5, .01 * h), i === 1 ? C.glowHot : C.glowEmber, [x * 1.5 + .015 * h, y + len * .2, 0], [0, 0, -a]));
+    }
+    return { solid, glow };
+  } },
+  unfinishedGreatsword: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .05, -.15], rot: [0, 0, -30], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.BoxGeometry(.07 * h, .5 * h, .012 * h), C.steel, [0, .1 * h, 0]), piece(new THREE.BoxGeometry(.18 * h, .025 * h, .03 * h), C.soot, [0, -.16 * h, 0]), piece(new THREE.CylinderGeometry(.014 * h, .014 * h, .12 * h, 5), C.leatherDark, [0, -.23 * h, 0])],
+    glow: [piece(new THREE.BoxGeometry(.016 * h, .26 * h, .014 * h), C.glowEmber, [.03 * h, .22 * h, 0]), piece(new THREE.BoxGeometry(.02 * h, .05 * h, .014 * h), C.glowHot, [.025 * h, .33 * h, 0])],
+  }) },
+  anvilShield: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.06, -.06, .17], rot: [0, -10, 0], scale: 1.4, build: (h) => ({
+    solid: [
+      piece(new THREE.BoxGeometry(.22 * h, .07 * h, .1 * h), C.soot, [0, .08 * h, 0]),
+      piece(new THREE.ConeGeometry(.04 * h, .14 * h, 6), C.soot, [.17 * h, .08 * h, 0], [0, 0, -90]),
+      piece(new THREE.BoxGeometry(.13 * h, .14 * h, .08 * h), C.soot, [0, -.03 * h, 0]),
+      piece(new THREE.BoxGeometry(.2 * h, .04 * h, .1 * h), C.steel, [0, -.11 * h, 0]),
+    ],
+    glow: [piece(new THREE.BoxGeometry(.14 * h, .008 * h, .06 * h), C.glowEmber, [0, .118 * h, 0])],
+  }) },
+  emberWick: { bones: ['Head', 'head'], at: [0, .26, 0], rot: [0, 0, 12], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.006 * h, .008 * h, .1 * h, 4), C.soot, [0, .05 * h, 0])],
+    glow: [piece(new THREE.SphereGeometry(.022 * h, 6, 4), C.glowHot, [0, .11 * h, 0]), piece(new THREE.ConeGeometry(.016 * h, .05 * h, 5), C.glowEmber, [0, .145 * h, 0])],
+  }) },
+  emberCap: { bones: ['Head', 'head'], at: [0, .24, 0], rot: [0, 0, 0], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.DodecahedronGeometry(.045 * h, 0), C.soot, [0, 0, 0]), piece(new THREE.DodecahedronGeometry(.032 * h, 0), C.soot, [.05 * h, -.01 * h, .02 * h]), piece(new THREE.DodecahedronGeometry(.028 * h, 0), C.soot, [-.045 * h, -.015 * h, -.015 * h])],
+    glow: [piece(new THREE.SphereGeometry(.018 * h, 5, 3), C.glowEmber, [.012 * h, .03 * h, .02 * h]), piece(new THREE.SphereGeometry(.012 * h, 5, 3), C.glowHot, [-.03 * h, .012 * h, .02 * h])],
+  }) },
+  emberLantern: { bones: ['Head', 'head'], at: [0, .28, 0], rot: [0, 0, 0], scale: 1.8, build: (h) => ({
+    solid: [piece(bellGeometry(.05 * h, 8), C.clay, [0, .055 * h, 0], [180, 0, 0], [1, .06 * h, 1]), piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 8), C.soot, [0, .06 * h, 0], [90, 0, 0])],
+    glow: [piece(new THREE.ConeGeometry(.02 * h, .06 * h, 5), C.glowHot, [0, .09 * h, 0]), piece(new THREE.SphereGeometry(.016 * h, 5, 3), C.glowEmber, [0, .068 * h, 0])],
+  }) },
+  hearthRing: { root: true, at: [0, .42, 0], rot: [90, 0, 0], scale: 1.2, build: (h) => ({
+    solid: [piece(new THREE.TorusGeometry(.2 * h, .012 * h, 4, 16), C.soot)],
+    glow: [0, 1, 2, 3, 4, 5].map((i) => { const a = i / 6 * Math.PI * 2; return piece(new THREE.SphereGeometry(.018 * h, 5, 3), i % 2 ? C.glowHot : C.glowEmber, [Math.cos(a) * .2 * h, Math.sin(a) * .2 * h, 0]); }),
+  }) },
+  emberChains: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, .05], rot: [0, 0, 35], scale: 1.4, build: (h) => {
+    const solid = [], glow = [];
+    for (let i = 0; i < 7; i++) {
+      const y = (i - 3) * .045 * h;
+      (i === 3 ? glow : solid).push(piece(new THREE.TorusGeometry(.02 * h, .006 * h, 3, 8), i === 3 ? C.glowEmber : C.steel, [0, y, .12 * h], [0, i % 2 ? 90 : 0, 0]));
+    }
+    solid.push(piece(new THREE.TorusGeometry(.1 * h, .012 * h, 4, 12), C.soot, [0, .17 * h, 0], [90, 0, -35]));
+    return { solid, glow };
+  } },
+  crucibleCrown: { bones: ['Head', 'head'], at: [0, .26, 0], rot: [0, 0, 0], scale: 2.1, build: (h) => {
+    const solid = [piece(new THREE.CylinderGeometry(.075 * h, .06 * h, .06 * h, 10, 1, true), C.soot)], glow = [piece(new THREE.CylinderGeometry(.07 * h, .07 * h, .006 * h, 10), C.glowEmber, [0, .022 * h, 0])];
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; solid.push(piece(new THREE.ConeGeometry(.014 * h, .06 * h, 4), C.soot, [Math.sin(a) * .075 * h, .055 * h, Math.cos(a) * .075 * h])); }
+    glow.push(piece(new THREE.SphereGeometry(.012 * h, 5, 3), C.glowHot, [.03 * h, .03 * h, .03 * h]));
     return { solid, glow };
   } },
 };
