@@ -87,7 +87,7 @@ export class Battle {
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
-    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0;
+    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0; this.treasureRooms = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
@@ -119,7 +119,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = withAvatarSpeed(heroStats(def, heroState, equipBonus), equipBonus, { party: !!stage.party });
     this.setBonus = equipBonus.active || [];
@@ -991,7 +991,6 @@ export class Battle {
     const dt = this.timeCtl.step(realDt);
     if (this.slowAccent) this.driveSlowAccent();
     this.elapsed += dt;
-    this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     this.input.update();
     this.routeObjectives?.observePlayer?.(this.player);
@@ -1021,26 +1020,24 @@ export class Battle {
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.killStreakT > 0) { this.killStreakT -= dt; if (this.killStreakT <= 0) { this.killStreak = 0; this.ui?.setKillStreak?.(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
-    // Local threat framing preserves readable heroes and explicit user presets.
+    // 고정 쿼터뷰: 화면 중심은 영웅을 바짝 따라가고, 거리·FOV 는 보스 구도에서만 천천히 바뀐다(무리 밀도·타격으로 움직이지 않는다).
     const rig = this.renderer.rig;
-    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, impactTarget: this.impactTarget, impactWeight: this.impactT > 0 ? this.impactT / .16 : 0, preset: rig.preset, presets: CAMERA_PRESETS });
+    const framing = battleFraming({ player: this.player, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
     _v.set(framing.target.x, framing.target.y, framing.target.z);
-    rig.target.lerp(_v, framingBlend(realDt, 7));
+    rig.target.lerp(_v, framingBlend(realDt, 8));
     if (rig.preset === 'auto') {
       const k = framingBlend(realDt, 1.2);
       const profile = this.visual?.camera;
       for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) {
-        // Preserve the threat/boss framing blend, then add the dungeon's own
-        // composition delta relative to the action baseline.
+        // 보스 구도 블렌드 위에 던전 고유 구도 차이(액션 기준)를 더한다.
         const delta = profile && Number.isFinite(profile[key]) ? profile[key] - CAMERA_PRESETS.action[key] : 0;
         rig.base[key] += (framing.desired[key] + delta - rig.base[key]) * k;
       }
     }
     const b = rig.base;
-    rig.offset.y += (b.y + framing.extraY - rig.offset.y) * framingBlend(realDt, 2);
-    rig.offset.z += (b.z + framing.extraZ - rig.offset.z) * framingBlend(realDt, 2);
-    rig.fov = b.fov + framing.extraFov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
-    // Anticipation lives in the bounded target; no additional direction-dependent sway.
+    rig.offset.y += (b.y - rig.offset.y) * framingBlend(realDt, 2);
+    rig.offset.z += (b.z - rig.offset.z) * framingBlend(realDt, 2);
+    rig.fov = b.fov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
     rig.side += (0 - rig.side) * framingBlend(realDt, 1.5);
     // 전투 카메라 AUTO: 손대지 않는 동안 위협·무리·벽에 맞춰 사용자 시점 값을 천천히 옮긴다(흔들림 없음).
     this.app.cameraControls?.updateAuto?.(realDt, this);
