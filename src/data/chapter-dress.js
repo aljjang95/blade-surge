@@ -37,6 +37,9 @@ const DEEP_SLIME = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#9af
 /** 5장 새벽을 먹는 왕관 — 새벽 보라와 금. 보라는 그대로 두고(장 색) 금 소품과 새벽빛 발광으로 왕관의 집행관을 표시한다. */
 const CROWN_SKIN = { color: '#d9c9e8', amount: 0.14, emissive: '#120a1c' };
 // 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
+// 버섯 갓·연두 슬라임도 새벽 보라로(왕관에 먹힌 새벽의 그림자).
+const CROWN_MUSH = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#d6b2f6', hues: [330, 40], mix: 0.8, baseMix: 0.1 } };
+const CROWN_SLIME = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#dcc0fa', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
 const CROWN_HOLLOW = { emissive: '#120a1c', remap: { dark: '#24163a', light: '#c9a8f2', hues: [50, 170], mix: 0.9, baseMix: 0.2 } };
 
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
@@ -218,9 +221,9 @@ export const CHAPTER_DRESS = Object.freeze({
       // 성벽 검 방패.
       skel_shield: { ...CROWN_SKIN, props: ['soldierCirclet', 'swordWallShield'] },
       bone_orc: { ...CROWN_SKIN, props: ['goldChains'] },
-      imp: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      imp: { ...CROWN_MUSH, props: ['soldierCirclet'] },
       bomb_abyss: { props: ['crownRing'] },
-      bomb_slime: { props: ['crownRing'] },
+      bomb_slime: { ...CROWN_SLIME, props: ['crownRing'] },
       // 심연 주시자: 왕관 고리. 원거리·주술사는 금관.
       abyss_seer: { ...CROWN_SKIN, props: ['crownRing'] },
       ghost: { ...CROWN_SKIN, props: ['crownRing'] },
@@ -242,8 +245,8 @@ export const CHAPTER_DRESS = Object.freeze({
       shadow_soldier: { ...CROWN_SKIN, props: ['dawnMask'] },
       bone_knight: { ...CROWN_SKIN, props: ['soldierCirclet'] },
       goblin_chief: { ...CROWN_SKIN, props: ['goldChains'] },
-      mushroom_shaman: { ...CROWN_SKIN, props: ['soldierCirclet'] },
-      slime: { props: ['crownRing'] },
+      mushroom_shaman: { ...CROWN_MUSH, props: ['soldierCirclet'] },
+      slime: { ...CROWN_SLIME, props: ['crownRing'] },
       star_owl: { ...CROWN_SKIN, props: ['crownRing'] },
       goblin_raider: { ...CROWN_SKIN, props: ['soldierCirclet'] },
       demon_lord: { ...CROWN_SKIN, props: ['hornCrown'] },

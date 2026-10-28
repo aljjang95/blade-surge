@@ -77,7 +77,8 @@ try {
         return en && { id, at, en };
       }).filter(Boolean);
       for (let k = 0; k < 240; k++) { for (const s of spawned) { s.en.pos.copy(s.at); s.en.vel.set(0, 0, 0); s.en.atkCd = 999; s.en.face?.(p.pos.x, p.pos.z); } a.step(1 / 60, k === 239); }
-      return spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null }));
+      const st = b.stage;
+      return { stage: { code: st.code, chapter: st.chapter?.id ?? null, ch: st.ch, expedition: !!st.expedition, keys: Object.keys(st).slice(0, 12) }, enemies: spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null })) };
     }, [CH, species]);
     await page.waitForTimeout(300);
     // 근접 초상: 각 적을 앞 3/4·뒤 3/4 두 방향에서 게임 카메라를 잠시 옮겨 렌더하고 캔버스만 받는다(HUD 제외).
@@ -101,7 +102,7 @@ try {
     for (const pt of portraits) pt.shots.forEach((data, k) => writeFileSync(`${OUT}/${TAG}-ch${CH}-${pt.id}-${k ? 'back' : 'front'}.png`, Buffer.from(data.split(',')[1], 'base64')));
     const file = `${OUT}/${TAG}-ch${CH}-row${row + 1}.png`;
     await page.screenshot({ path: file });
-    report.rows.push({ file, enemies: info });
+    report.rows.push({ file, ...info });
   }
 } finally {
   report.errors = errors;
