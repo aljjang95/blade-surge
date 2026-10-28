@@ -59,7 +59,7 @@ try {
     const key = (code, down) => { if (down === held.has(code)) return; down ? held.add(code) : held.delete(code); window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true })); };
     const tap = (code) => { window.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true })); window.dispatchEvent(new KeyboardEvent('keyup', { code, key: code, bubbles: true })); };
     const types = {}, rooms = {}, hitLog = [];
-    let propHits = 0, kills = 0, maxAlive = 0, hits = 0, frames = 0, skillT = 0, dodgeCd = 0, hp0 = p.hp, dmgTaken = 0, deaths = 0;
+    const snaps = []; let snapDue = null, propHits = 0, kills = 0, maxAlive = 0, hits = 0, frames = 0, skillT = 0, dodgeCd = 0, hp0 = p.hp, dmgTaken = 0, deaths = 0;
     const seen = new WeakSet();
     const origHurt = p.hurt.bind(p);
     // 피해 출처: 가장 가까운 살아 있는(또는 방금 터진) 적의 종 + 피해 종류. 원거리 탄은 'proj'.
@@ -85,7 +85,7 @@ try {
           for (const en of b.enemies) {
             const id = en.runtimeSpeciesId || en.def?.id || en.def?.name;
             const t = types[id] || (types[id] = { name: en.def.name, n: 0, acts: {}, kills: 0 });
-            if (!seen.has(en)) { seen.add(en); t.n++; const rid = en.homeRoom?.id ?? 'x'; const r = rooms[rid] || (rooms[rid] = { types: {}, type: en.homeRoom?.type, first: b.elapsed }); r.types[id] = (r.types[id] || 0) + 1; }
+            if (!seen.has(en)) { seen.add(en); t.n++; const rid = en.homeRoom?.id ?? 'x'; const r = rooms[rid] || (rooms[rid] = { types: {}, type: en.homeRoom?.type, first: b.elapsed }); if (!r.snapAt && r.type !== 'boss') { r.snapAt = frames + 50; snaps.push({ id: rid, at: frames + 50 }); } r.types[id] = (r.types[id] || 0) + 1; }
             const act = en.alive ? (en.burrow?.phase ? 'burrow:' + en.burrow.phase : en.bellringer?.phase ? 'bell:' + en.bellringer.phase : en.mobRole?.phase ? 'role:' + en.mobRole.key : en.fuse >= 0 ? 'fuse' : en.special ? 'sp:' + en.special : en.state) : 'dead';
             if (en._ptAct !== act) { en._ptAct = act; t.acts[act] = (t.acts[act] || 0) + 1; if (act === 'dead') { t.kills++; kills++; } }
           }
@@ -123,8 +123,10 @@ try {
           a.step(1 / 60, renderEvery > 0 && frames % renderEvery === 0);
           if (!p.alive) { deaths++; break; }
           if (b.bossDefeated || !b.active) break;
+          // 방 진입 1초 뒤(교전 전 대형) 화면을 남기도록 멈춘다.
+          const due = snaps.findIndex((x) => x.at <= frames); if (due >= 0) { snapDue = snaps.splice(due, 1)[0].id; a.step(0, true); break; }
         }
-        return { t: +b.elapsed.toFixed(2), alive: b.enemies.filter((x) => x.alive).length, hp: Math.round(p.hp / p.maxHp * 100), kills, done: !!b.bossDefeated || !b.active, dead: !p.alive };
+        const snap = snapDue; snapDue = null; return { snap, t: +b.elapsed.toFixed(2), alive: b.enemies.filter((x) => x.alive).length, hp: Math.round(p.hp / p.maxHp * 100), kills, done: !!b.bossDefeated || !b.active, dead: !p.alive };
       },
       report() {
         return { dmgBy, propHits, propsUsed: b._propsUsed || 0, affixes: b._affixSeen ? [...b._affixSeen] : [], kills, maxAlive, hits, dmgTakenPct: +(dmgTaken / p.maxHp * 100).toFixed(1), deaths, frames, elapsed: +b.elapsed.toFixed(1), bossDefeated: !!b.bossDefeated, types, rooms, hero: p.def.id, level: e.hero().level };
@@ -136,6 +138,7 @@ try {
   let f = 0, last;
   while (true) {
     last = await page.evaluate((n) => window.__pt.tick(n, n), SHOT);
+    if (last.snap != null) await page.screenshot({ path: `${OUT}/room-${last.snap}.jpg`, type: 'jpeg', quality: 80 });
     await page.screenshot({ path: `${FRAMES}/${String(f++).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 70 });
     if (f % 40 === 0) { console.log(JSON.stringify(last)); writeFileSync(resolve(OUT, 'partial.json'), JSON.stringify(await page.evaluate(() => window.__pt.report()))); }
     if (last.done || last.dead || last.t > MAX_SEC) break;
