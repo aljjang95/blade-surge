@@ -36,10 +36,10 @@ const DEEP_SLIME = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#9af
 
 /** 5장 새벽을 먹는 왕관 — 새벽 보라와 금. 보라는 그대로 두고(장 색) 금 소품과 새벽빛 발광으로 왕관의 집행관을 표시한다. */
 const CROWN_SKIN = { color: '#d9c9e8', amount: 0.14, emissive: '#120a1c' };
-// 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
 // 버섯 갓·연두 슬라임도 새벽 보라로(왕관에 먹힌 새벽의 그림자).
 const CROWN_MUSH = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#d6b2f6', hues: [330, 40], mix: 0.8, baseMix: 0.1 } };
 const CROWN_SLIME = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#dcc0fa', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
+// 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
 const CROWN_HOLLOW = { emissive: '#120a1c', remap: { dark: '#24163a', light: '#c9a8f2', hues: [50, 170], mix: 0.9, baseMix: 0.2 } };
 
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
