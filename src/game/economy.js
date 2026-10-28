@@ -24,7 +24,7 @@ import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
-import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
+import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
 import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
@@ -389,6 +389,11 @@ export class Economy {
     for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
       if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
       r.owned = [...r.owned, id]; joined.push(id);
+      // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
+      // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
+      const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
+      const nextIdx = Math.max(1, progress), joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
+      if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
     }
     return joined;
   }

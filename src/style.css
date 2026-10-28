@@ -1155,6 +1155,9 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .cust-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
 .cust-row span { flex: 0 0 52px; color: var(--muted); }
 .cust-row input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; font-size: 16px; color: inherit; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 10px; }
+.cust-methods { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.cust-methods legend { padding: 0 4px; color: var(--muted); }
+.cust-method { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
 @media (max-height: 460px) { .modal-box:has(.cust-row) { max-height: 100dvh; padding-bottom: 40vh; } }
 /* 세로 화면 장비 배너: 정사각 아이콘이 폭에 맞게 들어오도록 폭 기준으로 둔다. */
 @media (max-width: 600px) {

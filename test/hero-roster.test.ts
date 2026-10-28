@@ -165,6 +165,17 @@ describe('무료 해금', () => {
     const fresh = new Economy({ storage: createMemoryStorage(), now: () => PRE_ROTATION });
     expect(fresh.grantCampaignHeroes(69)).toEqual([]);   // 시작 영웅을 고르기 전
   });
+  test('성장형 합류: 동료는 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 합류하고, 이미 더 높으면 그대로', () => {
+    const eco = chosen('knight', { unlocked: 20 });
+    eco.s.heroes.knight.level = 36;
+    expect(eco.grantCampaignHeroes(20)).toEqual(['mage']);   // 2-10 클리어 → max(36−3, 3-1 권장 30)
+    expect(eco.s.heroes.mage.level).toBe(33); expect(eco.s.heroes.mage.exp).toBe(0);
+    eco.s.heroes.knight.level = 12;                         // 출전 영웅이 낮아도 다음 관문(4-1) 권장까지는 온다
+    expect(eco.grantCampaignHeroes(30)).toEqual(['rogue']);
+    expect(eco.s.heroes.rogue.level).toBe(35);
+    const high = chosen('knight', { unlocked: 20 }); high.s.heroes.knight.level = 40; high.s.heroes.mage.level = 45;
+    high.grantCampaignHeroes(20); expect(high.s.heroes.mage.level).toBe(45);
+  });
   test('성장형 합류: 부풀린 저장 진행만으로는 합류하지 않는다(가져오기·그림자 스냅샷 방어), 합류 대기 견적은 결제 대상이 아니다', () => {
     const eco = chosen('knight', { unlocked: 70 });
     expect(eco.grantCampaignHeroes(1)).toEqual([]);   // 1-1 만 깨면 아무도 오지 않는다
