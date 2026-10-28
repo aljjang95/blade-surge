@@ -24,6 +24,7 @@ export class JourneyService {
    * 보상 지급. 계승 문장은 서버 명령(eco.claimJourneySigil)으로만 올린다: 로컬에서 직접 더하면 서버 권위 계정에서
    * 서버 문서가 다음 응답에 덮어써 잔액이 어긋나거나 사라진다. 서버가 거부하면 수령 전체를 거부한다(transact 가 되돌린다).
    * 골드·강화석 등 나머지는 아직 서버 명령이 없는 여정 경로(로컬) 그대로다.
+   * @param {any} result @param {{ kind: string, id: string } | null} [source] 의뢰 수령 출처(계승 문장 보상에 필요)
    */
   grant(result, source = null) {
     if (!result.ok) return result;
