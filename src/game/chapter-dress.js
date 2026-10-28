@@ -14,6 +14,7 @@ const C = {
   wood: 0x4a3626, woodDark: 0x2f2219, cloth: 0x4f7d72, clothDark: 0x2c3b38, stone: 0x8f9894, stoneDark: 0x6c7471,
   bronze: 0x8b6a3c, bronzeDark: 0x5c4426, ivory: 0xe9e1c8, lily: 0xf4f7ef, leaf: 0x5f8f6a, iron: 0x4b5254,
   glowTeal: 0x8ff5dc, glowFlame: 0xfff1c2, glowName: 0x6fe0c4,
+  paper: 0xf1f4f6, ice: 0xbfe6f7, iceDark: 0x7fb4d4, ink: 0x22344a, bookRed: 0x7a3a3a, bookBlue: 0x35507a, bookGreen: 0x3f6a52, glowFrost: 0x9fe4ff, glowWhite: 0xeefaff,
   leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
 };
 
@@ -232,6 +233,71 @@ const PROPS = {
     const solid = [piece(new THREE.CylinderGeometry(.075 * h, .06 * h, .06 * h, 10, 1, true), C.soot)], glow = [piece(new THREE.CylinderGeometry(.07 * h, .07 * h, .006 * h, 10), C.glowEmber, [0, .022 * h, 0])];
     for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; solid.push(piece(new THREE.ConeGeometry(.014 * h, .06 * h, 4), C.soot, [Math.sin(a) * .075 * h, .055 * h, Math.cos(a) * .075 * h])); }
     glow.push(piece(new THREE.SphereGeometry(.012 * h, 5, 3), C.glowHot, [.03 * h, .03 * h, .03 * h]));
+    return { solid, glow };
+  } },
+  // ---- 3장 거꾸로 흐르는 서리 도서관: 얼어붙은 증언 ----
+  frozenPages: { root: true, at: [0, .55, 0], rot: [0, 0, 0], scale: 1.4, build: (h) => {
+    const solid = [], glow = [];
+    for (let i = 0; i < 3; i++) {
+      const a = i / 3 * Math.PI * 2, x = Math.sin(a) * .22 * h, z = Math.cos(a) * .22 * h, y = (i - 1) * .06 * h;
+      solid.push(piece(new THREE.BoxGeometry(.09 * h, .12 * h, .003 * h), C.paper, [x, y, z], [10 * i, a * 57.3, 12 - i * 9]));
+      glow.push(piece(new THREE.BoxGeometry(.06 * h, .006 * h, .004 * h), C.glowFrost, [x, y + .02 * h, z], [10 * i, a * 57.3, 12 - i * 9]));
+    }
+    return { solid, glow };
+  } },
+  openTome: { bones: ['Head', 'head'], at: [0, .3, .06], rot: [-35, 0, 0], scale: 1.8, build: (h) => ({
+    solid: [
+      piece(new THREE.BoxGeometry(.075 * h, .006 * h, .1 * h), C.paper, [-.04 * h, 0, 0], [0, 0, 12]),
+      piece(new THREE.BoxGeometry(.075 * h, .006 * h, .1 * h), C.paper, [.04 * h, 0, 0], [0, 0, -12]),
+      piece(new THREE.BoxGeometry(.17 * h, .005 * h, .11 * h), C.bookBlue, [0, -.008 * h, 0]),
+    ],
+    glow: [-.04, .04].flatMap((x) => [-.025, 0, .025].map((z) => piece(new THREE.BoxGeometry(.045 * h, .003 * h, .005 * h), C.glowFrost, [x * h, .006 * h, z * h], [0, 0, x < 0 ? 12 : -12]))),
+  }) },
+  shelfShield: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.08, -.08, .17], rot: [-6, -12, 0], scale: 1.45, build: (h) => {
+    const solid = [piece(new THREE.BoxGeometry(.24 * h, .3 * h, .025 * h), C.iceDark), piece(new THREE.BoxGeometry(.24 * h, .02 * h, .07 * h), C.ink, [0, 0, .02 * h])];
+    const colors = [C.bookRed, C.bookBlue, C.bookGreen, C.ink, C.bookBlue];
+    for (const [row, y] of [.07, -.08].entries()) colors.forEach((c, i) => solid.push(piece(new THREE.BoxGeometry(.035 * h, (.11 - (i % 2) * .02) * h, .05 * h), row ? colors[4 - i] : c, [(i - 2) * .042 * h, y * h, .028 * h])));
+    return { solid, glow: [piece(new THREE.BoxGeometry(.25 * h, .008 * h, .03 * h), C.glowFrost, [0, .152 * h, .015 * h])] };
+  } },
+  bookStackBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.16], rot: [-8, 0, 6], scale: 1.4, build: (h) => {
+    const colors = [C.bookRed, C.bookBlue, C.bookGreen, C.ink, C.bookBlue], solid = [];
+    colors.forEach((c, i) => solid.push(piece(new THREE.BoxGeometry((.17 - i * .012) * h, .045 * h, .12 * h), c, [((i % 2) - .5) * .015 * h, (i - 2) * .047 * h, 0], [0, i * 7, 0])));
+    solid.push(piece(new THREE.BoxGeometry(.02 * h, .26 * h, .13 * h), C.leatherDark, [0, 0, 0]));
+    return { solid, glow: [piece(new THREE.BoxGeometry(.15 * h, .006 * h, .125 * h), C.glowFrost, [0, .12 * h, 0])] };
+  } },
+  censorSeal: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .04, -.17], rot: [-12, 0, 0], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.09 * h, .1 * h, .05 * h, 10), C.iceDark, [0, -.06 * h, 0]), piece(new THREE.CylinderGeometry(.02 * h, .025 * h, .14 * h, 6), C.ink, [0, .04 * h, 0]), piece(new THREE.SphereGeometry(.035 * h, 6, 4), C.ink, [0, .12 * h, 0])],
+    glow: [piece(new THREE.TorusGeometry(.065 * h, .006 * h, 3, 12), C.glowFrost, [0, -.087 * h, 0], [90, 0, 0]), piece(new THREE.BoxGeometry(.07 * h, .004 * h, .012 * h), C.glowFrost, [0, -.087 * h, 0])],
+  }) },
+  keyRing: { bones: ['Hips', 'Spine'], at: [.13, -.04, .06], rot: [0, 0, 0], scale: 1.5, build: (h) => {
+    const solid = [piece(new THREE.TorusGeometry(.04 * h, .006 * h, 4, 10), C.iron)];
+    for (let i = 0; i < 4; i++) {
+      const a = -.6 + i * .4;
+      solid.push(piece(new THREE.BoxGeometry(.012 * h, .09 * h, .006 * h), C.bronze, [Math.sin(a) * .04 * h, -.07 * h, 0], [0, 0, a * 57.3]));
+      solid.push(piece(new THREE.TorusGeometry(.012 * h, .004 * h, 3, 6), C.bronze, [Math.sin(a) * .03 * h, -.035 * h, 0]));
+    }
+    return { solid, glow: [piece(new THREE.SphereGeometry(.008 * h, 4, 3), C.glowFrost, [0, -.04 * h, .004 * h])] };
+  } },
+  iceShards: { bones: ['Head', 'head'], at: [0, .24, 0], rot: [0, 0, 0], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.05 * h, .06 * h, .02 * h, 6), C.iceDark)],
+    glow: [[0, .07, 0, 0], [.035, .05, .01, 22], [-.035, .045, -.01, -24], [.01, .04, -.035, -14]].map(([x, y, z, t]) => piece(new THREE.ConeGeometry(.018 * h, y * 2 * h, 4), C.glowFrost, [x * h, y * h, z * h], [t, 0, -t])),
+  }) },
+  iceShardsTop: { root: true, at: [0, .86, 0], rot: [0, 0, 0], scale: 2.2, build: (h) => ({
+    solid: [],
+    glow: [[0, .07, 0, 0], [.035, .05, .01, 22], [-.035, .045, -.01, -24], [.01, .04, -.035, -14]].map(([x, y, z, t]) => piece(new THREE.ConeGeometry(.018 * h, y * 2 * h, 4), C.glowFrost, [x * h, y * h, z * h], [t, 0, -t])),
+  }) },
+  iceQuillCrown: { bones: ['Head', 'head'], at: [0, .24, -.04], rot: [-10, 0, 0], scale: 1.8, build: (h) => {
+    const solid = [], glow = [];
+    for (let i = 0; i < 5; i++) {
+      const a = (i - 2) * 22;
+      solid.push(piece(new THREE.ConeGeometry(.014 * h, .12 * h, 4), C.paper, [Math.sin(a / 57.3) * .06 * h, .05 * h, 0], [0, 0, -a], [1, 1, .3]));
+      glow.push(piece(new THREE.SphereGeometry(.007 * h, 4, 3), C.glowFrost, [Math.sin(a / 57.3) * .115 * h, .105 * h, 0]));
+    }
+    return { solid, glow };
+  } },
+  iceCrown: { bones: ['Head', 'head'], at: [0, .27, 0], rot: [0, 0, 0], scale: 2.1, build: (h) => {
+    const solid = [piece(new THREE.CylinderGeometry(.08 * h, .07 * h, .03 * h, 10, 1, true), C.iceDark)], glow = [];
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, tall = (.05 + (i % 2) * .04) * h; glow.push(piece(new THREE.ConeGeometry(.015 * h, tall, 4), i % 2 ? C.glowWhite : C.glowFrost, [Math.sin(a) * .078 * h, .015 * h + tall / 2, Math.cos(a) * .078 * h])); }
     return { solid, glow };
   } },
 };
