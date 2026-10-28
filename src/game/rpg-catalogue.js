@@ -1,4 +1,4 @@
-import { ENEMIES, CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
+import { ENEMIES, CHAPTERS, CHAPTER_SPECIES, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { monsterLevel, monsterStats, monsterXp } from './rpg-core.js';
 
 /** Derived from shipped encounters, not a second monster database. */
@@ -6,9 +6,10 @@ export function buildCatalogue() {
   const entries = new Map(Object.entries(ENEMIES).map(([id, def]) => [id, { id, def, locations: [] }]));
   for (const ch of CHAPTERS) for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(ch.id, st), roster = stage.rosterFor();
-    // 전투 방 편성(combatRosterFor)이 장 전용 종(1·2장 Tripo 몸)으로 바꾼 적도 실제 출현 위치로 잡는다.
-    const combat = stage.combatRosterFor?.();
-    const ids = new Set([...roster.trash, ...roster.ranged, ...roster.elite, ...(combat ? [...combat.trash, ...combat.ranged, ...combat.elite] : []), stage.dungeonBossId || stage.encounter.enemyId]);
+    // 장 전용 종(CHAPTER_SPECIES: 1·2장 Tripo 몸)은 보상 명단의 원래 적 자리에 실제로 나오므로 출현 위치를 함께 잡는다.
+    const swap = CHAPTER_SPECIES[ch.id] || {};
+    const base = [...roster.trash, ...roster.ranged, ...roster.elite];
+    const ids = new Set([...base, ...base.filter(id => swap[id]).map(id => swap[id]), stage.dungeonBossId || stage.encounter.enemyId]);
     for (const id of ids) {
       const entry = entries.get(id);
       if (entry) entry.locations.push({ floor: stage.idx, code: stage.code, chapter: ch.name, chapterId: ch.id, scale: stage.scale });
