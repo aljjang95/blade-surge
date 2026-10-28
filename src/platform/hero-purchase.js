@@ -95,7 +95,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
         const me = await api.me(); const f = me?.flags || {};
         webOn = f.webBilling === true;
         payMethods = ['CARD', ...(f.webKakaoPay === true ? ['KAKAOPAY'] : []), ...(f.webNaverPay === true ? ['NAVERPAY'] : []), ...(f.webTossPay === true ? ['TOSSPAY'] : [])];
-      } catch { webOn = false; }
+      } catch { webOn = false; payMethods = ['CARD']; }
       return webOn;
     },
     /**
@@ -156,7 +156,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
         try { intent = await api.request('POST', '/iap/web/intent', method === 'CARD' ? { productId } : { productId, method }); }
         catch (error) {
           const code = error?.body?.error;
-          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'already-subscribed' || code === 'payout-hold' || code === 'too-many-intents' ? code : 'intent-failed' };
+          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'already-subscribed' || code === 'payout-hold' || code === 'too-many-intents' || code === 'pay-method' ? code : 'intent-failed' };
         }
         if (!intent || !PAYMENT_ID.test(intent.paymentId) || intent.productId !== productId) return { ok: false, reason: 'intent-failed' };
         writePending({ paymentId: intent.paymentId, productId, at: now() });
