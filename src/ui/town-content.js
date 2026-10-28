@@ -55,7 +55,7 @@ export function serviceMethod(service, key) {
 }
 
 // ------------------------------------------------------------ 정규화
-const TARGET_LABEL = Object.freeze({ dungeon: '던전 클리어', field: '필드 탐험', gather: '채집', gathered: '채집', elite: '정예 처치', treasure: '숨은 보물 발견', event: '필드 이벤트 해결', visited: '필드 탐험' });
+const TARGET_LABEL = Object.freeze({ dungeon: '던전 클리어', field: '필드 탐험', kills: '몬스터 처치', gather: '채집', gathered: '채집', elite: '정예 처치', treasure: '숨은 보물 발견', event: '필드 이벤트 해결', visited: '필드 탐험' });
 const targetText = raw => {
   const target = raw?.target; if (!target || typeof target !== 'object') return '';
   const label = TARGET_LABEL[target.type]; return label ? label + ' ' + fmt(target.amount) + '회' : '';
