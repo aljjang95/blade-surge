@@ -611,7 +611,7 @@ export class Economy {
   }
   equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
   unequip(heroId, slot) { if (this.heroLocked(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
-  /** 강화: +8까지 100%, 이후 확률/파괴. protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
+  /** 강화: +3까지 100%, +4부터 확률이 단계마다 떨어지고 +10부터 하락·+12부터 파괴(items.js ENHANCE_CHANCE). protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
   enhance(uid, { protect = false, bless = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
