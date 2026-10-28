@@ -1,0 +1,920 @@
+{
+ "boss_appear": {
+  "lang": "ja",
+  "p": 0.93,
+  "text": "호스가 나타났다! (ko강제)",
+  "dur": 1.59
+ },
+ "boss_demon_appear": {
+  "lang": "ko",
+  "p": 0.49,
+  "text": "아, 싱싱한 영혼이로군. 가까이 오너라.",
+  "dur": 4.62
+ },
+ "boss_demon_death": {
+  "lang": "ko",
+  "p": 0.72,
+  "text": "안돼...시면으로 돌아가다니... 안돼...",
+  "dur": 4.62
+ },
+ "boss_demon_enrage": {
+  "lang": "ko",
+  "p": 0.95,
+  "text": "통째로 삼켜주마",
+  "dur": 1.88
+ },
+ "boss_demon_phase": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "이제야 나의 관심을 끄는군",
+  "dur": 2.53
+ },
+ "boss_dragon_appear": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "천 년의 잠을 고작 이것 때문에 깨우느냐?",
+  "dur": 3.68
+ },
+ "boss_dragon_death": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "천 년이 네 놈 손에 끝나는구나",
+  "dur": 4.15
+ },
+ "boss_dragon_enrage": {
+  "lang": "ko",
+  "p": 0.95,
+  "text": "하늘이 내 놈 위로 무너지리라",
+  "dur": 2.77
+ },
+ "boss_dragon_phase": {
+  "lang": "ko",
+  "p": 0.89,
+  "text": "하찮은 것 불타라",
+  "dur": 2.19
+ },
+ "boss_enrage": {
+  "lang": "ko",
+  "p": 0.9,
+  "text": "포스가 폭주한다!",
+  "dur": 1.59
+ },
+ "boss_found": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "포스가 가깝다 정신 차려라",
+  "dur": 2.53
+ },
+ "boss_kill": {
+  "lang": "ko",
+  "p": 0.89,
+  "text": "포스 철치! 영광은 내 것이다!",
+  "dur": 2.72
+ },
+ "boss_phase": {
+  "lang": "ko",
+  "p": 0.86,
+  "text": "보스가 강해진다!",
+  "dur": 1.59
+ },
+ "boss_warlord_appear": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "내 왕자에 바칠 해골이 또 왔구나!",
+  "dur": 2.95
+ },
+ "boss_warlord_death": {
+  "lang": "ko",
+  "p": 0.95,
+  "text": "말도 안 돼 내 군단이 무너진다",
+  "dur": 4.21
+ },
+ "boss_warlord_enrage": {
+  "lang": "ko",
+  "p": 0.85,
+  "text": "충분하다! 군단이여! 일어나라!",
+  "dur": 3.21
+ },
+ "boss_warlord_phase": {
+  "lang": "ko",
+  "p": 0.94,
+  "text": "감히 나를 배다니",
+  "dur": 1.7
+ },
+ "defeat": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "쓰러졌다. 하지만 성은 네 이름을 기억한다.",
+  "dur": 3.97
+ },
+ "elite": {
+  "lang": "ko",
+  "p": 0.87,
+  "text": "정의가 다가온다!",
+  "dur": 1.65
+ },
+ "enh_destroy": {
+  "lang": "ja",
+  "p": 0.58,
+  "text": "산산조각 무기가 사라졌다 (ko강제)",
+  "dur": 2.77
+ },
+ "enh_fail": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "강화 실패! 강화석이 부서진다!",
+  "dur": 3.08
+ },
+ "enh_success": {
+  "lang": "ko",
+  "p": 0.68,
+  "text": "강화 성공!",
+  "dur": 1.41
+ },
+ "floor_clear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "정돌파! 훌륭하다!",
+  "dur": 2.19
+ },
+ "floor_start": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "성이 깨어난다. 모든 구역을 청화하라.",
+  "dur": 3.45
+ },
+ "hero_barbarian_atk0": {
+  "lang": "fr",
+  "p": 0.61,
+  "text": "나! (ko강제)",
+  "dur": 0.76
+ },
+ "hero_barbarian_atk1": {
+  "lang": "en",
+  "p": 0.35,
+  "text": "흐! (ko강제)",
+  "dur": 0.52
+ },
+ "hero_barbarian_atk2": {
+  "lang": "ja",
+  "p": 0.4,
+  "text": "그래 (ko강제)",
+  "dur": 0.86
+ },
+ "hero_barbarian_atk3": {
+  "lang": "ja",
+  "p": 0.61,
+  "text": "우려! (ko강제)",
+  "dur": 0.76
+ },
+ "hero_barbarian_death": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "이런.. 아직.. 더 부술 수 있는데",
+  "dur": 2.83
+ },
+ "hero_barbarian_fin0": {
+  "lang": "ja",
+  "p": 0.86,
+  "text": "박살이다! (ko강제)",
+  "dur": 0.76
+ },
+ "hero_barbarian_fin1": {
+  "lang": "ko",
+  "p": 0.5,
+  "text": "푸셔라!",
+  "dur": 0.71
+ },
+ "hero_barbarian_hurt0": {
+  "lang": "ja",
+  "p": 0.62,
+  "text": "크 (ko강제)",
+  "dur": 1.04
+ },
+ "hero_barbarian_hurt1": {
+  "lang": "ja",
+  "p": 0.49,
+  "text": "크흐! (ko강제)",
+  "dur": 0.99
+ },
+ "hero_barbarian_hurt2": {
+  "lang": "en",
+  "p": 0.44,
+  "text": "어?! (ko강제)",
+  "dur": 0.86
+ },
+ "hero_barbarian_low_hp": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "피가 더 필요해 좋아 이제 진짜 화가 났다",
+  "dur": 3.02
+ },
+ "hero_barbarian_perfect": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "그게 전부냐?",
+  "dur": 1.44
+ },
+ "hero_barbarian_revive": {
+  "lang": "ko",
+  "p": 1.0,
+  "text": "아직 안 끝났다! 다시 간다!",
+  "dur": 2.14
+ },
+ "hero_barbarian_select": {
+  "lang": "ko",
+  "p": 1.0,
+  "text": "나는 광전사 드라칸이다! 피가 끓는구나! 오늘 이 전장을 전부 부숴버리겠다!",
+  "dur": 3.81
+ },
+ "hero_barbarian_skill0": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "회오리 참격!",
+  "dur": 0.84
+ },
+ "hero_barbarian_skill1": {
+  "lang": "ko",
+  "p": 0.92,
+  "text": "돼지 분쇄!",
+  "dur": 0.98
+ },
+ "hero_barbarian_skill2": {
+  "lang": "zh",
+  "p": 0.34,
+  "text": "광포과! (ko강제)",
+  "dur": 0.94
+ },
+ "hero_barbarian_skill6": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "혈왕! 대지 붕괴!",
+  "dur": 1.35
+ },
+ "hero_barbarian_ult": {
+  "lang": "ko",
+  "p": 0.69,
+  "text": "지옥의 토끼다!",
+  "dur": 0.84
+ },
+ "hero_barbarian_win": {
+  "lang": "ko",
+  "p": 1.0,
+  "text": "하하하! 이 정도는 배가 안 차는군! 다음은 누구냐!",
+  "dur": 3.39
+ },
+ "hero_knight_atk0": {
+  "lang": "en",
+  "p": 0.36,
+  "text": "흐흐흐 (ko강제)",
+  "dur": 0.57
+ },
+ "hero_knight_atk1": {
+  "lang": "en",
+  "p": 0.35,
+  "text": "하! (ko강제)",
+  "dur": 0.57
+ },
+ "hero_knight_atk2": {
+  "lang": "ja",
+  "p": 0.31,
+  "text": "흐흐.. (ko강제)",
+  "dur": 0.57
+ },
+ "hero_knight_atk3": {
+  "lang": "en",
+  "p": 0.35,
+  "text": "하... (ko강제)",
+  "dur": 1.31
+ },
+ "hero_knight_death": {
+  "lang": "ko",
+  "p": 0.95,
+  "text": "미안해... 여기까지인가...",
+  "dur": 2.51
+ },
+ "hero_knight_fin0": {
+  "lang": "en",
+  "p": 0.67,
+  "text": "하아앟 (ko강제)",
+  "dur": 0.71
+ },
+ "hero_knight_fin1": {
+  "lang": "ko",
+  "p": 0.89,
+  "text": "쓰러져라",
+  "dur": 0.86
+ },
+ "hero_knight_hurt0": {
+  "lang": "en",
+  "p": 0.3,
+  "text": "으흐... (ko강제)",
+  "dur": 0.68
+ },
+ "hero_knight_hurt1": {
+  "lang": "ja",
+  "p": 0.66,
+  "text": "크 (ko강제)",
+  "dur": 0.71
+ },
+ "hero_knight_hurt2": {
+  "lang": "ja",
+  "p": 0.57,
+  "text": "흐! (ko강제)",
+  "dur": 0.44
+ },
+ "hero_knight_low_hp": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "아직 쓰러질 수 없어 모두를 지켜야 해",
+  "dur": 3.85
+ },
+ "hero_knight_perfect": {
+  "lang": "ko",
+  "p": 0.72,
+  "text": "느려!",
+  "dur": 0.51
+ },
+ "hero_knight_revive": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "다시 일어선다! 아직 끝나지 않았어!",
+  "dur": 2.93
+ },
+ "hero_knight_select": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "나는 검성 아르카다 모두를 지키기 위해 이 선검과 함께 끝까지 싸우겠다",
+  "dur": 6.41
+ },
+ "hero_knight_skill0": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "성검 1섬",
+  "dur": 1.31
+ },
+ "hero_knight_skill1": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "철벽 강타!",
+  "dur": 1.07
+ },
+ "hero_knight_skill2": {
+  "lang": "ko",
+  "p": 0.72,
+  "text": "심판의 빛!",
+  "dur": 0.84
+ },
+ "hero_knight_skill6": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "성검 태양파쇠",
+  "dur": 2.09
+ },
+ "hero_knight_ult": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "용살검 천공",
+  "dur": 1.59
+ },
+ "hero_knight_win": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "빛은 꺼지지 않는다. 다음 전장으로 가자!",
+  "dur": 3.2
+ },
+ "hero_mage_atk0": {
+  "lang": "ja",
+  "p": 0.62,
+  "text": "하.. (ko강제)",
+  "dur": 0.63
+ },
+ "hero_mage_atk1": {
+  "lang": "ja",
+  "p": 0.51,
+  "text": "하.. (ko강제)",
+  "dur": 0.57
+ },
+ "hero_mage_atk2": {
+  "lang": "ja",
+  "p": 0.62,
+  "text": "카라 (ko강제)",
+  "dur": 0.44
+ },
+ "hero_mage_atk3": {
+  "lang": "ko",
+  "p": 0.87,
+  "text": "지금이야.",
+  "dur": 0.57
+ },
+ "hero_mage_death": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "별빛이 보이지 않아",
+  "dur": 2.04
+ },
+ "hero_mage_fin0": {
+  "lang": "ko",
+  "p": 0.53,
+  "text": "끝내",
+  "dur": 0.81
+ },
+ "hero_mage_fin1": {
+  "lang": "ko",
+  "p": 0.77,
+  "text": "불사자",
+  "dur": 0.52
+ },
+ "hero_mage_hurt0": {
+  "lang": "ja",
+  "p": 0.54,
+  "text": "아.. (ko강제)",
+  "dur": 0.47
+ },
+ "hero_mage_hurt1": {
+  "lang": "ja",
+  "p": 0.65,
+  "text": "그.. (ko강제)",
+  "dur": 0.76
+ },
+ "hero_mage_hurt2": {
+  "lang": "nn",
+  "p": 0.28,
+  "text": " (ko강제)",
+  "dur": 0.57
+ },
+ "hero_mage_low_hp": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "마력이 아직 남아있어 조금만 더 버티면 돼",
+  "dur": 3.34
+ },
+ "hero_mage_perfect": {
+  "lang": "ko",
+  "p": 0.94,
+  "text": "예측했어",
+  "dur": 0.84
+ },
+ "hero_mage_revive": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "아직 내 마법은 끝나지 않았어",
+  "dur": 2.0
+ },
+ "hero_mage_select": {
+  "lang": "ko",
+  "p": 1.0,
+  "text": "나는 대마도사 리아 별의 흐름은 이미 정해졌다 이제 조용히 내 마법을 지켜봐",
+  "dur": 4.74
+ },
+ "hero_mage_skill0": {
+  "lang": "ko",
+  "p": 0.71,
+  "text": "화염고",
+  "dur": 0.76
+ },
+ "hero_mage_skill1": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "번개 사슬",
+  "dur": 0.93
+ },
+ "hero_mage_skill2": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "빈결 폭풍",
+  "dur": 1.16
+ },
+ "hero_mage_skill6": {
+  "lang": "ko",
+  "p": 0.8,
+  "text": "성자 별감옥",
+  "dur": 1.41
+ },
+ "hero_mage_ult": {
+  "lang": "ko",
+  "p": 0.42,
+  "text": "메테오 스톰",
+  "dur": 1.11
+ },
+ "hero_mage_win": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "계산대로야. 별들이 조용해졌네.",
+  "dur": 2.6
+ },
+ "hero_ranger_atk0": {
+  "lang": "ja",
+  "p": 0.48,
+  "text": "흐흐... (ko강제)",
+  "dur": 0.57
+ },
+ "hero_ranger_atk1": {
+  "lang": "ja",
+  "p": 0.36,
+  "text": " (ko강제)",
+  "dur": 0.89
+ },
+ "hero_ranger_atk2": {
+  "lang": "ja",
+  "p": 0.45,
+  "text": " (ko강제)",
+  "dur": 1.1
+ },
+ "hero_ranger_atk3": {
+  "lang": "ko",
+  "p": 0.91,
+  "text": "놓치지 않아",
+  "dur": 1.04
+ },
+ "hero_ranger_death": {
+  "lang": "ko",
+  "p": 0.93,
+  "text": "숲이 멀어져",
+  "dur": 1.63
+ },
+ "hero_ranger_fin0": {
+  "lang": "ko",
+  "p": 0.87,
+  "text": "받아라",
+  "dur": 0.71
+ },
+ "hero_ranger_fin1": {
+  "lang": "ko",
+  "p": 0.92,
+  "text": "바람과 함께",
+  "dur": 1.04
+ },
+ "hero_ranger_hurt0": {
+  "lang": "ja",
+  "p": 0.32,
+  "text": " (ko강제)",
+  "dur": 0.68
+ },
+ "hero_ranger_hurt1": {
+  "lang": "ja",
+  "p": 0.63,
+  "text": "크 (ko강제)",
+  "dur": 0.76
+ },
+ "hero_ranger_hurt2": {
+  "lang": "ja",
+  "p": 0.4,
+  "text": "아! (ko강제)",
+  "dur": 0.47
+ },
+ "hero_ranger_low_hp": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "바람이 흔들려 그래도 내 화른 아직 멈추지 않아",
+  "dur": 2.69
+ },
+ "hero_ranger_perfect": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "바람이 먼저 알려줬어",
+  "dur": 1.3
+ },
+ "hero_ranger_revive": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "바람이 다시 불어 이번에는 내가 길을 열게",
+  "dur": 2.41
+ },
+ "hero_ranger_select": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "나는 바람추적자 실패바라 수폐바람이 길을 알려주는 한 내 화살은 한 번도 빗나가지 않아",
+  "dur": 4.69
+ },
+ "hero_ranger_skill0": {
+  "lang": "ko",
+  "p": 0.89,
+  "text": "바람 권통화살",
+  "dur": 1.16
+ },
+ "hero_ranger_skill1": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "3중 추적 화살",
+  "dur": 1.21
+ },
+ "hero_ranger_skill2": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "바람의 이탈",
+  "dur": 1.02
+ },
+ "hero_ranger_skill6": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "질품 사냥각인",
+  "dur": 1.52
+ },
+ "hero_ranger_ult": {
+  "lang": "ko",
+  "p": 0.95,
+  "text": "폭풍의 7파살",
+  "dur": 1.18
+ },
+ "hero_ranger_win": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "숲의 바람이 다시 고요해졌네. 잘했어.",
+  "dur": 3.07
+ },
+ "hero_rogue_atk0": {
+  "lang": "zh",
+  "p": 0.6,
+  "text": "찰 (ko강제)",
+  "dur": 0.47
+ },
+ "hero_rogue_atk1": {
+  "lang": "en",
+  "p": 0.52,
+  "text": "흐흐 (ko강제)",
+  "dur": 0.52
+ },
+ "hero_rogue_atk2": {
+  "lang": "en",
+  "p": 0.28,
+  "text": "ㅋㅋ (ko강제)",
+  "dur": 0.63
+ },
+ "hero_rogue_atk3": {
+  "lang": "zh",
+  "p": 0.49,
+  "text": "슈이 (ko강제)",
+  "dur": 0.39
+ },
+ "hero_rogue_death": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "이게 마지막 그림자인가",
+  "dur": 2.6
+ },
+ "hero_rogue_fin0": {
+  "lang": "zh",
+  "p": 0.47,
+  "text": "좋지 (ko강제)",
+  "dur": 0.57
+ },
+ "hero_rogue_fin1": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "사라져",
+  "dur": 0.71
+ },
+ "hero_rogue_hurt0": {
+  "lang": "ja",
+  "p": 0.61,
+  "text": "크 (ko강제)",
+  "dur": 0.47
+ },
+ "hero_rogue_hurt1": {
+  "lang": "ko",
+  "p": 0.44,
+  "text": "쯧!",
+  "dur": 0.39
+ },
+ "hero_rogue_hurt2": {
+  "lang": "en",
+  "p": 0.42,
+  "text": "어? (ko강제)",
+  "dur": 0.52
+ },
+ "hero_rogue_low_hp": {
+  "lang": "ko",
+  "p": 0.93,
+  "text": "당심했어. 하지만 아직 내 그림자는 살아 있어.",
+  "dur": 3.39
+ },
+ "hero_rogue_perfect": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "아쉽네",
+  "dur": 0.93
+ },
+ "hero_rogue_revive": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "죽음아 조금만 기다려",
+  "dur": 2.18
+ },
+ "hero_rogue_select": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "나는 암살자 카인! 조용히 다가가 한 번에 끝내겠어?",
+  "dur": 4.13
+ },
+ "hero_rogue_skill0": {
+  "lang": "ko",
+  "p": 0.94,
+  "text": "그림자 질주",
+  "dur": 1.21
+ },
+ "hero_rogue_skill1": {
+  "lang": "ko",
+  "p": 0.89,
+  "text": "동무 폭탄",
+  "dur": 1.07
+ },
+ "hero_rogue_skill2": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "환영 난 모",
+  "dur": 0.98
+ },
+ "hero_rogue_skill6": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "여행, 그림자 연모",
+  "dur": 1.67
+ },
+ "hero_rogue_ult": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "전개의 칼날",
+  "dur": 1.12
+ },
+ "hero_rogue_win": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "깔끔하네. 다음 목표로 가자",
+  "dur": 2.32
+ },
+ "legend_drop": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "천설이다! 천설 장비 획득!",
+  "dur": 2.9
+ },
+ "low_hp": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "위험하다! 물러서라! 지금!",
+  "dur": 3.03
+ },
+ "perfect": {
+  "lang": "ko",
+  "p": 0.37,
+  "text": "완벽한 회피!",
+  "dur": 1.46
+ },
+ "portal": {
+  "lang": "ko",
+  "p": 0.96,
+  "text": "포탈이 열렸다. 준비되면 들어가라!",
+  "dur": 2.35
+ },
+ "rebirth": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "풀사조가 일어선다! 오늘은 아니다! 죽으면!",
+  "dur": 3.74
+ },
+ "reinforce": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "증언이다! 전여를 지켜라!",
+  "dur": 2.56
+ },
+ "seal_break": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "모든 구역청화 완료! 봉인이 깨진다!",
+  "dur": 3.6
+ },
+ "set_blood": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "별세트 각성! 피를 마셔라!",
+  "dur": 3.19
+ },
+ "set_gravity": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "중력 세트 각성 아무것도 벗어날 수 없다",
+  "dur": 3.97
+ },
+ "set_phoenix": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "불사조 세트 각성! 타올라 다시 태어나라!",
+  "dur": 3.87
+ },
+ "set_storm": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "폭풍 세트 각성. 번개를 타라!",
+  "dur": 2.66
+ },
+ "treasure": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "보물빵이다! 전부 챙겨라!",
+  "dur": 2.77
+ },
+ "ult": {
+  "lang": "ko",
+  "p": 0.47,
+  "text": "공급기!",
+  "dur": 1.1
+ },
+ "unique_drop": {
+  "lang": "ko",
+  "p": 0.92,
+  "text": "유니크 장비! 행운이 함께 한다!",
+  "dur": 3.45
+ },
+ "welcome": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "돌아왔군, 전사여! 끝없는 성이 기다린다!",
+  "dur": 3.63
+ },
+ "boss_c1_fin_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "아무도 있지 않게 가둔다",
+  "dur": 2.25
+ },
+ "boss_c1_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "다시는 보내지 않는다.",
+  "dur": 1.46
+ },
+ "boss_c2_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "불이 꺼지면 다 죽는다",
+  "dur": 1.54
+ },
+ "boss_c2_mid_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "살아 돌아와라",
+  "dur": 1.88
+ },
+ "boss_c3_fin_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "쓰지 않은 내일도 지킨다",
+  "dur": 2.25
+ },
+ "boss_c3_mid_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "읽히지 않으면 안전하다.",
+  "dur": 1.96
+ },
+ "boss_c4_fin_appear": {
+  "lang": "ko",
+  "p": 0.98,
+  "text": "다시는 잃지 않는다!",
+  "dur": 1.23
+ },
+ "boss_c4_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "불빛을 따라와 제발",
+  "dur": 2.9
+ },
+ "boss_c5_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "바쳐라. 그러면 끝난다.",
+  "dur": 2.9
+ },
+ "boss_c5_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "한 사람이면 모두가 산다",
+  "dur": 2.14
+ },
+ "boss_c6_fin_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "혼자 남아라. 그게 명령이다.",
+  "dur": 2.25
+ },
+ "boss_c6_mid_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "누구를 안 치겠는가",
+  "dur": 1.78
+ },
+ "boss_c7_fin_appear": {
+  "lang": "ko",
+  "p": 0.97,
+  "text": "모두 같은 박자로 올려라",
+  "dur": 2.14
+ },
+ "boss_c7_mid_appear": {
+  "lang": "ko",
+  "p": 0.99,
+  "text": "이문은 내가 닿는다",
+  "dur": 1.65
+ }
+}

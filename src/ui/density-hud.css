@@ -1,0 +1,8 @@
+/* 짧은 가로 화면 밀도 조정: 전투 HUD (docs/UIUX_AUDIT.md). 토큰은 density.css. */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 보스 등장 띠(.boss-intro)는 화면 위 가운데에 약 2초 뜨면서 '7-10 · 구역 1/11' 표시를 덮었다.
+     띠가 같은 스테이지 코드를 보여 주므로 띠가 떠 있는 동안만 아래 표시를 숨긴다(자리는 그대로). */
+  #hud:has(.boss-intro) .hud-center { visibility: hidden; }
+  /* 왼쪽 알림 띠: 두 줄 말줄임이라 보스 전술 안내(행동 지시)가 잘렸다. 세 줄까지 보인다(높이 한도는 ui.js 가 58px로 잡는다). */
+  body:has(#hud.show.battle-readability) #toast-layer.edge-strip .toast.combat-notice { -webkit-line-clamp: 3; }
+}

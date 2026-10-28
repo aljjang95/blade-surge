@@ -13,8 +13,9 @@ import { createPlayApi, type PlayApi, type PlayEnv } from './play';
 import { recordServerMilestone } from './funnel';
 import { heroIdFromEntitlement } from '../../src/data/hero-roster.js';
 import { HERO_ORDER } from '../../src/data/heroes.js';
+import { AVATAR_PREMIUM_BY_HERO } from '../../src/data/avatars.js';
 import {
-  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
+  IAP_BY_ID, IAP_CATALOG_VERSION, heroIdFromAvatarKey, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
   type IapProduct,
 } from '../../src/shared/iap-catalog.js';
 
@@ -34,7 +35,8 @@ export interface IapEnv extends PlayEnv {
   RTDN_AUDIENCE?: string;
   RTDN_PUSH_SUBJECT?: string;
 }
-export interface IapDeps { playApi?: PlayApi }
+/** avatarPremium: 풀셋 상품이 지급할 아바타 표(영웅 id → 아바타 id). 시험에서만 바꾼다(운영은 avatars.js 의 AVATAR_PREMIUM_BY_HERO). */
+export interface IapDeps { playApi?: PlayApi; avatarPremium?: Readonly<Record<string, string>> }
 type IapCtx = Ctx & { deps: Ctx['deps'] & IapDeps };
 
 const iapEnv = (c: Ctx) => c.env as unknown as IapEnv;
@@ -101,15 +103,43 @@ export async function catalog(c: Ctx, auth: Authed) {
   const reason = await billingReason(c);
   const owned = reason ? new Set<string>() : await ownedProducts(c.db, auth.account.account_id);
   const activeKeys = reason ? new Set<string>() : await activeEntitlementKeys(c.db, auth.account.account_id, c.now);
+  // 월정액 권한('monthly')이 살아 있으면 월정액 계열(Play 구독·웹 30일 이용권)은 다시 살 수 없다(intent와 같은 기준).
+  const monthlyActive = activeKeys.has('monthly');
   return {
     version: IAP_CATALOG_VERSION, billing: !reason, ...(reason ? { reason } : {}),
     products: IAP_PRODUCTS.filter((p) => p.enabled).map((p) => ({
       id: p.id, type: p.type, playType: p.type === 'subscription' ? 'subs' : 'inapp', basePlanId: p.basePlanId ?? null,
       priceKRW: p.priceKRW, title: p.title, description: p.description, shopSku: p.shopSku, once: !!p.once, channels: p.channels ?? ['play'],
-      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys),
+      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys)
+        && !(monthlyActive && grantsMonthly(p)),
     })),
     serverTime: c.now,
   };
+}
+
+/**
+ * 아바타 풀셋 상품은 결제 전에 지급 가능 여부를 서버가 먼저 확인한다(자산 미준비·영웅 미소유면 팔지 않는다).
+ * 결제 뒤 지급 불가가 되면 grantOnce 가 확정 없이 'undeliverable'로 돌리므로, 돈이 나가기 전에 막는 것이 정상 경로다.
+ */
+export async function assertAvatarFullsetDeliverable(c: Ctx, accountId: string, product: IapProduct): Promise<void> {
+  const heroIds = entitlementKeys(product).map((k) => heroIdFromAvatarKey(k)).filter((h): h is string => !!h);
+  if (!heroIds.length) return;
+  const eco = loadEconomy((await loadAccountDoc(c.db, accountId)).state, { now: c.now });
+  const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+  // 보유 영웅 확인은 서버 권한을 얹은 뒤의 상태로 한다(영웅 소유의 정본은 권한 표).
+  setRosterPaid(eco.s, (await entitlementsOf(c.db, accountId, c.now)).heroes);
+  for (const heroId of heroIds) {
+    const avatarId = premium[heroId];
+    if (!avatarId) fail(409, 'not-eligible');
+    // 미리보기: 실제 문서는 저장하지 않는다(loadEconomy 결과는 버린다). 이미 소유한 아바타도 결제 전에 막는다.
+    const r = eco.grantAvatarFullset(heroId, { avatarId });
+    if (!r.ok || r.already) fail(409, 'not-eligible');
+  }
+}
+
+/** 월정액 권한을 주는 상품인가(Play 구독·웹 30일 이용권). 이용 중 중복 구매를 막는다. */
+export function grantsMonthly(product: IapProduct): boolean {
+  return entitlementKeys(product).includes('monthly');
 }
 
 /** 지금 유효한 권한 키 집합(철회·만료 제외). */
@@ -123,7 +153,7 @@ export function allKeysActive(product: IapProduct, active: Set<string>): boolean
   return product.type === 'non_consumable' && keys.length > 0 && keys.every((k) => active.has(k));
 }
 
-async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
+export async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
   const rows = await db.prepare("SELECT DISTINCT product_id FROM iap_grants WHERE account_id = ? AND reversed_at IS NULL").bind(accountId).all<{ product_id: string }>();
   return new Set((rows.results ?? []).map((r) => r.product_id));
 }
@@ -145,17 +175,18 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
   // 영웅 상품(권한 hero:*)은 서버 권위 계정에게만 판다. 다른 상품은 기존 동작 그대로.
-  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k))) fail(403, 'server-authority-required');
+  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k) || heroIdFromAvatarKey(k))) fail(403, 'server-authority-required');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
   const owned = await ownedProducts(c.db, accountId);
   if ((product.once || product.type === 'non_consumable') && owned.has(product.id)) fail(409, 'not-eligible');
   if (!soldOn(product, 'play')) fail(400, 'unknown-product');
   if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
-  if (product.type === 'subscription') {
+  if (grantsMonthly(product)) {
     const e = await entitlementsOf(c.db, accountId, c.now);
     if (e.monthlyUntil > c.now) fail(409, 'already-subscribed');
   }
+  await assertAvatarFullsetDeliverable(c, accountId, product);
   const obf = await obfuscatedId(c.db, accountId, c.now, true);
   if (!obf) fail(503, 'unavailable');
   await recordServerMilestone(c.db, accountId, 'purchase_start', c.now);
@@ -242,7 +273,7 @@ export async function processPurchase(c: Ctx, product: IapProduct, token: string
     purchase: { state: 'granted', test: p.test },
     entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
-  if (result === 'declined') return declinePurchase(c, hash, accountId, product, p.test);
+  if (result === 'declined' || result === 'undeliverable') return declinePurchase(c, hash, accountId, product, p.test);
   if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test: p.test };
   const granted = result === 'granted';
   // DB 지급이 확정된 뒤에만 Play에 소유를 확정한다. 실패하면 acked=false로 응답하고 다음 verify/RTDN이 재시도한다.
@@ -323,7 +354,8 @@ async function upsertPurchase(c: Ctx, hash: string, accountId: string, product: 
     .bind(hash, accountId, product.id, product.type, stateName, o.expiresAt ?? null, o.test ? 1 : 0, c.now, c.now).run();
 }
 
-type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded';
+/** 'undeliverable' = 결제는 검증됐지만 아바타 풀셋을 지급할 수 없음(지급·확정 없음, 환불 대상). */
+type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded' | 'undeliverable';
 
 /** 미상환 부채를 이 문서(eco.s)에서 먼저 갚는다. 같은 배치에 실을 쓰기와 상환량을 돌려준다(서버 지급·서버 정산 공용). */
 export async function debtRepayment(db: D1Database, accountId: string, state: Record<string, any>, now: number): Promise<{ writes: GuardedWrite[]; repaid: Record<string, number> }> {
@@ -363,6 +395,28 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
       const heroes = new Set((await entitlementsOf(c.db, accountId, c.now)).heroes);
       for (const e of o.entitlements) { const id = heroIdFromEntitlement(e.key); if (id && HERO_IDS.includes(id)) heroes.add(id); }
       setRosterPaid(eco.s, [...heroes]);
+    }
+    // 아바타 풀셋 권한은 같은 커밋에서 부위 전체(풀셋 아바타)를 지급한다. 서버 검증이 끝난 이 경로에서만 부른다.
+    // - 이미 소유(이벤트·부위·보석 출처)면 중복 지급 없이 통과하고 출처(avatars.paid)는 덮어쓰지 않는다 → 환불해도 회수하지 않는다.
+    //   (결제 전에는 이미 소유를 409로 막는다: assertAvatarFullsetDeliverable. 여기까지 온 이미 소유는 결제 사이 경합뿐이다.)
+    // - 지급할 수 없으면(not-ready·locked·storage 등) 지급·확정(ack)을 하지 않고 'undeliverable'로 돌린다.
+    //   Play 는 확정하지 않아 자동 환불되고, 웹은 환불 필요 큐(감사 플래그)로 남긴다. 사유는 감사 플래그에 남긴다.
+    const avatarHeroes = o.entitlements.map((e) => heroIdFromAvatarKey(e.key)).filter((h): h is string => !!h);
+    if (avatarHeroes.length) {
+      // 영웅 소유의 정본은 서버 권한이다: 풀셋 지급 판정(영웅 잠김)을 서버 권한 기준으로 맞춘 뒤 한다.
+      setRosterPaid(eco.s, [...(await entitlementsOf(c.db, accountId, c.now)).heroes]);
+      // deps.avatarPremium 은 시험 전용 주입점이다. 운영 deps 는 비어 있어 전역 상수(AVATAR_PREMIUM_BY_HERO)를 쓴다.
+      const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+      for (const heroId of avatarHeroes) {
+        const r = eco.grantAvatarFullset(heroId, { avatarId: premium[heroId], paidBy: grantId });
+        if (!r.ok) {
+          const reason = String((r as { reason?: unknown }).reason ?? 'unknown');
+          console.warn('avatar fullset undeliverable', { productId: product.id, heroId, reason });
+          await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
+            .bind(accountId, 'avatar-undeliverable', JSON.stringify({ productId: product.id, heroId, reason, grantId }).slice(0, 1000), c.now).run().catch(() => {});
+          return 'undeliverable';
+        }
+      }
     }
     const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
@@ -434,6 +488,8 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
       const doc = await loadAccountDoc(c.db, accountId);
       const eco = loadEconomy(doc.state, { now: c.now });
       const rewards = JSON.parse(g.rewards) as Record<string, number>, debt: Record<string, number> = {};
+      // 이 지급(grant_id)으로 결제해 얻은 아바타만 같은 커밋에서 회수한다(소유·착용). 다른 출처의 아바타는 그대로.
+      const revokedAvatars: string[] = eco.revokePaidAvatars(g.grant_id);
       for (const [key, amount] of Object.entries(rewards)) {
         const field = IAP_REWARD_FIELD[key];
         if (!field) continue;
@@ -454,7 +510,7 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
         values: [accountId, key, amount, c.now] });
       const next = docOf(eco);
       const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why }, receipt: { grantId: g.grant_id, debt } },
+        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why, revokedAvatars }, receipt: { grantId: g.grant_id, debt, revokedAvatars } },
         projection: next.projection, writes });
       if (outcome.ok) { reversed++; break; }
       if (outcome.reason === 'duplicate') break;

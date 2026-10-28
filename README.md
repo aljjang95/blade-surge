@@ -107,11 +107,11 @@ public/bgm, sfx/      Flow Music BGM 6곡, Kenney CC0 SFX
 ```
 
 ## 에셋 라이선스
-- 3D 캐릭터: **KayKit** Adventurers / Skeletons — Kay Lousberg, **CC0**
-- 3D 몬스터 26종: **Quaternius** Ultimate Monsters — **CC0**
+- 3D 캐릭터 몸체·몬스터: 프로젝트 전용 생성(**Tripo** 모델 + **Mixamo** 리깅, `asset-library/manifest.json`)
+- 무기 소켓·보조 소품(방패 등), 기사 머리: **KayKit** Adventurers — Kay Lousberg, **CC0**
 - 3D 배경: **KayKit** Dungeon Remastered — **CC0**
-- SFX: **Kenney** Impact / Interface / Casino / Music Jingles — **CC0**
-- BGM: **Google Flow Music** 생성 (전투2·보스2·로비·가챠)
+- SFX: **Mirelo** 생성 + 파생(`public/sfx/mirelo-v1`, `derived-v1`), 보이스 `public/sfx/voice`. `public/sfx/hit-v2`(Kenney CC0 파생)는 저장소에 남아 있지만 런타임에서 쓰지 않음
+- BGM: **Google Flow Music** 생성
 - 이미지/VFX: **ChatGPT** 이미지 생성 (프로젝트 전용)
 
 ## 각성 (레벨 구간 해금)

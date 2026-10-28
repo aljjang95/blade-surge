@@ -12,7 +12,7 @@ const TIPS = {
 // 플레이어 상태 → 안내 단계. 단계 순서 이후에 한 행동이면 앞 단계를 건너뛰고 다음 단계로 이어진다.
 const STATE_STEP = { move: 'move', attack: 'attack', dodge: 'dodge', skill: 'skill', ult: 'skill' };
 // 첫 전투 안내가 펼쳐져 있는 시간(전투 시간 초). 행동을 하면 다음 단계가 다시 이 시간을 받는다.
-const GUIDED_SECONDS = 30, GUIDED_FINAL_SECONDS = 10, MANUAL_SECONDS = 8;
+const GUIDED_SECONDS = 15, GUIDED_FINAL_SECONDS = 10, MANUAL_SECONDS = 8;
 const TOGGLE_OPENED_KEY = 'blade-surge.tutorial-toggle-opened';
 const readToggleOpened = () => { try { return globalThis.localStorage?.getItem(TOGGLE_OPENED_KEY) === '1'; } catch { return false; } };
 const writeToggleOpened = () => { try { globalThis.localStorage?.setItem(TOGGLE_OPENED_KEY, '1'); } catch {} };
@@ -98,7 +98,7 @@ export class BattleTutorial {
     this.phase = phase;
     if (this.expanded && !this.reviewing && !this.completedSteps.has(phase)) {
       this.completedSteps.add(phase);
-      this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size });
+      this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size, foldSec: GUIDED_SECONDS });
     }
     this.stepLabel.textContent = data.n; this.title.textContent = data.title; this.copy.textContent = data.copy;
     this.next.textContent = phase === 'clear' ? '안내 닫기' : '다음 안내'; this.next.hidden = false;
@@ -224,7 +224,7 @@ export class BattleTutorial {
     if (firstCompletion) {
       this.app.eco.s.tutorial = { ...this.app.eco.s.tutorial, completed: true };
       this.app.eco.emit();
-      this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
+      this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped, foldSec: GUIDED_SECONDS });
     }
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
     this.clearHealTip();

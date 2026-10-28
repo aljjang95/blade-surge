@@ -1,4 +1,4 @@
-// 영웅 정의 — 모델(KayKit Adventurers, CC0), 애니메이션, 스킬, 기본 스탯
+// 영웅 정의 — 몸체는 소유 생성 라이브러리(Tripo·Mixamo, asset-library), 무기 소켓·보조 소품은 KayKit Adventurers(CC0) 원본에서 가져온다. 애니메이션·스킬·기본 스탯 포함
 import { heroGrade } from './hero-grades.js';
 import { gradeRules } from './hero-grades.js';
 export const RARITY = {

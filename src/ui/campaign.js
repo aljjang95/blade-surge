@@ -16,7 +16,7 @@ export function dungeonBriefHtml(stage) {
 
 export function journalHtml(progress) {
   const entries = journalEntries(progress);
-  return `<div class="campaign-journal"><div class="journal-toolbar"><span class="campaign-eyebrow">기억의 기록 · ${entries.length}편</span><button type="button" class="btn btn-ghost btn-sm" id="journal-close">닫기</button></div><h2>${storyText(CAMPAIGN.title)}</h2><p>${storyText(CAMPAIGN.logline)}</p>
+  return `<div class="campaign-journal"><div class="journal-toolbar"><span class="campaign-eyebrow">기억의 기록 · ${entries.length}편</span><span class="journal-toolbar-btns"><button type="button" class="btn btn-ghost btn-sm" id="journal-codex">도감</button><button type="button" class="btn btn-ghost btn-sm" id="journal-close">닫기</button></span></div><h2>${storyText(CAMPAIGN.title)}</h2><p>${storyText(CAMPAIGN.logline)}</p>
     ${entries.length ? entries.map((entry) => `<article><span class="campaign-eyebrow">${storyText(entry.code)}</span><h3>${storyText(entry.title)}</h3><p>${storyText(entry.revelation)}</p><p>${storyText(entry.aftermath)}</p>${entry.oath ? `<blockquote>${storyText(entry.oath)}</blockquote>` : ''}</article>`).join('') : '<article><h3>아직 쓰이지 않은 첫 장</h3><p>스테이지를 클리어하면 되찾은 기억이 이곳에 남습니다.</p></article>'}
     ${progress.stars?.['5-10'] ? `<article class="campaign-ending">${endingHtml()}</article>` : ''}
     ${progress.stars?.['6-10'] ? `<article class="campaign-ending"><h3>${storyText(EPILOGUE_ENDING.title)}</h3><p>${storyText(EPILOGUE_ENDING.body)}</p></article>` : ''}
