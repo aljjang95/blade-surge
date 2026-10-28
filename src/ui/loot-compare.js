@@ -35,7 +35,7 @@ export function compareLoot(eco, heroId, uid) {
 /** 카드에 붙는 짧은 문구와 접근성 설명. */
 export function compareText(cmp) {
   if (!cmp) return { short: '', long: '' };
-  if (cmp.verdict === 'better') return { short: '▲ 장착 추천', long: '현재 장비보다 전투력 +' + fmt(cmp.powerDelta) + ' · 장착 추천' };
+  if (cmp.verdict === 'better') return { short: '▲ 더 좋음 +' + fmt(cmp.powerDelta), long: '현재 장비보다 전투력 +' + fmt(cmp.powerDelta) + ' · 더 좋음, 장착 추천' };
   if (cmp.verdict === 'equipped') return { short: '장착 중', long: '이미 장착 중인 장비' };
   if (cmp.verdict === 'worse') return { short: '판매 ' + fmt(cmp.sell), long: '현재 장비가 더 좋습니다 (전투력 ' + fmt(cmp.powerDelta) + ') · 판매가 ' + fmt(cmp.sell) + ' 골드' };
   return { short: '판매 ' + fmt(cmp.sell), long: '전투력 변화 없음 · 판매가 ' + fmt(cmp.sell) + ' 골드' };

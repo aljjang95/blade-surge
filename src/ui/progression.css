@@ -52,7 +52,8 @@
 .result-box .loot-item[data-verdict]{height:auto;min-height:68px;padding-bottom:3px}
 .loot-item .lc{position:static;margin-top:1px;font-size:9px;font-weight:900;line-height:11px;white-space:nowrap;color:#d8e3e6;text-shadow:0 1px 2px #000}
 .loot-item[data-verdict=better]{box-shadow:0 0 0 2px #7be0a4,0 0 10px #7be0a47a}
-.loot-item[data-verdict=better] .lc{color:#8dffb4}
+.loot-item[data-verdict=better] .lc{color:#8dffb4;font-size:11px;line-height:13px}
+.loot-item[data-verdict=better]{box-shadow:0 0 0 2px #3fdc7a,0 0 10px rgba(63,220,122,.55)}
 .loot-item[data-verdict=worse] .lc,.loot-item[data-verdict=same] .lc{color:#ffd070}
 .bag-item .bag-new{position:absolute;left:3px;top:22px;padding:0 4px;border-radius:5px;background:#ff5a7a;color:#fff;font-style:normal;font-size:10px;font-weight:900;line-height:14px;pointer-events:none}
 .mpl-new{right:2px;bottom:2px;padding:1px 3px;border-radius:2px;background:#ff5a7a;color:#fff;font-size:9px;text-shadow:none}

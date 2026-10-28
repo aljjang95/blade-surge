@@ -9,7 +9,7 @@ import { pickLootRarity } from '../data/loot-tables.js';
  * @param {any} table lootTable(ch, rank, difficulty)
  * @param {() => number} rng
  * @param {{ baseGold: number, scale: number, itemLevel?: number, summoned?: boolean, goldPerKill?: number, ledger?: boolean, rank?: string }} opts
- * @returns {Array<{ kind: string, n?: number, amount?: number, count?: number, id?: string, rarity?: string, slot?: string, pick?: number }>}
+ * @returns {Array<{ kind: string, n?: number, amount?: number, count?: number, id?: string, rarity?: string, slot?: string, pick?: number, il?: number }>}
  */
 export function rollKillLoot(table, rng, { baseGold, scale, summoned = false, goldPerKill = 0, ledger = true, rank = table.rank, itemLevel = 0 }) {
   const out = [];
