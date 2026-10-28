@@ -296,3 +296,22 @@ describe('서버 경로(/cmd)', () => {
     expect(r.body.doc.selected).toBe('knight');
   });
 });
+
+// PR #353 교차 리뷰: 착용 참조를 직접 바꾸는 우회 경로(여정 목표 장착 → 정규화 소유 확정) 차단.
+describe('귀속 우회 차단', () => {
+  test('저장된 소유자가 있으면 다른 영웅의 착용 참조로 소유가 바뀌지 않고 착용이 풀린다', () => {
+    const eco = newEco();
+    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    raw.vault = { day: 0, used: 0, expansions: 0 };
+    raw.inventory = [{ uid: 40, id: id('L'), enh: 9, owner: 'mage' }, { uid: 41, id: id('E'), enh: 3, owner: 'vault', from: 'mage' }];
+    raw.invSeq = 42;
+    raw.heroes.knight.equip.weapon = 40;
+    raw.heroes.rogue.equip.weapon = 41;
+    const s = normalizeSave(raw, eco.fresh());
+    expect(s.inventory.find((x: any) => x.uid === 40).owner).toBe('mage');
+    expect(s.inventory.find((x: any) => x.uid === 41).owner).toBe('vault');
+    expect(s.heroes.knight.equip.weapon).toBeNull();
+    expect(s.heroes.rogue.equip.weapon).toBeNull();
+    expect(s.inventory.length).toBe(2);
+  });
+});

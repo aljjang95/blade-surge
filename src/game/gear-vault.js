@@ -40,7 +40,13 @@ export function normalizeGearOwnership(s, raw) {
   for (const item of s.inventory) {
     const src = rawById.get(item.uid) || {};
     const worn = wearer.get(item.uid);
-    let owner = worn || (src.owner === VAULT_OWNER || knownHero(src.owner) ? src.owner : null);
+    const saved = src.owner === VAULT_OWNER || knownHero(src.owner) ? src.owner : null;
+    // 저장된 소유자가 있으면 그것이 정본이다. 다른 영웅(또는 금고 장비를) 착용 참조로 소유를 바꾸지 않고 착용만 푼다
+    // (PR #353 교차 리뷰: 착용 참조를 직접 바꾸는 경로가 정규화에서 소유 확정으로 이어져 금고 이전 비용을 우회했다).
+    if (saved && worn && worn !== saved) {
+      for (const slot of SLOTS) if (s.heroes[worn].equip[slot] === item.uid) s.heroes[worn].equip[slot] = null;
+    }
+    let owner = saved || worn || null;
     let legacy = src.legacy === 1 && owner !== null;
     if (!owner) { owner = fallback; legacy = legacySave; }
     item.owner = owner;
