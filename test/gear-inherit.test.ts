@@ -205,7 +205,7 @@ describe('장비 도감 (덩어리 2)', () => {
     expect(eco.gearDexClaim('nobody', 'drop25')).toMatchObject({ ok: false, reason: 'hero' });
     expect(eco.s.gearDex.claimed.knight).toEqual(['drop25']);
     for (const m of GEAR_DEX_MILESTONES) for (const k of Object.keys(m.rewards)) expect(['stones', 'stones2', 'stones3', 'lineageSigil', 'fragments', 'protect', 'bless']).toContain(k);   // 재료만, 현금 상품 키 없음
-    const a: any = eco.addRewards({ lineageSigil: 2 }); expect(eco.s.lineageSigil).toBe(22); expect(a[0].k).toBe('lineageSigil');
+    const a: any = eco.addRewards({ lineageSigil: 2 }); expect(eco.s.lineageSigil).toBe(20 + (GEAR_DEX_MILESTONES[0].rewards as any).lineageSigil + 2); expect(a[0].k).toBe('lineageSigil');
   });
 
   test('가져오기 정화: 문장 0, 가져온 kin·claimed 버림, 드랍은 가져온 장비로 재구성, 서버 문서의 수령 기록은 유지', () => {
