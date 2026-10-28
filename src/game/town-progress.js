@@ -14,6 +14,8 @@ export const townRequestDay = (now = Date.now()) => 'kst5:' + dayKey(now);
 /**
  * 원정 승리 하나를 진행 종류별 양으로 바꾼다.
  * dungeon: 던전 클리어(필드 제외) 1 · field: 필드 클리어 1 · elite: 정예 처치 수 · treasure: 숨은 보물 방 · kills: 처치 수.
+ * @param {{ target?: string, elites?: number, treasureRooms?: number, kills?: number }} [run]
+ * @returns {Record<string, number>}
  */
 export function townRunAmounts({ target, elites = 0, treasureRooms = 0, kills = 0 } = {}) {
   if (typeof target !== 'string' || !target) return {};

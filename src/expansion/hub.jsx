@@ -64,6 +64,8 @@ function HeroPortrait({app, id, ...rest}) {
   return <img {...rest} ref={ref}/>;
 }
 function Icon({id}) { return <img src={uiArt(id)} alt="" loading="lazy" decoding="async"/>; }
+// 결투장 상대·원정 임무·심층 첫 정복 보상 칩. #226에서 정의만 빠져 세 화면이 ReferenceError로 비던 것을 되살렸다.
+function RewardChips({rewards={}}) { return <div className="exp-chips">{rewards.gold>0 && <span><Icon id="gold"/>골드 +{fmt(rewards.gold)}</span>}{rewards.xp>0 && <span><Icon id="hero-xp"/>원정 EXP +{fmt(rewards.xp)}</span>}{MATERIALS.filter(m=>rewards.materials?.[m.id]).map(m=><span key={m.id}><img src={resourceArt(m.id)} alt=""/>{m.name} +{rewards.materials[m.id]}</span>)}{CONSUMABLES.filter(m=>rewards.consumables?.[m.id]).map(m=><span key={m.id}><img src={resourceArt(m.id)} alt=""/>{m.name} +{rewards.consumables[m.id]}</span>)}</div>; }
 function Detail({children,label="효과 자세히"}) { return <details className="ui-details"><summary>{label}</summary>{children}</details>; }
 function ForgePreview() { return <div className="exp-relic exp-relic-art"><img src={uiArt('nav-forge')} alt="재료를 정련하는 공방"/></div>; }
 /** 보상 칩 숫자 카운트업. 훅 없이 ref 콜백으로 DOM 텍스트만 바꾼다(프레임당 할당 없음, 모션 줄이기 설정이면 즉시 최종값). */
