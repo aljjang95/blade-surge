@@ -20,7 +20,8 @@ export const townRequestDay = (now = Date.now()) => 'kst5:' + dayKey(now);
 export function townRunAmounts({ target, elites = 0, treasureRooms = 0, kills = 0 } = {}) {
   if (typeof target !== 'string' || !target) return {};
   const field = FIELD_IDS.has(target);
-  return { [field ? 'field' : 'dungeon']: 1, elite: nat(elites), treasure: nat(treasureRooms), kills: nat(kills) };
+  // 처치·보물 방은 전투 결과 값이라 한 판에 나올 수 있는 만큼으로 자른다(콘솔로 한 번에 의뢰를 채우지 못하게).
+  return { [field ? 'field' : 'dungeon']: 1, elite: nat(elites), treasure: Math.min(nat(treasureRooms), 5), kills: Math.min(nat(kills), 1500) };
 }
 
 /** 하루가 바뀌었으면 일일 의뢰를 비운다. 바꿨으면 true. */
