@@ -173,8 +173,8 @@ const PROPS = {
     // 쇳물이 튄 그을음 자국.
     glow: [piece(new THREE.SphereGeometry(.008 * h, 4, 3), C.glowEmber, [-.06 * h, -.08 * h, .012 * h]), piece(new THREE.SphereGeometry(.006 * h, 4, 3), C.glowEmber, [.03 * h, .05 * h, .012 * h])],
   }) },
-  forgeHammerBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .03, -.15], rot: [0, 0, 35], scale: 1.5, build: (h) => ({
-    solid: [piece(new THREE.CylinderGeometry(.012 * h, .014 * h, .42 * h, 6), C.woodDark), piece(new THREE.BoxGeometry(.15 * h, .08 * h, .08 * h), C.soot, [0, .22 * h, 0])],
+  forgeHammerBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .03, -.15], rot: [0, 0, 35], scale: 1.15, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.012 * h, .014 * h, .42 * h, 6), C.woodDark), piece(new THREE.BoxGeometry(.15 * h, .08 * h, .08 * h), C.steel, [0, .22 * h, 0])],
     glow: [piece(new THREE.BoxGeometry(.012 * h, .07 * h, .07 * h), C.glowEmber, [.08 * h, .22 * h, 0])],
   }) },
   bellowsBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, 0, -.14], rot: [-10, 0, 0], scale: 1.4, build: (h) => ({
@@ -218,10 +218,6 @@ const PROPS = {
   emberLantern: { bones: ['Head', 'head'], at: [0, .28, 0], rot: [0, 0, 0], scale: 1.8, build: (h) => ({
     solid: [piece(bellGeometry(.05 * h, 8), C.clay, [0, .055 * h, 0], [180, 0, 0], [1, .06 * h, 1]), piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 8), C.soot, [0, .06 * h, 0], [90, 0, 0])],
     glow: [piece(new THREE.ConeGeometry(.02 * h, .06 * h, 5), C.glowHot, [0, .09 * h, 0]), piece(new THREE.SphereGeometry(.016 * h, 5, 3), C.glowEmber, [0, .068 * h, 0])],
-  }) },
-  hearthRing: { root: true, at: [0, .42, 0], rot: [90, 0, 0], scale: 1.2, build: (h) => ({
-    solid: [piece(new THREE.TorusGeometry(.2 * h, .012 * h, 4, 16), C.soot)],
-    glow: [0, 1, 2, 3, 4, 5].map((i) => { const a = i / 6 * Math.PI * 2; return piece(new THREE.SphereGeometry(.018 * h, 5, 3), i % 2 ? C.glowHot : C.glowEmber, [Math.cos(a) * .2 * h, Math.sin(a) * .2 * h, 0]); }),
   }) },
   emberChains: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, .05], rot: [0, 0, 35], scale: 1.4, build: (h) => {
     const solid = [], glow = [];

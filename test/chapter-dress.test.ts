@@ -26,8 +26,8 @@ test('2장 의상은 2장 로스터 전부와 중간·최종 보스를 덮는다
   const def: any = stageDef(2, 1);
   const roster = def.combatRosterFor?.();
   const ids = roster ? [...roster.trash, ...roster.ranged, ...roster.elite] : [];
-  // 독침벌(armabee)은 몸(fire_phoenix) 기준 의상으로 덮인다.
-  for (const id of ids) expect(chapterDressFor({ chapter: { id: 2 } }, id, (ENEMIES as any)[id]?.model === 'Flying_Armabee' ? 'fire_phoenix' : null), id).toBeTruthy();
+  // 화염 정령·독침벌(fire_phoenix 몸)은 이미 불새 실루엣이라 의상을 입히지 않는다.
+  for (const id of ids) if (!['hywirl', 'armabee'].includes(id)) expect(forge.species[id], id).toBeTruthy();
 });
 
 test('의상은 캠페인 장에만 입히고 원정은 제외한다', () => {

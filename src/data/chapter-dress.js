@@ -80,8 +80,6 @@ export const CHAPTER_DRESS = Object.freeze({
       bomb_imp: { props: ['emberWick'] },
       imp: { ...FORGE_SKIN, props: ['emberCap'] },
       ash_burrower: { props: ['emberCap'] },
-      // 화염 정령: 회수된 집집의 난롯불 — 난로 쇠고리 둘레의 불씨.
-      hywirl: { props: ['hearthRing'] },
       // 부족 주술사: 깨진 질그릇 등잔을 머리에 이고 불씨를 던진다.
       tribal_shaman: { ...FORGE_SKIN, props: ['emberLantern'] },
       elite_orc_chief: { ...FORGE_SKIN, props: ['smithApron', 'unfinishedGreatsword'] },
@@ -96,13 +94,11 @@ export const CHAPTER_DRESS = Object.freeze({
       goblin_chief: { ...FORGE_SKIN, props: ['smithApron'] },
       treant: { ...FORGE_SKIN, props: ['anvilShield'] },
       mushroom_shaman: { props: ['emberCap'] },
-      fire_phoenix: { props: ['hearthRing'] },
       demon_lord: { props: ['crucibleCrown'] },
       ember_drake: { props: ['emberChains'] },
       frost_yeti: { ...FORGE_SKIN, props: ['smithApron'] },
       bone_knight: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
       skeleton_mage: { ...FORGE_SKIN, props: ['emberLantern'] },
-      void_wisp: { props: ['hearthRing'] },
       slime: { props: ['emberWick'] },
     },
   },
