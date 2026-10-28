@@ -1,0 +1,31 @@
+{
+ "id": "tll_ch1_coffinbearer",
+ "workspace_task_id": "e4af41a7-9f77-4f23-904a-31718383e247",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, proportions language and plain light gray background tone as the reference image (stylized hand-painted fantasy game art, slightly chunky chibi-heroic proportions). Do not copy the reference character. Character: a hunched skeletal pallbearer undead, a funeral procession porter. Mossy ivory-colored bones with patches of green moss, skull face with dark hollow eyes and faint teal glow, wearing a tattered faded teal-gray mourning hood and shabby teal-gray mourning robe with a torn hem, rope straps over the shoulders. On its back it carries a narrow empty wooden coffin tied on with ropes. Bent-forward shuffling posture but with both arms stretched straight out horizontally to the sides in a T-pose, empty skeletal hands with fingers spread, palms down, legs straight and shoulder-width apart, face looking forward, symmetrical front view, full body head to toe fully visible. NO weapon, hands completely empty. Color palette: muted teal #87cbb0 accents, tombstone gray, faded ivory bone. Plain solid light gray background, no text, no logo, no UI, no watermark.",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_final_chain": 95,
+ "retopo_tris": 10946,
+ "bones": 65,
+ "raw_glb": "kept in session scratchpad only (not committed): coffinbearer/raw.glb",
+ "engine": "Tripo Studio",
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "image_refs": [
+  "asset-library/concepts/skeleton_mage.gpt-image-2.5.png (origin/main)",
+  "asset-library/normalized/bone_knight.glb front render (origin/main)"
+ ],
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0",
+ "rig": "Humanoid / Mixamo skeleton (65 joints)",
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "props": {}
+}

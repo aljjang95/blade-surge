@@ -1,0 +1,44 @@
+{
+ "id": "tll_ch1_mourner",
+ "workspace_task_id": "a0a1c871-65ef-4cc3-8bd2-5d5bb6b0db15",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering and plain light gray background tone as the two reference images (stylized chunky game proportions: a big head, about 3 to 3.5 heads tall overall, short limbs, chibi-heroic, hand-painted, soft clean shading; same style family as the skeleton knight and skeleton mage references). Do not copy the reference characters. Character: a weeping mourner ghost girl with a big head, pale teal face with big closed sorrowful eyes and one glowing teal tear, wearing a thick opaque dark-teal-gray mourning veil over her head and shoulders and a short bell-sleeved mourning dress. She has NO legs: the dress becomes one chunky tapering gown train with a few thick ragged cloth tails, ending in a soft point, floating just above the ground, no feet; the whole figure is small and cute-creepy, about 3 heads tall including the train. Both arms stretched straight out horizontally to the sides in a T-pose, small pale hands with fingers spread, palms down. Head facing forward, symmetrical front view, full body fully visible. Simple bold silhouette, solid opaque cloth with painted texture (not transparent, no thin wispy strands, no lace). NO weapon, NO bell, hands completely empty. Color palette: ghostly teal #87cbb0 glow accents, tombstone gray, pale ivory. Plain solid light gray background, no text, no logo, no UI, no watermark.",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_final_chain": 95,
+ "retopo_tris": 10646,
+ "bones": 65,
+ "raw_glb": "kept in session scratchpad only (not committed): mourner/raw.glb",
+ "engine": "Tripo Studio",
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "image_refs": [
+  "asset-library/concepts/skeleton_mage.gpt-image-2.5.png (origin/main)",
+  "asset-library/normalized/bone_knight.glb front render (origin/main)"
+ ],
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0",
+ "rig": "Humanoid / Mixamo skeleton (65 joints)",
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "props": {
+  "handbell": {
+   "file": "tll_ch1_handbell.glb",
+   "workspace_task_id": "6bd0d095-22de-42df-b204-18c35192261f",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes and clean painted rendering as the reference image. Do not copy the reference character. Object: a small old bronze funeral hand bell (a tolling bell) with a short dark wooden handle, weathered green-teal patina on the bronze, a faint teal ribbon tied on the handle, small clapper visible inside the bell mouth. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "tris": 3727,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none"
+  }
+ },
+ "tpose_history": "v1 (realistic, stringy veil) rejected at image stage; v2 (stylized ~5.5 heads) went through 3D+retopo+rig (95 credits) then discarded after coordinator chibi (3-3.5 heads) guidance; v3 chibi used here"
+}

@@ -1,0 +1,55 @@
+{
+ "id": "tll_ch1_tombknight",
+ "workspace_task_id": "cf83e15d-42b8-4ef8-9be0-973bbaf7e5cd",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering and plain light gray background tone as the two reference images (stylized chunky game proportions: a big head, about 3 to 3.5 heads tall overall, short limbs, chibi-heroic, hand-painted, soft clean shading; same style family as the skeleton knight and skeleton mage references). Do not copy the reference characters. Character: Seren, the Knight of Mourning, an elite undead plate-armor knight in black and teal mourning dress. Black blackened steel plate armor with teal edge trim and teal glowing seams, a closed great helm (large, about a third of the body height) with a faded dark gauze veil draped over the face opening and a long mourning ribbon streamer attached to the top of the helmet hanging down at the back, a short tattered black-and-teal mourning cloak hanging behind the back only (not between the legs), big chunky pauldrons with engraved funeral lily emblems, short sturdy armored legs, chunky gauntlets. NO weapon, NO shield, hands completely empty. Strict front-facing T-pose: both arms stretched straight out horizontally to the sides, palms facing down, fingers spread open, legs straight and shoulder-width apart, head facing forward, symmetrical, full body head to toe fully visible. Color palette: black, teal #87cbb0 accents, tombstone gray. Plain solid light gray background, no text, no logo, no UI, no watermark.",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_final_chain": 95,
+ "retopo_tris": 10835,
+ "bones": 65,
+ "raw_glb": "kept in session scratchpad only (not committed): tombknight/raw.glb",
+ "engine": "Tripo Studio",
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "image_refs": [
+  "asset-library/concepts/skeleton_mage.gpt-image-2.5.png (origin/main)",
+  "asset-library/normalized/bone_knight.glb front render (origin/main)"
+ ],
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0",
+ "rig": "Humanoid / Mixamo skeleton (65 joints)",
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "props": {
+  "tombshield": {
+   "file": "tll_ch1_tombshield.glb",
+   "workspace_task_id": "e2fe9b3f-cd0d-4b72-ad25-6e11b6011b29",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes and clean painted rendering as the reference image. Do not copy the reference character. Object: a heavy tombstone-slab shield: a rounded gray stone grave marker slab used as a shield, mossy, cracked, with an erased worn-away engraved name plaque and a faint teal funeral lily carving, iron straps and a leather arm strap on the back side not visible, front view of the slab, bone-ivory trim. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "tris": 3700,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none"
+  },
+  "clapper": {
+   "file": "tll_ch1_clapper.glb",
+   "workspace_task_id": "048d50f5-3ef1-4856-9774-248e136cea17",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes and clean painted rendering as the reference image. Do not copy the reference character. Object: a broken bell clapper mace: a heavy iron bell clapper (a long iron rod with a big round iron ball head) used as a mace, the ball head chipped and cracked, black blackened iron with teal glow in the cracks, a short wrapped leather grip, a bit of broken bronze bell rim fragment fused to the shaft. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "tris": 4002,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none"
+  }
+ },
+ "tpose_history": "first attempt 7-head heroic discarded (chain 95 credits spent before coordinator chibi guidance); this is the 3.5-head chibi retake"
+}
