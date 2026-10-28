@@ -80,3 +80,9 @@ test('이야기는 지금 마을의 현재 장만 진행하고 장이 넘어가�
   // 잠긴 마을 이야기는 오르지 않는다.
   expect(state.story.emberport.progress).toEqual({});
 });
+
+test('예전 저장에 완료로 남은 반복 의뢰는 다시 수락할 수 있다', () => {
+  const { eco, towns } = make();
+  eco.s.towns.requests.completed = ['oathhold_repeat_gather'];
+  expect(towns.acceptRequest('oathhold', 'oathhold_repeat_gather').ok).toBe(true);
+});

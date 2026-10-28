@@ -26,6 +26,8 @@ export function townRunAmounts({ target, elites = 0, treasureRooms = 0, kills = 
 /** 하루가 바뀌었으면 일일 의뢰를 비운다. 바꿨으면 true. */
 export function rotateTownRequests(state, now = Date.now()) {
   const requests = state?.requests; if (!requests) return false;
+  // 예전 저장은 반복 의뢰도 '완료'로 남겼다. 반복 의뢰는 완료 목록에 머물지 않는다(다시 수락 가능).
+  if (requests.completed.some(id => TOWN_REQUEST_BY_ID[id]?.kind === 'repeatable')) requests.completed = requests.completed.filter(id => TOWN_REQUEST_BY_ID[id]?.kind !== 'repeatable');
   const day = townRequestDay(now);
   if (requests.day === day) return false;
   requests.day = day;
