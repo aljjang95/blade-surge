@@ -429,6 +429,8 @@ class App {
    */
   async resetAccount({ fullReset = false } = {}) {
     if (this.stageStarting || this.mode === 'battle') return { ok: false, reason: 'busy' };
+    // 서버 권한 계정은 같은 기기 신원으로 다시 접속하면 서버 문서가 진행을 되살린다. 신원까지 새로 받는 완전 초기화만 가능하다.
+    if (!fullReset && this.account?.authority === 'server') return { ok: false, reason: 'server' };
     const seed = fullReset ? null : this.eco.entitlementSeed();
     // 신원·저장 삭제가 모두 검증된 뒤에만 메모리 상태를 비운다(실패하면 지금 상태 그대로).
     const r = await resetAccountFromScratch({ keepIdentity: !fullReset, seed });

@@ -884,6 +884,8 @@ export class Meta {
       const resetBtn = b.querySelector('#m-reset'), resetConfirm = b.querySelector('#m-reset-confirm');
       const resetInput = b.querySelector('#m-reset-input'), resetYes = b.querySelector('#m-reset-yes');
       resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; resetInput.value = ''; resetYes.disabled = true; resetInput.focus({ preventScroll: true }); };
+      const fullBox = b.querySelector('#m-reset-full');
+      if (this.app.account?.authority === 'server') { fullBox.checked = true; fullBox.disabled = true; fullBox.parentElement.insertAdjacentHTML('beforeend', '<br><b>서버 계정은 서버에 진행이 저장돼 있어 완전 초기화만 가능합니다.</b>'); }
       const exportNote = b.querySelector('#m-reset-export'), codeBox = b.querySelector('#m-reset-code');
       b.querySelector('#m-reset-file').onclick = () => {
         try {
@@ -905,7 +907,7 @@ export class Meta {
         const out = await this.app.resetAccount({ fullReset: b.querySelector('#m-reset-full').checked });
         if (out.ok) { location.reload(); return; }
         this._resetting = false; resetInput.disabled = false; resetBtn.disabled = false; b.querySelector('#m-reset-no').disabled = false; resetYes.disabled = !isAccountResetPhrase(resetInput.value);
-        this.ui.toast(out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
+        this.ui.toast(out.reason === 'server' ? '서버 계정은 완전 초기화만 가능합니다' : out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
       };
       this.groupSettingsTabs(b);
     } });
