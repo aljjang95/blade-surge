@@ -187,7 +187,7 @@ export class Battle extends BaseBattle {
       for (let i = 0; i < n && !seen; i++) seen = sparked[i] === enemy;
       if (!seen && contact.particles > 0 && n < CROWD_SPARKS && this.feedbackCount++ < 6) {
         sparked[n] = enemy; this._crowdSparks = n + 1;
-        this.fx.flash(hitPos, color, { size: contact.size * .75, life: .09, angle: this._crowdSparks * 1.9 });
+        this.fx.flash?.(hitPos, color, { size: contact.size * .75, life: .09, angle: this._crowdSparks * 1.9 });
       }
       return;
     }
