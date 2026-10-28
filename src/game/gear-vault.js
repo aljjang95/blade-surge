@@ -29,6 +29,7 @@ const knownHero = (id) => typeof id === 'string' && Object.hasOwn(HEROES, id);
 /** 금고 메타 정규화. 여러 번 적용해도 같다. */
 export function normalizeVault(raw) {
   const v = record(raw) ? raw : {};
+  /** @type {{ v: number, expansions: number, day: number, used: number, rday?: number, rused?: number }} */
   const out = { v: 1, expansions: int(v.expansions, 0, 0, VAULT.maxExpansions), day: int(v.day, 0, 0, 1e9), used: int(v.used, 0, 0, 1000) };
   // 의식 일일 카운터는 쓴 적이 있을 때만 둔다(이전 저장은 정규화 뒤에도 같다).
   const rday = int(v.rday, 0, 0, 1e9), rused = int(v.rused, 0, 0, 1000);
@@ -39,7 +40,8 @@ export function normalizeVault(raw) {
 /** 장비 계승 기록 정규화: hops(0~99, 0이면 생략), lin(알려진 영웅 id 최대 5, hops와 맞춤, 비면 생략). 멱등. */
 function normalizeLineage(item, src) {
   const hops = int(src.hops, 0, 0, VAULT_INHERIT.hopsMax);
-  const lin = (Array.isArray(src.lin) ? src.lin : []).filter(knownHero).slice(-Math.min(hops, VAULT_INHERIT.linMax));
+  const linAll = (Array.isArray(src.lin) ? src.lin : []).filter(knownHero);
+  const keep = Math.min(hops, VAULT_INHERIT.linMax), lin = hops > 0 ? linAll.slice(-keep) : [];
   if (hops > 0) item.hops = hops; else delete item.hops;
   if (lin.length) item.lin = lin; else delete item.lin;
 }

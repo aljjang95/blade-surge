@@ -669,7 +669,7 @@ export class Economy {
       this.s.vault = { ...normalizeVault(this.s.vault), rday: q.daily.day, rused: q.daily.used + 1 };
       inst.owner = heroId; delete inst.from; delete inst.legacy;
       inst.hops = hops;
-      const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));
+      const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));  // hops>=1 이라 keep>=1
       if (lin.length) inst.lin = lin; else delete inst.lin;
     } catch (e) {
       this.s.gold = before.gold; this.s.vault = before.vault;
