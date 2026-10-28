@@ -195,7 +195,9 @@ export class Economy {
       pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
-      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
+      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false },
+        // 장비 귀속·금고 안내(docs/GEAR_OWNERSHIP_VAULT.md). 보상 없는 안내 우편이라 경제·정산에는 영향이 없다.
+        { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false }],
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
     };
   }
