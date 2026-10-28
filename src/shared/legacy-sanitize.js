@@ -200,7 +200,7 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   s.runes = normalizeRunes(undefined); s.blessing = normalizeBlessing(undefined);
   for (const item of s.inventory) delete item.sockets;
   // 고통 단계 장비 파워(tp)·전설 수련도 서버 명령이 생기기 전까지 가져오지 않는다(조작 세이브로 tp 50 장비·전설 단계 주입 방지).
-  for (const item of s.inventory) delete item.tp;
+  for (const item of s.inventory) { delete item.tp; delete item.il; }   // il(스테이지 장비 레벨)도 같은 이유로 가져오지 않는다.
   s.legend = normalizeLegend(undefined);
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).

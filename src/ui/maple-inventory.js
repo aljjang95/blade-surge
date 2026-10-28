@@ -7,6 +7,7 @@ import { resourceArt, uiArt } from './illustrated.js';
 import { itemVisual } from './item-presentation.js';
 import { isFresh, clearFresh } from './loot-compare.js';
 import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
+import { betterItems } from '../game/gear-advice.js';
 
 export const INVENTORY_TABS = Object.freeze([
   { id: 'gear', label: '장비' }, { id: 'use', label: '소비' }, { id: 'etc', label: '기타' }, { id: 'cash', label: '캐시' },
@@ -52,7 +53,7 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
   const safeSlot = SLOTS.includes(slot) ? slot : 'all';
   let cells = [];
   if (safeTab === 'gear') {
-    const owners = equippedOwners(state);
+    const owners = equippedOwners(state), better = betterItems(eco, state.selected);   // 출전 영웅이 끼는 장비보다 전투력이 오르는 것
     // 출전 영웅 소유 장비만 보인다(docs/GEAR_OWNERSHIP_VAULT.md). 다른 영웅·금고 장비는 금고 화면에서 옮긴다.
     cells = (state.inventory || []).filter((inst) => ITEM_BY_ID[inst.id] && (inst.owner ?? state.selected) === state.selected && (safeSlot === 'all' || ITEM_BY_ID[inst.id].slot === safeSlot)).slice()
       .sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0) || b.uid - a.uid)
@@ -60,7 +61,7 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
         const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid) || null;
         // 칸을 누르면 착용자(없으면 출전 영웅) 문맥 시트가 열린다. 칸 그림도 같은 영웅의 형태로 그린다.
         const visual = itemVisual(it, { heroId: owner || eco.s?.selected });
-        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: tierName(it.name, inst), tierTag: tierTag(inst), tierTone: tierTone(inst), tierNote: tierNote(inst), icon: visual.iconUrl, fallbackIcon: visual.fallbackUrl, visual: visual.renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, fresh: isFresh(inst.uid), owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
+        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: tierName(it.name, inst), tierTag: tierTag(inst), tierTone: tierTone(inst), tierNote: tierNote(inst), icon: visual.iconUrl, fallbackIcon: visual.fallbackUrl, visual: visual.renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, fresh: isFresh(inst.uid), better: better.get(inst.uid) || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
       });
   } else if (safeTab === 'use') {
     cells = [...USE_STACKS, ...EXPEDITION_USE].map((def) => ({ def, qty: amount(state, def) })).filter((row) => row.qty > 0)
@@ -159,8 +160,9 @@ export class MapleInventory {
       if (cell.enh > 0) button.append(el('span', 'mpl-badge mpl-enh', '+' + cell.enh));
       if (cell.tierTag) { button.classList.add('tier-' + cell.tierTone); button.append(el('span', 'mpl-badge mpl-tier tier-tag', cell.tierTag)); }
       if (cell.fresh) button.append(el('span', 'mpl-badge mpl-new', 'NEW'));
+      if (cell.better) { button.classList.add('is-better'); const up = el('span', 'mpl-badge mpl-up', '▲'); up.title = '착용 중보다 전투력 +' + fmt(cell.better); button.append(up); }
       if (cell.owner) { const mark = el('span', 'mpl-badge mpl-worn', '착'); mark.title = cell.ownerName + ' 착용 중'; button.append(mark); }
-      button.setAttribute('aria-label', cell.name + ' +' + cell.enh + ', ' + cell.rarityName + ', ' + cell.slotName + (cell.tierNote ? ', ' + cell.tierNote : '') + (cell.owner ? ', ' + cell.ownerName + ' 착용 중' : '') + (cell.fresh ? ', 새로 얻음' : ''));
+      button.setAttribute('aria-label', cell.name + ' +' + cell.enh + ', ' + cell.rarityName + ', ' + cell.slotName + (cell.tierNote ? ', ' + cell.tierNote : '') + (cell.owner ? ', ' + cell.ownerName + ' 착용 중' : '') + (cell.better ? ', 더 좋음 전투력 +' + cell.better : '') + (cell.fresh ? ', 새로 얻음' : ''));
     } else if (cell.type === 'stack') {
       button.append(el('span', 'mpl-badge mpl-qty', fmt(cell.qty)));
       button.setAttribute('aria-label', cell.name + ' ' + fmt(cell.qty) + '개');

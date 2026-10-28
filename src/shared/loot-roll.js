@@ -8,10 +8,10 @@ import { pickLootRarity } from '../data/loot-tables.js';
  * DropSystem.onKill과 같은 순서로 난수를 소비한다.
  * @param {any} table lootTable(ch, rank, difficulty)
  * @param {() => number} rng
- * @param {{ baseGold: number, scale: number, summoned?: boolean, goldPerKill?: number, ledger?: boolean, rank?: string }} opts
- * @returns {Array<{ kind: string, n?: number, amount?: number, count?: number, id?: string, rarity?: string, slot?: string, pick?: number }>}
+ * @param {{ baseGold: number, scale: number, itemLevel?: number, summoned?: boolean, goldPerKill?: number, ledger?: boolean, rank?: string }} opts
+ * @returns {Array<{ kind: string, n?: number, amount?: number, count?: number, id?: string, rarity?: string, slot?: string, pick?: number, il?: number }>}
  */
-export function rollKillLoot(table, rng, { baseGold, scale, summoned = false, goldPerKill = 0, ledger = true, rank = table.rank }) {
+export function rollKillLoot(table, rng, { baseGold, scale, summoned = false, goldPerKill = 0, ledger = true, rank = table.rank, itemLevel = 0 }) {
   const out = [];
   const boss = rank === 'boss', elite = rank === 'elite';
   const amount = Math.max(1, Math.floor(baseGold * scale * table.goldMultiplier * (0.8 + rng() * 0.5)));
@@ -36,7 +36,7 @@ export function rollKillLoot(table, rng, { baseGold, scale, summoned = false, go
     const slot = SLOTS[Math.floor(rng() * SLOTS.length)];
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
-    out.push({ kind: 'item', rarity, slot, id: def.id });
+    out.push({ kind: 'item', rarity, slot, id: def.id, ...(itemLevel > 1 ? { il: itemLevel } : {}) });
   }
   return out;
 }
@@ -52,7 +52,7 @@ export function sumLoot(drops, into = { gold: 0, stones: 0, stones2: 0, stones3:
     else if (d.kind === 'heroShard') into.heroShards += d.n;
     else if (d.kind === 'transcendStone') into.transcendStones += d.n;
     else if (d.kind === 'material') into.materials[d.id] = (into.materials[d.id] || 0) + d.n;
-    else if (d.kind === 'item') into.items.push({ id: d.id, rarity: d.rarity, slot: d.slot });
+    else if (d.kind === 'item') into.items.push({ id: d.id, rarity: d.rarity, slot: d.slot, ...(d.il > 1 ? { il: d.il } : {}) });
   }
   return into;
 }

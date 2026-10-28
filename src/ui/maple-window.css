@@ -180,3 +180,5 @@
 .danger-zone .danger-confirm textarea[hidden] { display: none; }
 .danger-zone .danger-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.4; color: #e8c3c3; min-height: 44px; }
 .danger-zone .danger-check input { margin-top: 2px; width: 20px; height: 20px; flex: none; }
+.mpl-up { right: 2px; top: 2px; padding: 1px 4px; border-radius: 2px; background: #3fdc7a; color: #052a14; font-size: 11px; font-weight: 900; text-shadow: none; }
+.mpl-cell.is-better:not(.is-selected) { outline: 2px solid #3fdc7a; outline-offset: -2px; }

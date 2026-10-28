@@ -15,6 +15,7 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
+import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems } from '../game/gear-advice.js';
 import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
 import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
@@ -38,6 +39,7 @@ const BAG_SORTS = Object.freeze([
   { id: 'rarity', label: '등급순' },
   { id: 'enh', label: '강화순' },
   { id: 'recent', label: '최근순' },
+  { id: 'better', label: '더 좋은 순' },
 ]);
 const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 /** 고통 단계 장비 표시: 칸 모서리의 단계 표기와 색 구분 클래스(고대·태고). tp 가 없으면 아무것도 붙지 않는다. */
@@ -221,12 +223,28 @@ export function renderBag(meta, heroId) {
   const owners = equippedOwners(eco);
   // 가방은 그 영웅 소유 장비만(docs/GEAR_OWNERSHIP_VAULT.md). 다른 영웅으로 옮기려면 금고를 거친다.
   const all = eco.heroBag(heroId), vault = eco.vaultState();
+  // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
+  const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
+  const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
+  const junk = junkItems(eco, { heroId, rarities: clean?.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
+  const cleanHtml = clean ? '<div class="bag-clean" role="group" aria-label="가방 정리"><b>가방 정리</b>' + (junk.length
+      ? '<p>착용 중인 장비보다 약해 쓸 일이 없는 장비 <b>' + junk.length + '개</b>를 분해합니다 (노말 ' + (sum.byRarity.N || 0) + ' · 스페셜 ' + (sum.byRarity.S || 0) + (clean.includeE ? ' · 에픽 ' + (sum.byRarity.E || 0) : '') + ').<br>받는 것: 골드 +' + fmt(sum.gold) + ' · 강화석 +' + fmt(sum.stones) + (sum.stones2 ? ' · 상급 강화석 +' + fmt(sum.stones2) : '') + '</p>'
+      : '<p>지금 정리할 장비가 없습니다. 장착 중인 장비보다 약한 장비가 쌓이면 여기에 나타납니다.</p>') +
+    '<label class="bag-clean-e"><input type="checkbox" data-clean-e' + (clean.includeE ? ' checked' : '') + '> 에픽도 포함</label>' +
+    (junk.length ? (clean.step === 1
+      ? '<p class="bag-clean-warn" role="alert">되돌릴 수 없습니다. 장착 중인 장비와 유니크·레전드리는 건드리지 않습니다. 정말 분해할까요?</p><div class="bag-clean-btns"><button type="button" class="btn btn-red btn-sm" data-clean-confirm>예, ' + junk.length + '개 분해</button><button type="button" class="btn btn-ghost btn-sm" data-clean-back>아니요</button></div>'
+      : '<div class="bag-clean-btns"><button type="button" class="btn btn-blue btn-sm" data-clean-go>분해하기</button><button type="button" class="btn btn-ghost btn-sm" data-clean-close>닫기</button></div>')
+      : '<div class="bag-clean-btns"><button type="button" class="btn btn-ghost btn-sm" data-clean-close>닫기</button></div>') + '</div>' : '';
+  const toolsHtml = '<div class="bag-tools">' +
+    (plan.length ? '<button type="button" class="btn btn-gold btn-sm bag-best" data-bag-best>▲ 더 좋은 장비 장착 <small>' + plan.length + '곳 · 전투력 +' + fmt(plan.reduce((a, x) => a + x.delta, 0)) + '</small></button>' : '<span class="bag-best-none">장착 중인 장비가 가장 좋습니다</span>') +
+    '<button type="button" class="btn btn-ghost btn-sm bag-clean-open" data-bag-clean aria-expanded="' + !!clean + '">가방 정리' + (junk.length && !clean ? ' <small>' + junk.length + '</small>' : '') + '</button></div>' + cleanHtml;
   const items = all.filter((x) => (slot === 'all' || ITEM_BY_ID[x.id].slot === slot) && (rarity === 'all' || ITEM_BY_ID[x.id].rarity === rarity)).slice().sort((a, b) => {
     if (sort === 'recent') return b.uid - a.uid;
+    if (sort === 'better') return (better.get(b.uid) || 0) - (better.get(a.uid) || 0) || rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0);
     if (sort === 'enh') return (b.enh || 0) - (a.enh || 0) || rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity);
     return rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0);
   });
-  bag.innerHTML = '<div class="bag-bar"><div class="bag-filters" role="group" aria-label="장비 부위 필터">' + ['all', ...SLOTS].map((s) => '<button type="button" data-bag-slot="' + s + '" aria-pressed="' + (s === slot) + '">' + (s === 'all' ? '전체' : SLOT_NAME[s]) + '</button>').join('') + '</div>' +
+  bag.innerHTML = toolsHtml + '<div class="bag-bar"><div class="bag-filters" role="group" aria-label="장비 부위 필터">' + ['all', ...SLOTS].map((s) => '<button type="button" data-bag-slot="' + s + '" aria-pressed="' + (s === slot) + '">' + (s === 'all' ? '전체' : SLOT_NAME[s]) + '</button>').join('') + '</div>' +
     '<select class="bag-select" data-bag-rarity aria-label="등급 필터"><option value="all">등급</option>' + RARITIES.map((r) => '<option value="' + r + '"' + (r === rarity ? ' selected' : '') + '>' + RARITY_INFO[r].name + '</option>').join('') + '</select>' +
     '<select class="bag-select" data-bag-sort aria-label="정렬 기준">' + BAG_SORTS.map((entry) => '<option value="' + entry.id + '"' + (entry.id === sort ? ' selected' : '') + '>' + entry.label + '</option>').join('') + '</select>' +
     '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span>' +
@@ -234,13 +252,36 @@ export function renderBag(meta, heroId) {
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
       const isNew = isFresh(inst.uid);
-      const mark = (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
-      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + tierClass(inst) + '" data-inv="' + inst.uid + '" aria-label="' + esc(tierName(it.name, inst)) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (tierNote(inst) ? ', ' + tierNote(inst) : '') + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + '" title="' + esc(tierName(it.name, inst)) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + tierBadge(inst) + '</span><span class="inventory-name">' + esc(tierName(it.name, inst)) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
+      const up = better.get(inst.uid);
+      const mark = (up ? '<em class="bag-up" title="착용 중보다 전투력 +' + fmt(up) + '">▲ +' + fmt(up) + '</em>' : '') + (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
+      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + tierClass(inst) + '" data-inv="' + inst.uid + '" aria-label="' + esc(tierName(it.name, inst)) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (tierNote(inst) ? ', ' + tierNote(inst) : '') + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + (up ? ', 더 좋음 전투력 +' + up : '') + '" title="' + esc(tierName(it.name, inst)) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + tierBadge(inst) + '</span><span class="inventory-name">' + esc(tierName(it.name, inst)) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
     }).join('') || '<p class="bag-empty">' + (all.length ? '조건에 맞는 장비가 없습니다. 필터를 바꿔 보세요.' : '가방이 비어 있습니다. 던전에서 전리품을 모으거나 제작 공방에서 만들어 보세요.') + '</p>') + '</div>';
   const rerender = (focus) => { renderBag(meta, heroId); if (focus) $('hero-bag')?.querySelector(focus)?.focus({ preventScroll: true }); };
   bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => { meta.bagSlot = button.dataset.bagSlot; rerender('[data-bag-slot="' + meta.bagSlot + '"]'); });
   bag.querySelector('[data-bag-rarity]').onchange = (event) => { meta.bagRarity = event.target.value; rerender('[data-bag-rarity]'); };
   bag.querySelector('[data-bag-sort]').onchange = (event) => { meta.bagSort = event.target.value; rerender('[data-bag-sort]'); };
+  const refreshHero = () => { meta._sheetDirty = false; meta.renderHeroes?.(); };
+  bag.querySelector('[data-bag-best]')?.addEventListener('click', () => {
+    const done = applyBestEquip(eco, heroId);
+    meta.ui.toast(done.swaps.length ? '더 좋은 장비 ' + done.swaps.length + '곳 장착 · 전투력 ' + fmt(done.powerBefore) + ' → ' + fmt(done.powerAfter) : '바꿀 장비가 없습니다', done.swaps.length ? 'gold' : undefined);
+    if (done.swaps.length) audio.play('ui_confirm', { vol: 0.5 });
+    refreshHero();
+    if (done.swaps.length && heroId === eco.s.selected) meta.app.showcaseHero?.(heroId);   // 로비 캐릭터 외형도 바로 반영
+  });
+  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: false }; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-clean-e]')?.addEventListener('change', (event) => { meta.bagClean = { open: true, step: 0, includeE: event.target.checked }; rerender('[data-clean-e]'); });
+  bag.querySelector('[data-clean-go]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 1 }; rerender('[data-clean-confirm]'); });
+  bag.querySelector('[data-clean-back]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 0 }; rerender('[data-clean-go]'); });
+  bag.querySelector('[data-clean-close]')?.addEventListener('click', () => { meta.bagClean = null; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-clean-confirm]')?.addEventListener('click', () => {
+    // 누르는 순간 목록을 다시 계산한다(그사이 장착이 바뀌었을 수 있다). 화면에 보인 것과 개수가 달라도 지금 기준 후보만 분해한다.
+    const live = junkItems(eco, { heroId, rarities: clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), preview = salvagePreview(eco, live);
+    const out = salvageItems(eco, live.map((x) => x.uid));
+    meta.bagClean = null;
+    meta.ui.toast(out.ok ? '장비 ' + out.count + '개 분해 · 골드 +' + fmt(preview.gold) + ' · 강화석 +' + fmt(preview.stones + preview.stones2) : '분해하지 못했습니다 (저장 공간 확인)', out.ok ? 'gold' : 'red');
+    if (out.ok && out.count) audio.pick('coin', 2);
+    refreshHero();
+  });
   bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => { clearFresh(+button.dataset.inv); meta.showItem(+button.dataset.inv, heroId); });
   bag.querySelector('[data-bag-vault]').onclick = () => { audio.play('ui_click', { vol: 0.4 }); openVault(meta, heroId); };
 }
