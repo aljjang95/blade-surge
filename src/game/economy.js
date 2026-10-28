@@ -188,7 +188,7 @@ export class Economy {
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
-      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
+      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, gearDex: { v: 1, drop: {}, kin: {}, claimed: {} }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)

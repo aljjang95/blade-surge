@@ -44,8 +44,11 @@ export function normalizeGearDex(raw) {
   return { v: 1, drop, kin, claimed };
 }
 
-/** 저장에 정규화한 도감을 붙인다(없으면 필드 제거). */
-export function setGearDex(s, dex) { if (dex) s.gearDex = dex; else delete s.gearDex; }
+/**
+ * 저장에 정규화한 도감을 붙인다. 빈 결과도 "이관 완료" 표지(빈 도감)로 남긴다: 필드를 지우면 다음 로드가 이전 저장으로 보고
+ * 현재 소유 장비로 다시 소급해 일반 이동만으로 도감이 찬다. 이전 저장 판정은 gearDex 필드 유무(표지)다.
+ */
+export function setGearDex(s, dex) { s.gearDex = dex || { v: 1, drop: {}, kin: {}, claimed: {} }; }
 
 /** 첫 이관(원본에 gearDex 없음): 지금 영웅이 가진 장비(금고 제외) 종류를 그 영웅의 드랍 도감에 한 번 넣는다. */
 export function seedGearDex(s) {

@@ -211,7 +211,13 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   if (snapshot) {
     const sigil = Number.isSafeInteger(serverLineageSigil) && serverLineageSigil > 0 ? serverLineageSigil : 0;
     if (sigil > 0) s.lineageSigil = sigil;
-    setGearDex(s, normalizeGearDex(serverGearDex));
+    // 드랍 도감만 클라이언트가 실제 드랍 때 기록한 항목(원본 gearDex.drop)을 더하되, 지금 그 영웅이 가진 장비로 뒷받침되는 것만 인정한다.
+    // 소유만으로 채우는 소급(seedGearDex)은 하지 않으므로 이동·꺼내기로는 도감이 늘지 않는다. kin·claimed 는 서버 문서 값만.
+    const sv = normalizeGearDex(serverGearDex), own = normalizeGearDex(raw?.gearDex)?.drop || {}, held = {};
+    for (const x of s.inventory) if (x.owner) (held[x.owner] ||= new Set()).add(x.id);
+    const drop = {};
+    for (const h of Object.keys(HEROES)) { const l = [...new Set([...(sv?.drop?.[h] || []), ...(own[h] || []).filter((id) => held[h]?.has(id))])]; if (l.length) drop[h] = l; }
+    setGearDex(s, normalizeGearDex({ drop, kin: sv?.kin, claimed: sv?.claimed }));
   } else {
     const sv = normalizeGearDex(serverGearDex), mine = seedGearDex(s), merge = (a, b) => { const o = {}; for (const h of Object.keys(HEROES)) { const l = [...new Set([...(a?.[h] || []), ...(b?.[h] || [])])]; if (l.length) o[h] = l; } return o; };
     setGearDex(s, normalizeGearDex({ drop: merge(sv?.drop, mine?.drop), kin: sv?.kin, claimed: sv?.claimed }));

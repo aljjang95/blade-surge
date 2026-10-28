@@ -183,14 +183,14 @@ describe('장비 도감 (덩어리 2)', () => {
     expect(eco.s.gearDex.kin).toEqual({ mage: [it.id] }); expect(JSON.stringify(eco.s.gearDex.drop)).toBe(drop);
   });
 
-  test('소급 이관: 이전 저장(도감 없음)은 영웅 소유 장비로 한 번 채우고(금고 제외) 멱등, 빈 저장은 필드 생략', () => {
+  test('소급 이관: 이전 저장(도감 없음)은 영웅 소유 장비로 한 번 채우고(금고 제외) 멱등, 빈 저장도 빈 도감 표지', () => {
     const eco = newEco(); eco.addItem('N', 'weapon', undefined, 0, 'knight'); const v = stash(eco, 'E', 'mage');
     const raw: any = JSON.parse(JSON.stringify(eco.s)); delete raw.gearDex;
     const once = normalizeSave(JSON.parse(JSON.stringify(raw)), eco.fresh());
     expect(Object.keys(once.gearDex.drop)).toEqual(['knight']); expect(once.gearDex.drop.knight).not.toContain(v.id);
     expect(JSON.stringify(normalizeSave(JSON.parse(JSON.stringify(once)), eco.fresh()))).toBe(JSON.stringify(once));
     const empty: any = JSON.parse(JSON.stringify(raw)); empty.inventory = []; for (const h of Object.values(empty.heroes) as any[]) for (const k of Object.keys(h.equip)) h.equip[k] = null;
-    expect('gearDex' in normalizeSave(empty, eco.fresh())).toBe(false);
+    expect(normalizeSave(empty, eco.fresh()).gearDex).toEqual({ v: 1, drop: {}, kin: {}, claimed: {} });   // 빈 소급도 이관 완료 표지(P2-6)
     expect(normalizeGearDex({ drop: { knight: ['nope'], zzz: [Object.keys(ITEM_BY_ID)[0]] }, claimed: { knight: ['bad'] } })).toBeNull();
   });
 

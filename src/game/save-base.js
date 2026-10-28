@@ -105,7 +105,7 @@ export function normalizeSave(raw, fresh) {
   }
   // 장비 영웅 귀속(docs/GEAR_OWNERSHIP_VAULT.md 4절): 장착 = 소유, 귀속 이전 저장의 미장착 장비는 지금 고른 영웅 + 첫 이동 무료.
   normalizeGearOwnership(s, raw);
-  // 장비 도감(5.1): 원본에 gearDex 가 있으면 정화만, 없으면(이전 저장) 지금 영웅 소유 장비로 한 번 소급한다. 비면 필드를 두지 않는다.
+  // 장비 도감(5.1): 원본에 gearDex 가 있으면 정화만, 없으면(이전 저장) 지금 영웅 소유 장비로 한 번 소급한다. 소급이 비어도 빈 도감 표지를 남겨 다음 로드가 다시 소급하지 않게 한다.
   setGearDex(s, record(raw.gearDex) ? normalizeGearDex(raw.gearDex) : seedGearDex(s));
   // 순번은 줄지 않는다: 가장 큰 uid를 팔아도 저장된 invSeq를 유지해 uid 재사용과 서버(로드마다 정규화)·클라이언트 순번 차이를 막는다.
   s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), integer(s.invSeq, 1, 1));

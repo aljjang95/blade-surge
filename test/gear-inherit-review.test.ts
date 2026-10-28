@@ -24,14 +24,23 @@ describe('P2-2·5 shadowSnapshot: 서버 문장·도감 보존', () => {
     expect('lineageSigil' in imp.state).toBe(false);
   });
 
-  test('스냅샷은 서버 도감을 그대로 유지하고 현재 소유 장비로 드랍 도감을 소급하지 않는다(가져오기는 소급)', () => {
+  test('스냅샷은 서버 kin·claimed 를 유지하고 소유만으로 드랍 도감을 소급하지 않는다(가져오기는 소급)', () => {
     const eco = newEco(); eco.addItem('N', 'weapon', undefined, 0, 'knight'); eco.addItem('E', 'armor', undefined, 0, 'knight');
-    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    const raw: any = JSON.parse(JSON.stringify(eco.s)); delete raw.gearDex;   // 클라이언트 도감 기록 없음 = 소유만 있는 상태
     const server = dexOf({}, { kin: { mage: [Object.keys(ITEM_BY_ID)[0]] }, claimed: { knight: ['drop25'] } });
     const snap = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY, snapshot: true, serverGearDex: server } as any) as any;
     expect(snap.state.gearDex.drop).toEqual({}); expect(snap.state.gearDex.kin).toEqual(server.kin); expect(snap.state.gearDex.claimed).toEqual(server.claimed);
     const imp = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY, serverGearDex: server } as any) as any;
     expect((imp.state.gearDex.drop.knight || []).length).toBeGreaterThan(0);
+  });
+
+  test('스냅샷은 클라이언트가 기록한 드랍 항목 중 지금 그 영웅이 가진 장비만 더한다(실제 드랍은 도감에 오른다)', () => {
+    const eco = newEco(); const it = eco.addItem('N', 'weapon', undefined, 0, 'knight');
+    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    const other = Object.keys(ITEM_BY_ID).find((id) => id !== it.id)!;
+    raw.gearDex = dexOf({ knight: [it.id, other], mage: [it.id] }, { kin: { mage: [other] }, claimed: { knight: ['drop100'] } });
+    const snap = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY, snapshot: true, serverGearDex: dexOf({}) } as any) as any;
+    expect(snap.state.gearDex.drop).toEqual({ knight: [it.id] }); expect(snap.state.gearDex.kin).toEqual({}); expect(snap.state.gearDex.claimed).toEqual({});
   });
 });
 
@@ -64,7 +73,7 @@ describe('P2-6 소급 결과가 비어도 이관 완료 표지를 남긴다', ()
   });
   test('스냅샷이 서버의 빈 도감을 돌려줘도 서버 로드(normalizeSave)가 다시 소급하지 않는다', () => {
     const eco = newEco(); eco.addItem('N', 'weapon', undefined, 0, 'knight');
-    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    const raw: any = JSON.parse(JSON.stringify(eco.s)); delete raw.gearDex;
     const snap = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY, snapshot: true } as any) as any;
     const loaded: any = normalizeSave(JSON.parse(JSON.stringify(snap.state)), eco.fresh());
     expect(loaded.gearDex.drop).toEqual({});
