@@ -131,7 +131,7 @@ describe('무료 해금', () => {
     const eco = chosen('knight', { unlocked: 60, gems: 99999 });
     const before = JSON.stringify(eco.s);
     for (const id of ['mage', 'rogue', 'ranger', 'barbarian']) {
-      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'campaign', canFree: false, owned: false, need: HERO_CAMPAIGN_JOIN[id] });
+      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'campaign', canFree: false, owned: false, need: (HERO_CAMPAIGN_JOIN as Record<string, number>)[id] });
       expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'campaign' });
     }
     expect(JSON.stringify(eco.s)).toBe(before);
