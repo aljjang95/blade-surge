@@ -4,8 +4,9 @@ import * as THREE from 'three';
  * 전사 팔자걸음 보정(2026-10-28 대표님 실기기 피드백 "던전에서 전사 걸음이 팔자걸음").
  * 원인(측정): Tripo 몸체를 Mixamo 오토리그로 묶은 바인드 자세에서 발이 이미 바깥으로 벌어져 있다(검성 t1 약 +15°, 광전사 t1 약 +23°,
  * 마법사 −5°). 같은 Mixamo 달리기 클립이 영웅 모두에 약 +10°를 더하므로 전사만 발끝이 25~35° 벌어져 보였다. 무릎 방향·런타임 코드는 정상.
- * 골격(본 이름·바인드 자세)은 아바타·단계 몸체가 같이 묶여 있어 바꾸지 않는다. 대신 몸체마다 바인드 발각을 재서
- * 그 몸체가 쓰는 클립의 발 회전 트랙에만 '바인드 자세 기준 월드 Y 회전'을 곱한 복제 클립을 쓴다(원본 클립 캐시는 그대로).
+ * 골격(본 이름·바인드 자세)·클립은 아바타·단계 몸체·몸 교체 모션이 같이 묶여 있어 바꾸지 않는다. 대신 캐릭터 인스턴스의 발 본에
+ * '지금 몸체의 바인드 자세 기준 월드 Y 회전'을 기억시키고, 행렬을 만들 때만 애니메이션 회전 뒤에 곱한다(quaternion 값 자체는 클립 그대로).
+ * 몸 교체(단계·아바타) 뒤에는 새 몸체의 바인드 발각으로 다시 건다.
  */
 export const FOOT_FIX = Object.freeze({
   heroes: Object.freeze(['knight', 'barbarian']),
@@ -18,9 +19,13 @@ const SIDES = Object.freeze([['Left', 1], ['Right', -1]]);
 const DEG = 180 / Math.PI;
 
 function skinnedBody(scene) {
-  let found = null;
-  scene?.traverse?.((node) => { if (!found && node.isSkinnedMesh && node.skeleton?.bones.some((b) => b.name === 'mixamorigLeftFoot')) found = node; });
-  return found;
+  // 부츠·갑옷 파츠도 같은 본에 묶인 스킨이다. 몸체(libraryBody) 스킨을 먼저 고른다.
+  let found = null, any = null;
+  scene?.traverse?.((node) => {
+    if (!node.isSkinnedMesh || !node.skeleton?.bones.some((b) => b.name === 'mixamorigLeftFoot')) return;
+    any ??= node; if (!found && node.userData?.libraryBody) found = node;
+  });
+  return found || any;
 }
 
 /** 바인드 자세의 본 월드 행렬(스킨 기준 공간). */
@@ -43,6 +48,7 @@ export function bindFootYaw(skeleton, side) {
 export function footToeCorrections(scene, heroId, cfg = FOOT_FIX) {
   if (!cfg.heroes.includes(heroId)) return null;
   const body = skinnedBody(scene); if (!body) return null;
+  /** @type {{ Left?: { yaw: number, fix: number, q: THREE.Quaternion }, Right?: { yaw: number, fix: number, q: THREE.Quaternion } }} */
   const out = {};
   let any = false;
   for (const [side, sign] of SIDES) {
@@ -57,26 +63,26 @@ export function footToeCorrections(scene, heroId, cfg = FOOT_FIX) {
   return any ? out : null;
 }
 
-/** 발 회전 트랙만 보정한 복제 클립. 나머지 트랙 객체는 원본과 공유한다(메모리 증가 = 발 트랙 2개). */
-export function correctFootClips(clips, corrections) {
-  if (!corrections) return clips;
-  const scratch = new THREE.Quaternion();
-  return clips.map((clip) => {
-    let changed = false;
-    const tracks = clip.tracks.map((track) => {
-      const side = SIDES.find(([s]) => track.name === `mixamorig${s}Foot.quaternion`)?.[0];
-      const fix = side && corrections[side];
-      if (!fix) return track;
-      const values = Float32Array.from(track.values);
-      for (let i = 0; i < values.length; i += 4) {
-        scratch.fromArray(values, i).multiply(fix.q).normalize().toArray(values, i);
-      }
-      changed = true;
-      return new THREE.QuaternionKeyframeTrack(track.name, track.times, values, track.getInterpolation?.());
-    });
-    if (!changed) return clip;
-    const next = new THREE.AnimationClip(clip.name, clip.duration, tracks, clip.blendMode);
-    next.userData = { ...(clip.userData || {}), footToeFix: true };
-    return next;
-  });
+const _fixed = new THREE.Quaternion();
+/** 발 본 전용 updateMatrix: 애니메이션이 넣은 회전 뒤에 보정을 곱해 행렬만 만든다(누적되지 않는다). */
+function footFixUpdateMatrix() {
+  const fix = this.userData.footToeFix;
+  this.matrix.compose(this.position, fix ? _fixed.copy(this.quaternion).multiply(fix) : this.quaternion, this.scale);
+  this.matrixWorldNeedsUpdate = true;
+}
+
+/**
+ * 캐릭터 인스턴스(root)의 발 본에 지금 몸체 기준 보정을 건다. 보정이 필요 없으면 걸려 있던 보정을 푼다.
+ * spawn 직후와 몸 교체 직후에 부른다. 반환: 걸린 보정(없으면 null).
+ */
+export function installFootToeFix(root, heroId = root?.userData?.authoredContract?.heroId) {
+  const corrections = heroId ? footToeCorrections(root, heroId) : null;
+  for (const [side] of SIDES) {
+    const bone = root?.getObjectByName?.(`mixamorig${side}Foot`);
+    if (!bone?.isBone) continue;
+    const q = corrections?.[side]?.q || null;
+    if (q) bone.userData.footToeFix = q; else delete bone.userData.footToeFix;
+    if (q && bone.updateMatrix !== footFixUpdateMatrix) bone.updateMatrix = footFixUpdateMatrix;
+  }
+  return corrections;
 }

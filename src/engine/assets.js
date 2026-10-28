@@ -21,7 +21,7 @@ import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
 import { removeWeaponHalo } from '../game/weapon-glow.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
-import { correctFootClips, footToeCorrections } from './hero-foot-fix.js';
+import { installFootToeFix } from './hero-foot-fix.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
@@ -179,8 +179,7 @@ async function prepareLibraryHero(gltf, asset) {
     if (source) await loadHeroModel(heroId, source.armorTier || 1);
   }
   const { animations, clipAsset } = resolveSharedHeroClips(heroClipCache, heroId, asset, gltf.animations);
-  // 전사 팔자걸음: 이 몸체의 바인드 발각만큼 발 트랙을 보정한 복제 클립을 쓴다(공유 캐시 원본은 그대로).
-  gltf.animations = correctFootClips(animations, footToeCorrections(gltf.scene, heroId));
+  gltf.animations = animations;
   const handBones = heroHandBones(gltf.scene);
   // 메시 전용 단계·아바타는 1단계(클립 원본)의 활 그립·노크 소켓을 같은 이름의 본에 이어받는다.
   if (heroId === 'ranger') adoptRangerSockets(gltf.scene, heroBodies.get(clipAsset.id)?.scene || null);
@@ -445,6 +444,8 @@ function swapLibraryHeroBody(root, gltf, target) {
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
   root.userData.libraryBodyMotionIdentity = identity;
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  // 전사 팔자걸음 보정은 몸체마다 바인드 발각이 달라 새 몸 기준으로 다시 건다.
+  installFootToeFix(root);
   // 등급 부츠는 새 몸의 본·역바인드로 다시 묶는다(부츠가 없으면 무동작).
   refitHeroBoots(root, createBootsMaterial);
   refitHeroGearParts(root, createBootsMaterial);   // 갑옷 외형 파츠도 같은 방식(파츠가 없으면 무동작)
@@ -569,7 +570,7 @@ export function spawnCharacter(gltf) {
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
-  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); }
+  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); if (contract?.role === 'hero') installFootToeFix(root, contract.heroId); }
   catch (error) {
     // 아직 공유 재질을 쓰므로 실패한 clone의 skeleton·mixer만 정리한다.
     rigRoot.traverse(node => { if (node.isSkinnedMesh) node.skeleton.dispose(); });
