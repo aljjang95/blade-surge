@@ -17,6 +17,9 @@ const GARDEN_BONE = { color: '#a7beb6', amount: 0.22, emissive: '#071a16', remap
 const MAGE_REMAP = { ...GARDEN_REMAP, hues: [190, 345] };
 const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 360], mix: 1, baseMix: 0.6 }, emissive: '#174a40' };
 
+/** 2장 불씨 왕국의 용광로 — 그을음 낀 몸, 쇳물 주황 발광 소품. */
+const FORGE_SKIN = { color: '#c9a48a', amount: 0.18, emissive: '#140600' };
+
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
@@ -60,6 +63,47 @@ export const CHAPTER_DRESS = Object.freeze({
       frost_yeti: { color: '#9fb8b0', amount: 0.35, props: ['brokenBellLarge'] },
       demon_lord: { color: '#8fa8a0', amount: 0.35, props: ['bellCrown'] },
       treant: { color: '#9fb39c', amount: 0.3, props: ['graveLilies'] },
+    },
+  },
+  2: {
+    name: '멈추지 못한 장인',
+    species: {
+      // 앞치마 오크: 같은 하루의 노동에 굳은 장인. 앞치마와 등에 멘 망치.
+      orc: { ...FORGE_SKIN, props: ['smithApron', 'forgeHammerBack'] },
+      // 꼬마 화부: 풀무를 지고 불을 지핀다.
+      orc_blob: { ...FORGE_SKIN, props: ['bellowsBack'] },
+      // 부족 전사: 미완성 칼 다발을 지고 다닌다.
+      tribal: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
+      // 가시 수호병 → 모루 방패.
+      cacto_wall: { ...FORGE_SKIN, props: ['anvilShield'] },
+      // 폭발 임프: 머리 심지에 불이 붙어 있다(자폭 경고와 같은 읽기).
+      bomb_imp: { props: ['emberWick'] },
+      imp: { ...FORGE_SKIN, props: ['emberCap'] },
+      ash_burrower: { props: ['emberCap'] },
+      // 화염 정령: 회수된 집집의 난롯불 — 난로 쇠고리 둘레의 불씨.
+      hywirl: { props: ['hearthRing'] },
+      // 부족 주술사: 깨진 질그릇 등잔을 머리에 이고 불씨를 던진다.
+      tribal_shaman: { ...FORGE_SKIN, props: ['emberLantern'] },
+      elite_orc_chief: { ...FORGE_SKIN, props: ['smithApron', 'unfinishedGreatsword'] },
+      elite_bluedemon: { props: ['emberChains'] },
+      // 대장장이 이그란(중간 보스)·화왕 발드(최종 보스, 왕관 용광로).
+      forge_midboss: { ...FORGE_SKIN, props: ['smithApron', 'unfinishedBlades', 'forgeHammerBack'] },
+      forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
+    },
+    assets: {
+      goblin_brute: { ...FORGE_SKIN, props: ['smithApron', 'forgeHammerBack'] },
+      goblin_raider: { ...FORGE_SKIN, props: ['bellowsBack'] },
+      goblin_chief: { ...FORGE_SKIN, props: ['smithApron'] },
+      treant: { ...FORGE_SKIN, props: ['anvilShield'] },
+      mushroom_shaman: { props: ['emberCap'] },
+      fire_phoenix: { props: ['hearthRing'] },
+      demon_lord: { props: ['crucibleCrown'] },
+      ember_drake: { props: ['emberChains'] },
+      frost_yeti: { ...FORGE_SKIN, props: ['smithApron'] },
+      bone_knight: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
+      skeleton_mage: { ...FORGE_SKIN, props: ['emberLantern'] },
+      void_wisp: { props: ['hearthRing'] },
+      slime: { props: ['emberWick'] },
     },
   },
 });

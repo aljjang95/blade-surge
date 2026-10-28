@@ -9,6 +9,8 @@ import { mulberry32 } from './world.js';
 
 /** 장 대기 보정: 경로 대기값(T)을 장 색 쪽으로 weight 만큼 섞는다. 1장은 청록·묘비 회색(WORLD_BIBLE 2장 표). */
 export const CHAPTER_GRADES = Object.freeze({
+  // 2장 용광로: 그을린 갈색·쇳물 주황. 한 장 안의 tribunal(분홍)·archive(파랑) 경로를 kiln 쪽으로.
+  2: { weight: .7, fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], torch: 0xff7034, tint: 0xd8a28b, look: 'kiln', fogHorizon: 0xd35632 },
   1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
 
@@ -70,20 +72,61 @@ const GARDEN_KIT = {
     piece(new THREE.CylinderGeometry(.05, .07, .9, 5), C.iron, [.55, .07, .25], [90, 30, 0]),
   ],
 };
-const KITS = Object.freeze({ 1: { kit: GARDEN_KIT, mix: [['tomb', .5], ['lilies', .35], ['bell', .15]], perRoom: 9 } });
+const F = { slag: 0x2a2421, slagDark: 0x1c1816, iron: 0x3d3f42, ironLight: 0x6a6c70, wood: 0x5a3b26, woodDark: 0x3a2618, clay: 0x8a5a3c, glow: 0xff8a3c, glowHot: 0xffc46a };
+/** 2장 소품: 식은 쇳물 웅덩이, 빈 그릇이 놓인 식탁, 미완성 칼 걸이, 모루. 발광은 쇳물 주황 하나. */
+const FORGE_KIT = {
+  slag: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.9, 1.05, .08, 9), F.slag, [0, .04, 0], [0, 0, 0], [1, 1, .75]), piece(new THREE.DodecahedronGeometry(.2, 0), F.slagDark, [.55, .1, .2])],
+    glow: [piece(new THREE.BoxGeometry(1.1, .02, .05), F.glow, [0, .085, 0], [0, 28, 0]), piece(new THREE.BoxGeometry(.6, .02, .04), F.glow, [.15, .085, .15], [0, -40, 0]), piece(new THREE.BoxGeometry(.45, .02, .04), F.glowHot, [-.25, .085, -.1], [0, 75, 0])],
+  }),
+  table: () => {
+    const solid = [piece(new THREE.BoxGeometry(1.5, .1, .7), F.wood, [0, .72, 0])];
+    for (const [x, z] of [[-.65, -.28], [.65, -.28], [-.65, .28], [.65, .28]]) solid.push(piece(new THREE.BoxGeometry(.08, .7, .08), F.woodDark, [x, .35, z]));
+    // 빈 그릇 세 개(드라칸이 잃은 가족의 온기).
+    for (const x of [-.45, 0, .45]) solid.push(piece(new THREE.CylinderGeometry(.13, .08, .09, 8, 1, true), F.clay, [x, .82, 0]));
+    return solid;
+  },
+  rack: () => {
+    const solid = [piece(new THREE.BoxGeometry(1.3, .08, .12), F.woodDark, [0, 1.15, 0]), piece(new THREE.BoxGeometry(.1, 1.2, .1), F.woodDark, [-.6, .6, 0]), piece(new THREE.BoxGeometry(.1, 1.2, .1), F.woodDark, [.6, .6, 0])], glow = [];
+    for (const [i, x] of [-.35, 0, .35].entries()) {
+      const len = .8 + i * .08;
+      solid.push(piece(new THREE.BoxGeometry(.1, len, .02), F.ironLight, [x, 1.1 - len / 2, .02]));
+      glow.push(piece(new THREE.BoxGeometry(.025, len * .55, .022), i === 1 ? F.glowHot : F.glow, [x + .045, 1.1 - len * .75, .02]));
+    }
+    return { solid, glow };
+  },
+  anvil: () => ({
+    solid: [
+      piece(new THREE.BoxGeometry(.55, .18, .3), F.iron, [0, .62, 0]), piece(new THREE.ConeGeometry(.12, .4, 6), F.iron, [.45, .62, 0], [0, 0, -90]),
+      piece(new THREE.BoxGeometry(.28, .32, .22), F.iron, [0, .38, 0]), piece(new THREE.CylinderGeometry(.32, .38, .22, 8), F.woodDark, [0, .11, 0]),
+      piece(new THREE.CylinderGeometry(.025, .025, .55, 5), F.woodDark, [-.1, .75, .1], [0, 0, 70]), piece(new THREE.BoxGeometry(.12, .1, .1), F.ironLight, [-.32, .82, .1]),
+    ],
+    glow: [piece(new THREE.BoxGeometry(.3, .02, .14), F.glow, [.05, .715, 0])],
+  }),
+};
+const KITS = Object.freeze({
+  1: { kit: GARDEN_KIT, mix: [['tomb', .5], ['lilies', .35], ['bell', .15]], perRoom: 9 },
+  2: { kit: FORGE_KIT, mix: [['slag', .3], ['rack', .25], ['anvil', .25], ['table', .2]], perRoom: 8 },
+});
 
-let material = null;
-function sceneryMaterial() {
-  if (!material) { material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, metalness: .06 }); material.userData.sharedDress = true; }
-  return material;
+let material = null, glowMaterial = null;
+function sceneryMaterials() {
+  if (!material) {
+    material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, metalness: .06 });
+    glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    material.userData.sharedDress = glowMaterial.userData.sharedDress = true;
+  }
+  return [material, glowMaterial];
 }
 const kitCache = new Map();
+/** 소품 지오메트리(불투명·발광). 키트 함수는 배열(불투명만) 또는 { solid, glow } 를 돌려준다. */
 function kitGeometry(ch, key) {
   const id = `${ch}|${key}`;
   if (!kitCache.has(id)) {
-    const parts = KITS[ch].kit[key]();
-    const g = mergeGeometries(parts, false); for (const p of parts) p.dispose(); g.computeBoundingSphere();
-    kitCache.set(id, g);
+    const built = KITS[ch].kit[key]();
+    const { solid, glow = [] } = Array.isArray(built) ? { solid: built } : built;
+    const merge = (parts) => { if (!parts.length) return null; const g = mergeGeometries(parts, false); for (const part of parts) part.dispose(); g.computeBoundingSphere(); return g; };
+    kitCache.set(id, { solid: merge(solid), glow: merge(glow) });
   }
   return kitCache.get(id);
 }
@@ -135,11 +178,15 @@ export function buildChapterScenery(floor, ch) {
     chunks.get(id).list.push(it);
   }
   for (const { key, list } of chunks.values()) {
-    const mesh = new THREE.InstancedMesh(kitGeometry(ch, key), sceneryMaterial(), list.length);
-    list.forEach((it, i) => mesh.setMatrixAt(i, m.compose(p.set(it.x, 0, it.z), q.setFromAxisAngle(up, it.yaw), s.setScalar(it.s))));
-    mesh.instanceMatrix.needsUpdate = true; mesh.castShadow = false; mesh.receiveShadow = true; mesh.computeBoundingSphere();
-    mesh.name = `chapter-scenery-${key}`;
-    group.add(mesh);
+    const geo = kitGeometry(ch, key), mats = sceneryMaterials();
+    for (const [k, g] of [[0, geo.solid], [1, geo.glow]]) {
+      if (!g) continue;
+      const mesh = new THREE.InstancedMesh(g, mats[k], list.length);
+      list.forEach((it, i) => mesh.setMatrixAt(i, m.compose(p.set(it.x, 0, it.z), q.setFromAxisAngle(up, it.yaw), s.setScalar(it.s))));
+      mesh.instanceMatrix.needsUpdate = true; mesh.castShadow = false; mesh.receiveShadow = !k; mesh.computeBoundingSphere();
+      mesh.name = `chapter-scenery-${key}${k ? '-glow' : ''}`;
+      group.add(mesh);
+    }
   }
   group.userData.dispose = () => { group.removeFromParent(); for (const c of group.children) c.dispose?.(); };
   return group;
