@@ -21,6 +21,7 @@ import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
 import { removeWeaponHalo } from '../game/weapon-glow.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
+import { correctFootClips, footToeCorrections } from './hero-foot-fix.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
@@ -178,7 +179,8 @@ async function prepareLibraryHero(gltf, asset) {
     if (source) await loadHeroModel(heroId, source.armorTier || 1);
   }
   const { animations, clipAsset } = resolveSharedHeroClips(heroClipCache, heroId, asset, gltf.animations);
-  gltf.animations = animations;
+  // 전사 팔자걸음: 이 몸체의 바인드 발각만큼 발 트랙을 보정한 복제 클립을 쓴다(공유 캐시 원본은 그대로).
+  gltf.animations = correctFootClips(animations, footToeCorrections(gltf.scene, heroId));
   const handBones = heroHandBones(gltf.scene);
   // 메시 전용 단계·아바타는 1단계(클립 원본)의 활 그립·노크 소켓을 같은 이름의 본에 이어받는다.
   if (heroId === 'ranger') adoptRangerSockets(gltf.scene, heroBodies.get(clipAsset.id)?.scene || null);
