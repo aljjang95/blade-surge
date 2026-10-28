@@ -1,11 +1,17 @@
 import { HEROES, levelExp } from '../data/heroes.js';
 import { canLearnSkill } from '../data/skill-tree.js';
-import { ITEM_BY_ID, SLOTS, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
+import * as Items from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, ENH_MAX, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
+import { planBestEquip, junkItems, salvagePreview } from './gear-advice.js';
+
+// 강화 규칙은 다른 작업이 바꿀 수 있어 값을 박지 않고 items.js 의 함수를 호출 시점에 읽는다(없으면 0 = 위험 없음).
+const rule = (name, level) => { const fn = Items[name]; const value = typeof fn === 'function' ? Number(fn(level)) : 0; return Number.isFinite(value) ? value : 0; };
+export const JUNK_MIN = 5;   // 가방 정리 안내를 띄우는 최소 개수
 
 /** Read-only next steps, each affordable on its own. Never a bulk purchase quote. */
-export function growthOptions(save) {
+export function growthOptions(save, eco = null) {
   const heroId = save?.selected, hero = save?.heroes?.[heroId], def = HEROES[heroId];
   if (!hero || !def) return [];
   const options = [];
@@ -29,6 +35,20 @@ export function growthOptions(save) {
     options.push({ kind: 'equipment', heroId, uid: item.uid, name: ITEM_BY_ID[item.id].name, from: item.enh, to: item.enh + 1, gold, stones });
     break;
   }
+  // +8 이후: 확률 구간도 계속 안내한다. 성공률·파괴·하락은 items.js 규칙을 지금 읽어 그대로 보여 주고, 실제 강화는 화면에서 사람이 고른다.
+  if (!options.some(o => o.kind === 'equipment')) {
+    let pick = null;
+    for (const slot of SLOTS) {
+      const item = save.inventory?.find(x => x.uid === hero.equip?.[slot]);
+      if (!item || ITEM_BY_ID[item.id]?.slot !== slot || !Number.isInteger(item.enh) || item.enh < 8 || item.enh >= ENH_MAX) continue;
+      const gold = enhanceCost(item.enh), stones = enhanceStones(item.enh), stoneKey = STONE_KEY[enhanceStoneTier(item.enh)];
+      if (!(save.gold >= gold) || !((save[stoneKey] || 0) >= stones)) continue;
+      if (!pick || item.enh < pick.item.enh) pick = { item, gold, stones };
+    }
+    if (pick) options.push({ kind: 'equipment', mode: 'risk', heroId, uid: pick.item.uid, name: ITEM_BY_ID[pick.item.id].name, from: pick.item.enh, to: pick.item.enh + 1,
+      gold: pick.gold, stones: pick.stones, chance: enhanceChance(pick.item.enh), destroy: rule('destroyChance', pick.item.enh), down: rule('enhanceDown', pick.item.enh),
+      protect: save.protect || 0 });
+  }
   // 스킬은 스킬 포인트(SP)로 배우고 올린다. 지금 남은 SP로 가능한 것 중 가장 낮은 레벨(새 각성 습득 포함)을 안내한다.
   const skills = def.skills.map((skill, index) => ({ skill, index, rank: Math.floor(Number(hero.skills?.[index]) || 0), check: canLearnSkill(def, hero, index) }))
     .filter(({ check }) => check.ok)
@@ -41,7 +61,26 @@ export function growthOptions(save) {
   const node = MASTERY_NODES.find(n => !unlocked.includes(n.id) && mastery?.renown >= n.cost
     && (n.tier === 1 || unlocked.includes(n.path + '_' + (n.tier - 1))));
   if (node) options.push({ kind: 'mastery', heroId, id: node.id, name: node.name, description: node.description, renown: node.cost });
+  if (eco) options.push(...gearAndSinkOptions(eco, save, heroId));
   return options;
+}
+
+/** 장비 교체·가방 정리·남는 재화를 쓸 곳(소환·훈련·초월). 모두 읽기 전용 견적이며 누르기 전에는 아무것도 쓰지 않는다. */
+function gearAndSinkOptions(eco, save, heroId) {
+  const out = [];
+  const plan = planBestEquip(eco, heroId);
+  if (plan.length) out.push({ kind: 'gear', mode: 'equipBest', heroId, uid: plan[0].uid, count: plan.length, delta: plan.reduce((sum, swap) => sum + swap.delta, 0) });
+  const junk = junkItems(eco);
+  if (junk.length >= JUNK_MIN) { const sum = salvagePreview(eco, junk); out.push({ kind: 'gear', mode: 'cleanup', heroId, count: junk.length, gold: sum.gold, stones: sum.stones + sum.stones2 }); }
+  const training = eco.trainingQuote?.(heroId);
+  if (training?.ok) out.push({ kind: 'training', heroId, from: training.level, to: training.nextLevel, gold: training.cost });
+  const transcend = eco.transcendQuote?.(heroId);
+  if (transcend?.ok && transcend.next) out.push({ kind: 'transcend', heroId, from: transcend.grade, to: transcend.next });
+  for (const banner of ['beginner', 'hero', 'gear']) {
+    const quote = eco.pullQuote?.(10, banner) ?? { ok: false };
+    if (quote.ok) { out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets }); break; }
+  }
+  return out;
 }
 
 /** A single hunt's observed growth. Missing observations never become invented gains. */

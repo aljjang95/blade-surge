@@ -159,6 +159,8 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
+  // 노말 장비 자동 분해(장착 중보다 약한 노말만). 기본 꺼짐, 직접 켠 true/false 만 저장한다.
+  s.settings.autoSalvageN = raw.settings?.autoSalvageN === true;
   // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
   s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;

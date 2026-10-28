@@ -4,7 +4,7 @@ import { growthOptions, growthSummary } from '../src/game/growth-options.js';
 import { HEROES, levelExp } from '../src/data/heroes.js';
 import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
-import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
+import { ITEM_BY_ID, ENH_MAX, STONE_KEY, enhanceCost, enhanceStones, enhanceChance, destroyChance, enhanceStoneTier } from '../src/data/items.js';
 import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -50,16 +50,22 @@ test('viewing growth options does not mutate the save, and every quoted action u
   }
 });
 
-test('equipment suggestions require the actual gold and stone cost and never enter a chance-based step', () => {
+test('equipment suggestions require the actual gold and the right-tier stone cost; +8 and above show the live odds (2026-10-28)', () => {
   const eco = fixture(); const save: any = eco.s, item = save.inventory[0];
-  for (let level = 0; level <= 20; level++) {
-    item.enh = level; save.gold = enhanceCost(level); save.stones = enhanceStones(level);
-    expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(level < 8);
+  for (let level = 0; level < ENH_MAX; level++) {
+    const key = STONE_KEY[enhanceStoneTier(level)];
+    item.enh = level; save.gold = enhanceCost(level); for (const k of ['stones', 'stones2', 'stones3']) save[k] = 0; save[key] = enhanceStones(level);
+    const option: any = growthOptions(save).find(o => o.kind === 'equipment');
+    expect(!!option).toBe(true);
+    // 100% 구간은 기존 그대로, +8 이후는 위험 구간 표시(성공률·파괴·하락을 규칙 함수에서 읽음)
+    if (level < 8) expect(option.mode).toBeUndefined(); else { expect(option.mode).toBe('risk'); expect(option.chance).toBe(enhanceChance(level)); expect(option.destroy).toBe(destroyChance(level)); }
     save.gold--;
     expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
-    save.gold++; if (enhanceStones(level)) save.stones--;
+    save.gold++; if (enhanceStones(level)) save[key]--;
     if (enhanceStones(level)) expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
   }
+  item.enh = ENH_MAX; save.gold = 1e9; save.stones = save.stones2 = save.stones3 = 1e9;
+  expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);   // 최대 강화는 더 안내하지 않는다
 });
 
 test('only the selected hero equipped item is suggested; removed items and foreign slots are ignored', () => {
