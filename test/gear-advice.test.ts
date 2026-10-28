@@ -45,13 +45,15 @@ test('최선 장착: 슬롯마다 가장 좋은 것으로 한 번에 교체하�
   expect(planBestEquip(eco, hero)).toEqual([]);
 });
 
-test('가방 정리: 장착 중보다 약한 N/S만 후보, 장착·U/L·더 좋은 것은 보호, 분해는 economy.salvage 보상과 일치', () => {
+test('가방 정리: 장착 중보다 약한 N/S/E가 후보(E는 룬 없고 엄격히 약할 때), 장착·U/L·더 좋은 것은 보호, 분해는 economy.salvage 보상과 일치', () => {
   const eco = make(), hero = eco.s.selected;
   const worn = give(eco, id('weapon', 'S'), 5); eco.equip(hero, worn.uid);
   const junkN = give(eco, id('weapon', 'N')), junkS = give(eco, id('weapon', 'S', 1), 0), strongE = give(eco, id('weapon', 'E'), 8), uniq = give(eco, id('weapon', 'U'), 0), epicWeak = give(eco, id('weapon', 'E', 1), 0);
   const j = junkItems(eco).map((x: any) => x.uid);
   expect(j).toContain(junkN.uid); expect(j).toContain(junkS.uid);
-  for (const keep of [worn, strongE, uniq, epicWeak]) expect(j).not.toContain(keep.uid);
+  expect(j).toContain(epicWeak.uid);   // 끼고 있는 S+5보다 약한 E 는 기본 후보
+  for (const keep of [worn, strongE, uniq]) expect(j).not.toContain(keep.uid);
+  expect(junkItems(eco, { rarities: ['N', 'S'] }).map((x: any) => x.uid)).not.toContain(epicWeak.uid);
   expect(junkItems(eco, { rarities: ['E'] }).every((x: any) => x.rarity === 'E')).toBe(true);
   const preview = salvagePreview(eco, junkItems(eco)), gold0 = eco.s.gold, stones0 = eco.s.stones;
   const out = salvageItems(eco, j);
@@ -149,4 +151,17 @@ test('비교 결과 캐시: 같은 상태에서는 재사용하고, 강화·장�
   expect(betterItems(eco, hero).has(cand.uid)).toBe(true);
   eco.equip(hero, cand.uid);                              // 장착하면 더 이상 후보가 아님
   expect(betterItems(eco, hero).has(cand.uid)).toBe(false);
+});
+
+test('가방 정리 E: 룬이 박힌 E·같은 점수 E·업그레이드는 제외하고, 자동 분해(N 전용)는 E를 건드리지 않는다', () => {
+  const eco = make(), hero = eco.s.selected;
+  const worn = give(eco, id('weapon', 'E', 1), 5); eco.equip(hero, worn.uid);
+  const weakE = give(eco, id('weapon', 'E', 0), 0), runed = give(eco, id('weapon', 'E', 0), 0, { sockets: ['x'] }), tie = give(eco, worn.id, 5), junkN = give(eco, id('weapon', 'N'));
+  const j = junkItems(eco).map((x: any) => x.uid);
+  expect(j).toContain(weakE.uid); expect(j).toContain(junkN.uid);
+  expect(j).not.toContain(runed.uid); expect(j).not.toContain(tie.uid);
+  eco.s.settings = { ...(eco.s.settings || {}), autoSalvageN: true };
+  const auto = autoSalvageNormal(eco);
+  expect(auto?.count).toBe(1);
+  expect(eco.s.inventory.some((x: any) => x.uid === weakE.uid)).toBe(true);
 });

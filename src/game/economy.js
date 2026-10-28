@@ -394,8 +394,26 @@ export class Economy {
       const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
       const nextIdx = Math.max(1, progress), joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
       if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
+      this.grantCompanionKit(id, nextIdx);
     }
     return joined;
+  }
+  /**
+   * 합류 동료 시작 장비: 부위마다 에픽(E)·강화 0·il = 다음 관문의 드랍 장비 레벨 한 점씩, 그 영웅 소유로 만들어 바로 착용시킨다.
+   * 맨몸으로 합류한 마법사가 3-1에서 전투력 0.67배로 쓰러졌다(가방은 영웅 소유라 동료 가방이 비어 있다). 난수 없음 —
+   * 부위별 ITEM_POOL 의 첫 E 장비를 고정 규칙으로 고른다(장비에 무기 종류가 없다). 캠페인 합류에서만 부르고 서버 정산도 같은 completeStage 를 지난다.
+   * 이미 낀 부위는 건드리지 않는다. 저장은 호출자가 한다.
+   */
+  grantCompanionKit(heroId, nextIdx) {
+    const h = this.s.heroes[heroId]; if (!h) return [];
+    const n = Math.max(1, nextIdx), il = dropItemLevel({ ch: Math.floor((n - 1) / STAGES_PER_CHAPTER) + 1, st: (n - 1) % STAGES_PER_CHAPTER + 1 });
+    const given = [];
+    for (const slot of SLOTS) {
+      if (h.equip[slot]) continue;
+      const def = ITEM_POOL[slot].find((x) => x.rarity === 'E'); if (!def) continue;
+      const inst = this.pushItem(def.id, { owner: heroId, il }); h.equip[slot] = inst.uid; given.push(inst.uid);
+    }
+    return given;
   }
   /** 환불·회수·정화 뒤 출전 영웅과 직업이 소유 영웅 안에 있게 맞춘다. */
   reconcileOwnership() { reconcileSelectedHero(this.s); dropUnownedJob(this.s); }
