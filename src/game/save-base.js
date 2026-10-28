@@ -1,5 +1,6 @@
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
+import { ITEM_LEVEL_MAX } from '../data/item-tier.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { GACHA_BANNERS } from '../data/gacha-banners.js';
@@ -91,7 +92,8 @@ export function normalizeSave(raw, fresh) {
   s.inventory = s.inventory.filter((item) => {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
     seen.add(item.uid); return true;
-  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}) }));
+  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}),
+    ...(integer(item.tp, 0, 0, 50) === 0 && integer(item.il, 0, 0, ITEM_LEVEL_MAX) > 1 ? { il: integer(item.il, 0, 0, ITEM_LEVEL_MAX) } : {}) }));
   const byUid = new Map(s.inventory.map((item) => [item.uid, item]));
   const equipped = new Set();
   for (const h of Object.values(s.heroes)) for (const slot of SLOTS) {

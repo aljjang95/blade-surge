@@ -3,7 +3,8 @@
 // 클라이언트가 바꿀 수 있는 사실은 처치 수·경과 시간·별 등뿐이며 T1 상한이 막는다.
 import { stageDef, ENEMIES, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { applyDifficulty, resolveDifficulty, tormentTierOf } from '../game/difficulty.js';
-import { lootTable } from '../data/loot-tables.js';
+import { lootTable, dropItemLevel } from '../data/loot-tables.js';
+import { validItemLevel } from '../data/item-tier.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { monsterXp } from '../game/rpg-core.js';
 import { seededStream } from './rng.js';
@@ -53,7 +54,7 @@ export function stageRankValues(stage) {
 export function killDrops(stage, lootSeed, rank, killIndex, { summoned = false, values = stageRankValues(stage) } = {}) {
   const table = lootTable(stage.ch, rank, stage.difficultyId || 'story');
   const rng = seededStream(lootSeed, summoned ? rank + ':s' : rank, killIndex);
-  return rollKillLoot(table, rng, { baseGold: values[rank].gold, scale: stage.scale, summoned, rank });
+  return rollKillLoot(table, rng, { baseGold: values[rank].gold, scale: stage.scale, summoned, rank, itemLevel: dropItemLevel(stage) });
 }
 
 /** 스테이지·난이도별 T1 상한. 표에 없는 값은 보수 기본값을 쓴다. */
@@ -145,7 +146,9 @@ export function plausibility(stage, facts, ctx) {
 
 /** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. */
 export function grantLootItem(eco, item, tp = 0) {
-  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}) };
+  // il(스테이지 장비 레벨)은 killDrops 가 굴림 결과에 실어 주는 값이다. 고통 단계 장비(tp)에는 붙이지 않는다.
+  const il = tp > 0 ? 0 : validItemLevel(item.il);
+  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(il ? { il } : {}) };
   eco.s.inventory.push(inst);
   return inst;
 }

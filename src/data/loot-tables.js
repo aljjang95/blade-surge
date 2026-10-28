@@ -95,3 +95,11 @@ export function pickLootRarity(weights, rng = Math.random) {
   for (const [rarity, weight] of Object.entries(weights)) { r -= weight; if (r < 0) return rarity; }
   return 'L';
 }
+/** 필드 드랍 장비에 붙는 스테이지 장비 레벨(il). 본편 스테이지의 권장 레벨, 원정·고통 단계(tp 가 따로 있음)·번호 없는 판은 0 = 붙이지 않음.
+ *  난수를 쓰지 않는 스테이지 값이라 클라이언트 미리보기와 서버 정산이 같은 il 을 낸다. */
+export function dropItemLevel(stage) {
+  if (!stage || stage.expedition || stage.party || tormentTierOf(stage.difficultyId) > 0) return 0;
+  if (!Number.isInteger(stage.ch) || !Number.isInteger(stage.st)) return 0;
+  const il = recommendedLevel(stage.ch, stage.st);
+  return il > 1 ? il : 0;
+}
