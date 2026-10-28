@@ -77,6 +77,7 @@ try {
       };
       // 클로즈업: 영웅 진행 방향 앞쪽 비스듬히 낮게(발이 보이게) 카메라를 두고 한 장 그린다. 게임 카메라 상태(rig)는 건드리지 않는다.
       const cam = app.renderer.camera, eye = new V(), look = new V();
+      const grid = new window.__THREE.GridHelper(8, 16, 0xffd070, 0x5a6a80);
       window.__gaitShot = () => {
         const vx = p.vel?.x || 0, vz = p.vel?.z || 0, sp = Math.hypot(vx, vz) || 1, fx = vx / sp, fz = vz / sp;
         const saved = cam.position.clone(), savedQ = cam.quaternion.clone(), fov = cam.fov;
@@ -84,9 +85,15 @@ try {
         cam.position.copy(eye); cam.fov = 38; cam.updateProjectionMatrix(); cam.lookAt(look); cam.updateMatrixWorld();
         // 클로즈업 카메라는 벽 너머일 수 있다. 가림 실루엣(엑스레이 외곽선)과 벽 절단을 끄고 맨 몸을 그린다.
         const sil = app.renderer.playerSilhouetteTarget; app.renderer.playerSilhouetteTarget = () => null;
+        // 던전 벽이 클로즈업을 가리지 않게 영웅·조명만 남기고 나머지는 이 한 장 동안 숨긴 뒤, 발 방향이 보이는 격자 바닥을 깐다.
+        const scene = app.renderer.scene, hidden = [];
+        let top = p.model; while (top.parent && top.parent !== scene) top = top.parent;
+        for (const child of scene.children) if (child !== top && !child.isLight && child.visible) { child.visible = false; hidden.push(child); }
+        grid.position.set(p.pos.x, .01, p.pos.z); scene.add(grid);
         app.renderer.battleOcclusion?.update?.(cam.position, false);
         app.renderer.render();
         app.renderer.playerSilhouetteTarget = sil;
+        scene.remove(grid); for (const child of hidden) child.visible = true;
         cam.position.copy(saved); cam.quaternion.copy(savedQ); cam.fov = fov; cam.updateProjectionMatrix();
       };
       return { bones: !!(parts.L[0] && parts.L[1] && parts.R[0] && parts.R[1]) };
@@ -105,8 +112,9 @@ try {
       const stance = rows.filter(r => r[side].toeY - minY < .03).map(r => r[side].yaw);
       const mean = stance.reduce((s, v) => s + v, 0) / (stance.length || 1);
       const all = rows.map(r => r[side].yaw).sort((a, b) => a - b);
-      // 발이 땅에 평평히 닿은 접지 프레임만: 발끝이 최저점 +3cm 이내이고 발 기울기가 ±15° 이내(기울어진 발의 수평 투영은 각도를 부풀린다).
-      const flat = rows.filter(r => r[side].toeY - minY < .03 && Math.abs(r[side].pitch) < 15).map(r => r[side].yaw);
+      // 발이 땅에 닿은 접지 프레임 중 발 기울기가 접지 중앙값 ±8° 안인 것만(발목→발끝 기울기가 바뀌면 수평 투영 각도가 부풀려진다).
+      const low = rows.filter(r => r[side].toeY - minY < .03), pm = low.map(r => r[side].pitch).sort((a, b) => a - b)[Math.floor(low.length / 2)] ?? 0;
+      const flat = low.filter(r => Math.abs(r[side].pitch - pm) < 8).map(r => r[side].yaw);
       return { flatStanceFrames: flat.length, flatStanceMeanDeg: flat.length ? +(flat.reduce((s, v) => s + v, 0) / flat.length).toFixed(1) : null, allMedianDeg: +all[Math.floor(all.length / 2)].toFixed(1), stanceFrames: stance.length, stanceMeanDeg: +mean.toFixed(1), stanceMaxDeg: +Math.max(...stance).toFixed(1) };
     };
     Object.assign(report.heroes[hero], { movingFrames: rows.length, left: stat('L'), right: stat('R') });
