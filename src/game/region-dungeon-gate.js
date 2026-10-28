@@ -14,6 +14,7 @@ const record = (value) => value !== null && typeof value === 'object' && !Array.
 const positive = (value) => Number.isSafeInteger(value) && value > 0;
 export const REGION_GATE_VERSION = 1;
 const GATE_SLOTS = 6;
+const RETURN_ROAD_REGION = 6;
 // 컨셉 던전(빙하 조수 분지·석양 황동 채석장)은 처음부터 광장 관문이 없는 목록 전용 던전이다(concept-dungeons 계약). 관문 후보에서 뺀다.
 const GATELESS = new Set(CONCEPT_DUNGEONS.map((dungeon) => dungeon.id));
 
@@ -86,6 +87,12 @@ export function regionDungeonState(save) {
     .map(({ entry }) => entry.id);
   const gateIds = visible.filter((entry) => !GATELESS.has(entry.id) && (entry.region === town.current || entry.preserved)).map((entry) => entry.id)
     .sort((a, b) => Number(dungeonRegion(a) !== town.current) - Number(dungeonRegion(b) !== town.current)).slice(0, GATE_SLOTS);
+  // 귀환로(6지역)부터는 다섯 지역을 잇는 길이라 앞 지역의 대표 관문(지역마다 가장 높은 단계 하나)을 함께 세운다.
+  // 6지역 고유 던전이 하나뿐이라 광장이 비던 것(docs/TOWN_AUDIT.md). 이미 열린 던전만 서고 노출 · 입장 규칙은 그대로다.
+  if (town.current >= RETURN_ROAD_REGION) for (let region = town.current - 1; region >= 1 && gateIds.length < GATE_SLOTS; region--) {
+    const pick = visible.filter((entry) => entry.region === region && !GATELESS.has(entry.id) && !gateIds.includes(entry.id)).at(-1);
+    if (pick) gateIds.push(pick.id);
+  }
   const next = town.latest + 1;
   return {
     latest: town.latest, current: town.current,
