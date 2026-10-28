@@ -329,6 +329,7 @@ class App {
       if (this.showcase) this.showcase.root.rotation.y = Math.PI * .15;
     }
     this.syncHub();
+    if (this.hubWalkMode) this.townUI?.syncAttention?.();
     (this.hubWalkMode ? this.canvas : this.commandUI.explore).focus({ preventScroll: true });
     return true;
   }

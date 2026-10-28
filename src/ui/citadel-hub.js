@@ -186,6 +186,8 @@ export class CitadelHubUI {
       if (activeTownHub().starter) return this.app.commandUI?.openPreparation(trigger) !== false;
       this.app.meta.openTab('stage'); return true;
     }
+    // 2지역 이후 · 다른 서비스 마을의 의뢰 게시판 · 대장장이는 마을 일 창의 그 탭을 연다.
+    if (!activeTownHub().starter && ['board', 'smith'].includes(canonical.kind) && this.app.townUI) return !!this.app.townUI.openContent(canonical.kind === 'board' ? 'quests' : 'forge', trigger);
     if (activeTownHub().starter && ['guide', 'training', 'board', 'smith', 'story'].includes(canonical.kind)) {
       this.starter ??= new StarterVillageUI(this.app, this);
       return this.starter.interact(canonical, trigger);
