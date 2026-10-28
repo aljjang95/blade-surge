@@ -106,3 +106,17 @@ test('가방 정리: 단독 점수는 낮아도 세트를 완성해 빌드가 �
   expect(eco.isUpgrade(hero, iron)).toBe(true);   // 신병 세트 완성
   expect(junkItems(eco, { heroId: hero }).some((j: any) => j.uid === iron.uid)).toBe(false);
 });
+
+test('더 좋은 장비 표시: 단독 점수는 낮아도 세트를 완성하는 장비를 포함한다', () => {
+  const eco = make(), hero = eco.s.selected;
+  for (const itemId of ['w_steel', 'a_leather', 'r_copper', 'b_cloth']) eco.equip(hero, give(eco, itemId).uid);
+  const iron = give(eco, 'w_iron');
+  expect(betterItems(eco, hero).get(iron.uid)).toBeGreaterThan(0);
+});
+
+test('가방 정리: 보고 있는 영웅의 가방만 후보로 잡는다(출전 영웅과 달라도)', () => {
+  const eco = make(), lead = eco.s.selected;
+  const other = Object.keys(eco.s.heroes).find((id) => id !== lead)!;
+  eco.equip(lead, give(eco, id('weapon', 'E')).uid); const leadJunk = give(eco, id('weapon', 'N'), 0, { owner: lead });
+  expect(junkItems(eco, { heroId: other }).some((j: any) => j.uid === leadJunk.uid)).toBe(false);
+});

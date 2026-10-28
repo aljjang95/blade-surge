@@ -29,7 +29,9 @@ export function betterItems(eco, heroId, { perSlot = 12 } = {}) {
   const worn = wornMap(eco), inv = byUid(eco), basePower = eco.heroBuildStats(heroId).power;
   for (const slot of SLOTS) {
     const cur = inv.get(hero.equip?.[slot]), curScore = cur ? gearScore(cur) : -1;
-    const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && gearScore(x) > curScore)
+    // 단독 점수가 낮아도 다른 부위와 세트를 완성하는 장비는 실제 빌드 비교까지 보낸다.
+    const sets = new Set(SLOTS.filter((s) => s !== slot).map((s) => ITEM_BY_ID[inv.get(hero.equip?.[s])?.id]?.set).filter(Boolean));
+    const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && (gearScore(x) > curScore || sets.has(ITEM_BY_ID[x.id]?.set)))
       .sort((a, b) => gearScore(b) - gearScore(a)).slice(0, perSlot);
     for (const inst of cands) {
       const delta = Math.round(eco.heroBuildStats(heroId, { ...hero.equip, [slot]: inst.uid }, eco.s.inventory).power - basePower);

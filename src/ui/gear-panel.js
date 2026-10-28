@@ -226,7 +226,7 @@ export function renderBag(meta, heroId) {
   // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
   const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
   const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
-  const junk = junkItems(eco, { rarities: clean?.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
+  const junk = junkItems(eco, { heroId, rarities: clean?.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
   const cleanHtml = clean ? '<div class="bag-clean" role="group" aria-label="가방 정리"><b>가방 정리</b>' + (junk.length
       ? '<p>착용 중인 장비보다 약해 쓸 일이 없는 장비 <b>' + junk.length + '개</b>를 분해합니다 (노말 ' + (sum.byRarity.N || 0) + ' · 스페셜 ' + (sum.byRarity.S || 0) + (clean.includeE ? ' · 에픽 ' + (sum.byRarity.E || 0) : '') + ').<br>받는 것: 골드 +' + fmt(sum.gold) + ' · 강화석 +' + fmt(sum.stones) + (sum.stones2 ? ' · 상급 강화석 +' + fmt(sum.stones2) : '') + '</p>'
       : '<p>지금 정리할 장비가 없습니다. 장착 중인 장비보다 약한 장비가 쌓이면 여기에 나타납니다.</p>') +
@@ -266,6 +266,7 @@ export function renderBag(meta, heroId) {
     meta.ui.toast(done.swaps.length ? '더 좋은 장비 ' + done.swaps.length + '곳 장착 · 전투력 ' + fmt(done.powerBefore) + ' → ' + fmt(done.powerAfter) : '바꿀 장비가 없습니다', done.swaps.length ? 'gold' : undefined);
     if (done.swaps.length) audio.play('ui_confirm', { vol: 0.5 });
     refreshHero();
+    if (done.swaps.length && heroId === eco.s.selected) meta.app.showcaseHero?.(heroId);   // 로비 캐릭터 외형도 바로 반영
   });
   bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: false }; rerender('[data-bag-clean]'); });
   bag.querySelector('[data-clean-e]')?.addEventListener('change', (event) => { meta.bagClean = { open: true, step: 0, includeE: event.target.checked }; rerender('[data-clean-e]'); });
@@ -274,7 +275,7 @@ export function renderBag(meta, heroId) {
   bag.querySelector('[data-clean-close]')?.addEventListener('click', () => { meta.bagClean = null; rerender('[data-bag-clean]'); });
   bag.querySelector('[data-clean-confirm]')?.addEventListener('click', () => {
     // 누르는 순간 목록을 다시 계산한다(그사이 장착이 바뀌었을 수 있다). 화면에 보인 것과 개수가 달라도 지금 기준 후보만 분해한다.
-    const live = junkItems(eco, { rarities: clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), preview = salvagePreview(eco, live);
+    const live = junkItems(eco, { heroId, rarities: clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), preview = salvagePreview(eco, live);
     const out = salvageItems(eco, live.map((x) => x.uid));
     meta.bagClean = null;
     meta.ui.toast(out.ok ? '장비 ' + out.count + '개 분해 · 골드 +' + fmt(preview.gold) + ' · 강화석 +' + fmt(preview.stones + preview.stones2) : '분해하지 못했습니다 (저장 공간 확인)', out.ok ? 'gold' : 'red');
