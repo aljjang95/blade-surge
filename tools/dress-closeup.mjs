@@ -22,6 +22,40 @@ const LINEUPS = {
     ['ghost', 'ghost_skull', 'elite_wraith', 'bomb_slime'],
     ['grave_burrower', 'garden_midboss', 'garden_finalboss'],
   ],
+  2: [
+    ['orc', 'orc_blob', 'tribal', 'cacto_wall'],
+    ['bomb_imp', 'imp', 'ash_burrower', 'hywirl'],
+    ['tribal_shaman', 'armabee', 'elite_orc_chief', 'elite_bluedemon'],
+    ['forge_midboss', 'forge_finalboss'],
+  ],
+  3: [
+    ['skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'],
+    ['ghost', 'ghost_skull', 'skel_mage', 'skel_priest'],
+    ['blob_green', 'frost_burrower', 'elite_yeti', 'elite_golem'],
+    ['elite_wraith', 'frost_midboss', 'frost_finalboss'],
+  ],
+  4: [
+    ['squidle', 'glub', 'abyss_seer', 'blob_pink'],
+    ['bomb_abyss', 'alien', 'mushnub', 'golem_guard'],
+    ['elite_golem', 'elite_mushroom_king', 'elite_dragonling', 'armabee_evo'],
+    ['tide_midboss', 'tide_finalboss', 'skel_minion'],
+  ],
+  5: [
+    ['ninja', 'alien', 'skel_shield', 'bone_orc'],
+    ['imp', 'bomb_abyss', 'abyss_seer', 'tribal_shaman'],
+    ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain', 'skel_priest'],
+    ['crown_midboss', 'crown_finalboss', 'ghost'],
+  ],
+  6: [
+    ['skel_minion', 'orc', 'ghost', 'ninja'],
+    ['squidle', 'golem_guard', 'skel_mage', 'imp'],
+    ['homecoming_midboss', 'homecoming_finalboss'],
+  ],
+  7: [
+    ['skel_minion', 'skel_shield', 'skel_rogue', 'bone_orc'],
+    ['ghost', 'ghost_skull', 'blob_green', 'skel_mage'],
+    ['skel_priest', 'elite_skel_captain', 'elite_wraith', 'elite_bone_lord'],
+  ],
 };
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
@@ -53,7 +87,8 @@ try {
         return en && { id, at, en };
       }).filter(Boolean);
       for (let k = 0; k < 240; k++) { for (const s of spawned) { s.en.pos.copy(s.at); s.en.vel.set(0, 0, 0); s.en.atkCd = 999; s.en.face?.(p.pos.x, p.pos.z); } a.step(1 / 60, k === 239); }
-      return spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null }));
+      const st = b.stage;
+      return { stage: { code: st.code, chapter: st.chapter?.id ?? null, ch: st.ch, expedition: !!st.expedition, keys: Object.keys(st).slice(0, 12) }, enemies: spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null })) };
     }, [CH, species]);
     await page.waitForTimeout(300);
     // 근접 초상: 각 적을 앞 3/4·뒤 3/4 두 방향에서 게임 카메라를 잠시 옮겨 렌더하고 캔버스만 받는다(HUD 제외).
@@ -77,7 +112,7 @@ try {
     for (const pt of portraits) pt.shots.forEach((data, k) => writeFileSync(`${OUT}/${TAG}-ch${CH}-${pt.id}-${k ? 'back' : 'front'}.png`, Buffer.from(data.split(',')[1], 'base64')));
     const file = `${OUT}/${TAG}-ch${CH}-row${row + 1}.png`;
     await page.screenshot({ path: file });
-    report.rows.push({ file, enemies: info });
+    report.rows.push({ file, ...info });
   }
 } finally {
   report.errors = errors;
