@@ -144,11 +144,11 @@ export function plausibility(stage, facts, ctx) {
   return { verdict: issues.length ? 'rejected' : soft ? 'soft' : 'ok', issues };
 }
 
-/** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. */
-export function grantLootItem(eco, item, tp = 0) {
+/** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. owner = 그 판을 뛴 영웅(docs/GEAR_OWNERSHIP_VAULT.md). */
+export function grantLootItem(eco, item, tp = 0, owner = eco.s.selected) {
   // il(스테이지 장비 레벨)은 killDrops 가 굴림 결과에 실어 주는 값이다. 고통 단계 장비(tp)에는 붙이지 않는다.
   const il = tp > 0 ? 0 : validItemLevel(item.il);
-  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(il ? { il } : {}) };
+  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(il ? { il } : {}), owner: eco.s.heroes?.[owner] ? owner : eco.s.selected };
   eco.s.inventory.push(inst);
   return inst;
 }
@@ -198,7 +198,7 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
       ledger.heroShards = half(loot.heroShards); ledger.transcendStones = half(loot.transcendStones);
       for (const [id, n] of Object.entries(loot.materials)) ledger.materials[id] = half(n);
     }
-    const tormentTp = tormentTierOf(stage.difficultyId), items = loot.items.map((item) => grantLootItem(eco, item, tormentTp));
+    const tormentTp = tormentTierOf(stage.difficultyId), items = loot.items.map((item) => grantLootItem(eco, item, tormentTp, heroId));
     const rating = serverRating(stage, facts, heroCombatProfile(eco, heroId)?.maxHp ?? 1);
     const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),

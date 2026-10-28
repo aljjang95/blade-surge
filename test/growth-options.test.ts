@@ -4,7 +4,7 @@ import { growthOptions, growthSummary } from '../src/game/growth-options.js';
 import { HEROES, levelExp } from '../src/data/heroes.js';
 import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
-import { ITEM_BY_ID, ENH_MAX, STONE_KEY, enhanceCost, enhanceStones, enhanceChance, destroyChance, enhanceStoneTier } from '../src/data/items.js';
+import { ITEM_BY_ID, ENH_MAX, ENH_SAFE_MAX, STONE_KEY, enhanceCost, enhanceStones, enhanceChance, destroyChance, enhanceStoneTier } from '../src/data/items.js';
 import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -23,7 +23,7 @@ function fixture() {
   save.selected = 'mage'; save.heroes.mage.level = 20;
   save.masterworks = normalizeMasterworks({ earnedRenown: 6, renown: 6 });
   const weapon = Object.values(ITEM_BY_ID).find(item => item.slot === 'weapon')!;
-  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: 3 });
+  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: ENH_SAFE_MAX - 1 });   // 확정(100%) 구간의 마지막 단계
   save.heroes.mage.equip.weapon = 'growth-weapon';
   return eco;
 }
@@ -50,15 +50,15 @@ test('viewing growth options does not mutate the save, and every quoted action u
   }
 });
 
-test('equipment suggestions require the actual gold and the right-tier stone cost; +8 and above show the live odds (2026-10-28)', () => {
+test('equipment suggestions require the actual gold and the right-tier stone cost; steps beyond the safe range show the live odds (2026-10-28)', () => {
   const eco = fixture(); const save: any = eco.s, item = save.inventory[0];
   for (let level = 0; level < ENH_MAX; level++) {
     const key = STONE_KEY[enhanceStoneTier(level)];
     item.enh = level; save.gold = enhanceCost(level); for (const k of ['stones', 'stones2', 'stones3']) save[k] = 0; save[key] = enhanceStones(level);
     const option: any = growthOptions(save).find(o => o.kind === 'equipment');
     expect(!!option).toBe(true);
-    // 100% 구간은 기존 그대로, +8 이후는 위험 구간 표시(성공률·파괴·하락을 규칙 함수에서 읽음)
-    if (level < 8) expect(option.mode).toBeUndefined(); else { expect(option.mode).toBe('risk'); expect(option.chance).toBe(enhanceChance(level)); expect(option.destroy).toBe(destroyChance(level)); }
+    // 확정 구간(+ENH_SAFE_MAX 미만)은 기존 그대로, 그 위는 위험 구간 표시(성공률·파괴·하락을 규칙 함수에서 읽음)
+    if (level < ENH_SAFE_MAX) expect(option.mode).toBeUndefined(); else { expect(option.mode).toBe('risk'); expect(option.chance).toBe(enhanceChance(level)); expect(option.destroy).toBe(destroyChance(level)); }
     save.gold--;
     expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
     save.gold++; if (enhanceStones(level)) save[key]--;

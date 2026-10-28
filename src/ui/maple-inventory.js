@@ -54,7 +54,8 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
   let cells = [];
   if (safeTab === 'gear') {
     const owners = equippedOwners(state), better = betterItems(eco, state.selected);   // 출전 영웅이 끼는 장비보다 전투력이 오르는 것
-    cells = (state.inventory || []).filter((inst) => ITEM_BY_ID[inst.id] && (safeSlot === 'all' || ITEM_BY_ID[inst.id].slot === safeSlot)).slice()
+    // 출전 영웅 소유 장비만 보인다(docs/GEAR_OWNERSHIP_VAULT.md). 다른 영웅·금고 장비는 금고 화면에서 옮긴다.
+    cells = (state.inventory || []).filter((inst) => ITEM_BY_ID[inst.id] && (inst.owner ?? state.selected) === state.selected && (safeSlot === 'all' || ITEM_BY_ID[inst.id].slot === safeSlot)).slice()
       .sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0) || b.uid - a.uid)
       .map((inst) => {
         const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid) || null;

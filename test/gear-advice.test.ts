@@ -61,15 +61,20 @@ test('가방 정리: 장착 중보다 약한 N/S만 후보, 장착·U/L·더 좋
   expect(eco.s.inventory.some((x: any) => x.uid === worn.uid)).toBe(true);
 });
 
-test('맨몸인 동료가 있으면 그 부위의 최고 장비를 영웅 수만큼 남긴다', () => {
-  const eco = make(), main = eco.s.selected;
-  const w = give(eco, id('weapon', 'E')); eco.equip(main, w.uid);
-  const others = eco.ownedHeroIds().filter((h: string) => h !== main);
-  if (!others.length) return;   // 단일 영웅 계정이면 해당 없음
-  const spare = give(eco, id('weapon', 'N'));
-  expect(junkItems(eco).map((x: any) => x.uid)).not.toContain(spare.uid);
-  applyBestEquipAll(eco);
-  expect(eco.s.heroes[others[0]].equip.weapon).toBe(spare.uid);
+test('장비는 영웅 소유: 다른 영웅·금고 장비는 후보도 정리 대상도 아니다', () => {
+  const eco = make(), hero = eco.s.selected, other = eco.ownedHeroIds().find((h: string) => h !== hero);
+  const worn = give(eco, id('weapon', 'S'), 5); eco.equip(hero, worn.uid);
+  const mine = give(eco, id('weapon', 'N'), 0, { owner: hero }), vaulted = give(eco, id('weapon', 'N', 1), 0, { owner: 'vault', from: hero }), strongVault = give(eco, id('weapon', 'L'), 0, { owner: 'vault', from: hero });
+  expect(junkItems(eco).map((x: any) => x.uid)).toEqual([mine.uid]);
+  expect(betterItems(eco, hero).has(strongVault.uid)).toBe(false);
+  expect(planBestEquip(eco, hero)).toEqual([]);
+  if (other) {
+    const theirs = give(eco, id('weapon', 'L'), 0, { owner: other });
+    expect(betterItems(eco, hero).has(theirs.uid)).toBe(false);
+    expect(junkItems(eco).map((x: any) => x.uid)).not.toContain(theirs.uid);
+    expect(applyBestEquipAll(eco).some((r: any) => r.heroId === other)).toBe(true);   // 소유 영웅은 자기 장비를 끼운다
+    expect(eco.s.heroes[other].equip.weapon).toBe(theirs.uid);
+  }
 });
 
 test('자동 분해는 설정이 켜졌을 때만, 노말만', () => {

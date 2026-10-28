@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-architecture.js';
+import { buildChapterScenery, gradeAtmosphere } from './chapter-scenery.js';
 import { ROOM_TYPE, isStarArchive, mulberry32 } from './world.js';
 import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
@@ -111,7 +112,7 @@ export class Arena {
     this.clearSky();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
-    this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
+    this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null; this.chapterScenery?.userData.dispose(); this.chapterScenery = null;
     this.fieldScene?.userData.dispose(); this.fieldScene = null;
     this.conceptTerrain?.userData.dispose(); this.conceptTerrain = null;
     this.townDecor?.userData.dispose(); this.townDecor = null;
@@ -365,14 +366,16 @@ export class Arena {
       const landmark = source.clone(true); landmark.position.set(room.x, 0, room.z - room.h / 2 + 2.6); landmark.rotation.y = (room.id % 4) * Math.PI / 2; landmark.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); landmark.name = `${source.name}-${room.id}`; this.group.add(landmark);
     }
   }
-  buildFloor(floorData, theme = 'crypt', visual = null) {
+  buildFloor(floorData, theme = 'crypt', visual = null, chapterId = null) {
     this.clear();
     this.floorData = floorData;
     const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
     const field = floorData.layout?.field;
     const concept = floorData.layout?.concept;
     const archive = isStarArchive(floorData);
-    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}), ...(archive ? STAR_ARCHIVE_ATMOSPHERE : {}) };
+    const routeT = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}), ...(archive ? STAR_ARCHIVE_ATMOSPHERE : {}) };
+    // 캠페인 장 보정: 한 장 안에서 경로마다 섞이던 대기(예: 1장 X-3 의 분홍 tribunal)를 장 색 쪽으로 물들인다(chapter-scenery.js).
+    const T = field || archive ? routeT : gradeAtmosphere(routeT, chapterId);
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
     // 컨셉 던전은 먼 절벽·수문이 보이는 열린 분지라 안개를 옅게 둔다.
@@ -493,6 +496,8 @@ export class Arena {
     if (!archive) {
       this.mountTownDecor(floorData);
       this.mountLandmarks(floorData, visual || { landmark: visualKey });
+      this.chapterScenery = chapterId ? buildChapterScenery(floorData, chapterId) : null;
+      if (this.chapterScenery) this.group.add(this.chapterScenery);
       this.mountGlassGardenDecor(floorData);
     }
     this.buildSeals(floorData);

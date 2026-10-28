@@ -17,12 +17,17 @@ export function validateCustomer(raw = {}) {
 
 export function forgetCustomer() { remembered = null; }
 
+/** 결제수단 표시 이름. */
+export const PAY_METHOD_LABEL = Object.freeze({ CARD: '신용·체크카드', KAKAOPAY: '카카오페이', NAVERPAY: '네이버페이', TOSSPAY: '토스페이' });
+
 /**
  * 구매자 정보 모달을 띄우고 { fullName, phoneNumber, email } 또는 null(취소)을 돌려준다.
  * @param {{ modal: Function, closeModal: Function }} ui
  */
-export function askCustomerInfo(ui) {
-  if (remembered) return Promise.resolve({ ...remembered });
+export function askCustomerInfo(ui, methods = ['CARD']) {
+  const choices = methods.filter((m) => Object.hasOwn(PAY_METHOD_LABEL, m));
+  // 결제수단이 카드 하나면 예전처럼 저장된 정보로 바로 진행한다. 여럿이면 매번 수단을 고른다(정보는 미리 채움).
+  if (remembered && choices.length <= 1) return Promise.resolve({ ...remembered, method: 'CARD' });
   return new Promise((resolve) => {
     let settled = false;
     const finish = (value) => { if (settled) return; settled = true; resolve(value); };
@@ -31,6 +36,7 @@ export function askCustomerInfo(ui) {
       + field('cust-name', '이름', 'text', 'text', '홍길동', 'name')
       + field('cust-phone', '휴대폰', 'tel', 'tel', '01012345678', 'tel')
       + field('cust-email', '이메일', 'email', 'email', 'name@example.com', 'email')
+      + (choices.length > 1 ? `<fieldset class="cust-methods"><legend>결제수단</legend>${choices.map((m, i) => `<label class="cust-method"><input type="radio" name="cust-method" value="${m}"${i === 0 ? ' checked' : ''}> ${PAY_METHOD_LABEL[m]}</label>`).join('')}</fieldset>` : '')
       + '<p id="cust-err" role="alert" style="color:var(--red);min-height:1.2em"></p>'
       + '<div class="modal-btns"><button class="btn btn-ghost" id="cust-cancel">취소</button><button class="btn btn-gold" id="cust-ok">결제 계속</button></div>';
     ui.modal(html, {
@@ -43,12 +49,14 @@ export function askCustomerInfo(ui) {
           const v = validateCustomer({ fullName: q('#cust-name').value, phoneNumber: q('#cust-phone').value, email: q('#cust-email').value });
           if (!v.ok) { q('#cust-err').textContent = v.message; box.querySelector({ fullName: '#cust-name', phoneNumber: '#cust-phone', email: '#cust-email' }[v.field])?.focus(); return; }
           remembered = v.customer;
-          finish({ ...v.customer });
+          const picked = box.querySelector('input[name="cust-method"]:checked')?.value;
+          finish({ ...v.customer, method: choices.includes(picked) ? picked : 'CARD' });
           ui.closeModal();
         };
         q('#cust-ok').onclick = submit;
         q('#cust-cancel').onclick = () => { finish(null); ui.closeModal(); };
         box.onkeydown = (event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } else if (event.key === 'Escape') { event.preventDefault(); q('#cust-cancel').click(); } };
+        if (remembered) { q('#cust-name').value = remembered.fullName; q('#cust-phone').value = remembered.phoneNumber; q('#cust-email').value = remembered.email; }
         q('#cust-name').focus({ preventScroll: true });
       },
     });

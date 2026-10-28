@@ -66,10 +66,10 @@ test('같은 lootSeed 의 드랍은 il 만 더해질 뿐 장비 id·등급·순�
 
 test('economy.addItem 과 저장 정화가 il 을 지키고 범위 밖은 버린다', () => {
   const eco = newEco();
-  const inst = eco.addItem('S', 'weapon', () => .1, 0, 30) as any;
+  const inst = eco.addItem('S', 'weapon', () => .1, 0, eco.s.selected, 30) as any;
   expect(inst.il).toBe(30);
-  expect((eco.addItem('S', 'weapon', () => .1, 0, 0) as any).il).toBeUndefined();
-  expect((eco.addItem('S', 'weapon', () => .1, 5, 30) as any).il).toBeUndefined();
+  expect((eco.addItem('S', 'weapon', () => .1, 0, eco.s.selected, 0) as any).il).toBeUndefined();
+  expect((eco.addItem('S', 'weapon', () => .1, 5, eco.s.selected, 30) as any).il).toBeUndefined();
   const raw: any = { inventory: [{ uid: 1, id: weapon(), enh: 1, il: 30 }, { uid: 2, id: weapon(), enh: 1, il: 999 }, { uid: 3, id: weapon(), enh: 1, il: 'x' }, { uid: 4, id: weapon(), enh: 1, il: 1 }, { uid: 5, id: weapon(), enh: 1, tp: 3, il: 30 }] };
   const s = normalizeSave(raw, eco.fresh()) as any;
   expect(s.inventory.map((x: any) => x.il)).toEqual([30, 80, undefined, undefined, undefined]);

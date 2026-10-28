@@ -4,6 +4,7 @@ import { RECIPES } from '../data/expansion.js';
 import { TOWNS, TOWN_SHOP, TOWN_SHOP_BY_ID, TOWN_TRAINER, TOWN_TRAINER_BY_ID, TOWN_REQUESTS, TOWN_REQUEST_BY_ID, TOWN_BLACKSMITH, TOWN_STORY, normalizeTownState } from '../data/towns.js';
 import { fieldForTown } from '../data/open-fields.js';
 import { levelGate } from '../data/shop-gates.js';
+import { rotateTownRequests } from './town-progress.js';
 
 /** 상인 오퍼의 레벨 잠금 표시 필드(UI용). 잠기지 않았으면 requires만 그대로 넘긴다. */
 function offerGateFields(item, save) {
@@ -129,8 +130,7 @@ export class TownService {
     if (item.itemId) {
       const def = ITEM_BY_ID[item.itemId];
       if (!def) { this.eco.s = before; return { ok: false, reason: 'invalid-item' }; }
-      granted = { uid: this.eco.s.invSeq++, id: item.itemId, enh: 0 };
-      this.eco.s.inventory.push(granted);
+      granted = this.eco.pushItem(item.itemId, { owner: this.eco.s.selected });
     } else {
       expedition.consumables[item.consumableId] = (expedition.consumables[item.consumableId] || 0) + 1;
       granted = { consumableId: item.consumableId, count: 1 };
@@ -200,15 +200,7 @@ export class TownService {
       unlocked: state.unlockedTownIds.includes(townId) }));
   }
 
-  rotateDailyRequests() {
-    const state = this.ensureState(), day = new Date().toISOString().slice(0, 10);
-    if (state.requests.day === day) return false;
-    state.requests.day = day;
-    state.requests.active = state.requests.active.filter(id => TOWN_REQUEST_BY_ID[id]?.kind !== 'daily');
-    state.requests.completed = state.requests.completed.filter(id => TOWN_REQUEST_BY_ID[id]?.kind !== 'daily');
-    for (const id of Object.keys(state.requests.progress)) if (TOWN_REQUEST_BY_ID[id]?.kind === 'daily') delete state.requests.progress[id];
-    return true;
-  }
+  rotateDailyRequests() { return rotateTownRequests(this.ensureState()); }
 
   acceptRequest(townId, requestId) {
     const request = TOWN_REQUEST_BY_ID[requestId], state = this.ensureState();
@@ -240,7 +232,9 @@ export class TownService {
     if (!state.requests.active.includes(requestId)) return { ok: false, reason: 'not-accepted' };
     if ((state.requests.progress[requestId] || 0) < request.target.amount) return { ok: false, reason: 'incomplete' };
     const before = structuredClone(this.eco.s);
-    state.requests.active = state.requests.active.filter(id => id !== requestId); state.requests.completed.push(requestId);
+    state.requests.active = state.requests.active.filter(id => id !== requestId);
+    // 반복 의뢰는 받으면 진행을 비우고 다시 수락할 수 있다. 일일 의뢰만 오늘 완료로 남는다.
+    if (request.kind === 'repeatable') delete state.requests.progress[requestId]; else state.requests.completed.push(requestId);
     this.eco.addRewards(request.rewards, { silent: true });
     if (!this.eco.save()) { this.eco.s = before; return { ok: false, reason: 'storage' }; }
     for (const listener of this.listeners) listener(this.towns());
@@ -268,7 +262,7 @@ export class TownService {
     this.eco.s.gold -= recipe.gold || 0;
     for (const [id, amount] of Object.entries(recipe.materials || {})) this.eco.s.expedition.materials[id] -= amount;
     let granted;
-    if (recipe.itemId) { granted = { uid: this.eco.s.invSeq++, id: recipe.itemId, enh: 0 }; this.eco.s.inventory.push(granted); }
+    if (recipe.itemId) { granted = this.eco.pushItem(recipe.itemId, { owner: this.eco.s.selected }); }
     else { const consumableId = Object.keys(recipe.consumables || {})[0]; const count = recipe.consumables[consumableId]; this.eco.s.expedition.consumables[consumableId] = (this.eco.s.expedition.consumables[consumableId] || 0) + count; granted = { consumableId, count }; }
     state.blacksmith.crafted.push(recipeId);
     if (!this.eco.save()) { this.eco.s = before; return { ok: false, reason: 'storage' }; }
@@ -314,7 +308,7 @@ export class TownService {
     const current = state.story[townId], chapter = chapters[current.stage];
     if (!chapter) return { ok: false, reason: 'complete' };
     if ((current.progress[chapter.target.type] || 0) < chapter.target.amount) return { ok: false, reason: 'incomplete' };
-    const before = structuredClone(this.eco.s); current.stage++;
+    const before = structuredClone(this.eco.s); current.stage++; current.progress = {};
     this.eco.addRewards(chapter.rewards, { silent: true });
     if (!this.eco.save()) { this.eco.s = before; return { ok: false, reason: 'storage' }; }
     for (const listener of this.listeners) listener(this.towns());

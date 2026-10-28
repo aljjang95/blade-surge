@@ -771,6 +771,7 @@ export class Meta {
     if (reason === 'verify-failed') return '결제 확인이 늦어지고 있어요. 잠시 뒤 자동으로 반영됩니다';
     if (reason === 'refunded' || reason === 'expired') return '환불·만료된 결제입니다';
     if (reason === 'busy') return '결제 처리 중입니다';
+    if (reason === 'pay-method') return '선택한 결제수단을 지금 쓸 수 없어요. 다른 수단을 골라 주세요';
     if (reason === 'gems') return '보석이 부족합니다';
     if (reason === 'level') return result.need ? `영웅 Lv.${result.need} 달성 후 구매할 수 있습니다` : '아직 구매할 수 없는 단계입니다';
     return '구매하지 못했습니다';

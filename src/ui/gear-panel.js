@@ -4,7 +4,7 @@ import { audio } from '../engine/audio.js';
 import { playEnhanceStage } from './enhance-stage.js';
 import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
-import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown, ENH_SAFE_MAX } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
 import { weaponLook } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
@@ -20,6 +20,7 @@ import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.j
 import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
+import { openVault } from './vault-panel.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -220,7 +221,8 @@ export function renderBag(meta, heroId) {
   const rarity = RARITIES.includes(meta.bagRarity) ? meta.bagRarity : 'all';
   const sort = BAG_SORTS.some((entry) => entry.id === meta.bagSort) ? meta.bagSort : 'rarity';
   const owners = equippedOwners(eco);
-  const all = eco.s.inventory.filter((x) => ITEM_BY_ID[x.id]);
+  // 가방은 그 영웅 소유 장비만(docs/GEAR_OWNERSHIP_VAULT.md). 다른 영웅으로 옮기려면 금고를 거친다.
+  const all = eco.heroBag(heroId), vault = eco.vaultState();
   // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
   const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
   const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
@@ -245,7 +247,8 @@ export function renderBag(meta, heroId) {
   bag.innerHTML = toolsHtml + '<div class="bag-bar"><div class="bag-filters" role="group" aria-label="장비 부위 필터">' + ['all', ...SLOTS].map((s) => '<button type="button" data-bag-slot="' + s + '" aria-pressed="' + (s === slot) + '">' + (s === 'all' ? '전체' : SLOT_NAME[s]) + '</button>').join('') + '</div>' +
     '<select class="bag-select" data-bag-rarity aria-label="등급 필터"><option value="all">등급</option>' + RARITIES.map((r) => '<option value="' + r + '"' + (r === rarity ? ' selected' : '') + '>' + RARITY_INFO[r].name + '</option>').join('') + '</select>' +
     '<select class="bag-select" data-bag-sort aria-label="정렬 기준">' + BAG_SORTS.map((entry) => '<option value="' + entry.id + '"' + (entry.id === sort ? ' selected' : '') + '>' + entry.label + '</option>').join('') + '</select>' +
-    '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span></div>' +
+    '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span>' +
+    '<button type="button" class="bag-vault" data-bag-vault aria-label="금고 열기, ' + vault.used + '/' + vault.slots + '칸 사용 중"><img src="' + uiArt('treasure-chest') + '" alt="" onerror="this.remove()">금고 <b>' + vault.used + '/' + vault.slots + '</b></button></div>' +
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
       const isNew = isFresh(inst.uid);
@@ -279,6 +282,7 @@ export function renderBag(meta, heroId) {
     refreshHero();
   });
   bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => { clearFresh(+button.dataset.inv); meta.showItem(+button.dataset.inv, heroId); });
+  bag.querySelector('[data-bag-vault]').onclick = () => { audio.play('ui_click', { vol: 0.4 }); openVault(meta, heroId); };
 }
 
 // ------------------------------------------------------------------ 비교 · 장착 · 강화 시트
@@ -323,7 +327,7 @@ function enhanceHtml(meta, inst) {
     (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') + '</div>' +
     '<div class="enh-cost"><span class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
     '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' +
-    '<p class="is-enh-note">+8까지 성공 100% · +10부터 실패 시 하락 · +12부터 파괴 위험</p></section>';
+    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험</p></section>';
 }
 
 /** 가방 장비를 눌렀을 때 열리는 시트. 현재 장비와 나란히 비교하고 주 버튼 하나로 장착한다. */
@@ -354,7 +358,9 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
     const powerDelta = p.after.power - p.before.power;
     const label = p.remove ? '해제 후' : '장착 후';
     const owner = p.owner && p.owner !== heroId ? p.owner : null;
-    const primary = equipped ? '해제하기' : owner ? HEROES[owner].name.split(' ').pop() + '에게서 옮겨 장착' : '장착하기';
+    // 다른 영웅·금고 소유 장비는 장착할 수 없다(옮기려면 금고). 이 영웅 소유면 장착/해제.
+    const foreign = (inst.owner ?? eco.s.selected) !== heroId;
+    const primary = equipped ? '해제하기' : foreign ? (inst.owner === 'vault' ? '금고 보관 중' : esc(HEROES[inst.owner]?.name.split(' ').pop() || '다른 영웅') + ' 소유') : '장착하기';
     const look = it.slot === 'weapon' ? weaponLook(heroId, inst, LOOKS) : null;
     const visual = itemVisual(it, { heroId });
     ui.modal('<div class="item-sheet rar-line-' + it.rarity + '" data-slot="' + it.slot + '">' +
@@ -364,12 +370,12 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
       '<div class="is-power ' + trendClass(powerDelta) + '"><span>' + HEROES[heroId].name + ' · ' + label + ' 전투력</span><b>' + fmt(p.before.power) + ' → ' + fmt(p.after.power) + '</b><em>' + (powerDelta === 0 ? '변화 없음' : signed(powerDelta)) + '</em></div>' +
       (equipped ? '<div class="is-cards single">' + itemCardHtml(inst, '현재 장비', true, heroId) + '</div>' : '<div class="is-cards">' + itemCardHtml(p.current, '현재 ' + SLOT_NAME[it.slot], p.current && p.current.uid === uid, heroId) + '<span class="is-vs" aria-hidden="true">→</span>' + itemCardHtml(inst, '선택한 장비', false, heroId) + '</div>') +
       '<div class="is-rows" role="group" aria-label="' + HEROES[heroId].name + ' 능력치 ' + label + ' 변화"><small class="is-rows-title">' + label + ' 영웅 능력치 · 세트 효과 포함</small>' + statRows + '</div>' +
-      (owner ? '<p class="is-note stat-down">' + esc(HEROES[owner].name) + '에게 장착 중입니다. 장착하면 그 영웅에게서 옮겨옵니다.</p>' : '') +
+      (foreign ? '<p class="is-note stat-down">' + (inst.owner === 'vault' ? '금고에 보관 중인 장비입니다. 금고에서 이 영웅에게 꺼내야 장착할 수 있습니다.' : esc(HEROES[inst.owner]?.name || '다른 영웅') + ' 소유 장비입니다. 그 영웅이 금고에 맡긴 뒤 꺼내야 장착할 수 있습니다.') + '</p>' : '') +
       (look ? '<div class="item-look" style="--wl:' + look.color + '">착용 모습 · ' + esc([visual.formLabel, look.glow > 0 ? look.element + ' 발광' : '발광 없음', look.tier ? '+' + look.enh + ' ' + look.tier : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
       (it.summon ? '<p class="is-note" style="color:' + RARITY_COLOR[it.rarity] + '">✦ ' + esc(it.summon.name) + ' 소환 · ' + it.summon.interval + '초마다 ' + Math.round(it.summon.ratio * 100) + '% 공격</p>' : '') +
       setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
         (side === 'rune' ? '<div class="is-side-body">' + runePaneHtml(meta, uid, heroId, runeState.socket) + '</div>' : enhanceHtml(meta, inst)) + '</div>' : enhanceHtml(meta, inst)) + '</div>' +
-      '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button><button type="button" class="btn btn-gold" id="i-eq">' + primary + '</button></footer></div>',
+      '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button>' + (foreign ? '' : '<button type="button" class="btn btn-ghost btn-sm" id="i-vault" title="금고에 맡기면 다른 영웅이 꺼내 쓸 수 있습니다">금고에 맡기기</button>') + '<button type="button" class="btn btn-gold" id="i-eq"' + (foreign ? ' disabled' : '') + '>' + primary + '</button></footer></div>',
     { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); disposeRuneStage(); },
       onOpen: (b) => {
       // 강화 연출 뒤 다시 그리기는 이 시트가 아직 열린 현재 모달일 때만 한다(판매 확인 등으로 바뀌면 취소).
@@ -413,6 +419,13 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         audio.play('ui_confirm', { vol: 0.5 }); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
         if (heroId === eco.s.selected) meta.app.showcaseHero(heroId);   // 장착 즉시 외형 반영
         meta.focusInventory(uid, it.slot);
+      };
+      const toVault = b.querySelector('#i-vault');
+      if (toVault) toVault.onclick = () => {
+        const r = eco.vaultDeposit(uid);
+        if (!r.ok) { ui.toast(r.reason === 'full' ? '금고가 가득 찼습니다 — 금고에서 칸을 늘려 주세요' : '맡길 수 없습니다', 'red'); audio.play('ui_error'); return; }
+        audio.play('ui_confirm', { vol: 0.5 }); ui.toast(esc(it.name) + ' 금고에 맡김'); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
+        if (heroId === eco.s.selected && equipped) meta.app.showcaseHero(heroId);
       };
       b.querySelector('#i-sell').onclick = async () => {
         if (await ui.confirm('판매', esc(it.name) + ' +' + inst.enh + ' 을(를) 판매할까요?')) { const g = eco.sellItem(uid); ui.toast('골드 +' + fmt(g), 'gold'); audio.pick('coin', 2); meta._sheetDirty = false; meta.renderHeroes(); meta.focusInventory(uid, it.slot); }

@@ -1,5 +1,5 @@
 // 장비 조언: 더 좋은 장비 찾기·한 번에 장착·가방 정리. 화면을 그리지 않는 순수 규칙이라 UI와 플레이 도구가 같은 함수를 쓴다.
-// 비교 기준은 영웅 전투력(heroBuildStats: 세트·룬 반영)이고, 후보는 장비 점수(gearScore)로 먼저 걸러 비용을 줄인다.
+// 장비는 영웅 소유라 모든 함수가 그 영웅의 가방(heroBag)만 다룬다. 비교 기준은 영웅 전투력(heroBuildStats: 세트·룬 반영)이고, 후보는 장비 점수(gearScore)로 먼저 걸러 비용을 줄인다.
 // 분해는 economy.salvage(uids)와 salvageRewards 를 그대로 쓴다(N/S/E 만, 장착 중 불가, 보상 계산은 그쪽 규칙).
 import { ITEM_BY_ID, SLOTS } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
@@ -9,6 +9,8 @@ import { salvageRewards } from './economy.js';
 export const gearScore = (inst) => { const s = itemStats(inst); return (s.atk || 0) * 6 + (s.hp || 0) * 0.5 + (s.def || 0) * 4 + (s.crit || 0) * 1000; };
 
 const slotOf = (inst) => ITEM_BY_ID[inst?.id]?.slot || null;
+// 장비는 영웅 소유다(docs/GEAR_OWNERSHIP_VAULT.md): 후보·정리 대상은 그 영웅의 가방(heroBag)뿐이고 금고·다른 영웅 장비는 건드리지 않는다.
+const bagOf = (eco, heroId) => (eco.heroBag ? eco.heroBag(heroId) : eco.s.inventory.filter((x) => (x.owner ?? eco.s.selected) === heroId));
 /** 어느 영웅이든 장착 중인 장비 uid → 영웅 id */
 function wornMap(eco) {
   const worn = new Map();
@@ -27,7 +29,7 @@ export function betterItems(eco, heroId, { perSlot = 12 } = {}) {
   const worn = wornMap(eco), inv = byUid(eco), basePower = eco.heroBuildStats(heroId).power;
   for (const slot of SLOTS) {
     const cur = inv.get(hero.equip?.[slot]), curScore = cur ? gearScore(cur) : -1;
-    const cands = eco.s.inventory.filter((x) => slotOf(x) === slot && !worn.has(x.uid) && gearScore(x) > curScore)
+    const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && gearScore(x) > curScore)
       .sort((a, b) => gearScore(b) - gearScore(a)).slice(0, perSlot);
     for (const inst of cands) {
       const delta = Math.round(eco.heroBuildStats(heroId, { ...hero.equip, [slot]: inst.uid }, eco.s.inventory).power - basePower);
@@ -51,7 +53,7 @@ export function planBestEquip(eco, heroId) {
     let best = null;
     for (const slot of SLOTS) {
       const curScore = inv.get(equip[slot]) ? gearScore(inv.get(equip[slot])) : -1;
-      const cands = eco.s.inventory.filter((x) => slotOf(x) === slot && x.uid !== equip[slot] && !worn.has(x.uid) && !plan.some((p) => p.uid === x.uid) && gearScore(x) > curScore * 0.6)
+      const cands = bagOf(eco, heroId).filter((x) => slotOf(x) === slot && x.uid !== equip[slot] && !worn.has(x.uid) && !plan.some((p) => p.uid === x.uid) && gearScore(x) > curScore * 0.6)
         .sort((a, b) => gearScore(b) - gearScore(a)).slice(0, 8);
       for (const inst of cands) {
         const delta = eco.heroBuildStats(heroId, { ...equip, [slot]: inst.uid }).power - base;
@@ -81,27 +83,25 @@ export function applyBestEquipAll(eco) {
 }
 
 /**
- * 가방 정리 후보(분해해도 손해 없는 장비). 조건 전부:
+ * 가방 정리 후보(분해해도 손해 없는 장비). 영웅 한 명의 가방(heroBag)만 본다. 조건 전부:
  *  · 등급이 rarities 안(기본 N·S; 분해 가능 등급은 N·S·E뿐) · 누구도 장착하지 않음
- *  · 소유한 모든 영웅의 같은 부위 장착 장비(가장 약한 쪽)보다 점수가 높지 않음
- *  · 맨몸인 영웅이 있으면 그 부위의 최고 점수 장비를 영웅 수만큼 남김
- * 같은 점수끼리는 남겨 두는 쪽이 없다(중복 비교로 서로를 지우지 않게 비교 기준은 "장착 중" 장비뿐).
+ *  · 그 영웅이 같은 부위에 끼고 있는 장비보다 점수가 높지 않음(끼고 있는 장비가 없으면 그 부위는 정리하지 않는다)
+ * 금고 장비·다른 영웅 소유 장비는 후보가 아니다.
  * @returns {Array<{ uid: number, id: string, rarity: string, slot: string, score: number }>}
  */
-export function junkItems(eco, { rarities = ['N', 'S'] } = {}) {
+export function junkItems(eco, { rarities = ['N', 'S'], heroId = eco.s.selected } = {}) {
   const allowed = new Set(rarities.filter((r) => ['N', 'S', 'E'].includes(r)));
-  const worn = wornMap(eco), inv = byUid(eco), owned = eco.ownedHeroIds?.() || Object.keys(eco.s.heroes);
-  const junk = [];
+  const hero = eco.s.heroes?.[heroId], worn = wornMap(eco), inv = byUid(eco), junk = [];
+  if (!hero) return junk;
+  const bag = bagOf(eco, heroId);
   for (const slot of SLOTS) {
-    const wornScores = [];
-    let naked = 0;
-    for (const hid of owned) { const cur = inv.get(eco.s.heroes[hid]?.equip?.[slot]); if (cur) wornScores.push(gearScore(cur)); else naked++; }
-    const floor = wornScores.length ? Math.min(...wornScores) : 0;
-    const spare = eco.s.inventory.filter((x) => slotOf(x) === slot && !worn.has(x.uid)).sort((a, b) => gearScore(b) - gearScore(a));
-    const keep = new Set(spare.slice(0, naked).map((x) => x.uid));
-    for (const inst of spare) {
+    const cur = inv.get(hero.equip?.[slot]);
+    if (!cur) continue;
+    const floor = gearScore(cur);
+    for (const inst of bag) {
+      if (slotOf(inst) !== slot || worn.has(inst.uid)) continue;
       const rarity = ITEM_BY_ID[inst.id].rarity, score = gearScore(inst);
-      if (!allowed.has(rarity) || keep.has(inst.uid) || score > floor) continue;
+      if (!allowed.has(rarity) || score > floor) continue;
       junk.push({ uid: inst.uid, id: inst.id, rarity, slot, score: Math.round(score) });
     }
   }
@@ -130,10 +130,11 @@ export function salvageItems(eco, uids) {
   return out;
 }
 
-/** 설정 "N등급 자동 분해"가 켜져 있을 때 호출: 장착 중보다 약한 노말 장비만 분해한다. 반환: 분해한 개수와 미리 계산한 보상. */
+/** 설정 "N등급 자동 분해"가 켜져 있을 때 호출: 각 소유 영웅의 가방에서 그 영웅이 끼는 장비보다 약한 노말만 분해한다. 반환: 분해한 개수와 미리 계산한 보상. */
 export function autoSalvageNormal(eco) {
   if (!eco.s.settings?.autoSalvageN) return null;
-  const junk = junkItems(eco, { rarities: ['N'] });
+  const junk = [];
+  for (const heroId of eco.ownedHeroIds?.() || Object.keys(eco.s.heroes)) junk.push(...junkItems(eco, { rarities: ['N'], heroId }));
   if (!junk.length) return null;
   const preview = salvagePreview(eco, junk), r = salvageItems(eco, junk.map((j) => j.uid));
   return r.count ? { count: r.count, gold: preview.gold, stones: preview.stones } : null;
