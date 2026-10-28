@@ -34,6 +34,7 @@ import { TORMENT } from '../data/content-90d.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
+export const SAVE_STORAGE_KEY = KEY;
 const IAP_APPLIED_MAX = 300;
 // 서버가 준 opId만 받는다(길이·문자 제한). 이 밖의 값은 무시한다.
 const validOpId = (v) => typeof v === 'string' && v.length >= 1 && v.length <= 200;
@@ -242,6 +243,25 @@ export class Economy {
     catch { cleared = false; }
     this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
     return cleared && this.storageStatus === 'ready';
+  }
+  /**
+   * 진행 초기화 뒤 다시 쓸 새 저장(JSON). 영수증·결제로 얻은 권한만 현재 상태에서 옮기고 진행·재화는 새 시작값이다.
+   * 옮기는 것: 결제 원장(iapApplied·purchases·spentKRW), 광고 제거, VIP·월정액, 첫 구매 기록, 배틀패스 프리미엄 권한,
+   * 결제 영웅(roster.paid), 결제로 받은 아바타(avatars.paid와 그 소유). 유료 보석 몫은 새 시작값(0)이다.
+   */
+  entitlementSeed() {
+    const prev = this.s, next = this.fresh();
+    for (const field of ['iapApplied', 'adsRemoved', 'purchases', 'spentKRW', 'vip', 'vipUntil', 'monthlyUntil', 'monthlyClaimed', 'firstPurchaseUsed']) {
+      if (prev[field] !== undefined) next[field] = structuredClone(prev[field]);
+    }
+    if (Array.isArray(prev.roster?.paid)) next.roster.paid = [...prev.roster.paid];
+    if (prev.pass?.premium === true) next.pass.premium = true;
+    const paidAvatars = prev.avatars?.paid && typeof prev.avatars.paid === 'object' ? prev.avatars.paid : null;
+    if (paidAvatars) {
+      next.avatars.paid = structuredClone(paidAvatars);
+      next.avatars.owned = [...new Set([...(next.avatars.owned || []), ...Object.keys(paidAvatars).filter((id) => (prev.avatars.owned || []).includes(id))])];
+    }
+    return JSON.stringify(next);
   }
   rollbackEnergy(snapshot) {
     Object.assign(this.s, { energy: snapshot.energy, energyT: snapshot.energyT });

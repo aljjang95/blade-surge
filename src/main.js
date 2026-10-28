@@ -1,5 +1,5 @@
 import './style.css';
-import { resetAccountFromScratch } from './game/account-reset.js';
+import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
 import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
 const dungeonLabel = (kind, id) => [...__ALL_DUNGEONS, ...__FIELD_DUNGEONS].find((d) => d.id === id)?.name || (kind === 'arena' ? '결투장' : '던전');
@@ -422,12 +422,22 @@ class App {
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
-  /** 계정 초기화(처음부터): 세이브·UI 기록·동행·기기 신원을 지운다. 성공하면 호출부가 새로고침해 첫 실행 셋업으로 간다. */
-  async resetAccount() {
+  /**
+   * 처음부터 다시 시작. 기본(fullReset=false)은 진행·저장만 지우고 소셜 게스트 신원(이름·친구)과 결제 권한은 유지한다.
+   * fullReset=true는 기기 신원까지 지워 새 게스트 계정을 받는다(옛 결제 권한은 새 계정에 이어지지 않는다).
+   * 성공하면 호출부가 새로고침해 시작 영웅 선택부터 간다.
+   */
+  async resetAccount({ fullReset = false } = {}) {
     if (this.stageStarting || this.mode === 'battle') return { ok: false, reason: 'busy' };
+    // 서버 권한 계정은 같은 기기 신원으로 다시 접속하면 서버 문서가 진행을 되살린다. 신원까지 새로 받는 완전 초기화만 가능하다.
+    if (!fullReset && this.account?.authority === 'server') return { ok: false, reason: 'server' };
+    const seed = fullReset ? null : this.eco.entitlementSeed();
     // 신원·저장 삭제가 모두 검증된 뒤에만 메모리 상태를 비운다(실패하면 지금 상태 그대로).
-    const r = await resetAccountFromScratch();
-    if (r.ok) { this.companionAgent?.reset(); this.eco.reset(); }
+    const r = await resetAccountFromScratch({ keepIdentity: !fullReset, seed });
+    if (r.ok) {
+      this.companionAgent?.reset(); this.eco.reset(); // reset()은 저장 키를 다시 지우므로 결제 권한 저장은 그 뒤에 한 번 더 쓴다.
+      if (seed) { try { globalThis.localStorage.setItem(SAVE_STORAGE_KEY, seed); r.seedWritten = true; } catch { r.seedWritten = false; } }
+    }
     return r;
   }
   resetProgress() {

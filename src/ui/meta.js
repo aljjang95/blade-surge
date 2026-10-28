@@ -46,6 +46,7 @@ import { heroCompare } from '../data/hero-traits.js';
 import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { campaignTown } from '../data/campaign-towns.js';
+import { buildSaveExport } from './save-export.js';
 import { isAccountResetPhrase, PAYMENT_PENDING_MESSAGE } from '../game/account-reset.js';
 import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
@@ -842,7 +843,7 @@ export class Meta {
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       ${legalLinksHtml(undefined, 'legal-links setting-legal')}
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
-      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 모든 진행(영웅·장비·재화·진행도·튜토리얼)과 기기 계정이 지워지고 새 계정으로 처음부터 시작합니다. 되돌릴 수 없습니다. 결제·구독 확인 기록은 지우지 않습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 처음부터 시작할까요?</b> 구매한 상품 권한은 옛 계정에 남고 새 계정으로 이어지지 않습니다. 아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
+      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 진행(영웅·장비·재화·진행도·튜토리얼)을 지우고 시작 영웅 선택부터 다시 합니다. 이름·친구와 결제로 받은 권한(광고 제거·월정액·구매한 영웅/아바타)은 유지됩니다. 되돌릴 수 없으니 먼저 저장을 내보내 두세요.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>1단계 · 현재 저장 내보내기</b></p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-file">파일로 저장</button><button type="button" class="btn btn-ghost btn-sm" id="m-reset-copy">코드 복사</button></div><textarea id="m-reset-code" class="danger-input" readonly rows="3" aria-label="저장 내보내기 코드" hidden></textarea><p id="m-reset-export" role="status"></p><p><b>2단계 · 확인 문구</b><br>아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><label class="danger-check"><input type="checkbox" id="m-reset-full"> 이름·친구까지 새로 시작(완전 초기화) — 기기 계정이 바뀌어 옛 결제 권한은 이어지지 않습니다</label><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
       const pwa = this.app.pwa, pwaState = pwa?.getState();
@@ -883,15 +884,30 @@ export class Meta {
       const resetBtn = b.querySelector('#m-reset'), resetConfirm = b.querySelector('#m-reset-confirm');
       const resetInput = b.querySelector('#m-reset-input'), resetYes = b.querySelector('#m-reset-yes');
       resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; resetInput.value = ''; resetYes.disabled = true; resetInput.focus({ preventScroll: true }); };
+      const fullBox = b.querySelector('#m-reset-full');
+      if (this.app.account?.authority === 'server') { fullBox.checked = true; fullBox.disabled = true; fullBox.parentElement.insertAdjacentHTML('beforeend', '<br><b>서버 계정은 서버에 진행이 저장돼 있어 완전 초기화만 가능합니다.</b>'); }
+      const exportNote = b.querySelector('#m-reset-export'), codeBox = b.querySelector('#m-reset-code');
+      b.querySelector('#m-reset-file').onclick = () => {
+        try {
+          const out = buildSaveExport(this.eco.s), url = URL.createObjectURL(new Blob([out.json], { type: 'application/json' })), link = document.createElement('a');
+          link.href = url; link.download = out.fileName; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+          exportNote.textContent = '파일 저장을 요청했습니다. 다운로드가 막히면 「코드 복사」를 쓰세요.';
+        } catch { exportNote.textContent = '파일 저장에 실패했습니다. 「코드 복사」를 쓰세요.'; }
+      };
+      b.querySelector('#m-reset-copy').onclick = async () => {
+        const out = buildSaveExport(this.eco.s); codeBox.value = out.code; codeBox.hidden = false;
+        try { await navigator.clipboard.writeText(out.code); exportNote.textContent = '코드를 복사했습니다. 메모장 등에 붙여 두세요.'; }
+        catch { codeBox.focus(); codeBox.select(); exportNote.textContent = '자동 복사가 막혀 있습니다. 아래 코드를 길게 눌러 직접 복사하세요.'; }
+      };
       resetInput.oninput = () => { resetYes.disabled = !isAccountResetPhrase(resetInput.value); };
       b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
       resetYes.onclick = async () => {
         if (!isAccountResetPhrase(resetInput.value) || this._resetting) return;
         this._resetting = true; resetYes.disabled = true; resetInput.disabled = true; resetBtn.disabled = true; b.querySelector('#m-reset-no').disabled = true;
-        const out = await this.app.resetAccount();
+        const out = await this.app.resetAccount({ fullReset: b.querySelector('#m-reset-full').checked });
         if (out.ok) { location.reload(); return; }
         this._resetting = false; resetInput.disabled = false; resetBtn.disabled = false; b.querySelector('#m-reset-no').disabled = false; resetYes.disabled = !isAccountResetPhrase(resetInput.value);
-        this.ui.toast(out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
+        this.ui.toast(out.reason === 'server' ? '서버 계정은 완전 초기화만 가능합니다' : out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
       };
       this.groupSettingsTabs(b);
     } });
