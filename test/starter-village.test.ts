@@ -101,8 +101,10 @@ test('chapter 2 and later bring back the original plaza layout', () => {
   expect(plaza.starter).toBeFalsy();
   expect(plaza).not.toBe(starter);
   const kinds = new Set(plaza.hotspots.map((spot: any) => spot.kind));
-  for (const kind of ['guide', 'training', 'board', 'smith', 'story']) expect(kinds.has(kind)).toBe(false);
-  for (const kind of ['campaign', 'arena', 'merchant', 'trainer', 'waystone']) expect(kinds.has(kind)).toBe(true);
+  for (const kind of ['guide', 'training', 'story']) expect(kinds.has(kind)).toBe(false);
+  // 의뢰 게시판 · 대장장이는 2지역 이후 마을에도 선다(docs/TOWN_AUDIT.md). 초보자 마을의 첫 의뢰 게시판과는 id가 다르다.
+  for (const kind of ['campaign', 'arena', 'merchant', 'trainer', 'waystone', 'board', 'smith']) expect(kinds.has(kind)).toBe(true);
+  expect(plaza.hotspots.some((spot: any) => spot.id === 'board:quests')).toBe(false);
   // 2지역 마을에서도 모든 지점에 걸어서 닿아야 한다(기존 계약).
   const reach = hubReach(plaza);
   expect(plaza.hotspots.filter((spot: any) => !reach.reaches(spot)).map((spot: any) => spot.id)).toEqual([]);

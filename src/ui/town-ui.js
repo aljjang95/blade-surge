@@ -146,8 +146,16 @@ export class TownUI {
     node.innerHTML = '<span aria-hidden="true">★</span><strong>' + safe(event.title) + '</strong><small>' + safe(event.text) + '</small>';
     document.body.append(node); setTimeout(() => node.remove(), 3400);
   }
+  /** 3D 광장의 들를 곳 표시('!'): 받을 보상이 있거나 아직 받지 않은 일일 의뢰가 있으면 의뢰 게시판 위에 띄운다. */
+  syncAttention() {
+    const scene = this.app.arena?.lobbyHall?.userData; if (typeof scene?.setAttention !== 'function') return;
+    const quests = attempt(() => this.content.quests(this.activeId), null) || [];
+    const due = this.content.claimable() > 0 || quests.some(quest => quest.status === 'available' && quest.kind === 'daily');
+    scene.setAttention(due ? [townHub(this.activeId).starter ? 'board:quests' : 'board:town'] : []);
+  }
   /** 걷기 HUD의 '마을 일' 칩에 받을 보상 수를 표시한다(버튼을 새로 만들지 않아 초점을 잃지 않는다). */
   updateBadge(root = this.placeRoot || this.app.hubUI?.root) {
+    this.syncAttention();
     const chip = root?.querySelector('.town-work-chip'); if (!chip) return;
     const ready = this.content.claimable(), badge = chip.querySelector('.town-work-badge');
     chip.dataset.ready = String(ready);

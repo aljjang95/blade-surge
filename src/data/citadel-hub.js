@@ -156,6 +156,18 @@ const WAYSTONE = Object.freeze({ id: 'waystone:main', kind: 'waystone', route: '
   description: '이동석에 손을 얹어 다른 마을로 떠납니다.', accent: '#b9e6ff', x: 3.3, z: 8.5, yaw: 0,
   interactionRadius: 2, blockerRadius: .5 });
 
+// 마을 일(의뢰 게시판 · 대장장이)을 3D 광장에도 세운다(docs/TOWN_AUDIT.md). 초보자 마을은 starter-village.js 의 게시판 · 도르가 같은 일을 한다.
+// 자리는 출현 위치(0, 3.6) 양옆으로, 중앙 통로(x ±2)와 벤치(x ±6)를 피한다.
+const TOWN_SMITHS = Object.freeze({ oathhold: ['대장장이 도르', '#ff9f5a'], emberport: ['선창 대장장이 브론', '#ffb27a'], starcrest: ['서리 대장장이 이라', '#bfe6ff'] });
+const townWork = townId => [
+  Object.freeze({ id: 'board:town', kind: 'board', route: 'quests', label: '의뢰 게시판', subtitle: '마을 의뢰 · 이야기',
+    description: '오늘의 의뢰를 받고 보상을 챙기세요.', accent: '#f0c46a', x: -3.6, z: 1.4, yaw: .35,
+    interactionRadius: 1.9, blockerRadius: .6 }),
+  Object.freeze({ id: 'npc:smith', kind: 'smith', route: 'forge', label: TOWN_SMITHS[townId][0], subtitle: '제작 · 강화',
+    description: '골드와 재료로 장비를 만들고 강화하세요.', accent: TOWN_SMITHS[townId][1], x: 3.6, z: 1.4, yaw: -.4,
+    interactionRadius: 2, blockerRadius: .42, model: 'Barbarian' }),
+];
+
 /** 마을별 소품 자리. 걷는 길(중앙 통로)은 비워 두고 기존 충돌 규칙을 그대로 쓴다. */
 const townProps = townId => {
   const lamps = [-1, 1].flatMap(xSide => [-1, 1].map(zSide => ({ id: 'lamp:' + xSide + ':' + zSide, kind: 'lamp',
@@ -219,7 +231,7 @@ function starterHub(townId) {
     blockers: Object.freeze(starterBlockers(hotspots)), props: STARTER_PROPS, dungeonIds: Object.freeze(ids.slice()) });
 }
 
-/** 마을 하나의 걷기 데이터: 던전 게이트 6개 + 캠페인·결투장 + 상인·교관·안내관 + 이동석. */
+/** 마을 하나의 걷기 데이터: 던전 게이트 6개 + 캠페인·결투장 + 상인·교관·안내관 + 의뢰 게시판·대장장이 + 이동석. */
 export function townHub(townId) {
   if (!TOWN_THEMES[townId]) townId = 'oathhold';
   if (isStarterVillage(townId)) {
@@ -232,7 +244,7 @@ export function townHub(townId) {
   const slots = GATE_SLOTS[theme.gateLayout];
   const gates = ids.map((id, index) => townGate(ALL_DUNGEONS.find(dungeon => dungeon.id === id), ...slots[index]));
   const campaign = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'campaign'), arena = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'arena');
-  const hotspots = Object.freeze([...gates, campaign, arena, ...townNpcs(townId), WAYSTONE]);
+  const hotspots = Object.freeze([...gates, campaign, arena, ...townNpcs(townId), ...townWork(townId), WAYSTONE]);
   const props = townProps(townId), blockers = Object.freeze(townBlockers(hotspots, props));
   const hub = Object.freeze({ townId, theme, bounds: CITADEL_HUB_BOUNDS, spawn: CITADEL_HUB_SPAWN, hotspots, blockers, props,
     dungeonIds: Object.freeze(ids.slice()) });

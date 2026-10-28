@@ -346,6 +346,18 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     b.finish();
   }
 
+  // 마을 의뢰 게시판(2지역 이후 · 다른 서비스 마을). 기둥 둘 · 판 · 지붕 · 붙은 쪽지. 라이브러리 'board' 소품이 있으면 그 모델을 쓴다.
+  function buildBoard(node, spot) {
+    if (planLibrary('board', { x: spot.x, z: spot.z, yaw: spot.yaw })) return;
+    const b = batch(node), paper = mat('#efe3c2');
+    for (const side of [-1, 1]) b.box(.14, 2.1, .14, wood, side * .78, 1.05, 0);
+    b.box(1.78, 1.06, .1, wood, 0, 1.42, 0);
+    b.box(2.02, .1, .5, shadowStone, 0, 2.18, 0);
+    [[-.5, 1.6, .02], [.05, 1.66, -.04], [.52, 1.55, .05], [-.28, 1.2, -.03], [.34, 1.18, .02]].forEach(([x, y, r]) => b.add(new THREE.BoxGeometry(.38, .3, .02), paper, x, y, .07, 0, 0, r));
+    b.add(new THREE.CylinderGeometry(.07, .07, .03, 10), gold, .05, 1.79, .085, Math.PI / 2);
+    b.finish();
+  }
+
   // 새로 열린 관문의 등장: 노드를 땅 아래로 내리고 update 에서 순서대로 올린다. 빛기둥은 공유 기하 하나·재질 하나를 쓴다.
   const emergingIds = new Set(emerging || []), rising = [], pendingLabels = new Set();
   const riseColumn = emergingIds.size ? new THREE.CylinderGeometry(.9, 1.25, 7, 18, 1, true) : null;
@@ -373,6 +385,9 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     } else if (spot.kind === 'waystone') {
       buildWaystone(node, spot);
       textLabel(spot, 3.4);
+    } else if (spot.kind === 'board') {
+      buildBoard(node, spot);
+      textLabel(spot, 3.1);
     } else {
       if (!cloneAsset(spot.asset, node)) {
         if (models[spot.model]) {
@@ -559,6 +574,26 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   }
   market.finish();
 
+  // 들를 곳 표시: 받을 보상 · 오늘의 의뢰가 있는 게시판 · NPC 머리 위 금빛 '!'(docs/TOWN_AUDIT.md). 글을 읽지 않아도 보이게 한다.
+  // 텍스처 · 재질 하나를 공유하고, 처음 표시할 때만 만든다.
+  const attention = new Map(); let attentionMaterial = null, attentionT = 0;
+  function attentionSprite(spot) {
+    if (!attentionMaterial) {
+      if (typeof document === 'undefined') return null;
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+      const context = canvas.getContext('2d'); if (!context) return null;
+      context.fillStyle = '#ffd34d'; context.strokeStyle = '#7a3f06'; context.lineWidth = 10;
+      context.beginPath(); context.arc(64, 64, 52, 0, Math.PI * 2); context.fill(); context.stroke();
+      context.fillStyle = '#5a2c04'; context.font = '900 88px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle';
+      context.fillText('!', 64, 70);
+      const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texturesOwned.add(texture);
+      attentionMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }); materialsOwned.add(attentionMaterial);
+    }
+    const sprite = new THREE.Sprite(attentionMaterial); sprite.scale.set(.6, .6, 1); sprite.renderOrder = 4;
+    sprite.userData.baseY = spot.kind === 'board' ? 2.65 : 2.95; sprite.position.set(spot.x, sprite.userData.baseY, spot.z);
+    root.add(sprite); return sprite;
+  }
+
   let disposed = false, nearestId = null;
   root.userData = {
     version: 'citadel-playable-hub-v1', townId: town, starter: starterVillage, campaignChapter: skin?.chapter || 1, spatial: hub || CITADEL_HUB, hotspots,
@@ -573,6 +608,14 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
         sprite.material.opacity = spot.id === nearestId ? 1 : isNpc ? .6 : .84;
       }
     },
+    /** 들를 곳 표시를 바꾼다. ids: 표시할 상호작용 지점 id 목록(없는 id는 무시). */
+    setAttention(ids = []) {
+      if (disposed) return;
+      const want = new Set([...ids].filter(id => hotspots.some(spot => spot.id === id)));
+      for (const [id, sprite] of attention) sprite.visible = want.has(id);
+      for (const id of want) if (!attention.has(id)) { const sprite = attentionSprite(hotspots.find(spot => spot.id === id)); if (sprite) attention.set(id, sprite); }
+    },
+    attentionIds: () => [...attention].filter(([, sprite]) => sprite.visible).map(([id]) => id),
     /** 아직 솟아오르는 중인 관문 수(QA·연출 확인용). */
     risingGates: () => rising.filter(entry => !entry.done).length,
     emergingIds: [...emergingIds],
@@ -597,6 +640,10 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       if (camera) canopySightline.update(camera.position); else canopySightline.disable();
       if (Object.hasOwn(state, 'nearestId') || Object.hasOwn(state, 'nearest')) this.highlightHotspot(nextId ?? nearest?.id ?? null);
       if (!reducedMotion) for (const actor of characters) actor.mixer.update(Math.min(dt, .05));
+      if (attention.size) {
+        attentionT += reducedMotion ? 0 : Math.min(dt, .1);
+        for (const sprite of attention.values()) sprite.position.y = sprite.userData.baseY + Math.sin(attentionT * 3) * .09;
+      }
       if (playerPosition) for (const { sprite, spot, isNpc } of labels) {
         const distance = Math.hypot(spot.x - playerPosition.x, spot.z - playerPosition.z), selected = spot.id === nearestId;
         const range = isNpc ? 9 : quality === 'low' ? 9 : 14;

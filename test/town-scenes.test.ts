@@ -137,3 +137,21 @@ test('price normalization accepts numbers and gold-plus-material objects', () =>
   expect(normalizePrice({ gold: 5, materials: { ember_core: 2 } })).toEqual({ gold: 5, materials: { ember_core: 2 } });
   expect(normalizePrice(undefined)).toEqual({ gold: 0, materials: {} });
 });
+
+test('2지역 이후 광장에 의뢰 게시판·대장장이가 서고 들를 곳 표시를 켜고 끌 수 있다', () => withChapter(2, () => {
+  for (const id of CITADEL_TOWN_IDS) {
+    const hub = townHub(id) as any;
+    expect(hub.hotspots.find((s: any) => s.id === 'board:town')?.kind).toBe('board');
+    expect(hub.hotspots.find((s: any) => s.id === 'npc:smith')?.kind).toBe('smith');
+    const reach = hubReach(hub);
+    expect(hub.hotspots.filter((s: any) => ['board', 'smith'].includes(s.kind) && !reach.reaches(s))).toEqual([]);
+  }
+  const root = buildCitadelHubScene({ assets: new Map(), townId: 'emberport' }) as any;
+  expect(root.getObjectByName('Citadel_Hotspot_board:town')?.children.length).toBeGreaterThan(0);
+  root.userData.setAttention(['board:town', 'unknown']);
+  // 헤드리스(문서 없음)에서는 캔버스 표시를 만들지 않는다. 있으면 그 id만 켠다.
+  expect(root.userData.attentionIds().every((id: string) => id === 'board:town')).toBe(true);
+  root.userData.setAttention([]);
+  expect(root.userData.attentionIds()).toEqual([]);
+  root.userData.dispose();
+}));
