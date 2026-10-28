@@ -31,7 +31,9 @@ export function normalizeVault(raw) {
  */
 export function normalizeGearOwnership(s, raw) {
   const legacySave = !record(raw?.vault);
-  const rawById = new Map((Array.isArray(raw?.inventory) ? raw.inventory : []).filter(record).map((x) => [x.uid, x]));
+  // 중복 uid 는 normalizeSave 처럼 처음 것만 쓴다.
+  const rawById = new Map();
+  for (const x of Array.isArray(raw?.inventory) ? raw.inventory : []) if (record(x) && !rawById.has(x.uid)) rawById.set(x.uid, x);
   const wearer = new Map();
   for (const [heroId, h] of Object.entries(s.heroes)) for (const slot of SLOTS) if (h.equip[slot] != null) wearer.set(h.equip[slot], heroId);
   const fallback = knownHero(s.selected) ? s.selected : Object.keys(HEROES)[0];

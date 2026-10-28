@@ -165,7 +165,7 @@ describe('금고 이전 규칙', () => {
     expect(eco.vaultDeposit(item.uid).ok).toBe(false); // 이미 금고
     expect(eco.vaultWithdrawQuote(item.uid, 'knight')).toMatchObject({ ok: true, gold: 0, free: 'return' });
     expect(eco.vaultWithdraw(item.uid, 'knight')).toMatchObject({ ok: true, gold: 0, free: 'return' });
-    expect(item.owner).toBe('knight'); expect(item.from).toBeUndefined(); expect(eco.s.vault.used).toBe(0);
+    expect(item.owner).toBe('knight'); expect((item as any).from).toBeUndefined(); expect(eco.s.vault.used).toBe(0);
   });
 
   test('다른 영웅은 등급·강화 비례 골드, 강화·tp·룬 그대로, 하루 5회', () => {
