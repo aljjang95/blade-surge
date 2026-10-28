@@ -29,6 +29,7 @@ const _route = { x: 0, z: 0, pace: 1, los: true };
 // 원거리 적이 근접 영웅에게서 연속으로 물러설 수 있는 최대 시간. 끝없는 뒷걸음 추격을 막는다.
 const RANGED_RETREAT_SEC = 2.4;
 // 적 탄환과 자폭의 실제 타이밍 값. 공격 코드와 AUTO 위협 계산(enemyImpactIn)이 같은 값을 쓴다.
+export const GHOST_OPACITY = .85;        // 원령 몸 불투명도(깊이 기록과 함께 — 겹친 원령끼리 비쳐 보이지 않게)
 export const ENEMY_BOLT = { speed: 11, radius: 0.7 };
 export const ENEMY_FAN_BOLT = { speed: 13, radius: 0.75 };
 const ENEMY_MUZZLE = 0.8;                 // 탄환은 적 앞 0.8 지점에서 생긴다
@@ -118,7 +119,8 @@ export class Enemy extends Actor {
     this.model.traverse((o) => { if (o.isMesh && /Eyes/.test(o.name)) { o.material.emissive = new THREE.Color(def.boss ? 0xff2020 : def.elite ? 0xffc040 : 0x40ff80); o.material.emissiveIntensity = 2.5; this.eyeMat = o.material; } });
     this.mats = this.mats.filter((m) => m !== this.eyeMat);
     if (def.elite) this.tintEmissive = new THREE.Color(0.06, 0.04, 0.0);
-    if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = 0.8; m.depthWrite = false; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
+    // 원령은 반투명 몸을 유지하되 깊이를 써서, 뭉쳤을 때 서로의 몸·뒤의 적이 비쳐 보이지 않게 한다(밀집 시 '투명해져 타격감이 사라짐').
+    if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = GHOST_OPACITY; m.depthWrite = true; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */

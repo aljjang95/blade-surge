@@ -4,7 +4,7 @@ import { ARMORY_ITEMS, ARMORY_SETS } from '../src/data/armory.js';
 import { ITEM_BY_ID, ITEM_POOL, ITEMS_OF, THEMED_SETS, craftable, CRAFT_COST } from '../src/data/items.js';
 import { Economy } from '../src/game/economy.js';
 import { ArmoryProcs } from '../src/game/armory-procs.js';
-import { contactProfile, contactBudget } from '../src/game/combat-contact.js';
+import { CROWD_SPARKS, contactProfile, contactBudget } from '../src/game/combat-contact.js';
 import { FEEL } from '../src/game/feel.js';
 import { HeroBeacon } from '../src/game/hero-beacon.js';
 import { Actor } from '../src/game/actor.js';
@@ -280,3 +280,25 @@ test('pure contact budget allows only one upgrade without moving the ordinary em
 });
 
 
+test('RPG crowd swing sparks each struck enemy while hitstop and sound stay once per window',()=>{
+ let flashes=0,contacts=0,sounds=0;const original=audio.hit;audio.hit=()=>{sounds++;};
+ try{
+ const g:any={active:true,elapsed:1,paused:false,player:{stats:{crit:0,ultGain:1},addUlt(){}},app:{reducedMotion:{matches:false}},dmgDealt:0,combo:0,maxCombo:0,feedbackCount:0,feedbackSound:false,ui:{setCombo(){}},timeCtl:new TimeCtl(),fx:{dmgLayer:{children:[]},damage(){},flash(){flashes++;},directional(){},contact(){contacts++;}}};
+ const mk=()=>({alive:true,pos:new Vector3(),def:{scale:1},maxHp:100,hurt:()=>10,receiveImpact(){},flash(){}});
+ const crowd=[mk(),mk(),mk(),mk(),mk(),mk()];
+ for(const e of crowd)RpgBattle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
+ expect(contacts).toBe(1);expect(flashes).toBe(CROWD_SPARKS);expect(sounds).toBe(1);
+ // 같은 적을 연타하면 군중 섬광을 더 쓰지 않는다.
+ g.elapsed+=.061;g.feedbackCount=0;const one=mk();
+ for(let i=0;i<5;i++)RpgBattle.prototype.damageEnemy.call(g,one,10,{quietStop:true});
+ expect(contacts).toBe(2);expect(flashes).toBe(CROWD_SPARKS);
+ // 두 적을 번갈아 맞혀도 섬광은 서로 다른 적에게만 간다.
+ g.elapsed+=.061;g.feedbackCount=0;const a=mk(),b=mk(),c=mk();
+ for(const e of [a,b,a,b,c])RpgBattle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
+ expect(contacts).toBe(3);expect(flashes).toBe(CROWD_SPARKS+2);
+ // 동작 줄이기: 군중 섬광 없음.
+ g.elapsed+=.061;g.feedbackCount=0;g.app.reducedMotion.matches=true;
+ for(const e of [mk(),mk(),mk()])RpgBattle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
+ expect(contacts).toBe(4);expect(flashes).toBe(CROWD_SPARKS+2);
+ }finally{audio.hit=original;}
+});

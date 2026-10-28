@@ -6,7 +6,7 @@ import { HEROES, heroStats, levelExp } from '../data/heroes.js';
 import { audio } from '../engine/audio.js';
 import { ImpactClock } from './combat-motion.js';
 import { contactFeedback } from './apex-combat.js';
-import { contactProfile, contactBudget } from './combat-contact.js';
+import { CROWD_SPARKS, contactProfile, contactBudget } from './combat-contact.js';
 import { HitCrowd, hitWeight, weightedHitstop, flashFor } from './feel.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain } from './control-rewards.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
@@ -177,9 +177,22 @@ export class Battle extends BaseBattle {
     // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
-    if (!budget) return;
-    this._contactBudget = budget; this._contactAt = budget.at;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
+    if (!budget) {
+      // 같은 60ms 창에 함께 맞은 다른 적도 접점 섬광을 받는다(정지·소리·진동은 창당 한 번 그대로).
+      // 휘두르기 한 번에 여럿이 맞으면 첫 적만 번쩍여 군중 타격이 비어 보였다. 각도를 정해 난수 흐름은 건드리지 않는다.
+      // 동작 줄이기에서는 주 접점 하나만 남긴다. 이번 창에서 이미 번쩍인 적(고정 3칸)은 다시 쓰지 않는다.
+      const sparked = this._crowdSparked || (this._crowdSparked = new Array(CROWD_SPARKS).fill(null)), n = this._crowdSparks | 0;
+      let seen = enemy === this._contactLast;
+      for (let i = 0; i < n && !seen; i++) seen = sparked[i] === enemy;
+      if (!seen && contact.particles > 0 && n < CROWD_SPARKS && this.feedbackCount++ < 6) {
+        sparked[n] = enemy; this._crowdSparks = n + 1;
+        this.fx.flash?.(hitPos, color, { size: contact.size * .75, life: .09, angle: this._crowdSparks * 1.9 });
+      }
+      return;
+    }
+    this._contactBudget = budget; this._contactAt = budget.at;
+    if (budget.emit) { this._crowdSparks = 0; this._contactLast = enemy; }
     // The entire pack shares a small per-frame budget, rather than 30 stacked impacts.
     if (budget.emit && this.feedbackCount++ < 6) {
       this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier,crit});

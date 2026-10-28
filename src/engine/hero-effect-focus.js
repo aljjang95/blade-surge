@@ -14,6 +14,9 @@ float heroEffectFactor(vec2 uv) {
   // 영웅 주변에서도 이펙트가 완전히 사라지지 않게 최소 비율을 둔다(영웅 윤곽은 별도 실루엣 패스가 지킨다).
   return mix(.45, 1.0, smoothstep(.78, 1.22, d));
 }
+float heroBloomFactor(vec2 uv) {
+  return mix(.7, 1.0, (heroEffectFactor(uv) - .45) / .55);
+}
 `;
 
 const cosmeticMask = `
@@ -94,7 +97,8 @@ export class HeroEffectFocus {
     const focus = this;
     const statement = scope === 'alpha'
       ? 'gl_FragColor.a *= heroCosmeticFactor(gl_FragCoord.xy / heroFocusViewport);'
-      : 'gl_FragColor.rgb *= heroEffectFactor(vUv);';
+      // 블룸은 영웅 캡슐에서 .7 까지만 낮춘다(.45 는 영웅을 둘러싼 군중의 타격 발광까지 반으로 죽였다. 영웅 윤곽은 실루엣 패스가 지킨다).
+      : 'gl_FragColor.rgb *= heroBloomFactor(vUv);';
     const hook = function(shader, renderer) {
       original.call(this, shader, renderer);
       shader.uniforms.heroFocus = focus.area;
@@ -106,7 +110,7 @@ export class HeroEffectFocus {
       }
       shader.fragmentShader = extendMain(shader.fragmentShader, statement, scope === 'alpha' ? cosmeticMask : '');
     };
-    const cacheKey = () => prefix + (scope === 'alpha' ? '|hero-effect-focus-v5:' : '|hero-effect-focus-v3:') + scope;
+    const cacheKey = () => prefix + (scope === 'alpha' ? '|hero-effect-focus-v5:' : '|hero-effect-focus-v4:') + scope;
     material.onBeforeCompile = hook; material.customProgramCacheKey = cacheKey;
     material.needsUpdate = true;
     bindings.set(material, { owner: this, scope, original, prefix, hook, cacheKey });
