@@ -52,6 +52,10 @@ const LINEUPS = {
     ['bomb_abyss', 'alien', 'mushnub', 'golem_guard'],
     ['elite_golem', 'elite_mushroom_king', 'elite_dragonling', 'armabee_evo'],
     ['tide_midboss', 'tide_finalboss', 'skel_minion'],
+    // 4장 전용 Tripo 몸(따개비 수부·미끼등 아귀)·마렌(tll_ch4_maren).
+    ['ch4_drowned', 'ch4_drowned_line', 'ch4_drowned_anchor', 'ch4_drowned_coral'],
+    ['ch4_plankguard', 'ch4_deckhand', 'ch4_drowned_drift', 'tide_midboss'],
+    ['ch4_lurer', 'ch4_lurer_bomb', 'ch4_lurer_seer', 'ch4_lurer_glim'],
   ],
   5: [
     ['ninja', 'alien', 'skel_shield', 'bone_orc'],

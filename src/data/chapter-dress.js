@@ -243,7 +243,30 @@ export const CHAPTER_DRESS = Object.freeze({
       ghost: { ...DEEP_SKIN, props: ['lureLamp'] },
       ghost_skull: { ...DEEP_SKIN, props: ['lureLamp'] },
       // 등대지기 마렌(중간 보스)·해왕 네레이스(최종 보스).
-      tide_midboss: { ...DEEP_MUSH, props: ['lighthouseLens', 'glowPouches'] },
+      // 마렌은 Tripo 몸(tll_ch4_maren)의 머리가 꺼진 등대 등실이고 장대 등롱을 손에 들어(로스터 weapon) 등대 렌즈·빛 주머니 소품을 뺀다.
+      tide_midboss: { emissive: '#04282a' },
+      // 4장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 남색·청록이라 재배치(DEEP_SKIN remap)를 걸지 않고 발광만 준다.
+      // 수부 몸에 있는 따개비·허리 닻사슬, 아귀 이마의 미끼등과 겹치는 소품(barnacles·lureLamp)은 뺀다.
+      ch4_drowned: { emissive: '#021a1c' },
+      // 심연 슬라임 자리: 해초에 덮인 수부 — 몸빛을 해초 녹색으로.
+      ch4_drowned_line: { color: '#7fa88a', amount: 0.4, emissive: '#031a10' },
+      // 이계 침입자 자리: 등에 녹슨 닻사슬을 하나 더 끄는 수부(허리 사슬과 다른 등 실루엣).
+      ch4_drowned_anchor: { emissive: '#021a1c', props: ['anchorChain'] },
+      // 포자 괴물 자리: 어깨에 산호가 자란 수부.
+      ch4_drowned_coral: { emissive: '#021a1c', props: ['coralGrowth'] },
+      // 판자 방패는 로스터 offhand(tll_ch4_plankshield)로 왼손에 든다.
+      ch4_plankguard: { emissive: '#021a1c' },
+      // 합류 경로의 해골 병사 자리: 몸빛을 한 톤 어둡게.
+      ch4_deckhand: { color: '#6f8494', amount: 0.3, emissive: '#021a1c' },
+      // 합류 경로의 원령 자리: 물에 불어 창백한 수부, 청록 발광을 조금 세게.
+      ch4_drowned_drift: { color: '#bfd8e0', amount: 0.25, emissive: '#06302e' },
+      ch4_lurer: { emissive: '#021a1c' },
+      // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광.
+      ch4_lurer_bomb: { emissive: '#3a0808' },
+      // 심연 주시자 자리(지원 소환): 몸에 빛 주머니.
+      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouches'] },
+      // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
+      ch4_lurer_glim: { emissive: '#06302e' },
       tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
     },
     assets: {

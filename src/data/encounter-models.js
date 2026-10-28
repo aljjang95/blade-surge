@@ -17,6 +17,8 @@ export const CAMPAIGN_MODELS = {
   forge_midboss: 'Ch2_Igran',
   // 3장 중간 보스: 기록관 오르딘(tll_ch3_ordin, 봉인 도장 철퇴).
   frost_midboss: 'Ch3_Ordin',
+  // 4장 중간 보스: 등대지기 마렌(tll_ch4_maren, 장대 등롱).
+  tide_midboss: 'Ch4_Maren',
   garden_finalboss: 'Skeleton_BellKing',
   forge_finalboss: 'Big_KilnTyrant',
   frost_finalboss: 'Big_ArchiveMonarch',

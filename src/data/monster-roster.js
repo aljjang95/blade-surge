@@ -101,6 +101,20 @@ export const MONSTER_ROSTER = Object.freeze({
     weapon: { asset: 'tll_ch3_tome', hand: 'right', grip: [0, 0.1, 0], at: [0, 0.08, 0.04], rot: [90, 0, 0] } },
   Ch3_Ordin: { asset: 'tll_ch3_ordin', fallback: 'frost_golem', scale: 0.8, fallbackScale: 0.63,
     weapon: { asset: 'tll_ch3_seal', hand: 'right', grip: [0, 0.25, 0], at: [0, 0.08, 0.02], rot: [90, 0, 40] } },
+  // ---- 4장 전용 Tripo 몸(2026-10-29, docs/asset-library/ch4-tripo.md) ----
+  // 따개비 수부 1.6m(허리 닻사슬·어깨 따개비)·미끼등 아귀 1.25m(이마 미끼등, 두 다리로 서서 hover 없음)·등대지기 마렌 2.2m(tide_midboss).
+  // scale 은 heightM × scale × def.scale 이 영웅(1.8m)의 0.9~1.0배(수부)·약 0.73배(아귀)가 되게 맞췄다. 원본 종 크기가 다른 자리
+  // (원령 1.25·골렘 수호자 1.15·해골 망령 1.2)는 항목을 나눴다.
+  Ch4_Drowned: { asset: 'tll_ch4_drowned', fallback: 'bone_knight', scale: 1.08, fallbackScale: 0.86 },
+  Ch4_DrownedDrift: { asset: 'tll_ch4_drowned', fallback: 'void_wisp', scale: 0.86, fallbackScale: 1.17 },
+  // 판자 방패 수부: 왼손에 난파선 판자 방패(골렘 수호자 shield 행동 자리).
+  Ch4_PlankGuard: { asset: 'tll_ch4_drowned', fallback: 'bone_knight', scale: 0.95, fallbackScale: 1.03,
+    offhand: { asset: 'tll_ch4_plankshield', hand: 'left', grip: [0, 0.4, 0.05], at: [0, 0.05, 0.08], rot: [0, 0, 0] } },
+  Ch4_Lurer: { asset: 'tll_ch4_lurer', fallback: 'star_owl', scale: 1.05, fallbackScale: 0.92 },
+  Ch4_LurerGlim: { asset: 'tll_ch4_lurer', fallback: 'void_wisp', scale: 0.88, fallbackScale: 1.15 },
+  // 등대지기 마렌: 오른손에 긴 장대 등롱.
+  Ch4_Maren: { asset: 'tll_ch4_maren', fallback: 'mushroom_shaman', scale: 0.8, fallbackScale: 0.99,
+    weapon: { asset: 'tll_ch4_lantern', hand: 'right', grip: [0, 0.45, 0], at: [0, 0.08, 0.02], rot: [160, 0, 0] } },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
