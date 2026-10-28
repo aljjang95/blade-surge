@@ -98,7 +98,7 @@ describe('의뢰 · 문장 획득처', () => {
     const eco = newEco(), svc = new JourneyService({ eco, expedition: { reward: () => ({}) } } as any); eco.s.lineageSigil = 0;
     const st = normalizeJourney(null); st.day = 100; st.week = 15;
     st.daily.actions.vaultRelay = 1; const r = claimContract(st, 'daily', d[0].id) as any;
-    expect(r.ok).toBe(true); svc.grant(r); expect(eco.s.lineageSigil).toBe(1);
+    expect(r.ok).toBe(true); svc.grant(r, { kind: 'daily', id: d[0].id }); expect(eco.s.lineageSigil).toBe(1);
     expect(claimContract(st, 'daily', d[0].id)).toMatchObject({ ok: false, error: 'claimed' });   // 중복 수령 불가
   });
 
