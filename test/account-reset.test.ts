@@ -82,7 +82,7 @@ test('기본(진행 초기화): 신원 키·IndexedDB는 그대로 두고 진행
   const st = full(), log: string[] = [];
   const idKeys = [DEVICE_KEY_NAME, 'tll-social:blade-surge:runq', INSTALL_ID_NAME];
   const seed = JSON.stringify({ adsRemoved: true });
-  const r = await resetAccountFromScratch({ storage: st as any, indexedDB: idbOk(log) as any, seed });
+  const r = await resetAccountFromScratch({ storage: st as any, indexedDB: idbOk(log) as any, seed } as any);
   expect(r.ok).toBe(true); expect(r.identityCleared).toBe(false); expect(r.seedWritten).toBe(true); expect(log).toEqual([]);
   for (const k of idKeys) expect(st.keys()).toContain(k);
   expect(st.getItem('bladesurge_save_v1')).toBe(seed); expect(st.keys()).not.toContain('bladesurge_save_v1_backup');
@@ -91,6 +91,6 @@ test('기본(진행 초기화): 신원 키·IndexedDB는 그대로 두고 진행
 
 test('완전 초기화는 seed가 있어도 쓰지 않는다(새 계정에 옛 결제 원장을 붙이지 않는다)', async () => {
   const st = full();
-  const r = await resetAccountFromScratch({ storage: st as any, indexedDB: idbOk() as any, keepIdentity: false, seed: '{"adsRemoved":true}' });
+  const r = await resetAccountFromScratch({ storage: st as any, indexedDB: idbOk() as any, keepIdentity: false, seed: "{\"adsRemoved\":true}" } as any);
   expect(r.ok).toBe(true); expect(st.getItem('bladesurge_save_v1')).toBeNull();
 });
