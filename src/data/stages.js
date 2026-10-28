@@ -81,6 +81,9 @@ const DUNGEON_BOSS_NAMES = {
   bellstreet: '어긋난 거리의 수문 감시자', belfry: '종루의 타종 관리인', crackedNave: '금 간 대예배당의 종 수호자',
 };
 const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
+/** 권장 전투력: 적 공격과 같은 배율^0.7. 배율에 비례하던 값은 7-10에서 실제 승리선의 약 3.6배로 부풀었다(61%로도 승리). */
+export function recommendedPowerFor(scale) { return Math.floor(2600 * Math.pow(scale, 0.7)); }
+
 export function stageDef(ch, st) {
   if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError(`스테이지는 1-1부터 ${CHAPTERS.length}-${STAGES_PER_CHAPTER}까지입니다.`);
   const chapter = CHAPTERS[ch - 1], idx = (ch - 1) * STAGES_PER_CHAPTER + st;
@@ -114,7 +117,7 @@ export function stageDef(ch, st) {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: chapter.homecoming && st === STAGES_PER_CHAPTER,
     boss, finale: chapter.finale && st === STAGES_PER_CHAPTER, waves, scale, energy: 6 + Math.floor(idx / 6),
-    rosterFor: () => rewardR, recPower: Math.floor(2600 * scale),
+    rosterFor: () => rewardR, recPower: recommendedPowerFor(scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,

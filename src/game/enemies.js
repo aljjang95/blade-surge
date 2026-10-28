@@ -20,6 +20,7 @@ import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } fr
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { EliteAffixes } from './elite-affixes.js';
 import { sizeBandMul } from '../data/size-bands.js';
+import { campaignAtkMul } from './squads.js';
 const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
@@ -90,7 +91,7 @@ export class Enemy extends Actor {
     // visualScale 은 모델 크기만 줄인다. 반경·피격 높이·자폭 범위는 def.scale 기준으로 그대로다(큰 슬라임이 뒤의 적을 가리던 문제).
     super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (rig === 'library' && gltf.scene.userData.libraryAsset?.id === monsterRosterEntry(def.model)?.asset ? sizeBandMul(def) : 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
     this.def = def; this.type = def.name; this.isBoss = !!def.boss; this.isElite = !!def.elite;
-    this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7);
+    this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7) * campaignAtkMul(game.stage);
     this.pos.copy(pos); this.face(0, 0);
     this.libraryRoster = monsterRosterEntry(def.model) || this.libraryRoster;
     this.libraryAsset = gltf.scene.userData.libraryAsset || this.libraryAsset;
