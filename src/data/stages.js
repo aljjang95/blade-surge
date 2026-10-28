@@ -69,6 +69,11 @@ export const CHAPTER_SPECIES = Object.freeze({
   1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner' }),
   2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp' }),
 });
+/** 캠페인 1·2장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
+export function chapterSpeciesId(stage, id) {
+  if (!stage || stage.expedition) return id;
+  return CHAPTER_SPECIES[stage.chapter?.id]?.[id] || id;
+}
 const swappedRosters = new Map();
 function chapterSpecies(chapterId, roster) {
   const swap = CHAPTER_SPECIES[chapterId];
