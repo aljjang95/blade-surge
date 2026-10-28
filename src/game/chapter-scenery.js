@@ -11,6 +11,8 @@ import { mulberry32 } from './world.js';
 export const CHAPTER_GRADES = Object.freeze({
   // 2장 용광로: 그을린 갈색·쇳물 주황. 한 장 안의 tribunal(분홍)·archive(파랑) 경로를 kiln 쪽으로.
   2: { weight: .7, fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], torch: 0xff7034, tint: 0xd8a28b, look: 'kiln', fogHorizon: 0xd35632 },
+  // 3장 서리 도서관: 백지 흰색·서리 하늘색. archive 기준.
+  3: { weight: .7, fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], torch: 0x86d7ff, tint: 0xb7cbed, look: 'archive', fogHorizon: 0x6f98ca },
   1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
 
@@ -104,7 +106,27 @@ const FORGE_KIT = {
     glow: [piece(new THREE.BoxGeometry(.3, .02, .14), F.glow, [.05, .715, 0])],
   }),
 };
+const I = { ice: 0xa9d6ee, iceDark: 0x6d9ec0, paper: 0xf1f4f6, ink: 0x22344a, wood: 0x4a3a30, bookRed: 0x7a3a3a, bookBlue: 0x35507a, bookGreen: 0x3f6a52, glow: 0x9fe4ff };
+/** 3장 소품: 책을 품은 얼음 기둥, 흩날린 백지, 서리 낀 서가. */
+const FROST_KIT = {
+  pillar: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.42, .5, 1.9, 6), I.ice, [0, .95, 0]), piece(new THREE.CylinderGeometry(.55, .6, .14, 6), I.iceDark, [0, .07, 0]), piece(new THREE.BoxGeometry(.32, .42, .1), I.bookBlue, [0, 1.05, .3], [0, 0, 18])],
+    glow: [piece(new THREE.BoxGeometry(.28, .02, .02), I.glow, [0, 1.1, .36], [0, 0, 18]), piece(new THREE.ConeGeometry(.14, .5, 5), I.glow, [0, 2.1, 0])],
+  }),
+  pages: () => {
+    const parts = [];
+    for (let i = 0; i < 6; i++) { const a = i * 1.7, r = .2 + (i % 3) * .2; parts.push(piece(new THREE.BoxGeometry(.24, .006, .32), I.paper, [Math.sin(a) * r, .01 + i * .004, Math.cos(a) * r], [0, a * 40, (i % 2) * 6])); }
+    return parts;
+  },
+  shelf: () => {
+    const solid = [piece(new THREE.BoxGeometry(1.4, 1.6, .35), I.wood, [0, .8, -.05]), piece(new THREE.BoxGeometry(1.32, .04, .3), I.iceDark, [0, .55, .02]), piece(new THREE.BoxGeometry(1.32, .04, .3), I.iceDark, [0, 1.1, .02])];
+    const colors = [I.bookRed, I.bookBlue, I.bookGreen, I.ink];
+    for (const y of [.75, 1.3]) for (let i = 0; i < 8; i++) solid.push(piece(new THREE.BoxGeometry(.13, .34 - (i % 3) * .05, .24), colors[(i + (y > 1 ? 2 : 0)) % 4], [-.56 + i * .16, y - (i % 3) * .025, .03]));
+    return { solid, glow: [piece(new THREE.BoxGeometry(1.42, .05, .38), I.glow, [0, 1.62, -.05])] };
+  },
+};
 const KITS = Object.freeze({
+  3: { kit: FROST_KIT, mix: [['pillar', .35], ['shelf', .3], ['pages', .35]], perRoom: 8 },
   1: { kit: GARDEN_KIT, mix: [['tomb', .5], ['lilies', .35], ['bell', .15]], perRoom: 9 },
   2: { kit: FORGE_KIT, mix: [['slag', .3], ['rack', .25], ['anvil', .25], ['table', .2]], perRoom: 8 },
 });

@@ -20,6 +20,13 @@ const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 
 /** 2장 불씨 왕국의 용광로 — 그을음 낀 몸, 쇳물 주황 발광 소품. */
 const FORGE_SKIN = { color: '#c9a48a', amount: 0.18, emissive: '#140600' };
 
+/** 3장 거꾸로 흐르는 서리 도서관 — 백지 흰색·서리 하늘색. 보라 천·원령은 서리 청색으로, 초록 슬라임은 얼음빛으로. */
+const FROST_REMAP = { dark: '#1d3550', light: '#cfeeff', hues: [235, 345], mix: 0.95, baseMix: 0.1 };
+const FROST_BONE = { color: '#c6dcef', amount: 0.2, emissive: '#05101c', remap: FROST_REMAP };
+const FROST_MAGE_REMAP = { ...FROST_REMAP, hues: [190, 345] };
+const FROST_SPIRIT = { remap: { dark: '#1b3a5a', light: '#dff4ff', hues: [180, 360], mix: 1, baseMix: 0.5 }, emissive: '#16365a' };
+const FROST_SLIME_REMAP = { dark: '#2a5a7a', light: '#e2f6ff', hues: [50, 190], mix: 0.9, baseMix: 0.2 };
+
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
@@ -100,6 +107,47 @@ export const CHAPTER_DRESS = Object.freeze({
       bone_knight: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
       skeleton_mage: { ...FORGE_SKIN, props: ['emberLantern'] },
       slime: { props: ['emberWick'] },
+    },
+  },
+  3: {
+    name: '얼어붙은 증언',
+    species: {
+      // 서리 해골 사서: 얼어붙은 금서 더미를 지고, 서가를 방패로 든다.
+      skel_shield: { ...FROST_BONE, props: ['shelfShield'] },
+      bone_orc: { ...FROST_BONE, props: ['bookStackBack'] },
+      skel_rogue: { ...FROST_BONE },
+      // 망령: 얼음에 갇힌 증언 — 주위에 얼어붙은 종이가 맴돈다. 해골 망령(원거리)은 펼친 금서를 읽는다.
+      ghost: { ...FROST_SPIRIT, props: ['frozenPages'] },
+      ghost_skull: { ...FROST_SPIRIT, props: ['openTome'] },
+      // 해골 주술사·사제: 금서를 펼치는 기록관 / 얼음 깃펜 관.
+      skel_mage: { ...FROST_BONE, remap: FROST_MAGE_REMAP, props: ['openTome'] },
+      skel_priest: { ...FROST_BONE, remap: { ...FROST_MAGE_REMAP, light: '#eef8ff' }, props: ['iceQuillCrown'] },
+      // 부패 슬라임 → 서리 슬라임: 초록을 얼음빛으로, 머리에 얼음 결정.
+      blob_green: { remap: FROST_SLIME_REMAP, props: ['iceShardsTop'] },
+      frost_burrower: { props: ['iceShards'] },
+      // 골렘 수호자: 검열관 — 등에 커다란 봉인 도장.
+      golem_guard: { props: ['censorSeal'] },
+      elite_golem: { props: ['censorSeal', 'iceShards'] },
+      // 설산 거인 → 금서실 수문장: 열쇠 꾸러미와 책 더미.
+      elite_yeti: { props: ['keyRing', 'bookStackBack'] },
+      elite_wraith: { ...FROST_SPIRIT, props: ['openTome', 'spiritHalo'] },
+      // 기록관 오르딘(중간 보스)·서리왕 이셀(최종 보스).
+      frost_midboss: { props: ['bookStackBack', 'openTome'] },
+      frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
+    },
+    assets: {
+      bone_knight: { ...FROST_BONE, props: ['shelfShield'] },
+      shadow_soldier: { ...FROST_BONE },
+      skeleton_mage: { ...FROST_BONE, remap: FROST_MAGE_REMAP, props: ['openTome'] },
+      goblin_chief: { ...FROST_BONE, props: ['bookStackBack'] },
+      void_wisp: { ...FROST_SPIRIT, props: ['frozenPages'] },
+      slime: { remap: FROST_SLIME_REMAP, props: ['iceShardsTop'] },
+      frost_golem: { props: ['censorSeal'] },
+      frost_yeti: { props: ['keyRing'] },
+      goblin_raider: { props: ['iceShards'] },
+      mushroom_shaman: { props: ['iceShards'] },
+      treant: { props: ['iceShards'] },
+      ember_drake: { remap: { dark: '#1a3350', light: '#d6f0ff', hues: [0, 70], mix: .85, baseMix: .2 } },
     },
   },
 });
