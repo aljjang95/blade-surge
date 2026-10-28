@@ -203,6 +203,11 @@ const townBlockers = (hotspots, props) => {
   return blockers.map(Object.freeze);
 };
 
+// 들를 곳 표시('!')를 띄울 상호작용 지점. 마을 UI가 정하고, 광장 장면은 새로 지어질 때 이 값을 읽는다(장면 상태, 저장 아님).
+let attentionIds = [];
+export function setHubAttention(ids) { attentionIds = Array.isArray(ids) ? ids.filter(id => typeof id === 'string') : []; return attentionIds; }
+export const hubAttention = () => attentionIds;
+
 // 새 지역 마을이 열려 처음 서는 관문. 다음 광장 장면이 한 번 꺼내 땅에서 솟아오르게 그린다(장면 상태, 저장 아님).
 let emergingGates = new Set();
 export function markEmergingGates(ids) { for (const id of ids || []) if (typeof id === 'string') emergingGates.add(id); }

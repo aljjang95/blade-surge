@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
-import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT, TOWN_THEMES, townHub } from '../data/citadel-hub.js';
+import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT, TOWN_THEMES, townHub, hubAttention } from '../data/citadel-hub.js';
 import { preloadEnvironmentKit, buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
 import { CanopySightline } from '../engine/canopy-sightline.js';
 import { libraryAssets } from '../engine/library-assets.js';
@@ -671,5 +671,6 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       root.removeFromParent();
     },
   };
+  root.userData.setAttention(hubAttention());
   return root;
 }

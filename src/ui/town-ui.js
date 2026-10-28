@@ -4,7 +4,7 @@ import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
 import { activeCampaignSkin, activeCampaignTownChapter, campaignTown } from '../data/campaign-towns.js';
-import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds, markEmergingGates } from '../data/citadel-hub.js';
+import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds, markEmergingGates, setHubAttention } from '../data/citadel-hub.js';
 import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
 import { townServiceFor } from './town-service-adapter.js';
@@ -147,11 +147,13 @@ export class TownUI {
     document.body.append(node); setTimeout(() => node.remove(), 3400);
   }
   /** 3D 광장의 들를 곳 표시('!'): 받을 보상이 있거나 아직 받지 않은 일일 의뢰가 있으면 의뢰 게시판 위에 띄운다. */
+  // 전투 중에는 건너뛴다(로비로 돌아오면 renderPlace → updateBadge가 다시 부른다). 새로 지은 광장 장면은 hubAttention()을 읽는다.
   syncAttention() {
-    const scene = this.app.arena?.lobbyHall?.userData; if (typeof scene?.setAttention !== 'function') return;
+    if (this.app.mode !== 'lobby') return;
     const quests = attempt(() => this.content.quests(this.activeId), null) || [];
     const due = this.content.claimable() > 0 || quests.some(quest => quest.status === 'available' && quest.kind === 'daily');
-    scene.setAttention(due ? [townHub(this.activeId).starter ? 'board:quests' : 'board:town'] : []);
+    const ids = setHubAttention(due ? [townHub(this.activeId).starter ? 'board:quests' : 'board:town'] : []);
+    this.app.arena?.lobbyHall?.userData?.setAttention?.(ids);
   }
   /** 걷기 HUD의 '마을 일' 칩에 받을 보상 수를 표시한다(버튼을 새로 만들지 않아 초점을 잃지 않는다). */
   updateBadge(root = this.placeRoot || this.app.hubUI?.root) {
