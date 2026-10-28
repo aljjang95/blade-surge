@@ -20,6 +20,10 @@ export const VAULT_INHERIT = Object.freeze({
   /** 의식 재료 `lineageSigil`: 기본 1개, 강화 highEnh 이상이면 sigilHigh 개. */
   sigil: 1, sigilHigh: 2, highEnh: 15,
   hopsMax: 99, linMax: 5,
+  /** 문장 획득처(콘텐츠 보상만): 고통 단계 새 기록이 5의 배수일 때. 일일·주간 의뢰는 data/journey.js. */
+  tormentSigil: 2, tormentEvery: 5,
+  /** vaultRelay 하루 중복 방지 목록 상한(장착 칸 수보다 넉넉히). */
+  relayUidsMax: 12,
 });
 
 const record = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -29,12 +33,24 @@ const knownHero = (id) => typeof id === 'string' && Object.hasOwn(HEROES, id);
 /** 금고 메타 정규화. 여러 번 적용해도 같다. */
 export function normalizeVault(raw) {
   const v = record(raw) ? raw : {};
-  /** @type {{ v: number, expansions: number, day: number, used: number, rday?: number, rused?: number }} */
+  /** @type {{ v: number, expansions: number, day: number, used: number, rday?: number, rused?: number, rl?: { day: number, uids: number[] } }} */
   const out = { v: 1, expansions: int(v.expansions, 0, 0, VAULT.maxExpansions), day: int(v.day, 0, 0, 1e9), used: int(v.used, 0, 0, 1000) };
   // 의식 일일 카운터는 쓴 적이 있을 때만 둔다(이전 저장은 정규화 뒤에도 같다).
   const rday = int(v.rday, 0, 0, 1e9), rused = int(v.rused, 0, 0, 1000);
   if (rday > 0 || rused > 0) { out.rday = rday; out.rused = rused; }
+  // vaultRelay(받은 장비로 클리어) 하루 중복 방지: 오늘 이미 센 장비 uid. 쓴 적이 있을 때만 둔다.
+  if (record(v.rl)) {
+    const day = int(v.rl.day, 0, 0, 1e9), uids = [...new Set((Array.isArray(v.rl.uids) ? v.rl.uids : []).filter((x) => Number.isSafeInteger(x) && x >= 1))].slice(-VAULT_INHERIT.relayUidsMax);
+    if (day > 0 && uids.length) out.rl = { day, uids };
+  }
   return out;
+}
+
+/** 오늘(05:00 KST 기준) 이미 vaultRelay 로 센 uid. 날짜가 바뀌면 비고, 날짜는 앞으로만 간다. */
+export function relayToday(vault, nowMs) {
+  const v = normalizeVault(vault), day = periodAt(nowMs).day;
+  const rl = v.rl;
+  return !rl || day > rl.day ? { day, uids: [] } : { day: rl.day, uids: rl.uids };
 }
 
 /** 장비 계승 기록 정규화: hops(0~99, 0이면 생략), lin(알려진 영웅 id 최대 5, hops와 맞춤, 비면 생략). 멱등. */

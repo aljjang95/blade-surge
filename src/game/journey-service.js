@@ -25,6 +25,7 @@ export class JourneyService {
     const r = result.rewards || {};
     this.app.expedition.reward(r);
     for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.app.eco.s[key] += r[key] || 0;
+    if (r.lineageSigil > 0) this.app.eco.s.lineageSigil = (this.app.eco.s.lineageSigil || 0) + r.lineageSigil;   // 계승 문장(현금 판매 없음, 콘텐츠 보상만)
     return result;
   }
   claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
