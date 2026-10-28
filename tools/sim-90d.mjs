@@ -80,10 +80,10 @@ function runValue(idx, diffId) {
 
 // ---------- 장비 ----------
 const ITEM_OF = Object.fromEntries(RARITIES.map((r) => [r, Object.fromEntries(SLOTS.map((s) => [s, ITEMS_OF(r, s)[0]?.id]))]));
-const slotScore = (it) => { if (!it) return 0; const st = itemStats({ id: ITEM_OF[it.r][it.slot], enh: it.enh, tp: it.tp }); return st.atk * 6 + st.hp * .5 + st.def * 4 + st.crit * 1000; };
+const slotScore = (it) => { if (!it) return 0; const st = itemStats({ id: ITEM_OF[it.r][it.slot], enh: it.enh, tp: it.tp, il: it.il }); return st.atk * 6 + st.hp * .5 + st.def * 4 + st.crit * 1000; };
 function equipBonus(gear) {
   const b = { atk: 0, hp: 0, def: 0, crit: 0 };
-  for (const slot of SLOTS) { const it = gear[slot]; if (!it) continue; const st = itemStats({ id: ITEM_OF[it.r][slot], enh: it.enh, tp: it.tp }); for (const k in b) b[k] += st[k]; }
+  for (const slot of SLOTS) { const it = gear[slot]; if (!it) continue; const st = itemStats({ id: ITEM_OF[it.r][slot], enh: it.enh, tp: it.tp, il: it.il }); for (const k in b) b[k] += st[k]; }
   return b;
 }
 function pickWeighted(weights, rng) {
@@ -177,15 +177,16 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
   const better = (cand, old) => P.torment
     ? slotScore({ ...cand, enh: POTENTIAL_ENH }) > slotScore({ ...(old || cand), enh: POTENTIAL_ENH }) * (old ? SWAP_MARGIN : 0)
     : slotScore(cand) > slotScore(old);
-  const dropGear = (ch, rank, diffId, count) => {
-    const t = lootTable(ch, rank, diffId), tp = tormentTierOf(diffId);
+  // il: 본편 필드 드랍의 스테이지 장비 레벨(loot-tables.js dropItemLevel 과 같은 규칙: 권장 레벨, 고통 단계는 tp 가 대신한다).
+  const dropGear = (ch, rank, diffId, count, recLevel = 0) => {
+    const t = lootTable(ch, rank, diffId), tp = tormentTierOf(diffId), il = !tp && recLevel > 1 ? recLevel : 0;
     for (let i = 0; i < count; i++) {
       if (rng() >= t.gearChance) continue;
       for (let k = 0; k < t.gearRolls; k++) {
         const r = pickWeighted(t.gearWeights, rng), slot = SLOTS[Math.floor(rng() * SLOTS.length)];
-        const cand = { r, slot, enh: 0, tp };
+        const cand = { r, slot, enh: 0, tp, il };
         const old = st.gear[slot];
-        if (better(cand, old && { ...old, slot })) { st.gear[slot] = tp ? { r, enh: 0, tp } : { r, enh: 0 }; runes.dirty = true; if (old) { runes.dust += RUNE_SOURCES.dismantleDust[old.r] || 0; } }
+        if (better(cand, old && { ...old, slot })) { st.gear[slot] = tp ? { r, enh: 0, tp } : il ? { r, enh: 0, il } : { r, enh: 0 }; runes.dirty = true; if (old) { runes.dust += RUNE_SOURCES.dismantleDust[old.r] || 0; } }
         else runes.dust += RUNE_SOURCES.dismantleDust[r] || 0; // 쓰지 않는 유니크·레전드리는 분해(룬 가루)
       }
     }
@@ -200,7 +201,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     gainExp(v.combatExp + Math.floor(comp.exp * levelExperienceMultiplier(st.level, v.recLevel)));
     st.shards += v.heroShards * decay; st.transcendStones += v.transcendStones * decay;
     // 처치 수는 기댓값을 반올림해 장비 드랍을 굴린다(보스 1·정예·일반).
-    dropGear(v.ch, 'boss', diffId, Math.round(v.kills.boss)); dropGear(v.ch, 'elite', diffId, Math.round(v.kills.elite)); dropGear(v.ch, 'normal', diffId, Math.round(v.kills.normal));
+    dropGear(v.ch, 'boss', diffId, Math.round(v.kills.boss), v.recLevel); dropGear(v.ch, 'elite', diffId, Math.round(v.kills.elite), v.recLevel); dropGear(v.ch, 'normal', diffId, Math.round(v.kills.normal), v.recLevel);
     // 룬 드랍·완료 상자 룬 가루: 게임 정산과 같은 rollRuneDrops(정예·보스 처치 수, 지옥 = 심층 보스 판정).
     const rr = rollRuneDrops({ elite: Math.round(v.kills.elite), boss: Math.round(v.kills.boss) }, { hell: diffId === 'hell' || tormentTierOf(diffId) > 0, first }, Math.floor(runeRng() * 4294967296));
     for (const d of rr.drops) { addRune(d.id, d.grade); runes.dropped++; }

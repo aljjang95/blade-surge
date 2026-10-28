@@ -303,7 +303,24 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
         if (!res) break;
         did('pull10', { banner, currency: q.currency, results: res.map((x) => (x.id || x.item?.id || x.hero || '?') + (x.rar ? '/' + x.rar : '')) });
       }
-      // 3) 장비: 아무도 안 낀 장비 중 전투력이 오르는 것을 슬롯마다 최선으로 낀다
+      // 3a) 장비(새 UI 그대로): 영웅 탭 가방의 "더 좋은 장비 장착" → "가방 정리"(확인 단계 포함)를 사람이 누르듯 눌러 본다.
+      {
+        a.meta.heroSel = id; a.meta.heroPane = 'gear'; a.meta.bagClean = null; a.meta.openTab('heroes');
+        const q = (sel) => document.querySelector('#hero-bag ' + sel);
+        const press = (sel) => { const b = q(sel); if (!b || b.disabled) return false; b.click(); return true; };
+        for (let g = 0; g < 3; g++) {
+          const before = e.heroPower(id), worn0 = JSON.stringify(e.hero(id).equip);
+          if (!press('[data-bag-best]')) break;
+          const after = e.heroPower(id);
+          if (JSON.stringify(e.hero(id).equip) === worn0) break;
+          did('uiEquipBest', { power: `${before}->${after}`, swaps: Object.keys(e.hero(id).equip).filter((k) => JSON.parse(worn0)[k] !== e.hero(id).equip[k]).length });
+        }
+        const bag0 = e.s.inventory.length;
+        if (press('[data-bag-clean]') && press('[data-clean-go]') && press('[data-clean-confirm]')) did('uiBagClean', { bag: `${bag0}->${e.s.inventory.length}` });
+        else { a.meta.bagClean = null; }
+        a.meta.bagClean = null;
+      }
+      // 3b) 새 UI가 놓친 교체가 남았는지 점검: 아무도 안 낀 장비 중 전투력이 오르는 것을 슬롯마다 최선으로 낀다(남은 것은 equip 으로 기록)
       for (let guard = 0; guard < 12; guard++) {
         const h = e.hero(id), worn = new Set(Object.entries(e.s.heroes).flatMap(([hid, hh]) => hid === id ? [] : Object.values(hh.equip || {})));
         const base = e.heroPower(id); let best = null;
@@ -429,6 +446,11 @@ function writeReport(final = false) {
   L.push('| 코드 | 시도 | 결과 | 영웅 | Lv 전→후 | 전투력/권장 | 클리어(s) | 사망 | 처치 | 무보상 최장(s) | HP 손실% | 별 |', '|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const s of stages) L.push(`| ${s.code}${s.tag ? '(' + s.tag + ')' : ''} | ${s.attempt} | ${s.result} | ${s.hero || ''} | ${s.levelBefore ?? ''}→${s.levelAfter ?? ''} | ${s.powerRatio ?? ''} (${s.power ?? ''}/${s.recPower ?? ''}) | ${s.clearS ?? ''} | ${s.deaths ?? ''} | ${s.kills ?? ''} | ${s.longestDryS ?? ''} | ${s.hpLostPct ?? ''} | ${s.stars ?? ''} |`);
   L.push('', '## 레벨업', levelUps.map((u) => `${u.code}: Lv${u.from}→${u.to}`).join(' · ') || '없음', '', `레벨업 주기: 클리어 ${wins.length}스테이지 / 레벨업 ${levelUps.length}회 = ${rep.cadence.stagesPerLevelUp ?? '-'} 스테이지당 1회`, '');
+  const gearActs = metaLog.flatMap((m) => m.acts.map((x) => ({ label: m.label, ...x })));
+  const lastInv = metaLog.at(-1);
+  L.push('## 장비·재화', `- UI 장비 교체(uiEquipBest) ${gearActs.filter((x) => x.kind === 'uiEquipBest').length}회 · 가방 정리(uiBagClean) ${gearActs.filter((x) => x.kind === 'uiBagClean').length}회 · UI가 놓친 추가 교체(equip) ${gearActs.filter((x) => x.kind === 'equip').length}회`,
+    ...gearActs.filter((x) => ['uiEquipBest', 'uiBagClean', 'equip'].includes(x.kind)).map((x) => `  - ${x.label}: ${x.kind} ${x.power || x.bag || ''}${x.swaps ? ' (' + x.swaps + '곳)' : ''}`),
+    lastInv ? `- 마지막 정비 시점: 골드 ${lastInv.gold?.[1]} · 보석 ${lastInv.gems} · 가방 ${lastInv.inv?.total}개 ${JSON.stringify(lastInv.inv?.byRarity)} · 안 낀 최선 장비 전투력 변화 ${JSON.stringify(lastInv.inv?.bestUnwornPowerDelta)}` : '', '');
   L.push('## 마찰', ...friction.map((f) => `- ${JSON.stringify(f)}`), '', '## 합류', ...joins.map((j) => `- ${JSON.stringify(j)}`), ...newHeroTrials.map((j) => `- 첫 사용: ${JSON.stringify(j)}`), '', `## 콘솔 오류 ${errors.length}건`, ...errors.slice(0, 20).map((x) => `- ${x.t}`));
   writeFileSync(resolve(OUT, 'summary.md'), L.join('\n'));
   return rep;
