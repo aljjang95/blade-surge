@@ -50,7 +50,7 @@ const stages = [], friction = [], metaLog = [], joins = [], newHeroTrials = [];
 let aborted = null;
 
 /** 브라우저 안 하네스. 한 번 설치하고 스테이지마다 enter/tick/settle 을 부른다. */
-function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled }) {
+function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled, itemRarity }) {
   const a = window.app, e = a.eco;
   let st = seed >>> 0;
   Math.random = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -344,7 +344,15 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
         did('enhance', { item: t.id, from, to: r.enh, success: r.success });
       }
     } catch (err) { did('metaError', { err: String(err && err.stack || err).slice(0, 300) }); }
-    return { acts, gold: [gold0, e.s.gold], gems: e.s.gems, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
+    // 인벤토리 진단: 가방 등급 분포, 착용 장비, 안 낀 장비 중 슬롯별 최대 전투력 변화
+    let inv = null;
+    try {
+      const byRarity = {}; for (const x of e.s.inventory) { const r = itemRarity[x.id] || '?'; byRarity[r] = (byRarity[r] || 0) + 1; }
+      const h = e.hero(id), base = e.heroPower(id), bestDelta = {};
+      for (const x of e.s.inventory) { const slot = itemSlot[x.id]; if (!slot || h.equip[slot] === x.uid) continue; const d = e.heroBuildStats(id, { ...h.equip, [slot]: x.uid }, e.s.inventory).power - base; if (bestDelta[slot] === undefined || d > bestDelta[slot]) bestDelta[slot] = d; }
+      inv = { total: e.s.inventory.length, byRarity, worn: Object.entries(h.equip || {}).map(([slot, uid]) => { const x = e.s.inventory.find((y) => y.uid === uid); return x ? `${slot}:${x.id}(${itemRarity[x.id]}+${x.enh})` : `${slot}:-`; }), bestUnwornPowerDelta: bestDelta, stones: [e.s.stones, e.s.stones2, e.s.stones3], fragments: e.s.fragments };
+    } catch (err) { inv = { err: String(err).slice(0, 80) }; }
+    return { acts, inv, gold: [gold0, e.s.gold], gems: e.s.gems, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
   };
 
   C.state = () => { const hid = e.s.selected; return { mode: a.mode, hero: hid, level: e.hero().level, exp: e.hero().exp, power: e.heroPower(hid), unlocked: e.s.progress.unlocked, gold: e.s.gold, gems: e.s.gems, energy: e.s.energy, energyMax: e.energyMax, owned: [...(e.s.roster?.owned || [])], inventory: e.s.inventory.length, equip: e.hero().equip, levels: Object.fromEntries(Object.entries(e.s.heroes).map(([k, v]) => [k, v.level])) }; };
@@ -405,7 +413,7 @@ async function playStage(code, attempt, { tag = '' } = {}) {
 
 async function doMeta(label) {
   const r = await page.evaluate(() => window.__C.meta());
-  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, n: r.acts.length, gold: r.gold, gems: r.gems, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
+  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, gems: r.gems, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
   return r;
 }
 
@@ -438,8 +446,9 @@ try {
   await page.evaluate(() => window.app.ui.closeModal?.());
   const heroSkills = Object.fromEntries(Object.entries(HEROES).map(([k, h]) => [k, (h.skills || []).map((s) => ({ id: s.id, name: s.name }))]));
   const itemSlot = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.slot]));
+  const itemRarity = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.rarity]));
   const storyFirst = Object.fromEntries(STORY_EVENTS.map((ev) => [ev.id, ev.choices?.[0]?.id]));
-  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL });
+  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL, itemRarity });
   const s0 = await page.evaluate(() => window.__C.state());
   log({ evt: 'fresh-state', ...s0 });
   const known = new Set(s0.owned);
