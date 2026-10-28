@@ -1,6 +1,7 @@
 // MMO P1-F: 명령 큐. UI가 부르는 기존 Economy 메서드를 계정 인스턴스에서만 감싸 성공한 결정적 명령을
 // 서버 /cmd로 순서대로 보낸다(UI 파일은 바꾸지 않는다). 각 명령에는 클라이언트 상태 해시를 붙여
 // 그림자 모드에서는 패리티를 측정하고, 서버 권위 모드에서는 해시가 다르면 서버 문서로 덮어쓴다.
+import { isAccountResetting } from '../game/reset-lock.js';
 import { OPS, validateOp } from '../shared/v1-ops.js';
 import { parityHash } from '../shared/state-hash.js';
 import { newCid } from './account-client.js';
@@ -48,12 +49,14 @@ export class CommandQueue {
     this.push('selectHero', [this.lastSelected]);
   }
   push(op, args) {
+    if (isAccountResetting()) return;
     if (!validateOp(op, args)) return;
     this.pending.push({ cid: newCid(), op, args, clientHash: parityHash(this.eco.s) });
     void this.flush();
   }
   /** 그림자 모드: 로컬 정본 상태를 서버 그림자 문서로 다시 맞춘다(전투 보상 등 명령 밖 변화 뒤). 큐 순서를 지킨다. */
   snapshot() {
+    if (isAccountResetting()) return;
     if (this.hooks.authority() !== 'shadow') return;
     this.pending = this.pending.filter((e) => e.op !== '__snapshot');
     this.pending.push({ cid: newCid(), op: '__snapshot', save: JSON.parse(JSON.stringify(this.eco.s)), clientHash: parityHash(this.eco.s) });
@@ -62,7 +65,7 @@ export class CommandQueue {
   /** 서버 문서를 적용하는 동안에는 감싼 메서드·선택 변화가 명령을 만들지 않는다. */
   quiet(fn) { this.suspended++; try { return fn(); } finally { this.suspended--; this.lastSelected = this.eco.s.selected; } }
   async flush() {
-    if (this.busy) return;
+    if (this.busy || isAccountResetting()) return;
     this.busy = true;
     try {
       while (this.pending.length) {

@@ -1,4 +1,5 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
+import { isAccountResetting } from './reset-lock.js';
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
@@ -223,6 +224,7 @@ export class Economy {
     return out;
   }
   save() {
+    if (isAccountResetting()) return false; // 계정 초기화 중에는 저장이 지운 키를 되살리지 않는다.
     // 유료 몫 클램프는 저장이 성공할 때만 확정한다(실패하면 되돌려 호출부의 부분 롤백이 어긋나지 않게).
     const paidBefore = this.s.paidGems;
     try {

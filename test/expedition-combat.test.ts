@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { buildExpeditionStage, buildExpeditionWorld, expeditionRoster, applyBattleConsumable } from '../src/game/expedition-combat.js';
+import { buildExpeditionStage, buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from '../src/game/expedition-combat.js';
 import { resolveJobHero } from '../src/data/jobs.js';
 import { HEROES } from '../src/data/heroes.js';
 import { SKILLS } from '../src/game/skills.js';
@@ -51,6 +51,19 @@ test('consumables affect HP and independent buff timers, with failure leaving st
   game.paused = true; expect(applyBattleConsumable(game,'hp_tonic')).toBe(false); expect(game.player.hp).toBe(55);
   game.paused = false; game.player.hp=100; expect(applyBattleConsumable(game,'hp_tonic')).toBe(false);
   game.active=false; expect(applyBattleConsumable(game,'aegis')).toBe(false);
+});
+
+test('overdrive potion restores MP (clamped) and stays usable for MP while buff is active', () => {
+  const game: any = { active:true, paused:false, player:{alive:true,hp:100,maxHp:100,mp:10,maxMp:100,tonicAtkT:0,addMp(n:number){this.mp=Math.min(this.maxMp,this.mp+n);}} };
+  expect(applyBattleConsumable(game,'overdrive')).toBe(true);
+  expect(game.player.mp).toBe(50); expect(game.player.tonicAtkT).toBe(12);
+  game.player.tonicAtkT = 5; // 버프 중에도 MP가 모자라면 사용 가능, 시간은 그대로
+  expect(applyBattleConsumable(game,'overdrive')).toBe(true);
+  expect(game.player.mp).toBe(90); expect(game.player.tonicAtkT).toBe(5);
+  expect(applyBattleConsumable(game,'overdrive')).toBe(true); expect(game.player.mp).toBe(100); // 최대치 클램프
+  expect(applyBattleConsumable(game,'overdrive')).toBe(false); // 버프 중 + MP 가득
+  game.player.mp = 100; expect(canApplyBattleConsumable(game,'overdrive')).toBe(false);
+  game.player.tonicAtkT = 0; game.player.mp = 80; applyBattleConsumable(game,'overdrive'); expect(game.player.mp).toBe(100);
 });
 
 test('guardian perfect guard actually cancels incoming damage and earns counter resource', () => {

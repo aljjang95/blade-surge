@@ -1,3 +1,4 @@
+import { sizeBandMul } from '../src/data/size-bands.js';
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { ENEMIES } from '../src/data/stages.js';
@@ -73,7 +74,7 @@ test('Enemy: Tripo 몸이면 오른손에 무기가 붙고 색조 보정을 받�
   expect(primary.socket).toBeDefined();
   expect(primary.socket!.parent!.name).toBe('mixamorigRightHand');
   const def = (ENEMIES as any).belltower_midboss;
-  expect(primary.enemy.model.scale.x).toBeCloseTo(def.scale * 0.53);
+  expect(primary.enemy.model.scale.x).toBeCloseTo(def.scale * sizeBandMul(def) * 0.53);   // 크기 띠 보정 포함
   // 무기 재질도 몸과 같은 색조(def.tint 쪽으로 lerp 0.32)를 받는다.
   const weaponMesh = primary.socket!.getObjectByProperty('isMesh', true) as THREE.Mesh;
   const base = new THREE.Color('#888888'), expected = base.clone().lerp(new THREE.Color(def.tint), 0.32);

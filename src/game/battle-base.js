@@ -36,6 +36,11 @@ import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
+import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './squads.js';
+import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
+import { RoomProps, roomPropsAllowed } from './room-props.js';
+import { RegionTraits, regionTheme } from './region-traits.js';
+import { bossShortcutRule } from './boss-shortcut.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
@@ -157,6 +162,11 @@ export class Battle {
     if (cueTarget) this.exitCue = new ExitCue(this.scene, sr, cueTarget);
     // 실제 경고·드랍 재질을 출격 준비에 포함해 첫 처치/예고 때의 컴파일을 막는다.
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
+    this.roomProps?.dispose(); this.roomProps = roomPropsAllowed(stage) ? new RoomProps(this) : null;
+    this.regionTraits = regionTheme(stage) ? new RegionTraits(this) : null;
+    // 보스 직행은 출격 시점의 별·전투력으로 한 번 정한다(전투 중 별이 바뀌어도 이번 판 조건은 같다).
+    { const eco = this.app?.eco, key = `${stage.ch}-${stage.st}`;
+      this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 }); }
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
@@ -299,24 +309,39 @@ export class Battle {
   }
   roomRoster(room) {
     if (this.stage.expedition) return expeditionRoster(this.stage, room);
-    const R = this.stage.rosterFor(room.type);
+    const R = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type);
     // 증원으로 이미 달려나간 만큼은 정원에서 뺀다 (총량 보존)
     const n = Math.max(0, this.rosterSize(room) - (room.reinforced || 0));
     const list = [];
     // Step 3 in a six-entry pool visits only two species; ranged slots were also constant.
-    let meleeTurn=0,rangedTurn=0;
-    for (let i = 0; i < n; i++) {
-      const ranged=i%6===5,pool=ranged?R.ranged:R.trash,turn=ranged?rangedTurn++:meleeTurn++;
-      list.push(pool[(turn+room.id+this.stage.idx)%pool.length]);
+    // 캠페인 방은 분대 편성(squads.js): 단계 곡선으로 고른 종을 역할 조합 분대로 짠다. 그 밖(정의 없는 단계)은 기존 순환.
+    const st = this.stage.st, squads = Number.isInteger(st) && R.trash?.length && n > 0;
+    room.squadPlan = null;
+    if (squads) {
+      const featuredRoom = !this._featuredRoomDone && room.type !== ROOM_TYPE.TREASURE;
+      const plan = composeRoom(R, st, room.id, this.stage.idx, n, { featuredRoom });
+      if (featuredRoom && plan.featured) this._featuredRoomDone = true;
+      list.push(...plan.list); room.squadPlan = plan;
+    } else {
+      let meleeTurn=0,rangedTurn=0;
+      for (let i = 0; i < n; i++) {
+        const ranged=i%6===5,pool=ranged?R.ranged:R.trash,turn=ranged?rangedTurn++:meleeTurn++;
+        list.push(pool[(turn+room.id+this.stage.idx)%pool.length]);
+      }
     }
     if (room.type === ROOM_TYPE.ELITE) { list.push(R.elite[room.id % R.elite.length]); if (this.stage.idx > 8) list.push(R.elite[(room.id + 1) % R.elite.length]); }
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
-    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
+    // 정예는 첫 분대(방 테마)의 대장으로 앞줄에 선다.
+    if (room.squadPlan) for (let i = room.squadPlan.list.length; i < list.length; i++) { room.squadPlan.squadOf.push(0); room.squadPlan.roles.push('elite'); }
+    // 보스방 호위와 증원도 이번 단계까지 소개된 종만 쓴다.
+    const C = squads ? stageCurve(R, st) : R;
+    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, C.trash[0], C.trash[1], C.trash[0], C.trash[2 % C.trash.length], C.ranged[0], C.trash[1]);
     return list;
   }
   /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
   callReinforcements(room) {
-    const R = this.stage.rosterFor(room.type); let wave = 0;
+    const R0 = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type); let wave = 0;
+    const R = Number.isInteger(this.stage.st) && !this.stage.expedition ? stageCurve(R0, this.stage.st) : R0;
     for (const nid of room.links || []) {
       const nb = this.world.rooms[nid];
       if (!nb || nb.cleared || nb.spawned || nb.type === ROOM_TYPE.BOSS || nb.type === ROOM_TYPE.START) continue;
@@ -375,7 +400,11 @@ export class Battle {
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     // 방 명단을 진입 반대편의 무리로 나눠 경계시킨다. 보스방·증원·소환은 기존처럼 바로 교전한다.
-    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
+    const squadCount = room.squadPlan ? Math.max(...room.squadPlan.squadOf) + 1 : 0;
+    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z, squadCount);
+    room.entryX = this.player.pos.x; room.entryZ = this.player.pos.z;
+    if (room.squadPlan && !isBoss) this.announceSquad(room);
+    if (!isBoss && room.type !== ROOM_TYPE.TREASURE) this.roomProps?.placeFor(room);
     room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
       audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(bossAppearVoiceName(this.stage, this.bossKey), { min: 10 }));
@@ -400,6 +429,24 @@ export class Battle {
     for (const t of list.slice(initial)) this.pending.push({ t, room });   // 덮어쓰면 이전 방 잔여가 증발해 그 방이 영영 안 닫힌다
     room.pendingCount = list.length;
     if (!isBoss && !this.stage.expedition) this.callReinforcements(room);
+  }
+  /** 방 테마(주 분대) 안내. 같은 판에서 같은 테마는 한 번만, 새로 소개되는 적이 있으면 그 이름을 앞세운다. */
+  announceSquad(room) {
+    const plan = room.squadPlan, squad = SQUADS[plan.theme];
+    if (!squad?.hint) return;
+    const seen = this._squadSeen || (this._squadSeen = new Set());
+    const fresh = plan.featured && plan.list.includes(plan.featured) && !seen.has('new:' + plan.featured);
+    if (!fresh && seen.has(plan.theme)) return;
+    seen.add(plan.theme); if (fresh) seen.add('new:' + plan.featured);
+    const name = fresh ? ENEMIES[plan.featured]?.name : null;
+    this.ui.toast(fresh ? `새 적 · ${name} — ${squad.name}: ${squad.hint}` : `${squad.name} — ${squad.hint}`, fresh ? 'gold' : '');
+  }
+  /** 정예 접두사 안내: 처음 보는 접두사만 한 줄로 알린다. */
+  announceAffixes(e) {
+    const seen = this._affixSeen || (this._affixSeen = new Set());
+    const fresh = e.affixes.keys.filter((k) => !seen.has(k)); fresh.forEach((k) => seen.add(k));
+    const tips = fresh.map((k) => `${ELITE_AFFIXES[k].name}: ${ELITE_AFFIXES[k].hint}`).join(' ');
+    this.ui.toast(`정예 · ${e.affixes.label} ${e.def.name}${tips ? ' — ' + tips : ''}`, 'gold');
   }
   /** 예약 생성 하나가 끝났다. 생성이 취소돼 처치 이벤트가 없더라도 남은 적이 없으면 방을 닫는다. */
   settleRoomSpawn(room) {
@@ -447,7 +494,7 @@ export class Battle {
     }
     // Valve operation becomes available only AFTER all authored reinforcements.
     if (this.routeObjectives?.beforeClear(this, room)) return;
-    room.cleared = true; this.roomsCleared++;
+    room.cleared = true; this.roomsCleared++; this.roomProps?.clearRoom(room);
     this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {
       this.ui.toast(`${room.type === ROOM_TYPE.BOSS ? '보스방' : room.type === ROOM_TYPE.ELITE ? '엘리트 구역' : room.type === ROOM_TYPE.TREASURE ? '보물방' : '구역'} 클리어!`, 'gold');
@@ -486,7 +533,7 @@ export class Battle {
     this.openPortal();
   }
   canBossShortcut() {
-    return !!(this.active && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
+    return !!(this.active && this.bossShortcut?.ok && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
   }
   shortcutBoss() {
     if (!this.canBossShortcut()) return false;
@@ -531,7 +578,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -542,7 +589,7 @@ export class Battle {
       const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
     }
     if (this._spawningFollower) def = packFollowerDef(def);
-    let pos, pack = null, rushing = false;
+    let pos, pack = null, rushing = false, squadRole = null;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
     else if (near) {
       const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3));
@@ -550,8 +597,20 @@ export class Battle {
       if (this.world) { const [x, z] = this.world.resolve(near.x, near.z, pos.x, pos.z, 0.6); pos.x = x; pos.z = z; }
     }
     else if (this.world && rm) {
-      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? this.roomPackFor(rm) : null;
-      if (pack) { rm.packAssigned++; packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); }
+      const squadIdx = rm.squadPlan && rm.packAssigned < rm.packQuota ? rm.squadPlan.squadOf[rm.packAssigned] : undefined;
+      squadRole = squadIdx !== undefined ? rm.squadPlan.roles[rm.packAssigned] : null;
+      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? (squadIdx !== undefined ? rm.packs[squadIdx % rm.packs.length] : this.roomPackFor(rm)) : null;
+      if (pack) {
+        rm.packAssigned++; packSlot(this.world, pack, _slot);
+        // 분대 대형: 방패·분쇄는 진입한 영웅 쪽 앞줄, 원거리·주술사는 뒷줄, 측면 침투는 옆으로 벌린다.
+        if (squadRole && Number.isFinite(rm.entryX)) {
+          const fx = rm.entryX - pack.x, fz = rm.entryZ - pack.z, fl = Math.hypot(fx, fz) || 1;
+          const front = squadRole === 'elite' ? 1.4 : ROLE_FORMATION[squadRole] || 0, side = (ROLE_SIDE[squadRole] || 0) * ((rm.packAssigned & 1) ? 1 : -1);
+          const tx = _slot.x + fx / fl * front - fz / fl * side, tz = _slot.z + fz / fl * front + fx / fl * side;
+          [_slot.x, _slot.z] = this.world.resolve(_slot.x, _slot.z, tx, tz, .6);
+        }
+        pos = new THREE.Vector3(_slot.x, 0, _slot.z);
+      }
       else if (!def.boss && rm.packs?.length) {
         // 명단 뒤의 증원 물결은 한 앵커에서 무리로 들어와 바로 교전한다(흩어진 한 마리씩 대신).
         pack = this.roomPackFor(rm); packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); rushing = true;
@@ -570,7 +629,15 @@ export class Battle {
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
     if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
+    // 캠페인 정예는 행동형 접두사 1~2개를 달고 자기 분대의 대장이 된다.
+    if (def.elite && !def.boss && Number.isInteger(this.stage.st) && !this.stage.expedition && rm) {
+      const ordinal = this._eliteOrdinal = (this._eliteOrdinal || 0) + 1;
+      e.affixes = new EliteAffixes(e, pickAffixes(rm.id, this.stage.idx, this.stage.st, ordinal, rm.type === ROOM_TYPE.ELITE));
+      if (pack) pack.leader = e;
+      this.announceAffixes(e);
+    }
     e.runtimeSpeciesId = runtimeType;
+    this.regionTraits?.attach(e, squadRole);
     // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
     if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
     this.enemies.push(e);
@@ -716,6 +783,8 @@ export class Battle {
 
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
+    // 영웅의 타격은 지역 환경 장치에도 닿는다(room-props.js).
+    if (src === this.player) this.roomProps?.strike(pos, yaw, range, arcDeg);
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
     const reachPad = opts.basic ? 1.5 : opts.precision ? .35 : 1.5;
     const r2 = (range + reachPad) * (range + reachPad);
@@ -922,6 +991,8 @@ export class Battle {
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);
+    this.roomProps?.update(dt);
+    this.regionTraits?.update(dt);
     this.exitCue?.update(dt, this.player.alive, !!this.app.reducedMotion?.matches);
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
