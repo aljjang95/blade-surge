@@ -70,7 +70,7 @@ try {
             // 진행 방향 기준 바깥(+) 각도. 왼발은 진행 방향의 왼쪽이 바깥이다.
             const fx = vx / (sp || 1), fz = vz / (sp || 1), lx = fz, lz = -fx;   // 진행 방향 왼쪽 단위벡터(+Y 위, 오른손 좌표)
             const fwd = c.x * fx + c.z * fz, lat = c.x * lx + c.z * lz;
-            row[s] = { yaw: Math.atan2(lat * sg, fwd) * 180 / Math.PI, toeY: a.y + c.y };
+            row[s] = { yaw: Math.atan2(lat * sg, fwd) * 180 / Math.PI, pitch: Math.atan2(c.y, Math.hypot(fwd, lat)) * 180 / Math.PI, toeY: a.y + c.y };
           }
           window.__gait.rows.push(row);
         }
@@ -105,7 +105,9 @@ try {
       const stance = rows.filter(r => r[side].toeY - minY < .03).map(r => r[side].yaw);
       const mean = stance.reduce((s, v) => s + v, 0) / (stance.length || 1);
       const all = rows.map(r => r[side].yaw).sort((a, b) => a - b);
-      return { allMedianDeg: +all[Math.floor(all.length / 2)].toFixed(1), stanceFrames: stance.length, stanceMeanDeg: +mean.toFixed(1), stanceMaxDeg: +Math.max(...stance).toFixed(1) };
+      // 발이 땅에 평평히 닿은 접지 프레임만: 발끝이 최저점 +3cm 이내이고 발 기울기가 ±15° 이내(기울어진 발의 수평 투영은 각도를 부풀린다).
+      const flat = rows.filter(r => r[side].toeY - minY < .03 && Math.abs(r[side].pitch) < 15).map(r => r[side].yaw);
+      return { flatStanceFrames: flat.length, flatStanceMeanDeg: flat.length ? +(flat.reduce((s, v) => s + v, 0) / flat.length).toFixed(1) : null, allMedianDeg: +all[Math.floor(all.length / 2)].toFixed(1), stanceFrames: stance.length, stanceMeanDeg: +mean.toFixed(1), stanceMaxDeg: +Math.max(...stance).toFixed(1) };
     };
     Object.assign(report.heroes[hero], { movingFrames: rows.length, left: stat('L'), right: stat('R') });
     if (video) {

@@ -32,6 +32,8 @@ export const AUTO_CAMERA = Object.freeze({
   safeX: .82, safeY: .8, fitZoomMin: 85,
   // 고정 쿼터뷰의 상시 거리(zoom %). 무리 줌을 끈 대신 처음부터 조금 넓게 잡아 주변 적을 화면에 담는다. 전투·비전투 같은 값이라 펌핑이 없다.
   steadyZoom: 92,
+  // 상시 내려다보기 가산(도). 액션 기준 39° 시점은 영웅 아래(카메라 쪽) 땅이 좁아 주변 적이 화면 밖으로 빠졌다(무리 줌 제거 뒤 화면 안 적 80%→68% 계측). 장르 쿼터뷰(약 45~50°)에 맞춘다.
+  steadyPitch: 7,
   // 영웅과 카메라 사이 바닥이 막혀 있으면(벽) 이만큼까지 내려다본다(도).
   occlusionPitch: 9, occlusionProbes: Object.freeze([1.1, 2, 3, 4.2]),
 });
@@ -70,7 +72,7 @@ function frameRatio(camera, x, y, z, cfg) {
  */
 export function autoCameraGoal(ctx, out, cfg = AUTO_CAMERA) {
   const p = ctx.player?.pos, base = ctx.base, current = ctx.current;
-  out.yaw = current.yaw; out.pitch = base.pitch; out.zoom = base.zoom; out.threat = null; out.engaged = false;
+  out.yaw = current.yaw; out.pitch = base.pitch + (cfg.crowdZoom ? 0 : finite(cfg.steadyPitch)); out.zoom = base.zoom; out.threat = null; out.engaged = false;
   if (!p) return out;
   // 1) 가장 위협적인 대상: 사거리 안 보스 > 예고 중인 가장 가까운 적. 그냥 몰려 있는 무리로는 돌리지 않는다.
   let threat = null, best = Infinity;
@@ -122,7 +124,7 @@ export function autoCameraGoal(ctx, out, cfg = AUTO_CAMERA) {
     for (const d of cfg.occlusionProbes) {
       if (!ctx.walkable(p.x + sx * d, p.z + sz * d)) { occluded = Math.max(occluded, 1 - (d - cfg.occlusionProbes[0]) / 4.5); break; }
     }
-    out.pitch = base.pitch + cfg.occlusionPitch * occluded;
+    out.pitch = out.pitch + cfg.occlusionPitch * occluded;
   }
   return out;
 }

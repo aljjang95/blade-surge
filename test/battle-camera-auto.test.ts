@@ -88,8 +88,8 @@ describe('전투 카메라 AUTO', () => {
     expect(autoCameraGoal(ctxOf({ base: { yaw: 0, pitch: 0, zoom: 90 }, enemies: [actor(9, -2), actor(-8, -4)] }), goal()).zoom).toBeCloseTo(90 * AUTO_CAMERA.steadyZoom / 100, 9);
     // 카메라 쪽(+z) 바닥 2칸 뒤가 벽이다.
     const walled = autoCameraGoal(ctxOf({ walkable: (_x: number, z: number) => z < 1.5 }), goal());
-    expect(walled.pitch).toBeGreaterThan(5);
-    expect(autoCameraGoal(ctxOf({ walkable: () => true }), goal()).pitch).toBe(0);
+    expect(walled.pitch).toBeGreaterThan(AUTO_CAMERA.steadyPitch + 5);
+    expect(autoCameraGoal(ctxOf({ walkable: () => true }), goal()).pitch).toBe(AUTO_CAMERA.steadyPitch);
   });
   test('보스 예고 범위가 화면 밖으로 넘치면 투영 기준으로 줌을 줄여 안전 상자 안에 넣는다', () => {
     const boss = actor(9, -4, { radius: 1.6 });
