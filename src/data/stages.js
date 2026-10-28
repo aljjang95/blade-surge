@@ -462,7 +462,12 @@ const CHAPTER_SPECIES_DEFS = {
   ch3_icecrawler: ['frost_burrower', '얼음 밑 사서', 'Ch3_Librarian'],
   ch3_moldkeeper: ['blob_green', '곰팡이 핀 사서', 'Ch3_Librarian'],
 };
-for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
+// 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome']);
+for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
+  ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
+  if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
+}
 // 1·2·3장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
 for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {
   for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3]]) {
