@@ -85,6 +85,7 @@ export class BattleTutorial {
     const battle = this.app.battle;
     if (!battle?.active || !battle.player?.alive) return false;
     this.battle = battle; this.reviewing = !!save.tutorial?.completed;
+    this.compact = false; this.root?.classList?.remove?.('compact');
     // 첫 전투는 필수 조작(이동·공격 꾹 누르기·스킬)을 화면 가장자리 띠로 펼쳐 둔다. 전투는 멈추지 않고 행동할 때마다 다음 단계로 넘어간다.
     this.guided = !this.reviewing;
     if (!this.reviewing) { this.show('move'); this.setExpanded(true, GUIDED_SECONDS); }
@@ -171,6 +172,8 @@ export class BattleTutorial {
     if (this.battle.roomsCleared > 0 && !this.reviewing) { this.finish(false); return; }
     const p = this.battle.player;
     const done = STATE_STEP[p?.state];
+    // 첫 조작(이동·공격 등)을 하면 설명을 접고 제목 한 줄만 남긴다(상단 띠가 전장 시야를 덜 차지하게).
+    if (done && !this.compact) { this.compact = true; this.root?.classList?.add?.('compact'); }
     const at = STEPS.indexOf(this.phase), doneAt = STEPS.indexOf(done);
     if (doneAt >= at && doneAt >= 0 && done !== 'clear') this.show(STEPS[doneAt + 1]);
   }

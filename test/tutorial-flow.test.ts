@@ -131,11 +131,12 @@ test('the toggle pulse stays off once the player has opened the guide on this de
   } finally { Reflect.deleteProperty(globalThis, 'localStorage'); }
 });
 
-test('the guide toggle keeps a 44px touch target and the strip stays on the bottom edge in landscape', async () => {
+test('the guide toggle keeps a 44px touch target and the strip stays on the top edge band in landscape', async () => {
   const css = await Bun.file(new URL('../src/ui/tutorial.css', import.meta.url)).text();
   expect(css).toMatch(/\.tutorial-toggle \{[^}]*min-height: 44px;[^}]*min-width: 44px;/);
   expect(css).not.toMatch(/\.tutorial-toggle \{[^}]*min-height: 3\d/);
-  expect(css).toMatch(/orientation: landscape\) \{[\s\S]*\.tutorial-card \{[^}]*position: absolute;[^}]*bottom: calc\(8px/);
+  expect(css).toMatch(/orientation: landscape\) \{[\s\S]*\.tutorial-card \{[^}]*top: calc\(60px[^}]*bottom: auto;/);
+  expect(css).toMatch(/#battle-tutorial\.compact \.tutorial-copy-wrap p \{ display: none; \}/);
 });
 
 test('actual move, attack, dodge and skill state transitions never pause or clear an ongoing command', () => {
