@@ -165,6 +165,17 @@ describe('무료 해금', () => {
     const fresh = new Economy({ storage: createMemoryStorage(), now: () => PRE_ROTATION });
     expect(fresh.grantCampaignHeroes(69)).toEqual([]);   // 시작 영웅을 고르기 전
   });
+  test('성장형 합류: 동료는 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 합류하고, 이미 더 높으면 그대로', () => {
+    const eco = chosen('knight', { unlocked: 20 });
+    eco.s.heroes.knight.level = 36;
+    expect(eco.grantCampaignHeroes(20)).toEqual(['mage']);   // 2-10 클리어 → max(36−3, 3-1 권장 30)
+    expect(eco.s.heroes.mage.level).toBe(33); expect(eco.s.heroes.mage.exp).toBe(0);
+    eco.s.heroes.knight.level = 12;                         // 출전 영웅이 낮아도 다음 관문(4-1) 권장까지는 온다
+    expect(eco.grantCampaignHeroes(30)).toEqual(['rogue']);
+    expect(eco.s.heroes.rogue.level).toBe(35);
+    const high = chosen('knight', { unlocked: 20 }); high.s.heroes.knight.level = 40; high.s.heroes.mage.level = 45;
+    high.grantCampaignHeroes(20); expect(high.s.heroes.mage.level).toBe(45);
+  });
   test('성장형 합류: 부풀린 저장 진행만으로는 합류하지 않는다(가져오기·그림자 스냅샷 방어), 합류 대기 견적은 결제 대상이 아니다', () => {
     const eco = chosen('knight', { unlocked: 70 });
     expect(eco.grantCampaignHeroes(1)).toEqual([]);   // 1-1 만 깨면 아무도 오지 않는다
@@ -355,7 +366,8 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
   test('소환 해금 직후에는 같은 명령이 허용된다', () => {
     const eco = chosen('knight'); eco.gachaRng = () => 0; eco.s.heroes.mage.level = 30; eco.s.gold = 99999999; eco.s.heroes.mage.shards = 9999;
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
-    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    // 장비는 얻은 영웅 소유다(docs/GEAR_OWNERSHIP_VAULT.md): 마법사 장비로 만든다.
+    const uid = eco.addItem('N', 'weapon', undefined, 0, 'mage').uid; eco.s.avatars.owned.push('avatar_mage_astral');
     expect(eco.levelUpHero('mage')).toBe(false); expect(eco.equipAvatar('mage', 'avatar_mage_astral').ok).toBe(false);
     expect(eco.unlockHeroFree('mage').ok).toBe(false); // 보석 해금은 닫혔다
     expect(eco.rollResult('SR')).toMatchObject({ id: 'mage', unlocked: true }); expect(eco.s.heroes.mage.shards).toBe(9999);
@@ -382,7 +394,7 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
     const out: Record<string, boolean[]> = {};
     for (const id of LEGACY) {
       const h = eco.s.heroes[id]; h.level = 20; h.exp = Math.ceil(levelExp(20) / 2); h.shards = 9999;
-      const uid = eco.addItem('N', 'weapon').uid;
+      const uid = eco.addItem('N', 'weapon', undefined, 0, id).uid;
       out[id] = [eco.levelUpHero(id) === true, eco.promoteHero(id) === true, eco.equip(id, uid) !== false && h.equip.weapon === uid,
         eco.unequip(id, 'weapon') !== false && h.equip.weapon === null, eco.setShowGear(id, true).ok === true, eco.learnSkill(id, 1).reason !== 'locked'];
     }
@@ -410,7 +422,7 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
 
   test('v1-ops 영웅 지정 명령은 미소유에 실패하고 해금 뒤에는 성공한다', () => {
     const eco = chosen('knight'); eco.s.gold = 99999999; eco.s.heroes.mage.level = 30; eco.s.heroes.mage.shards = 9999;
-    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    const uid = eco.addItem('N', 'weapon', undefined, 0, 'mage').uid; eco.s.avatars.owned.push('avatar_mage_astral');
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
     const calls: [string, unknown[]][] = [['levelUpHero', ['mage']], ['promoteHero', ['mage']], ['transcend', ['mage']], ['learnSkill', ['mage', 1]],
       ['resetSkills', ['mage', true]], ['setSkillLoadout', ['mage', 0, 4]], ['selectHero', ['mage']], ['equip', ['mage', uid]], ['unequip', ['mage', 'weapon']],

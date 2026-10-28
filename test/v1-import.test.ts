@@ -39,7 +39,9 @@ describe('MMO P1-G 로컬 세이브 임포트·정화 (골든 세이브)', () =>
     expect(r.body.doc.gold).toBe(2_400_000);
     expect(r.body.doc.progress.unlocked).toBe(25);
     expect(r.body.doc.heroes.knight.level).toBe(32);
-    expect(r.body.doc.inventory).toEqual(src.inventory);
+    // 장비 귀속 이관은 owner·legacy 만 더한다(장비 수·uid·강화 그대로, docs/GEAR_OWNERSHIP_VAULT.md 4절).
+    expect(r.body.doc.inventory.map(({ owner, legacy, ...rest }: any) => rest)).toEqual(src.inventory);
+    expect(r.body.doc.inventory.every((x: any) => typeof x.owner === 'string')).toBe(true);
     expect(r.body.doc.heroes.knight.equip).toEqual(src.heroes.knight.equip);
     expect(r.body.report.days).toBe(10);
   });

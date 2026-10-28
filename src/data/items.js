@@ -165,14 +165,8 @@ export const RARITY_COLOR = { N: RARITY_INFO.N.color, S: RARITY_INFO.S.color, E:
 // ---------- 강화 (+0 ~ +20, 던파식) ----------
 // 핵심: 강화 보너스는 등급이 아니라 **슬롯 기준치(SLOT_BASE)** 에 붙는다. 흰 무기 +10 이 레전드리 +0 보다 세다.
 export const ENH_MAX = 20;
-/** 성공 확률 */
-export const enhanceChance = (lv) => lv < 8 ? 1 : ({ 8: 0.85, 9: 0.75, 10: 0.65, 11: 0.5, 12: 0.4, 13: 0.3, 14: 0.25, 15: 0.2, 16: 0.15, 17: 0.13, 18: 0.11, 19: 0.09 }[lv] ?? 0.08);
-/** 실패 시 파괴 확률 (+12 이상). 보호 주문서로 0 */
-export const destroyChance = (lv) => lv < 12 ? 0 : lv < 15 ? 0.1 : 0.2;
-/** 실패 시 단계 하락: +10 이상에서 1 (던파 +11↑ 하락에 해당) */
-export const enhanceDown = (lv) => lv >= 10 ? 1 : 0;
-export const enhanceCost = (lv) => Math.floor(250 * Math.pow(1.3, lv));
-export const enhanceStones = (lv) => lv < 3 ? 0 : lv < 8 ? 1 : lv < 12 ? 2 : lv < 16 ? 3 : 5;
+// 확률·비용·강화석 개수·하락·파괴 표는 enhance.js 한 곳에 둔다(밸런스를 바꿔도 이 파일의 렌더 원본 해시가 바뀌지 않게). 클라이언트·서버(EconomyCore)·sim-90d 가 같은 표를 쓴다.
+export { ENHANCE_CHANCE, ENH_SAFE_MAX, enhanceChance, destroyChance, enhanceDown, enhanceCost, enhanceStones } from './enhance.js';
 /** 강화석 등급 — 비석 3종: +9까지 하급(stones), +14까지 중급(stones2), 그 위는 상급(stones3) */
 export const enhanceStoneTier = (lv) => lv < 10 ? 1 : lv < 15 ? 2 : 3;
 export const STONE_KEY = { 1: 'stones', 2: 'stones2', 3: 'stones3' };

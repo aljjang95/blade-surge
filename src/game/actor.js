@@ -296,7 +296,8 @@ export class Actor {
     });
     // spawnCharacter가 복제한 스켈레톤의 전용 boneTexture만 정리한다.
     for (const skeleton of skeletons) skeleton.dispose();
-    for (const material of materials) material.dispose();
+    // 장 의상 소품의 재질은 모든 적이 공유한다(chapter-dress.js).
+    for (const material of materials) if (!material.userData.sharedDress) material.dispose();
   }
   /** 무기 트레일용: 손 위치와 무기 끝 */
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */

@@ -135,6 +135,8 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
         ['sellItem', [uid]], ['salvage', [[uid]]], ['craftSetItem', [pick(Object.keys(HEROES).length ? ['dragon', 'shadow', 'holy'] : []), pick(['weapon', 'armor'])]],
         ['claimPass', [1 + Math.floor(rng() * 16), false]], ['claimQuest', [pick(['k30', 'k100', 's3', 's10', 'p10'])]], ['claimMail', [1]],
         ['claimDaily', []], ['setDifficulty', [pick(['story', 'adept', 'nightmare']), 1, 1]], ['equipAvatar', [hero, null]],
+        // 금고(docs/GEAR_OWNERSHIP_VAULT.md): 서버 시계·같은 규칙으로 맡기기·꺼내기·확장
+        ['vaultDeposit', [uid]], ['vaultWithdraw', [uid, hero]], ['vaultExpand', []],
       ];
       recorded.push(pick(choices));
     }

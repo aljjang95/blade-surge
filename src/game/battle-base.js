@@ -45,6 +45,8 @@ import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
+import { chapterVisual } from './chapter-scenery.js';
+import { prewarmChapterDress } from './chapter-dress.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
@@ -131,13 +133,14 @@ export class Battle {
     this.routeObjectives = createRouteObjectives(stage, this.world);
     this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
-    this.visual = dungeonVisualFor(stage);
+    this.visual = chapterVisual(dungeonVisualFor(stage), stage);
     if (stage.field) await preloadFieldSurface();
     if (this.world.expeditionRouteId === 'glass_garden') await preloadGlassGardenKit();
     if (this._startGeneration !== startGeneration) return;
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
     this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
-    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual, stage.expedition ? null : stage.chapter?.id);
+    prewarmChapterDress(stage, this.app.models, ENEMIES);
     this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
@@ -633,7 +636,7 @@ export class Battle {
         pos = new THREE.Vector3(best.x, 0, best.z);
       }
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
-    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
+    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos, runtimeType);
     e.homeRoom = rm;
     if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
     // 캠페인 정예는 행동형 접두사 1~2개를 달고 자기 분대의 대장이 된다.
