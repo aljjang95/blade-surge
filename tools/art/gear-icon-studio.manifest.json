@@ -1,7 +1,7 @@
 {
   "sourceHashes": {
     "src/data/gear-catalog.js": "4c28bb17f47bb1a77d39b9a44241483cd71361c0e62e42cac51a890643ab7cc9",
-    "src/data/items.js": "ec9c112de6648a36616c2a862d6a45371ce1ea4d9502d1f6c91ce78be5a4ea8d",
+    "src/data/items.js": "63043d0591f921d2294f12927dbdbf9988e9559cfb708df3729ab145331b2b28",
     "src/engine/item-forge.js": "7c71d0722677a0e95cfd06dcfd324fe805c444e68a4469fd060886dcf5cc8391",
     "src/game/armor-appearance.js": "1fec39abb9bb229ebcbf99043ee99aaf291afc9dc1c22d3c1a9be9513dfd15d8",
     "tools/art/gear-icon-studio.html": "4ba65aa4fe6db72228f08d53d58e5fa8c41e89fe8ddad173ae076d5b794357b4"

@@ -38,8 +38,9 @@ test('저장 정화: tp 는 1~50 정수만 남고 기존 장비는 필드가 늘
   const eco = newEco();
   const raw: any = { inventory: [{ uid: 1, id: weapon(), enh: 3 }, { uid: 2, id: weapon(), enh: 4, tp: 12 }, { uid: 3, id: weapon(), enh: 1, tp: 999 }, { uid: 4, id: weapon(), enh: 1, tp: -4 }, { uid: 5, id: weapon(), enh: 1, tp: 'x' }, { uid: 6, id: weapon(), enh: 1, tp: 2.5 }] };
   const once = normalizeSave(raw, eco.fresh());
-  expect(once.inventory.find((i: any) => i.uid === 1)).toEqual({ uid: 1, id: weapon(), enh: 3 });
-  expect(once.inventory.find((i: any) => i.uid === 2)).toEqual({ uid: 2, id: weapon(), enh: 4, tp: 12 });
+  // 귀속 이전 저장이라 지금 고른 영웅 소유 + 첫 이동 무료(legacy) 표시가 붙는다(docs/GEAR_OWNERSHIP_VAULT.md 4절).
+  expect(once.inventory.find((i: any) => i.uid === 1)).toEqual({ uid: 1, id: weapon(), enh: 3, owner: 'knight', legacy: 1 });
+  expect(once.inventory.find((i: any) => i.uid === 2)).toEqual({ uid: 2, id: weapon(), enh: 4, tp: 12, owner: 'knight', legacy: 1 });
   expect(once.inventory.find((i: any) => i.uid === 3).tp).toBe(50);
   for (const uid of [4, 5, 6]) expect(Object.hasOwn(once.inventory.find((i: any) => i.uid === uid), 'tp')).toBe(false);
   expect(normalizeSave(once, eco.fresh()).inventory).toEqual(once.inventory);
@@ -76,8 +77,8 @@ test('정산 보너스 장비(풀 클리어·더블)도 tp 를 단다', () => {
 
 test('서버 정산 grantLootItem 은 같은 tp 를 단다(없으면 필드도 없다)', () => {
   const eco = newEco();
-  expect(grantLootItem(eco, { id: weapon() } as any)).toEqual({ uid: 1, id: weapon(), enh: 0 });
-  expect(grantLootItem(eco, { id: weapon() } as any, 7)).toEqual({ uid: 2, id: weapon(), enh: 0, tp: 7 });
+  expect(grantLootItem(eco, { id: weapon() } as any)).toEqual({ uid: 1, id: weapon(), enh: 0, owner: eco.s.selected });
+  expect(grantLootItem(eco, { id: weapon() } as any, 7)).toEqual({ uid: 2, id: weapon(), enh: 0, tp: 7, owner: eco.s.selected });
   expect(eco.s.inventory.map((i: any) => i.tp)).toEqual([undefined, 7]);
 });
 

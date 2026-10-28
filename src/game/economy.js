@@ -31,6 +31,7 @@ import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventReward
 import { recordTormentRun, tormentStatus } from './torment-core.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
+import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, expandGold, normalizeVault } from './gear-vault.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -186,7 +187,7 @@ export class Economy {
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
-      inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
+      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
@@ -194,7 +195,9 @@ export class Economy {
       pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
-      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
+      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false },
+        // 장비 귀속·금고 안내(docs/GEAR_OWNERSHIP_VAULT.md). 보상 없는 안내 우편이라 경제·정산에는 영향이 없다.
+        { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false }],
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
     };
   }
@@ -308,7 +311,7 @@ export class Economy {
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
-    if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR'); got.push({ k: 'item', item: it }); } }
+    if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR', null, rngOf(this), 0, this.s.selected); got.push({ k: 'item', item: it }); } }
     if (!opts.silent) this.emit();
     return got;
   }
@@ -436,7 +439,7 @@ export class Economy {
     const def = THEMED_SETS.includes(setId) ? craftable(setId, slot) : null; if (!def) return { ok: false, reason: 'none' };
     if ((this.s.fragments || 0) < CRAFT_COST) return { ok: false, reason: 'fragments' };
     this.s.fragments -= CRAFT_COST;
-    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
+    const inst = this.pushItem(def.id); this.emit(); return { ok: true, inst };
   }
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
@@ -606,17 +609,60 @@ export class Economy {
   }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = rngOf(this), tp = 0) {
+  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault()) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
     // tp: 고통 단계 장비 파워(드랍된 단계). 0 이면 필드를 두지 않아 기존 장비와 같은 모양이다.
-    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0, ...(tp > 0 ? { tp } : {}) }; this.s.inventory.push(inst); return inst;
+    return this.pushItem(def.id, { tp, owner });
   }
-  equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
+  // ---------- 장비 귀속 · 금고 (docs/GEAR_OWNERSHIP_VAULT.md) ----------
+  /** 새 장비의 주인: 진행 중인 전투 장부의 영웅, 없으면 지금 고른 영웅. */
+  gearOwnerDefault() { const led = this._fieldRewards; return led && !led.settled && this.s.heroes[led.heroId] ? led.heroId : this.s.selected; }
+  /** 장비 인스턴스 하나를 인벤토리에 넣는다(모든 획득 경로의 단일 형태). */
+  pushItem(id, { tp = 0, owner = this.gearOwnerDefault() } = {}) {
+    const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
+    this.s.inventory.push(inst); return inst;
+  }
+  /** 그 영웅 소유 장비(가방에 보이는 것). */
+  heroBag(heroId = this.s.selected) { return heroItems(this.s, heroId); }
+  /** 금고 요약: 칸·사용·확장 비용·오늘 남은 유료 꺼내기. */
+  vaultState() {
+    const v = this.s.vault = normalizeVault(this.s.vault), items = vaultItems(this.s), day = vaultDay(v, nowOf(this));
+    return { items, used: items.length, slots: vaultSlots(v), expansions: v.expansions, maxExpansions: VAULT.maxExpansions,
+      expandGold: v.expansions >= VAULT.maxExpansions ? null : expandGold(v), dailyLeft: Math.max(0, VAULT.dailyPaidWithdrawals - day.used), dailyMax: VAULT.dailyPaidWithdrawals };
+  }
+  vaultWithdrawQuote(uid, heroId = this.s.selected) { return withdrawQuote(this.s, uid, heroId, nowOf(this), { ownsHero: (id) => this.ownHero(id) }); }
+  /** 영웅 → 금고. 무료, 장착 중이면 해제. 금고가 가득 차면 거부. */
+  vaultDeposit(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    if (!inst || !ITEM_BY_ID[inst.id] || inst.owner === VAULT_OWNER) return { ok: false, reason: 'item' };
+    const v = this.vaultState(); if (v.used >= v.slots) return { ok: false, reason: 'full' };
+    const from = this.s.heroes[inst.owner] ? inst.owner : this.s.selected;
+    for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; }
+    inst.owner = VAULT_OWNER; inst.from = from;
+    this.emit(); return { ok: true, from };
+  }
+  /** 금고 → 영웅. 맡긴 영웅·같은 계열·공유 시절 장비는 무료, 그 밖에는 골드와 하루 유료 횟수. */
+  vaultWithdraw(uid, heroId = this.s.selected) {
+    const q = this.vaultWithdrawQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    this.s.gold -= q.gold;
+    if (!q.free) this.s.vault = { ...normalizeVault(this.s.vault), day: q.daily.day, used: q.daily.used + 1 };
+    inst.owner = heroId; delete inst.from; delete inst.legacy;
+    this.emit(); return { ok: true, gold: q.gold, free: q.free, heroId };
+  }
+  /** 금고 칸 확장(골드). */
+  vaultExpand() {
+    const v = normalizeVault(this.s.vault); if (v.expansions >= VAULT.maxExpansions) return { ok: false, reason: 'max' };
+    const gold = expandGold(v); if (this.s.gold < gold) return { ok: false, reason: 'gold', gold };
+    this.s.gold -= gold; this.s.vault = { ...v, expansions: v.expansions + 1 };
+    this.emit(); return { ok: true, gold, slots: vaultSlots(this.s.vault) };
+  }
+  equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; if ((inst.owner ?? this.s.selected) !== heroId) return false; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
   unequip(heroId, slot) { if (this.heroLocked(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
-  /** 강화: +8까지 100%, 이후 확률/파괴. protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
+  /** 강화: +3까지 100%, +4부터 확률이 단계마다 떨어지고 +10부터 하락·+12부터 파괴(items.js ENHANCE_CHANCE). protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
   enhance(uid, { protect = false, bless = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
@@ -641,6 +687,7 @@ export class Economy {
   isUpgrade(heroId, inst) {
     const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
     if (!h || !item || h.equip[item.slot] === inst.uid) return false;
+    if (inst.owner && inst.owner !== heroId) return false; // 다른 영웅·금고 장비는 이 영웅의 강화 후보가 아니다
     const before = this.heroBuildStats(heroId);
     // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
     const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
@@ -782,8 +829,8 @@ export class Economy {
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
     const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? scaled(5, mulFrag) : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
-    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier));
-    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier)); }
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier, heroId));
+    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier, heroId)); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
     if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));
@@ -950,7 +997,7 @@ export class Economy {
   rollResult(rar, { banner = GACHA_BANNERS.hero, now = nowOf(this), featured = bannerPickup(banner.id, now), freshSr = false } = {}) {
     const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
     const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
-    const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
+    const item = (def, extra = {}) => { const inst = this.pushItem(def.id, { owner: this.s.selected }); return { type: 'item', rar, item: inst, ...extra }; };
     const split = rar === 'SSR' ? banner.ssr : rar === 'SR' ? banner.sr : banner.r;
     if (rar === 'SSR' && split.hero) {
       const others = otherSsrHeroes(featured, now);

@@ -1,3 +1,4 @@
+import { heroItems } from './gear-vault.js';
 import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJourneyStep, claimContract, setTargetRecipe } from './journey-core.js';
 import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
@@ -46,7 +47,8 @@ export class JourneyService {
     const recipe = RECIPES.find(r => r.id === this.s.targetRecipeId && r.itemId);
     if (!recipe) return null;
     const eco = this.app.eco, item = ITEM_BY_ID[recipe.itemId], open = visibleDungeonIds(eco.s);
-    const owned = eco.s.inventory.filter(i => i.id === item.id).sort((a, b) => b.enh - a.enh)[0];
+    // 장비 귀속(docs/GEAR_OWNERSHIP_VAULT.md): 목표 장비도 지금 영웅 소유분만 본다. 다른 영웅·금고 장비를 여기서 장착하면 금고 이전 비용·횟수를 우회한다.
+    const owned = heroItems(eco.s, eco.s.selected).filter(i => i.id === item.id).sort((a, b) => b.enh - a.enh)[0];
     const owner = owned && Object.keys(eco.s.heroes).find(id => Object.values(eco.s.heroes[id].equip).includes(owned.uid));
     const materials = Object.entries(recipe.materials).map(([id, need]) => {
       // 재료를 주는 던전 중 이 저장에서 열린 곳만 안내한다. 전부 잠겼으면 던전 이름을 숨기고 locked 로만 알린다.
@@ -62,6 +64,8 @@ export class JourneyService {
     if (!target?.owned) return { ok: false, error: '목표 장비를 먼저 제작해 주세요.' };
     return this.transact(() => {
       const eco = this.app.eco, slot = target.item.slot, uid = target.owned.uid;
+      const inst = eco.s.inventory.find(i => i.uid === uid);
+      if (!inst || (inst.owner ?? eco.s.selected) !== eco.s.selected) return { ok: false, error: '이 영웅의 장비가 아닙니다. 금고에서 꺼내 주세요.' };
       for (const h of Object.values(eco.s.heroes)) if (h.equip[slot] === uid) h.equip[slot] = null;
       eco.s.heroes[eco.s.selected].equip[slot] = uid; return { ok: true, uid };
     });

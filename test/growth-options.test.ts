@@ -4,7 +4,7 @@ import { growthOptions, growthSummary } from '../src/game/growth-options.js';
 import { HEROES, levelExp } from '../src/data/heroes.js';
 import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
-import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
+import { ITEM_BY_ID, ENH_SAFE_MAX, enhanceCost, enhanceStones } from '../src/data/items.js';
 import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -23,7 +23,7 @@ function fixture() {
   save.selected = 'mage'; save.heroes.mage.level = 20;
   save.masterworks = normalizeMasterworks({ earnedRenown: 6, renown: 6 });
   const weapon = Object.values(ITEM_BY_ID).find(item => item.slot === 'weapon')!;
-  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: 3 });
+  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: ENH_SAFE_MAX - 1 });   // 확정(100%) 구간의 마지막 단계
   save.heroes.mage.equip.weapon = 'growth-weapon';
   return eco;
 }
@@ -54,7 +54,7 @@ test('equipment suggestions require the actual gold and stone cost and never ent
   const eco = fixture(); const save: any = eco.s, item = save.inventory[0];
   for (let level = 0; level <= 20; level++) {
     item.enh = level; save.gold = enhanceCost(level); save.stones = enhanceStones(level);
-    expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(level < 8);
+    expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(level < ENH_SAFE_MAX);
     save.gold--;
     expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
     save.gold++; if (enhanceStones(level)) save.stones--;

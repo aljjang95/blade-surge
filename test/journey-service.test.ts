@@ -75,3 +75,13 @@ test('rift encounters preserve baseline stats and never leak into the AI arena',
   for(const rule of RIFT_RULES){const e={maxHp:100,hp:100,atk:10};applyRiftEnemy(e,{riftId:rule.id,expedition:{kind:'dungeon'}});expect(e.maxHp).toBe(Math.round(100*rule.hp));expect(e.atk).toBe(10*rule.atk);
     const ai={maxHp:100,hp:100,atk:10};applyRiftEnemy(ai,{riftId:rule.id,expedition:{kind:'arena'}});expect(ai).toEqual({maxHp:100,hp:100,atk:10});}
 });
+test('목표 장비는 지금 영웅 소유분만 보고, 금고·다른 영웅 장비는 장착하지 않는다(금고 이전 우회 차단)',()=>{
+  const a=make(),recipe=RECIPES.find(r=>r.itemId)!;
+  expect(a.journey.track(recipe.id).ok).toBe(true);
+  a.eco.s.gold=recipe.gold;for(const[k,n]of Object.entries(recipe.materials))a.expedition.s.materials[k]=n;
+  const crafted=a.expedition.craft(recipe.id);expect(crafted.ok).toBe(true);
+  const inst=a.eco.s.inventory.find((i:any)=>i.uid===crafted.item.uid);inst.owner='vault';
+  expect(a.journey.target().owned).toBeNull();
+  expect(a.journey.equipTarget().ok).toBe(false);
+  expect(Object.values(a.eco.s.heroes).some((h:any)=>Object.values(h.equip).includes(crafted.item.uid))).toBe(false);
+});

@@ -131,10 +131,10 @@ test('장비 비교는 강화·세트 포함 실전 능력치 기준이며 가�
 
 test('분해는 중복 UID를 한 번만 처리하고 장착·희귀 장비를 보호하며 저장 실패 시 원복한다', () => {
   const eco = grandfather(new Economy()), n = eco.addItem('N', 'weapon'), s = eco.addItem('S', 'armor'), e = eco.addItem('E', 'boots'), rare = eco.addItem('U', 'ring');
-  eco.equip('mage', n.uid);
+  eco.equip('knight', n.uid);
   expect(eco.salvage([n.uid])).toEqual({ ok: false, reason: 'equipped' });
   for (const uids of [[], [-1], [s.uid, -1], [rare.uid]]) expect(eco.salvage(uids)).toEqual({ ok: false, reason: 'items' });
-  eco.unequip('mage', 'weapon'); const before = structuredClone(eco.s); const save = eco.save; eco.save = () => false;
+  eco.unequip('knight', 'weapon'); const before = structuredClone(eco.s); const save = eco.save; eco.save = () => false;
   expect(eco.salvage([n.uid, s.uid, e.uid])).toEqual({ ok: false, reason: 'storage' }); expect(eco.s).toEqual(before); eco.save = save;
   expect(eco.salvage([n.uid, s.uid, s.uid, e.uid])).toEqual({ ok: true, count: 3, got: [{ k: 'gold', n: 2550 }, { k: 'stones', n: 4 }, { k: 'stones2', n: 2 }] });
   expect(eco.s.inventory).toEqual([rare]); expect(new Economy().s.inventory).toEqual([rare]);
