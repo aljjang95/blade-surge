@@ -17,6 +17,8 @@ export const CHAPTER_GRADES = Object.freeze({
   4: { weight: .7, fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], torch: 0x4be6d2, tint: 0x9adbd1, look: 'beacon', fogHorizon: 0x55c4c2 },
   // 5장 새벽을 먹는 왕관: 새벽 보라·금. tribunal 기준에 금빛 횃불.
   5: { weight: .6, fog: 0x2a2139, bg: 0x171323, hemi: [0xd8c0e0, 0x342743], torch: 0xffd27a, tint: 0xd8c4d6, look: 'tribunal', fogHorizon: 0xc77da9 },
+  // 6장 귀환로: 1장과 같은 귀환 청록(memorial)으로, 경로 색은 조금 더 남긴다. 7장은 모든 경로가 이미 belltower 대기라 보정 없음.
+  6: { weight: .5, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x9ff0d8, tint: 0xbfd2ca, look: 'memorial', fogHorizon: 0x8ab9a9 },
   1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
 
@@ -165,7 +167,36 @@ const CROWN_KIT = {
     glow: [piece(new THREE.BoxGeometry(.04, .4, .02), K.glow, [.1, .45, .32], [0, 0, 20])],
   }),
 };
+const H = { wood: 0x5a4632, woodDark: 0x3a2c20, paper: 0xece6d4, rope: 0x8a7a5a, iron: 0x3e4446, brass: 0xa89060, glow: 0x9ff0d8, glowBrass: 0xffe0a0 };
+/** 6장 소품: 이름표가 걸린 줄, 이어진 등대(불 켠 등 기둥). 1장 흰 꽃도 섞는다(귀환). */
+const HOMECOMING_KIT = {
+  tags: () => {
+    const solid = [piece(new THREE.CylinderGeometry(.05, .06, 1.5, 5), H.woodDark, [-.7, .75, 0]), piece(new THREE.CylinderGeometry(.05, .06, 1.5, 5), H.woodDark, [.7, .75, 0]), piece(new THREE.CylinderGeometry(.012, .012, 1.4, 3), H.rope, [0, 1.35, 0], [0, 0, 90])];
+    for (let i = 0; i < 5; i++) solid.push(piece(new THREE.BoxGeometry(.16, .22, .01), H.paper, [-.5 + i * .25, 1.17 - (i % 2) * .04, 0], [0, 0, (i - 2) * 5]));
+    return { solid, glow: [0, 2, 4].map((i) => piece(new THREE.BoxGeometry(.08, .012, .012), H.glow, [-.5 + i * .25, 1.17 - (i % 2) * .04, .008])) };
+  },
+  lantern: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.06, .08, 1.8, 6), H.iron, [0, .9, 0]), piece(new THREE.BoxGeometry(.32, .04, .32), H.brass, [0, 1.8, 0]), piece(new THREE.ConeGeometry(.24, .2, 4), H.iron, [0, 2.15, 0], [0, 45, 0])],
+    glow: [piece(new THREE.BoxGeometry(.24, .26, .24), H.glow, [0, 1.95, 0])],
+  }),
+  lilies: GARDEN_KIT.lilies,
+};
+const R = { bronze: 0x8a7046, bronzeDark: 0x5c4a2c, oak: 0x5a4430, paper: 0xece2c4, rope: 0x8a7a5a, glow: 0xffe0a0 };
+/** 7장 소품: 금 간 종, 타종 명부 독서대, 바닥에 감긴 종 줄. */
+const BELLTOWER_KIT = {
+  bell: () => ({
+    solid: [piece(bellGeometry(.6, 12), R.bronze, [0, 0, 0], [0, 0, 0], [1, .95, 1]), piece(new THREE.TorusGeometry(.14, .04, 4, 10), R.bronzeDark, [0, 1, 0])],
+    glow: [piece(new THREE.BoxGeometry(.04, .6, .02), R.glow, [.18, .35, .45], [0, 20, 12]), piece(new THREE.BoxGeometry(.03, .25, .02), R.glow, [.1, .55, .48], [0, 20, -30])],
+  }),
+  ledger: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.06, .09, 1, 5), R.oak, [0, .5, 0]), piece(new THREE.BoxGeometry(.5, .04, .36), R.oak, [0, 1.02, 0], [-20, 0, 0]), piece(new THREE.BoxGeometry(.44, .03, .3), R.paper, [0, 1.05, .01], [-20, 0, 0])],
+    glow: [piece(new THREE.BoxGeometry(.3, .006, .01), R.glow, [0, 1.075, .03], [-20, 0, 0])],
+  }),
+  rope: () => [0, 1, 2, 3].map((i) => piece(new THREE.TorusGeometry(.35 - i * .07, .04, 4, 12), R.rope, [0, .04 + i * .05, 0], [90, 0, i * 20])).concat([piece(new THREE.CylinderGeometry(.04, .04, .8, 4), R.rope, [.3, .4, .1], [0, 0, -30])]),
+};
 const KITS = Object.freeze({
+  6: { kit: HOMECOMING_KIT, mix: [['tags', .35], ['lantern', .3], ['lilies', .35]], perRoom: 7 },
+  7: { kit: BELLTOWER_KIT, mix: [['bell', .35], ['ledger', .3], ['rope', .35]], perRoom: 7 },
   5: { kit: CROWN_KIT, mix: [['throne', .3], ['swords', .45], ['bell', .25]], perRoom: 7 },
   4: { kit: DEEP_KIT, mix: [['ribs', .35], ['anchor', .35], ['lens', .3]], perRoom: 7 },
   3: { kit: FROST_KIT, mix: [['pillar', .35], ['shelf', .3], ['pages', .35]], perRoom: 8 },

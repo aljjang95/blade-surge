@@ -17,6 +17,7 @@ const C = {
   paper: 0xf1f4f6, ice: 0xbfe6f7, iceDark: 0x7fb4d4, ink: 0x22344a, bookRed: 0x7a3a3a, bookBlue: 0x35507a, bookGreen: 0x3f6a52, glowFrost: 0x9fe4ff, glowWhite: 0xeefaff,
   seaWood: 0x4a3a2a, barnacle: 0xc9c3b0, coral: 0xd9785e, kelp: 0x2f5a46, rust: 0x6a4a36, brass: 0x9a7a3c, glowAbyss: 0x58e0d2, glowLure: 0xd8fff4,
   gold: 0xd8b25a, goldDark: 0x9a7a34, violet: 0x4a2f6a, violetDark: 0x2a1a40, glowDawn: 0xffd27a, glowViolet: 0xd9a8ff,
+  brassOld: 0xa89060, brassDark: 0x6e5a36, oak: 0x5a4430, glowBrass: 0xffe0a0,
   leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
 };
 
@@ -400,6 +401,26 @@ const PROPS = {
   oathBanner: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.09, .1, -.16], rot: [-6, 0, -6], scale: 1.6, build: (h) => ({
     solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .62 * h, 5), C.goldDark, [0, .12 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .26 * h, .006 * h), C.violet, [-.085 * h, .27 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .03 * h, .008 * h), C.gold, [-.085 * h, .41 * h, 0]), piece(new THREE.ConeGeometry(.012 * h, .05 * h, 4), C.gold, [0, .45 * h, 0])],
     glow: [piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 10), C.glowDawn, [-.085 * h, .28 * h, .005 * h])],
+  }) },
+  // ---- 7장 금 간 종탑의 도시: 어긋난 박자 ----
+  bellLedger: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.15], rot: [-8, 0, 8], scale: 1.4, build: (h) => ({
+    solid: [piece(new THREE.BoxGeometry(.17 * h, .22 * h, .06 * h), C.oak), piece(new THREE.BoxGeometry(.16 * h, .21 * h, .045 * h), C.paper, [.006 * h, 0, 0]), piece(new THREE.BoxGeometry(.03 * h, .05 * h, .065 * h), C.brassOld, [.085 * h, 0, 0]), piece(new THREE.BoxGeometry(.02 * h, .3 * h, .02 * h), C.leatherDark, [-.05 * h, .05 * h, .04 * h], [0, 0, 25])],
+    glow: [piece(new THREE.BoxGeometry(.1 * h, .006 * h, .004 * h), C.glowBrass, [0, .04 * h, -.031 * h]), piece(new THREE.BoxGeometry(.07 * h, .006 * h, .004 * h), C.glowBrass, [0, 0, -.031 * h])],
+  }) },
+  doorShield: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.08, -.08, .17], rot: [-6, -12, 0], scale: 1.45, build: (h) => {
+    const solid = [];
+    for (let i = 0; i < 4; i++) solid.push(piece(new THREE.BoxGeometry(.06 * h, .3 * h, .025 * h), i % 2 ? C.oak : C.woodDark, [(i - 1.5) * .061 * h, 0, 0]));
+    solid.push(piece(new THREE.BoxGeometry(.26 * h, .025 * h, .032 * h), C.brassDark, [0, .09 * h, .006 * h]), piece(new THREE.BoxGeometry(.26 * h, .025 * h, .032 * h), C.brassDark, [0, -.09 * h, .006 * h]), piece(bellGeometry(.03 * h, 6), C.brassOld, [0, -.02 * h, .03 * h], [0, 0, 0], [1, .04 * h, 1]));
+    return { solid, glow: [piece(new THREE.TorusGeometry(.016 * h, .003 * h, 3, 8), C.glowBrass, [0, .03 * h, .022 * h])] };
+  } },
+  tuningFork: { bones: ['Head', 'head'], at: [0, .27, 0], rot: [0, 0, 0], scale: 1.8, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .05 * h, 5), C.brassDark, [0, 0, 0]), piece(new THREE.TorusGeometry(.02 * h, .006 * h, 4, 8, Math.PI), C.brassOld, [0, .025 * h, 0], [0, 0, 180]), piece(new THREE.BoxGeometry(.008 * h, .09 * h, .008 * h), C.brassOld, [-.02 * h, .07 * h, 0]), piece(new THREE.BoxGeometry(.008 * h, .09 * h, .008 * h), C.brassOld, [.02 * h, .07 * h, 0])],
+    // 어긋난 박자: 굽쇠 끝의 진동 고리.
+    glow: [piece(new THREE.TorusGeometry(.035 * h, .003 * h, 3, 14), C.glowBrass, [0, .12 * h, 0], [90, 0, 0]), piece(new THREE.TorusGeometry(.05 * h, .002 * h, 3, 14), C.glowBrass, [0, .135 * h, 0], [90, 0, 0])],
+  }) },
+  clapperBack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .04, -.15], rot: [0, 0, -28], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.012 * h, .012 * h, .36 * h, 6), C.iron, [0, .02 * h, 0]), piece(new THREE.SphereGeometry(.05 * h, 8, 6), C.brassDark, [0, .22 * h, 0], [0, 0, 0], [1, 1.25, 1]), piece(new THREE.TorusGeometry(.025 * h, .006 * h, 3, 8), C.iron, [0, -.17 * h, 0])],
+    glow: [piece(new THREE.BoxGeometry(.006 * h, .05 * h, .004 * h), C.glowBrass, [.02 * h, .23 * h, .045 * h], [0, 0, 15])],
   }) },
 };
 export const DRESS_PROP_KEYS = Object.freeze(Object.keys(PROPS));

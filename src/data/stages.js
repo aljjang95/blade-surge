@@ -79,7 +79,7 @@ function chapterSpecies(chapterId, roster) {
   return byRoster.get(roster);
 }
 // 던전 배치의 고향 지역(테마). 표에 없는 던전은 지역 기본 편성을 쓴다.
-const DUNGEON_HOME = {
+export const DUNGEON_HOME = {
   procession: 'garden', greenhouse: 'garden', tribunal: 'garden', kiln: 'forge', uprising: 'forge', archive: 'frost', reverseRiver: 'frost',
   beacon: 'tide', lostShip: 'tide', confluence: 'tide', emptyThrones: 'crown', addresses: 'garden', bellstreet: 'crypt', belfry: 'crypt', crackedNave: 'crypt',
 };
