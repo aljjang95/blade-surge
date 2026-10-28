@@ -334,10 +334,10 @@ CAMPAIGN_ENCOUNTERS.homecoming = Object.fromEntries(Object.entries(CAMPAIGN_ENCO
 const RANK_STATS = {
   // 관문도 궁극기 한 번 뒤에 패턴을 보여줄 체력이 필요하다.
   // 기존 첫 보스(31,200)를 기준으로 계급 간 6k/8k/8k 차이를 보존한다.
-  // 크기: 관문 대장도 정예(1.35~1.7)보다 한눈에 커야 보스로 읽힌다(1-1 시계종의 주권자가 영웅만 해 보이던 문제, 2026-10-28).
-  captain: { hp: 31200, atk: 40, scale: 1.85, exp: 90, gold: 20 },
-  warden: { hp: 37200, atk: 44, scale: 1.95, exp: 120, gold: 28 },
-  midboss: { hp: 45200, atk: 48, scale: 2.1, exp: 160, gold: 40 },
+  // 보이는 크기는 size-bands.js 가 영웅×1.8 이상으로 맞춘다(판정 반경은 이 scale 그대로).
+  captain: { hp: 31200, atk: 40, scale: 1.45, exp: 90, gold: 20 },
+  warden: { hp: 37200, atk: 44, scale: 1.7, exp: 120, gold: 28 },
+  midboss: { hp: 45200, atk: 48, scale: 1.95, exp: 160, gold: 40 },
   finalboss: { hp: 53200, atk: 53, scale: 2.25, exp: 220, gold: 55 },
 };
 // 층 배율의 증가가 완만해지는 후반에는 지역 보스 → 다음 지역 중간 보스의 실효 체력이 8% 넘게 내려간다(test/campaign-structure.test.ts 의 곡선 보호선).

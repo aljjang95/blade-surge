@@ -83,7 +83,8 @@ export class RoomProps {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i]; if (!p || p.used) continue;
       const dx = p.x - pos.x, dz = p.z - pos.z, d = Math.hypot(dx, dz);
-      if (d > range + 1.1) continue;
+      // 근접 거리(타격 반경 최대 3m)만: 장거리 스킬·관통 투사체가 멀리 있는 장치를 터뜨리지 않는다.
+      if (d > Math.min(range, 3) + 1.1) continue;
       if (arcDeg < 360 && d > .8) { let a = Math.atan2(dx, dz) - yaw; a = Math.atan2(Math.sin(a), Math.cos(a)); if (Math.abs(a) > half + .35) continue; }
       this.trigger(p);
     }

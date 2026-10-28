@@ -53,7 +53,9 @@ export function canLearnSkill(def, state, i) {
   const skill = def?.skills?.[i]; if (!skill) return { ok: false, reason: 'skill' };
   const current = Math.floor(Number(state?.skills?.[i]) || 0);
   if (current >= SKILL_MAX_LV) return { ok: false, reason: 'max' };
-  if ((state?.level || 1) < skillRequiredLevel(skill)) return { ok: false, reason: 'level', need: skillRequiredLevel(skill) };
+  // 단계 해금(기본 Lv3·5, 궁극기 Lv8) 전에는 SP를 쓰지 못한다: 전투에서 못 쓰는 스킬에 SP가 묶이지 않게.
+  const need = skillGateLevel(def, i);
+  if ((state?.level || 1) < need) return { ok: false, reason: 'level', need };
   const cost = spCostForLevel(skill, current + 1);
   if (spAvailable(def, state) < cost) return { ok: false, reason: 'sp', cost };
   return { ok: true, cost, toLevel: current + 1 };

@@ -8,6 +8,9 @@
 import { ENEMIES } from '../data/stages.js';
 
 /** 몬스터 정의의 역할. 행동 코드(behavior·meleeRole)에서 읽는다. */
+/** 분대 편성·정예 접두사·지역 특성을 쓰는 전투인지: 캠페인 혼자 플레이(원정·파티 제외 — 파티 게스트 스냅샷에 이 상태가 실리지 않는다). */
+export function campaignCombat(stage) { return !!stage && Number.isInteger(stage.st) && !stage.expedition && !stage.party; }
+
 export function speciesRole(def) {
   if (!def) return 'line';
   if (def.behavior === 'shield') return 'tank';

@@ -26,7 +26,8 @@ const POOLS = 12;
 const _v = new THREE.Vector3();
 
 export function regionTheme(stage) {
-  if (!stage || !Number.isInteger(stage.st) || stage.expedition || stage.party) return null;
+  // 지역 특성은 각 지역 2관문부터(1관문은 기본 적 학습 — 단계 곡선과 같은 규칙).
+  if (!stage || !Number.isInteger(stage.st) || stage.st < 2 || stage.expedition || stage.party) return null;
   return stage.chapter?.id === 7 ? 'crypt' : stage.chapter?.theme || null;
 }
 
@@ -83,7 +84,7 @@ export class RegionTraits {
         if (g.active && !room.cleared) {
           const r = g.spawnEnemy(type, null, room, new THREE.Vector3(x, 0, z));
           if (r) {
-            r.echoed = true; r.summoned = true; r.xpReward = 0; r.hp = r.maxHp * .4; r.reactT = 0; if (r.pack) r.pack.aggro = true;
+            r.echoed = true; r.summoned = true; r.noLoot = true; r.xpReward = 0; r.hp = r.maxHp * .4; r.reactT = 0; if (r.pack) r.pack.aggro = true;
             r.tintEmissive = new THREE.Color(.15, .3, .45);
             g.fx.damage(r.pos, 0, { text: '잔향' });
           }
