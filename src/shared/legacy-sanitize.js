@@ -8,6 +8,7 @@ import { GACHA_BANNERS } from '../data/gacha-banners.js';
 import { EconomyCore } from '../game/economy-core.js';
 import { HEROES } from '../data/heroes.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE } from '../data/hero-roster.js';
+import { normalizeGearDex, seedGearDex, setGearDex } from '../game/gear-dex.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 import { normalizeLegend } from '../game/legend-rank.js';
 import { CHAPTERS } from '../data/stages.js';
@@ -156,7 +157,7 @@ export function elapsedDays(created, now) {
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -202,6 +203,11 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 고통 단계 장비 파워(tp)·전설 수련도 서버 명령이 생기기 전까지 가져오지 않는다(조작 세이브로 tp 50 장비·전설 단계 주입 방지).
   for (const item of s.inventory) { delete item.tp; delete item.il; }   // il(스테이지 장비 레벨)도 같은 이유로 가져오지 않는다.
   s.legend = normalizeLegend(undefined);
+  // 계승 문장은 가져오지 않는다(외부 저장으로 재화 주입 금지). 도감은 가져온 장비로 다시 만든 드랍 도감 + 서버 문서 값(수령 기록 포함)만 인정한다:
+  // 가져온 kin·claimed 는 버린다(마일스톤 보상 주입·재수령 방지).
+  delete s.lineageSigil;
+  { const sv = normalizeGearDex(serverGearDex), mine = seedGearDex(s), merge = (a, b) => { const o = {}; for (const h of Object.keys(HEROES)) { const l = [...new Set([...(a?.[h] || []), ...(b?.[h] || [])])]; if (l.length) o[h] = l; } return o; };
+    setGearDex(s, normalizeGearDex({ drop: merge(sv?.drop, mine?.drop), kin: sv?.kin, claimed: sv?.claimed })); }
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).
   const droppedPaid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };

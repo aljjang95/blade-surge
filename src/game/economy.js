@@ -31,6 +31,7 @@ import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventReward
 import { recordTormentRun, tormentStatus } from './torment-core.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
+import { recordGearDex, milestoneOf, milestoneReached, milestoneClaimed } from './gear-dex.js';
 import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, VAULT_INHERIT } from './gear-vault.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
@@ -308,6 +309,7 @@ export class Economy {
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
     if (r.runeDust) { const runes = Runes.runesOf(this); runes.dust += r.runeDust; got.push({ k: 'runeDust', n: r.runeDust }); }
     if (r.blessingCharm) { const n = Runes.grantCharms(this, r.blessingCharm); if (n) got.push({ k: 'blessingCharm', n }); }
+    if (r.lineageSigil) { s.lineageSigil = (s.lineageSigil || 0) + r.lineageSigil; got.push({ k: 'lineageSigil', n: r.lineageSigil }); }
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
@@ -625,7 +627,9 @@ export class Economy {
   pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = 0 } = {}) {
     const lv = tp > 0 ? 0 : validItemLevel(il);   // il = 스테이지 장비 레벨(item-tier.js). 없으면 필드를 두지 않는다.
     const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(lv ? { il: lv } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
-    this.s.inventory.push(inst); return inst;
+    this.s.inventory.push(inst);
+    if (inst.owner !== VAULT_OWNER) recordGearDex(this.s, 'drop', inst.owner, id);   // 직접 얻은 장비만 드랍 도감에(일반 꺼내기·장착은 등재하지 않는다)
+    return inst;
   }
   /** 그 영웅 소유 장비(가방에 보이는 것). */
   heroBag(heroId = this.s.selected) { return heroItems(this.s, heroId); }
@@ -660,7 +664,7 @@ export class Economy {
   vaultRitual(uid, heroId) {
     const q = this.vaultRitualQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, sigil: q.sigil };
     const inst = this.s.inventory.find((x) => x.uid === uid);
-    const before = { gold: this.s.gold, sigil: this.s.lineageSigil, vault: this.s.vault, inst: { ...inst } };
+    const before = { gold: this.s.gold, sigil: this.s.lineageSigil, vault: this.s.vault, inst: { ...inst }, dex: this.s.gearDex === undefined ? undefined : structuredClone(this.s.gearDex) };
     try {
       const from = inst.from, hops = Math.min(VAULT_INHERIT.hopsMax, (inst.hops || 0) + 1);
       this.s.gold -= q.gold;
@@ -669,15 +673,28 @@ export class Economy {
       this.s.vault = { ...normalizeVault(this.s.vault), rday: q.daily.day, rused: q.daily.used + 1 };
       inst.owner = heroId; delete inst.from; delete inst.legacy;
       inst.hops = hops;
+      recordGearDex(this.s, 'kin', heroId, inst.id);
       const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));  // hops>=1 이라 keep>=1
       if (lin.length) inst.lin = lin; else delete inst.lin;
     } catch (e) {
       this.s.gold = before.gold; this.s.vault = before.vault;
       if (before.sigil === undefined) delete this.s.lineageSigil; else this.s.lineageSigil = before.sigil;
+      if (before.dex === undefined) delete this.s.gearDex; else this.s.gearDex = before.dex;
       for (const k of Object.keys(inst)) delete inst[k]; Object.assign(inst, before.inst);
       return { ok: false, reason: 'error', gold: q.gold, sigil: q.sigil };
     }
     this.emit(); return { ok: true, gold: q.gold, sigil: q.sigil, heroId, hops: inst.hops };
+  }
+  /** 도감 마일스톤 수령(중복 수령 불가, 달성은 gearDex 로 재계산). 보상 수치는 gear-dex.js 표(덩어리 4에서 확정). */
+  gearDexClaim(heroId, milestoneId) {
+    const m = milestoneOf(milestoneId);
+    if (!m) return { ok: false, reason: 'milestone' };
+    if (!this.ownHero(heroId)) return { ok: false, reason: 'hero' };
+    if (milestoneClaimed(this.s, heroId, milestoneId)) return { ok: false, reason: 'claimed' };
+    if (!milestoneReached(this.s, heroId, milestoneId)) return { ok: false, reason: 'locked' };
+    const dex = this.s.gearDex; (dex.claimed[heroId] ||= []).push(milestoneId);
+    const got = this.addRewards({ ...m.rewards }, { silent: true, applyVip: false });
+    this.emit(); return { ok: true, got };
   }
   /** 금고 칸 확장(골드). */
   vaultExpand() {
@@ -1264,4 +1281,4 @@ export class Economy {
 
 export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
 // 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
-Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
+Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], lineageSigil: ['계승 문장', '/img/icon_fragment.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
