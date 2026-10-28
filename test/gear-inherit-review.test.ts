@@ -34,3 +34,39 @@ describe('P2-2·5 shadowSnapshot: 서버 문장·도감 보존', () => {
     expect((imp.state.gearDex.drop.knight || []).length).toBeGreaterThan(0);
   });
 });
+
+describe('P2-3 mergeServerOwned: 선택적 서버 소유 필드의 생략은 삭제', () => {
+  test('서버 문서에 lineageSigil·gearDex 가 없으면 로컬 값을 지운다(다른 필드는 그대로)', () => {
+    const local: any = { gold: 5, lineageSigil: 9, gearDex: dexOf({ knight: [Object.keys(ITEM_BY_ID)[0]] }), name: 'x' };
+    const out: any = mergeServerOwned(local, { gold: 7 });
+    expect(out.gold).toBe(7); expect(out.name).toBe('x');
+    expect('lineageSigil' in out).toBe(false); expect('gearDex' in out).toBe(false);
+    const keep: any = mergeServerOwned(local, { gold: 7, lineageSigil: 2, gearDex: dexOf({}) });
+    expect(keep.lineageSigil).toBe(2); expect(keep.gearDex).toEqual(dexOf({}));
+  });
+  test('서버가 null 문서를 보내도(문서 없음) 일반 필드는 로컬 유지', () => {
+    expect((mergeServerOwned({ gold: 1, lineageSigil: 3 }, null) as any).gold).toBe(1);
+  });
+});
+
+describe('P2-6 소급 결과가 비어도 이관 완료 표지를 남긴다', () => {
+  test('이전 저장(도감 없음)에서 소급이 비어도 gearDex 표지가 생기고, 그 뒤 장비를 얻어도 다시 소급하지 않는다', () => {
+    const eco = newEco();
+    const raw: any = JSON.parse(JSON.stringify(eco.s)); delete raw.gearDex; raw.inventory = [];
+    for (const h of Object.values(raw.heroes) as any[]) for (const k of Object.keys(h.equip)) h.equip[k] = null;
+    const once: any = normalizeSave(JSON.parse(JSON.stringify(raw)), eco.fresh());
+    expect(once.gearDex).toEqual({ v: 1, drop: {}, kin: {}, claimed: {} });
+    // 다음 로드 전에 금고 밖 장비가 생겨도(드랍 도감은 add 때 기록되지 않은 상태로 가정) 소급하지 않는다.
+    once.inventory = [{ uid: 1, id: Object.keys(ITEM_BY_ID)[0], enh: 0, owner: 'knight' }]; once.invSeq = 2;
+    const twice: any = normalizeSave(JSON.parse(JSON.stringify(once)), eco.fresh());
+    expect(twice.gearDex.drop).toEqual({});
+    expect(JSON.stringify(normalizeSave(JSON.parse(JSON.stringify(twice)), eco.fresh()))).toBe(JSON.stringify(twice));
+  });
+  test('스냅샷이 서버의 빈 도감을 돌려줘도 서버 로드(normalizeSave)가 다시 소급하지 않는다', () => {
+    const eco = newEco(); eco.addItem('N', 'weapon', undefined, 0, 'knight');
+    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    const snap = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY, snapshot: true } as any) as any;
+    const loaded: any = normalizeSave(JSON.parse(JSON.stringify(snap.state)), eco.fresh());
+    expect(loaded.gearDex.drop).toEqual({});
+  });
+});
