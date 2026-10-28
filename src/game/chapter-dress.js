@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { chapterDressFor } from '../data/chapter-dress.js';
+import { CHAPTER_DRESS, chapterDressFor } from '../data/chapter-dress.js';
 
 // 장별 몬스터 의상 — 몸 색조·기본 발광과 뼈에 붙는 저폴리 소품(관·묘비 방패·종·촛불 관·꽃).
 // 소품 하나는 정점색 병합 지오메트리 1~2개(불투명 + 발광)다. 지오메트리·재질은 소품 종류와 몸 키별로 공유하고,
@@ -184,8 +184,8 @@ function propGeometry(key, h) {
     const built = PROPS[key].build(h);
     const merge = (list) => {
       if (!list.length) return null;
-      const g = list.length === 1 ? list[0] : mergeGeometries(list, false);
-      if (list.length > 1) for (const part of list) part.dispose();
+      const g = mergeGeometries(list, false);
+      for (const part of list) part.dispose();
       g.computeBoundingSphere(); g.userData.sharedDress = true;
       return g;
     };
@@ -278,12 +278,30 @@ export function remapTexture(map, remap) {
     }
     ctx.putImageData(data, 0, 0);
     texture = new THREE.CanvasTexture(canvas);
+    texture.magFilter = map.magFilter; texture.minFilter = map.minFilter; texture.generateMipmaps = map.generateMipmaps;
     texture.flipY = map.flipY; texture.colorSpace = map.colorSpace; texture.wrapS = map.wrapS; texture.wrapT = map.wrapT;
     texture.channel = map.channel; texture.offset.copy(map.offset); texture.repeat.copy(map.repeat); texture.rotation = map.rotation; texture.center.copy(map.center);
     texture.anisotropy = map.anisotropy; texture.userData.sharedDress = true;
   } catch { texture = null; }
-  remapCache.set(key, texture);
+  // 실패는 캐시하지 않는다(일시적 읽기 실패가 그 몸을 영구히 단색 틴트로 고정하지 않게).
+  if (texture) remapCache.set(key, texture);
   return texture;
+}
+
+/**
+ * 전투 준비 중(로딩 화면) 그 장 의상의 텍스처 재배치를 미리 만든다. 첫 스폰 때 동기 픽셀 처리로 프레임이 끊기지 않게.
+ * @param {*} stage @param {Record<string, any>} models app.models(모델 이름 → glTF) @param {Record<string, { model: string }>} enemies 적 정의
+ */
+export function prewarmChapterDress(stage, models, enemies) {
+  if (!stage || stage.expedition) return 0;
+  const table = CHAPTER_DRESS[stage.chapter?.id ?? stage.ch];
+  if (!table) return 0;
+  let made = 0;
+  for (const [species, spec] of Object.entries(table.species)) {
+    const gltf = spec.remap && models?.[enemies?.[species]?.model];
+    gltf?.scene?.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m?.map && remapTexture(m.map, spec.remap)) made++; });
+  }
+  return made;
 }
 
 /**
@@ -300,5 +318,5 @@ export function dressEnemy(enemy, stage, species) {
   if (spec.emissive) { const c = new THREE.Color(spec.emissive); for (const m of enemy.mats) if (m.emissive) { m.userData.baseEmissive = c.clone(); m.emissive.copy(c); } }
   const props = [];
   for (const key of spec.props || []) if (attachDressProp(enemy.model, key, enemy.libraryAsset?.heightM)) props.push(key);
-  return { species, props, ghostGlow: spec.ghostGlow || null };
+  return { species, props };
 }

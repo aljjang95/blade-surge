@@ -6,7 +6,7 @@
 // 여기서 그 종의 소품을 빼면 된다(소품은 몸에 이미 있는 실루엣을 대신하던 것).
 
 /** @typedef {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} DressRemap */
-/** @typedef {{ color?: string, amount?: number, emissive?: string, ghostGlow?: string, remap?: DressRemap, props?: string[] }} DressSpec */
+/** @typedef {{ color?: string, amount?: number, emissive?: string, remap?: DressRemap, props?: string[] }} DressSpec */
 
 /** 1장 잊힌 종의 정원 — 장례 행렬. 청록·묘비 회색, 관을 멘 해골, 떠도는 원령, 이름 없는 묘비·부서진 종·시들지 않는 꽃. */
 // remap: 몸 텍스처의 보라·자주(해골 깃털·천, 원령 몸) 색을 상복 청록으로 옮긴다. 뼈(무채색)는 그대로 둔다.
@@ -15,7 +15,7 @@ const GARDEN_BONE = { color: '#a7beb6', amount: 0.22, emissive: '#071a16', remap
 // 원령은 몸 전체가 보라라 색상 범위를 넓히고 거의 전부 옮긴다.
 // 해골 주술사 몸의 파란 두건도 장례 사제의 청록 상복으로.
 const MAGE_REMAP = { ...GARDEN_REMAP, hues: [190, 345] };
-const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 360], mix: 1, baseMix: 0.6 }, ghostGlow: '#2b7a69' };
+const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 360], mix: 1, baseMix: 0.6 }, emissive: '#174a40' };
 
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({

@@ -46,6 +46,7 @@ import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { chapterVisual } from './chapter-scenery.js';
+import { prewarmChapterDress } from './chapter-dress.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
@@ -139,6 +140,7 @@ export class Battle {
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
     this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual, stage.expedition ? null : stage.chapter?.id);
+    prewarmChapterDress(stage, this.app.models, ENEMIES);
     this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;

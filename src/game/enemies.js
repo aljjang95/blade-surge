@@ -126,7 +126,6 @@ export class Enemy extends Actor {
     // 장별 의상(docs/MONSTER_ART_BIBLE.md): 같은 Tripo 몸이라도 그 지역에 묶인 이유가 보이게 색·발광·뼈 소품을 입힌다.
     // 애니메이션 재생 전(휴식 자세)에 붙여야 소품이 뼈 축에 맞는다.
     this.dress = species ? dressEnemy(this, game.stage, species) : null;
-    if (this.dress?.ghostGlow && def.ghostly) this.tintEmissive = new THREE.Color(this.dress.ghostGlow).multiplyScalar(.55);
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */
