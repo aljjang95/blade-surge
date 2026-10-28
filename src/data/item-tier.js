@@ -12,7 +12,7 @@ export const itemTierMul = (tp) => Number.isSafeInteger(tp) && tp > 0 ? 1 + TORM
 // il 이 없는 기존 장비·가챠·제작 장비는 보너스가 없어 능력치가 그대로다. 고통 단계 장비(tp)는 자기 배율이 있어 il 을 달지 않는다.
 // 소수는 한 자리로 굳혀 클라이언트·서버(V8) 어디서든 같은 정수 능력치가 나오게 한다(곱셈·덧셈만 쓴다).
 export const ITEM_LEVEL_MAX = 80;
-export const ILU_STEP = 0.35, ILU_MAX = 12, ILU_FADE = 22;   // ILU_MAX < ILU_FADE 여야 강화가 언제나 능력치를 올린다. 이보다 세면 sim:90d 룬 전투력 밴드(미드 D90 ≤35)를 넘는다(2026-10-28 실측).
+export const ILU_STEP = 0.3, ILU_MAX = 8, ILU_FADE = 22;   // ILU_MAX < ILU_FADE 여야 강화가 언제나 능력치를 올린다. 이보다 세면 sim:90d 룬 전투력 밴드(미드 D90 ≤35)를 넘는다(2026-10-28 실측; 0.35·12·22 도 시드 3에서 미드 최장 정체 11일로 실패).
 const ILU_RARITY = Object.freeze({ N: 0.4, S: 0.6, E: 0.8, U: 0.9, L: 1 });
 const ILU_TABLE = Object.freeze(Array.from({ length: ITEM_LEVEL_MAX + 1 }, (_, il) => il <= 1 ? 0 : Math.round(Math.min(ILU_MAX, ILU_STEP * (il - 1)) * 10) / 10));
 export const validItemLevel = (il) => (Number.isSafeInteger(il) && il > 1 ? Math.min(ITEM_LEVEL_MAX, il) : 0);
