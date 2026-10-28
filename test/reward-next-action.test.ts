@@ -44,7 +44,7 @@ test('보석을 벌지 않았으면 소환이 가능해도 캠페인 1순위가 
 
 test('던전: 강화석을 벌고 착용 장비를 강화할 수 있으면 강화', () => {
   const eco = fresh(); eco.s.gold = 100000; eco.s.stones = 5;
-  const { heroId, inst } = wear(eco, 3);
+  const { heroId, inst } = wear(eco, 2);
   const a = run('dungeon', [{ k: 'stones', n: 5 }], eco)!;
   expect(a.id).toBe('enhance');
   expect(a.target).toEqual({ tab: 'heroes', heroId, uid: inst.uid });
@@ -52,14 +52,15 @@ test('던전: 강화석을 벌고 착용 장비를 강화할 수 있으면 강�
 
 test('던전: 빈 슬롯에 낄 예비 장비가 있어도 착용 장비 강화를 고른다', () => {
   const eco = fresh(); eco.s.gold = 100000; eco.s.stones = 5;
-  const { inst } = wear(eco, 3); eco.addItem('R', 'armor');
+  const { inst } = wear(eco, 2); eco.addItem('R', 'armor');
   const a = run('dungeon', [{ k: 'stones', n: 5 }], eco)!;
   expect(a.id).toBe('enhance');
   expect(a.target.uid).toBe(inst.uid);
 });
 
-test('던전: 강화석이 부족하면 강화 대신 다른 갈래, 없으면 null', () => {
-  const eco = fresh(); eco.s.gold = 100000; wear(eco, 3);
+test('던전: 확정 구간 강화 골드가 부족하면 강화 대신 다른 갈래, 없으면 null', () => {
+  // +3까지는 강화석이 들지 않으므로(enhanceStones) 막는 재화는 골드다. +4부터는 확률 구간이라 애초에 제안하지 않는다.
+  const eco = fresh(); eco.s.gold = 0; eco.s.stones = 5; wear(eco, 2);
   expect(run('dungeon', [{ k: 'stones', n: 5 }], eco)).toBeNull();
 });
 
@@ -84,14 +85,14 @@ test('주간 보급 상자를 받을 수 있으면 패스보다 먼저 무한의
 
 test('캠페인 폴백: 패스가 없고 강화석이 있으면 강화', () => {
   const eco = fresh(); eco.s.gold = 100000; eco.s.stones = 5;
-  const { heroId } = wear(eco, 3);
+  const { heroId } = wear(eco, 2);
   const a = run('campaign', [{ k: 'gold', n: 10 }], eco)!;
   expect(a.id).toBe('enhance');
   expect(a.target.heroId).toBe(heroId);
 });
 
 test('어떤 모드·재화 조합에서도 목적지는 상점이 아니다', () => {
-  const eco = fresh(); Object.assign(eco.s, { gems: 5000, tickets: 5, gold: 100000, stones: 9 }); eco.s.pass.xp = 500; wear(eco, 3);
+  const eco = fresh(); Object.assign(eco.s, { gems: 5000, tickets: 5, gold: 100000, stones: 9 }); eco.s.pass.xp = 500; wear(eco, 2);
   recordTowerClear(eco.s.endgame, { floor: 1, receiptId: 'r2', nowMs: Date.now() });
   for (const mode of ['campaign', 'tower', 'dungeon', 'arena']) {
     for (const got of [[], [{ k: 'gems', n: 1 }], [{ k: 'stones', n: 1 }], [{ k: 'tickets', n: 1 }]]) {
