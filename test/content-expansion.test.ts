@@ -96,16 +96,21 @@ test('구 저장은 기존 진행을 보존하면서 신규 의뢰·대장장이
 
 test('의뢰는 잠금·수락·진행·완료·재진입을 저장하고 보상을 중복 지급하지 않는다', () => {
   const { eco, service } = make();
-  const id = 'oathhold_repeat_gather';
+  const id = 'oathhold_daily_clear';
   expect(service.acceptRequest('emberport', 'emberport_daily_elite')).toEqual({ ok: false, reason: 'locked' });
   expect(service.acceptRequest('oathhold', id)).toEqual({ ok: true, requestId: id });
   expect(service.acceptRequest('oathhold', id)).toEqual({ ok: false, reason: 'accepted' });
-  expect(service.recordRequestProgress('oathhold', 'gather', 4)).toMatchObject({ ok: true, updated: [id] });
+  expect(service.recordRequestProgress('oathhold', 'field', 4)).toMatchObject({ ok: true, updated: [] });
   expect(service.claimRequest('oathhold', id)).toEqual({ ok: false, reason: 'incomplete' });
-  expect(service.recordRequestProgress('oathhold', 'gather', 1)).toMatchObject({ ok: true, updated: [id] });
+  expect(service.recordRequestProgress('oathhold', 'dungeon', 1)).toMatchObject({ ok: true, updated: [id] });
   const gold = eco.s.gold;
   expect(service.claimRequest('oathhold', id)).toMatchObject({ ok: true, requestId: id });
-  expect(eco.s.gold).toBe(gold + 280);
+  expect(eco.s.gold).toBe(gold + 450);
+  // 반복 의뢰는 보상 뒤 다시 수락해야 하므로 두 번 받을 수 없다(docs/TOWN_AUDIT.md).
+  const repeat = 'oathhold_repeat_gather';
+  service.acceptRequest('oathhold', repeat); service.recordRequestProgress('oathhold', 'field', 1);
+  expect(service.claimRequest('oathhold', repeat)).toMatchObject({ ok: true });
+  expect(service.claimRequest('oathhold', repeat)).toEqual({ ok: false, reason: 'not-accepted' });
   expect(service.claimRequest('oathhold', id)).toEqual({ ok: false, reason: 'completed' });
 });
 

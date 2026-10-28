@@ -10,13 +10,15 @@ export const TOWNS = Object.freeze([
 
 export const TOWN_FIELDS = Object.freeze({ oathhold: 'windmeadow', emberport: 'dawnward_city', starcrest: 'skywind_pass' });
 
+// 의뢰 목표 종류는 원정 정산이 실제로 아는 값만 쓴다(src/game/town-progress.js): dungeon · field · elite · treasure · kills.
+// 저장 호환을 위해 id는 그대로 두고 목표만 바꿨다(2026-10-28, 진행이 오르지 않던 채집·이벤트 목표 정리).
 export const TOWN_REQUESTS = Object.freeze([
-  { id: 'oathhold_daily_clear', townId: 'oathhold', kind: 'daily', name: '성채 주변 정화', description: '서약의 성채 던전을 한 번 클리어하세요.', target: { type: 'dungeon', amount: 1 }, rewards: { gold: 450, materials: { glass_leaf: 1 } } },
-  { id: 'oathhold_repeat_gather', townId: 'oathhold', kind: 'repeatable', name: '바람 잎 수집', description: '필드에서 유리 잎을 모으세요.', target: { type: 'gather', amount: 5 }, rewards: { gold: 280, materials: { glass_leaf: 2 } } },
-  { id: 'emberport_daily_elite', townId: 'emberport', kind: 'daily', name: '항구의 정예 경계', description: '잿불 항구 던전의 정예를 한 번 제압하세요.', target: { type: 'elite', amount: 1 }, rewards: { gold: 900, materials: { ember_core: 1 } } },
-  { id: 'emberport_repeat_event', townId: 'emberport', kind: 'repeatable', name: '배수문 점검', description: '필드 이벤트를 두 번 해결하세요.', target: { type: 'event', amount: 2 }, rewards: { gold: 650, materials: { ember_core: 2 } } },
-  { id: 'starcrest_daily_treasure', townId: 'starcrest', kind: 'daily', name: '빙정호의 잔광', description: '별마루 필드의 숨은 보물을 찾으세요.', target: { type: 'treasure', amount: 1 }, rewards: { gold: 1500, materials: { star_dust: 1 } } },
-  { id: 'starcrest_repeat_clear', townId: 'starcrest', kind: 'repeatable', name: '설원 순찰', description: '별마루 설원 던전을 세 번 클리어하세요.', target: { type: 'dungeon', amount: 3 }, rewards: { gold: 1100, materials: { star_dust: 2 } } },
+  { id: 'oathhold_daily_clear', townId: 'oathhold', kind: 'daily', name: '성채 주변 정화', description: '아무 던전이나 한 번 클리어하세요.', target: { type: 'dungeon', amount: 1 }, rewards: { gold: 450, materials: { glass_leaf: 1 } } },
+  { id: 'oathhold_repeat_gather', townId: 'oathhold', kind: 'repeatable', name: '바람 들판 순찰', description: '필드 원정을 한 번 마치세요.', target: { type: 'field', amount: 1 }, rewards: { gold: 280, materials: { glass_leaf: 2 } } },
+  { id: 'emberport_daily_elite', townId: 'emberport', kind: 'daily', name: '항구의 정예 경계', description: '원정에서 정예 몬스터를 세 마리 쓰러뜨리세요.', target: { type: 'elite', amount: 3 }, rewards: { gold: 900, materials: { ember_core: 1 } } },
+  { id: 'emberport_repeat_event', townId: 'emberport', kind: 'repeatable', name: '배수문 소탕', description: '원정에서 몬스터 300마리를 쓰러뜨리세요.', target: { type: 'kills', amount: 300 }, rewards: { gold: 650, materials: { ember_core: 2 } } },
+  { id: 'starcrest_daily_treasure', townId: 'starcrest', kind: 'daily', name: '빙정호의 잔광', description: '원정에서 숨은 보물 방을 찾으세요.', target: { type: 'treasure', amount: 1 }, rewards: { gold: 1500, materials: { star_dust: 1 } } },
+  { id: 'starcrest_repeat_clear', townId: 'starcrest', kind: 'repeatable', name: '설원 순찰', description: '던전을 세 번 클리어하세요.', target: { type: 'dungeon', amount: 3 }, rewards: { gold: 1100, materials: { star_dust: 2 } } },
 ]);
 export const TOWN_REQUEST_BY_ID = Object.freeze(Object.fromEntries(TOWN_REQUESTS.map(request => [request.id, request])));
 
