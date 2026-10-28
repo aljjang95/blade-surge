@@ -129,3 +129,12 @@ test('최선 장착: 같은 고점수 중복 장비가 쌓여도 세트 완성 �
   expect(betterItems(eco, hero).get(iron.uid)).toBeGreaterThan(0);
   expect(planBestEquip(eco, hero).some((p: any) => p.uid === iron.uid)).toBe(true);
 });
+
+test('더 좋은 장비 표시: 같은 장비라도 룬이 박혀 전투력이 오르면 포함한다(장착 계획과 일치)', () => {
+  const eco = make(), hero = eco.s.selected;
+  eco.equip(hero, give(eco, 'w_steel').uid);
+  const runed = give(eco, 'w_steel', 0, { sockets: [{ id: 'ember_edge', grade: 1 }] });
+  const up = eco.isUpgrade(hero, runed); expect(up).toBe(true);
+  expect(betterItems(eco, hero).has(runed.uid)).toBe(up);
+  expect(planBestEquip(eco, hero).some((p: any) => p.uid === runed.uid)).toBe(up);
+});
