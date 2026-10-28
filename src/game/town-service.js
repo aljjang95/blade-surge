@@ -129,8 +129,7 @@ export class TownService {
     if (item.itemId) {
       const def = ITEM_BY_ID[item.itemId];
       if (!def) { this.eco.s = before; return { ok: false, reason: 'invalid-item' }; }
-      granted = { uid: this.eco.s.invSeq++, id: item.itemId, enh: 0 };
-      this.eco.s.inventory.push(granted);
+      granted = this.eco.pushItem(item.itemId, { owner: this.eco.s.selected });
     } else {
       expedition.consumables[item.consumableId] = (expedition.consumables[item.consumableId] || 0) + 1;
       granted = { consumableId: item.consumableId, count: 1 };
@@ -268,7 +267,7 @@ export class TownService {
     this.eco.s.gold -= recipe.gold || 0;
     for (const [id, amount] of Object.entries(recipe.materials || {})) this.eco.s.expedition.materials[id] -= amount;
     let granted;
-    if (recipe.itemId) { granted = { uid: this.eco.s.invSeq++, id: recipe.itemId, enh: 0 }; this.eco.s.inventory.push(granted); }
+    if (recipe.itemId) { granted = this.eco.pushItem(recipe.itemId, { owner: this.eco.s.selected }); }
     else { const consumableId = Object.keys(recipe.consumables || {})[0]; const count = recipe.consumables[consumableId]; this.eco.s.expedition.consumables[consumableId] = (this.eco.s.expedition.consumables[consumableId] || 0) + count; granted = { consumableId, count }; }
     state.blacksmith.crafted.push(recipeId);
     if (!this.eco.save()) { this.eco.s = before; return { ok: false, reason: 'storage' }; }

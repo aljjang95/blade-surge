@@ -28,10 +28,14 @@ export const OPS = {
   unlockHeroFree: { args: [str], run: (e, h) => e.unlockHeroFree(h), ok: okResult },
   selectHero: { args: [str], run: (e, h) => { if (!e.ownHero(h) || e.s.selected === h) return false; e.s.selected = h; e.emit(); return true; }, ok: okBool, offline: true },
   // 장비 (난수 없음)
-  equip: { args: [str, (v) => int(v, 1)], run: (e, h, uid) => { if (!e.ownHero(h) || !e.s.inventory.some((x) => x.uid === uid)) return false; e.equip(h, uid); return true; }, ok: okBool, offline: true },
+  equip: { args: [str, (v) => int(v, 1)], run: (e, h, uid) => { if (!e.ownHero(h) || !e.s.inventory.some((x) => x.uid === uid)) return false; return e.equip(h, uid) !== false; }, ok: okBool, offline: true },
   unequip: { args: [str, SLOT], run: (e, h, slot) => { if (!e.ownHero(h)) return false; e.unequip(h, slot); return true; }, ok: okBool, offline: true },
   sellItem: { args: [(v) => int(v, 1)], run: (e, uid) => e.sellItem(uid), ok: okValue },
   salvage: { args: [(v) => Array.isArray(v) && v.length > 0 && v.length <= 200 && v.every((x) => int(x, 1))], run: (e, uids) => e.salvage(uids), ok: okResult },
+  // 금고(docs/GEAR_OWNERSHIP_VAULT.md): 서버 시계로 하루 유료 꺼내기를 센다.
+  vaultDeposit: { args: [(v) => int(v, 1)], run: (e, uid) => e.vaultDeposit(uid), ok: okResult },
+  vaultWithdraw: { args: [(v) => int(v, 1), str], run: (e, uid, h) => e.vaultWithdraw(uid, h), ok: okResult },
+  vaultExpand: { args: [], run: (e) => e.vaultExpand(), ok: okResult },
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)
   enhance: { args: [(v) => int(v, 1), bool, bool], run: (e, uid, protect, bless) => e.enhance(uid, { protect, bless }), ok: okResult, random: true },
