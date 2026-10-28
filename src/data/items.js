@@ -165,14 +165,19 @@ export const RARITY_COLOR = { N: RARITY_INFO.N.color, S: RARITY_INFO.S.color, E:
 // ---------- 강화 (+0 ~ +20, 던파식) ----------
 // 핵심: 강화 보너스는 등급이 아니라 **슬롯 기준치(SLOT_BASE)** 에 붙는다. 흰 무기 +10 이 레전드리 +0 보다 세다.
 export const ENH_MAX = 20;
-/** 성공 확률 */
-export const enhanceChance = (lv) => lv < 8 ? 1 : ({ 8: 0.85, 9: 0.75, 10: 0.65, 11: 0.5, 12: 0.4, 13: 0.3, 14: 0.25, 15: 0.2, 16: 0.15, 17: 0.13, 18: 0.11, 19: 0.09 }[lv] ?? 0.08);
+/** 성공 확률(키 = 현재 단계, 결과 = 다음 단계 성공 확률). 대표님 2026-10-28 "던파식 긴장":
+ *  +1~+3 확정, +4 90% → +8 50% → +10 35% 로 단계마다 떨어진다. +16 이상은 기존 값 그대로.
+ *  (예전: +8까지 100% — 신규 계정 1-1 한 판에 전투력 3,200→7,896, 그중 약 49%가 무위험 강화였다.) */
+export const ENHANCE_CHANCE = Object.freeze({ 3: 0.9, 4: 0.8, 5: 0.7, 6: 0.65, 7: 0.6, 8: 0.55, 9: 0.5, 10: 0.45, 11: 0.42, 12: 0.4, 13: 0.3, 14: 0.25, 15: 0.2, 16: 0.15, 17: 0.13, 18: 0.11, 19: 0.09 });
+export const ENH_SAFE_MAX = 3;   // 이 단계까지는 성공 100%
+export const enhanceChance = (lv) => lv < ENH_SAFE_MAX ? 1 : (ENHANCE_CHANCE[lv] ?? 0.08);
 /** 실패 시 파괴 확률 (+12 이상). 보호 주문서로 0 */
 export const destroyChance = (lv) => lv < 12 ? 0 : lv < 15 ? 0.1 : 0.2;
 /** 실패 시 단계 하락: +10 이상에서 1 (던파 +11↑ 하락에 해당) */
 export const enhanceDown = (lv) => lv >= 10 ? 1 : 0;
 export const enhanceCost = (lv) => Math.floor(250 * Math.pow(1.3, lv));
-export const enhanceStones = (lv) => lv < 3 ? 0 : lv < 8 ? 1 : lv < 12 ? 2 : lv < 16 ? 3 : 5;
+/** 강화석 개수: +3까지 0, +4·+5 1개, +6~+12 2개, +13~+16 3개, 그 위 5개(+6~+8 은 예전 1개 → 2개) */
+export const enhanceStones = (lv) => lv < 3 ? 0 : lv < 5 ? 1 : lv < 12 ? 2 : lv < 16 ? 3 : 5;
 /** 강화석 등급 — 비석 3종: +9까지 하급(stones), +14까지 중급(stones2), 그 위는 상급(stones3) */
 export const enhanceStoneTier = (lv) => lv < 10 ? 1 : lv < 15 ? 2 : 3;
 export const STONE_KEY = { 1: 'stones', 2: 'stones2', 3: 'stones3' };
