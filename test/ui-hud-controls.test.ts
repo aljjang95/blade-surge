@@ -151,7 +151,7 @@ function fixture() {
     { name: 'five', desc: 'five', icon: 'five.png', cd: 15, unlock: 20 },
   ];
   const def = { skills, color: '#123456', portrait: 'hero.png' }, slots = [0, 1, 2, 3, 4, 5];
-  const player: any = { def, hp: 80, maxHp: 100, mp: 10, maxMp: 40, ult: 50, ultMax: 100,
+  const player: any = { def, heroLevel: 8, hp: 80, maxHp: 100, mp: 10, maxMp: 40, ult: 50, ultMax: 100,
     alive: true, dodgeCd: 1.25, cds: [2, 0, 0, 0, 5, 6], auto: false,
     combatSkillIndex: (slot: number) => slots[slot],
     combatSkill: (slot: number) => ({ index: slots[slot], skill: player.def.skills[slots[slot]] }),
@@ -235,6 +235,8 @@ test('cached children preserve cooldown, MP, lock, ultimate and ready transition
   expect(get('hud-mp').style.width).toBe('62.5%'); expect(get('hud-mp-txt').textContent).toBe('MP 25 / 40');
   expect(get('hud-exp-txt').textContent).toBe(`EXP 200 / ${levelExp(20)}`);
   expect(get('hud-ult').parentElement!.classList.contains('full')).toBe(true);
+  // 궁극기 단계 해금(Lv8) 전에는 게이지가 차도 '발동 가능' 반짝임을 켜지 않는다.
+  f.player.heroLevel = 7; update(f); expect(get('hud-ult').parentElement!.classList.contains('full')).toBe(false); f.player.heroLevel = 8; update(f);
   const flashes = f.skillBtns.map(button => button.layoutReads), calls = play.mock.calls.length;
   update(f); expect(f.skillBtns.map(button => button.layoutReads)).toEqual(flashes);
   expect(play.mock.calls.length).toBe(calls);

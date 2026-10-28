@@ -1,3 +1,4 @@
+import { skillGateLevel, ULT_GATE_LEVEL } from '../data/skill-tree.js';
 import * as THREE from 'three';
 import { legalLinksHtml } from './legal-links.js';
 import { bindHeroPortrait } from './hero-portraits.js';
@@ -419,7 +420,7 @@ export class UI {
       img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
       b.style.display = ''; b.classList.toggle('locked', !player.unlocked(index));
       this._skillCooldowns[slot].style.setProperty('--p', '0%'); b.dataset.ready = '0'; b.classList.remove('ready', 'ready-flash');
-      const lk = b.querySelector('.lock b'); if (lk) lk.textContent = sk.unlock || '';
+      const lk = b.querySelector('.lock b'); if (lk) lk.textContent = String(skillGateLevel(def, index));
     });
     $('btn-boss-shortcut').hidden = !this.app.battle?.canBossShortcut?.();
     $('btn-auto').classList.toggle('on', !!player.auto);
@@ -648,7 +649,7 @@ export class UI {
     const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); writeHudStyle($('hud-exp').style, 'width', Math.min(100, hero.exp / Math.max(1, need) * 100) + '%');
     const expText = `EXP ${hero.exp} / ${need}`, expLabel = $('hud-exp-txt'); if (expLabel.textContent !== expText) expLabel.textContent = expText;
     const shortcut = $('btn-boss-shortcut'), shortcutHidden = !b.canBossShortcut?.(); if (shortcut.hidden !== shortcutHidden) shortcut.hidden = shortcutHidden;
-    const ult = p.ult / p.ultMax; writeHudStyle($('hud-ult').style, 'width', ult * 100 + '%'); $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
+    const ult = p.ult / p.ultMax; writeHudStyle($('hud-ult').style, 'width', ult * 100 + '%'); $('hud-ult').parentElement.classList.toggle('full', ult >= 1 && p.heroLevel >= ULT_GATE_LEVEL);
     this.setGauge(b);
     if (b.boss && b.boss.alive) writeHudStyle($('boss-hp').style, 'width', (b.boss.hp / b.boss.maxHp * 100) + '%');
     if (this.hurtT > 0) { this.hurtT -= dt; } writeHudStyle($('hud-vignette').style, 'opacity', Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0));
