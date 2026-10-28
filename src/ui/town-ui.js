@@ -1,4 +1,5 @@
 import './town-ui.css';
+import './town-hud.css';
 import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
@@ -288,8 +289,10 @@ export class TownUI {
   render(focusId, focusKind) {
     const body = this.dialog.querySelector('.town-body'), scroll = body?.scrollTop || 0;
     const town = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold;
-    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [town.name + ' 상인', 'MERCHANT'], trainer: [town.name + ' 스킬 교관', 'TRAINER'],
-      ...Object.fromEntries(CONTENT_TABS.map(tab => [tab.id, [tab.title(town.name), tab.eyebrow]])) };
+    // 창 제목은 지금 서 있는 지역 마을 이름을 따른다(2~6지역에서도 '서약의 성채'로 뜨던 것, docs/TOWN_AUDIT.md). 이동석 마을은 머리 줄 부제로 둔다.
+    const skin = activeCampaignSkin(), placeName = skin?.name || town.name;
+    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [placeName + ' 상인', 'MERCHANT'], trainer: [placeName + ' 스킬 교관', 'TRAINER'],
+      ...Object.fromEntries(CONTENT_TABS.map(tab => [tab.id, [tab.title(placeName), tab.eyebrow]])) };
     const [title, eyebrow] = titles[this.view] || titles.map;
     this.dialog.dataset.view = this.view; this.dialog.dataset.town = this.activeId;
     const art = TOWN_ART[this.activeId] || TOWN_ART.oathhold;
@@ -299,7 +302,7 @@ export class TownUI {
       : this.view === 'merchant' ? '<button type="button" data-town-act="potions">전투 물약 보급소</button>'
         : this.view === 'trainer' ? '<button type="button" data-town-act="build">전투 방식 · 스킬 강화</button>'
           : '<span class="town-foot-hint">던전을 클리어하면 다음 마을이 열립니다</span><button type="button" data-town-act="view" data-view="dungeons">마을 일 보기</button>';
-    this.dialog.innerHTML = '<div class="town-shell"><header class="town-head"><div><small class="town-eyebrow">' + safe(town.subtitle) + ' · ' + eyebrow + '</small><h2 id="town-dialog-title">' + safe(title) + '</h2></div>' +
+    this.dialog.innerHTML = '<div class="town-shell"><header class="town-head"><div><small class="town-eyebrow">' + safe(skin ? skin.subtitle + ' · ' + town.name : town.subtitle) + ' · ' + eyebrow + '</small><h2 id="town-dialog-title">' + safe(title) + '</h2></div>' +
       '<button type="button" class="town-close" data-town-act="close">닫기</button></header>' +
       '<div class="town-body" tabindex="-1">' + content + '</div>' +
       '<footer class="town-foot"><p class="town-status" role="status" aria-live="polite" data-tone="' + safe(this.tone) + '">' + safe(this.message) + '</p>' + footer + '</footer></div>';
