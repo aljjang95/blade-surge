@@ -5,6 +5,8 @@
 // 소품 키는 src/game/chapter-dress.js PROP_BUILDERS 에 있다. 새 Tripo 몸이 오면 monster-roster.js 의 asset 만 바꾸고
 // 여기서 그 종의 소품을 빼면 된다(소품은 몸에 이미 있는 실루엣을 대신하던 것).
 
+import { DUNGEON_HOME } from './stages.js';
+
 /** @typedef {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} DressRemap */
 /** @typedef {{ color?: string, amount?: number, emissive?: string, remap?: DressRemap, props?: string[] }} DressSpec */
 
@@ -42,7 +44,15 @@ const CROWN_SLIME = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#dc
 // 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
 const CROWN_HOLLOW = { emissive: '#120a1c', remap: { dark: '#24163a', light: '#c9a8f2', hues: [50, 170], mix: 0.9, baseMix: 0.2 } };
 
-/** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
+/** 6장 잔향 — 고향 장 의상 위에 1장과 같은 귀환 청록 발광. */
+const ECHO_SKIN = { color: '#b9d6cc', amount: 0.2, emissive: '#13403a' };
+/** 7장 금 간 종탑의 도시 — 바랜 황동. 보라 천·원령은 바랜 황동으로, 초록 슬라임은 녹청 황동으로. */
+const BRASS_REMAP = { dark: '#3a3020', light: '#e6d6a6', hues: [235, 345], mix: 0.9, baseMix: 0.12 };
+const BRASS_BONE = { color: '#d8ceb0', amount: 0.18, emissive: '#120d04', remap: BRASS_REMAP };
+const BRASS_SPIRIT = { remap: { dark: '#3a3222', light: '#f0e2b8', hues: [180, 360], mix: 1, baseMix: 0.5 }, emissive: '#2a2210' };
+const BRASS_SLIME = { remap: { dark: '#3a4a36', light: '#d8e0b0', hues: [50, 190], mix: 0.85, baseMix: 0.2 } };
+
+/** @type {Readonly<Record<number, { name: string, echo?: boolean, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
     name: '장례 행렬',
@@ -258,11 +268,55 @@ export const CHAPTER_DRESS = Object.freeze({
       frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
+  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 따로 의상 표를 두지 않고, 그 경로의 고향 장 의상을
+  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스만 직접 정한다.
+  6: {
+    name: '다섯 명령의 잔향',
+    echo: true,
+    species: {
+      // 빈 의자의 증인: 상복 베일과 맹세 깃발. 고립의 잔향: 금 간 큰 종과 후광.
+      homecoming_midboss: { ...ECHO_SKIN, props: ['mourningVeil', 'oathBanner'] },
+      homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
+    },
+    assets: {},
+  },
+  7: {
+    name: '어긋난 박자',
+    species: {
+      // 해골 시민: 귀환 축하에 모였다가 어긋난 박자에 묶인 사람들 — 타종 명부를 진다.
+      skel_minion: { ...BRASS_BONE, props: ['bellLedger'] },
+      skel_rogue: { ...BRASS_BONE },
+      // 종탑 문짝 방패.
+      skel_shield: { ...BRASS_BONE, props: ['doorShield'] },
+      bone_orc: { ...BRASS_BONE, props: ['clapperBack'] },
+      ghost: { ...BRASS_SPIRIT, props: ['spiritBell'] },
+      ghost_skull: { ...BRASS_SPIRIT, props: ['spiritBell'] },
+      blob_green: { ...BRASS_SLIME, props: ['spiritBell'] },
+      // 해골 주술사·사제: 소리 굽쇠.
+      skel_mage: { ...BRASS_BONE, remap: { ...BRASS_REMAP, hues: [190, 345] }, props: ['tuningFork'] },
+      skel_priest: { ...BRASS_BONE, remap: { ...BRASS_REMAP, hues: [190, 345] }, props: ['tuningFork', 'bellLedger'] },
+      elite_skel_captain: { ...BRASS_BONE, props: ['doorShield', 'clapperBack'] },
+      elite_wraith: { ...BRASS_SPIRIT, props: ['spiritBell', 'spiritHalo'] },
+      elite_bone_lord: { ...BRASS_BONE, props: ['brokenBellLarge'] },
+    },
+    // 종지기·오르벤·카델은 7장 전용 Tripo 몸이라 의상을 입히지 않는다.
+    assets: {
+      bone_knight: { ...BRASS_BONE, props: ['bellLedger'] },
+      void_wisp: { ...BRASS_SPIRIT, props: ['spiritBell'] },
+      skeleton_mage: { ...BRASS_BONE, props: ['tuningFork'] },
+      goblin_chief: { ...BRASS_BONE, props: ['clapperBack'] },
+      shadow_soldier: { ...BRASS_BONE },
+    },
+  },
 });
+
+/** 장 테마 → 장 번호(6장 잔향이 경로의 고향 장 의상을 찾을 때). */
+const THEME_CHAPTER = Object.freeze({ garden: 1, forge: 2, frost: 3, tide: 4, crown: 5, crypt: 7 });
+const ECHO_GLOW = '#13403a';
 
 /**
  * 이 관문의 적에게 입힐 의상. 원정(전용 로스터·아트)은 제외한다.
- * @param {{ expedition?: unknown, ch?: number, chapter?: { id?: number } } | null | undefined} stage
+ * @param {{ expedition?: unknown, ch?: number, chapter?: { id?: number }, dungeon?: { id?: string } } | null | undefined} stage
  * @param {string} species 런타임 적 id
  * @param {string | null | undefined} asset 실제 로드된 라이브러리 asset id
  * @returns {DressSpec | null}
@@ -273,5 +327,22 @@ export function chapterDressFor(stage, species, asset) {
   const table = CHAPTER_DRESS[ch];
   if (!table) return null;
   if (Object.hasOwn(table.species, species)) return table.species[species];
+  if (table.echo) {
+    // 잔향: 이 경로의 고향 장 의상(없으면 1~5장 중 먼저 찾은 것)에 귀환 청록 발광을 덧입힌다.
+    const home = THEME_CHAPTER[DUNGEON_HOME[stage.dungeon?.id]];
+    for (const c of [home, 1, 2, 3, 4, 5]) {
+      const t = c && c !== ch ? CHAPTER_DRESS[c] : null;
+      const spec = t && (Object.hasOwn(t.species, species) ? t.species[species] : asset && Object.hasOwn(t.assets, asset) ? t.assets[asset] : null);
+      if (spec) return echoOf(spec);
+    }
+    return null;
+  }
   return asset && Object.hasOwn(table.assets, asset) ? table.assets[asset] : null;
+}
+
+const echoCache = new Map();
+/** @param {DressSpec} spec @returns {DressSpec} */
+function echoOf(spec) {
+  if (!echoCache.has(spec)) echoCache.set(spec, Object.freeze({ ...spec, emissive: ECHO_GLOW }));
+  return echoCache.get(spec);
 }
