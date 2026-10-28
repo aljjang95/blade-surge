@@ -94,10 +94,14 @@ export function mountEnemyPreview(host, def) {
       canvas = renderer.domElement;
       canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', `${def.name} 실제 전투 모델`);
       canvas.addEventListener('webglcontextlost', contextLost);
-      const weaponId = monsterRosterEntry(def.model)?.weapon?.asset;
-      const weaponModel = weaponId ? await loadModel(weaponId).catch(() => null) : null;
+      const roster = monsterRosterEntry(def.model);
+      const weaponModels = {};
+      for (const weaponId of [roster?.weapon?.asset, roster?.offhand?.asset].filter(Boolean)) {
+        const weaponModel = await loadModel(weaponId).catch(() => null);
+        if (weaponModel) weaponModels[weaponId] = weaponModel;
+      }
       if (disposed || !host.isConnected) return;
-      enemy = createPreviewEnemy(scene, gltf, null, def, weaponModel ? { [weaponId]: weaponModel } : {});
+      enemy = createPreviewEnemy(scene, gltf, null, def, weaponModels);
       const bounds = new THREE.Box3().setFromObject(enemy.model);
       const sphere = bounds.getBoundingSphere(new THREE.Sphere());
       const radius = Math.max(.25, sphere.radius);

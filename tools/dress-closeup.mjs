@@ -21,12 +21,16 @@ const LINEUPS = {
     ['skel_mage', 'skel_priest', 'bone_orc', 'elite_bone_lord'],
     ['ghost', 'ghost_skull', 'elite_wraith', 'bomb_slime'],
     ['grave_burrower', 'garden_midboss', 'garden_finalboss'],
+    // 1장 전용 Tripo 몸(stages.js CHAPTER_SPECIES)·세렌(tll_ch1_tombknight).
+    ['ch1_coffinbearer', 'ch1_mourner', 'garden_midboss'],
   ],
   2: [
     ['orc', 'orc_blob', 'tribal', 'cacto_wall'],
     ['bomb_imp', 'imp', 'ash_burrower', 'hywirl'],
     ['tribal_shaman', 'armabee', 'elite_orc_chief', 'elite_bluedemon'],
     ['forge_midboss', 'forge_finalboss'],
+    // 2장 전용 Tripo 몸·이그란(tll_ch2_igran).
+    ['ch2_smith', 'ch2_emberimp', 'forge_midboss'],
   ],
   3: [
     ['skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'],

@@ -63,6 +63,21 @@ const DUNGEON_ROSTERS = {
   belfry: { trash: ['skel_shield', 'ghost', 'skel_rogue', 'bell_ringer', 'bone_orc', 'bomb_slime', 'skel_minion', 'blob_green'], ranged: ['ghost_skull', 'skel_priest', 'skel_mage'], elite: ['elite_bone_lord', 'elite_wraith', 'elite_skel_captain'] },
   crackedNave: { trash: ['ghost', 'bone_orc', 'skel_minion', 'skel_rogue', 'bell_ringer', 'skel_shield', 'bomb_slime', 'blob_green'], ranged: ['skel_priest', 'skel_mage', 'ghost_skull'], elite: ['elite_wraith', 'elite_skel_captain', 'elite_bone_lord'] },
 };
+// 장 전용 몸(2026-10-28 Tripo 1·2장): 여러 장이 같이 쓰는 적 id 는 def.model 을 공유하므로, 그 장의 전투 방 편성에서만
+// 같은 수치·행동의 전용 적 id 로 바꾼다. 보상·정산 명단(rosterFor)·웨이브 id 는 그대로라 경제 밴드가 움직이지 않는다.
+export const CHAPTER_SPECIES = Object.freeze({
+  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner' }),
+  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp' }),
+});
+const swappedRosters = new Map();
+function chapterSpecies(chapterId, roster) {
+  const swap = CHAPTER_SPECIES[chapterId];
+  if (!swap || !roster) return roster;
+  let byRoster = swappedRosters.get(chapterId);
+  if (!byRoster) swappedRosters.set(chapterId, byRoster = new Map());
+  if (!byRoster.has(roster)) byRoster.set(roster, Object.fromEntries(Object.entries(roster).map(([key, ids]) => [key, ids.map((id) => swap[id] || id)])));
+  return byRoster.get(roster);
+}
 // 던전 배치의 고향 지역(테마). 표에 없는 던전은 지역 기본 편성을 쓴다.
 export const DUNGEON_HOME = {
   procession: 'garden', greenhouse: 'garden', tribunal: 'garden', kiln: 'forge', uprising: 'forge', archive: 'frost', reverseRiver: 'frost',
@@ -93,7 +108,7 @@ export function stageDef(ch, st) {
   // 지역 정체성: 경로가 다른 지역의 던전 배치를 빌려도 몬스터는 그 지역 무리다(2-3 용광로에서 정원 해골이 나오던 문제).
   // 던전 고유 편성은 그 던전의 고향 지역에서만 쓴다. 다섯 지역을 순례하는 귀환 장(homecoming)은 던전 편성을 그대로 둔다.
   const home = DUNGEON_HOME[dungeon.id];
-  const R = (DUNGEON_ROSTERS[dungeon.id] && (home === chapter.theme || CHAPTER_FLAGS[chapter.id]?.homecoming) ? DUNGEON_ROSTERS[dungeon.id] : null) || ROSTER[chapter.theme], scene = stageStory(ch, st);
+  const R = chapterSpecies(chapter.id, (DUNGEON_ROSTERS[dungeon.id] && (home === chapter.theme || CHAPTER_FLAGS[chapter.id]?.homecoming) ? DUNGEON_ROSTERS[dungeon.id] : null) || ROSTER[chapter.theme]), scene = stageStory(ch, st);
   // rosterFor()(보상·정산 stageRankValues·원정 waves·확장 던전이 펼쳐 쓰는 명단)는 기존 던전 편성을 그대로 둔다.
   // 캠페인 전투 방 편성만 열거되지 않는 combatRosterFor()로 지역 무리를 쓴다 — 90일 경제 밴드·원정 지문이 움직이지 않는다.
   const rewardR = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme];
@@ -408,5 +423,21 @@ for (const [dungeonId, sourceId] of Object.entries(DUNGEON_BOSS_BASE)) {
       voiceKey: source.voiceKey || sourceId,
       signatureBoss: true,
     };
+  }
+}
+
+// 장 전용 몸 적(CHAPTER_SPECIES): 원래 적의 수치·행동·초상·근접 역할을 그대로 복사하고 이름과 모델만 바꾼다.
+const CHAPTER_SPECIES_DEFS = {
+  ch1_coffinbearer: ['skel_minion', '관꾼 해골', 'Ch1_CoffinBearer'],
+  ch1_mourner: ['ghost', '곡하는 원령', 'Ch1_Mourner'],
+  ch2_smith: ['orc', '앞치마 오크 장인', 'Ch2_Smith'],
+  ch2_emberimp: ['tribal_shaman', '불씨 임프', 'Ch2_EmberImp'],
+};
+for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
+// 1·2장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
+for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {
+  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2]]) {
+    const def = ENEMIES[`${prefix}_${rank}`];
+    if (def && CHAPTER_SPECIES[chapterId][def.summon]) def.summon = CHAPTER_SPECIES[chapterId][def.summon];
   }
 }

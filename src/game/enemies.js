@@ -103,8 +103,9 @@ export class Enemy extends Actor {
       this.root.traverse((o) => { if (o.isMesh) o.castShadow = body && o === body.o; });
     }
     // 분리 무기(종지기 곤봉·수문 기사 쌍종 플레일): 로스터의 weapon 항목을 Tripo 몸(대체 실루엣이 아닌)의 오른손 본에 붙인다.
-    const weaponSpec = this.libraryRoster?.weapon;
-    if (weaponSpec && this.libraryAsset?.id === this.libraryRoster.asset) {
+    // 애도의 기사처럼 왼손 소품(묘비 방패)이 있으면 offhand 항목을 같은 방식으로 왼손 본에 붙인다.
+    const weaponSpecs = [this.libraryRoster?.weapon, this.libraryRoster?.offhand].filter(Boolean);
+    if (weaponSpecs.length && this.libraryAsset?.id === this.libraryRoster.asset) for (const weaponSpec of weaponSpecs) {
       const held = attachMonsterWeapon(this.model, weaponSpec, game.app?.models);
       const weaponTint = def.tint || (def.boss ? '#ffb0b0' : null), tintColor = weaponTint ? new THREE.Color(weaponTint) : null;
       if (held) held.weapon.traverse((o) => {

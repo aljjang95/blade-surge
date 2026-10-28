@@ -12,6 +12,9 @@ export const ENCOUNTER_MODELS = {
   Skeleton_OathRemnant: { base: 'Skeleton_Warrior', file: 'oath-remnant-v1', remove: ['mesh_1'] },
 };
 export const CAMPAIGN_MODELS = {
+  // 1·2장 중간 보스: Tripo 전용 몸(애도의 기사 세렌 tll_ch1_tombknight, 대장장이 이그란 tll_ch2_igran).
+  garden_midboss: 'Ch1_TombKnight',
+  forge_midboss: 'Ch2_Igran',
   garden_finalboss: 'Skeleton_BellKing',
   forge_finalboss: 'Big_KilnTyrant',
   frost_finalboss: 'Big_ArchiveMonarch',
