@@ -149,3 +149,12 @@ test('도감은 1·2장 전용 종의 실제 출현 위치를 잡는다', async 
     expect(entry.locations.length, id).toBeGreaterThan(0);
   }
 });
+
+test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 전용 종으로 바뀐다', async () => {
+  const { chapterSpeciesId } = await import('../src/data/stages.js');
+  expect(chapterSpeciesId({ chapter: { id: 1 } }, 'skel_minion')).toBe('ch1_coffinbearer');
+  expect(chapterSpeciesId({ chapter: { id: 2 } }, 'orc')).toBe('ch2_smith');
+  expect(chapterSpeciesId({ chapter: { id: 6 } }, 'skel_minion')).toBe('skel_minion');
+  expect(chapterSpeciesId({ chapter: { id: 1 }, expedition: {} }, 'skel_minion')).toBe('skel_minion');
+  expect(chapterSpeciesId({ chapter: { id: 1 } }, 'bone_orc')).toBe('bone_orc');
+});

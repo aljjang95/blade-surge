@@ -83,7 +83,8 @@ export const CHAPTER_DRESS = Object.freeze({
       garden_midboss: { ...GARDEN_BONE, props: ['funeralBanner'] },
       // 1장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 색은 원래 종과 같고, 몸에 이미 있는 관·두건·조종 소품은 뺀다.
       ch1_coffinbearer: { ...GARDEN_BONE },
-      ch1_mourner: { ...GARDEN_SPIRIT },
+      // 곡하는 원령은 전용 몸이 이미 청록 상복이라 텍스처 재배치(원령 공용 baseMix 0.6)가 무늬를 지워 단색처럼 보였다 — 발광만 준다.
+      ch1_mourner: { emissive: '#174a40' },
       garden_finalboss: { ...GARDEN_BONE, emissive: '#0e2c25', props: ['bellCrown', 'brokenBellLarge'] },
     },
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.

@@ -13,7 +13,7 @@ import { DropSystem, fieldDropsAllowed } from './drops.js';
 import { TreasureChests } from './treasure-chest.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ExitCue, exitCueTarget } from './exit-cue.js';
-import { ENEMIES } from '../data/stages.js';
+import { ENEMIES, chapterSpeciesId } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel, preloadHeroBody } from '../engine/assets.js';
 import { heroBodyAppearance } from '../data/hero-library.js';
@@ -591,6 +591,7 @@ export class Battle {
   stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
+    type = chapterSpeciesId(this.stage, type);
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
     let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[runtimeType]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;

@@ -503,12 +503,14 @@ const remapCache = new Map();
  * 손그림 텍스처의 색상(hue) 범위를 장 팔레트로 옮긴 복제 텍스처. 밝기는 보존해 무늬·음영을 살린다.
  * hue 범위 안 픽셀은 mix, 밖은 baseMix 만큼 섞는다. 텍스처·팔레트별로 한 번만 만들고 공유한다(브라우저 전용).
  * @param {THREE.Texture} map @param {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} remap
+ * @param {number} [owner] 이 텍스처를 쓰는 장(장이 바뀌면 releaseChapterTextures 가 다른 장 것을 GPU 에서 내린다)
  */
-export function remapTexture(map, remap) {
+export function remapTexture(map, remap, owner = 0) {
   const image = map?.image;
   if (!image || typeof document === 'undefined' || !(image.width > 0)) return null;
   const key = `${map.uuid}|${remap.dark}|${remap.light}|${remap.hues}|${remap.mix}|${remap.baseMix || 0}`;
-  if (remapCache.has(key)) return remapCache.get(key);
+  const hit = remapCache.get(key);
+  if (hit) { hit.owner = owner; return hit.texture; }
   let texture = null;
   try {
     const scale = Math.min(1, 1024 / Math.max(image.width, image.height));
@@ -545,7 +547,7 @@ export function remapTexture(map, remap) {
     texture.anisotropy = map.anisotropy; texture.userData.sharedDress = true;
   } catch { texture = null; }
   // 실패는 캐시하지 않는다(일시적 읽기 실패가 그 몸을 영구히 단색 틴트로 고정하지 않게).
-  if (texture) remapCache.set(key, texture);
+  if (texture) remapCache.set(key, { texture, owner });
   return texture;
 }
 
@@ -553,14 +555,23 @@ export function remapTexture(map, remap) {
  * 전투 준비 중(로딩 화면) 그 장 의상의 텍스처 재배치를 미리 만든다. 첫 스폰 때 동기 픽셀 처리로 프레임이 끊기지 않게.
  * @param {*} stage @param {Record<string, any>} models app.models(모델 이름 → glTF) @param {Record<string, { model: string }>} enemies 적 정의
  */
+/** 다른 장의 재배치 텍스처를 내려 GPU 메모리가 장 수만큼 쌓이지 않게 한다. 이전 전투의 적은 이미 정리된 뒤에 부른다. */
+export function releaseChapterTextures(keep) {
+  let released = 0;
+  for (const [key, entry] of remapCache) if (entry.owner !== keep) { entry.texture.dispose(); remapCache.delete(key); released++; }
+  return released;
+}
+
 export function prewarmChapterDress(stage, models, enemies) {
-  if (!stage || stage.expedition) return 0;
-  const table = CHAPTER_DRESS[stage.chapter?.id ?? stage.ch];
+  const ch = stage && !stage.expedition ? stage.chapter?.id ?? stage.ch : 0;
+  releaseChapterTextures(ch);
+  if (!ch) return 0;
+  const table = CHAPTER_DRESS[ch];
   if (!table) return 0;
   let made = 0;
   for (const [species, spec] of Object.entries(table.species)) {
     const gltf = spec.remap && models?.[enemies?.[species]?.model];
-    gltf?.scene?.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m?.map && remapTexture(m.map, spec.remap)) made++; });
+    gltf?.scene?.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m?.map && remapTexture(m.map, spec.remap, ch)) made++; });
   }
   return made;
 }
@@ -574,7 +585,7 @@ export function prewarmChapterDress(stage, models, enemies) {
 export function dressEnemy(enemy, stage, species) {
   const spec = chapterDressFor(stage, species, enemy.libraryAsset?.id);
   if (!spec) return null;
-  if (spec.remap) for (const m of enemy.mats) { const t = m.map && remapTexture(m.map, spec.remap); if (t) { m.map = t; m.needsUpdate = true; } }
+  if (spec.remap) for (const m of enemy.mats) { const t = m.map && remapTexture(m.map, spec.remap, stage?.chapter?.id ?? stage?.ch ?? 0); if (t) { m.map = t; m.needsUpdate = true; } }
   if (spec.color && spec.amount) { const c = new THREE.Color(spec.color); for (const m of enemy.mats) m.color?.lerp(c, spec.amount); }
   if (spec.emissive) { const c = new THREE.Color(spec.emissive); for (const m of enemy.mats) if (m.emissive) { m.userData.baseEmissive = c.clone(); m.emissive.copy(c); } }
   const props = [];
