@@ -319,6 +319,10 @@ const PROPS = {
     ]).concat([piece(new THREE.ConeGeometry(.015 * h, .07 * h, 4), C.coral, [-.05 * h, .02 * h, 0], [0, 0, 25])]),
     glow: [piece(new THREE.SphereGeometry(.01 * h, 4, 3), C.glowAbyss, [0, .012 * h, 0])],
   }) },
+  barnaclesTop: { root: true, at: [0, .84, 0], rot: [0, 0, 0], scale: 2.6, build: (h) => ({
+    solid: [[0, 0, 0, .03], [.04, -.015, .02, .022], [-.035, -.01, .025, .02], [.01, -.02, -.04, .024]].map(([x, y, z, r]) => piece(new THREE.CylinderGeometry(r * .6 * h, r * h, r * 1.2 * h, 6, 1, true), C.barnacle, [x * h, y * h, z * h])),
+    glow: [piece(new THREE.SphereGeometry(.01 * h, 4, 3), C.glowAbyss, [0, .012 * h, 0])],
+  }) },
   lureLamp: { bones: ['head', 'Head'], at: [0, .25, .06], rot: [0, 0, 0], scale: 1.8, build: (h) => ({
     solid: [piece(new THREE.CylinderGeometry(.005 * h, .008 * h, .14 * h, 4), C.kelp, [0, .06 * h, .02 * h], [25, 0, 0]), piece(new THREE.CylinderGeometry(.005 * h, .005 * h, .06 * h, 4), C.kelp, [0, .135 * h, .07 * h], [70, 0, 0])],
     // 가짜 등대 빛: 조난선을 부르는 미끼 등.
@@ -461,7 +465,8 @@ export function remapTexture(map, remap) {
       if (c > 0) hue = max === r ? 60 * (((g - b) / c) % 6) : max === g ? 60 * ((b - r) / c + 2) : 60 * ((r - g) / c + 4);
       if (hue < 0) hue += 360;
       // 채도가 낮은 픽셀(뼈·회색)은 범위 밖으로 본다.
-      const inRange = c > 24 && hue >= h0 && hue <= h1;
+      // h0 > h1 이면 360 을 넘어 감싸는 범위(예: 붉은색 [330, 40]).
+      const inRange = c > 24 && (h0 <= h1 ? hue >= h0 && hue <= h1 : hue >= h0 || hue <= h1);
       const k = inRange ? mix : base;
       if (!k) continue;
       const lum = (0.3 * r + 0.59 * g + 0.11 * b) / 255;
