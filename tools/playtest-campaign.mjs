@@ -15,12 +15,14 @@ import { mkdirSync, readFileSync, writeFileSync, appendFileSync, rmSync } from '
 import { installAutoStarter } from './qa-starter.mjs';
 import { MASTERY_NODES, STORY_EVENTS } from '../src/data/masterworks.js';
 import { HEROES } from '../src/data/heroes.js';
-import { ITEM_BY_ID } from '../src/data/items.js';
+import { ITEM_BY_ID, ENH_MAX, enhanceChance } from '../src/data/items.js';
 import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname));
 const TO = arg('to', '3-10'), FROM = arg('from', '1-1'), SEED = Number(arg('seed', 1)), BUDGET_MS = Number(arg('budget-min', 150)) * 60000;
+// --enhance-min: 성공 확률이 이 값 이상인 단계까지만 강화한다(기본 0.8 = +5까지). 예전 규칙은 '+8까지(당시 100%)'였다.
+const ENH_MIN = Number(arg('enhance-min', 0.8));
 const PULL = process.argv.includes('--pull'), MAX_SEC = Number(arg('max-sec', 600)), RETRIES = Number(arg('retries', 2)), VIDEO_EVERY = Number(arg('video-every', 5));
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
 const OUT = resolve(PROJ, arg('out', `work/qa/campaign/${stamp}`));
@@ -50,7 +52,7 @@ const stages = [], friction = [], metaLog = [], joins = [], newHeroTrials = [];
 let aborted = null;
 
 /** 브라우저 안 하네스. 한 번 설치하고 스테이지마다 enter/tick/settle 을 부른다. */
-function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled, itemRarity }) {
+function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled, itemRarity, enhChance, enhMin }) {
   const a = window.app, e = a.eco;
   let st = seed >>> 0;
   Math.random = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -335,13 +337,13 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
           if (!node) break; const r = a.masterworks.unlock(node.id); if (!r?.ok) break; did('mastery', { id: node.id, name: node.name, cost: node.cost });
         }
       } catch (err) { did('masteryErr', { err: String(err).slice(0, 80) }); }
-      // 7) 강화: 착용 장비 중 가장 낮은 강화부터 +8까지(성공 100% 구간), 남은 골드·강화석 한도 안에서
+      // 7) 강화: 착용 장비 중 가장 낮은 강화부터, 성공 확률 enhMin 이상인 단계까지(실패도 기록), 남은 골드·강화석 한도 안에서
       for (let g = 0; g < 60; g++) {
-        const h = e.hero(id), worn = Object.values(h.equip || {}).map((uid) => e.s.inventory.find((x) => x.uid === uid)).filter(Boolean).filter((x) => x.enh < 8).sort((x, y) => x.enh - y.enh);
+        const h = e.hero(id), worn = Object.values(h.equip || {}).map((uid) => e.s.inventory.find((x) => x.uid === uid)).filter(Boolean).filter((x) => (enhChance[x.enh] ?? 0) >= enhMin).sort((x, y) => x.enh - y.enh);
         if (!worn.length) break;
         const t = worn[0], from = t.enh, r = e.enhance(t.uid);
         if (!r.ok) { did('enhanceBlocked', { reason: r.reason, item: t.id, enh: from }); break; }
-        did('enhance', { item: t.id, from, to: r.enh, success: r.success });
+        did('enhance', { item: t.id, from, to: r.enh, success: r.success, chance: r.chance, ...(r.destroyed ? { destroyed: true } : {}), ...(r.down ? { down: r.down } : {}) });
       }
     } catch (err) { did('metaError', { err: String(err && err.stack || err).slice(0, 300) }); }
     // 인벤토리 진단: 가방 등급 분포, 착용 장비, 안 낀 장비 중 슬롯별 최대 전투력 변화
@@ -448,7 +450,7 @@ try {
   const itemSlot = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.slot]));
   const itemRarity = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.rarity]));
   const storyFirst = Object.fromEntries(STORY_EVENTS.map((ev) => [ev.id, ev.choices?.[0]?.id]));
-  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL, itemRarity });
+  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL, itemRarity, enhChance: Array.from({ length: ENH_MAX + 1 }, (_, lv) => lv >= ENH_MAX ? 0 : enhanceChance(lv)), enhMin: ENH_MIN });
   const s0 = await page.evaluate(() => window.__C.state());
   log({ evt: 'fresh-state', ...s0 });
   const known = new Set(s0.owned);
