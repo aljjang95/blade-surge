@@ -42,98 +42,101 @@ describe('진행도 정화: 조작·정상·개방 시각', () => {
     expect(Object.keys(r.report.clamped).filter((k) => k.startsWith('progress'))).toEqual([]);
   });
 
-  test('3. 7장 별점은 개방 시각 이전 now에서 사라지고 이후에는 남는다', () => {
+  test('3. 7장 별점은 개방 시각 이전 now에서 사라지고(조작 표시) 이후에는 남는다', () => {
     const open = CHAPTER_OPEN[7];
-    const raw = () => withProgress({ unlocked: 71, stars: { ...stars(1, 1), '7-1': 3, '7-2': 2 } });
+    const raw = () => withProgress({ unlocked: 63, stars: { ...stars(1, 6), '7-1': 3, '7-2': 2 } });
     const early = run(raw(), { now: open - 1 });
     expect(Object.keys(early.state.progress.stars).some((k) => k.startsWith('7-'))).toBe(false);
-    expect(Object.keys(early.state.progress.stars).length).toBe(10);
-    expect(early.state.progress.unlocked).toBe(11);
+    expect(Object.keys(early.state.progress.stars).length).toBe(60);
+    expect(early.state.progress.unlocked).toBe(61);
+    expect(early.report.severe).toBe(true);
     const late = run(raw(), { now: open });
     expect(Object.keys(late.state.progress.stars)).toContain('7-1');
     expect(Object.keys(late.state.progress.stars)).toContain('7-2');
-    expect(late.state.progress.unlocked).toBe(6 * 10 + 2 + 1);
+    expect(late.state.progress.unlocked).toBe(63);
+    expect(late.report.severe).toBe(false);
   });
 });
 
 describe('진행도 정화: 속도 상한·서버 바닥값', () => {
-  test('4. 경과 1일에 1~6장 60관문 → oneTime+daily 개만, 앞쪽 관문부터, unlocked=마지막+1', () => {
+  test('4. 경과 1일에 1~7장 70관문 → 관문 번호 ≤ oneTime+daily 까지만, 앞쪽부터, 속도 초과만으로는 severe 아님', () => {
     const cap = PROGRESS_PACE.oneTime + PROGRESS_PACE.daily * 1;
-    const r = run(withProgress({ unlocked: 61, stars: stars(1, 6) }), { createdAt: NOW });
+    const r = run(withProgress({ unlocked: 70, stars: stars(1, 7) }), { createdAt: NOW });
     expect(r.report.days).toBe(1);
     const keys = floorsOf(Object.keys(r.state.progress.stars));
     expect(keys.length).toBe(cap);
-    expect(keys[0]).toBe('1-1');
-    expect(keys[keys.length - 1]).toBe('4-10'); // cap 40 = 4장 끝
-    expect(keys).toEqual(floorsOf(Object.keys(stars(1, 4))));
+    expect(keys).toEqual(floorsOf(Object.keys(stars(1, 6))));
     expect(r.state.progress.unlocked).toBe(cap + 1);
-    expect(r.report.clamped['progress.stars']).toEqual({ from: 60, to: cap });
-    expect(r.report.clamped['progress.unlocked']).toEqual({ from: 61, to: cap + 1 });
+    expect(r.report.clamped['progress.stars']).toEqual({ from: 70, to: cap });
+    expect(r.report.clamped['progress.unlocked']).toEqual({ from: 70, to: cap + 1 });
+    expect(r.report.severe).toBe(false);
   });
 
   test('5. 서버 바닥값: 원본에 없거나 상한을 넘어도 서버 진행은 유지', () => {
-    // 원본은 진행 없음, 서버 문서는 3-4까지 클리어(unlocked 35)
     const floor = run(withProgress({ unlocked: 1, stars: {} }), { serverProgress: { unlocked: 35, stars: { '3-4': 2, '1-1': 3 } } });
     expect(floor.state.progress.stars['3-4']).toBe(2);
     expect(floor.state.progress.stars['1-1']).toBe(3);
     expect(floor.state.progress.unlocked).toBe(35);
-    // 서버 진행이 속도 상한(40)을 넘어도 깎지 않는다
-    const big = stars(1, 5);
-    const over = run(withProgress({ unlocked: 1, stars: {} }), { createdAt: NOW, serverProgress: { unlocked: 51, stars: big } });
-    expect(Object.keys(over.state.progress.stars).length).toBe(50);
-    expect(over.state.progress.unlocked).toBe(51);
+    // 서버 진행이 속도 상한을 넘어도 깎지 않는다(경과 1일 상한 60, 서버 진행 70)
+    const over = run(withProgress({ unlocked: 1, stars: {} }), { createdAt: NOW, serverProgress: { unlocked: 70, stars: stars(1, 7) } });
+    expect(Object.keys(over.state.progress.stars).length).toBe(70);
+    expect(over.state.progress.unlocked).toBe(70);
     expect(over.report.clamped['progress.unlocked']).toBeUndefined();
-    // 원본이 상한을 채워도 서버 항목이 먼저 남는다
-    const mixed = run(withProgress({ unlocked: 61, stars: stars(1, 6) }), { createdAt: NOW, serverProgress: { unlocked: 61, stars: { '6-10': 1 } } });
-    expect(mixed.state.progress.stars['6-10']).toBe(1);
-    expect(mixed.state.progress.unlocked).toBe(61);
+    // 서버가 아는 구간은 이어진 것으로 본다: 원본에 앞 관문이 없어도 서버 구간 뒤의 이어진 기록을 인정
+    const joined = run(withProgress({ unlocked: 12, stars: { '2-1': 3 } }), { createdAt: NOW, serverProgress: { unlocked: 11, stars: stars(1, 1) } });
+    expect(joined.state.progress.stars['2-1']).toBe(3);
+    expect(joined.state.progress.unlocked).toBe(12);
+    expect(joined.report.severe).toBe(false);
   });
 });
 
-describe('진행도 정화: endgame·마을', () => {
-  test('6a. 별점이 잘린 관문의 endgame.peak 항목은 사라지고 서버 peak는 남는다', () => {
-    const raw = withProgress({ unlocked: 61, stars: stars(1, 6) }, { endgame: { peak: { '1-1': 2, '6-5': 3 }, torment: { best: 0 } } });
-    const r = run(raw, { createdAt: NOW });
+describe('진행도 정화: endgame·마을·리뷰 회귀', () => {
+  test('6a. 잘린 관문의 peak 항목은 사라지고 서버 peak는 남는다, 3별이 아닌 관문의 악몽 이상 기록은 ≤1로', () => {
+    const s = { ...stars(1, 1), '1-2': 1, '3-1': 3 };
+    const raw = () => withProgress({ unlocked: 31, stars: s }, { endgame: { peak: { '1-1': 2, '1-2': 3, '3-1': 3 }, torment: { best: 0 } } });
+    const r = run(raw(), { createdAt: NOW });
     expect(r.state.endgame.peak['1-1']).toBe(2);
-    expect('6-5' in r.state.endgame.peak).toBe(false);
-    expect(r.report.clamped['endgame.peak']).toEqual({ from: 2, to: 1 });
-    const withServer = run(raw, { createdAt: NOW, serverEndgame: { peak: { '2-2': 1 } } });
-    expect(withServer.state.endgame.peak['2-2']).toBe(1);
+    expect(r.state.endgame.peak['1-2']).toBe(1);
+    expect('3-1' in r.state.endgame.peak).toBe(false);
+    expect(r.report.clamped['endgame.peak']).toEqual({ from: 3, to: 2 });
+    expect(run(raw(), { createdAt: NOW, serverEndgame: { peak: { '2-2': 1 } } }).state.endgame.peak['2-2']).toBe(1);
   });
 
-  test('6b. 지옥(랭크 3)으로 한 장 10관문 기록이 없으면 torment.best는 서버값 이하로 절삭', () => {
+  test('6b. torment.best는 항상 min(저장값, 서버 best)', () => {
     const peak = Object.fromEntries(Object.keys(stars(1, 1)).map((k) => [k, 3]));
-    const noHell = (extra: Record<string, unknown> = {}) => withProgress({ unlocked: 11, stars: stars(1, 1) }, { endgame: { peak: { ...peak, '1-10': 2 }, torment: { best: 6 }, ...extra } });
-    const cut = run(noHell(), { serverEndgame: { torment: { best: 2 } } });
+    const raw = () => withProgress({ unlocked: 11, stars: stars(1, 1) }, { endgame: { peak, torment: { best: 6 } } });
+    const cut = run(raw(), { serverEndgame: { torment: { best: 2 } } });
     expect(cut.state.endgame.torment.best).toBe(2);
     expect(cut.report.clamped['endgame.torment.best']).toEqual({ from: 6, to: 2 });
-    expect(run(noHell()).state.endgame.torment.best).toBe(0); // 서버 기록도 없으면 0
-    // 서버 best가 더 커도 원본 값(6)을 넘지 않는다
-    expect(run(noHell(), { serverEndgame: { torment: { best: 9 } } }).state.endgame.torment.best).toBe(6);
-    // 지옥으로 1장 10관문을 끝낸 기록이 남으면 저장값 유지
-    const full = withProgress({ unlocked: 11, stars: stars(1, 1) }, { endgame: { peak, torment: { best: 6 } } });
-    const kept = run(full);
-    expect(kept.state.endgame.torment.best).toBe(6);
-    expect(kept.report.clamped['endgame.torment.best']).toBeUndefined();
+    expect(run(raw()).state.endgame.torment.best).toBe(0);
+    expect(run(raw(), { serverEndgame: { torment: { best: 9 } } }).state.endgame.torment.best).toBe(6);
   });
 
-  test('6c. 속도 상한으로 지옥 기록 관문이 잘리면 torment.best도 서버값으로 내려간다', () => {
-    const peak = Object.fromEntries(Object.keys(stars(5, 5)).map((k) => [k, 3]));
-    const raw = withProgress({ unlocked: 61, stars: stars(1, 6) }, { endgame: { peak, torment: { best: 8 } } });
-    const r = run(raw, { createdAt: NOW, serverEndgame: { torment: { best: 1 } } });
-    expect(r.state.endgame.peak).toEqual({});
-    expect(r.state.endgame.torment.best).toBe(1);
+  test('6c. (리뷰 b) 1-1~1-10 별 1개 + peak 전부 3 + torment.best 49, 서버 best 0 → best 0, peak ≤1', () => {
+    const peak = Object.fromEntries(Object.keys(stars(1, 1)).map((k) => [k, 3]));
+    const r = run(withProgress({ unlocked: 11, stars: stars(1, 1, 1) }, { endgame: { peak, torment: { best: 49 } } }), { serverEndgame: { torment: { best: 0 } } });
+    expect(r.state.endgame.torment.best).toBe(0);
+    expect(Object.keys(r.state.endgame.peak).length).toBe(10);
+    for (const rank of Object.values(r.state.endgame.peak) as number[]) expect(rank).toBeLessThanOrEqual(1);
   });
 
   test('7. campaignTown.current가 잘린 지역을 가리키면 남은 진행의 최신 마을로 내려간다', () => {
     const forgedTown = run(withProgress({ unlocked: 70, stars: {} }, { campaignTown: { current: 7, celebrated: 7 } }));
     expect(forgedTown.state.campaignTown).toEqual({ current: 1, celebrated: 1 });
-    const capped = run(withProgress({ unlocked: 61, stars: stars(1, 6) }, { campaignTown: { current: 6, celebrated: 6 } }), { createdAt: NOW });
-    expect(capped.state.progress.unlocked).toBe(41);
-    expect(capped.state.campaignTown).toEqual({ current: 5, celebrated: 5 });
-    // 남은 진행 안의 마을은 그대로
+    // 1장만 이어지고 나머지는 끊긴 기록 → 2지역(unlocked 11)까지만
+    const gap = run(withProgress({ unlocked: 61, stars: { ...stars(1, 1), ...stars(5, 6) } }, { campaignTown: { current: 6, celebrated: 6 } }), { createdAt: NOW });
+    expect(gap.state.progress.unlocked).toBe(11);
+    expect(gap.state.campaignTown).toEqual({ current: 2, celebrated: 2 });
     const ok = run(withProgress({ unlocked: 61, stars: stars(1, 6) }, { campaignTown: { current: 3, celebrated: 4 } }), { createdAt: NOW });
     expect(ok.state.campaignTown).toEqual({ current: 3, celebrated: 4 });
+  });
+
+  test('(리뷰 a) 신규 계정(경과 1일)에 4-1~7-10만 별 3개 → unlocked 1, 마을 1, severe', () => {
+    const r = run(withProgress({ unlocked: 71, stars: stars(4, 7) }, { campaignTown: { current: 7, celebrated: 7 } }), { createdAt: NOW });
+    expect(r.state.progress.unlocked).toBe(1);
+    expect(r.state.progress.stars).toEqual({});
+    expect(r.state.campaignTown).toEqual({ current: 1, celebrated: 1 });
+    expect(r.report.severe).toBe(true);
   });
 });
 
