@@ -155,7 +155,7 @@ export class Pack {
     this.room = room; this.x = x; this.z = z; this.aggro = aggro; this.returning = false;
     this.members = []; this.slots = 0; this.lostT = 0; this.alertedAt = -1;
     this.frame = NaN; this.sumNow = 0; this.cntNow = 0; this.nearNow = Infinity;
-    this.meanPrev = 0; this.cntPrev = 0; this.nearPrev = 0;
+    this.meanPrev = 0; this.cntPrev = 0; this.nearPrev = 0; this.formNow = 0; this.formPrev = 0;
   }
 }
 
@@ -255,8 +255,8 @@ export function alertPack(game, pack, source, radius = PACK.alertRadius) {
 function rollover(pack, game, dt) {
   if (pack.frame === game.elapsed) return;
   pack.frame = game.elapsed;
-  pack.meanPrev = pack.cntNow ? pack.sumNow / pack.cntNow : 0; pack.cntPrev = pack.cntNow; pack.nearPrev = pack.nearNow;
-  pack.sumNow = 0; pack.cntNow = 0; pack.nearNow = Infinity;
+  pack.meanPrev = pack.cntNow ? pack.sumNow / pack.cntNow : 0; pack.formPrev = pack.cntNow ? (pack.formNow || 0) / pack.cntNow : 0; pack.cntPrev = pack.cntNow; pack.nearPrev = pack.nearNow;
+  pack.sumNow = 0; pack.cntNow = 0; pack.nearNow = Infinity; pack.formNow = 0;
   // 추격 중인 무리원이 한 명도 없던 프레임(모두 피격·공격 중)은 추적 상실로 세지 않는다.
   if (!pack.aggro || !(dt > 0) || !pack.cntPrev) return;
   if (pack.nearPrev > PACK.leashPath) pack.lostT += dt; else pack.lostT = 0;
@@ -297,9 +297,11 @@ export function updatePursuit(enemy, game, player, distance, dt, route) {
     if (enemy.routeClear === false) field.step(enemy.pos.x, enemy.pos.z, route);
   }
   if (pack) {
-    pack.sumNow += d; pack.cntNow++;
+    pack.sumNow += d; pack.cntNow++; pack.formNow = (pack.formNow || 0) + (enemy.formFront || 0);
     if (pack.cntPrev > 1 && d > PACK.paceRange) {
-      const ahead = pack.meanPrev - d;
+      // 분대 대형(squads.js ROLE_FORMATION): 방패·분쇄는 무리 평균보다 앞에서, 원거리·주술사는 뒤에서 걷는다.
+      // 무리 평균 대형 오프셋을 빼 상대값으로 본다(원거리만 있는 무리가 통째로 느려지지 않게).
+      const ahead = pack.meanPrev - d - ((enemy.formFront || 0) - (pack.formPrev || 0));
       route.pace = ahead > PACK.paceAhead ? PACK.paceSlow : -ahead > PACK.paceBehind ? PACK.paceFast : 1;
     }
     // 발각한 무리는 걷는 영웅을 놓치지 않을 만큼 따라붙는다. 느린 종일수록 더 서두르되 영웅 기본 속도는 넘지 않는다.
