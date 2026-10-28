@@ -142,3 +142,48 @@ describe('P2-1 의뢰 수령의 계승 문장은 서버 명령(claimJourneySigil
     if (prevLs) Object.defineProperty(globalThis, 'localStorage', prevLs); else Reflect.deleteProperty(globalThis, 'localStorage');
   });
 });
+
+describe('P2-4 연결 계정의 의식은 서버 결과를 기다려 연출한다', () => {
+  const fakeClient = (cmd: (c: any) => Promise<any>) => ({ cmd, me: async () => ({ doc: { gold: 1 }, rev: 1 }), shadowSnapshot: async () => ({}) });
+  const setup = async (cmd: (c: any) => Promise<any>) => {
+    const { CommandQueue } = await import('../src/net/command-queue.js');
+    const eco = newEco(); eco.s.lineageSigil = 5; eco.s.roster.owned = [...new Set([...eco.s.roster.owned, 'knight', 'mage'])];
+    const it = eco.addItem('L', 'weapon', undefined, 0, 'knight'); expect(eco.vaultDeposit(it.uid).ok).toBe(true);
+    const adopted: any[] = [];
+    const q = new CommandQueue(eco, fakeClient(cmd) as any, { authority: () => 'server', adopt: (d: any) => adopted.push(d) });
+    return { q, eco, it, adopted };
+  };
+
+  test('CommandQueue.settled: 서버 성공은 ok, 거부(422)는 ok:false, 응답이 없으면 timeout', async () => {
+    const ok = await setup(async () => ({ match: true }));
+    const before = ok.q.lastCid; expect(ok.eco.vaultRitual(ok.it.uid, 'mage').ok).toBe(true);
+    expect(ok.q.lastCid).not.toBe(before);
+    expect(await ok.q.settled(ok.q.lastCid)).toMatchObject({ ok: true });
+    const no = await setup(async () => { throw Object.assign(new Error('rejected'), { status: 422, body: { error: 'rejected' } }); });
+    no.eco.vaultRitual(no.it.uid, 'mage');
+    expect(await no.q.settled(no.q.lastCid)).toMatchObject({ ok: false, status: 422 });
+    const slow = await setup(() => new Promise(() => {}));
+    slow.eco.vaultRitual(slow.it.uid, 'mage');
+    expect(await slow.q.settled(slow.q.lastCid, 20)).toMatchObject({ ok: false, timeout: true });
+  });
+
+  test('performRitual: 로컬 전용은 즉시 결과, 서버 권위는 서버 성공 뒤 ok·거부면 실패 사유(연출 없음)', async () => {
+    const { performRitual, RITUAL_FAIL_TEXT } = await import('../src/ui/vault-panel.js');
+    // 로컬 전용(계정 없음): 기다리지 않는다.
+    const local = newEco(); local.s.lineageSigil = 5; local.s.roster.owned = [...new Set([...local.s.roster.owned, 'knight', 'mage'])];
+    const li = local.addItem('L', 'weapon', undefined, 0, 'knight'); local.vaultDeposit(li.uid);
+    expect(await performRitual({ eco: local, app: {} } as any, li.uid, 'mage')).toMatchObject({ ok: true });
+    // 서버 권위 + 서버 성공
+    const good = await setup(async () => ({ match: true }));
+    const g = await performRitual({ eco: good.eco, app: { account: { authority: 'server', queue: good.q } } } as any, good.it.uid, 'mage');
+    expect(g.ok).toBe(true);
+    // 서버 권위 + 서버 거부: 연출 대신 거부 사유
+    let release!: () => void; const gate = new Promise<void>((r) => { release = r; });
+    const bad = await setup(async () => { await gate; throw Object.assign(new Error('rejected'), { status: 422, body: { error: 'rejected' } }); });
+    let settled = false;
+    const p = performRitual({ eco: bad.eco, app: { account: { authority: 'server', queue: bad.q } } } as any, bad.it.uid, 'mage').then((r: any) => { settled = true; return r; });
+    await new Promise((r) => setTimeout(r, 15)); expect(settled).toBe(false);   // 서버 응답 전에는 끝나지 않는다(연출 없음)
+    release(); const b: any = await p;
+    expect(b).toMatchObject({ ok: false, reason: 'server' }); expect(RITUAL_FAIL_TEXT.server).toMatch(/[가-힣]/);
+  });
+});

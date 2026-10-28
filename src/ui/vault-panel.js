@@ -15,12 +15,23 @@ const short = (heroId) => HEROES[heroId]?.name.split(' ').pop() || '';
 const FREE_TEXT = { return: '되돌리기 무료', kin: '같은 계열 무료', legacy: '공유 시절 장비 · 첫 이동 무료' };
 const FAIL_TEXT = { daily: '오늘 유료 꺼내기를 모두 썼습니다 (05:00 초기화)', gold: '골드가 부족합니다', hero: '해금한 영웅에게만 꺼낼 수 있습니다', item: '금고에 없는 장비입니다', full: '금고가 가득 찼습니다', max: '더 늘릴 수 없습니다', bound: '계승 의식으로만 옮길 수 있어요' };
 /** 계승 의식 거부 사유(서버 reason 그대로) + UI 전용 battle. */
-export const RITUAL_FAIL_TEXT = { bound: '계승 의식으로만 옮길 수 있어요', same: '맡긴 영웅에게는 의식 없이 되돌릴 수 있어요', daily: '오늘 계승 의식을 모두 했어요 (05:00 초기화)', gold: '골드가 부족합니다', sigil: '계승 문장이 부족합니다', hero: '해금한 영웅에게만 의식을 치를 수 있어요', item: '금고에 없는 장비입니다', battle: '전투 중에는 의식을 치를 수 없어요', error: '의식을 마치지 못했어요. 다시 시도해 주세요' };
+export const RITUAL_FAIL_TEXT = { bound: '계승 의식으로만 옮길 수 있어요', same: '맡긴 영웅에게는 의식 없이 되돌릴 수 있어요', daily: '오늘 계승 의식을 모두 했어요 (05:00 초기화)', gold: '골드가 부족합니다', sigil: '계승 문장이 부족합니다', hero: '해금한 영웅에게만 의식을 치를 수 있어요', item: '금고에 없는 장비입니다', battle: '전투 중에는 의식을 치를 수 없어요', error: '의식을 마치지 못했어요. 다시 시도해 주세요', server: '서버가 의식을 받아들이지 않았어요. 금고를 다시 열어 확인해 주세요', pending: '서버 응답을 기다리는 중이에요. 잠시 뒤 금고를 다시 열어 확인해 주세요' };
 const REWARD_NAME = { gold: '골드', gems: '보석', stones: '강화석', stones2: '상급 강화석', stones3: '전설 강화석', fragments: '세트 조각', runeDust: '룬 가루', transcendStones: '초월석', lineageSigil: '계승 문장', protect: '보호 주문서', bless: '축복 주문서' };
 const SLOT_ORDER = ['weapon', 'armor', 'ring', 'boots'];
 const sortItems = (list) => list.slice().sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0) || b.uid - a.uid);
 
 /** 전투 중이거나 출격 중이면 의식을 열지 않는다(화면 밖 규칙: 전투 중 의식 비활성). */
+/**
+ * 계승 의식 실행. 로컬 전용·그림자 계정은 지금처럼 즉시 결과. 서버 권위 계정은 로컬에 반영한 뒤 그 명령의 서버 결과를 기다리고,
+ * 성공일 때만 ok(연출), 거부·시간 초과면 사유를 돌려준다(거부되면 명령 큐가 서버 문서로 되돌린다).
+ */
+export async function performRitual(meta, uid, heroId) {
+  const eco = meta.eco, acct = meta.app?.account, q = acct?.queue;
+  const before = q?.lastCid, r = eco.vaultRitual(uid, heroId);
+  if (!r.ok || acct?.authority !== 'server' || !q || q.lastCid === before) return r;
+  const res = await q.settled(q.lastCid);
+  return res.ok ? r : { ok: false, reason: res.timeout ? 'pending' : 'server' };
+}
 export const inBattle = (meta) => !!(meta?.app?.battle?.active || meta?.app?.stageStarting);
 
 /** 보상 표를 "상급 강화석 5 · 계승 문장 1"처럼 읽을 수 있게. */
@@ -156,10 +167,11 @@ export function openVault(meta, heroId, { tab = 'vault', selected = null, view =
           if (inBattle(meta)) { ui.toast(RITUAL_FAIL_TEXT.battle, 'red'); audio.play('ui_error'); return; }
           go.disabled = true;
           const before = eco.s.inventory.find((x) => x.uid === selected), from = before?.from || null, itemId = before?.id, enh = before?.enh || 0;
-          const r = eco.vaultRitual(selected, heroId);
-          if (!r.ok) { ui.toast(RITUAL_FAIL_TEXT[r.reason] || RITUAL_FAIL_TEXT.error, 'red'); audio.play('ui_error'); again({ tab: 'vault', selected, view: 'ritual' }); return; }
-          audio.play('ui_confirm', { vol: 0.5 }); meta.refreshTop?.();
-          openVault(meta, heroId, { tab: 'vault', view: 'rite', rite: { itemId, enh, from, heroId, hops: r.hops, gold: r.gold, sigil: r.sigil, reduce: reduceMotion() } });
+          performRitual(meta, selected, heroId).then((r) => {
+            if (!r.ok) { ui.toast(RITUAL_FAIL_TEXT[r.reason] || RITUAL_FAIL_TEXT.error, 'red'); audio.play('ui_error'); again({ tab: 'vault', selected, view: 'ritual' }); return; }
+            audio.play('ui_confirm', { vol: 0.5 }); meta.refreshTop?.();
+            openVault(meta, heroId, { tab: 'vault', view: 'rite', rite: { itemId, enh, from, heroId, hops: r.hops, gold: r.gold, sigil: r.sigil, reduce: reduceMotion() } });
+          });
         };
         (b.querySelector('#ritual-go:not([disabled])') || b.querySelector('#ritual-back')).focus({ preventScroll: true });
       },
