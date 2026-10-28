@@ -15,6 +15,7 @@ import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
@@ -699,6 +700,24 @@ export class Economy {
     if (!this.recordJourneyAction('vaultRelay').ok) return false;
     this.s.vault = { ...normalizeVault(this.s.vault), rl: { day: today.day, uids: [...today.uids, inst.uid].slice(-VAULT_INHERIT.relayUidsMax) } };
     return true;
+  }
+  /**
+   * 일일·주간 의뢰의 계승 문장 보상(서버 명령). 의뢰 달성은 로컬 여정 기록이 정본이라 서버가 검증할 수 없으므로,
+   * 서버는 (종류, 의뢰, 서버 기준 기간)당 한 번만 의뢰 표의 문장 수만큼 지급해 상한을 지킨다(재수령·반복 지급 차단).
+   * 클라이언트는 같은 메서드를 불러 서버와 잔액이 같게 한다. 골드·강화석 등 나머지 의뢰 보상은 기존 로컬 경로 그대로.
+   */
+  claimJourneySigil(kind, id) {
+    const list = kind === 'daily' ? DAILY_CONTRACTS : kind === 'weekly' ? WEEKLY_CONTRACTS : null;
+    const def = list?.find((c) => c.id === id);
+    if (!def) return { ok: false, reason: 'unknown' };
+    const sigil = Number(def.rewards?.lineageSigil) || 0;
+    if (!(sigil > 0)) return { ok: false, reason: 'unknown' };
+    const p = periodAt(endgameNow(this)), no = kind === 'daily' ? p.day : p.week, key = kind + ':' + id + ':' + no;
+    const keep = (Array.isArray(this.s.sigilClaims) ? this.s.sigilClaims : []).filter((k) => typeof k === 'string' && k.endsWith(':' + (k.startsWith('daily:') ? p.day : p.week)) && (k.startsWith('daily:') || k.startsWith('weekly:')));
+    if (keep.includes(key)) return { ok: false, reason: 'claimed' };
+    keep.push(key); this.s.sigilClaims = keep.slice(-16);
+    this.s.lineageSigil = (this.s.lineageSigil || 0) + sigil;
+    this.emit(); return { ok: true, sigil };
   }
   /** 도감 마일스톤 수령(중복 수령 불가, 달성은 gearDex 로 재계산). 보상 수치는 gear-dex.js 표. */
   gearDexClaim(heroId, milestoneId) {

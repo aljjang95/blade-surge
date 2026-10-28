@@ -32,7 +32,7 @@ export function hashValue(value) { return hashText(canonicalJson(value)); }
 export const PARITY_KEYS = Object.freeze([
   'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless',
   'transcendStones', 'skillResets', 'heroes', 'selected', 'inventory', 'invSeq', 'vault', 'avatars', 'progress', 'pass',
-  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex',
+  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims',
 ]);
 export function paritySubset(state) {
   const out = {};
@@ -47,7 +47,7 @@ export function parityHash(state) { return hashValue(paritySubset(state)); }
  */
 export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT']);
 /** 0·빈 값이면 서버 문서가 필드를 생략하는 서버 소유 키. 서버 문서에 없으면 "삭제(0)"로 반영한다(로컬 값을 남기면 서버가 지운 잔액이 되살아난다). */
-export const OPTIONAL_SERVER_KEYS = Object.freeze(['lineageSigil', 'gearDex']);
+export const OPTIONAL_SERVER_KEYS = Object.freeze(['lineageSigil', 'gearDex', 'sigilClaims']);
 export function mergeServerOwned(local, server) {
   const out = { ...local };
   for (const key of SERVER_OWNED_KEYS) if (server && server[key] !== undefined) out[key] = server[key];

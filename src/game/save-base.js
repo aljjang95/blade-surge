@@ -119,6 +119,10 @@ export function normalizeSave(raw, fresh) {
   // 계승 문장(docs/GEAR_VAULT_INHERIT.md 5.1): 최상위 정수 재료. 0이면 필드를 두지 않아 이전 저장은 정규화 뒤에도 같다.
   delete s.lineageSigil;
   if (integer(raw.lineageSigil, 0, 0) > 0) s.lineageSigil = integer(raw.lineageSigil, 0, 0);
+  // 의뢰 문장 수령 기록(claimJourneySigil): 'daily|weekly:<의뢰>:<기간>' 문자열만, 최근 16개. 비면 필드를 두지 않는다.
+  delete s.sigilClaims;
+  { const claims = (Array.isArray(raw.sigilClaims) ? raw.sigilClaims : []).filter((k) => typeof k === 'string' && /^(daily|weekly):[A-Za-z0-9_-]{1,40}:\d{1,9}$/.test(k));
+    const uniq = [...new Set(claims)].slice(-16); if (uniq.length) s.sigilClaims = uniq; }
   const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
   s.progress.unlocked = integer(s.progress.unlocked, 1, 1, floors);
   s.progress.stars = {};

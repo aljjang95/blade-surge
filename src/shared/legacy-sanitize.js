@@ -151,13 +151,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, snapshot?: boolean }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, snapshot?: boolean }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, snapshot = false }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, snapshot = false }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -207,8 +207,10 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 가져온 kin·claimed 는 버린다(마일스톤 보상 주입·재수령 방지).
   // 그림자 스냅샷(snapshot)은 외부 가져오기가 아니라 같은 계정의 반복 동기화다: 문장 잔액·도감은 서버 문서 값을 그대로 유지하고(소급·삭제 없음),
   // 로컬이 보낸 값은 쓰지 않는다. 문장·도감은 서버 명령(vaultRitual·gearDexClaim·claimJourneySigil)으로만 바뀐다.
-  delete s.lineageSigil;
+  delete s.lineageSigil; delete s.sigilClaims;
   if (snapshot) {
+    const claims = (Array.isArray(serverSigilClaims) ? serverSigilClaims : []).filter((k) => typeof k === 'string');   // 의뢰 문장 수령 기록도 서버 값 그대로(재수령 차단)
+    if (claims.length) s.sigilClaims = claims.slice(-16);
     const sigil = Number.isSafeInteger(serverLineageSigil) && serverLineageSigil > 0 ? serverLineageSigil : 0;
     if (sigil > 0) s.lineageSigil = sigil;
     // 드랍 도감만 클라이언트가 실제 드랍 때 기록한 항목(원본 gearDex.drop)을 더하되, 지금 그 영웅이 가진 장비로 뒷받침되는 것만 인정한다.

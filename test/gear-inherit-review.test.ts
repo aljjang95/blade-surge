@@ -79,3 +79,66 @@ describe('P2-6 소급 결과가 비어도 이관 완료 표지를 남긴다', ()
     expect(loaded.gearDex.drop).toEqual({});
   });
 });
+
+describe('P2-1 의뢰 수령의 계승 문장은 서버 명령(claimJourneySigil)으로', () => {
+  const dayMs = DAY;
+  test('Economy.claimJourneySigil: 의뢰 표의 문장 수만큼, 기간(일·주)당 한 번, 모르는 의뢰·문장 없는 의뢰 거부', () => {
+    let now = T; const eco: any = grandfather(new Economy({ now: () => now, storage: memory(), rng: () => .5 }));
+    expect(eco.claimJourneySigil('daily', 'daily_relay')).toMatchObject({ ok: true, sigil: 1 }); expect(eco.s.lineageSigil).toBe(1);
+    expect(eco.claimJourneySigil('daily', 'daily_relay')).toMatchObject({ ok: false, reason: 'claimed' }); expect(eco.s.lineageSigil).toBe(1);
+    expect(eco.claimJourneySigil('weekly', 'weekly_relay')).toMatchObject({ ok: true, sigil: 3 }); expect(eco.s.lineageSigil).toBe(4);
+    expect(eco.claimJourneySigil('daily', 'first_dungeon')).toMatchObject({ ok: false, reason: 'unknown' });
+    expect(eco.claimJourneySigil('daily', 'nope')).toMatchObject({ ok: false });
+    expect(eco.claimJourneySigil('monthly', 'daily_relay')).toMatchObject({ ok: false });
+    now += dayMs;   // 다음 일일 기간: 일일은 다시, 같은 주의 주간은 여전히 거부
+    expect(eco.claimJourneySigil('daily', 'daily_relay').ok).toBe(true); expect(eco.s.lineageSigil).toBe(5);
+    expect(eco.claimJourneySigil('weekly', 'weekly_relay')).toMatchObject({ ok: false, reason: 'claimed' });   // 같은 주
+  });
+
+  test('서버 허용 명령표에 있고 인자 형식을 검사하며, 같은 기간 두 번째는 거부된다', async () => {
+    const { OPS, validateOp } = await import('../src/shared/v1-ops.js');
+    expect(Object.keys(OPS)).toContain('claimJourneySigil');
+    expect(validateOp('claimJourneySigil', ['daily', 'daily_relay'])).toBeTruthy();
+    expect(validateOp('claimJourneySigil', ['daily'])).toBeNull(); expect(validateOp('claimJourneySigil', [1, 'x'])).toBeNull();
+    const eco: any = grandfather(new Economy({ now: () => T, storage: memory(), rng: () => .5 }));
+    const def = (OPS as any).claimJourneySigil;
+    expect(def.ok(def.run(eco, 'daily', 'daily_relay'))).toBe(true); expect(def.ok(def.run(eco, 'daily', 'daily_relay'))).toBe(false);
+  });
+
+  test('서버 소유 필드·패리티: sigilClaims 는 서버 문서에서 생략되면 지워지고 정규화·정화를 지난다', async () => {
+    const { PARITY_KEYS } = await import('../src/shared/state-hash.js');
+    expect(PARITY_KEYS).toContain('sigilClaims');
+    expect((mergeServerOwned({ sigilClaims: ['daily:daily_relay:5'] }, { gold: 1 }) as any).sigilClaims).toBeUndefined();
+    const eco = newEco(); eco.claimJourneySigil('daily', 'daily_relay');
+    const raw: any = JSON.parse(JSON.stringify(eco.s));
+    expect(normalizeSave(JSON.parse(JSON.stringify(raw)), eco.fresh()).sigilClaims).toEqual(raw.sigilClaims);
+    raw.sigilClaims = ['x', 5, 'daily:daily_relay:1', ...Array(40).fill('daily:daily_relay:2')];
+    expect(normalizeSave(raw, eco.fresh()).sigilClaims.every((x: any) => typeof x === 'string')).toBe(true);
+    const imp = sanitizeLegacySave(JSON.parse(JSON.stringify(eco.s)), { now: T, createdAt: T - 400 * DAY } as any) as any;
+    expect(imp.state.sigilClaims).toBeUndefined();
+    const snap = sanitizeLegacySave(JSON.parse(JSON.stringify(eco.s)), { now: T, createdAt: T - 400 * DAY, snapshot: true, serverSigilClaims: ['daily:daily_relay:9'] } as any) as any;
+    expect(snap.state.sigilClaims).toEqual(['daily:daily_relay:9']);
+  });
+
+  test('JourneyService.claim: 문장은 로컬에서 직접 더하지 않고 eco.claimJourneySigil 한 번으로 지급(명령 큐가 감싼 메서드), 골드 등 나머지는 그대로', async () => {
+    const { ExpeditionEconomy } = await import('../src/game/expedition-economy.js');
+    const { JourneyService } = await import('../src/game/journey-service.js');
+    const store = new Map<string, string>(), prevLs = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => store.delete(k) } });
+    const eco: any = new Economy(); const app: any = { eco, battle: { active: false }, expeditionUI: { result: null } };
+    app.expedition = new ExpeditionEconomy(eco); app.journey = new JourneyService(app);
+    const calls: any[] = []; const orig = eco.claimJourneySigil.bind(eco);
+    eco.claimJourneySigil = (...a: any[]) => { calls.push(a); return orig(...a); };
+    app.journey.s.daily.actions = { ...(app.journey.s.daily.actions || {}), vaultRelay: 1 };
+    const r = app.journey.claim('daily', 'daily_relay');
+    expect(r.ok).toBe(true); expect(calls).toEqual([['daily', 'daily_relay']]); expect(eco.s.lineageSigil).toBe(1);
+    expect(app.journey.claim('daily', 'daily_relay').ok).toBe(false); expect(eco.s.lineageSigil).toBe(1);
+    // 서버가 거부하면(이미 수령) 로컬 수령 기록도 되돌려 의뢰가 수령 완료로 남지 않는다.
+    store.clear(); const eco2: any = new Economy(); const app2: any = { eco: eco2, battle: { active: false }, expeditionUI: { result: null } };
+    app2.expedition = new ExpeditionEconomy(eco2); app2.journey = new JourneyService(app2);
+    app2.journey.s.daily.actions = { vaultRelay: 1 }; eco2.claimJourneySigil = () => ({ ok: false, reason: 'claimed' });
+    const bad = app2.journey.claim('daily', 'daily_relay');
+    expect(bad.ok).toBe(false); expect(app2.journey.s.daily.claimed).not.toContain('daily_relay'); expect(eco2.s.lineageSigil).toBeUndefined();
+    if (prevLs) Object.defineProperty(globalThis, 'localStorage', prevLs); else Reflect.deleteProperty(globalThis, 'localStorage');
+  });
+});
