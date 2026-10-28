@@ -66,8 +66,10 @@ const DUNGEON_ROSTERS = {
 // 장 전용 몸(2026-10-28 Tripo 1·2장): 여러 장이 같이 쓰는 적 id 는 def.model 을 공유하므로, 그 장의 전투 방 편성에서만
 // 같은 수치·행동의 전용 적 id 로 바꾼다. 보상·정산 명단(rosterFor)·웨이브 id 는 그대로라 경제 밴드가 움직이지 않는다.
 export const CHAPTER_SPECIES = Object.freeze({
-  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner' }),
-  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp' }),
+  // 2026-10-28 운영 캡처: 편성 곡선(squads stageCurve)이 먼저 세우는 종(1장 방패·원거리, 2장 부족 전사·임프)이 옛 몸이라
+  // 2-1 일반 방에 새 몸이 하나도 없었다. 처음 소개되는 주력 종도 장 전용 몸으로 바꾼다(수치·행동은 각 원본 복사).
+  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp' }),
+  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
 });
 /** 캠페인 1·2장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
@@ -437,6 +439,16 @@ const CHAPTER_SPECIES_DEFS = {
   ch1_mourner: ['ghost', '곡하는 원령', 'Ch1_Mourner'],
   ch2_smith: ['orc', '앞치마 오크 장인', 'Ch2_Smith'],
   ch2_emberimp: ['tribal_shaman', '불씨 임프', 'Ch2_EmberImp'],
+  ch1_tombguard: ['skel_shield', '묘비 방패병', 'Ch1_TombGuard'],
+  ch1_mourner_wail: ['ghost_skull', '울부짖는 원령', 'Ch1_Mourner'],
+  ch2_smith_line: ['tribal', '풀무 오크 장인', 'Ch2_Smith'],
+  ch2_emberimp_line: ['imp', '불씨 꼬마 임프', 'Ch2_EmberImp'],
+  ch2_emberimp_bomb: ['bomb_imp', '폭발 불씨 임프', 'Ch2_EmberImp'],
+  ch1_hoodbearer: ['skel_rogue', '두건 쓴 길잡이', 'Ch1_CoffinBearer'],
+  ch1_gravewisp: ['grave_burrower', '묘혈 원령', 'Ch1_Mourner'],
+  ch1_mourner_dirge: ['skel_mage', '만가 부르는 원령', 'Ch1_Mourner'],
+  ch2_anvilguard: ['cacto_wall', '모루 방패 장인', 'Ch2_Smith'],
+  ch2_ashimp: ['ash_burrower', '잿불 굴착 임프', 'Ch2_EmberImp'],
 };
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
 // 1·2장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).

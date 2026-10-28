@@ -23,6 +23,9 @@ const LINEUPS = {
     ['grave_burrower', 'garden_midboss', 'garden_finalboss'],
     // 1장 전용 Tripo 몸(stages.js CHAPTER_SPECIES)·세렌(tll_ch1_tombknight).
     ['ch1_coffinbearer', 'ch1_mourner', 'garden_midboss'],
+    // 같은 Tripo 몸의 역할 갈래(일반 방 주력).
+    ['ch1_tombguard', 'ch1_hoodbearer', 'ch1_mourner_wail', 'ch1_mourner_dirge'],
+    ['ch1_gravewisp'],
   ],
   2: [
     ['orc', 'orc_blob', 'tribal', 'cacto_wall'],
@@ -31,6 +34,8 @@ const LINEUPS = {
     ['forge_midboss', 'forge_finalboss'],
     // 2장 전용 Tripo 몸·이그란(tll_ch2_igran).
     ['ch2_smith', 'ch2_emberimp', 'forge_midboss'],
+    ['ch2_smith_line', 'ch2_anvilguard', 'ch2_emberimp_line', 'ch2_emberimp_bomb'],
+    ['ch2_ashimp'],
   ],
   3: [
     ['skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'],
