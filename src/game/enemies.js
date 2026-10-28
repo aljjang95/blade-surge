@@ -18,6 +18,8 @@ import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
 import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
+import { EliteAffixes } from './elite-affixes.js';
+import { sizeBandMul } from '../data/size-bands.js';
 const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
@@ -85,7 +87,7 @@ export class Enemy extends Actor {
   constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
     const rig = rigOf(def.model, gltf.scene.userData.libraryAsset);
     // visualScale 은 모델 크기만 줄인다. 반경·피격 높이·자폭 범위는 def.scale 기준으로 그대로다(큰 슬라임이 뒤의 적을 가리던 문제).
-    super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
+    super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (rig === 'library' && gltf.scene.userData.libraryAsset?.id === monsterRosterEntry(def.model)?.asset ? sizeBandMul(def) : 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
     this.def = def; this.type = def.name; this.isBoss = !!def.boss; this.isElite = !!def.elite;
     this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7);
     this.pos.copy(pos); this.face(0, 0);
@@ -324,6 +326,9 @@ export class Enemy extends Actor {
       }
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
+    // 정예 접두사 방패막: 막이 켜진 정예 곁의 무리는 피해를 덜 받고, 정예가 받은 피해는 막을 깎는다.
+    const leader = this.pack?.leader; if (leader?.affixes?.has.warding) dmg = leader.affixes.wardFilter(this, dmg);
+    if (this.pack?.herald) dmg = this.game.regionTraits?.filter(this, dmg) ?? dmg;
     if (this.burrow) dmg *= this.burrow.damageMul();
     // 종지기: 매단 종이 피해를 먼저 받아 낸다. 종이 깨진 뒤 무방비 동안은 받는 피해가 늘어난다.
     // 종이 전부 흡수하면 반환값(몸 체력 피해)은 0 이지만 타격은 맞은 것이다 — 호출부는 absorbed 로 적중(콤보·궁극 게이지·세트 on-hit·연출)을 처리한다.
@@ -387,6 +392,9 @@ export class Enemy extends Actor {
     this.killFlair = !!flair && !this.isBoss && !this.isElite;
     // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
     if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(_warnColor.set(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0).multiplyScalar(.55).getHex(), 0.26); }   // .55 배: 몸 전체 발광이 덩어리로 보이지 않게
+    this.affixes?.onDeath();
+    this.game.regionTraits?.onDeath(this, flair);
+    const leader = this.pack?.leader; if (leader && leader !== this) leader.affixes?.allyDied(this);
     this.game.onEnemyDeath(this);
   }
   update(dt) {
@@ -423,11 +431,13 @@ export class Enemy extends Actor {
     this.updateSkillTelegraph();
     if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const raw = this.maxHp * 0.02 + 8, d = this.damageVeil ? this.damageVeil.filter(raw) : raw; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
+    // 정예 접두사: 쓰러진 뒤에도 불길·시한 폭발은 흐른다.
+    if (this.affixes && !this.alive) this.affixes.update(dt, 0);
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;
     // 벽 속에 박힌 중심은 어떤 이동도 거부돼 방 정화를 막는다. 가장 가까운 바닥으로 보정한다(잠행 중 제외).
     if (!this.burrow?.phase) escapeWall(this.game.world, this.pos);
-    const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1);
+    const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1) * (this.affixes ? this.affixes.speedMul : 1);
     if (this.state === 'spawn') {
       if (this.popIn !== undefined) { const k = Math.min(1, this.stateT / this.spawnLen); const e = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.25; this.model.scale.setScalar(this.modelScale * (k < 1 ? k * e : 1)); }
       // 등장은 80% 지점에서 끝나므로 팝인 배율도 그때 원래 크기로 확정한다(남겨 두면 0.94배로 굳는다).
@@ -438,6 +448,8 @@ export class Enemy extends Actor {
     if (this.burrow && (this.burrow.phase || this.pack?.aggro !== false) && this.burrow.update(dt, d)) return;
     // 종지기는 발각 전에는 치지 않는다. 이미 퍼지는 고리는 발각과 무관하게 계속 진행한다.
     if (this.bellringer && (this.bellringer.busy || this.pack?.aggro !== false) && this.bellringer.update(dt, d)) return;
+    // 정예 접두사(사슬 구속·그림자 도약 같은 자기 동작)는 그 동작 동안 일반 추격·공격을 멈춘다.
+    if (this.affixes?.update(dt, d)) return;
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
@@ -497,7 +509,7 @@ export class Enemy extends Actor {
         } else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.2 });
         return;
       }
-      this.atkCd -= dt;
+      this.atkCd -= dt * (this.affixes ? this.affixes.speedMul : 1) * EliteAffixes.commandMul(this);
       if (this.mobRole && this.atkCd <= 0 && p.alive && _route.los && this.mobRole.available(d)) { this.mobRole.start(); return; }
       const range = this.def.range;
       const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
@@ -617,6 +629,7 @@ export class Enemy extends Actor {
   }
   playerHit(target, damage, options, point = target.pos) {
     if (!target?.hurt || !target.hurt(damage, options)) return false;
+    this.game.regionTraits?.onPlayerHit(this, target);
     const size = Math.min(1.7, Math.max(.65, this.def.scale * (this.libraryAsset?.heightM || 1) * .45));
     const hit = _impactPoint.copy(point).setY(Math.max(.8, this.def.scale * .9));
     const g = this.game;

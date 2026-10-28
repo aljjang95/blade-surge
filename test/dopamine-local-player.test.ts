@@ -1,3 +1,4 @@
+import { bossShortcutRule } from '../src/game/boss-shortcut.js';
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { Player } from '../src/game/player.js';
@@ -141,7 +142,7 @@ test('perfect dodge grants the control-first MP and ultimate reward',()=>{
 
 test('campaign boss shortcut only unseals and opens portal, preserving optional flags and excluding other modes',()=>{
   const rooms=[{cleared:false,discovered:false},{cleared:false,discovered:true}], before=JSON.stringify(rooms); let opened=0,sealFx=0;
-  const g:any={active:true,stage:{},conquest:null,enemies:[],pending:[],world:{sealed:true,bossRoom:{cleared:false},rooms,unseal(){this.sealed=false;}},arena:{openSeal(){sealFx++;}},fx:{},ui:{setObjective(){},toast(){}},openPortal(){opened++;},canBossShortcut:Battle.prototype.canBossShortcut};
+  const g:any={active:true,bossShortcut:{ok:true},stage:{},conquest:null,enemies:[],pending:[],world:{sealed:true,bossRoom:{cleared:false},rooms,unseal(){this.sealed=false;}},arena:{openSeal(){sealFx++;}},fx:{},ui:{setObjective(){},toast(){}},openPortal(){opened++;},canBossShortcut:Battle.prototype.canBossShortcut};
   expect(Battle.prototype.canBossShortcut.call(g)).toBe(true); expect(Battle.prototype.shortcutBoss.call(g)).toBe(true);
   expect(JSON.stringify(rooms)).toBe(before); expect(opened).toBe(1); expect(sealFx).toBe(1);
   expect(g.bossRush).toBe(true); expect(g.autoTarget).toBe(g.world.bossRoom); expect(g.world.bossRoom.discovered).toBe(true);
@@ -149,4 +150,9 @@ test('campaign boss shortcut only unseals and opens portal, preserving optional 
   for(const blocked of [{stage:{expedition:{}},conquest:null},{stage:{party:{}},conquest:null},{stage:{},conquest:{}}]) {
     Object.assign(g,blocked,{active:true}); g.world.sealed=true; expect(Battle.prototype.canBossShortcut.call(g)).toBe(false);
   }
+  // 2026-10-28: 별 3 정복 관문이거나 전투력이 권장의 1.5배 이상일 때만 직행할 수 있다.
+  Object.assign(g,{stage:{},conquest:null,bossShortcut:{ok:false}}); expect(Battle.prototype.canBossShortcut.call(g)).toBe(false);
+  expect(bossShortcutRule({power:1000,recPower:1000,stars:2}).ok).toBe(false);
+  expect(bossShortcutRule({power:1500,recPower:1000,stars:0})).toMatchObject({ok:true,reason:'power'});
+  expect(bossShortcutRule({power:100,recPower:1000,stars:3})).toMatchObject({ok:true,reason:'stars'});
 });
