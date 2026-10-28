@@ -283,7 +283,7 @@ export class ExpeditionEconomy {
     return this.transact(() => {
       this.eco.s.gold -= r.gold; for (const [k, v] of Object.entries(r.materials)) this.s.materials[k] -= v;
       let item = null;
-      if (r.itemId) { const def = ITEM_BY_ID[r.itemId]; item = this.eco.addItem(def.rarity, def.slot); item.id = def.id; }
+      if (r.itemId) { const def = ITEM_BY_ID[r.itemId]; item = this.eco.addItem(def.rarity, def.slot, undefined, 0, this.eco.s.selected); item.id = def.id; }
       if (r.consumables) this.reward({ consumables: r.consumables });
       this.s.stats.crafts++; return { ok: true, item, consumables: r.consumables || {} };
     });

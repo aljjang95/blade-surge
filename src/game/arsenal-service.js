@@ -52,6 +52,7 @@ export class ArsenalService {
       const entry=p.equipment[slot];if(!entry)continue;
       const inst=eco.s.inventory.find(i=>i.uid===entry.uid&&i.id===entry.id);
       if(!inst||ITEM_BY_ID[inst.id]?.slot!==slot)missing.push(`${SLOT_NAME[slot]} · ${ITEM_BY_ID[entry.id]?.name||'장비'}`);
+      else if((inst.owner??eco.s.selected)!==heroId)missing.push(`${SLOT_NAME[slot]} · ${ITEM_BY_ID[entry.id]?.name||'장비'}(${inst.owner==='vault'?'금고':'다른 영웅'} 소유 — 금고로 옮겨 주세요)`);
       else {const owner=Object.keys(eco.s.heroes).find(id=>id!==heroId&&Object.values(eco.s.heroes[id].equip).includes(entry.uid));if(owner)transfers.push({uid:entry.uid,item:ITEM_BY_ID[entry.id].name,owner});}
     }
     if(p.jobId&&!eco.s.expedition.unlockedJobs.includes(p.jobId))missing.push('아직 배우지 않은 전직');

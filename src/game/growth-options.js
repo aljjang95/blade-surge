@@ -13,7 +13,7 @@ export function growthOptions(save) {
   const gearScore = item => { const s = itemStats(item); return (s.atk || 0) * 6 + (s.hp || 0) * .5 + (s.def || 0) * 4 + (s.crit || 0) * 1000; };
   for (const slot of SLOTS) {
     if (hero.equip?.[slot]) continue;
-    const item = (save.inventory || []).filter(i => i && !worn.has(i.uid) && ITEM_BY_ID[i.id]?.slot === slot
+    const item = (save.inventory || []).filter(i => i && !worn.has(i.uid) && (i.owner ?? heroId) === heroId && ITEM_BY_ID[i.id]?.slot === slot
       && Number.isInteger(i.enh) && i.enh >= 0 && i.enh <= 20).sort((a, b) => gearScore(b) - gearScore(a))[0];
     if (!item) continue;
     options.push({ kind: 'equipment', mode: 'equip', heroId, uid: item.uid, slot,

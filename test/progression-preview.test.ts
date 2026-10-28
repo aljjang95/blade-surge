@@ -32,13 +32,18 @@ test('세트 1→2→3→4개 및 해제 비교가 실제 적용값과 일치하
   eco.unequip('knight', 'boots'); expect(preview.after).toEqual(actual(eco));
 });
 
-test('다른 영웅의 장비 이전을 미리 알리고 기존 영웅의 상태는 비교만으로 바꾸지 않는다', () => {
-  const eco = grandfather(new Economy()); eco.grantHero('barbarian');
-  const item = eco.addItem('N', 'weapon'); item.enh = 12; eco.equip('barbarian', item.uid);
+test('다른 영웅의 장비는 비교만 보여 주고 바로 옮겨 장착하지 않는다(금고를 거쳐야 한다, docs/GEAR_OWNERSHIP_VAULT.md)', () => {
+  const eco = grandfather(new Economy()); eco.grantHero('barbarian'); eco.s.gold = 1e9;
+  const item = eco.addItem('N', 'weapon', undefined, 0, 'barbarian'); item.enh = 12; eco.equip('barbarian', item.uid);
   const before = JSON.stringify(eco.s), preview = eco.previewItem('knight', item.uid)!;
   expect(preview.owner).toBe('barbarian'); expect(JSON.stringify(eco.s)).toBe(before);
+  expect(eco.equip('knight', item.uid)).toBe(false);
+  expect(eco.hero('barbarian').equip.weapon).toBe(item.uid); expect(eco.hero('knight').equip.weapon).not.toBe(item.uid);
+  // 금고: 바바리안이 맡기고(해제) 기사가 꺼내면 장착된다. 결과 능력치는 미리보기와 같다.
+  expect(eco.vaultDeposit(item.uid).ok).toBe(true); expect(eco.hero('barbarian').equip.weapon).toBeNull();
+  expect(eco.vaultWithdraw(item.uid, 'knight').ok).toBe(true);
   eco.equip('knight', item.uid);
-  expect(eco.hero('barbarian').equip.weapon).toBeNull(); expect(preview.after).toEqual(actual(eco));
+  expect(eco.hero('knight').equip.weapon).toBe(item.uid); expect(preview.after).toEqual(actual(eco));
 });
 
 test('강화된 저등급과 무강화 장비 교체도 최종 스탯·기본 세트 계산을 공유한다', () => {
