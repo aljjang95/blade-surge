@@ -60,7 +60,7 @@ try {
           const t = t0 + i / 60, ang = t * .9;   // 반경 넓은 원을 돌며 계속 달린다(방향 전환이 완만해 접지 측정이 안정적이다)
           // 실제 조이스틱과 같은 경로(screenMove → 카메라 기준 변환)로 넣는다.
           app.input.joy.active = true; app.input.screenMove.x = Math.cos(ang); app.input.screenMove.y = Math.sin(ang);
-          app.step(1 / 60, i === frames - 1);
+          app.step(1 / 60, false);
           const vx = p.vel?.x || 0, vz = p.vel?.z || 0, sp = Math.hypot(vx, vz);
           p.model.updateMatrixWorld(true);
           const row = { sp };
@@ -75,6 +75,20 @@ try {
           window.__gait.rows.push(row);
         }
       };
+      // 클로즈업: 영웅 진행 방향 앞쪽 비스듬히 낮게(발이 보이게) 카메라를 두고 한 장 그린다. 게임 카메라 상태(rig)는 건드리지 않는다.
+      const cam = app.renderer.camera, eye = new V(), look = new V();
+      window.__gaitShot = () => {
+        const vx = p.vel?.x || 0, vz = p.vel?.z || 0, sp = Math.hypot(vx, vz) || 1, fx = vx / sp, fz = vz / sp;
+        const saved = cam.position.clone(), savedQ = cam.quaternion.clone(), fov = cam.fov;
+        eye.set(p.pos.x + fx * 3.4 - fz * 1.6, 1.5, p.pos.z + fz * 3.4 + fx * 1.6); look.set(p.pos.x, .55, p.pos.z);
+        cam.position.copy(eye); cam.fov = 38; cam.updateProjectionMatrix(); cam.lookAt(look); cam.updateMatrixWorld();
+        // 클로즈업 카메라는 벽 너머일 수 있다. 가림 실루엣(엑스레이 외곽선)과 벽 절단을 끄고 맨 몸을 그린다.
+        const sil = app.renderer.playerSilhouetteTarget; app.renderer.playerSilhouetteTarget = () => null;
+        app.renderer.battleOcclusion?.update?.(cam.position, false);
+        app.renderer.render();
+        app.renderer.playerSilhouetteTarget = sil;
+        cam.position.copy(saved); cam.quaternion.copy(savedQ); cam.fov = fov; cam.updateProjectionMatrix();
+      };
       return { bones: !!(parts.L[0] && parts.L[1] && parts.R[0] && parts.R[1]) };
     });
     report.heroes[hero] = { bones: info.bones };
@@ -82,6 +96,7 @@ try {
     const total = 6 * 60, every = 2;
     for (let f = 0, k = 0; f < total; f += every, k++) {
       await page.evaluate(([n, t0]) => window.__gaitStep(n, t0), [every, f / 60]);
+      if (video && f >= 60) await page.evaluate(() => window.__gaitShot());
       if (video && f >= 60) await fs.writeFile(path.join(dir, String(k).padStart(4, '0') + '.png'), await page.screenshot());
     }
     const rows = (await page.evaluate(() => window.__gait.rows)).slice(60).filter(r => r.sp > 2 && r.L && r.R);
@@ -89,7 +104,8 @@ try {
       const minY = Math.min(...rows.map(r => r[side].toeY));
       const stance = rows.filter(r => r[side].toeY - minY < .03).map(r => r[side].yaw);
       const mean = stance.reduce((s, v) => s + v, 0) / (stance.length || 1);
-      return { stanceFrames: stance.length, stanceMeanDeg: +mean.toFixed(1), stanceMaxDeg: +Math.max(...stance).toFixed(1) };
+      const all = rows.map(r => r[side].yaw).sort((a, b) => a - b);
+      return { allMedianDeg: +all[Math.floor(all.length / 2)].toFixed(1), stanceFrames: stance.length, stanceMeanDeg: +mean.toFixed(1), stanceMaxDeg: +Math.max(...stance).toFixed(1) };
     };
     Object.assign(report.heroes[hero], { movingFrames: rows.length, left: stat('L'), right: stat('R') });
     if (video) {

@@ -28,7 +28,10 @@ export const AUTO_CAMERA = Object.freeze({
   // 무리 퍼짐 반경(월드 단위) → 줌. 지역 기본 줌(100 기준)에 곱한다.
   spreadNear: 3, spreadFar: 10, zoomNear: 100, zoomFar: 80, bossZoomPerRadius: 5, bossZoomMin: 80,
   // 영웅·보스 예고 범위가 들어와야 하는 화면 안전 상자(NDC 반폭). HUD 가장자리를 비워 둔다.
-  safeX: .8, safeY: .7, fitZoomMin: 72,
+  // 보스 맞춤은 기본 거리의 약 +18%(zoom 85)까지만 물러난다. 지역 보스 구도(+13%)와 합쳐도 절제된 줌아웃이다.
+  safeX: .82, safeY: .8, fitZoomMin: 85,
+  // 고정 쿼터뷰의 상시 거리(zoom %). 무리 줌을 끈 대신 처음부터 조금 넓게 잡아 주변 적을 화면에 담는다. 전투·비전투 같은 값이라 펌핑이 없다.
+  steadyZoom: 92,
   // 영웅과 카메라 사이 바닥이 막혀 있으면(벽) 이만큼까지 내려다본다(도).
   occlusionPitch: 9, occlusionProbes: Object.freeze([1.1, 2, 3, 4.2]),
 });
@@ -96,7 +99,7 @@ export function autoCameraGoal(ctx, out, cfg = AUTO_CAMERA) {
   } else if (ctx.calm >= cfg.calmReturn) out.yaw = base.yaw;
   // 3) zoom: 무리 반경·보스 크기에 맞춘 편한 거리, 그리고 영웅·보스 예고 범위가 안전 상자를 넘지 않는 거리 중 가까운 쪽.
   const scale = finite(base.zoom, 100) / 100;
-  let zoom = cfg.crowdZoom && count > 1 ? cfg.zoomNear + (cfg.zoomFar - cfg.zoomNear) * smooth((spread - cfg.spreadNear) / (cfg.spreadFar - cfg.spreadNear)) : cfg.zoomNear;
+  let zoom = cfg.crowdZoom && count > 1 ? cfg.zoomNear + (cfg.zoomFar - cfg.zoomNear) * smooth((spread - cfg.spreadNear) / (cfg.spreadFar - cfg.spreadNear)) : cfg.crowdZoom ? cfg.zoomNear : cfg.steadyZoom;
   if (cfg.crowdZoom && alive(boss) && threat === boss) zoom = Math.min(zoom, Math.max(cfg.bossZoomMin, cfg.zoomNear - finite(boss.radius, 1) * cfg.bossZoomPerRadius));
   zoom *= scale;
   const camera = ctx.fitReady === false ? null : ctx.camera;

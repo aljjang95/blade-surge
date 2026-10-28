@@ -84,8 +84,8 @@ describe('전투 카메라 AUTO', () => {
   test('무리 퍼짐으로 줌이 바뀌지 않고, 벽이 영웅을 가리면 내려다본다', () => {
     const tight = autoCameraGoal(ctxOf({ enemies: [actor(1, -1), actor(-1, -2)] }), goal()).zoom;
     const wide = autoCameraGoal(ctxOf({ enemies: [actor(9, -2), actor(-8, -4), actor(0, 3)] }), goal()).zoom;
-    expect(tight).toBe(100); expect(wide).toBe(100);
-    expect(autoCameraGoal(ctxOf({ base: { yaw: 0, pitch: 0, zoom: 90 }, enemies: [actor(9, -2), actor(-8, -4)] }), goal()).zoom).toBe(90);
+    expect(tight).toBe(AUTO_CAMERA.steadyZoom); expect(wide).toBe(AUTO_CAMERA.steadyZoom);
+    expect(autoCameraGoal(ctxOf({ base: { yaw: 0, pitch: 0, zoom: 90 }, enemies: [actor(9, -2), actor(-8, -4)] }), goal()).zoom).toBeCloseTo(90 * AUTO_CAMERA.steadyZoom / 100, 9);
     // 카메라 쪽(+z) 바닥 2칸 뒤가 벽이다.
     const walled = autoCameraGoal(ctxOf({ walkable: (_x: number, z: number) => z < 1.5 }), goal());
     expect(walled.pitch).toBeGreaterThan(5);
@@ -123,12 +123,12 @@ describe('전투 카메라 AUTO', () => {
     for (let i = 0; i < 60 * (AUTO_CAMERA.calmReturn + 1); i++) auto.step(1 / 60, value, ctxOf({ boss, current: value, camera: cameraFor(value) }));
     expect(auto.bossZoom).toBeNull();
     for (let i = 0; i < 60 * 25; i++) auto.step(1 / 60, value, ctxOf({ boss, current: value, camera: cameraFor(value) }));
-    expect(value.zoom).toBeCloseTo(100, 0);
+    expect(value.zoom).toBeCloseTo(AUTO_CAMERA.steadyZoom, 0);
   });
   test('일반 적이 예고 중이어도 투영 맞춤 줌이 걸리지 않는다', () => {
     const v = { yaw: 0, pitch: 0, zoom: 130 };
     const g = autoCameraGoal(ctxOf({ enemies: [actor(11, -6, { telegraph: .8, radius: 2 })], current: v, camera: cameraFor(v) }), goal());
-    expect(g.zoom).toBe(100); expect(g.threat).not.toBeNull();
+    expect(g.zoom).toBe(AUTO_CAMERA.steadyZoom); expect(g.threat).not.toBeNull();
   });
   test('손대면 즉시 멈추고, 무입력 뒤에야 천천히 복귀하며 같은 입력이면 같은 결과다', () => {
     // 사용자가 yaw 를 -60 으로 돌린 뒤 적이 없는 상황.

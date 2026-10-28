@@ -1021,7 +1021,7 @@ export class Battle {
     const rig = this.renderer.rig;
     const framing = battleFraming({ player: this.player, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
     _v.set(framing.target.x, framing.target.y, framing.target.z);
-    rig.target.lerp(_v, framingBlend(realDt, 10));
+    rig.target.lerp(_v, framingBlend(realDt, 8));
     if (rig.preset === 'auto') {
       const k = framingBlend(realDt, 1.2);
       const profile = this.visual?.camera;
