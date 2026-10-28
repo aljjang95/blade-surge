@@ -1,4 +1,4 @@
-import { ENEMIES, stageDef } from './stages.js';
+import { ENEMIES, stageDef, recommendedPowerFor } from './stages.js';
 import { ROUTE_OBJECTIVES } from './route-objectives.js';
 
 // 종락 심층 보스 합창 장막 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.bellfall_deep.counter)에서 계산한다.
@@ -300,5 +300,5 @@ export function depthStage(id) {
   const def = expeditionDepth(id);
   if (!def) throw new RangeError('알 수 없는 심층 원정입니다.');
   return { ...stageDef(def.chapter, def.stage), scale: def.scale, energy: def.energy,
-    recPower: Math.floor(2600 * def.scale), dungeon: null, epilogueFinale: false };
+    recPower: recommendedPowerFor(def.scale), dungeon: null, epilogueFinale: false };
 }

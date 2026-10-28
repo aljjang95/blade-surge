@@ -12,9 +12,9 @@ import { ENEMIES } from '../data/stages.js';
 export function campaignCombat(stage) { return !!stage && Number.isInteger(stage.st) && !stage.expedition && !stage.party; }
 
 // 5장부터 캠페인 적 공격 ×1.3. 적 공격은 배율^0.7, 영웅 체력·방어는 전투력에 비례해 커져 7-10 보스가 영웅을 쓰러뜨리는 데
-// 처치 시간의 10배가 걸렸다(권장 전투력 61%로도 승리). 보상·정산·배율(scale)은 그대로 두고 위협만 되살린다. 원정·파티 제외.
+// 처치 시간의 10배가 걸렸다(권장 전투력 61%로도 승리). 보상·정산·배율(scale)은 그대로 두고 위협만 되살린다. 원정·파티·무한의 성(자체 층 배율) 제외.
 export const LATE_CHAPTER_FROM = 5, LATE_CHAPTER_ATK = 1.3;
-export function campaignAtkMul(stage) { return campaignCombat(stage) && (stage.chapter?.id ?? stage.ch) >= LATE_CHAPTER_FROM ? LATE_CHAPTER_ATK : 1; }
+export function campaignAtkMul(stage) { return campaignCombat(stage) && !stage.tower && (stage.chapter?.id ?? stage.ch) >= LATE_CHAPTER_FROM ? LATE_CHAPTER_ATK : 1; }
 
 export function speciesRole(def) {
   if (!def) return 'line';

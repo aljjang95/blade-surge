@@ -1,6 +1,6 @@
 // 스테이지 선택 화면의 순수 모델. 저장·진행·해금 판정을 읽기만 하고 아무것도 쓰지 않는다.
 // 화면(src/ui/stage-select.js)은 이 결과만 그리고, 입장은 기존 startStage / 준비창(openDestination)이 맡는다.
-import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
+import { CHAPTERS, STAGES_PER_CHAPTER, stageDef, recommendedPowerFor } from '../data/stages.js';
 import { chapterOpenLabel, isChapterOpen } from '../data/chapter-open.js';
 import { MATERIALS } from '../data/expansion.js';
 import { expeditionDepth } from '../data/expedition-depths.js';
@@ -143,7 +143,7 @@ export function dungeonStages({ expedition, power, energy = null, source = undef
     const definition = depth === 'deep' ? expeditionDepth(node.dungeon.id) : node.dungeon;
     if (!definition) return null;
     const access = depth === 'deep' ? expedition.dungeonAccess(node.dungeon.id, { depth: 'deep' }) : { ok: node.unlocked, error: node.reason };
-    const recPower = depth === 'deep' ? Math.floor(2600 * (Number(definition.scale) || 1)) : Number(node.dungeon.stage?.recPower) || 0;
+    const recPower = depth === 'deep' ? recommendedPowerFor(Number(definition.scale) || 1) : Number(node.dungeon.stage?.recPower) || 0;
     const wins = depth === 'deep' ? Number(depthWins[node.dungeon.id]) || 0 : node.wins;
     const rewards = materialRewards(definition.rewards);
     if (depth === 'deep' && !wins && definition.firstRewards?.gold) rewards.push({ id: 'first', name: '첫 심층 클리어 골드', amount: definition.firstRewards.gold });

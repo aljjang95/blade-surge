@@ -1,7 +1,7 @@
 // 엔드게임 상태(무한의 성·난이도 최고 기록·시즌 이벤트)의 순수 규칙. 시계는 호출자가 넘긴다(nowMs).
 // 저장 트랜잭션은 호출자(Economy)가 맡고, 여기서는 상태를 검사·갱신하고 지급할 보상만 돌려준다.
 import { SEASON, TOWER, EVENT_WEEKS, EVENT_EFFECT_KINDS } from '../data/content-90d.js';
-import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
+import { stageDef, CHAPTERS, STAGES_PER_CHAPTER, recommendedPowerFor } from '../data/stages.js';
 import { DIFFICULTY_ORDER } from './difficulty.js';
 import { recommendedLevel } from '../data/loot-tables.js';
 import { TORMENT } from '../data/content-90d.js';   // 고통 단계 저장 정화용(규칙은 torment-core.js)
@@ -157,7 +157,7 @@ export function towerStage(floor) {
   const f = integer(floor, 1, MAX_FLOOR, 1), src = towerFloorSource(f), base = stageDef(src.ch, src.st);
   const scale = towerScale(f), recLevel = Math.min(80, recommendedLevel(src.ch, src.st) + Math.floor(f / 4));
   const stage = { ...base, code: `T${f}`, name: `무한의 성 ${f}층 · ${base.title}`, title: `${f}층 · ${base.title}`,
-    scale, recPower: Math.floor(2600 * scale), energy: 0, finale: false, epilogueFinale: false,
+    scale, recPower: recommendedPowerFor(scale), energy: 0, finale: false, epilogueFinale: false,
     objective: `무한의 성 ${f}층: ${base.objective}`,
     rewards: { ...base.rewards, gold: 0, exp: Math.floor(110 * scale), bp: 40, firstGems: 0, dropChance: base.boss ? 1 : 0.6, stones: 0 },
     tower: { floor: f, sourceCode: base.code } };
@@ -218,5 +218,5 @@ export function towerSummary(state, progress, nowMs) {
   const src = towerFloorSource(next);
   return { unlocked: towerUnlocked(progress), best: view.tower.best, next, cap, capped: next > cap,
     source: `${src.ch}-${src.st}`, boss: src.st === 10 ? 'final' : src.st === 5 ? 'mid' : null,
-    recPower: Math.floor(2600 * towerScale(next)), chest: towerChest(view, nowMs) };
+    recPower: recommendedPowerFor(towerScale(next)), chest: towerChest(view, nowMs) };
 }
