@@ -85,7 +85,7 @@ try {
           for (const en of b.enemies) {
             const id = en.runtimeSpeciesId || en.def?.id || en.def?.name;
             const t = types[id] || (types[id] = { name: en.def.name, n: 0, acts: {}, kills: 0 });
-            if (!seen.has(en)) { seen.add(en); t.n++; const rid = en.homeRoom?.id ?? 'x'; const r = rooms[rid] || (rooms[rid] = { types: {}, type: en.homeRoom?.type, first: b.elapsed }); if (!r.snapAt && r.type !== 'boss') { r.snapAt = frames + 50; snaps.push({ id: rid, at: frames + 50 }); } r.types[id] = (r.types[id] || 0) + 1; }
+            if (!seen.has(en)) { seen.add(en); t.n++; const rid = en.homeRoom?.id ?? 'x'; const r = rooms[rid] || (rooms[rid] = { types: {}, type: en.homeRoom?.type, first: b.elapsed }); if (!r.snapAt && r.type !== 'boss') { r.snapAt = frames + 50; snaps.push({ id: rid, at: frames + 50 }, { id: rid + 'b', at: frames + 150 }); } r.types[id] = (r.types[id] || 0) + 1; }
             const act = en.alive ? (en.burrow?.phase ? 'burrow:' + en.burrow.phase : en.bellringer?.phase ? 'bell:' + en.bellringer.phase : en.mobRole?.phase ? 'role:' + en.mobRole.key : en.fuse >= 0 ? 'fuse' : en.special ? 'sp:' + en.special : en.state) : 'dead';
             if (en._ptAct !== act) { en._ptAct = act; t.acts[act] = (t.acts[act] || 0) + 1; if (act === 'dead') { t.kills++; kills++; } }
           }
