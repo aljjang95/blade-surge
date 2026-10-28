@@ -435,10 +435,10 @@ export class Battle {
     const plan = room.squadPlan, squad = SQUADS[plan.theme];
     // 분대 깃발: 무리마다 앵커에 고리와 분대 이름을 띄워 화면 밖 대형도 어디에 무엇이 있는지 보이게 한다(월드 위 표시, 플레이 영역 팝업 아님).
     room.packs?.forEach((pk, i) => {
-      const tpl = SQUADS[i % 2 === 0 ? plan.theme : plan.secondary] || squad; 
+      const tpl = SQUADS[i % 2 === 0 ? plan.theme : plan.secondary] || squad;
       const at = new THREE.Vector3(pk.x, 0, pk.z);
       this.fx.castCircle(at, i % 2 === 0 ? 0xffc060 : 0x9fd0ff, { radius: 2.6, life: 1.8, telegraph: false });
-      if (tpl?.name) this.fx.damage(at.setY(1.6), 0, { text: tpl.name });
+      if (tpl?.name && (this.fx.dmgLayer?.children.length ?? 0) < 30) this.fx.damage(at.clone().setY(1.6), 0, { text: tpl.name });
     });
     if (!squad?.hint) return;
     const seen = this._squadSeen || (this._squadSeen = new Set());
