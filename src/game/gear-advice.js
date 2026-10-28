@@ -30,11 +30,34 @@ function slotCandidates(list, keep) {
   return out;
 }
 
+/** 같은 상태로 다시 그릴 때(필터·정렬 변경, 골드 획득 같은 무관한 갱신) 장비 비교를 다시 돌리지 않는다.
+ *  상태 지문 = 가방 전체(uid·강화·소유자·장비 레벨·룬)와 모든 영웅의 장착·레벨·별·초월 + 전설 수련. 가방 1,600개 기준 계산 0.1ms 미만. */
+const memo = new WeakMap();
+function stateKey(eco) {
+  let h = 2166136261;
+  const mix = (v) => { const t = String(v); for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); };
+  for (const x of eco.s.inventory || []) { mix(x.uid); mix(x.id); mix(x.enh); mix(x.owner ?? ''); mix(x.il ?? ''); mix(x.tp ?? ''); mix(x.sockets ? JSON.stringify(x.sockets) : ''); }
+  for (const [id, hero] of Object.entries(eco.s.heroes || {})) { mix(id); mix(JSON.stringify(hero?.equip || {})); mix(hero?.level); mix(hero?.star); mix(hero?.grade ?? hero?.awaken ?? ''); }
+  mix(JSON.stringify(eco.s.legend || null)); mix(JSON.stringify(eco.s.roster?.owned || null));
+  return h >>> 0;
+}
+function cached(eco, name, args, compute) {
+  const key = name + '|' + args + '|' + stateKey(eco);
+  let box = memo.get(eco);
+  if (!box || box.s !== eco.s) { box = { s: eco.s, map: new Map() }; memo.set(eco, box); }
+  if (box.map.has(key)) return box.map.get(key);
+  if (box.map.size > 32) box.map.clear();
+  const value = compute(); box.map.set(key, value); return value;
+}
+
 /**
  * 영웅 한 명의 슬롯별 "더 좋은 장비" 후보. 다른 영웅이 끼고 있는 장비는 뺏지 않는다.
  * @returns {Map<number, number>} uid → 장착 시 전투력 증가(정수, 양수만)
  */
 export function betterItems(eco, heroId, { perSlot = 12 } = {}) {
+  return cached(eco, 'better', heroId + ':' + perSlot, () => betterItemsNow(eco, heroId, perSlot));
+}
+function betterItemsNow(eco, heroId, perSlot) {
   const out = new Map(), hero = eco.s.heroes?.[heroId];
   if (!hero || eco.heroLocked?.(heroId)) return out;
   const worn = wornMap(eco), inv = byUid(eco), basePower = eco.heroBuildStats(heroId).power;
@@ -58,6 +81,9 @@ export function betterItems(eco, heroId, { perSlot = 12 } = {}) {
  * @returns {Array<{ slot: string, uid: number, from: number|null, delta: number }>}
  */
 export function planBestEquip(eco, heroId) {
+  return cached(eco, 'plan', heroId, () => planBestEquipNow(eco, heroId)).map((p) => ({ ...p }));
+}
+function planBestEquipNow(eco, heroId) {
   const hero = eco.s.heroes?.[heroId];
   if (!hero || eco.heroLocked?.(heroId)) return [];
   const worn = wornMap(eco), inv = byUid(eco), equip = { ...hero.equip }, plan = [];
@@ -106,6 +132,9 @@ export function applyBestEquipAll(eco) {
  * @returns {Array<{ uid: number, id: string, rarity: string, slot: string, score: number }>}
  */
 export function junkItems(eco, { rarities = ['N', 'S'], heroId = eco.s.selected } = {}) {
+  return cached(eco, 'junk', heroId + ':' + rarities.join(','), () => junkItemsNow(eco, rarities, heroId)).slice();
+}
+function junkItemsNow(eco, rarities, heroId) {
   const allowed = new Set(rarities.filter((r) => ['N', 'S', 'E'].includes(r)));
   const hero = eco.s.heroes?.[heroId], worn = wornMap(eco), inv = byUid(eco), junk = [];
   if (!hero) return junk;

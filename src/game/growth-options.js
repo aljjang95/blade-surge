@@ -61,7 +61,12 @@ export function growthOptions(save, eco = null) {
   const node = MASTERY_NODES.find(n => !unlocked.includes(n.id) && mastery?.renown >= n.cost
     && (n.tier === 1 || unlocked.includes(n.path + '_' + (n.tier - 1))));
   if (node) options.push({ kind: 'mastery', heroId, id: node.id, name: node.name, description: node.description, renown: node.cost });
-  if (eco) options.push(...gearAndSinkOptions(eco, save, heroId));
+  if (eco) {
+    const extra = gearAndSinkOptions(eco, save, heroId);
+    // 일괄 장착 제안이 있으면 빈 부위 '첫 장비 비교' 제안은 같은 장착으로 이어지므로 뺀다.
+    if (extra.some((o) => o.mode === 'equipBest')) { const i = options.findIndex((o) => o.kind === 'equipment' && o.mode === 'equip'); if (i >= 0) options.splice(i, 1); }
+    options.push(...extra);
+  }
   return options;
 }
 

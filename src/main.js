@@ -458,9 +458,6 @@ class App {
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); this.party.view.message('파티에서 준비를 마치고 함께 출격하세요.'); return false; }
     if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId, depth: stage.expedition.depth, conquestId: stage.expedition.conquestId });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
-    // 설정 "노말 장비 자동 분해": 출격 직전에 착용 중보다 약한 노말만 정리한다(결과 화면에서 비교하던 장비가 사라지지 않게 이 시점에).
-    const swept = stage?.tower ? null : autoSalvageNormal(this.eco);
-    if (swept) this.ui.toast(`노말 장비 ${swept.count}개 자동 분해 · 골드 +${swept.gold.toLocaleString('ko-KR')} · 강화석 +${swept.stones.toLocaleString('ko-KR')}`, 'gold');
     // 무한의 성: 넘겨받은 층이 지금 도전할 다음 층일 때만, 저장 상태로 다시 만든 정의로 출격한다(에너지 없음).
     const tower = stage?.tower ? this.eco.nextTowerStage() : null;
     if (stage?.tower) {
@@ -493,6 +490,9 @@ class App {
           if (ok) this.meta.openTab('shop', 'energy');
           return false;
         }
+        // 설정 "노말 장비 자동 분해": 출격이 확정된 뒤(에너지 지불 뒤)에만 착용 중보다 약한 노말을 정리한다(거부된 출격에서 되돌릴 수 없는 분해가 일어나지 않게).
+        const swept = autoSalvageNormal(this.eco);
+        if (swept) this.ui.toast(`노말 장비 ${swept.count}개 자동 분해 · 골드 +${swept.gold.toLocaleString('ko-KR')} · 강화석 +${swept.stones.toLocaleString('ko-KR')}`, 'gold');
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;

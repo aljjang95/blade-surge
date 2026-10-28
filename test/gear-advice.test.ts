@@ -138,3 +138,15 @@ test('더 좋은 장비 표시: 같은 장비라도 룬이 박혀 전투력이 �
   expect(betterItems(eco, hero).has(runed.uid)).toBe(up);
   expect(planBestEquip(eco, hero).some((p: any) => p.uid === runed.uid)).toBe(up);
 });
+
+test('비교 결과 캐시: 같은 상태에서는 재사용하고, 강화·장착이 바뀌면 다시 계산한다', () => {
+  const eco = make(), hero = eco.s.selected;
+  const worn = give(eco, id('weapon', 'N')); eco.equip(hero, worn.uid);
+  const cand = give(eco, id('weapon', 'N', 1));
+  const first = betterItems(eco, hero);
+  expect(betterItems(eco, hero)).toBe(first);            // 같은 상태 → 같은 결과 객체(재계산 없음)
+  cand.enh = 12;                                          // 강화로 후보가 세짐
+  expect(betterItems(eco, hero).has(cand.uid)).toBe(true);
+  eco.equip(hero, cand.uid);                              // 장착하면 더 이상 후보가 아님
+  expect(betterItems(eco, hero).has(cand.uid)).toBe(false);
+});
