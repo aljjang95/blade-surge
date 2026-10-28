@@ -1,0 +1,50 @@
+{
+ "id": "tll_ch3_librarian",
+ "workspace_task_id": "302993fb-f9e2-4e52-b516-d8b75bdc05db",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, stylized chunky chibi, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: paper white, frost sky-blue #9fe4ff glow accents, pale icy gray-blue shadows. No religious symbols, no crosses. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: a frost skeleton librarian: ivory-white skull with a frost-rimed round pair of spectacles and glowing sky-blue #9fe4ff eye sockets, a frost-covered tattered librarian robe in paper white with icicle fringe, legs straight and shoulder-width apart (short thick bony legs with frost-crusted shoes), small skeletal big hands, and on its back a frozen stack of old books bound with ice and rope, visible behind the shoulders (books are part of the body silhouette, compact and not too wide).",
+ "image_refs": [
+  "skeleton_mage.gpt-image-2.5.png (asset-library/concepts, origin/main)",
+  "tll_ch1_coffinbearer tpose.png (tll_ch1 deliverable)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0, target 11000",
+ "retopo_tris": 10959,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch3/tll_ch3_librarian/raw.glb",
+ "props": {
+  "shelfshield": {
+   "file": "tll_ch3_shelfshield.glb",
+   "description": "책이 꽂힌 얼음 서가 판 방패 (prop, 리깅 없음)",
+   "workspace_task_id": "e79c2260-ed0f-4a27-81ce-c0f78cc559de",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: a shield made from a slab of ice shaped like a small bookshelf board: a chunky rounded rectangular frozen ice panel with a thick pale frost-blue frame, with several old books standing in neat rows on shelf ledges inside the panel, frozen in clear ice, paper white and frost sky-blue #9fe4ff glow edges, a thick short grip bar on the back easy for a big hand, compact and sturdy shape, no symbols. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch3_librarian tpose.png (this folder, tpose.png)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700 -> Tripo result 4182",
+   "tris": 3700,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch3/tll_ch3_shelfshield/raw.glb",
+   "post": "Blender 5.2 headless Decimate (collapse) 4182 -> 3700 tris (limit 3900), Tripo Icosphere artifact removed, UV/texture kept"
+  }
+ },
+ "credits_props": 75
+}
