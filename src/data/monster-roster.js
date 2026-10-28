@@ -70,17 +70,19 @@ export const MONSTER_ROSTER = Object.freeze({
   // fallback 은 몸 로드 실패 때 서던 예전 몸이고, fallbackScale 은 그때의 예전 배율이다.
   Ch1_CoffinBearer: { asset: 'tll_ch1_coffinbearer', fallback: 'bone_knight', scale: 1.05, fallbackScale: 0.86 },
   Ch1_Mourner: { asset: 'tll_ch1_mourner', fallback: 'void_wisp', scale: 0.8, fallbackScale: 1.17,
-    weapon: { asset: 'tll_ch1_handbell', hand: 'right', grip: [0, 0.33, 0], at: [0, 0.07, 0.02], rot: [0, 0, -90] } },
+    weapon: { asset: 'tll_ch1_handbell', hand: 'right', grip: [0, 0.33, 0], at: [0, 0.07, 0.02], rot: [0, 0, 180] } },
   Ch1_TombKnight: { asset: 'tll_ch1_tombknight', fallback: 'bone_knight', scale: 0.85, fallbackScale: 1.03,
-    weapon: { asset: 'tll_ch1_clapper', hand: 'right', grip: [0, 0.22, 0], at: [0, 0.08, 0.02], rot: [0, 0, -90] },
+    weapon: { asset: 'tll_ch1_clapper', hand: 'right', grip: [0, 0.22, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] },
     offhand: { asset: 'tll_ch1_tombshield', hand: 'left', grip: [0, 0.42, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
   Ch2_Smith: { asset: 'tll_ch2_smith', fallback: 'goblin_brute', scale: 1, fallbackScale: 0.77,
     weapon: { asset: 'tll_ch2_hammer', hand: 'right', grip: [0, 0.17, 0], at: [0, 0.07, 0.02], rot: [0, 0, -90] } },
+  // rot 은 2026-10-28 근접 캡처(work/tmp/weapon-tune.mjs)로 고른 값: 철퇴·모루 철퇴는 머리가 위, 장인 망치는 머리가 아래로 늘어지고,
+  // 손종·등잔은 손끝 너머로 매단다. 묘비 방패는 왼손에 앞을 보게 든다.
   // 등잔은 위 손잡이 고리를 쥐고 아래로 늘어뜨린다(발광 Glow 재질은 라이브러리 tllAuthored 로 유지된다).
   Ch2_EmberImp: { asset: 'tll_ch2_emberimp', fallback: 'goblin_raider', scale: 1.2, fallbackScale: 1.07,
     weapon: { asset: 'tll_ch2_lantern', hand: 'right', grip: [0, 0.28, 0], at: [0, 0.05, 0.01], rot: [0, 0, 180] } },
   Ch2_Igran: { asset: 'tll_ch2_igran', fallback: 'goblin_brute', scale: 0.75, fallbackScale: 0.77,
-    weapon: { asset: 'tll_ch2_anvil_hammer', hand: 'right', grip: [0, 0.3, 0], at: [0, 0.08, 0.02], rot: [0, 0, -90] } },
+    weapon: { asset: 'tll_ch2_anvil_hammer', hand: 'right', grip: [0, 0.3, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] } },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
