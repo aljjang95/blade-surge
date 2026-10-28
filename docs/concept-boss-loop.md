@@ -11,7 +11,7 @@
 | 기술 | 수문 범람 `tidegate_flood`, 물결 고리 틈 `tidegate_ring_gap` | 도르래 낙석 `pulley_ore_fall`, 사슬 당김 `pulley_chain_line` |
 | 페이즈(60%·30%) | 범람·강타·고리 틈·부채 → 고리 틈·범람·회전·강타 → 범람·고리 틈·돌진 | 낙석·강타·사슬·회전 → 사슬·낙석·부채·강타 → 낙석·사슬·돌진 |
 
-두 자산은 다른 19개 던전 기본 보스, 12개 기존 심층 보스, 캠페인 최종 보스(`*_finalboss`, `dungeon_*_finalboss`)가 쓰지 않는다. 다만 `frost_golem`은 캠페인 4장 1관문 대장(`tide_captain`)과 3장 중간 보스(`frost_midboss`)도 쓴다. KayKit 장식 조립 경로는 이미 철회돼 있어(`public/models/tll/encounters/README.md`) 새 GLB·초상은 만들지 않았다. 전용 초상이 없으므로 보스 바 초상은 숨겨진다. 표시 키는 약 4.3m(거신)·5.1m(거수)이며 판정 반경은 교체 전 보스와 같다.
+두 자산은 다른 19개 던전 기본 보스, 12개 기존 심층 보스, 캠페인 최종 보스(`*_finalboss`, `dungeon_*_finalboss`)가 쓰지 않는다. 다만 `frost_golem`은 캠페인 4장 1관문 대장(`tide_captain`)도 쓴다(3장 중간 보스 `frost_midboss`는 2026-10-28부터 전용 Tripo 몸 `Ch3_Ordin`). KayKit 장식 조립 경로는 이미 철회돼 있어(`public/models/tll/encounters/README.md`) 새 GLB·초상은 만들지 않았다. 전용 초상이 없으므로 보스 바 초상은 숨겨진다. 표시 키는 약 4.3m(거신)·5.1m(거수)이며 판정 반경은 교체 전 보스와 같다.
 
 기본 컨셉 던전 정의에서는 `bossEnemy`·`bossName`(빙하만 '빙하 수문의 거신'으로)·`tactic`의 보스 문장·`bossPattern` 메타데이터와 목표 문장의 보스 이름만 바뀌었다. 에너지 4, 보상, 보스 체력(11,800/12,600), 레이아웃, 명단, 맵 기믹은 그대로다.
 

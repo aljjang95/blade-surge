@@ -186,6 +186,7 @@ export const CHAPTER_DRESS = Object.freeze({
       // 3장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 백지 흰색·서리 하늘색이라 색은 장 팔레트 그대로 두고,
       // 사서 등의 책 더미·검열관의 두루마리 자락처럼 몸에 있는 실루엣과 겹치는 소품(bookStackBack·shelfShield·openTome)은 뺀다.
       ch3_librarian: { ...FROST_BONE },
+      ch3_pagebearer: { ...FROST_BONE, props: ['frozenPages'] },
       // 서가 방패는 로스터 offhand(tll_ch3_shelfshield)로 왼손에 든다.
       ch3_shelfguard: { ...FROST_BONE },
       // 뼈 오크 자리: 금서실 열쇠 꾸러미를 찬 사서, 몸빛을 한 톤 어둡게.

@@ -72,7 +72,7 @@ export const CHAPTER_SPECIES = Object.freeze({
   2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
   // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
   // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
-  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler' }),
+  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
 });
 /** 캠페인 1·2·3장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
@@ -456,6 +456,8 @@ const CHAPTER_SPECIES_DEFS = {
   ch3_censor_slip: ['ghost_skull', '쪽지 날리는 검열관', 'Ch3_Censor'],
   ch3_censor_tome: ['skel_mage', '금서 낭독 검열관', 'Ch3_CensorTome'],
   ch3_censor_quill: ['skel_priest', '깃펜 든 검열관', 'Ch3_CensorTome'],
+  // 깃펜 검열관(skel_priest 자리)이 부르는 지원병(summon skel_minion)도 3장 사서 몸으로 나온다.
+  ch3_pagebearer: ['skel_minion', '책 나르는 사서', 'Ch3_Librarian'],
   ch3_librarian: ['skel_rogue', '서리 해골 사서', 'Ch3_Librarian'],
   ch3_shelfguard: ['skel_shield', '서가 방패 사서', 'Ch3_ShelfGuard'],
   ch3_keykeeper: ['bone_orc', '열쇠지기 사서', 'Ch3_Librarian'],

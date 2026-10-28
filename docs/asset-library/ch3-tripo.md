@@ -83,5 +83,7 @@ Blender 5.2.3 LTS 리눅스판(`/opt/blender`, 1·2장 문서와 같은 설치)�
 
 ## 남은 것
 
-- 검열관은 원본 `ghostly`(반투명·푸른 발광)를 물려받아 근접 화면에서 몸 무늬가 하얗게 바래 보인다(1장 원령과 같은 처리). swiftshader 캡처 기준이며 실기기 GPU 화면은 확인하지 않았다.
+- 검열관은 흰 법복 무늬가 텍스처에 있어 원령의 `ghostly`(반투명·푸른 발광)를 빼고 불투명으로 둔다(`stages.js` OPAQUE_SPIRIT_BODIES). swiftshader 캡처 기준이며 실기기 GPU 화면은 확인하지 않았다.
 - 얼음 밑 사서는 잠복형이라 근접 캡처에서 땅속 자세로 찍힌다(솟구침 장면은 별도 확인 필요).
+
+- 깃펜 검열관(skel_priest 자리)의 지원 소환(skel_minion)은 `ch3_pagebearer`(사서 몸+얼어붙은 책장)로 나온다.
