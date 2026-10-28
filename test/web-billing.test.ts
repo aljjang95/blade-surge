@@ -626,3 +626,24 @@ describe('웹 1회성 상품 동시 결제 방어', () => {
     expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-duplicate-payment'")).toBe(1);
   });
 });
+
+describe('웹 간편결제(카카오페이·네이버페이)', () => {
+  test('기본은 카드만: method 없으면 CARD, 꺼진 간편결제는 400 pay-method, /me 플래그도 꺼짐', async () => {
+    const { a, h, intent, me } = await setup();
+    expect((await intent(a.token, 'hero_knight_v1')).body.payMethod).toBe('CARD');
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', method: 'KAKAOPAY' }, a.token)).body.error).toBe('pay-method');
+    const f = (await me(a.token)).flags;
+    expect(f.webKakaoPay).toBe(false); expect(f.webNaverPay).toBe(false);
+  });
+  test('WEB_PAY_METHODS로 켜면 EASY_PAY + easyPayProvider를 내고, 지급 검증은 카드와 같다', async () => {
+    const { a, h, pn, me, complete } = await setup({ WEB_PAY_METHODS: 'CARD,KAKAOPAY,NAVERPAY' });
+    const f = (await me(a.token)).flags;
+    expect(f.webKakaoPay).toBe(true); expect(f.webNaverPay).toBe(true); expect(f.webTossPay).toBe(false);
+    const k = (await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', method: 'KAKAOPAY' }, a.token)).body;
+    expect(k).toMatchObject({ payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' }, totalAmount: 5900 });
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', method: 'TOSSPAY' }, a.token)).body.error).toBe('pay-method');
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', method: 42 }, a.token)).body.error).toBe('pay-method');
+    pn.pay(k);
+    expect((await complete(a.token, k.paymentId)).body.state).toBe('granted');
+  });
+});

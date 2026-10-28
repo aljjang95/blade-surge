@@ -148,10 +148,11 @@ export const HEROES = {
     ],
   },
   // A distinct free adventurer; the Rogue's ranger job remains unchanged.
-  // 초상: 현행 3D 실바(교정본 ranger-library-v2)를 게임 로더로 렌더한 것(tools/art/ranger-portrait-studio.js). 옛 KayKit 남성 초상은 정체성이 달라 쓰지 않는다.
+  // 초상: 다른 영웅과 같은 일러스트 톤의 실바(2026-10-28, Tripo GPT Image 2.5, 참조 mage-original·ranger-render-v2 정체성).
+  // 3D 렌더 초상(ranger-render-v2)은 다른 영웅 일러스트와 톤이 달라 얼굴이 일그러져 보였다(대표님 지적). 옛 KayKit 남성 초상은 정체성이 달라 쓰지 않는다.
   ranger: {
   id: 'ranger', name: '바람추적자 실바', title: '숲의 명사수', rarity: 'SR', model: 'Ranger',
-  portrait: '/img/tll/ranger-render-v2.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
+  portrait: '/img/tll/ranger-original-v1.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
   color: '#7feac0', accent: '#d4ffdb', show: ['Bow'],
   base: { hp: 1120, atk: 145, def: 24, crit: .25, critDmg: 1.8, spd: 6.6 },
   combo: RANGER_COMBO,
