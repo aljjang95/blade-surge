@@ -8,17 +8,19 @@ const record = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const knownHero = (id) => typeof id === 'string' && Object.hasOwn(HEROES, id);
 
 /**
- * 마일스톤 표(자리). 조건만 정하고 보상 수치는 덩어리 4에서 정한다. 보상은 게임 내 재료만(현금 상품 금지).
+ * 마일스톤 표(docs/GEAR_VAULT_INHERIT.md 4.3). 영웅마다 한 번씩만 받는다. 보상은 게임 내 재료·계승 문장·칭호뿐이고 능력치는 없다(전투력 곡선 불변).
+ * 칭호는 별도 저장 없이 수령 기록(claimed)에서 계산해 도감 화면에 보인다. 아바타 조각은 유료 아바타 상품과 섞이지 않게 넣지 않았다(BM 결정 전).
+ * 계승 문장 총량(영웅 1명 기준 일회성): 드랍 도감 4개 + 계승 도감 5개 = 9개. 주간 수급(일일·주간 의뢰)과 별개의 누적 보상이라 sim:90d 전투력 밴드에 들어가지 않는다.
  * kind: drop(드랍 도감 비율 %) · kin(계승 도감 종수).
  */
 export const GEAR_DEX_MILESTONES = Object.freeze([
-  { id: 'drop25', kind: 'drop', need: 25, rewards: Object.freeze({}) },
-  { id: 'drop50', kind: 'drop', need: 50, rewards: Object.freeze({}) },
-  { id: 'drop75', kind: 'drop', need: 75, rewards: Object.freeze({}) },
-  { id: 'drop100', kind: 'drop', need: 100, rewards: Object.freeze({}) },
-  { id: 'kin5', kind: 'kin', need: 5, rewards: Object.freeze({}) },
-  { id: 'kin15', kind: 'kin', need: 15, rewards: Object.freeze({}) },
-  { id: 'kin30', kind: 'kin', need: 30, rewards: Object.freeze({}) },
+  { id: 'drop25', kind: 'drop', need: 25, title: '수집가', rewards: Object.freeze({ stones2: 5, lineageSigil: 1 }) },
+  { id: 'drop50', kind: 'drop', need: 50, title: '', rewards: Object.freeze({ stones2: 10, fragments: 30 }) },
+  { id: 'drop75', kind: 'drop', need: 75, title: '', rewards: Object.freeze({ stones3: 3, fragments: 40, lineageSigil: 1 }) },
+  { id: 'drop100', kind: 'drop', need: 100, title: '장비 도감 완성', rewards: Object.freeze({ stones3: 8, bless: 2, lineageSigil: 2 }) },
+  { id: 'kin5', kind: 'kin', need: 5, title: '', rewards: Object.freeze({ stones2: 5, lineageSigil: 1 }) },
+  { id: 'kin15', kind: 'kin', need: 15, title: '계승자', rewards: Object.freeze({ stones3: 2, lineageSigil: 2 }) },
+  { id: 'kin30', kind: 'kin', need: 30, title: '대계승자', rewards: Object.freeze({ stones3: 5, fragments: 50, lineageSigil: 2 }) },
 ]);
 const MILESTONE_BY_ID = Object.fromEntries(GEAR_DEX_MILESTONES.map((m) => [m.id, m]));
 
