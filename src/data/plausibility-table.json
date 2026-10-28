@@ -1,6 +1,6 @@
 {
-  "version": "p1-calibrated-20261027",
-  "note": "MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다.",
+  "version": "p1-calibrated-20261028",
+  "note": "MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다. 재보정은 기존 행보다 엄격해지지 않게 필드별로 더 관대한 값을 유지한다(표본이 적은 재측정이 정상 판을 거절하지 않게).",
   "dpsPerAtk": 40,
   "damageSlack": 0.2,
   "maxRevives": 3,
@@ -23,7 +23,7 @@
         "elite": 30,
         "boss": 2
       },
-      "summonedKills": 16,
+      "summonedKills": 22,
       "maxRooms": 15
     },
     "1-2:story": {
@@ -53,7 +53,7 @@
         "elite": 26,
         "boss": 2
       },
-      "summonedKills": 16,
+      "summonedKills": 22,
       "maxRooms": 13
     },
     "1-5:story": {
@@ -87,13 +87,13 @@
       "maxRooms": 15
     },
     "1-8:story": {
-      "minClearMs": 91578,
+      "minClearMs": 90378,
       "kills": {
         "normal": 302,
         "elite": 28,
         "boss": 2
       },
-      "summonedKills": 19,
+      "summonedKills": 22,
       "maxRooms": 14
     },
     "1-9:story": {
@@ -113,7 +113,7 @@
         "elite": 30,
         "boss": 2
       },
-      "summonedKills": 16,
+      "summonedKills": 22,
       "maxRooms": 15
     },
     "2-1:story": {
@@ -127,7 +127,7 @@
       "maxRooms": 15
     },
     "2-5:story": {
-      "minClearMs": 135557,
+      "minClearMs": 134620,
       "kills": {
         "normal": 348,
         "elite": 30,
@@ -147,7 +147,7 @@
       "maxRooms": 15
     },
     "3-1:story": {
-      "minClearMs": 185669,
+      "minClearMs": 165554,
       "kills": {
         "normal": 323,
         "elite": 28,
@@ -163,7 +163,7 @@
         "elite": 28,
         "boss": 2
       },
-      "summonedKills": 19,
+      "summonedKills": 31,
       "maxRooms": 14
     },
     "4-1:story": {
