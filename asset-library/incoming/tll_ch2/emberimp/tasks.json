@@ -25,6 +25,30 @@
  },
  "credits_total": 95,
  "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
- "props": "not generated (credit cap): see report",
- "raw_glb": "kept in session scratchpad only (not committed)"
+ "props": {
+  "lantern": {
+   "file": "tll_ch2_lantern.glb",
+   "description": "깨진 질그릇 등잔, 발광부 재질 Glow",
+   "workspace_task_id": "bfe84f52-4c00-461e-8a6d-995ac07108ac",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: a small broken clay oil lamp lantern (a cracked earthenware pot lamp with a chipped rim and a hole), scorched brown terracotta clay with soot, a short iron wire handle ring on top, and a small bright molten-orange #ff8a3c glowing ember flame core visible inside the cracked opening as a distinct glowing part, orange glow also leaking from the cracks. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch2_emberimp tpose.png (this folder, tpose.png)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700",
+   "tris": 3643,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch2/tll_ch2_lantern/raw.glb",
+   "glow_material": "Blender 5.2 headless post-process: faces whose basecolor texel is bright orange (hsv h<=55deg, s>0.55, v>0.80) split into a second material named 'Glow' (copy of the clay material, basecolor also wired to emission, emissiveFactor 1, emissiveTexture). 178 of 3643 faces = the flame core inside the crack. Tripo cannot name materials, so this was done outside Tripo; tris unchanged (3643).",
+   "materials": [
+    "Clay",
+    "Glow"
+   ]
+  }
+ },
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch2/tll_ch2_emberimp/raw.glb",
+ "credits_props": 75
 }

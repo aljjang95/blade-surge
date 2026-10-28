@@ -25,6 +25,25 @@
  },
  "credits_total": 95,
  "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
- "props": "not generated (credit cap): see report",
- "raw_glb": "kept in session scratchpad only (not committed)"
+ "props": {
+  "anvil_hammer": {
+   "file": "tll_ch2_anvil_hammer.glb",
+   "description": "모루 머리 철퇴",
+   "workspace_task_id": "c0535636-7073-4e85-bd53-815275c9d912",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: a huge anvil-head mace (an anvil used as the head of a heavy war mace): a chunky black iron anvil shape with a flat top, horn and a waist as the mace head, mounted on a thick short wooden-and-iron shaft with a wrapped scorched brown leather grip and a heavy iron pommel, dark scorched iron with a few small glowing molten-orange #ff8a3c cracks and rivets, brutal oversized stylized shape, handle thick and easy for a huge orc to grip. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch2_igran tpose.png (this folder, tpose.png)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700",
+   "tris": 3957,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch2/tll_ch2_anvil_hammer/raw.glb"
+  }
+ },
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch2/tll_ch2_igran/raw.glb",
+ "credits_props": 75
 }

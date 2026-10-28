@@ -25,6 +25,25 @@
  },
  "credits_total": 95,
  "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
- "props": "not generated (credit cap): see report",
- "raw_glb": "not saved (export attempted before generation finished; chain continued to retopo)"
+ "props": {
+  "hammer": {
+   "file": "tll_ch2_hammer.glb",
+   "description": "대장 망치 (prop, 리깅 없음)",
+   "workspace_task_id": "13196785-642c-48df-a7ff-87c39f00ca1f",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: a blacksmith's forging hammer: a chunky oversized iron hammer head with a flat striking face and a rounded peen, scorched dark iron with soot stains and a few small molten-orange #ff8a3c glowing hot spots, a thick short wooden handle wrapped with scorched brown leather grip and a leather loop at the end, handle comfortably thick for a big orc hand, handle length about the same as the head width times two. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch2_smith tpose.png (this folder, tpose.png)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700",
+   "tris": 3915,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch2/tll_ch2_hammer/raw.glb"
+  }
+ },
+ "raw_glb": "raw HD (pre-retopo) not recoverable: exported after the chain had already run (export returned the rigged model); not archived",
+ "credits_props": 75
 }
