@@ -137,7 +137,7 @@ export class Battle {
     if (this._startGeneration !== startGeneration) return;
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
     this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
-    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual, stage.expedition ? null : stage.chapter?.id);
     this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;

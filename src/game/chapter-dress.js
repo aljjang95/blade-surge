@@ -17,7 +17,7 @@ const C = {
 };
 
 /** 정점색을 칠하고 위치·회전을 굽는다. */
-function piece(geometry, color, at = [0, 0, 0], rot = [0, 0, 0], scale = null) {
+export function piece(geometry, color, at = [0, 0, 0], rot = [0, 0, 0], scale = null) {
   const g = geometry.index ? geometry.toNonIndexed() : geometry;
   if (g !== geometry) geometry.dispose();
   for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
@@ -37,15 +37,15 @@ function coffinShape(w, l) {
   s.lineTo(-w * .36, l * .5); s.lineTo(-w * .5, l * .22); s.closePath();
   return s;
 }
-function tombShape(w, l) {
+export function tombShape(w, l) {
   const s = new THREE.Shape();
   s.moveTo(-w * .5, -l * .5); s.lineTo(w * .5, -l * .5); s.lineTo(w * .5, l * .5 - w * .5);
   s.absarc(0, l * .5 - w * .5, w * .5, 0, Math.PI, false); s.closePath();
   return s;
 }
-const extrude = (shape, depth) => { const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 }); g.translate(0, 0, -depth / 2); return g; };
+export const extrude = (shape, depth) => { const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 }); g.translate(0, 0, -depth / 2); return g; };
 /** 종 단면을 돌려 만든다(입이 아래). 높이 1 기준. */
-function bellGeometry(r, segments = 10) {
+export function bellGeometry(r, segments = 10) {
   const pts = [[0, 1], [r * .35, .98], [r * .5, .82], [r * .58, .5], [r * .78, .18], [r, 0], [r * .9, -.03]].map(([x, y]) => new THREE.Vector2(x, y));
   const g = new THREE.LatheGeometry(pts, segments); return g;
 }
@@ -157,7 +157,7 @@ const PROPS = {
     for (let i = 0; i < 4; i++) {
       const a = i / 4 * Math.PI * 2 + .4, x = Math.sin(a) * .06 * h, z = Math.cos(a) * .06 * h, tilt = 18 + i * 6;
       solid.push(piece(new THREE.CylinderGeometry(.005 * h, .006 * h, .1 * h, 3), C.leaf, [x, .03 * h, z], [Math.cos(a) * tilt, 0, -Math.sin(a) * tilt]));
-      solid.push(piece(new THREE.ConeGeometry(.03 * h, .05 * h, 6, 1, true), C.lily, [x * 1.4, .095 * h, z * 1.4], [180 + Math.cos(a) * tilt, 0, -Math.sin(a) * tilt]));
+      solid.push(piece(new THREE.ConeGeometry(.03 * h, .05 * h, 6, 1, false), C.lily, [x * 1.4, .095 * h, z * 1.4], [180 + Math.cos(a) * tilt, 0, -Math.sin(a) * tilt]));
       glow.push(piece(new THREE.SphereGeometry(.007 * h, 4, 3), C.glowFlame, [x * 1.4, .085 * h, z * 1.4]));
     }
     return { solid, glow };

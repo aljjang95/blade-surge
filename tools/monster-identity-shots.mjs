@@ -13,6 +13,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname));
 const PORT = 4297, OUT = resolve(PROJ, process.argv[2] || 'work/qa/identity'), TAG = process.argv[3] || 'before';
+const ONLY = process.argv[4] ? process.argv[4].split(',').map(Number) : null; // 장 번호 목록(예: 1,6)만 찍기
 mkdirSync(OUT, { recursive: true });
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
@@ -80,6 +81,7 @@ try {
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
   await page.evaluate(() => window.app.ui.closeModal?.());
   for (let ch = 1; ch <= 7; ch++) for (const st of [1, 3, 5, 10]) {
+    if (ONLY && !ONLY.includes(ch)) continue;
     const name = `ch${ch}-${st}`;
     try {
       const code = await enter((ch - 1) * 10 + st);
