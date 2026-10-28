@@ -1,0 +1,30 @@
+{
+ "id": "tll_ch2_smith",
+ "workspace_task_id": "291b2212-dddb-4f7c-a9b7-8f976d556b09",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, legs straight and shoulder-width apart, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: scorched brown, leather, with molten-orange #ff8a3c glowing accent points. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: an apron orc blacksmith artisan: green orc skin like the goblin references but a stockier thicker body, a scorched brown leather smith apron with a front pocket and straps, a dark cloth hood-cap with welding goggles pushed up on the forehead, burn-bandage wraps on both forearms, thick leather gloves-less big hands, small tusks, heavy leather boots, a soot-stained look, a few orange ember glow spots on the apron rivets. Grumpy working expression.",
+ "image_refs": [
+  "asset-library/concepts/goblin_0.png (origin/main)",
+  "asset-library/concepts/goblin_1.png (origin/main)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0",
+ "retopo_tris": 10256,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "props": "not generated (credit cap): see report",
+ "raw_glb": "not saved (export attempted before generation finished; chain continued to retopo)"
+}
