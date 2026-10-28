@@ -137,7 +137,7 @@ export class BattleAutoCamera {
     this.goal = { yaw: 0, pitch: 0, zoom: 100, threat: null, engaged: false };
     this.idle = Infinity; this.calm = Infinity; this.settle = Infinity;
     // 보스전에서 한 번 물러난 거리는 보스가 사라질 때까지 유지한다(보스가 오갈 때마다 줌이 들락거리지 않게).
-    this.bossZoom = null;
+    this.bossZoom = null; this.bossRef = null;
   }
   /** 새 스테이지: 속도·위협 기억을 버린다. 대기 상태(손댄 직후인지)는 그대로 둔다. */
   restart() { this.velocity.yaw = this.velocity.pitch = this.velocity.zoom = 0; this.calm = 0; this.settle = 0; this.goal.threat = null; this.bossZoom = null; }
@@ -154,6 +154,8 @@ export class BattleAutoCamera {
     // 잠잠함은 위협 예고가 아니라 주변 전투 자체가 끝났는지로 센다(전투 중 방위 복귀가 시작되지 않게).
     this.calm = this.goal.engaged ? 0 : this.calm + dt;
     const g0 = this.goal;
+    // 다른 보스(보스 러시·연속 보스)가 나오면 앞 보스의 물러난 거리를 이어받지 않는다.
+    if (ctx.boss !== this.bossRef) { this.bossRef = ctx.boss || null; this.bossZoom = null; }
     if (g0.threat && g0.threat === ctx.boss) g0.zoom = this.bossZoom = Math.min(this.bossZoom ?? g0.zoom, g0.zoom);
     else if (this.bossZoom !== null) { if (this.calm >= cfg.calmReturn || !alive(ctx.boss)) this.bossZoom = null; else g0.zoom = Math.min(g0.zoom, this.bossZoom); }
     if (this.idle < cfg.resumeDelay) return false;

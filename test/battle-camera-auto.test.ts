@@ -166,4 +166,14 @@ describe('전투 카메라 AUTO', () => {
     const bad = structuredClone(fresh); bad.settings.cameraAuto = 'no' as any;
     expect(normalizeSave(bad, new Economy().s).settings.cameraAuto).toBe(true);
   });
+  test('다른 보스가 나오면 앞 보스의 물러난 줌을 이어받지 않는다', () => {
+    const auto = new BattleAutoCamera(); auto.resume();
+    const first = actor(9, -4, { radius: 1.6 }), value = { yaw: 0, pitch: 0, zoom: 100 };
+    for (let i = 0; i < 240; i++) auto.step(1 / 60, value, ctxOf({ boss: first, current: value, camera: cameraFor(value) }));
+    expect(auto.bossZoom).not.toBeNull();
+    const next = actor(0, -3, { radius: .6 });
+    auto.step(1 / 60, value, ctxOf({ boss: next, enemies: [actor(1, -1)], current: value, camera: cameraFor(value) }));
+    expect(auto.bossRef).toBe(next);
+    expect(auto.goal.zoom).toBeGreaterThanOrEqual(AUTO_CAMERA.steadyZoom - 1e-9);
+  });
 });
