@@ -34,7 +34,7 @@ import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
-import { composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './squads.js';
+import { campaignCombat, composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './squads.js';
 import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
 import { RoomProps, roomPropsAllowed } from './room-props.js';
 import { RegionTraits, regionTheme } from './region-traits.js';
@@ -312,7 +312,7 @@ export class Battle {
     const list = [];
     // Step 3 in a six-entry pool visits only two species; ranged slots were also constant.
     // 캠페인 방은 분대 편성(squads.js): 단계 곡선으로 고른 종을 역할 조합 분대로 짠다. 그 밖(정의 없는 단계)은 기존 순환.
-    const st = this.stage.st, squads = Number.isInteger(st) && R.trash?.length && n > 0;
+    const st = this.stage.st, squads = campaignCombat(this.stage) && R.trash?.length && n > 0;
     room.squadPlan = null;
     if (squads) {
       const featuredRoom = !this._featuredRoomDone && room.type !== ROOM_TYPE.TREASURE;
@@ -338,7 +338,7 @@ export class Battle {
   /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
   callReinforcements(room) {
     const R0 = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type); let wave = 0;
-    const R = Number.isInteger(this.stage.st) && !this.stage.expedition ? stageCurve(R0, this.stage.st) : R0;
+    const R = campaignCombat(this.stage) ? stageCurve(R0, this.stage.st) : R0;
     for (const nid of room.links || []) {
       const nb = this.world.rooms[nid];
       if (!nb || nb.cleared || nb.spawned || nb.type === ROOM_TYPE.BOSS || nb.type === ROOM_TYPE.START) continue;
@@ -627,10 +627,11 @@ export class Battle {
     e.homeRoom = rm;
     if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
     // 캠페인 정예는 행동형 접두사 1~2개를 달고 자기 분대의 대장이 된다.
-    if (def.elite && !def.boss && Number.isInteger(this.stage.st) && !this.stage.expedition && rm) {
+    if (def.elite && !def.boss && campaignCombat(this.stage) && rm) {
       const ordinal = this._eliteOrdinal = (this._eliteOrdinal || 0) + 1;
       e.affixes = new EliteAffixes(e, pickAffixes(rm.id, this.stage.idx, this.stage.st, ordinal, rm.type === ROOM_TYPE.ELITE));
-      if (pack) pack.leader = e;
+      // 무리의 대장은 먼저 선 정예다(두 번째 정예가 대장 자리를 덮어써 앞 정예의 방패막·지휘가 끊기지 않게).
+      if (pack && !pack.leader?.alive) pack.leader = e;
       this.announceAffixes(e);
     }
     e.runtimeSpeciesId = runtimeType;

@@ -15,7 +15,7 @@ function makeGame(theme: string | null, hero: any) {
   const afters: { t: number; fn: () => void }[] = [];
   const game: any = {
     active: true, fx: fxProxy, ui: { toast() {} }, player: hero, enemies: [] as any[], afters, spawned: [] as any[], settled: [] as any[],
-    stage: theme ? { st: 1, chapter: { id: 1, theme } } : null,
+    stage: theme ? { st: 2, chapter: { id: 1, theme } } : null,
     after(t: number, fn: () => void) { afters.push({ t, fn }); },
     spawnEnemy(type: string, _a: any, room: any, pos: any) {
       const r: any = { type, room, pos, maxHp: 100, hp: 100, pack: null, xpReward: 5, reactT: 1 };
@@ -48,6 +48,7 @@ test('regionTheme: 캠페인 stage 는 chapter.theme, chapter 7 은 crypt, 원�
   expect(regionTheme({ st: 3, chapter: { id: 2, theme: 'forge' }, party: true })).toBeNull();
   expect(regionTheme({ chapter: { id: 2, theme: 'forge' } })).toBeNull();
   expect(regionTheme({ st: 1.5, chapter: { id: 2, theme: 'forge' } })).toBeNull();
+  expect(regionTheme({ st: 1, chapter: { id: 2, theme: 'forge' } })).toBeNull();   // 1관문은 기본 적 학습(지역 특성은 2관문부터)
   expect(regionTheme(null)).toBeNull();
   expect(regionTheme(undefined)).toBeNull();
 });

@@ -228,7 +228,8 @@ export class DropSystem {
   onKill(enemy, stage) {
     if (!fieldDropsAllowed(stage) || !fieldDropsAllowed(this.game.stage)) return;
     // 무리 졸개는 몰이 밀도만 더한다. 보상은 기존 명단·방 정화에서만 나온다.
-    if (enemy.packFollower) return;
+    // 잔향 부활·분열 분신(noLoot)도 같다: 서버 정산 처치 상한(plausibility)에 넣지 않는다.
+    if (enemy.packFollower || enemy.noLoot) return;
     this.fieldLedger();
     const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
     // 서버 런 티켓(MMO P1)이 있으면 서버가 정산 때 같은 lootSeed로 재생성할 드랍을 그대로 보여 준다.
