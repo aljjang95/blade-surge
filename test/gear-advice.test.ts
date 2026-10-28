@@ -24,9 +24,9 @@ test('더 좋은 장비 표시: 전투력이 오르는 후보만, 다른 영웅�
   expect(better.has(weak.uid)).toBe(false); expect(better.has(worn.uid)).toBe(false);
 });
 
-test('후반 il 장비는 +8 노말 무기를 이긴다 (드랍이 실제 업그레이드)', () => {
+test('후반 il 장비는 +5 노말 무기를 이긴다 (드랍이 실제 업그레이드)', () => {
   const eco = make(), hero = eco.s.selected;
-  const worn = give(eco, id('weapon', 'N'), 8), drop = give(eco, id('weapon', 'E'), 0, { il: 34 }), plain = give(eco, id('weapon', 'E'), 0);
+  const worn = give(eco, id('weapon', 'N'), 5), drop = give(eco, id('weapon', 'E'), 0, { il: 34 }), plain = give(eco, id('weapon', 'E'), 0);
   eco.equip(hero, worn.uid);
   const better = betterItems(eco, hero);
   expect(better.has(drop.uid)).toBe(true); expect(better.has(plain.uid)).toBe(false);

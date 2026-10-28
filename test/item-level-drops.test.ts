@@ -17,11 +17,11 @@ test('il 이 없거나 1 이하면 능력치가 그대로다(기존 저장·가�
   expect(itemLevelUnits(1, 'E', 0)).toBe(0);
 });
 
-test('후반 스테이지 드랍은 il 보너스로 초반 +8 장비를 넘고 등급 순서가 유지된다', () => {
+test('후반 스테이지 드랍은 il 보너스로 초반 +5 장비(새 강화 곡선의 전형)를 넘고 등급 순서가 유지된다', () => {
   const il = dropItemLevel(stageDef(3, 10)) as number;
-  const early = itemStats({ id: (ITEMS_OF as any)('N', 'weapon')[0].id, enh: 8 }).atk;
+  const early = itemStats({ id: (ITEMS_OF as any)('N', 'weapon')[0].id, enh: 5 }).atk;
   const atk = (r: string) => itemStats({ id: (ITEMS_OF as any)(r, 'weapon')[0].id, enh: 0, il }).atk;
-  expect(atk('E')).toBeGreaterThan(early);   // 에픽 이상은 새 드랍만으로 초반 +8 노말을 넘는다
+  expect(atk('E')).toBeGreaterThan(early);   // 에픽 이상은 새 드랍만으로 초반 +5 노말을 넘는다
   expect(atk('N')).toBeLessThan(early);       // 노말은 여전히 정리 대상
   expect(atk('N')).toBeLessThan(atk('S')); expect(atk('S')).toBeLessThan(atk('E')); expect(atk('E')).toBeLessThan(atk('U')); expect(atk('U')).toBeLessThan(atk('L'));
   // 스테이지가 깊을수록 같은 장비가 강하다
