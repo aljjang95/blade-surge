@@ -448,7 +448,7 @@ export class Battle {
     const fresh = plan.featured && plan.list.includes(plan.featured) && !seen.has('new:' + plan.featured);
     if (!fresh && seen.has(plan.theme)) return;
     seen.add(plan.theme); if (fresh) seen.add('new:' + plan.featured);
-    const name = fresh ? ENEMIES[plan.featured]?.name : null;
+    const name = fresh ? ENEMIES[chapterSpeciesId(this.stage, plan.featured)]?.name : null;
     this.ui.toast(fresh ? `새 적 · ${name} — ${squad.name}: ${squad.hint}` : `${squad.name} — ${squad.hint}`, fresh ? 'gold' : '');
   }
   /** 정예 접두사 안내: 처음 보는 접두사만 한 줄로 알린다. */

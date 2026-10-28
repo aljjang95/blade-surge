@@ -21,7 +21,8 @@ export const REGION_SPECIES_VERBS = {
   tide: { squidle: { key: 'tether', name: '촉수 낚아채기' } },
   crown: { ninja: { key: 'blink', name: '그림자 걸음' } },
 };
-const SKELETAL = /^Skeleton_|Skull/;
+// 1장 전용 Tripo 몸(Ch1_*: 관꾼·곡하는 원령 갈래)도 언데드라 망각의 잔향으로 되살아난다.
+export const SKELETAL = /^Skeleton_|Skull|^Ch1_/;
 const POOLS = 12;
 const _v = new THREE.Vector3();
 

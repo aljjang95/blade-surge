@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, regionTheme } from '../src/game/region-traits.js';
+import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, SKELETAL, regionTheme } from '../src/game/region-traits.js';
 
 const noop: any = new Proxy(() => {}, { get: () => noop, apply: () => undefined });
 const fxProxy: any = new Proxy({}, { get: () => () => {} });
@@ -258,4 +258,9 @@ test('종 동사: 정예·보스·summoned 에는 붙지 않는다', () => {
     rt.attach(e, 'line');
     expect(e.affixes).toBeUndefined();
   }
+});
+
+test('망각의 잔향은 1장 일반 방 주력(전용 Tripo 몸 갈래)에도 걸린다', async () => {
+  const { ENEMIES, CHAPTER_SPECIES } = await import('../src/data/stages.js');
+  for (const id of Object.values(CHAPTER_SPECIES[1]) as string[]) expect(SKELETAL.test((ENEMIES as any)[id].model), id).toBe(true);
 });
