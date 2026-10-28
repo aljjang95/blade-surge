@@ -10,7 +10,7 @@ import { importLegacy, settleLegacyCompensation, shadowSnapshot } from './import
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
 import { handleRtdn } from './rtdn';
-import { webBillingOn, webComplete, webIntent, type PortoneDeps, type PortoneEnv } from './portone';
+import { webBillingOn, webComplete, webIntent, webPayMethods, type PortoneDeps, type PortoneEnv } from './portone';
 import { ingestFunnel } from './funnel';
 
 export const V1_PREFIX = '/api/v1';
@@ -31,7 +31,9 @@ export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
 
 /** webBilling은 서버 권위 계정에게만 켠다(그림자·로컬 계정은 roster를 서버가 강제하지 못해 현금 판매를 열지 않는다). */
 export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId) };
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId),
+    // 웹 결제창의 간편결제 선택지(카드는 항상). 웹 결제가 켜진 계정에만 의미가 있다.
+    webKakaoPay: webPayMethods(env).includes('KAKAOPAY'), webNaverPay: webPayMethods(env).includes('NAVERPAY'), webTossPay: webPayMethods(env).includes('TOSSPAY') };
 }
 
 export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps & PortoneDeps = defaultDeps): Promise<Response> {

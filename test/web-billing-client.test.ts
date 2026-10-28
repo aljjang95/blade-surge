@@ -7,10 +7,10 @@ const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId,
 
 class MemStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
 
-function rig(opts: { webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any; authority?: string | null; askCustomer?: () => Promise<any> } = {}) {
+function rig(opts: { flags?: Record<string, boolean>; webBilling?: boolean; complete?: any; intent?: any; sdk?: any; search?: string; channel?: string; billing?: any; authority?: string | null; askCustomer?: () => Promise<any> } = {}) {
   const calls: any[] = [], applied: any[] = [], storage = new MemStorage();
   const api = {
-    async me() { return { flags: { webBilling: opts.webBilling ?? true } }; },
+    async me() { return { flags: { webBilling: opts.webBilling ?? true, ...(opts.flags ?? {}) } }; },
     async request(method: string, path: string, body: any) {
       calls.push([method, path, body]);
       if (path === '/iap/web/intent') { if (opts.intent instanceof Error) throw opts.intent; return opts.intent ?? intentOf(body.productId); }
@@ -295,5 +295,27 @@ describe('상태 응답 순서 (오래된 권한 목록이 방금 산 영웅을 
     r.release({ grants: [], reversals: [], entitlements: { heroes: ['rogue'] }, serverTime: 1000 });
     expect(await sync).toBe(true);
     expect(r.eco.ownHero('rogue')).toBe(true);
+  });
+});
+
+describe('웹 간편결제 선택', () => {
+  const who = { fullName: '홍길동', phoneNumber: '01012345678', email: 'a@b.co' };
+  test('서버가 켠 수단만 묻고, 고른 간편결제는 intent 본문(method)과 결제창(easyPay)에 실린다', async () => {
+    let asked: any = null;
+    const intent = { paymentId: 'bsw_' + 'c'.repeat(32), productId: 'hero_knight_v1', storeId: 's', channelKey: 'k', orderName: 'o', totalAmount: 5900, currency: 'KRW',
+      payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' }, customData: '{}' };
+    const { hp, calls, payCalls } = rig({ flags: { webKakaoPay: true }, intent, askCustomer: async (m?: any) => { asked = m; return { ...who, method: 'KAKAOPAY' }; } });
+    await hp.init();
+    expect(hp.methods()).toEqual(['CARD', 'KAKAOPAY']);
+    await hp.buy('hero_knight_v1');
+    expect(asked).toEqual(['CARD', 'KAKAOPAY']);
+    expect(calls[0][2]).toEqual({ productId: 'hero_knight_v1', method: 'KAKAOPAY' });
+    expect(payCalls[0]).toMatchObject({ payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' } });
+  });
+  test('꺼진 수단을 골라도 카드로 요청한다(본문에 method 없음)', async () => {
+    const { hp, calls } = rig({ askCustomer: async () => ({ ...who, method: 'NAVERPAY' }) });
+    await hp.init();
+    await hp.buy('hero_knight_v1');
+    expect(calls[0][2]).toEqual({ productId: 'hero_knight_v1' });
   });
 });
