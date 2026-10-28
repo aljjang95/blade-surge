@@ -11,6 +11,12 @@ import { mulberry32 } from './world.js';
 export const CHAPTER_GRADES = Object.freeze({
   // 2장 용광로: 그을린 갈색·쇳물 주황. 한 장 안의 tribunal(분홍)·archive(파랑) 경로를 kiln 쪽으로.
   2: { weight: .7, fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], torch: 0xff7034, tint: 0xd8a28b, look: 'kiln', fogHorizon: 0xd35632 },
+  // 3장 서리 도서관: 백지 흰색·서리 하늘색. archive 기준.
+  3: { weight: .7, fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], torch: 0x86d7ff, tint: 0xb7cbed, look: 'archive', fogHorizon: 0x6f98ca },
+  // 4장 별이 잠긴 심해: 남색·청록. beacon 기준.
+  4: { weight: .7, fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], torch: 0x4be6d2, tint: 0x9adbd1, look: 'beacon', fogHorizon: 0x55c4c2 },
+  // 5장 새벽을 먹는 왕관: 새벽 보라·금. tribunal 기준에 금빛 횃불.
+  5: { weight: .6, fog: 0x2a2139, bg: 0x171323, hemi: [0xd8c0e0, 0x342743], torch: 0xffd27a, tint: 0xd8c4d6, look: 'tribunal', fogHorizon: 0xc77da9 },
   1: { weight: .7, fog: 0x15302c, bg: 0x0c1d1b, hemi: [0xb3d6cf, 0x18322c], torch: 0x86e1c5, tint: 0xb9cbc4, look: 'memorial', fogHorizon: 0x8ab9a9 },
 });
 
@@ -104,7 +110,65 @@ const FORGE_KIT = {
     glow: [piece(new THREE.BoxGeometry(.3, .02, .14), F.glow, [.05, .715, 0])],
   }),
 };
+const I = { ice: 0xa9d6ee, iceDark: 0x6d9ec0, paper: 0xf1f4f6, ink: 0x22344a, wood: 0x4a3a30, bookRed: 0x7a3a3a, bookBlue: 0x35507a, bookGreen: 0x3f6a52, glow: 0x9fe4ff };
+/** 3장 소품: 책을 품은 얼음 기둥, 흩날린 백지, 서리 낀 서가. */
+const FROST_KIT = {
+  pillar: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.42, .5, 1.9, 6), I.ice, [0, .95, 0]), piece(new THREE.CylinderGeometry(.55, .6, .14, 6), I.iceDark, [0, .07, 0]), piece(new THREE.BoxGeometry(.32, .42, .1), I.bookBlue, [0, 1.05, .3], [0, 0, 18])],
+    glow: [piece(new THREE.BoxGeometry(.28, .02, .02), I.glow, [0, 1.1, .36], [0, 0, 18]), piece(new THREE.ConeGeometry(.14, .5, 5), I.glow, [0, 2.1, 0])],
+  }),
+  pages: () => {
+    const parts = [];
+    for (let i = 0; i < 6; i++) { const a = i * 1.7, r = .2 + (i % 3) * .2; parts.push(piece(new THREE.BoxGeometry(.24, .006, .32), I.paper, [Math.sin(a) * r, .01 + i * .004, Math.cos(a) * r], [0, a * 40, (i % 2) * 6])); }
+    return parts;
+  },
+  shelf: () => {
+    const solid = [piece(new THREE.BoxGeometry(1.4, 1.6, .35), I.wood, [0, .8, -.05]), piece(new THREE.BoxGeometry(1.32, .04, .3), I.iceDark, [0, .55, .02]), piece(new THREE.BoxGeometry(1.32, .04, .3), I.iceDark, [0, 1.1, .02])];
+    const colors = [I.bookRed, I.bookBlue, I.bookGreen, I.ink];
+    for (const y of [.75, 1.3]) for (let i = 0; i < 8; i++) solid.push(piece(new THREE.BoxGeometry(.13, .34 - (i % 3) * .05, .24), colors[(i + (y > 1 ? 2 : 0)) % 4], [-.56 + i * .16, y - (i % 3) * .025, .03]));
+    return { solid, glow: [piece(new THREE.BoxGeometry(1.42, .05, .38), I.glow, [0, 1.62, -.05])] };
+  },
+};
+const D = { wood: 0x3e3226, woodDark: 0x2a221a, rust: 0x5e4232, iron: 0x3c4446, brass: 0x8a6e36, barnacle: 0xb9b4a2, kelp: 0x2a5444, glow: 0x58e0d2 };
+/** 4장 소품: 가라앉은 배 늑골, 닻과 사슬, 꺼진 등대 렌즈. */
+const DEEP_KIT = {
+  ribs: () => {
+    const solid = [piece(new THREE.BoxGeometry(2.2, .14, .2), D.woodDark, [0, .07, 0])];
+    for (let i = 0; i < 4; i++) solid.push(piece(new THREE.TorusGeometry(.75 - i * .06, .06, 4, 8, Math.PI * .8), D.wood, [-.8 + i * .53, .05, 0], [0, 90, 100]));
+    for (const x of [-.6, .3]) solid.push(piece(new THREE.CylinderGeometry(.05, .08, .06, 6), D.barnacle, [x, .16, .08]));
+    return { solid, glow: [piece(new THREE.SphereGeometry(.06, 5, 3), D.glow, [.7, .12, .1])] };
+  },
+  anchor: () => {
+    const solid = [piece(new THREE.BoxGeometry(.12, 1.1, .12), D.rust, [0, .05, 0], [0, 0, 80]), piece(new THREE.TorusGeometry(.38, .07, 4, 10, Math.PI), D.rust, [.5, .05, 0], [90, 0, 90]), piece(new THREE.TorusGeometry(.1, .03, 3, 8), D.rust, [-.6, .05, 0], [90, 0, 0])];
+    for (let i = 0; i < 6; i++) solid.push(piece(new THREE.TorusGeometry(.07, .022, 3, 6), D.iron, [-.75 - i * .1, .03, Math.sin(i) * .12], [90, 0, i % 2 ? 90 : 0]));
+    return solid;
+  },
+  lens: () => ({
+    solid: [piece(new THREE.CylinderGeometry(.4, .46, .12, 8), D.brass, [0, .06, 0]), piece(new THREE.CylinderGeometry(.34, .34, .7, 8, 1, true), D.iron, [0, .45, 0]), piece(new THREE.ConeGeometry(.4, .3, 8), D.rust, [0, .95, 0]), piece(new THREE.CylinderGeometry(.06, .08, .9, 5), D.kelp, [.45, .45, .1], [0, 0, -12])],
+    glow: [piece(new THREE.SphereGeometry(.2, 8, 5), D.glow, [0, .45, 0])],
+  }),
+};
+const K = { stone: 0x6e6378, stoneDark: 0x4a4256, violet: 0x4a2f6a, gold: 0xd8b25a, goldDark: 0x9a7a34, steel: 0x8a8e94, bronze: 0x7d6136, glow: 0xffd27a };
+/** 5장 소품: 빈 왕좌, 성벽에 꽂힌 검들, 끊긴 아침 종. */
+const CROWN_KIT = {
+  throne: () => ({
+    solid: [piece(new THREE.BoxGeometry(.9, .2, .8), K.stoneDark, [0, .1, 0]), piece(new THREE.BoxGeometry(.8, .5, .7), K.stone, [0, .45, 0]), piece(new THREE.BoxGeometry(.8, 1.4, .14), K.stone, [0, 1.1, -.3]), piece(new THREE.BoxGeometry(.7, .9, .04), K.violet, [0, .95, -.22]), piece(new THREE.BoxGeometry(.86, .06, .2), K.gold, [0, 1.8, -.3]), piece(new THREE.ConeGeometry(.08, .25, 4), K.gold, [0, 1.95, -.3])],
+    glow: [piece(new THREE.SphereGeometry(.06, 5, 3), K.glow, [0, 1.62, -.21])],
+  }),
+  swords: () => {
+    const solid = [piece(new THREE.CylinderGeometry(.5, .6, .08, 8), K.stoneDark, [0, .04, 0])];
+    for (let i = 0; i < 4; i++) { const a = i * 1.6, x = Math.sin(a) * .3, z = Math.cos(a) * .3, tilt = 8 + i * 5; solid.push(piece(new THREE.BoxGeometry(.07, .9, .02), K.steel, [x, .45, z], [tilt, a * 57, 0])); solid.push(piece(new THREE.BoxGeometry(.24, .04, .05), K.gold, [x, .92, z], [tilt, a * 57, 0])); }
+    return solid;
+  },
+  bell: () => ({
+    solid: [piece(bellGeometry(.5, 10), K.bronze, [0, .35, 0], [0, 0, 70], [1, .8, 1]), piece(new THREE.BoxGeometry(1.2, .12, .12), K.goldDark, [-.2, .06, .4], [0, 30, 0])],
+    glow: [piece(new THREE.BoxGeometry(.04, .4, .02), K.glow, [.1, .45, .32], [0, 0, 20])],
+  }),
+};
 const KITS = Object.freeze({
+  5: { kit: CROWN_KIT, mix: [['throne', .3], ['swords', .45], ['bell', .25]], perRoom: 7 },
+  4: { kit: DEEP_KIT, mix: [['ribs', .35], ['anchor', .35], ['lens', .3]], perRoom: 7 },
+  3: { kit: FROST_KIT, mix: [['pillar', .35], ['shelf', .3], ['pages', .35]], perRoom: 8 },
   1: { kit: GARDEN_KIT, mix: [['tomb', .5], ['lilies', .35], ['bell', .15]], perRoom: 9 },
   2: { kit: FORGE_KIT, mix: [['slag', .3], ['rack', .25], ['anvil', .25], ['table', .2]], perRoom: 8 },
 });

@@ -1,0 +1,9 @@
+/* 마을 걷기 HUD 장소 표시(대표님 2026-10-28 "서약의 성채 저게 시야를 많이 잡아먹는다").
+   마을 이름은 위의 지역 칩(REGION 0X ○○ 마을)이 이미 보여 주므로 숨기고, '이동'·'마을 일' 두 칩만 남긴다.
+   배경 상자 없이 칩만 두어 광장(영웅 앞길)을 가리지 않는다. 터치 44px는 지킨다(docs/UIUX_AUDIT.md). */
+:root:root:root:root .citadel-hub-active .citadel-hub-place { padding: 0; gap: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root:root:root:root .citadel-hub-active .citadel-hub-place > small,
+:root:root:root:root .citadel-hub-active .citadel-hub-place > span,
+:root:root:root:root .citadel-hub-active .citadel-hub-place .town-place-row > strong { display: none; }
+:root:root:root:root .citadel-hub-place .town-place-row { gap: 6px; }
+:root:root:root:root .citadel-hub-place .town-map-chip { min-height: 44px; min-width: 44px; padding: 0 12px; font-size: 13px; box-shadow: 0 2px 0 #874a0e, 0 3px 10px #0004; }

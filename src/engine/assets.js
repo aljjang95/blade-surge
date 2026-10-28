@@ -21,6 +21,7 @@ import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
 import { removeWeaponHalo } from '../game/weapon-glow.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
+import { installFootToeFix } from './hero-foot-fix.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
@@ -443,6 +444,8 @@ function swapLibraryHeroBody(root, gltf, target) {
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
   root.userData.libraryBodyMotionIdentity = identity;
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  // 전사 팔자걸음 보정은 몸체마다 바인드 발각이 달라 새 몸 기준으로 다시 건다.
+  installFootToeFix(root);
   // 등급 부츠는 새 몸의 본·역바인드로 다시 묶는다(부츠가 없으면 무동작).
   refitHeroBoots(root, createBootsMaterial);
   refitHeroGearParts(root, createBootsMaterial);   // 갑옷 외형 파츠도 같은 방식(파츠가 없으면 무동작)
@@ -567,7 +570,7 @@ export function spawnCharacter(gltf) {
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
-  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); }
+  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); if (contract?.role === 'hero') installFootToeFix(root, contract.heroId); }
   catch (error) {
     // 아직 공유 재질을 쓰므로 실패한 clone의 skeleton·mixer만 정리한다.
     rigRoot.traverse(node => { if (node.isSkinnedMesh) node.skeleton.dispose(); });

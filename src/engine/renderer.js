@@ -425,7 +425,8 @@ export class Renderer {
       off.set(fitted.x, fitted.y, fitted.z);
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
+      // 고정 쿼터뷰: 위치는 이미 부드럽게 따라온 목표점에 단단히 붙인다. 위치만 따로 늦게 따라오면 시선 방향이 이동마다 흔들린다(전후 계측 2026-10-28).
+      rig.pos.copy(desired);
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);

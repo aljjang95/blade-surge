@@ -20,6 +20,28 @@ const GARDEN_SPIRIT = { remap: { dark: '#123f37', light: '#c4f7ea', hues: [180, 
 /** 2장 불씨 왕국의 용광로 — 그을음 낀 몸, 쇳물 주황 발광 소품. */
 const FORGE_SKIN = { color: '#c9a48a', amount: 0.18, emissive: '#140600' };
 
+/** 3장 거꾸로 흐르는 서리 도서관 — 백지 흰색·서리 하늘색. 보라 천·원령은 서리 청색으로, 초록 슬라임은 얼음빛으로. */
+const FROST_REMAP = { dark: '#1d3550', light: '#cfeeff', hues: [235, 345], mix: 0.95, baseMix: 0.1 };
+const FROST_BONE = { color: '#c6dcef', amount: 0.2, emissive: '#05101c', remap: FROST_REMAP };
+const FROST_MAGE_REMAP = { ...FROST_REMAP, hues: [190, 345] };
+const FROST_SPIRIT = { remap: { dark: '#1b3a5a', light: '#dff4ff', hues: [180, 360], mix: 1, baseMix: 0.5 }, emissive: '#16365a' };
+const FROST_SLIME_REMAP = { dark: '#2a5a7a', light: '#e2f6ff', hues: [50, 190], mix: 0.9, baseMix: 0.2 };
+
+/** 4장 별이 잠긴 심해 — 남색·청록, 심해 청록 발광. 보라·분홍 몸은 심해 청록으로, 붉은 용은 남청으로. */
+const DEEP_SKIN = { emissive: '#021a1c', remap: { dark: '#0d2a3a', light: '#7fe8dc', hues: [235, 345], mix: 0.95, baseMix: 0.12 } };
+const DEEP_DRAKE = { emissive: '#021a1c', remap: { dark: '#0e2a44', light: '#86e6dc', hues: [330, 60], mix: 0.85, baseMix: 0.15 } };
+// 심해 버섯·슬라임: 붉은 갓·연두 몸을 심해 청록으로(빛 주머니 발광과 같은 색 계열).
+const DEEP_MUSH = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#8ef0e2', hues: [330, 40], mix: 0.85, baseMix: 0.1 } };
+const DEEP_SLIME = { emissive: '#021a1c', remap: { dark: '#0c2c36', light: '#9af2e6', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
+
+/** 5장 새벽을 먹는 왕관 — 새벽 보라와 금. 보라는 그대로 두고(장 색) 금 소품과 새벽빛 발광으로 왕관의 집행관을 표시한다. */
+const CROWN_SKIN = { color: '#d9c9e8', amount: 0.14, emissive: '#120a1c' };
+// 버섯 갓·연두 슬라임도 새벽 보라로(왕관에 먹힌 새벽의 그림자).
+const CROWN_MUSH = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#d6b2f6', hues: [330, 40], mix: 0.8, baseMix: 0.1 } };
+const CROWN_SLIME = { emissive: '#120a1c', remap: { dark: '#2a1640', light: '#dcc0fa', hues: [50, 190], mix: 0.9, baseMix: 0.2 } };
+// 빈 왕관(나무 몸): 초록을 새벽 보라로 바꿔 왕관에 먹힌 그림자로.
+const CROWN_HOLLOW = { emissive: '#120a1c', remap: { dark: '#24163a', light: '#c9a8f2', hues: [50, 170], mix: 0.9, baseMix: 0.2 } };
+
 /** @type {Readonly<Record<number, { name: string, species: Record<string, DressSpec>, assets: Record<string, DressSpec> }>>} */
 export const CHAPTER_DRESS = Object.freeze({
   1: {
@@ -108,6 +130,140 @@ export const CHAPTER_DRESS = Object.freeze({
       bone_knight: { ...FORGE_SKIN, props: ['unfinishedBlades'] },
       skeleton_mage: { ...FORGE_SKIN, props: ['emberLantern'] },
       slime: { props: ['emberWick'] },
+    },
+  },
+  3: {
+    name: '얼어붙은 증언',
+    species: {
+      // 서리 해골 사서: 얼어붙은 금서 더미를 지고, 서가를 방패로 든다.
+      skel_shield: { ...FROST_BONE, props: ['shelfShield'] },
+      bone_orc: { ...FROST_BONE, props: ['bookStackBack'] },
+      skel_rogue: { ...FROST_BONE },
+      // 망령: 얼음에 갇힌 증언 — 주위에 얼어붙은 종이가 맴돈다. 해골 망령(원거리)은 펼친 금서를 읽는다.
+      ghost: { ...FROST_SPIRIT, props: ['frozenPages'] },
+      ghost_skull: { ...FROST_SPIRIT, props: ['openTome'] },
+      // 해골 주술사·사제: 금서를 펼치는 기록관 / 얼음 깃펜 관.
+      skel_mage: { ...FROST_BONE, remap: FROST_MAGE_REMAP, props: ['openTome'] },
+      skel_priest: { ...FROST_BONE, remap: { ...FROST_MAGE_REMAP, light: '#eef8ff' }, props: ['iceQuillCrown'] },
+      // 부패 슬라임 → 서리 슬라임: 초록을 얼음빛으로, 머리에 얼음 결정.
+      blob_green: { remap: FROST_SLIME_REMAP, props: ['iceShardsTop'] },
+      frost_burrower: { props: ['iceShards'] },
+      // 골렘 수호자: 검열관 — 등에 커다란 봉인 도장.
+      golem_guard: { props: ['censorSeal'] },
+      elite_golem: { props: ['censorSeal', 'iceShards'] },
+      // 설산 거인 → 금서실 수문장: 열쇠 꾸러미와 책 더미.
+      elite_yeti: { props: ['keyRing', 'bookStackBack'] },
+      elite_wraith: { ...FROST_SPIRIT, props: ['openTome', 'spiritHalo'] },
+      // 기록관 오르딘(중간 보스)·서리왕 이셀(최종 보스).
+      frost_midboss: { props: ['censorSeal', 'openTome'] },
+      frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
+    },
+    assets: {
+      bone_knight: { ...FROST_BONE, props: ['shelfShield'] },
+      shadow_soldier: { ...FROST_BONE },
+      skeleton_mage: { ...FROST_BONE, remap: FROST_MAGE_REMAP, props: ['openTome'] },
+      goblin_chief: { ...FROST_BONE, props: ['bookStackBack'] },
+      void_wisp: { ...FROST_SPIRIT, props: ['frozenPages'] },
+      slime: { remap: FROST_SLIME_REMAP, props: ['iceShardsTop'] },
+      frost_golem: { props: ['censorSeal'] },
+      frost_yeti: { props: ['keyRing'] },
+      goblin_raider: { props: ['iceShards'] },
+      mushroom_shaman: { props: ['iceShards'] },
+      treant: { props: ['iceShards'] },
+      ember_drake: { remap: { dark: '#1a3350', light: '#d6f0ff', hues: [0, 70], mix: .85, baseMix: .2 } },
+    },
+  },
+  4: {
+    name: '조난 신호의 형체',
+    species: {
+      // 부유 촉수·심연 눈알: 가짜 등대 빛을 매단 심해 생물.
+      squidle: { ...DEEP_SKIN, props: ['lureLamp'] },
+      glub: { ...DEEP_SKIN, props: ['lureLamp'] },
+      abyss_seer: { ...DEEP_SKIN, props: ['lureLamp', 'glowPouches'] },
+      // 심연 슬라임: 분홍을 심해 청록으로, 따개비가 붙는다. 심연 폭탄은 자폭 경고 색(자홍)을 유지한다.
+      blob_pink: { ...DEEP_SLIME, props: ['barnaclesTop'] },
+      bomb_abyss: { props: ['barnaclesTop'] },
+      // 이계 침입자 → 난파선 판자 방패를 든 수부.
+      alien: { ...DEEP_SKIN, props: ['plankShield', 'barnacles'] },
+      // 포자 괴물: 심해 빛 주머니를 단 버섯.
+      mushnub: { ...DEEP_MUSH, props: ['glowPouches'] },
+      // 골렘 수호자 → 산호 골렘.
+      golem_guard: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      elite_golem: { ...DEEP_SKIN, props: ['coralGrowth', 'anchorChain'] },
+      elite_mushroom_king: { ...DEEP_MUSH, props: ['glowPouches', 'coralGrowth'] },
+      elite_dragonling: { ...DEEP_DRAKE, props: ['glowPouches'] },
+      // 4장 confluence 경로에 섞이는 해골·원령: 따개비 해골·익사한 원령.
+      skel_minion: { ...DEEP_SKIN, props: ['anchorChain', 'barnacles'] },
+      elite_skel_captain: { ...DEEP_SKIN, props: ['plankShield', 'anchorChain'] },
+      ghost: { ...DEEP_SKIN, props: ['lureLamp'] },
+      ghost_skull: { ...DEEP_SKIN, props: ['lureLamp'] },
+      // 등대지기 마렌(중간 보스)·해왕 네레이스(최종 보스).
+      tide_midboss: { ...DEEP_MUSH, props: ['lighthouseLens', 'glowPouches'] },
+      tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
+    },
+    assets: {
+      star_owl: { ...DEEP_SKIN, props: ['lureLamp'] },
+      slime: { ...DEEP_SLIME, props: ['barnaclesTop'] },
+      shadow_soldier: { ...DEEP_SKIN, props: ['plankShield'] },
+      mushroom_shaman: { ...DEEP_MUSH, props: ['glowPouches'] },
+      frost_golem: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      ember_drake: { ...DEEP_DRAKE, props: ['glowPouches'] },
+      bone_knight: { ...DEEP_SKIN, props: ['anchorChain', 'barnacles'] },
+      void_wisp: { ...DEEP_SKIN, props: ['lureLamp'] },
+      skeleton_mage: { ...DEEP_SKIN, props: ['lureLamp'] },
+      goblin_chief: { ...DEEP_SKIN, props: ['anchorChain'] },
+      frost_yeti: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      demon_lord: { ...DEEP_SKIN, props: ['tideCrown'] },
+      treant: { ...DEEP_SKIN, props: ['coralGrowth'] },
+      fire_phoenix: { ...DEEP_SKIN },
+    },
+  },
+  5: {
+    name: '집행관의 손발',
+    species: {
+      // 그림자 닌자: 새벽빛 가면. 이계 침입자·해골 병사 → 왕관 병사(작은 금관).
+      ninja: { ...CROWN_SKIN, props: ['dawnMask'] },
+      alien: { ...CROWN_SKIN, props: ['soldierCirclet', 'swordWallShield'] },
+      skel_minion: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_rogue: { ...CROWN_SKIN, props: ['dawnMask'] },
+      // 성벽 검 방패.
+      skel_shield: { ...CROWN_SKIN, props: ['soldierCirclet', 'swordWallShield'] },
+      bone_orc: { ...CROWN_SKIN, props: ['goldChains'] },
+      imp: { ...CROWN_MUSH, props: ['soldierCirclet'] },
+      bomb_abyss: { props: ['crownRing'] },
+      bomb_slime: { props: ['crownRing'] },
+      // 심연 주시자: 왕관 고리. 원거리·주술사는 금관.
+      abyss_seer: { ...CROWN_SKIN, props: ['crownRing'] },
+      ghost: { ...CROWN_SKIN, props: ['crownRing'] },
+      ghost_skull: { ...CROWN_SKIN, props: ['crownRing'] },
+      tribal_shaman: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_mage: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      skel_priest: { ...CROWN_SKIN, props: ['hornCrown'] },
+      // 정예: 왕관 뿔의 푸른 악마, 금 사슬의 새끼 용, 맹세 깃발의 해골 대장.
+      elite_bluedemon: { ...CROWN_SKIN, props: ['hornCrown', 'goldChains'] },
+      elite_dragonling: { ...CROWN_SKIN, props: ['goldChains'] },
+      elite_skel_captain: { ...CROWN_SKIN, props: ['soldierCirclet', 'oathBanner'] },
+      elite_bone_lord: { ...CROWN_SKIN, props: ['goldChains'] },
+      elite_wraith: { ...CROWN_SKIN, props: ['crownRing'] },
+      // 첫 기사 아스텔(중간 보스)·빈 왕관(최종 보스: 몸 위에 떠 있는 빈 금관).
+      crown_midboss: { ...CROWN_SKIN, props: ['hornCrown', 'swordWallShield', 'oathBanner'] },
+      crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
+    },
+    assets: {
+      shadow_soldier: { ...CROWN_SKIN, props: ['dawnMask'] },
+      bone_knight: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      goblin_chief: { ...CROWN_SKIN, props: ['goldChains'] },
+      mushroom_shaman: { ...CROWN_MUSH, props: ['soldierCirclet'] },
+      slime: { ...CROWN_SLIME, props: ['crownRing'] },
+      star_owl: { ...CROWN_SKIN, props: ['crownRing'] },
+      goblin_raider: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      demon_lord: { ...CROWN_SKIN, props: ['hornCrown'] },
+      ember_drake: { ...CROWN_SKIN, props: ['goldChains'] },
+      void_wisp: { ...CROWN_SKIN, props: ['crownRing'] },
+      skeleton_mage: { ...CROWN_SKIN, props: ['soldierCirclet'] },
+      treant: { ...CROWN_HOLLOW, props: ['emptyCrown'] },
+      frost_yeti: { ...CROWN_SKIN, props: ['hornCrown'] },
+      frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
 });
