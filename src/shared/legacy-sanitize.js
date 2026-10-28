@@ -10,6 +10,11 @@ import { HEROES } from '../data/heroes.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE } from '../data/hero-roster.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 import { normalizeLegend } from '../game/legend-rank.js';
+import { CHAPTERS } from '../data/stages.js';
+import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
+import { isChapterOpen } from '../data/chapter-open.js';
+import { DIFFICULTY_ORDER } from '../game/difficulty.js';
+import { resolveCampaignTown } from '../data/campaign-towns.js';
 
 export const LEGACY_EPOCH = Date.UTC(2026, 6, 1);
 const DAY = 86400000;
@@ -28,6 +33,80 @@ export const ONE_TIME = Object.freeze({
 const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transcendStones', 'skillResets'];
 
 const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * 캠페인 진행 속도 상한(가정): 인정하는 마지막 관문 번호 = 일회성 + 일당 × 경과일. 7장 70관문을 이틀 안에 끝낸 기록까지 깎지 않게 넉넉히 잡았다.
+ * 베타 지표(실제 클리어 속도)로 보정한다.
+ */
+export const PROGRESS_PACE = Object.freeze({ oneTime: 40, daily: 20 });
+const STAGE_KEY = /^(\d+)-(\d+)$/;
+const floorOf = (key) => { const m = STAGE_KEY.exec(key); return m ? (+m[1] - 1) * STAGES_PER_CHAPTER + +m[2] : 0; };
+const NIGHTMARE_RANK = DIFFICULTY_ORDER.indexOf('nightmare');
+const chapterOf = (key) => { const m = STAGE_KEY.exec(key); return m ? +m[1] : 0; };
+
+/**
+ * 진행도 정화(가져오기·그림자 스냅샷 공통). 클라이언트가 보낸 progress.unlocked·stars·endgame(peak·고통 단계)를 그대로 믿지 않는다.
+ * 1) 개방 시각(CHAPTER_OPEN)이 지나지 않은 장의 기록은 버린다(서버 시계 now 기준).
+ * 2) 클라이언트 별점은 1번 관문부터 끊김 없이 이어진 구간만, 관문 번호가 속도 상한(PROGRESS_PACE × 경과일) 이하인 곳까지 인정한다.
+ * 3) unlocked 는 저장값이 아니라 남은 별점 기록에서 다시 계산한다(마지막 클리어 관문 + 1). 별점 없는 unlocked 만 올린 조작은 잘린다.
+ * 4) 서버 문서가 이미 가진 진행(서버 정산·이전 정화를 거친 값)은 깎지 않는다(바닥값).
+ * 5) endgame.peak 는 남은 관문만(악몽 이상은 3별 관문만), 고통 단계 best 는 서버 문서 값까지만.
+ * @returns {{ clamped: Record<string, { from: number, to: number }>, tampered: boolean }} 절삭 기록과 조작 표시(열리지 않은 장·건너뛴 관문 뒤의 기록)
+ */
+export function trustedProgress(s, { now, days, serverProgress, serverEndgame }) {
+  const clamped = {};
+  let tampered = false;
+  const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
+  const sp = isRecord(serverProgress) ? serverProgress : {};
+  const serverStars = isRecord(sp.stars) ? sp.stars : {};
+  const stars = isRecord(s.progress?.stars) ? s.progress.stars : {};
+  const cap = PROGRESS_PACE.oneTime + PROGRESS_PACE.daily * days;
+  const before = { unlocked: Number(s.progress?.unlocked) || 1, cleared: Object.values(stars).filter((v) => v > 0).length };
+  // 서버가 이미 아는 관문은 항상 남긴다(바닥값).
+  const keep = {};
+  for (const [key, v] of Object.entries(serverStars)) if (STAGE_KEY.test(key) && Number.isInteger(v) && v > 0) keep[key] = Math.min(3, v);
+  const serverTop = Math.max(Object.keys(keep).reduce((m, key) => Math.max(m, floorOf(key)), 0), (Number.isSafeInteger(sp.unlocked) ? sp.unlocked : 1) - 1);
+  // 클라이언트 관문은 1번부터 끊김 없이 이어진 구간만 인정한다(관문 N은 N-1을 깬 뒤에만 들어갈 수 있다).
+  // 열리지 않은 장에서 멈추고, 그 구간의 끝은 속도 상한(관문 번호 ≤ cap)을 넘지 않는다. 서버가 아는 진행까지는 이어진 것으로 본다.
+  const byFloor = new Map(Object.entries(stars).filter(([key, v]) => v > 0 && STAGE_KEY.test(key)).map(([key, v]) => [floorOf(key), [key, v]]));
+  let top = serverTop;
+  for (let f = 1; f <= floors; f++) {
+    const hit = byFloor.get(f);
+    const known = f <= serverTop;
+    if (!hit) { if (known) continue; break; }
+    const [key, v] = hit;
+    if (!known && (!isChapterOpen(chapterOf(key), now) || f > cap)) break;
+    keep[key] = Math.max(keep[key] ?? 0, v);
+    top = Math.max(top, f);
+  }
+  // 이어진 구간 밖에 남은 별점: 열리지 않은 장의 기록이나 건너뛴 관문 뒤의 기록은 정상 플레이로 생길 수 없다(조작 표시).
+  for (const [f, [key]] of byFloor) if (!(key in keep) && (!isChapterOpen(chapterOf(key), now) || (f > top + 1 && f <= cap))) tampered = true;
+  const unlocked = Math.max(1, Math.min(floors, top + 1));
+  s.progress = { ...s.progress, stars: keep, unlocked };
+  // 마을 상태는 정화된 진행에서 다시 정한다(잘린 지역의 마을이 현재 마을로 남지 않게).
+  if (isRecord(s.campaignTown)) { const town = resolveCampaignTown(s.progress, s.campaignTown); s.campaignTown = { current: town.current, celebrated: town.celebrated }; }
+  const after = Object.keys(keep).length;
+  if (after < before.cleared) clamped['progress.stars'] = { from: before.cleared, to: after };
+  if (unlocked < before.unlocked) clamped['progress.unlocked'] = { from: before.unlocked, to: unlocked };
+  if (isRecord(s.endgame)) {
+    const se = isRecord(serverEndgame) ? serverEndgame : {};
+    const sPeak = isRecord(se.peak) ? se.peak : {};
+    const peak = {};
+    const clientPeak = isRecord(s.endgame.peak) ? s.endgame.peak : {};
+    // 남은 관문의 난이도 기록만, 악몽 이상은 그 관문이 3별일 때만(악몽은 3별 관문에서 열린다) 인정한다.
+    for (const [key, rank] of Object.entries(clientPeak)) if (key in keep) peak[key] = keep[key] >= 3 ? rank : Math.min(rank, NIGHTMARE_RANK - 1);
+    for (const [key, rank] of Object.entries(sPeak)) if (Number.isInteger(rank)) peak[key] = Math.max(peak[key] ?? -1, rank);
+    const keptClient = Object.keys(clientPeak).filter((key) => key in keep).length;
+    if (keptClient < Object.keys(clientPeak).length) clamped['endgame.peak'] = { from: Object.keys(clientPeak).length, to: keptClient };
+    // 고통 단계 최고 기록은 서버 문서 값까지만 인정한다(가져오기·스냅샷으로 올릴 수 없음). 단계는 서버 정산으로만 오른다.
+    const serverBest = Number.isSafeInteger(se.torment?.best) ? se.torment.best : 0;
+    const best = Number(s.endgame.torment?.best) || 0;
+    const nextBest = Math.min(best, serverBest);
+    if (nextBest < best) clamped['endgame.torment.best'] = { from: best, to: nextBest };
+    s.endgame = { ...s.endgame, peak, torment: { ...s.endgame.torment, best: nextBest } };
+  }
+  return { clamped, tampered };
+}
 
 /**
  * 영웅 소유 정본 정화. 클라이언트가 보낸 roster.paid·owned는 버리고 서버가 아는 값으로 만든다.
@@ -71,13 +150,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -105,6 +184,11 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   for (const key of Object.keys(s.expedition?.materials || {})) {
     s.expedition.materials[key] = clamp(`materials.${key}`, Number(s.expedition.materials[key]) || 0, ONE_TIME.material + DAILY_MAX.material * days);
   }
+  // 진행도(unlocked·별점·엔드게임)는 개방 시각·속도 상한·서버 기록으로 정화한다(조작 저장으로 지역·영웅 합류·고통 단계 건너뛰기 차단).
+  const progress = trustedProgress(s, { now, days, serverProgress, serverEndgame });
+  Object.assign(clamped, progress.clamped);
+  // 정상 플레이로 생길 수 없는 진행 기록(열리지 않은 장, 건너뛴 관문 뒤)은 severe(감사·보상 보류).
+  if (progress.tampered) severe = true;
   if (s.inventory.length > INVENTORY_CAP) {
     const equipped = new Set(Object.values(s.heroes).flatMap((h) => Object.values(h.equip)).filter(Boolean));
     const keep = s.inventory.filter((x) => equipped.has(x.uid));
