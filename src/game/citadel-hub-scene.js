@@ -9,6 +9,7 @@ import { CanopySightline } from '../engine/canopy-sightline.js';
 import { libraryAssets } from '../engine/library-assets.js';
 import { createCitadelGateDesignLibrary } from './citadel-gate-designs.js';
 import { buildStarterVillage } from './starter-village-scene.js';
+import { buildChapterProps } from './chapter-scenery.js';
 
 const templates = new Map();
 const pending = new Map();
@@ -413,7 +414,11 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
 
   const booth = batch(); let authoredStall = false;
   const roleIndex = new Map();
+  // 지역 마을 광장 소품(장 키트, docs/TOWN_AUDIT.md): 키마다 인스턴스 메시 하나. 지오메트리 · 재질은 던전과 공유라 장면이 해제하지 않는다.
+  const chapterProps = skin ? buildChapterProps(skin.chapter, hubProps.filter(prop => prop.kind === 'chapter')) : null;
+  if (chapterProps) root.add(chapterProps);
   for (const prop of hubProps) {
+    if (prop.kind === 'chapter') continue;
     const node = new THREE.Group(); node.name = `Citadel_Prop_${prop.id}`;
     node.position.set(prop.x, 0, prop.z); node.rotation.y = prop.yaw; root.add(node);
     if (starter && prop.kind === 'stall') starterVillage?.adoptFallback('stall', node);   // Tripo 상점 좌판이 오면 이 기존 좌판은 숨는다

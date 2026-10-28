@@ -185,6 +185,23 @@ const townProps = townId => {
   ].map(Object.freeze));
 };
 
+// 2지역 이후 마을 광장의 지역 소품 자리(docs/TOWN_AUDIT.md). 관문 줄(북·동·서)의 관문 사이와 안쪽 띠에만 두어
+// 관문 앞 · 중앙 통로 · NPC 둘레를 비운다. 자리마다 큰 소품 하나와 작은 소품 하나(바깥쪽으로 0.95m).
+// 장 소품 키는 src/game/chapter-scenery.js KITS 와 같다(데이터 모듈이 three 를 불러오지 않게 따로 둔다 — test/town-scenes.test.ts 가 맞춰 본다).
+export const PLAZA_DECOR_KEYS = Object.freeze({ 2: ['slag', 'rack', 'anvil', 'table'], 3: ['pillar', 'shelf', 'pages'], 4: ['ribs', 'anchor', 'lens'], 5: ['throne', 'swords', 'bell'], 6: ['tags', 'lantern', 'lilies'], 7: ['bell', 'ledger', 'rope'] });
+const PLAZA_DECOR_SPOTS = Object.freeze([[-8, -7.6], [8, -7.6], [-4, -7], [4, -7], [-8.6, 0], [8.6, 0], [-8.6, 4], [8.6, 4]]);
+export function regionPlazaDecor(chapter) {
+  const keys = PLAZA_DECOR_KEYS[chapter]; if (!keys?.length) return [];
+  return PLAZA_DECOR_SPOTS.flatMap(([x, z], index) => {
+    const yaw = Math.atan2(-x, -z), out = Math.hypot(x, z) || 1, ox = x / out * .75, oz = z / out * .75;
+    const main = keys[index % keys.length], minor = keys[(index + 1) % keys.length];
+    return [
+      Object.freeze({ id: 'decor:' + index + ':a', kind: 'chapter', key: main, chapter, x, z, yaw, s: 1.45 }),
+      Object.freeze({ id: 'decor:' + index + ':b', kind: 'chapter', key: minor, chapter, x: x + ox + oz * .5, z: z + oz - ox * .5, yaw: yaw + 1.1, s: 1 }),
+    ];
+  });
+}
+
 const townBlockers = (hotspots, props) => {
   const blockers = [];
   for (const spot of hotspots) {
@@ -199,6 +216,7 @@ const townBlockers = (hotspots, props) => {
       minX: prop.x - 1, maxX: prop.x + 1, minZ: prop.z - .35, maxZ: prop.z + .35 });
     if (prop.kind === 'lamp') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .19 });
     if (prop.kind === 'brazier') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .5 });
+    if (prop.kind === 'chapter') blockers.push({ type: 'circle', x: prop.x, z: prop.z, radius: .55 * (prop.s || 1) });
   }
   return blockers.map(Object.freeze);
 };
@@ -213,7 +231,10 @@ const dungeonOverrides = new Map(), hubCache = new Map();
 export function setTownDungeonIds(townId, ids) {
   if (!CITADEL_TOWN_IDS.includes(townId) || !Array.isArray(ids)) return;
   const next = ids.filter(id => ALL_DUNGEONS.some(dungeon => dungeon.id === id)).slice(0, 6);
-  if (next.join() !== (dungeonOverrides.get(townId) || []).join()) { dungeonOverrides.set(townId, next); hubCache.delete(townId); hubCache.delete(townId + ':starter'); }
+  if (next.join() !== (dungeonOverrides.get(townId) || []).join()) {
+    dungeonOverrides.set(townId, next);
+    for (const key of [...hubCache.keys()]) if (key === townId + ':starter' || key.startsWith(townId + '@')) hubCache.delete(key);
+  }
 }
 
 /**
@@ -239,16 +260,17 @@ export function townHub(townId) {
     if (!hubCache.has(key)) hubCache.set(key, starterHub(townId));
     return hubCache.get(key);
   }
-  if (hubCache.has(townId)) return hubCache.get(townId);
+  const chapter = activeCampaignTownChapter(), key = townId + '@' + chapter;
+  if (hubCache.has(key)) return hubCache.get(key);
   const theme = TOWN_THEMES[townId], ids = dungeonOverrides.get(townId) || defaultTownDungeonIds(townId);
   const slots = GATE_SLOTS[theme.gateLayout];
   const gates = ids.map((id, index) => townGate(ALL_DUNGEONS.find(dungeon => dungeon.id === id), ...slots[index]));
   const campaign = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'campaign'), arena = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'arena');
   const hotspots = Object.freeze([...gates, campaign, arena, ...townNpcs(townId), ...townWork(townId), WAYSTONE]);
-  const props = townProps(townId), blockers = Object.freeze(townBlockers(hotspots, props));
+  const props = Object.freeze([...townProps(townId), ...regionPlazaDecor(chapter)]), blockers = Object.freeze(townBlockers(hotspots, props));
   const hub = Object.freeze({ townId, theme, bounds: CITADEL_HUB_BOUNDS, spawn: CITADEL_HUB_SPAWN, hotspots, blockers, props,
     dungeonIds: Object.freeze(ids.slice()) });
-  hubCache.set(townId, hub);
+  hubCache.set(key, hub);
   return hub;
 }
 

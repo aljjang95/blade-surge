@@ -4,6 +4,8 @@ import { ALL_DUNGEONS } from '../src/data/expansion.js';
 import { CITADEL_TOWN_IDS, townHub, defaultTownDungeonIds, townOfDungeon, setActiveTownId, activeTownHub, findHotspot } from '../src/data/citadel-hub.js';
 import { setActiveCampaignTownChapter } from '../src/data/campaign-towns.js';
 import { buildCitadelHubScene, libraryRoleOf } from '../src/game/citadel-hub-scene.js';
+import { CHAPTER_PROP_KEYS } from '../src/game/chapter-scenery.js';
+import { PLAZA_DECOR_KEYS } from '../src/data/citadel-hub.js';
 import { buildLobbyWorld } from '../src/game/lobby-world.js';
 import { buildTownDecor, townDecorFor, townDecorPlacements } from '../src/game/region-architecture.js';
 import { ProvisionalTownService } from '../src/ui/town-service-adapter.js';
@@ -155,3 +157,22 @@ test('2지역 이후 광장에 의뢰 게시판·대장장이가 서고 들를 �
   expect(root.userData.attentionIds()).toEqual([]);
   root.userData.dispose();
 }));
+
+test('2~7지역 광장에 장 소품이 서고, 모든 상호작용 지점에 여전히 걸어서 닿는다', () => {
+  for (const [ch, keys] of Object.entries(PLAZA_DECOR_KEYS)) expect(keys).toEqual([...(CHAPTER_PROP_KEYS as any)[ch]]);
+  for (let ch = 2; ch <= 7; ch++) withChapter(ch, () => {
+    for (const id of CITADEL_TOWN_IDS) {
+      const hub = townHub(id) as any;
+      const decor = hub.props.filter((p: any) => p.kind === 'chapter');
+      expect(decor.length).toBe(16);
+      for (const prop of decor) {
+        expect(Math.abs(prop.x)).toBeLessThan(11); expect(Math.abs(prop.z)).toBeLessThan(11);
+        expect(Math.abs(prop.x)).toBeGreaterThan(2);   // 중앙 남북 통로를 비운다
+        for (const spot of hub.hotspots) expect(Math.hypot(spot.x - prop.x, spot.z - prop.z)).toBeGreaterThan(1.5);
+      }
+      const reach = hubReach(hub);
+      expect(hub.hotspots.filter((s: any) => !reach.reaches(s)).map((s: any) => s.id)).toEqual([]);
+    }
+  });
+  withChapter(1, () => expect((townHub('emberport') as any).props.some((p: any) => p.kind === 'chapter')).toBe(false));
+});
