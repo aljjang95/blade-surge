@@ -83,7 +83,7 @@ describe('도감', () => {
       const stage = stageDef(ch, st);
       for (const wave of stage.waves) for (const id of wave) roster.add(id);
       // 보상 명단과 실제 전투 방 편성(장 전용 몸 적 포함) 모두 도감에 있어야 한다.
-      for (const R of [stage.rosterFor(), stage.combatRosterFor()]) for (const id of [...R.trash, ...R.ranged, ...R.elite]) roster.add(id);
+      for (const R of [stage.rosterFor(), (stage as any).combatRosterFor()]) for (const id of [...R.trash, ...R.ranged, ...R.elite]) roster.add(id);
     }
     const covered = new Map(CODEX.filter((e) => e.tab === 'monster').map((e) => [e.id.slice('monster-'.length), e]));
     for (const id of roster) {
