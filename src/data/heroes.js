@@ -195,11 +195,13 @@ export function kitOf(hero) {
 
 // 레벨업 필요 EXP / 골드
 // 기본 곡선 100×1.18^(lv-1) 위에 입문 구간 바닥(EARLY_LEVEL_EXP)을 깐다(2026-10-29 대표님 실기기 피드백 '1-1 한 판에 Lv1→5').
-//  - Lv1~9 는 표 값, Lv10 부터는 표의 마지막 값(EARLY_LEVEL_EXP_FLOOR)이 바닥이고 기본 곡선이 그 값을 넘는 Lv27 부터는 기본 곡선 그대로다.
-//  - 목표: 1-1 첫 클리어 Lv3, 첫날 약 1시간에 Lv10(첫 각성). 이후는 권장 레벨 경험치 보정으로 기본 곡선을 따라잡는다(tools/progression-estimate.mjs).
+//  - Lv1~9 는 표 값, Lv10 부터는 표의 마지막 값(EARLY_LEVEL_EXP_FLOOR)이 바닥이고 기본 곡선이 그 값을 넘는 Lv24 부터는 기본 곡선 그대로다.
+//    필요 EXP 는 레벨이 오를수록 줄지 않는다(단조). 1·2 레벨은 1-1 한 판(처치+클리어 EXP 537~742)에 Lv3 으로 끝나게, Lv3~9 는 판당 EXP 증가에 맞춰 레벨당 약 두 판.
+//  - 목표: 1-1 첫 클리어 Lv3, 첫날 약 1시간(첫 클리어 약 13판)에 Lv10(첫 각성). 이후는 권장 레벨 경험치 보정으로 기본 곡선을 따라잡는다
+//    (tools/progression-estimate.mjs: 장 끝 Lv 8·21·33·38·41·44·45, 예전 곡선 20·29·35·39·42·44·46). 1·2장 권장 레벨은 loot-tables.js CHAPTER_START_LEVEL.
 //  - 필요 EXP 는 어느 레벨에서도 예전 값 이상이라, 저장된 레벨·EXP(예전 필요치 미만)는 그대로 유효하고 레벨이 내려가지 않는다.
 //  - 클라이언트·서버 정산이 같은 함수를 쓴다. 난수·할당 없음.
-export const EARLY_LEVEL_EXP = Object.freeze([180, 320, 800, 1300, 1900, 2700, 3700, 4900, 6300]);
+export const EARLY_LEVEL_EXP = Object.freeze([180, 320, 1300, 1750, 2200, 2650, 3100, 3550, 4000]);
 export const EARLY_LEVEL_EXP_FLOOR = EARLY_LEVEL_EXP[EARLY_LEVEL_EXP.length - 1];
 export const baseLevelExp = (lv) => Math.floor(100 * Math.pow(1.18, lv - 1));
 export const levelExp = (lv) => {
@@ -207,7 +209,12 @@ export const levelExp = (lv) => {
   if (!(lv >= 1)) return base;
   return Math.max(base, lv > EARLY_LEVEL_EXP.length ? EARLY_LEVEL_EXP_FLOOR : EARLY_LEVEL_EXP[Math.floor(lv) - 1]);
 };
-export const levelGold = (lv) => Math.floor(200 * Math.pow(1.15, lv - 1));
+// 골드 훈련(hero-training.js)은 남은 EXP 비율로 levelGold 를 낸다. 입문 바닥으로 늘어난 필요 EXP 만큼 골드도 같은 비율로 늘려
+// 'EXP 1당 골드'를 예전과 같게 둔다(시작 골드로 입문 구간을 건너뛰지 않게). 바닥이 없는 레벨은 예전 값 그대로다.
+export const levelGold = (lv) => {
+  const gold = Math.floor(200 * Math.pow(1.15, lv - 1)), base = baseLevelExp(lv), need = levelExp(lv);
+  return need > base ? Math.floor(gold * need / base) : gold;
+};
 export const starShards = (star) => [0, 20, 40, 80, 160, 320][star] || 999;
 export const skillUpGold = (lv) => Math.floor(500 * Math.pow(1.4, lv - 1));
 
