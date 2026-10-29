@@ -87,9 +87,11 @@ export class ReadabilityView {
           float seg = step(.35, fract(a / 1.5707963 + .5)) ;
           float band = smoothstep(.74, .80, r) * (1. - smoothstep(.92, .98, r)) * seg;
           float glow = smoothstep(.55, .9, r) * (1. - smoothstep(.95, 1., r)) * .22;
-          float hit = uPulse * smoothstep(.3, .85, r) * (1. - smoothstep(.85, 1., r)) * .9;
+          // 명중 맥박은 바깥 테(r .62~1)만 채운다: 예전(r .3~1, 흰빛 .6 혼합)은 깊이 검사 없이 적 몸 위에 흰 원판을 그려
+          // 다단 명중(숲의 속박 다섯 발 관통 등) 동안 표적 실루엣이 흰빛에 묻혔다(전투 VFX 2차 2026-10-30).
+          float hit = uPulse * smoothstep(.62, .8, r) * (1. - smoothstep(.9, 1., r)) * .75;
           float alpha = (band + glow + hit) * uShow; if (alpha < .01) discard;
-          gl_FragColor = vec4(mix(uColor, vec3(1.), hit * .6 + band * .15), alpha); }`,
+          gl_FragColor = vec4(mix(uColor, vec3(1.), hit * .3 + band * .15), alpha); }`,
       transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     }));
     this.reticle.frustumCulled = false; this.reticle.renderOrder = 985; this.reticle.visible = false; scene.add(this.reticle);
