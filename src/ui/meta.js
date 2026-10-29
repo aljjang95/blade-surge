@@ -666,10 +666,28 @@ export class Meta {
       const hero = HEROES[avatar.heroId], ready = !!libraryAssetForAvatar(avatar.id), isOwned = owned.includes(avatar.id), isEquipped = equipped[avatar.heroId] === avatar.id;
       const heroLocked = !this.eco.ownHero(avatar.heroId); // 미보유 영웅은 입을 수 없으므로 구매·착용 대신 해금 안내만 보인다
       const d = document.createElement('div'); d.className = 'shop-item avatar-shop-item' + (ready ? '' : ' avatar-pending');
-      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready && !heroLocked ? '' : 'disabled'}>${ready ? (heroLocked ? '영웅 해금 후 이용' : isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button></div>`;
+      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready && !heroLocked ? '' : 'disabled'}>${ready ? (heroLocked ? '영웅 해금 후 이용' : isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button>${ready && !isEquipped && this.app.models?.[hero.model] ? `<button type="button" class="btn btn-ghost btn-sm avatar-tryon-btn" data-avatar-tryon="${avatar.id}">입어 보기</button>` : ''}</div>`;
       d.querySelector('[data-avatar]').onclick = () => this.buyOrEquipAvatar(avatar.id);
+      const tryButton = d.querySelector('[data-avatar-tryon]');
+      if (tryButton) tryButton.onclick = () => this.showAvatarTryOn(avatar.id);
       grid.appendChild(d);
     }
+  }
+  /** 상점 '입어 보기': 사기 전에 구매 없이 임시로 입혀 본다. 닫으면 원래대로(저장·결제·가격 불변). */
+  showAvatarTryOn(id) {
+    const avatar = AVATARS.find((entry) => entry.id === id), hero = avatar && HEROES[avatar.heroId];
+    if (!avatar || !hero || !libraryAssetForAvatar(id)) return;
+    const owned = this.eco.s.avatars.owned.includes(id), heroLocked = !this.eco.ownHero(avatar.heroId);
+    const stop = () => this.app.wardrobe?.previewStop?.();
+    const action = heroLocked ? '' : `<button class="btn ${owned ? 'btn-ghost' : 'btn-gold'}" id="m-buy">${owned ? '착용하기' : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`}</button>`;
+    this.ui.modal(`<div class="tryon-wrap"><h2>${avatar.name}</h2><p class="setting-help">${hero.name} · 입어 보기는 구매·착용 없이 모습만 보여 줍니다.</p>`
+      + `<div class="tryon-stage" id="tryon-stage" role="img" aria-label="${hero.name}이(가) ${avatar.name}을(를) 입어 본 모습"></div>`
+      + `<p class="tryon-note">${avatar.desc}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button>${action}</div></div>`, { onClose: stop, onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => { stop(); this.ui.closeModal(); };
+      const buy = b.querySelector('#m-buy');
+      if (buy) buy.onclick = () => { stop(); this.ui.closeModal(); void this.buyOrEquipAvatar(id); };
+      this.app.wardrobe?.tryOn?.(b.querySelector('#tryon-stage'), avatar.heroId, id);
+    } });
   }
   async buyOrEquipAvatar(id) {
     const avatar = AVATARS.find((entry) => entry.id === id), s = this.eco.s;
@@ -684,7 +702,7 @@ export class Meta {
     const result = this.eco.equipAvatar(avatar.heroId, equipped ? null : id);
     if (!result.ok) { this.ui.toast('아바타 착용 상태를 바꾸지 못했습니다.', 'red'); return; }
     this.ui.toast(equipped ? `${avatar.name} 해제` : `${avatar.name} 착용`, 'gold');
-    if (this.eco.s.selected === avatar.heroId) this.app.showcaseHero(avatar.heroId);
+    if (this.eco.s.selected === avatar.heroId) (this.app.refreshShowcaseAvatar || this.app.showcaseHero).call(this.app, avatar.heroId);
     this.renderShop(); this.refreshTop();
   }
   renderShop() {

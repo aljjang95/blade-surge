@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, SKELETAL, regionTheme } from '../src/game/region-traits.js';
+import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, SKELETAL, regionSpeciesVerb, regionTheme } from '../src/game/region-traits.js';
 
 const noop: any = new Proxy(() => {}, { get: () => noop, apply: () => undefined });
 const fxProxy: any = new Proxy({}, { get: () => () => {} });
@@ -263,4 +263,22 @@ test('종 동사: 정예·보스·summoned 에는 붙지 않는다', () => {
 test('망각의 잔향은 1장 일반 방 주력(전용 Tripo 몸 갈래)에도 걸린다', async () => {
   const { ENEMIES, CHAPTER_SPECIES } = await import('../src/data/stages.js');
   for (const id of Object.values(CHAPTER_SPECIES[1]) as string[]) expect(SKELETAL.test((ENEMIES as any)[id].model), id).toBe(true);
+});
+
+test('종 동사: 4장 전용 몸(부유 촉수 → 따개비 수부)도 촉수 낚아채기를 이어받는다', async () => {
+  const { CHAPTER_SPECIES } = await import('../src/data/stages.js');
+  const id = CHAPTER_SPECIES[4].squidle;
+  expect(id).toBe('ch4_drowned');
+  expect(regionSpeciesVerb('tide', id)?.key).toBe('tether');
+  expect(regionSpeciesVerb('tide', 'ch4_lurer')).toBeNull();
+  expect(regionSpeciesVerb('forge', id)).toBeNull();
+  expect(regionSpeciesVerb(null, id)).toBeNull();
+  const tide = setup('tide');
+  const sq = makeEnemy(tide.game, 0, 0, { runtimeSpeciesId: id });
+  tide.rt.attach(sq, 'line');
+  expect(sq.affixes.has.tether).toBe(true);
+  expect(sq.regionVerb).toBe('촉수 낚아채기');
+  const summoned = makeEnemy(tide.game, 0, 0, { runtimeSpeciesId: id, summoned: true });
+  tide.rt.attach(summoned, 'line');
+  expect(summoned.affixes).toBeUndefined();
 });
