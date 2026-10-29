@@ -154,7 +154,7 @@ export const SIGNATURES = {
       // ① 표식 새기는 실: 발밑에서 표식 자리까지 빠르게 뻗는 가는 선 + 표식 조준 원.
       _a.copy(player.pos).setY(.12); _d.set(mx - _a.x, 0, mz - _a.z);
       impact.beam(_a, _d, _d.length(), i % 2 ? VIOLET : MAGENTA, { speed: 30, tail: 3.2, width: .14, delay: i * .02 });
-      _b.set(mx, 0, mz); impact.mark(_b, i % 2 ? MAGENTA : VIOLET, { radius: 1, life: PULL + .1, style: MARK_STYLE.reticle, angle: i * .7 });
+      _b.set(mx, 0, mz); impact.mark(_b, i % 2 ? DEEP : VIOLET, { radius: 1, life: PULL + .1, style: MARK_STYLE.reticle, angle: i * .7 });
       // ② 분신 낙하: 표식 바깥 위(높이 3.2m)에서 비스듬히 내리꽂혀 t 에 몸통(1m)에 닿는 단검 빛 + 엇갈린 X 자.
       const ca = i * 2.1;
       _a.set(mx + Math.cos(ca) * 1.6, 3.2, mz + Math.sin(ca) * 1.6); _d.set(mx - _a.x, 1 - _a.y, mz - _a.z);
@@ -235,20 +235,19 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.star, at.x, .9, at.z, .9, MAGENTA, .08, { angle: .3, grow: .5, delay: .2 });
   },
   // 일식 · 무영절명(최상위 각성, 강화 2026-10-30) — 실루엣 = '번개 사슬 → 하늘 일섬 → 코로나 방사':
-  // ① 예비(0~.3초) 영웅에서 착탄점까지 지그재그 연쇄 베기 다섯 획이 차례로 그어지고(각 꺾임에 칼날 자국), 가시 원이 조여든다.
+  // ① 예비(0~.3초) 영웅 쪽 바깥에서 전장을 가로지르며 안으로 꺾여 드는 연쇄 베기 다섯 획(각 꺾임에 칼날 자국), 가시 원이 조여든다.
   // ② 판정 순간(.3초) 하늘(10m)에서 착탄점으로 수직 일섬(짙은 굵은 획 + 자홍 심)이 내리꽂힌다.
   // ③ 일식 고리 — 짙은 보라 시계판 큰 테 + 자홍 가시 안쪽 테 + 바닥으로 뻗는 코로나 열두 줄기 + 가운데 X 자 + 바깥으로 튀는 줄기.
   eclipse_edge(ctx) {
     const { impact, at, player, lite } = ctx; const HIT = .3, K = 5, RUN = HIT - .06, seg = RUN / K;
     impact.mark(at, DEEP, { radius: 7.5, life: HIT + .1, style: MARK_STYLE.thorn, angle: .3 });
-    _d.set(at.x - player.pos.x, 0, at.z - player.pos.z); const D = Math.max(.5, _d.length()); _d.multiplyScalar(1 / D);
-    const nx = -_d.z, nz = _d.x, O = Math.min(1.8, .35 * D);
+    // 사슬: 영웅 쪽 바깥(6.5m)에서 출발해 전장을 크게 가로지르며 안으로 꺾여 들어와 RUN 에 착탄점에 닿는 다섯 획(번개처럼 꺾이는 나선).
+    const th0 = Math.atan2(player.pos.z - at.z, player.pos.x - at.x), pt = (v, k) => {
+      const r = 6.5 * (1 - k / K), th = th0 + k * 2.3; return v.set(at.x + Math.cos(th) * r, .9, at.z + Math.sin(th) * r);
+    };
     for (let i = 0, step = lite ? 2 : 1; i < K; i += step) {
-      const k0 = i / K, k1 = (i + 1) / K, o0 = i ? (i % 2 ? O : -O) : 0, o1 = i + 1 < K ? ((i + 1) % 2 ? O : -O) : 0;
-      _a.set(player.pos.x + (at.x - player.pos.x) * k0 + nx * o0, .9, player.pos.z + (at.z - player.pos.z) * k0 + nz * o0);
-      _b.set(player.pos.x + (at.x - player.pos.x) * k1 + nx * o1, .9, player.pos.z + (at.z - player.pos.z) * k1 + nz * o1);
-      const t = RUN * k0; _b.sub(_a); const l = _b.length(); if (!(l > .1)) continue;
-      impact.beam(_a, _b, l, i % 2 ? MAGENTA : VIOLET, { speed: l / seg, tail: 1.8, width: .18, delay: t });
+      pt(_a, i); pt(_b, i + 1); const t = RUN * i / K; _b.sub(_a); const l = _b.length();
+      impact.beam(_a, _b, l, i % 2 ? MAGENTA : VIOLET, { speed: l / seg, tail: 2.4, width: .2, delay: t });
       _a.add(_b); impact._emit(IMPACT_KIND.cut, _a.x, 1, _a.z, 2, i % 2 ? VIOLET : MAGENTA, .2, { angle: cutAngle(impact, _b) + .9, stretch: 1.15, grow: .9, delay: t + seg });
     }
     _a.set(at.x, 10, at.z); _d.set(0, -1, 0);
