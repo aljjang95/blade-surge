@@ -7,7 +7,8 @@ import { parityHash } from '../src/shared/state-hash.js';
 import { OPS, validateOp } from '../src/shared/v1-ops.js';
 import { HEROES } from '../src/data/heroes.js';
 import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
-import { HERO_DIRECT_PURCHASE } from '../src/data/hero-direct-purchase.js';
+import { HERO_DIRECT_PURCHASE, HERO_DIRECT_PURCHASE_GEMS, HERO_DIRECT_PURCHASE_KRW } from '../src/data/hero-direct-purchase.js';
+import { IAP_BY_ID } from '../src/shared/iap-catalog.js';
 import { v1Harness } from './helpers/v1-harness';
 
 const NOW = Date.UTC(2026, 9, 27, 3);
@@ -30,8 +31,12 @@ describe('기본값과 가격표', () => {
     expect(eco.heroBuyQuote('mage').reason).toBe('disabled');
     expect(JSON.stringify(eco.s)).toBe(before);
   });
-  test('가격표는 SR/SSR 이고 영웅 등급마다 가격이 있다', () => {
-    expect(HERO_DIRECT_PURCHASE.prices).toEqual({ SR: 6000, SSR: 15000 });
+  test('가격은 30,000원어치 보석(보석 팩 기본 단가, 보너스 제외)이고 모든 영웅이 같다', () => {
+    const base = IAP_BY_ID['gems_300_v1'] as any;   // 읽기만: 가장 작은 팩이 보너스·묶음 할인 없는 기본 단가
+    expect(base.grant.rewards.gems).toBe(300); expect(base.priceKRW).toBe(3900);
+    expect(HERO_DIRECT_PURCHASE_GEMS).toBe(Math.ceil(HERO_DIRECT_PURCHASE_KRW / (base.priceKRW / base.grant.rewards.gems)));
+    expect(HERO_DIRECT_PURCHASE_KRW).toBe(30000); expect(HERO_DIRECT_PURCHASE_GEMS).toBe(2308);
+    expect(HERO_DIRECT_PURCHASE.prices).toEqual({ SR: 2308, SSR: 2308 });
     for (const def of Object.values(HEROES) as any[]) expect(HERO_DIRECT_PURCHASE.prices[def.rarity as 'SR' | 'SSR']).toBeGreaterThan(0);
   });
 });
@@ -41,18 +46,18 @@ describe('Economy.buyHero (켠 상태)', () => {
     on();
     const eco = chosen('knight', { unlocked: 5 }); eco.s.heroes.knight.level = 20;
     const r = eco.buyHero('werewolf');   // SSR 소환 전용: 합류 관문이 없어 진행과 무관
-    expect(r).toEqual({ ok: true, id: 'werewolf', gems: 15000 });
-    expect(eco.s.gems).toBe(99999 - 15000);
+    expect(r).toEqual({ ok: true, id: 'werewolf', gems: 2308 });
+    expect(eco.s.gems).toBe(99999 - 2308);
     expect(eco.ownHero('werewolf')).toBe(true);
     expect(eco.s.heroes.werewolf.level).toBe(17);                       // 출전 영웅 Lv20 − 3 (합류 규칙과 같음)
     expect(Object.values(eco.s.heroes.werewolf.equip).every(Boolean)).toBe(true);
   });
-  test('SR 가격 6,000 (합류 관문 전)과 보석 부족', () => {
+  test('가격 2,308 (합류 관문 전)과 보석 부족', () => {
     on();
-    const eco = chosen('knight', { unlocked: 5, gems: 5999 });
+    const eco = chosen('knight', { unlocked: 5, gems: 2307 });
     expect(eco.buyHero('mage')).toEqual({ ok: false, reason: 'gems' });
-    eco.s.gems = 6000;
-    expect(eco.buyHero('mage')).toEqual({ ok: true, id: 'mage', gems: 6000 });
+    eco.s.gems = 2308;
+    expect(eco.buyHero('mage')).toEqual({ ok: true, id: 'mage', gems: 2308 });
     expect(eco.s.gems).toBe(0);
   });
   test('제외: 소유 영웅(시작·이미 합류)·진행이 합류 관문을 지난 영웅·시작 영웅 선택 전·모르는 id', () => {
@@ -78,9 +83,9 @@ describe('Economy.buyHero (켠 상태)', () => {
   });
   test('유료 보석 몫은 무료부터 쓰고 paidGems 가 잔액을 넘지 않는다', () => {
     on();
-    const eco = chosen('knight', { unlocked: 5, gems: 7000 }); eco.s.paidGems = 5000;
+    const eco = chosen('knight', { unlocked: 5, gems: 3000 }); eco.s.paidGems = 2800;
     expect(eco.buyHero('mage').ok).toBe(true);
-    expect(eco.s.gems).toBe(1000); expect(eco.s.paidGems).toBe(1000);
+    expect(eco.s.gems).toBe(692); expect(eco.s.paidGems).toBe(692);   // 무료 200 먼저, 유료 2,108 소비
   });
   test('저장이 실패하면 보석·소유·레벨·장비가 모두 되돌아간다', () => {
     on();
@@ -158,7 +163,7 @@ describe('서버 /cmd 패리티', () => {
     const r = await h.cmd(a.token, 'buyHero', ['mage'], { clientHash: parityHash(client.s) });
     expect(r.status).toBe(200);
     expect(r.body.match).toBe(true); expect(r.body.stateHash).toBe(parityHash(client.s));
-    expect(r.body.doc.gems).toBe(14000); expect(r.body.doc.paidGems).toBe(client.s.paidGems);
+    expect(r.body.doc.gems).toBe(17692); expect(r.body.doc.paidGems).toBe(client.s.paidGems);
     expect(r.body.doc.roster.owned).toContain('mage');
     expect(r.body.doc.heroes.mage.level).toBe(client.s.heroes.mage.level);
     const again = await h.cmd(a.token, 'buyHero', ['mage']);
