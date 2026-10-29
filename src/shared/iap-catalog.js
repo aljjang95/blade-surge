@@ -29,7 +29,7 @@ export const CURRENT_SEASON = 's1';
  *     entitlement?: { key: string }, entitlements?: readonly { key: string }[] } }} IapProduct
  */
 /** 영웅 해금 상품 가격 후보(원). 공개 전 대표님 확인(docs/BM_DESIGN.md '영웅 해금'). 웹·Play 동일가. */
-export const HERO_PRICE_KRW = 5900;
+export const HERO_PRICE_KRW = 30000;
 export const HERO_ALL_PRICE_KRW = 17900;
 /** hero_<id>_v1 상품 id ↔ 영웅 id. */
 export const heroProductId = (heroId) => `hero_${heroId}_v1`;

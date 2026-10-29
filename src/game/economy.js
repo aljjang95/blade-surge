@@ -387,11 +387,12 @@ export class Economy {
   }
   /**
    * 보석 직접 영입 견적(UI·서버 공통). HERO_DIRECT_PURCHASE.enabled 가 꺼져 있으면 항상 reason 'disabled'.
-   * reason: disabled | unknown | owned | policy | starter-pending | unreleased | no-price | campaign-pending | gems | null(영입 가능).
+   * reason: disabled | unknown | owned | policy | starter-pending | unreleased | no-price | campaign-pending | paid-gems | null(영입 가능).
+   * 유료 보석 전용(대표님 결정 2026-10-29): 무료 보석은 영입에 쓰지 않으므로 have 는 유료 보석 잔액(paidGems, 총 잔액 이하)이다.
    * campaign-pending = 진행이 이미 합류 관문을 지나 다음 클리어에 무료로 합류할 영웅(보석을 쓰지 않게 막는다, heroUnlockQuote 와 같은 규칙).
    */
   heroBuyQuote(id) {
-    const s = this.s, r = s.roster, have = s.gems, base = { id, ok: false, price: 0, have, reason: null };
+    const s = this.s, r = s.roster, have = Math.max(0, Math.min(Math.floor(Number(s.paidGems) || 0), Math.floor(Number(s.gems) || 0))), base = { id, ok: false, price: 0, have, reason: null };
     if (!HERO_DIRECT_PURCHASE.enabled) return { ...base, reason: 'disabled' };
     if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !s.heroes[id]) return { ...base, reason: 'unknown' };
     if (this.ownHero(id)) return { ...base, reason: 'owned' };
@@ -404,20 +405,21 @@ export class Economy {
     if (!Number.isSafeInteger(price) || price <= 0) return { ...base, reason: 'no-price' };
     const join = HERO_CAMPAIGN_JOIN[id];
     if (join && (s.progress?.unlocked || 1) >= join) return { ...base, price, reason: 'campaign-pending' };
-    if (have < price) return { ...base, price, reason: 'gems' };
+    if (have < price) return { ...base, price, reason: 'paid-gems' };
     return { ...base, price, ok: true };
   }
   /**
    * 보석 직접 영입: 아직 소유하지 않은 영웅을 보석으로 바로 연다. 보석 차감·소유 추가·시작 레벨/장비는 저장이 성공해야 확정(실패하면 전부 되돌린다).
    * 시작 레벨·장비는 캠페인 합류와 같은 규칙(_startCompanion). 나중에 캠페인 합류 관문에 닿아도 이미 소유라 grantCampaignHeroes 가 건너뛰므로
-   * 중복 지급·레벨/경험치 덮어쓰기가 없다. 소비는 소환과 같이 무료 보석부터(spendGems).
+   * 중복 지급·레벨/경험치 덮어쓰기가 없다. 소비는 유료 보석만(gems 와 paidGems 를 같이 줄여 무료 몫은 그대로).
+   * 최초 1회 기본 해금만 준다: 중복 조각·각성·별 재료는 주지 않는다(그것들은 소환에서만 나온다).
    * @param {string} id @returns {{ ok: boolean, reason?: string, id?: string, gems?: number }}
    */
   buyHero(id) {
     const q = this.heroBuyQuote(id);
     if (!q.ok) return { ok: false, reason: q.reason };
     const before = structuredClone(this.s), r = this.s.roster;
-    spendGems(this.s, q.price);
+    this.s.gems -= q.price; this.s.paidGems -= q.price;   // 유료 몫만 차감(save 의 clampPaidGems 와 일관)
     r.owned = [...r.owned, id];
     this._startCompanion(id, Math.max(1, this.s.progress?.unlocked || 1));
     if (!this._commit(before)) return { ok: false, reason: 'storage' };

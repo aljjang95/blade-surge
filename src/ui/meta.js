@@ -405,10 +405,10 @@ export class Meta {
   /** 보석 직접 영입(HERO_DIRECT_PURCHASE.enabled 일 때만 버튼이 있다). 확인창 → Economy.buyHero(서버 명령 큐가 같은 규칙으로 정산). */
   async buyHeroWithGems(id) {
     const q = this.eco.heroBuyQuote(id), def = HEROES[id]; if (!q.ok) { audio.play('ui_error'); return; }
-    const ok = await this.ui.confirm('영웅 영입', `${esc(def.name)}을(를) 보석 ${fmt(q.price)}개로 바로 영입할까요?<br>영입하면 되돌릴 수 없습니다.`, { ok: '영입' });
+    const ok = await this.ui.confirm('영웅 영입', `${esc(def.name)}을(를) 유료 보석 ${fmt(q.price)}개로 바로 영입할까요?<br>기본 해금 1회만 드리며 조각·각성·별 재료는 소환에서만 나옵니다. 영입하면 되돌릴 수 없습니다.`, { ok: '영입' });
     if (!ok) return;
     const r = this.eco.buyHero(id);
-    if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 영입을 취소했습니다. 보석은 그대로입니다' : r?.reason === 'gems' ? '보석이 부족합니다' : '지금은 영입할 수 없습니다', 'red'); audio.play('ui_error'); this.renderHeroes(); return; }
+    if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 영입을 취소했습니다. 보석은 그대로입니다' : r?.reason === 'paid-gems' ? '유료 보석이 부족합니다' : '지금은 영입할 수 없습니다', 'red'); audio.play('ui_error'); this.renderHeroes(); return; }
     audio.play('jingle_win0', { vol: 0.5 }); this.ui.toast(`${def.name} 영입!`, 'gold');
     this.heroSel = id; this.renderHeroes(); this.refreshTop();
   }

@@ -18,7 +18,7 @@ afterEach(() => { HERO_DIRECT_PURCHASE.enabled = false; });
 function chosen(starter = 'knight', { unlocked = 5, gems = 99999 } = {}) {
   const eco = new Economy({ storage: createMemoryStorage(), now: () => NOW });
   expect(eco.chooseStarter(starter).ok).toBe(true);
-  eco.s.progress.unlocked = unlocked; eco.s.gems = gems;
+  eco.s.progress.unlocked = unlocked; eco.s.gems = gems; eco.s.paidGems = gems;   // 영입은 유료 보석 전용이라 기본은 전부 유료
   return eco;
 }
 
@@ -47,16 +47,16 @@ describe('Economy.buyHero (켠 상태)', () => {
     const eco = chosen('knight', { unlocked: 5 }); eco.s.heroes.knight.level = 20;
     const r = eco.buyHero('werewolf');   // SSR 소환 전용: 합류 관문이 없어 진행과 무관
     expect(r).toEqual({ ok: true, id: 'werewolf', gems: 2308 });
-    expect(eco.s.gems).toBe(99999 - 2308);
+    expect(eco.s.gems).toBe(99999 - 2308); expect(eco.s.paidGems).toBe(99999 - 2308);
     expect(eco.ownHero('werewolf')).toBe(true);
     expect(eco.s.heroes.werewolf.level).toBe(17);                       // 출전 영웅 Lv20 − 3 (합류 규칙과 같음)
     expect(Object.values(eco.s.heroes.werewolf.equip).every(Boolean)).toBe(true);
   });
-  test('가격 2,308 (합류 관문 전)과 보석 부족', () => {
+  test('가격 2,308 (합류 관문 전)과 유료 보석 부족', () => {
     on();
     const eco = chosen('knight', { unlocked: 5, gems: 2307 });
-    expect(eco.buyHero('mage')).toEqual({ ok: false, reason: 'gems' });
-    eco.s.gems = 2308;
+    expect(eco.buyHero('mage')).toEqual({ ok: false, reason: 'paid-gems' });
+    eco.s.gems = 2308; eco.s.paidGems = 2308;
     expect(eco.buyHero('mage')).toEqual({ ok: true, id: 'mage', gems: 2308 });
     expect(eco.s.gems).toBe(0);
   });
@@ -75,22 +75,38 @@ describe('Economy.buyHero (켠 상태)', () => {
   test('데뷔 전 영웅(검은 고양이)은 살 수 없다', () => {
     on();
     const eco = new Economy({ storage: createMemoryStorage(), now: () => Date.UTC(2026, 9, 27, 3) });
-    eco.chooseStarter('knight'); eco.s.gems = 99999;
+    eco.chooseStarter('knight'); eco.s.gems = 99999; eco.s.paidGems = 99999;
     expect(eco.buyHero('blackcat')).toEqual({ ok: false, reason: 'unreleased' });
     const later = new Economy({ storage: createMemoryStorage(), now: () => Date.UTC(2026, 10, 10) });
-    later.chooseStarter('knight'); later.s.gems = 99999;
+    later.chooseStarter('knight'); later.s.gems = 99999; later.s.paidGems = 99999;
     expect(later.buyHero('blackcat').ok).toBe(true);
   });
-  test('유료 보석 몫은 무료부터 쓰고 paidGems 가 잔액을 넘지 않는다', () => {
+  test('유료 보석만 쓴다: 무료 보석이 아무리 많아도 살 수 없고, 살 때 무료 몫은 그대로다', () => {
     on();
-    const eco = chosen('knight', { unlocked: 5, gems: 3000 }); eco.s.paidGems = 2800;
+    const free = chosen('knight', { unlocked: 5, gems: 99999 }); free.s.paidGems = 2307;     // 무료 97,692 + 유료 2,307
+    expect(free.buyHero('mage')).toEqual({ ok: false, reason: 'paid-gems' });
+    expect(free.heroBuyQuote('mage')).toMatchObject({ have: 2307, price: 2308, ok: false });
+    const f2p = chosen('knight', { unlocked: 5, gems: 99999 }); f2p.s.paidGems = 0;
+    expect(f2p.buyHero('mage')).toEqual({ ok: false, reason: 'paid-gems' }); expect(f2p.s.gems).toBe(99999);
+    const eco = chosen('knight', { unlocked: 5, gems: 5000 }); eco.s.paidGems = 3000;       // 무료 2,000 + 유료 3,000
     expect(eco.buyHero('mage').ok).toBe(true);
-    expect(eco.s.gems).toBe(692); expect(eco.s.paidGems).toBe(692);   // 무료 200 먼저, 유료 2,108 소비
+    expect(eco.s.gems).toBe(5000 - 2308); expect(eco.s.paidGems).toBe(3000 - 2308);          // 무료 2,000 은 그대로
+    expect(eco.s.gems - eco.s.paidGems).toBe(2000);
+  });
+  test('기본 해금 1회만: 조각·각성·별 재료·소환권·골드를 주지 않는다(소환 전용 성장 재료)', () => {
+    on();
+    const eco = chosen('knight', { unlocked: 5 });
+    const snap = (x: any) => JSON.stringify({ shards: x.s.heroes.mage.shards, star: x.s.heroes.mage.star, grade: x.s.heroes.mage.grade, transcendStones: x.s.transcendStones, tickets: x.s.tickets, ssrTickets: x.s.ssrTickets, gold: x.s.gold, totalPulls: x.s.totalPulls, pity: x.s.gacha.pity, mileage: x.s.gacha.mileage, others: Object.entries(x.s.heroes).filter(([k]) => k !== 'mage').map(([k, h]: any) => [k, h.shards, h.star]) });
+    const before = snap(eco);
+    expect(eco.buyHero('mage').ok).toBe(true);
+    expect(snap(eco)).toBe(before);
+    // 이미 소유한 영웅 재구매는 중복 조각으로 바뀌지 않고 거절된다.
+    expect(eco.buyHero('mage')).toEqual({ ok: false, reason: 'owned' }); expect(snap(eco)).toBe(before);
   });
   test('저장이 실패하면 보석·소유·레벨·장비가 모두 되돌아간다', () => {
     on();
     const storage = createMemoryStorage();
-    const eco = new Economy({ storage, now: () => NOW }); eco.chooseStarter('knight'); eco.s.gems = 20000; eco.s.progress.unlocked = 5;
+    const eco = new Economy({ storage, now: () => NOW }); eco.chooseStarter('knight'); eco.s.gems = 20000; eco.s.paidGems = 20000; eco.s.progress.unlocked = 5;
     const before = JSON.stringify(eco.s);
     storage.setItem = () => { throw new Error('quota'); };
     expect(eco.buyHero('mage')).toEqual({ ok: false, reason: 'storage' });
@@ -139,9 +155,9 @@ describe('서버 /cmd 패리티', () => {
     expect(validateOp('buyHero', [1])).toBeNull();
     expect(validateOp('buyHero', ['mage', 'x'])).toBeNull();
   });
-  async function seeded(h: Awaited<ReturnType<typeof v1Harness>>, accountId: string) {
+  async function seeded(h: Awaited<ReturnType<typeof v1Harness>>, accountId: string, paid = 4000) {
     const eco = EconomyCore.fromState(null, { now: () => h.now(), rng: createSeededRng(3) }) as any;
-    eco.chooseStarter('knight'); eco.s.progress.unlocked = 5; eco.s.gems = 20000; eco.s.paidGems = 4000; eco.s.heroes.knight.level = 20;
+    eco.chooseStarter('knight'); eco.s.progress.unlocked = 5; eco.s.gems = 20000; eco.s.paidGems = paid; eco.s.heroes.knight.level = 20;
     const state = eco.snapshot(), text = JSON.stringify(state);
     h.db.sqlite.query('UPDATE account_docs SET doc = ?, bytes = ? WHERE account_id = ?').run(text, Math.min(text.length, 262144), accountId);
     return state;
@@ -153,6 +169,10 @@ describe('서버 /cmd 패리티', () => {
     expect(r.status).toBe(422); expect(r.body.reason).toBe('disabled');
     const me = await h.send('GET', '/me', undefined, a.token);
     expect(me.body.rev).toBe(1); expect(me.body.doc.gems).toBe(20000);
+    on();   // 켜도 무료 보석뿐이면 서버도 거절
+    await seeded(h, a.accountId, 0);
+    const f = await h.cmd(a.token, 'buyHero', ['mage']);
+    expect(f.status).toBe(422); expect(f.body.reason).toBe('paid-gems');
   });
   test('켬: 서버 결과·문서가 클라이언트와 같고 stateHash 가 일치한다, 재시도는 소유로 거부', async () => {
     on();
@@ -163,7 +183,7 @@ describe('서버 /cmd 패리티', () => {
     const r = await h.cmd(a.token, 'buyHero', ['mage'], { clientHash: parityHash(client.s) });
     expect(r.status).toBe(200);
     expect(r.body.match).toBe(true); expect(r.body.stateHash).toBe(parityHash(client.s));
-    expect(r.body.doc.gems).toBe(17692); expect(r.body.doc.paidGems).toBe(client.s.paidGems);
+    expect(r.body.doc.gems).toBe(17692); expect(r.body.doc.paidGems).toBe(4000 - 2308); expect(r.body.doc.paidGems).toBe(client.s.paidGems);
     expect(r.body.doc.roster.owned).toContain('mage');
     expect(r.body.doc.heroes.mage.level).toBe(client.s.heroes.mage.level);
     const again = await h.cmd(a.token, 'buyHero', ['mage']);
@@ -177,7 +197,8 @@ describe('화면', () => {
     const eco = chosen('knight', { unlocked: 5 });
     expect(heroBuyButtonHtml(eco, 'mage')).toBe('');            // 꺼짐: 아무것도 그리지 않는다
     on();
-    expect(heroBuyButtonHtml(eco, 'mage')).toContain('보석으로 바로 영입');
+    const html = heroBuyButtonHtml(eco, 'mage');
+    expect(html).toContain('보석으로 바로 영입'); expect(html).toContain('유료 보석'); expect(html).toContain('중복 조각·각성·별 재료는 포함되지 않고');
     expect(heroBuyButtonHtml(eco, 'knight')).toBe('');          // 소유 영웅 제외
     eco.s.progress.unlocked = HERO_CAMPAIGN_JOIN.mage;
     expect(heroBuyButtonHtml(eco, 'mage')).toBe('');            // 곧 무료 합류
