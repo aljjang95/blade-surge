@@ -48,3 +48,10 @@
 
 /* The selected model must remain scrollable on short and portrait screens. */
 .rpg-split .rpg-detail{position:static}
+/* 레벨업 연출(2026-10-29): 머리 위 금빛 레벨 숫자와 짧은 팝 배너. 상자 없이 글자만 띄워 플레이 영역을 덮지 않는다. */
+.dmg.status.levelup{padding:0 4px;border:0;background:none;font-family:var(--disp);font-size:clamp(24px,3.6vw,34px);font-weight:900;letter-spacing:.04em;color:#fff1b8;text-shadow:0 0 14px #ffb63a,0 0 4px #ffde8a,0 3px 0 #6b3d00;animation:levelUpNum 1.05s cubic-bezier(.16,.9,.28,1) forwards}
+.dmg.status.levelup::before{content:'▲';margin-right:3px;font-size:.6em;color:#7feac0;text-shadow:0 0 8px #2fd29a}
+@keyframes levelUpNum{0%{opacity:0;transform:translate(calc(-50% + var(--dmg-x,0px)),-50%) scale(.4)}18%{opacity:1;transform:translate(calc(-50% + var(--dmg-x,0px)),-64%) scale(1.25)}35%{transform:translate(calc(-50% + var(--dmg-x,0px)),-72%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dmg-x,0px)),calc(-50% - 64px)) scale(.96)}}
+.rpg-announcement.levelup-pop-in{background:linear-gradient(180deg,#fff7d6,#ffd36a 55%,#e8a63a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px #ffb63a99) drop-shadow(0 2px 0 #3a2200);letter-spacing:.08em;animation:levelUpBanner 1.6s cubic-bezier(.16,.9,.28,1) forwards}
+@keyframes levelUpBanner{0%{opacity:0;transform:translateX(-50%) scale(.6)}14%{opacity:1;transform:translateX(-50%) scale(1.12)}26%{transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.98)}}
+@media (prefers-reduced-motion:reduce){.dmg.status.levelup,.rpg-announcement.levelup-pop-in{animation-duration:.01s;animation-fill-mode:none}}
