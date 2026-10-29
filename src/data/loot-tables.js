@@ -103,3 +103,10 @@ export function dropItemLevel(stage) {
   const il = recommendedLevel(stage.ch, stage.st);
   return il > 1 ? il : 0;
 }
+/** 진행 장비 레벨: 지금까지 깬 가장 깊은 본편 관문의 드랍 장비 레벨(progress.unlocked 는 다음에 열린 관문). 하나도 못 깼으면 0.
+ *  스테이지가 없는 획득(가챠·제작·상점·보상)과 il 도입 전 장비의 이월이 같은 진행의 필드 드랍과 같은 단계에 서게 한다. */
+export function progressItemLevel(progress) {
+  const cleared = Math.min(CHAPTER_COUNT * STAGES_PER_CHAPTER, Math.floor(Number(progress?.unlocked) || 1) - 1);
+  if (cleared < 1) return 0;
+  return dropItemLevel({ ch: Math.floor((cleared - 1) / STAGES_PER_CHAPTER) + 1, st: (cleared - 1) % STAGES_PER_CHAPTER + 1 });
+}

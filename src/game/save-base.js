@@ -1,6 +1,7 @@
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
 import { ITEM_LEVEL_MAX } from '../data/item-tier.js';
+import { progressItemLevel } from '../data/loot-tables.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { GACHA_BANNERS } from '../data/gacha-banners.js';
@@ -133,6 +134,13 @@ export function normalizeSave(raw, fresh) {
     // 장 확장 뒤에도 이전 마지막 관문의 실제 완료 별점으로 다음 장을 연다.
     if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
+  // il(스테이지 장비 레벨) 도입 전 장비 이월(한 번): il·tp 가 없는 장비는 지금까지 깬 가장 깊은 관문의 장비 레벨을 받는다.
+  // 이월하지 않으면 il 이 붙은 새 필드 드랍(하위 등급)이 기존 유니크·레전드리보다 세게 나왔다(2026-10-29 신고). 새 저장은 gearIl 이 이미 1이다.
+  if (raw.gearIl !== 1) {
+    const il = progressItemLevel(s.progress);
+    if (il > 1) for (const item of s.inventory) if (!item.tp && !item.il) item.il = il;
+  }
+  s.gearIl = 1;
   if (!['story', 'adept', 'nightmare', 'hell'].includes(s.progress.difficulty) && !/^torment-([1-9]\d?)$/.test(s.progress.difficulty)) s.progress.difficulty = 'story';
   // 캠페인 마을: 값이 없는 기존 저장은 이미 해금한 가장 먼 마을을 보여 주고 축하는 다시 하지 않는다.
   const town = resolveCampaignTown(s.progress, record(raw.campaignTown) ? raw.campaignTown : null);

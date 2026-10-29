@@ -26,7 +26,7 @@ import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
-import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel, dropItemLevel } from '../data/loot-tables.js';
+import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel, dropItemLevel, progressItemLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
 import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
@@ -186,7 +186,7 @@ export class Economy {
   fresh() {
     return {
       expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), legend: normalizeLegend(), actionSequence: 0,
-      schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      schemaVersion: 1, gearIl: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
@@ -634,21 +634,24 @@ export class Economy {
   }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault(), il = 0) {
+  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault(), il = null) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
     // tp: 고통 단계 장비 파워(드랍된 단계). 0 이면 필드를 두지 않아 기존 장비와 같은 모양이다.
-    // il: 스테이지 장비 레벨(필드 드랍이 나온 스테이지의 권장 레벨). 없으면 필드를 두지 않아 기존 장비와 같다. 고통 단계(tp) 장비에는 붙이지 않는다.
+    // il: 스테이지 장비 레벨(필드 드랍이 나온 스테이지의 권장 레벨). 0 이면 필드를 두지 않는다. 고통 단계(tp) 장비에는 붙이지 않는다.
+    // 생략(null)하면 지금 진행 단계의 장비 레벨(가챠·제작·보상) — pushItem 참고.
     return this.pushItem(def.id, { tp, owner, il });
   }
   // ---------- 장비 귀속 · 금고 (docs/GEAR_OWNERSHIP_VAULT.md) ----------
   /** 새 장비의 주인: 진행 중인 전투 장부의 영웅, 없으면 지금 고른 영웅. */
   gearOwnerDefault() { const led = this._fieldRewards; return led && !led.settled && this.s.heroes[led.heroId] ? led.heroId : this.s.selected; }
   /** 장비 인스턴스 하나를 인벤토리에 넣는다(모든 획득 경로의 단일 형태). */
-  pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = 0 } = {}) {
-    const lv = tp > 0 ? 0 : validItemLevel(il);   // il = 스테이지 장비 레벨(item-tier.js). 없으면 필드를 두지 않는다.
+  pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = null } = {}) {
+    // il = 스테이지 장비 레벨(item-tier.js). 필드 드랍은 그 스테이지 값을 명시하고(0 이면 필드 없음), 생략한 경로(가챠·제작·상점·보상)는
+    // 지금까지 깬 가장 깊은 관문의 장비 레벨을 받는다. 생략 경로가 il 없이 나오면 같은 진행의 필드 드랍 하위 등급이 유니크·레전드리를 이겼다(2026-10-29 신고).
+    const lv = tp > 0 ? 0 : validItemLevel(il === null || il === undefined ? progressItemLevel(this.s.progress) : il);
     const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(lv ? { il: lv } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
     this.s.inventory.push(inst);
     if (inst.owner !== VAULT_OWNER) recordGearDex(this.s, 'drop', inst.owner, id);   // 직접 얻은 장비만 드랍 도감에(일반 꺼내기·장착은 등재하지 않는다)
