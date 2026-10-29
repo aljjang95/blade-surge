@@ -639,7 +639,7 @@ export const SKILLS = {
   },
   thousand: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0x9a4cff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); game.renderer.flashScreen?.(0.35, 0x2a0a60); },
+    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0x9a4cff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); game.renderer.flashScreen?.(0.18, 0x2a0a60); },
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
