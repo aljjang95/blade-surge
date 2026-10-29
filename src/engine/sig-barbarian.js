@@ -138,7 +138,6 @@ export function barbRushEnd(game, center, f) {
   const impact = game?.fx?.impact; if (!live(impact) || !center || game.app?.reducedMotion?.matches) return 0;
   const lite = !!game.fx.lite, before = impact.spawned;
   impact.mark(center, DEEP_CRIMSON, { radius: THORN_MAX, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
-  impact._emit(IMPACT_KIND.ring, center.x, .6, center.z, 4.5, EMBER, .3, { grow: 1 });
   // 사방 균열 대신 밀어붙인 방향(±40°)으로만 달려 나가는 균열 부채: 돌진의 화살촉 실루엣이 끝에서 앞으로 터진다.
   _p.copy(center).setY(0);
   runningFissures(impact, _p, f, lite ? 3 : 5, 7.5, .7, EMBER, { speed: 40, width: .16, shards: false });
@@ -340,11 +339,11 @@ export const SIGNATURES = {
       if (!lite) earthSpikes(impact, _p, 3, .9, 1.5, EMBER, { delay: d, h: 1.8, width: .24, out: .8, phase: a });
       debris(impact, _p.x, _p.z, lite ? 1 : 2, MOLTEN, { delay: d, up: 9, out: 2.4, phase: a });
     }
-    // .75초 육망성: 각 기둥에서 두 칸 건너 기둥으로(길이 R√3 ≈ 8m), 짙은 색으로 낮춰 바닥이 바래지 않게.
+    // .75초 육망성: 각 기둥에서 두 칸 건너 기둥으로(길이 R√3 ≈ 8m). 가는 선이라 원색 그대로 둬도 바닥이 바래지 않는다(iter1: 짙은 색은 장판 원화에 묻힘).
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * TAU + A0, b = ((i + 2) / 6) * TAU + A0;
       _a.set(c.x + Math.cos(a) * R, .07, c.z + Math.sin(a) * R); _g.set(Math.cos(b) * R - Math.cos(a) * R, 0, Math.sin(b) * R - Math.sin(a) * R);
-      impact.beam(_a, _g, R * Math.sqrt(3), i % 2 ? DEEP_CRIMSON : DEEP_EMBER, { speed: 32, width: .11, delay: .75, fade: 1 });
+      impact.beam(_a, _g, R * Math.sqrt(3), i % 2 ? CRIMSON : EMBER, { speed: 32, width: .13, delay: .75, fade: 1 });
     }
     lavaFissures(impact, c, lite ? 3 : 5, 1, 6.4, CRIMSON, { delay: .75, speed: 30, width: .08, fade: 1 });
     impact.mark(c, GOLD, { radius: 1.6, life: .5, style: MARK_STYLE.compass, delay: .75 });
@@ -361,12 +360,11 @@ export const SIGNATURES = {
         _a.set(c.x + Math.cos(a0 + da0) * r0, .08, c.z + Math.sin(a0 + da0) * r0);
         _g.set(c.x + Math.cos(a0 + da1) * r1 - _a.x, 0, c.z + Math.sin(a0 + da1) * r1 - _a.z);
         const L = _g.length();
-        impact.beam(_a, _g, L, k % 2 ? CRIMSON : BLOOD, { speed: SP, tail: 4, width: .18, delay: t });
+        impact.beam(_a, _g, L, k % 2 ? EMBER : CRIMSON, { speed: SP, tail: 4, width: .22, delay: t });
         t += L / SP;
       }
     }
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 4, CRIMSON, .24, { angle: -Math.PI / 2 + .3, grow: .7 });
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
     lavaFissures(impact, c, lite ? 3 : 6, .6, 5, BLOOD, { speed: 50, width: .16 });
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 5, EMBER, .26, { angle: -Math.PI / 2 - .3, grow: .7, delay: .2 });
     impact.mark(c, DEEP_EMBER, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
@@ -381,7 +379,7 @@ export const SIGNATURES = {
   },
   // 종말·화산심장(각성 4) — '혜성 낙하 → 화산탄 분수': 착탄점에 금빛 나침 + 진홍 가시 표식(조준), 도약 정점(영웅 뒤 3m·위 7.5m)에서
   // 착탄점으로 비스듬히 내리꽂는 불의 궤적 두 줄이 .3초(판정 순간)에 닿는다. 분화: 중심 불기둥 + 금빛 심, 포물선으로 솟아 바깥에
-  // 떨어지는 화산탄 마름모 분수, 용암 균열, 고리 하나, .16초 뒤 바깥 6~8.5m 여진 바위 가시.
+  // 떨어지는 화산탄 마름모 분수, 용암 균열(빌보드 고리 없음: 크림 원판), .16초 뒤 바깥 6~8.5m 여진 바위 가시.
   cataclysm(ctx) {
     const { impact, player, at, f, lite } = ctx; const T = .3;
     impact.mark(at, GOLD, { radius: 2, life: T + .15, style: MARK_STYLE.compass });
@@ -401,7 +399,6 @@ export const SIGNATURES = {
       impact._emit(IMPACT_KIND.shard, at.x, .6, at.z, .42, i % 3 ? MOLTEN : GOLD, .9,
         { vx: Math.cos(a) * s, vy: 11 + impact.rng.next() * 4, vz: Math.sin(a) * s, angle: a, stretch: 1.6, grow: .9, gravity: 22, delay: T });
     }
-    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 5.5, EMBER, .38, { grow: 1, delay: T });
     lavaFissures(impact, at, lite ? 6 : 10, 1, 11, EMBER, { speed: 65, delay: T, width: .14 });
     earthSpikes(impact, at, lite ? 3 : 7, 6, 8.5, CRIMSON, { delay: T + .16, h: 2.6, width: .32, out: .9, phase: .2 });
     risingEmbers(impact, at, lite ? 4 : 8, 4, FLAME, { delay: T, rise: 10 });
