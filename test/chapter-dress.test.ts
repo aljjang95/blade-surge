@@ -359,7 +359,8 @@ test('가독성 2차: 6장 서두르는·바닷길·이끼 승객, 7장 늦은·
   const ROSTER = MONSTER_ROSTER as Record<string, any>;
   for (const [ch, ids] of groups) {
     // 같은 몸을 쓰는 갈래끼리 (소품 묶음 + 손 소켓) 윤곽 서명이 겹치지 않는다. 몸빛(color)은 서명에 넣지 않는다.
-    const sign = (id: string) => { const r = ROSTER[ENEMIES[id].model]; return JSON.stringify([[...pick(ch, id)].sort(), r.weapon?.asset || null, r.offhand?.asset || null]); };
+    const E = ENEMIES as Record<string, any>;
+    const sign = (id: string) => { const r = ROSTER[E[id].model]; return JSON.stringify([[...pick(ch, id)].sort(), r.weapon?.asset || null, r.offhand?.asset || null]); };
     const signs = ids.map(sign);
     expect(new Set(signs).size, `${ch}장 ${ids.join(',')} ${signs.join(' ')}`).toBe(ids.length);
   }
@@ -367,7 +368,7 @@ test('가독성 2차: 6장 서두르는·바닷길·이끼 승객, 7장 늦은·
   expect(pick(6, 'ch6_passenger_tide')).toContain('tideOar');
   expect(pick(6, 'ch6_passenger_moss')).toContain('mossCap');
   expect(pick(7, 'ch7_citizen_late')).toContain('lateScarf');
-  expect(ROSTER[ENEMIES.ch7_citizen_late.model].weapon.asset).toBe('tll_ch1_handbell');
+  expect(ROSTER[(ENEMIES as Record<string, any>).ch7_citizen_late.model].weapon.asset).toBe('tll_ch1_handbell');
   expect(pick(7, 'ch7_citizen_hauler')).toContain('haulerRope');
   expect(pick(7, 'ch7_citizen_fuse')).toContain('fuseKeg');
   expect(pick(7, 'ch7_tuner_echo')).toContain('echoRings');
@@ -422,23 +423,24 @@ test('6장 심층 전술 공략의 표식 대상은 장 전용 몸으로 나와�
 
 test('5장 법정 경로(와 모든 5장 관문)에는 옛 몸이 섞이지 않는다: 편성·던전 대장·주술사 소환까지 5장 몸', () => {
   const { chapterSpeciesId, speciesSourceId } = require('../src/data/stages.js');
+  const E = ENEMIES as Record<string, any>;
   let tribunal = 0;
   for (let st = 1; st <= 10; st++) {
     const s: any = stageDef(5, st), R = s.combatRosterFor();
     if (s.dungeon.id === 'tribunal') tribunal++;
     const spawnable = new Set<string>([...R.trash, ...R.ranged]);
-    for (const id of [...spawnable]) if (ENEMIES[id].summon) spawnable.add(ENEMIES[id].summon);
-    for (const bossId of [s.encounter.enemyId, s.dungeonBossId].filter(Boolean)) spawnable.add(ENEMIES[bossId].summon || 'skel_minion');
+    for (const id of [...spawnable]) if (E[id].summon) spawnable.add(E[id].summon);
+    for (const bossId of [s.encounter.enemyId, s.dungeonBossId].filter(Boolean)) spawnable.add(E[bossId].summon || 'skel_minion');
     for (const raw of spawnable) {
       const id = chapterSpeciesId(s, raw);
-      expect(id !== speciesSourceId(id) && /^Ch5_/.test(ENEMIES[id].model), `${s.code} ${s.dungeon.id} ${raw}→${id} ${ENEMIES[id].model}`).toBe(true);
+      expect(id !== speciesSourceId(id) && /^Ch5_/.test(E[id].model), `${s.code} ${s.dungeon.id} ${raw}→${id} ${E[id].model}`).toBe(true);
     }
     // 보상 명단은 그대로다.
     for (const id of [...s.rosterFor().trash, ...s.rosterFor().ranged, ...s.rosterFor().elite]) expect(id.startsWith('ch5_'), `${s.code} ${id}`).toBe(false);
   }
   expect(tribunal).toBeGreaterThanOrEqual(4);
   // 소환 갈래는 원본 수치 그대로(환영 사냥개의 보라 색조만 뺐다).
-  expect(ENEMIES.ch5_dawnninja_mirage.hp).toBe(ENEMIES.mirage_hound.hp);
-  expect(ENEMIES.ch5_dawnninja_mirage.tint).toBeUndefined();
-  expect(ENEMIES.ch5_crownsoldier_levy.atk).toBe(ENEMIES.orc_blob.atk);
+  expect(E.ch5_dawnninja_mirage.hp).toBe(E.mirage_hound.hp);
+  expect(E.ch5_dawnninja_mirage.tint).toBeUndefined();
+  expect(E.ch5_crownsoldier_levy.atk).toBe(E.orc_blob.atk);
 });

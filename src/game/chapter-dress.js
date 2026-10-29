@@ -18,7 +18,7 @@ const C = {
   seaWood: 0x4a3a2a, barnacle: 0xc9c3b0, coral: 0xd9785e, kelp: 0x2f5a46, rust: 0x6a4a36, brass: 0x9a7a3c, glowAbyss: 0x58e0d2, glowLure: 0xd8fff4,
   gold: 0xd8b25a, goldDark: 0x9a7a34, violet: 0x4a2f6a, violetDark: 0x2a1a40, glowDawn: 0xffd27a, glowViolet: 0xd9a8ff,
   brassOld: 0xa89060, brassDark: 0x6e5a36, oak: 0x5a4430, glowBrass: 0xffe0a0,
-  leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
+  leather: 0x5b3a22, leatherDark: 0x3b2516, soot: 0x2b2826, steel: 0x6d7175, clay: 0x8a5a3c, rope: 0xc8a46a, glowEmber: 0xff8a3c, glowHot: 0xffc46a,
 };
 
 /** 정점색을 칠하고 위치·회전을 굽는다. */
@@ -483,7 +483,7 @@ const PROPS = {
   }) },
   // 7장 종루 짐꾼: 가슴을 가로지른 굵은 밧줄 타래 — 앞에서도 짐꾼임이 보인다(등의 종추와 함께).
   haulerRope: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .0, .02], rot: [0, 0, -35], scale: 1.45, build: (h) => ({
-    solid: [piece(new THREE.TorusGeometry(.11 * h, .016 * h, 5, 16), C.clay, [0, 0, 0], [90, 0, 0], [1.15, .85, 1]), piece(new THREE.TorusGeometry(.1 * h, .013 * h, 5, 16), C.leather, [0, -.02 * h, 0], [90, 0, 0], [1.15, .85, 1]),
+    solid: [piece(new THREE.TorusGeometry(.12 * h, .024 * h, 5, 16), C.rope, [0, 0, 0], [90, 0, 0], [1.15, .85, 1]), piece(new THREE.TorusGeometry(.115 * h, .02 * h, 5, 16), C.clay, [0, -.035 * h, 0], [90, 0, 0], [1.15, .85, 1]),
       piece(new THREE.BoxGeometry(.04 * h, .04 * h, .04 * h), C.brassDark, [0, 0, .09 * h])],
     glow: [],
   }) },

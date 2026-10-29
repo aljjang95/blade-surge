@@ -447,7 +447,7 @@ const ECHO_GLOW = '#13403a';
 
 /**
  * 이 관문의 적에게 입힐 의상. 원정(전용 로스터·아트)은 제외한다 — 6장 심층 원정만 6장 몸·의상을 입는다(stages.js speciesStageOf).
- * @param {{ expedition?: { depth?: string } | null, ch?: number, st?: number, chapter?: { id?: number }, dungeon?: { id?: string } | null } | null | undefined} stage
+ * @param {{ expedition?: { depth?: string, [key: string]: unknown } | null, ch?: number, st?: number, chapter?: { id?: number }, dungeon?: { id?: string } | null } | null | undefined} stage
  * @param {string} species 런타임 적 id
  * @param {string | null | undefined} asset 실제 로드된 라이브러리 asset id
  * @returns {DressSpec | null}
