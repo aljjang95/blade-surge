@@ -214,7 +214,7 @@ export const SIGNATURES = {
     _d.set(-f.z, 0, f.x);
     for (let i = 0; i < 3; i++) {
       const d = i * .12, hit = d + FLY, c = BEAT[i], side = (i - 1) * .22;
-      // 창 다발: 박자마다 옆 간격만 다른 밝은 심(금 → 금연두 → 뜨거운 금) + 바닥 진한 쌍나선 번짐.
+      // 창 다발: 박자마다 옆 간격만 다른 가는 심(금 → 금연두 → 금, 흰 기둥이 되지 않게 .14m) + 바닥 진한 쌍나선 번짐.
       _e.copy(o).addScaledVector(_d, side);
       impact.beam(_e, f, AIM + 5, i === 1 ? LIME : GOLD, { speed: SPEED, tail: 4, width: .14, delay: d });
       _e.copy(player.pos).setY(.1).addScaledVector(_d, side);
@@ -279,7 +279,7 @@ export const SIGNATURES = {
     for (let j = 0; j < n; j++) {
       const d = (1 + j * (8 / (n - 1))) * k, th = j * (12 / n) * 1.1, r = 1 + j * (.6 / n);
       const c = Math.cos(th), s = Math.sin(th);
-      impact._emit(IMPACT_KIND.streak, player.pos.x + f.x * d + _d.x * c * r, 1 + s * r, player.pos.z + f.z * d + _d.z * c * r, .3, j % 3 === 1 ? GOLD : j % 3 ? JADE : LIME, .32,
+      impact._emit(IMPACT_KIND.streak, player.pos.x + f.x * d + _d.x * c * r, 1 + s * r, player.pos.z + f.z * d + _d.z * c * r, .42, j % 3 === 1 ? GOLD : j % 3 ? JADE : LIME, .36,
         { vx: -_d.x * s * 7 + f.x * 6, vy: c * 7, vz: -_d.z * s * 7 + f.z * 6, stretch: 1, grow: 1, delay: d / SPEED });
     }
     for (let w = 0; w < 3; w++) {
@@ -300,7 +300,7 @@ export const SIGNATURES = {
   },
   // 천궁 · 유성화살비(실루엣 = 하늘에서 비스듬히 꽂히는 유성 다섯 줄): 위치 예고(큰 금 원화)는 skills.js 의 groundTex 가 맡으므로
   // 서명은 큰 나침 고리를 더 겹치지 않는다(백화). 착탄점마다 작은 조준 원 → 판정 순간(.16+i×.09초)에 정확히 꽂히는 유성
-  // (진한 비취 번짐 + 금연두 쌍나선 꼬리 + 금 심) → 금·금연두 고리, 별빛, 진한 가시 자국, 사방으로 튀는 파편.
+  // (진한 비취 번짐 + 금연두 쌍나선 꼬리 + 금 심, 꽂힌 뒤 비스듬한 꼬리 잔상) → 금·금연두 고리, 별빛, 진한 가시 자국, 사방으로 튀는 파편.
   skyfall_arrows(ctx) {
     const { impact, at, lite } = ctx;
     const FALL = 16, SPEED = 110;
@@ -313,6 +313,8 @@ export const SIGNATURES = {
       if (!lite) impact.beam(_a, _d, len, DEEP, { speed: SPEED, tail: 10, width: .42, delay: start });
       impact.beam(_a, _d, len, LIME, { speed: SPEED, tail: 6, width: .26, style: BEAM_STYLE.gale, delay: start });
       impact.beam(_a, _d, len, i % 2 ? GOLD_HOT : GOLD, { speed: SPEED, tail: 7, width: .14, delay: start });
+      // 유성 꼬리 잔상: 낙하가 .15초로 짧아 눈에 남지 않으므로, 꽂힌 순간 하늘→착탄점 비스듬한 바람 줄이 잠깐 남는다(사선 실루엣).
+      if (!lite) impact.beam(_a, _d, len, i % 2 ? LIME : JADE, { width: .24, style: BEAM_STYLE.gale, fade: .32, delay: hitT });
       impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 1.8, c, .28, { grow: 1, delay: hitT });
       impact._emit(IMPACT_KIND.star, _b.x, .5, _b.z, 1.1, GOLD, .1, { angle: .3 + i, grow: .5, delay: hitT });
       if (!lite) {
