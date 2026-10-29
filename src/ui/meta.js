@@ -26,6 +26,7 @@ import { paymentNoticeHtml, legalLinksHtml, INSTANT_GRANT_CONSENT } from './lega
 import './legal-links.css';
 import { revealPlan } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
+import { heroBuyButtonHtml } from './hero-buy.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { createFunnelLog } from '../game/funnel-events.js';
@@ -389,16 +390,28 @@ export class Meta {
         <div class="hl-info"><h2>${esc(def.name)}</h2><div class="sub">${esc(cmp.role)}</div><p class="hl-intro">${esc(cmp.intro)}</p>${compareBarsHtml(cmp)}</div></section>
       <div class="hl-boards">
         <section class="hl-box" data-lock="free"><h3>${viaCampaign ? '이야기 합류' : viaGacha ? '소환으로 획득' : '무료 해금'}</h3><p class="hl-lead">${viaCampaign ? '캠페인을 진행하면 이 영웅이 동료로 합류합니다. 소환으로도 얻을 수 있어요.' : viaGacha ? '이 영웅은 소환에서 얻을 수 있습니다.' : '특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.'}</p>${freeRows}${viaGacha ? `<p class="hl-why" id="hl-why">영웅 소환(2주 교대 픽업)과 초보자 소환에서 나옵니다. 이미 가진 영웅이 나오면 조각 ${GACHA.dupShards}개로 바뀌어 초월에 쓰입니다.</p>` : why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
+        ${heroBuyButtonHtml(this.eco, id)}
         ${viaGacha || joinPending ? '' : `<section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>`}
         ${!viaGacha && !joinPending && allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
         ${viaGacha ? '' : '<p class="hl-note"><i aria-hidden="true">!</i>결제는 서버 확인 후 지급됩니다.</p>'}
       </div></div>`;
     det.querySelector('#h-free').onclick = () => (viaGacha ? this.openTab('gacha', 'hero') : this.unlockHeroFree(id));
+    const gemBuy = det.querySelector('#h-gem-buy'); if (gemBuy) gemBuy.onclick = () => this.buyHeroWithGems(id);
     const buy = det.querySelector('#h-buy'); if (buy) buy.onclick = () => this.buyHero(heroProductId(id), id);
     const all = det.querySelector('#h-buy-all'); if (all) all.onclick = () => this.buyHero(HERO_ALL_PRODUCT_ID, id);
   }
   /** 다음 열릴 관문 번호 → '3-5' 식 표기(마지막으로 깬 관문). */
   stageLabel(unlocked) { const cleared = Math.max(1, unlocked - 1); return Math.ceil(cleared / STAGES_PER_CHAPTER) + '-' + (((cleared - 1) % STAGES_PER_CHAPTER) + 1); }
+  /** 보석 직접 영입(HERO_DIRECT_PURCHASE.enabled 일 때만 버튼이 있다). 확인창 → Economy.buyHero(서버 명령 큐가 같은 규칙으로 정산). */
+  async buyHeroWithGems(id) {
+    const q = this.eco.heroBuyQuote(id), def = HEROES[id]; if (!q.ok) { audio.play('ui_error'); return; }
+    const ok = await this.ui.confirm('영웅 영입', `${esc(def.name)}을(를) 보석 ${fmt(q.price)}개로 바로 영입할까요?<br>영입하면 되돌릴 수 없습니다.`, { ok: '영입' });
+    if (!ok) return;
+    const r = this.eco.buyHero(id);
+    if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 영입을 취소했습니다. 보석은 그대로입니다' : r?.reason === 'gems' ? '보석이 부족합니다' : '지금은 영입할 수 없습니다', 'red'); audio.play('ui_error'); this.renderHeroes(); return; }
+    audio.play('jingle_win0', { vol: 0.5 }); this.ui.toast(`${def.name} 영입!`, 'gold');
+    this.heroSel = id; this.renderHeroes(); this.refreshTop();
+  }
   async unlockHeroFree(id) {
     const q = this.eco.heroUnlockQuote(id), def = HEROES[id]; if (!q.canFree) { audio.play('ui_error'); return; }
     const ok = await this.ui.confirm('영웅 해금', `${esc(def.name)}을(를) 보석 ${fmt(q.gems)}개로 해금할까요?<br>해금하면 되돌릴 수 없습니다.`, { ok: '해금' });
