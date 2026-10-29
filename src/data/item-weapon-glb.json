@@ -37,6 +37,18 @@
       }
     },
     {
+      "id": "w_guard",
+      "form": "sword",
+      "file": "/models/item-weapons/w_guard.glb",
+      "sha256": "ed27f990eadd155de118fe2d125615213bc1872327355306382c00fddb249336",
+      "bytes": 504812,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "139c93a4-b2cc-4552-97a5-c2a3c05e2221",
+        "concept": "city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it"
+      }
+    },
+    {
       "id": "w_hunter",
       "form": "sword",
       "file": "/models/item-weapons/w_hunter.glb",
