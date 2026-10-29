@@ -411,8 +411,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch7_citizen_ledger: { emissive: '#140f04' },
       // 뼈 오크 자리(분쇄): 종루 짐꾼 — 그을린 청동 몸빛, 등에 종추.
       ch7_citizen_hauler: { color: '#9a7c52', amount: 0.4, emissive: '#140f04', props: ['clapperBack'] },
-      // 폭탄 슬라임 자리: 자폭 경고 — 붉은 금 발광(색조는 원본 금빛 그대로).
-      ch7_citizen_fuse: { emissive: '#4a2408' },
+      // 폭탄 슬라임 자리: 자폭 경고 — 그을린 황동 몸빛과 붉은 금 발광(첫 근접 캡처에서 맨손 시민과 구분이 약해 올렸다).
+      ch7_citizen_fuse: { color: '#c89a5a', amount: 0.35, emissive: '#6a2a06' },
       ch7_tuner: { emissive: '#140f04' },
       // 해골 사제 자리(지원 소환): 명부를 낭송하는 주술사 — 따뜻한 황동 발광.
       ch7_tuner_cantor: { color: '#e0c68c', amount: 0.25, emissive: '#2a1e08' },
