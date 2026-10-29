@@ -97,6 +97,18 @@
       }
     },
     {
+      "id": "w_knight",
+      "form": "sword",
+      "file": "/models/item-weapons/w_knight.glb",
+      "sha256": "b4f2ff8119dae3b0fec50da55edc99cde9f731d534d485c2287542e04b2cd661",
+      "bytes": 554968,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "b73938b8-24cc-44b7-a206-5faac25a16ce",
+        "concept": "knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
       "id": "w_rune",
       "form": "sword",
       "file": "/models/item-weapons/w_rune.glb",
