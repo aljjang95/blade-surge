@@ -45,6 +45,6 @@ bun run check
 
 ## 다음 단계 (2026-10-30)
 
-- 2차(기본 드롭 11: w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) 등록 완료. 1차 4자루와 합쳐 매니페스트 15자루. 3차(U 테마 9) 중 w_storm·w_blood·w_gravity·w_phoenix·w_rime·w_plague 6자루 등록(총 21자루), w_sigil·w_chain·w_void는 생성 중. 남은 것은 3차 잔여 3 → 4차 → 5차.
+- 2차(기본 드롭 11: w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) 등록 완료. 1차 4자루와 합쳐 매니페스트 15자루. 3차(U 테마 9) 전부 등록(w_storm·w_blood·w_gravity·w_phoenix·w_rime·w_plague·w_sigil·w_chain·w_void, 총 24자루). 남은 것은 4차 도감·마을 → 5차 원정.
 - 나머지 검성 무기(1·2차 제외)의 우선순위·참조 아이콘: `art-src/gear-icons/weapon-3d-queue.json`(2차 기본 드롭 11 → 3차 U 테마 9 → 4차 도감·마을 15 → 5차 원정 3). 병기고 6종은 병기고 GLB 경로, 소환 2종은 검 형태가 아니라 제외.
 - 다른 직업 형태(광전사 도끼, 마법사 지팡이, 도적 쌍단검, 궁수 활) 후보: 대표님 요청 취지("아이콘 정체성대로 보이는 무기")상 다음 단계. 매니페스트 키를 `{id, form}`으로 넓히고 형태별 원화를 같은 아이콘 정체성으로 만든다. 그때 `public/img/item-renders/forms/` 215장(옛 그림)도 같은 톤으로 다시 그린다.
