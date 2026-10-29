@@ -120,6 +120,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
       else base.setScalar(0);
       // 강화 빛: 무기 자체가 속성색으로 달아오른다(+6 부터). 위에서 base 를 매번 새로 정하므로 다시 불러도 쌓이지 않는다.
       if (owner === 'w' && wCol && enhGlow > 0) base.add(_enh.copy(wCol).multiplyScalar(enhGlow));
+      // 텍스처 GLB 무기(item-weapon-glb)는 발광이 무늬를 덮지 않게 줄여 칠한다.
+      if (owner === 'w' && material.userData.emissiveScale) base.multiplyScalar(material.userData.emissiveScale);
       material.emissive.copy(base);
     }
   });

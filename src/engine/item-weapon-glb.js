@@ -6,6 +6,8 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import MANIFEST from '../data/item-weapon-glb.json';
 
 export const ITEM_WEAPON_GLB_FORMS = Object.freeze(['sword', 'greatsword']);
+/** 텍스처가 있는 GLB 무기는 등급·강화 발광을 이 비율로만 칠한다(절차적 무기 대비). */
+export const ITEM_WEAPON_GLB_EMISSIVE_SCALE = 0.4;
 export const ITEM_WEAPON_GLB_BUDGET = Object.freeze({ triangles: 4000, textureMax: 1024 });
 
 const records = new Map();   // id → { form, geometry, material }
@@ -65,12 +67,18 @@ function bakeRecord(entry, gltf) {
   if (!(box.min.y < 0 && box.max.y > 0)) throw Error('무기 GLB 손잡이 원점이 길이축(+Y) 안에 없음');
   geometry.computeBoundingSphere();
   const source = mesh.material;
+  // Tripo 재질은 metallicRoughness 텍스처에 기대어 metalness=1·roughness=1 을 둔다. 텍스처를 버리면 전부 금속(환경광 없으면 검정)이 된다.
+  const metalnessMap = source.metalnessMap || null, roughnessMap = source.roughnessMap || null;
   const material = new THREE.MeshStandardMaterial({
-    map: source.map || null, normalMap: source.normalMap || null,
-    roughness: source.roughness ?? .5, metalness: source.metalness ?? .6,
-    // 강화 빛(look.js)이 emissive 를 칠한다. 텍스처 발광은 쓰지 않아 칠한 색이 그대로 보인다.
-    emissive: new THREE.Color(0), emissiveMap: null, vertexColors: false,
+    map: source.map || null, normalMap: source.normalMap || null, metalnessMap, roughnessMap,
+    roughness: roughnessMap ? (source.roughness ?? 1) : (source.roughness ?? .5),
+    metalness: metalnessMap ? (source.metalness ?? 1) : Math.min(source.metalness ?? .6, .6),
+    // 강화 빛(look.js)이 emissive 를 칠한다. 발광을 색 텍스처로 곱해 무늬가 남게 하고(단색 덩어리 방지),
+    // look.js 는 userData.emissiveScale 로 절차적 무기보다 약하게 칠한다.
+    emissive: new THREE.Color(0), emissiveMap: source.map || null, vertexColors: false,
+    side: source.side ?? THREE.FrontSide,
   });
+  material.userData.emissiveScale = ITEM_WEAPON_GLB_EMISSIVE_SCALE;
   material.name = `ItemWeaponGlb_${entry.id}`;
   if (material.map) material.map.colorSpace = THREE.SRGBColorSpace;
   mesh.geometry.dispose(); source.dispose();

@@ -105,7 +105,11 @@ test('런타임: 매니페스트에 있고 형태가 같으면 GLB 지오메트�
   const [material] = createItemMaterial(weapon, 'sword');
   expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
   expect((material as THREE.MeshStandardMaterial).vertexColors).toBe(false);
-  expect((material as THREE.MeshStandardMaterial).emissiveMap).toBeNull();
+  // 발광은 색 텍스처로 곱하고(픽스처에 텍스처가 없으면 null) 절차적 무기보다 약하게 칠한다.
+  expect((material as THREE.MeshStandardMaterial).emissiveMap).toBe((material as THREE.MeshStandardMaterial).map);
+  expect(material.userData.emissiveScale).toBeGreaterThan(0);
+  expect(material.userData.emissiveScale).toBeLessThan(1);
+  expect((material as THREE.MeshStandardMaterial).metalness).toBeLessThanOrEqual(1);
   expect((material as THREE.MeshStandardMaterial).emissive.getHex()).toBe(0);
   // look.js 의 강화 빛은 emissive 를 직접 칠한다.
   (material as THREE.MeshStandardMaterial).emissive.set('#ff8800');
