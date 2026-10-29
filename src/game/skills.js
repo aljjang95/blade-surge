@@ -259,6 +259,7 @@ export const SKILLS = {
   },
   ranger_quickshot: {
     dur: .8,
+    start(game, p) { skillPrelude(game, p, 'ranger_quickshot'); },
     cast(game, p, c) {
       rangerArrows(game, p, c.dmg, 1, { streak: 'quick' }); p.gainJobResource(1);
       for (const delay of [.12, .24]) game.after(delay, () => {
@@ -268,6 +269,7 @@ export const SKILLS = {
   },
   ranger_binding: {
     dur: .8,
+    start(game, p) { skillPrelude(game, p, 'ranger_binding'); },
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
@@ -1207,8 +1209,8 @@ export const SKILLS = {
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
-  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});game.fx.light?.(hit,0x9fffd8,5,7,.22);game.fx.impact?._streaks?.(hit,null,4,9,.3,i%2?0xeaff9a:0x52f0b4,{up:4,spread:3.1,size:.26});}); } },
+  gale_hunt: { dur:.9, start(game,p){ skillPrelude(game,p,'gale_hunt'); }, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
+  skyfall_arrows: { dur:1.05, start(game,p){ skillPrelude(game,p,'skyfall_arrows'); }, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});game.fx.light?.(hit,0x9fffd8,5,7,.22);game.fx.impact?._streaks?.(hit,null,4,9,.3,i%2?0xeaff9a:0x52f0b4,{up:4,spread:3.1,size:.26});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,
