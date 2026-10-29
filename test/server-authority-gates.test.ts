@@ -20,6 +20,14 @@ const STAGE = applyDifficulty(stageDef(1, 1), DIFFICULTIES.story);
 const LIMITS = plausibilityFor(STAGE);
 const POOL = [...stageSpeciesPool(stageDef(1, 1))] as string[];
 const FOREIGN = 'forge_finalboss'; // 2장 보스: 1-1 풀 밖
+// 1-1 풀(장 전용 몸으로 바꾼 id 만 든다)에서 계급별 종을 계산한다. 원본 skel_minion 은 ch1_coffinbearer 로 바뀌어 풀에 없다.
+const rankOf = (id: string) => ((ENEMIES as any)[id].boss ? 'boss' : (ENEMIES as any)[id].elite ? 'elite' : 'normal');
+const NORMALS = POOL.filter((id) => rankOf(id) === 'normal').sort();
+const [N1, N2, N3] = NORMALS; // id 정렬 순서 앞 두 일반 종
+const BOSS = POOL.filter((id) => rankOf(id) === 'boss').sort()[0];
+const ELITE = POOL.filter((id) => rankOf(id) === 'elite').sort()[0];
+const RAW = 'skel_minion'; // 원본 id: 1장에서는 ch1_coffinbearer 로 바뀌므로 풀 밖
+const CAP_SUM = LIMITS.kills.normal + LIMITS.kills.elite + LIMITS.kills.boss + LIMITS.summonedKills;
 const DAY = 86400000;
 
 const legit = (over: Record<string, unknown> = {}) => ({ win: true, elapsedMs: LIMITS.minClearMs + 30000, kills: { normal: 40, elite: 2, boss: 1 },
@@ -46,14 +54,14 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
   test('승리 정산: quests.kills += kills+summonedKills, 풀 안 종만 slain, 영수증 killLedger', async () => {
     const { run, doc } = await ready();
     const before = await doc();
-    const species = { ch1_mourner: 30, skel_minion: 10, [FOREIGN]: 1 };
+    const species = { [N1]: 30, [N2]: 10, [FOREIGN]: 1 };
     const { r } = await run(legit({ summonedKills: { normal: 5 }, species }));
     expect(r.status).toBe(200);
     expect(r.body.verdict).toBe('ok');
     expect(r.body.killLedger).toEqual({ kills: 48, species: 2, dropped: 1 });
     const after = await doc();
     expect(after.quests.kills).toBe((before.quests.kills || 0) + 48);
-    expect(after.slain.kills).toEqual({ ch1_mourner: 30, skel_minion: 10 });
+    expect(after.slain.kills).toEqual({ [N1]: 30, [N2]: 10 });
     expect(after.slain.kills[FOREIGN]).toBeUndefined();
   });
 
@@ -61,24 +69,24 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
     const { h, start, settle, doc } = await ready();
     const before = await doc();
     const t = await start();
-    h.advance(30000);
-    const r = await settle(t.runId, { win: false, elapsedMs: 25000, kills: { normal: 10 }, species: { skel_minion: 10 } });
+    h.advance(LIMITS.minClearMs + 1000); // 서버 시계가 최소 클리어 시간 이상 흘러야 처치 전부 인정
+    const r = await settle(t.runId, { win: false, elapsedMs: 25000, kills: { normal: 10 }, species: { [N2]: 10 } });
     expect(r.status).toBe(200);
     expect(r.body.killLedger).toEqual({ kills: 10, species: 1, dropped: 0 });
     const after = await doc();
     expect(after.quests.kills).toBe((before.quests.kills || 0) + 10);
-    expect(after.slain.kills).toEqual({ skel_minion: 10 });
+    expect(after.slain.kills).toEqual({ [N2]: 10 });
   });
 
   test('rejected(보스 상한 초과·너무 빠름)는 0, 영수증 killLedger 0', async () => {
     const { h, start, settle, doc, run } = await ready();
     const before = await doc();
-    const tooMany = await run(legit({ kills: { normal: 40, elite: 2, boss: LIMITS.kills.boss + 1 }, species: { skel_minion: 40 } }));
+    const tooMany = await run(legit({ kills: { normal: 40, elite: 2, boss: LIMITS.kills.boss + 1 }, species: { [N2]: 40 } }));
     expect(tooMany.r.body.verdict).toBe('rejected');
     expect(tooMany.r.body.killLedger).toEqual({ kills: 0, species: 0, dropped: 0 });
     const t = await start();
     h.advance(2000);
-    const fast = await settle(t.runId, legit({ elapsedMs: 2000, species: { skel_minion: 40 } }));
+    const fast = await settle(t.runId, legit({ elapsedMs: 2000, species: { [N2]: 40 } }));
     expect(fast.body.verdict).toBe('rejected');
     expect(fast.body.killLedger).toEqual({ kills: 0, species: 0, dropped: 0 });
     const after = await doc();
@@ -88,10 +96,10 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
 
   test('같은 티켓 재정산은 replayed, quests.kills·slain 이 다시 늘지 않는다', async () => {
     const { run, settle, doc } = await ready();
-    const { t, r } = await run(legit({ species: { skel_minion: 43 } }));
+    const { t, r } = await run(legit({ species: { [N2]: 43 } }));
     expect(r.body.verdict).toBe('ok');
     const mid = await doc();
-    const again = await settle(t.runId, legit({ kills: { normal: 400, elite: 30, boss: 1 }, species: { skel_minion: 431 } }));
+    const again = await settle(t.runId, legit({ kills: { normal: 400, elite: 30, boss: 1 }, species: { [N2]: 431 } }));
     expect(again.body.replayed).toBe(true);
     expect(again.body.killLedger).toEqual(r.body.killLedger);
     const end = await doc();
@@ -101,11 +109,11 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
 
   test('위조: species 합이 처치 합보다 크면 id 순서로 잘리고 초과분은 dropped', async () => {
     const { run, doc } = await ready();
-    const { r } = await run(legit({ species: { ch1_mourner: 40, skel_minion: 40 } })); // 합 80 > 43
+    const { r } = await run(legit({ species: { [N1]: 40, [N2]: 40 } })); // 합 80 > 43
     expect(r.body.verdict).toBe('ok');
-    // id 정렬 순서로 채운다: ch1_mourner 40 + skel_minion 3, 나머지 37 은 dropped
+    // id 정렬 순서로 채운다: 앞 종 40 + 뒤 종 3, 나머지 37 은 dropped
     expect(r.body.killLedger).toEqual({ kills: 43, species: 2, dropped: 37 });
-    expect((await doc()).slain.kills).toEqual({ ch1_mourner: 40, skel_minion: 3 });
+    expect((await doc()).slain.kills).toEqual({ [N1]: 40, [N2]: 3 });
   });
 
   test('위조: 풀 밖 종만 보고하면 전부 dropped, slain 비어 있음, 처치 수는 센다', async () => {
@@ -133,6 +141,62 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
     h.advance(LIMITS.minClearMs + 40000);
     const r = await settle(t.runId, legit({ species: { 'skel-minion': 1 } }));
     expect(r.status).toBe(400);
+  });
+});
+
+describe('위조 회귀: 처치 원장 시계·계급·원본 id (PR #435 보안 리뷰)', () => {
+  const cap = { normal: LIMITS.kills.normal, elite: LIMITS.kills.elite, boss: LIMITS.kills.boss };
+  test('티켓 직후(시계 진행 없음) 패배 정산에 상한 처치를 찍어도 원장은 0, quests.kills·slain 그대로', async () => {
+    const { start, settle, doc } = await ready();
+    const before = await doc();
+    const t = await start();
+    const r = await settle(t.runId, { win: false, elapsedMs: 1, kills: cap, summonedKills: { normal: LIMITS.summonedKills }, species: { [N1]: 100 } });
+    expect(r.status).toBe(200);
+    expect(r.body.killLedger.kills).toBe(0);
+    expect(r.body.killLedger.species).toBe(0);
+    const after = await doc();
+    expect(after.quests.kills || 0).toBe(before.quests.kills || 0);
+    expect(after.slain).toEqual(before.slain);
+  });
+
+  test('minClearMs 의 절반 경과 후 패배에 상한 처치 → 상한 합의 절반(내림)만 센다', async () => {
+    const { h, start, settle, doc } = await ready();
+    const before = await doc();
+    const t = await start();
+    const wallMs = Math.floor(LIMITS.minClearMs / 2);
+    h.advance(wallMs);
+    const r = await settle(t.runId, { win: false, elapsedMs: wallMs, kills: cap, summonedKills: { normal: LIMITS.summonedKills }, species: { [N1]: CAP_SUM } });
+    expect(r.status).toBe(200);
+    const expected = Math.floor(CAP_SUM * wallMs / LIMITS.minClearMs);
+    expect(expected).toBeGreaterThan(0);
+    expect(expected).toBeLessThan(CAP_SUM);
+    expect(r.body.killLedger.kills).toBe(expected);
+    const after = await doc();
+    expect(after.quests.kills - (before.quests.kills || 0)).toBe(expected);
+    expect(after.slain.kills[N1]).toBe(expected);
+  });
+
+  test('보스 종을 일반 처치로 주장(kills.boss 0)하면 그 보스 종은 0, dropped', async () => {
+    const { run, doc } = await ready();
+    expect(BOSS).toBeDefined();
+    const { r } = await run(legit({ win: false, elapsedMs: LIMITS.minClearMs + 30000, kills: { normal: 40, elite: 0, boss: 0 }, species: { [BOSS]: 3 } }));
+    expect(r.body.killLedger).toEqual({ kills: 40, species: 0, dropped: 3 });
+    expect((await doc()).slain.kills[BOSS]).toBeUndefined();
+  });
+
+  test('정예 종도 정예 처치 수까지만 인정된다(정예 0 이면 dropped)', async () => {
+    const { run } = await ready();
+    expect(ELITE).toBeDefined();
+    const { r } = await run(legit({ kills: { normal: 40, elite: 0, boss: 1 }, species: { [ELITE]: 2, [BOSS]: 1 } }));
+    expect(r.body.killLedger).toEqual({ kills: 41, species: 1, dropped: 2 });
+  });
+
+  test('원본 id(skel_minion)를 1장 정산에 보내면 풀 밖이라 전부 dropped', async () => {
+    const { run, doc } = await ready();
+    expect(POOL).not.toContain(RAW);
+    const { r } = await run(legit({ species: { [RAW]: 10 } }));
+    expect(r.body.killLedger).toEqual({ kills: 43, species: 0, dropped: 10 });
+    expect((await doc()).slain.kills[RAW]).toBeUndefined();
   });
 });
 
@@ -358,34 +422,34 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     const raw = base();
     raw.progress.unlocked = 11; raw.progress.stars = stars(1, 1);
     raw.quests.kills = 1000;
-    raw.rpg = { bestiary: { ch1_mourner: { kills: 600 }, skel_minion: { kills: 600 }, ch7_citizen: { kills: 500 }, [FOREIGN]: { kills: 500 } } };
+    raw.rpg = { bestiary: { [N1]: { kills: 600 }, [N2]: { kills: 600 }, ch7_citizen: { kills: 500 }, [FOREIGN]: { kills: 500 } } };
     const r = sanitize(raw);
     expect(r.state.slain.seeded).toBe(true);
     expect(r.state.slain.kills.ch7_citizen).toBeUndefined();
     expect(r.state.slain.kills[FOREIGN]).toBeUndefined();
     expect(Object.keys(r.state.slain.kills).every((id) => poolUpToFloor(11).has(id))).toBe(true);
     expect(sum(r.state.slain.kills)).toBeLessThanOrEqual(r.state.quests.kills);
-    expect(r.state.slain.kills.ch1_mourner).toBe(600);
-    expect(r.state.slain.kills.skel_minion).toBe(400);
+    expect(r.state.slain.kills[N1]).toBe(600);
+    expect(r.state.slain.kills[N2]).toBe(400);
   });
 
   test('진행이 1장 초반(unlocked=1)인데 7장 종을 주장하면 빠진다, 1-1 종은 인정', () => {
     const raw = base();
     raw.quests.kills = 5000;
-    raw.rpg = { bestiary: { ch7_citizen: { kills: 100 }, [FOREIGN]: { kills: 100 }, skel_minion: { kills: 100 } } };
+    raw.rpg = { bestiary: { ch7_citizen: { kills: 100 }, [FOREIGN]: { kills: 100 }, [N2]: { kills: 100 } } };
     raw.slain = { seeded: false, kills: { ch7_tuner_drift: 50 } };
     const r = sanitize(raw);
     expect(r.state.progress.unlocked).toBe(1);
-    expect(r.state.slain.kills).toEqual({ skel_minion: 100 });
+    expect(r.state.slain.kills).toEqual({ [N2]: 100 });
     expect(r.state.slain.seeded).toBe(true);
   });
 
   test('slain.kills 와 bestiary 중 큰 값을 쓴다', () => {
     const raw = base();
     raw.quests.kills = 5000;
-    raw.slain = { seeded: false, kills: { skel_minion: 300 } };
-    raw.rpg = { bestiary: { skel_minion: { kills: 100 }, ghost: { kills: 40 } } };
-    expect(sanitize(raw).state.slain.kills).toEqual({ ghost: 40, skel_minion: 300 });
+    raw.slain = { seeded: false, kills: { [N2]: 300 } };
+    raw.rpg = { bestiary: { [N2]: { kills: 100 }, [N3]: { kills: 40 } } };
+    expect(sanitize(raw).state.slain.kills).toEqual({ [N3]: 40, [N2]: 300 });
   });
 
   test('quests.kills 가 ONE_TIME + DAILY_MAX × 경과일을 넘으면 절삭하고 report.clamped 에 기록', () => {
@@ -421,19 +485,19 @@ describe('A5 병합: 가져오기·스냅샷', () => {
   test('외부 가져오기(계정당 1회)는 서버가 seeded=true 여도 한 번 병합한다(서버 값은 바닥)', () => {
     const raw = base();
     raw.quests.kills = 5000;
-    raw.rpg = { bestiary: { skel_minion: { kills: 3 } } };
-    const r = sanitize(raw, { serverSlain: { seeded: true, kills: { skel_minion: 7, ghost: 1 } } });
-    expect(r.state.slain).toEqual({ seeded: true, kills: { ghost: 1, skel_minion: 7 } });
-    raw.rpg.bestiary.skel_minion.kills = 40;
-    expect(sanitize(raw, { serverSlain: { seeded: true, kills: { skel_minion: 7 } } }).state.slain.kills.skel_minion).toBe(40);
+    raw.rpg = { bestiary: { [N2]: { kills: 3 } } };
+    const r = sanitize(raw, { serverSlain: { seeded: true, kills: { [N2]: 7, [N3]: 1 } } });
+    expect(r.state.slain).toEqual({ seeded: true, kills: { [N3]: 1, [N2]: 7 } });
+    raw.rpg.bestiary[N2].kills = 40;
+    expect(sanitize(raw, { serverSlain: { seeded: true, kills: { [N2]: 7 } } }).state.slain.kills[N2]).toBe(40);
   });
 
   test('서버가 seeded=false 면 서버 값은 바닥값으로 합쳐지고 seeded=true', () => {
     const raw = base();
     raw.quests.kills = 5000;
-    raw.rpg = { bestiary: { skel_minion: { kills: 10 } } };
-    const r = sanitize(raw, { serverSlain: { seeded: false, kills: { skel_minion: 50, ghost: 2 } } });
-    expect(r.state.slain).toEqual({ seeded: true, kills: { ghost: 2, skel_minion: 50 } });
+    raw.rpg = { bestiary: { [N2]: { kills: 10 } } };
+    const r = sanitize(raw, { serverSlain: { seeded: false, kills: { [N2]: 50, [N3]: 2 } } });
+    expect(r.state.slain).toEqual({ seeded: true, kills: { [N3]: 2, [N2]: 50 } });
   });
 
   test('HTTP 가져오기: 새 계정(문서 seeded=true)도 기기 도감을 상한 검사 후 한 번 옮긴다', async () => {
@@ -444,10 +508,10 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     const a = { ...first, ...await h.session(first.deviceKey) };
     const raw = fresh(NOW).snapshot() as any;
     raw.quests.kills = 800;
-    raw.rpg = { bestiary: { skel_minion: { kills: 500 } } };
+    raw.rpg = { bestiary: { [N2]: { kills: 500 } } };
     const r1 = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: raw }, a.token);
     expect(r1.status).toBe(200);
-    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: { skel_minion: 500 } });
+    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: { [N2]: 500 } });
   });
 
   test('HTTP 가져오기: 서버 문서가 seeded=false 면 한 번만 병합하고 이후 재주입은 무시', async () => {
@@ -461,13 +525,14 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     await withDoc(h, a.accountId, server.snapshot());
     const raw = fresh(NOW).snapshot() as any;
     raw.quests.kills = 800;
-    raw.rpg = { bestiary: { skel_minion: { kills: 500 }, [FOREIGN]: { kills: 50 } } };
+    raw.rpg = { bestiary: { [N2]: { kills: 500 }, [FOREIGN]: { kills: 50 } } };
     const r1 = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: raw }, a.token);
     expect(r1.status).toBe(200);
-    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: { skel_minion: 500 } });
-    raw.rpg.bestiary.skel_minion.kills = 700; raw.rpg.bestiary.ghost = { kills: 99 };
+    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: { [N2]: 500 } });
+    raw.rpg.bestiary[N2].kills = 700; raw.rpg.bestiary[N3] = { kills: 99 };
     const r2 = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: raw }, a.token);
-    if (r2.status === 200) expect(r2.body.doc.slain).toEqual({ seeded: true, kills: { skel_minion: 500 } });
+    expect(r2.status).toBe(409); // 계정당 1회: 두 번째 가져오기는 거절
+    expect((await h.send('GET', '/me', undefined, a.token)).body.doc.slain).toEqual({ seeded: true, kills: { [N2]: 500 } });
   });
 
   test('normalizeSave: slain 없는 옛 저장은 seeded:false, 새 저장은 seeded:true, 모르는 종 id 는 버림', () => {
@@ -487,6 +552,46 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     const server = { slain: { seeded: true, kills: { skel_minion: 3 } } };
     expect(mergeServerOwned(local, server).slain).toEqual(server.slain);
     expect(mergeServerOwned(local, {}).slain).toEqual(local.slain);
+  });
+});
+
+describe('위조 회귀: 가져오기 여정 단계는 서버 판정 가능한 접두사만', () => {
+  const NOW = Date.UTC(2026, 10, 20);
+  const ALL = JOURNEY_STEPS.map((x: any) => x.id) as string[];
+  test('6단계 전부 주장 + 진행 0·갑옷 없음 → oath 만 남는다(garden 이상은 attest 실패)', () => {
+    const raw = fresh(NOW).snapshot() as any;
+    raw.journey = { ...(raw.journey || {}), claimedSteps: [...ALL] };
+    const r = sanitizeLegacySave(raw, { now: NOW, createdAt: LEGACY_EPOCH }) as any;
+    expect(r.ok).toBe(true);
+    // 규칙대로 계산: 서버 판정(attest)으로 완료인 단계를 JOURNEY_STEPS 순서대로 처음 끊기는 곳까지
+    const steps = journeySteps({ ...r.state, journey: { claimedSteps: [] } }, { attest: true }) as any[];
+    const expected: string[] = [];
+    for (const st of steps) { if (!st.complete) break; expected.push(st.id); }
+    expect(r.state.journey.claimedSteps).toEqual(expected);
+    expect(expected).toEqual(['oath']);
+  });
+
+  test('서버 문서의 수령 기록은 항상 유지되고, 스냅샷은 서버 값 그대로', () => {
+    const raw = fresh(NOW).snapshot() as any;
+    raw.journey = { ...(raw.journey || {}), claimedSteps: [...ALL] };
+    const r = sanitizeLegacySave(raw, { now: NOW, createdAt: LEGACY_EPOCH, serverJourney: { claimedSteps: ['equip'] } }) as any;
+    expect(r.state.journey.claimedSteps).toContain('equip');
+    const snap = sanitizeLegacySave(raw, { now: NOW, createdAt: LEGACY_EPOCH, snapshot: true, serverJourney: { claimedSteps: ['equip'] } }) as any;
+    expect(snap.state.journey.claimedSteps).toEqual(['equip']);
+  });
+
+  test('HTTP 가져오기 후 wayfarer 업적 수령은 422', async () => {
+    const h = await v1Harness();
+    h.setNow(NOW - 30 * DAY);
+    const first = await h.session();
+    h.setNow(NOW);
+    const a = { ...first, ...await h.session(first.deviceKey) };
+    const raw = fresh(NOW).snapshot() as any;
+    raw.journey = { ...(raw.journey || {}), claimedSteps: [...ALL] };
+    const r1 = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: raw }, a.token);
+    expect(r1.status).toBe(200);
+    expect(r1.body.doc.journey.claimedSteps).toEqual(['oath']);
+    expect((await h.cmd(a.token, 'claimAchievement', ['wayfarer'])).status).toBe(422);
   });
 });
 
