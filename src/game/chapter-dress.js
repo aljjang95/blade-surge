@@ -451,6 +451,61 @@ const PROPS = {
     solid: [piece(new THREE.CylinderGeometry(.012 * h, .012 * h, .36 * h, 6), C.iron, [0, .02 * h, 0]), piece(new THREE.SphereGeometry(.05 * h, 8, 6), C.brassDark, [0, .22 * h, 0], [0, 0, 0], [1, 1.25, 1]), piece(new THREE.TorusGeometry(.025 * h, .006 * h, 3, 8), C.iron, [0, -.17 * h, 0])],
     glow: [piece(new THREE.BoxGeometry(.006 * h, .05 * h, .004 * h), C.glowBrass, [.02 * h, .23 * h, .045 * h], [0, 0, 15])],
   }) },
+  // ---- 가독성 2차(2026-10-29): 같은 몸·몸빛만 다르던 6·7장 갈래를 실루엣으로 가른다 ----
+  // 6장 서두르는 승객: 어깨 위로 비스듬히 솟은 큰 회중시계 — 둥근 원판이 머리 옆으로 튀어나와 다른 승객과 윤곽이 다르다.
+  hurryClock: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.08, .1, -.15], rot: [0, 0, -18], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.13 * h, .13 * h, .03 * h, 14), C.brass, [0, .22 * h, 0], [90, 0, 0]), piece(new THREE.CylinderGeometry(.115 * h, .115 * h, .032 * h, 14), C.paper, [0, .22 * h, -.002 * h], [90, 0, 0]),
+      piece(new THREE.CylinderGeometry(.022 * h, .022 * h, .04 * h, 6), C.brassDark, [0, .37 * h, 0]), piece(new THREE.TorusGeometry(.025 * h, .007 * h, 3, 8), C.brass, [0, .41 * h, 0]),
+      piece(new THREE.BoxGeometry(.012 * h, .09 * h, .006 * h), C.ink, [0, .26 * h, -.02 * h]), piece(new THREE.BoxGeometry(.01 * h, .065 * h, .006 * h), C.ink, [.025 * h, .21 * h, -.02 * h], [0, 0, 60]),
+      piece(new THREE.CylinderGeometry(.006 * h, .006 * h, .24 * h, 4), C.brassDark, [-.02 * h, .02 * h, 0], [0, 0, 8])],
+    glow: [piece(new THREE.TorusGeometry(.118 * h, .004 * h, 3, 16), C.glowTeal, [0, .22 * h, -.018 * h])],
+  }) },
+  // 6장 바닷길 승객: 등에 엇갈려 멘 노와 둥근 부표 — 긴 대각선과 원으로 따개비 어깨를 넘어 실루엣이 갈린다.
+  tideOar: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .04, -.15], rot: [0, 0, 32], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.01 * h, .01 * h, .6 * h, 5), C.seaWood, [0, .08 * h, 0]), piece(new THREE.BoxGeometry(.075 * h, .17 * h, .014 * h), C.seaWood, [0, .44 * h, 0]),
+      piece(new THREE.SphereGeometry(.07 * h, 8, 6), C.coral, [-.05 * h, -.14 * h, -.03 * h]), piece(new THREE.TorusGeometry(.071 * h, .012 * h, 4, 10), C.paper, [-.05 * h, -.14 * h, -.03 * h], [0, 90, 0]),
+      piece(new THREE.CylinderGeometry(.004 * h, .004 * h, .14 * h, 3), C.kelp, [-.02 * h, -.06 * h, -.02 * h], [0, 0, 40])],
+    glow: [piece(new THREE.SphereGeometry(.018 * h, 5, 4), C.glowAbyss, [-.05 * h, -.06 * h, -.03 * h])],
+  }) },
+  // 6장 이끼 낀 승객: 머리를 덮는 넓은 버섯 갓과 늘어진 이끼 — 머리 윤곽이 우산처럼 넓어진다.
+  mossCap: { bones: ['Head', 'head'], at: [0, .2, 0], rot: [0, 0, 6], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.SphereGeometry(.16 * h, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), C.leaf, [0, 0, 0], [0, 0, 0], [1, .55, 1]), piece(new THREE.CylinderGeometry(.155 * h, .12 * h, .02 * h, 10), C.kelp, [0, -.005 * h, 0]),
+      piece(new THREE.SphereGeometry(.05 * h, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), C.coral, [.13 * h, -.05 * h, .02 * h], [0, 0, -20], [1, .6, 1]), piece(new THREE.SphereGeometry(.035 * h, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2), C.leaf, [-.12 * h, -.06 * h, -.04 * h], [0, 0, 25], [1, .6, 1])]
+      .concat([[-.1, .05], [-.03, .13], [.06, .1], [.11, -.06], [-.07, -.12]].map(([x, z], i) => piece(new THREE.BoxGeometry(.016 * h, (.07 + (i % 2) * .04) * h, .008 * h), C.kelp, [x * h, -.05 * h, z * h]))),
+    glow: [[.06, .04], [-.05, .07], [0, -.08]].map(([x, z]) => piece(new THREE.SphereGeometry(.011 * h, 5, 3), C.glowTeal, [x * h, .07 * h, z * h])),
+  }) },
+  // 7장 늦은 시민: 뒤로 길게 휘날리는 목도리 — 달려가는 몸 뒤로 수평 꼬리가 생긴다(손에는 로스터 손종).
+  lateScarf: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .16, -.08], rot: [0, 0, 0], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.TorusGeometry(.075 * h, .022 * h, 4, 10), C.bookRed, [0, 0, .03 * h], [90, 0, 0]),
+      piece(new THREE.BoxGeometry(.07 * h, .018 * h, .2 * h), C.bookRed, [.03 * h, -.01 * h, -.15 * h], [12, 10, 0]), piece(new THREE.BoxGeometry(.062 * h, .016 * h, .16 * h), C.bookRed, [.07 * h, -.045 * h, -.32 * h], [-8, 22, 6]),
+      piece(new THREE.BoxGeometry(.065 * h, .014 * h, .02 * h), C.brassOld, [.09 * h, -.06 * h, -.41 * h], [0, 22, 0])],
+    glow: [],
+  }) },
+  // 7장 종루 짐꾼: 가슴을 가로지른 굵은 밧줄 타래 — 앞에서도 짐꾼임이 보인다(등의 종추와 함께).
+  haulerRope: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .0, .02], rot: [0, 0, -35], scale: 1.45, build: (h) => ({
+    solid: [piece(new THREE.TorusGeometry(.11 * h, .016 * h, 5, 16), C.clay, [0, 0, 0], [90, 0, 0], [1.15, .85, 1]), piece(new THREE.TorusGeometry(.1 * h, .013 * h, 5, 16), C.leather, [0, -.02 * h, 0], [90, 0, 0], [1.15, .85, 1]),
+      piece(new THREE.BoxGeometry(.04 * h, .04 * h, .04 * h), C.brassDark, [0, 0, .09 * h])],
+    glow: [],
+  }) },
+  // 7장 폭음 시민: 등에 진 종 모양 폭약통과 불 붙은 심지 — 머리 위로 불꽃이 튀는 윤곽이 자폭 경고다.
+  fuseKeg: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .05, -.16], rot: [-6, 0, 0], scale: 1.5, build: (h) => ({
+    solid: [piece(bellGeometry(.13 * h, 10), C.brassDark, [0, -.06 * h, 0], [0, 0, 0], [1, .24 * h, 1]), piece(new THREE.TorusGeometry(.12 * h, .01 * h, 3, 12), C.iron, [0, .0, 0], [90, 0, 0]),
+      piece(new THREE.CylinderGeometry(.006 * h, .006 * h, .14 * h, 4), C.soot, [.02 * h, .24 * h, 0], [0, 0, -18])],
+    glow: [piece(new THREE.SphereGeometry(.03 * h, 6, 4), C.glowHot, [.045 * h, .32 * h, 0]), piece(new THREE.ConeGeometry(.022 * h, .07 * h, 5), C.glowEmber, [.05 * h, .37 * h, 0]),
+      piece(new THREE.BoxGeometry(.2 * h, .012 * h, .004 * h), C.glowEmber, [0, .08 * h, -.13 * h])],
+  }) },
+  // 7장 울림 잔향 주술사: 등 뒤에 선 동심원 음파 고리 셋 — 머리 뒤 큰 원 윤곽(떠도는 조율사의 풍경 장대와 갈린다).
+  echoRings: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .16, -.17], rot: [0, 0, 0], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.01 * h, .01 * h, .2 * h, 5), C.brassDark, [0, -.02 * h, 0]), piece(bellGeometry(.04 * h, 8), C.brassOld, [0, .1 * h, 0], [0, 0, 0], [1, .06 * h, 1])],
+    glow: [.09, .15, .21].map((r, i) => piece(new THREE.TorusGeometry(r * h, (.008 - i * .0015) * h, 3, 20), C.glowBrass, [0, .13 * h, -i * .015 * h])),
+  }) },
+  // 7장 떠도는 조율사: 등에서 앞으로 휜 장대 끝에 매단 풍경 셋 — 머리 위로 휜 갈고리와 늘어진 종들.
+  driftChimes: { bones: ['Spine2', 'Spine1', 'Spine'], at: [-.05, .06, -.15], rot: [0, 0, 8], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.008 * h, .009 * h, .5 * h, 5), C.oak, [0, .12 * h, 0]), piece(new THREE.TorusGeometry(.09 * h, .008 * h, 4, 10, Math.PI * .8), C.oak, [.09 * h, .37 * h, 0], [0, 0, 20]),
+      piece(new THREE.BoxGeometry(.2 * h, .01 * h, .01 * h), C.brassDark, [.16 * h, .33 * h, 0])]
+      .concat([[.08, .07], [.16, .11], [.24, .06]].flatMap(([x, d]) => [piece(new THREE.CylinderGeometry(.002 * h, .002 * h, d * h, 3), C.brassDark, [x * h, (.33 - d / 2) * h, 0]), piece(bellGeometry(.024 * h, 6), C.brassOld, [x * h, (.33 - d - .035) * h, 0], [0, 0, 0], [1, .035 * h, 1])])),
+    glow: [[.08, .07], [.16, .11], [.24, .06]].map(([x, d]) => piece(new THREE.SphereGeometry(.008 * h, 4, 3), C.glowBrass, [x * h, (.33 - d - .04) * h, 0])),
+  }) },
 };
 export const DRESS_PROP_KEYS = Object.freeze(Object.keys(PROPS));
 

@@ -175,7 +175,8 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
   // 5장은 같은 종이 왕관 전용 몸(왕관 병사·왕관 고리 주술사)으로 바뀐다.
   expect(chapterSpeciesId({ chapter: { id: 5 } }, 'alien')).toBe('ch5_crownsoldier');
   expect(chapterSpeciesId({ chapter: { id: 5 } }, 'abyss_seer')).toBe('ch5_seer');
-  expect(chapterSpeciesId({ chapter: { id: 5 } }, 'squidle')).toBe('squidle');
+  // 부유 촉수는 5장 편성에 없고 왕관 고리 주술사가 소환한다 — 5장에서는 소환 갈래 몸으로 나온다(2026-10-29).
+  expect(chapterSpeciesId({ chapter: { id: 5 } }, 'squidle')).toBe('ch5_dawnninja_called');
   expect(chapterSpeciesId({ chapter: { id: 5 }, expedition: {} }, 'ninja')).toBe('ninja');
 });
 
@@ -345,4 +346,99 @@ test('7장 Tripo 갈래 의상은 BRASS 재배치 없이 발광만, 손 소품�
     expect(spec.remap, id).toBeUndefined();
     for (const key of spec.props || []) { expect(DRESS_PROP_KEYS).toContain(key); expect(['bellLedger', 'tuningFork', 'spiritBell'], `${id} ${key}`).not.toContain(key); }
   }
+});
+
+test('가독성 2차: 6장 서두르는·바닷길·이끼 승객, 7장 늦은·짐꾼·폭음 시민, 울림 잔향·떠도는 조율사는 저마다 다른 실루엣 소품을 가진다', async () => {
+  const { MONSTER_ROSTER } = await import('../src/data/monster-roster.js');
+  const pick = (ch: number, id: string): string[] => (CHAPTER_DRESS as any)[ch].species[id].props || [];
+  const groups: [number, string[]][] = [
+    [6, ['ch6_passenger', 'ch6_passenger_hurry', 'ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger_porter', 'ch6_passenger_lost']],
+    [7, ['ch7_citizen_late', 'ch7_citizen_hauler', 'ch7_citizen_fuse']],
+    [7, ['ch7_tuner_echo', 'ch7_tuner_drift']],
+  ];
+  const ROSTER = MONSTER_ROSTER as Record<string, any>;
+  for (const [ch, ids] of groups) {
+    // 같은 몸을 쓰는 갈래끼리 (소품 묶음 + 손 소켓) 윤곽 서명이 겹치지 않는다. 몸빛(color)은 서명에 넣지 않는다.
+    const sign = (id: string) => { const r = ROSTER[ENEMIES[id].model]; return JSON.stringify([[...pick(ch, id)].sort(), r.weapon?.asset || null, r.offhand?.asset || null]); };
+    const signs = ids.map(sign);
+    expect(new Set(signs).size, `${ch}장 ${ids.join(',')} ${signs.join(' ')}`).toBe(ids.length);
+  }
+  expect(pick(6, 'ch6_passenger_hurry')).toContain('hurryClock');
+  expect(pick(6, 'ch6_passenger_tide')).toContain('tideOar');
+  expect(pick(6, 'ch6_passenger_moss')).toContain('mossCap');
+  expect(pick(7, 'ch7_citizen_late')).toContain('lateScarf');
+  expect(ROSTER[ENEMIES.ch7_citizen_late.model].weapon.asset).toBe('tll_ch1_handbell');
+  expect(pick(7, 'ch7_citizen_hauler')).toContain('haulerRope');
+  expect(pick(7, 'ch7_citizen_fuse')).toContain('fuseKeg');
+  expect(pick(7, 'ch7_tuner_echo')).toContain('echoRings');
+  expect(pick(7, 'ch7_tuner_drift')).toContain('driftChimes');
+  for (const key of ['hurryClock', 'tideOar', 'mossCap', 'lateScarf', 'haulerRope', 'fuseKeg', 'echoRings', 'driftChimes']) {
+    expect(DRESS_PROP_KEYS).toContain(key);
+    expect(dressPropTriangles(key, 1.6), key).toBeLessThan(1200);
+  }
+});
+
+test('6장 심층 원정(dungeon 없음)도 경로 고향 장 Tripo 몸과 6장 승객·의상으로 바뀐다, 다른 원정은 그대로', async () => {
+  const { buildExpeditionStage } = await import('../src/game/expedition-combat.js');
+  const { chapterSpeciesId, speciesSourceId, CHAPTER_SPECIES: SP } = await import('../src/data/stages.js');
+  const { expeditionRoster } = await import('../src/game/expedition-combat.js');
+  const deep: any = buildExpeditionStage('dungeon', 'star_archive', null, { depth: 'deep' });
+  expect(deep.dungeon).toBeNull();
+  expect(deep.chapter.id).toBe(6);
+  // 6-10 경로(confluence → 4장 바닷길): 4장 아귀·수부와 6장 승객이 함께 나온다.
+  const ids = new Set<string>();
+  for (const type of ['normal', 'elite', 'treasure']) for (const id of expeditionRoster(deep, { type })) ids.add(chapterSpeciesId(deep, id));
+  const fresh = [...ids].filter((id) => id !== speciesSourceId(id));
+  expect(fresh.some((id) => id.startsWith('ch4_')), [...ids].join(',')).toBe(true);
+  expect(fresh.some((id) => id.startsWith('ch6_')), [...ids].join(',')).toBe(true);
+  expect(chapterSpeciesId(deep, 'squidle')).toBe(SP[6].squidle);
+  expect(chapterSpeciesId(deep, 'glub')).toBe(SP[4].glub);
+  // 보스(심층 전용 정의)는 바뀌지 않는다.
+  expect(chapterSpeciesId(deep, deep.encounter.enemyId)).toBe(deep.encounter.enemyId);
+  // 의상: 6장 승객은 6장 의상, 고향 장 몸은 4장 의상의 잔향.
+  expect(chapterDressFor(deep, 'ch6_passenger_tide', 'tll_ch6_passenger')).toBe(CHAPTER_DRESS[6].species.ch6_passenger_tide);
+  expect(chapterDressFor(deep, 'ch4_lurer', 'tll_ch4_lurer')!.emissive).toBe('#13403a');
+  // 표준 원정·다른 장 심층은 그대로(전용 로스터·아트).
+  const standard: any = buildExpeditionStage('dungeon', 'star_archive', null);
+  expect(chapterSpeciesId(standard, 'squidle')).toBe('squidle');
+  expect(chapterDressFor(standard, 'squidle', null)).toBeNull();
+  const ember: any = buildExpeditionStage('dungeon', 'ember_vault', null, { depth: 'deep' });
+  expect(chapterSpeciesId(ember, 'squidle')).toBe('squidle');
+});
+
+test('6장 심층 전술 공략의 표식 대상은 장 전용 몸으로 나와도 원래 종 id로 맞춘다', async () => {
+  const { ConquestRun } = await import('../src/game/expedition-conquests.js');
+  const { chapterSpeciesId } = await import('../src/data/stages.js');
+  const proto: any = ConquestRun.prototype;
+  const room = {}, ctx: any = { rooms: new Map([[room, { targetType: 'squidle', expected: 3, spawned: 0, deaths: 0, target: null, success: false }]]), def: { priority: 'first' } };
+  const deep = { chapter: { id: 6 }, ch: 6, st: 10, dungeon: null, expedition: { kind: 'dungeon', id: 'star_archive', depth: 'deep' } };
+  const swapped = chapterSpeciesId(deep, 'squidle');
+  expect(swapped).not.toBe('squidle');
+  expect(proto.enemyDefinition.call(ctx, swapped, { name: '승객' }, room).name).toContain('표식');
+  const enemy: any = {};
+  proto.spawn.call(ctx, enemy, swapped, room);
+  expect(enemy.conquestTarget).toBe(true);
+});
+
+test('5장 법정 경로(와 모든 5장 관문)에는 옛 몸이 섞이지 않는다: 편성·던전 대장·주술사 소환까지 5장 몸', () => {
+  const { chapterSpeciesId, speciesSourceId } = require('../src/data/stages.js');
+  let tribunal = 0;
+  for (let st = 1; st <= 10; st++) {
+    const s: any = stageDef(5, st), R = s.combatRosterFor();
+    if (s.dungeon.id === 'tribunal') tribunal++;
+    const spawnable = new Set<string>([...R.trash, ...R.ranged]);
+    for (const id of [...spawnable]) if (ENEMIES[id].summon) spawnable.add(ENEMIES[id].summon);
+    for (const bossId of [s.encounter.enemyId, s.dungeonBossId].filter(Boolean)) spawnable.add(ENEMIES[bossId].summon || 'skel_minion');
+    for (const raw of spawnable) {
+      const id = chapterSpeciesId(s, raw);
+      expect(id !== speciesSourceId(id) && /^Ch5_/.test(ENEMIES[id].model), `${s.code} ${s.dungeon.id} ${raw}→${id} ${ENEMIES[id].model}`).toBe(true);
+    }
+    // 보상 명단은 그대로다.
+    for (const id of [...s.rosterFor().trash, ...s.rosterFor().ranged, ...s.rosterFor().elite]) expect(id.startsWith('ch5_'), `${s.code} ${id}`).toBe(false);
+  }
+  expect(tribunal).toBeGreaterThanOrEqual(4);
+  // 소환 갈래는 원본 수치 그대로(환영 사냥개의 보라 색조만 뺐다).
+  expect(ENEMIES.ch5_dawnninja_mirage.hp).toBe(ENEMIES.mirage_hound.hp);
+  expect(ENEMIES.ch5_dawnninja_mirage.tint).toBeUndefined();
+  expect(ENEMIES.ch5_crownsoldier_levy.atk).toBe(ENEMIES.orc_blob.atk);
 });

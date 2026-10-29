@@ -1,4 +1,5 @@
 import { conquestForRun } from '../data/expedition-conquests.js';
+import { speciesSourceId } from '../data/stages.js';
 
 // A report copied out of a save, another start, or UI state is not a combat
 // receipt. This is local flow integrity, not a server anti-cheat boundary.
@@ -22,14 +23,15 @@ export class ConquestRun {
   }
   enemyDefinition(type, def, room) {
     const state = this.rooms.get(room);
-    return state && !state.target && type === state.targetType
+    return state && !state.target && speciesSourceId(type) === state.targetType
       ? { ...def, name: `${this.def.priority === 'first' ? '표식 신호수' : '표식 운반책'} · ${def.name}` } : def;
   }
   spawn(enemy, type, room) {
     const state = this.rooms.get(room);
     if (!state || state.spawned >= state.expected) return;
     state.spawned++; enemy.conquestInitial = true;
-    if (!state.target && type === state.targetType) { state.target = enemy; enemy.conquestTarget = true; }
+    // 6장 심층은 적이 장 전용 몸 id로 나온다(stages.js chapterSpeciesId) — 표식 대상은 원래 종 id로 맞춘다.
+    if (!state.target && speciesSourceId(type) === state.targetType) { state.target = enemy; enemy.conquestTarget = true; }
   }
   death(enemy) {
     const state = this.rooms.get(enemy.homeRoom);
