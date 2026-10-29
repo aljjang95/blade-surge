@@ -244,7 +244,7 @@ export class ClearLoop {
     if (!this.ready()) return;
     const w = this.weaponInfo(); if (!w) return;
     const r = this.eco.repairItem(w.inst.uid);
-    if (!r?.ok && !r?.cost) {
+    if (!r?.ok && !r?.saveError) {
       if (r?.reason === 'gold') this.ui.toast(`골드가 ${fmt(Math.max(0, (r.cost || 0) - this.eco.s.gold))} 부족해요.`, 'red');
       else this.ui.toast(r?.reason === 'full' ? '이미 새 무기처럼 단단해요.' : '수리하지 못했어요.', 'red');
       audio.play('ui_error', { vol: 0.5 }); return;

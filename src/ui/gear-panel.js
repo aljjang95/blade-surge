@@ -436,7 +436,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
       const repairBtn = b.querySelector('#i-repair');
       if (repairBtn) repairBtn.onclick = () => {
         const r = eco.repairItem(uid);
-        if (!r?.ok && !r?.cost) { ui.toast(r?.reason === 'gold' ? '골드가 부족합니다' : '수리할 수 없습니다', 'red'); audio.play('ui_error'); return; }
+        if (!r?.ok && !r?.saveError) { ui.toast(r?.reason === 'gold' ? '골드가 부족합니다' : '수리할 수 없습니다', 'red'); audio.play('ui_error'); return; }
         audio.pick('hit_metal', 3, { vol: 0.6, rate: 0.9 }); ui.toast('무기 정비 완료 · 골드 -' + fmt(r.cost), 'gold');
         meta._sheetDirty = true; meta.refreshTop(); render();
       };
