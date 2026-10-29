@@ -136,7 +136,7 @@ describe('웹 결제 intent', () => {
     expect(r.body).toMatchObject({ productId: 'hero_mage_v1', storeId: STORE, channelKey: CHANNEL, totalAmount: 30000, currency: 'KRW' });
     expect(r.body.paymentId).toMatch(/^bsw_[0-9a-f]{32}$/);
     expect(JSON.parse(r.body.customData)).toEqual({ productId: 'hero_mage_v1' });
-    expect((await intent(a.token, 'hero_all_v1')).body.totalAmount).toBe(17900);
+    expect((await intent(a.token, 'hero_all_v1')).body.totalAmount).toBe(89000);
     expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', amount: 1 }, a.token)).body.error).toBe('unknown-field');
     expect(count('SELECT COUNT(*) AS n FROM iap_web_payments')).toBe(2);
   });
@@ -291,7 +291,7 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     await complete(a.token, it.paymentId);
     expect((await me(a.token)).doc.roster.paid.length).toBe(5);
-    pn.pay(it, { status: 'CANCELLED', amount: { total: 17900, paid: 0, cancelled: 17900 } });
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 89000, paid: 0, cancelled: 89000 } });
     const r = await complete(a.token, it.paymentId);
     expect(r.body.state).toBe('cancelled');
     expect(r.body.entitlements.heroes).toEqual([]);
@@ -345,7 +345,7 @@ describe('웹 결제 취소 회수', () => {
     const all = (await t.intent(t.a.token, 'hero_all_v1')).body;
     t.pn.pay(all);
     await t.complete(t.a.token, all.paymentId);
-    t.pn.pay(all, { status: 'PARTIAL_CANCELLED', amount: { total: 17900, paid: 5000, cancelled: 12900 } });
+    t.pn.pay(all, { status: 'PARTIAL_CANCELLED', amount: { total: 89000, paid: 5000, cancelled: 84000 } });
     const r = await t.complete(t.a.token, all.paymentId);
     expect(r.body.state).toBe('cancelled');
     expect(r.body.entitlements.heroes).toEqual(['knight']);
@@ -503,7 +503,7 @@ describe('Play 흐름 하위호환', () => {
     const byId = Object.fromEntries(cat.body.products.map((p: any) => [p.id, p]));
     expect(byId.hero_knight_v1.channels).toEqual(['web', 'play']);
     expect(byId.hero_knight_v1.priceKRW).toBe(30000);
-    expect(byId.hero_all_v1.priceKRW).toBe(17900);
+    expect(byId.hero_all_v1.priceKRW).toBe(89000);
     expect(byId.starter_pack_v1.channels).toEqual(['web', 'play']);
     expect(byId.gems_300_v1).toBeUndefined(); // 비활성 상품은 카탈로그에 나오지 않는다
     // 그림자 계정은 영웅 상품 Play intent가 거부되고 다른 상품은 기존대로 열린다.

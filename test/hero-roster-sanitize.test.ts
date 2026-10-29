@@ -91,7 +91,7 @@ describe('영웅 상품 카탈로그', () => {
       expect(soldOn(p, 'web') && soldOn(p, 'play')).toBe(true);
     }
     const all = IAP_BY_ID.hero_all_v1;
-    expect(all.priceKRW).toBe(17900);
+    expect(all.priceKRW).toBe(89000);
     expect(entitlementKeys(all).sort()).toEqual(HERO_LEGACY_IDS.map((id) => 'hero:' + id).sort());
     expect(all.priceKRW).toBeLessThan(30000 * 4); // 4명 개별 대비 할인
     // 즉시 지급형(스타터 등)은 웹·Play 둘 다, 보석 팩은 Play 단독(PAYMENT_COMPLIANCE 4.1)
