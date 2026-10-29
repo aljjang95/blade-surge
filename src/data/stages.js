@@ -72,9 +72,12 @@ export const CHAPTER_SPECIES = Object.freeze({
   2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
   // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
   // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
+  // 4장(2026-10-29 Tripo): 따개비 수부(부유 촉수·심연 슬라임·이계 침입자·포자 괴물·골렘 수호자 자리, 합류 경로의 해골 병사·원령)·
+  // 미끼등 아귀(심연 눈알·심연 폭탄·심연 주시자 자리, 합류 경로의 해골 망령). 진화한 독침벌은 옛 몸 그대로 소수로 남긴다.
+  4: Object.freeze({ squidle: 'ch4_drowned', blob_pink: 'ch4_drowned_line', alien: 'ch4_drowned_anchor', mushnub: 'ch4_drowned_coral', golem_guard: 'ch4_plankguard', skel_minion: 'ch4_deckhand', ghost: 'ch4_drowned_drift', bomb_abyss: 'ch4_lurer_bomb', glub: 'ch4_lurer', abyss_seer: 'ch4_lurer_seer', ghost_skull: 'ch4_lurer_glim' }),
   3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
 });
-/** 캠페인 1·2·3장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
+/** 캠페인 1~4장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
   if (!stage || stage.expedition) return id;
   return CHAPTER_SPECIES[stage.chapter?.id]?.[id] || id;
@@ -463,16 +466,37 @@ const CHAPTER_SPECIES_DEFS = {
   ch3_keykeeper: ['bone_orc', '열쇠지기 사서', 'Ch3_Librarian'],
   ch3_icecrawler: ['frost_burrower', '얼음 밑 사서', 'Ch3_Librarian'],
   ch3_moldkeeper: ['blob_green', '곰팡이 핀 사서', 'Ch3_Librarian'],
+  // 4장: 따개비 수부(tll_ch4_drowned) 갈래 7종·미끼등 아귀(tll_ch4_lurer) 갈래 4종. 원본 종 크기가 다른 자리(원령 1.25·골렘 수호자 1.15·해골 망령 1.2)는 로스터 항목을 나눴다.
+  ch4_drowned: ['squidle', '따개비 수부', 'Ch4_Drowned'],
+  ch4_drowned_line: ['blob_pink', '따개비 덮인 수부', 'Ch4_Drowned'],
+  ch4_drowned_anchor: ['alien', '닻 끄는 수부', 'Ch4_Drowned'],
+  ch4_drowned_coral: ['mushnub', '산호 핀 수부', 'Ch4_Drowned'],
+  ch4_plankguard: ['golem_guard', '판자 방패 수부', 'Ch4_PlankGuard'],
+  ch4_deckhand: ['skel_minion', '갑판 수부', 'Ch4_Drowned'],
+  ch4_drowned_drift: ['ghost', '떠밀려 온 수부', 'Ch4_DrownedDrift'],
+  ch4_lurer: ['glub', '미끼등 아귀', 'Ch4_Lurer'],
+  ch4_lurer_bomb: ['bomb_abyss', '경고등 아귀', 'Ch4_Lurer'],
+  ch4_lurer_seer: ['abyss_seer', '빛주머니 아귀', 'Ch4_Lurer'],
+  ch4_lurer_glim: ['ghost_skull', '깜빡이 아귀', 'Ch4_LurerGlim'],
 };
+/** 장 전용 종 id → 수치를 복사한 원래 적 id(지역 동사처럼 원래 종에 묶인 규칙을 찾을 때). 원래 종이면 그대로. */
+const SPECIES_SOURCE = Object.freeze(Object.fromEntries(Object.entries(CHAPTER_SPECIES_DEFS).map(([id, [sourceId]]) => [id, sourceId])));
+export function speciesSourceId(id) { return SPECIES_SOURCE[id] || id; }
 // 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
-const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome']);
+// 4장 수부·아귀도 원령·해골 망령 자리(ch4_drowned_drift·ch4_lurer_glim)를 맡지만 불투명한 Tripo 몸이다.
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim']);
+// 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래(null = 색조 없음). 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을
+// 보라로 물들였다 — 붉은 색조도 남색과 섞이면 보라가 되어, 경고등 아귀는 색조를 빼고 의상의 붉은 발광으로 경고한다. 빛주머니 아귀는 청록.
+// 수치·행동은 그대로다.
+const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4' });
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
   ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
   if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
+  if (id in BODY_TINTS) { if (BODY_TINTS[id]) ENEMIES[id].tint = BODY_TINTS[id]; else delete ENEMIES[id].tint; }
 }
-// 1·2·3장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
+// 1~4장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
 for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {
-  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3]]) {
+  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3], ['tide', 4]]) {
     const def = ENEMIES[`${prefix}_${rank}`];
     if (def && CHAPTER_SPECIES[chapterId][def.summon]) def.summon = CHAPTER_SPECIES[chapterId][def.summon];
   }
