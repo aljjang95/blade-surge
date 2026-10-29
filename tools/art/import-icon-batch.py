@@ -59,10 +59,10 @@ def main():
         man = json.load(open(mp, encoding='utf8'))
         for e in man['items']:
             if e['id'] in gear_h: e['sha256'] = gear_h[e['id']][0]
-        open(mp, 'w', encoding='utf8').write(json.dumps(man, indent=2) + '\n')
+        open(mp, 'w', encoding='utf8').write(json.dumps(man, indent=2, ensure_ascii=False) + '\n')
         for e in pres['items']:
             if e['id'] in rend_h: e['sha256'], e['occupancy'] = rend_h[e['id']]
-        open(pres_path, 'w', encoding='utf8').write(json.dumps(pres, indent=2) + '\n')
+        open(pres_path, 'w', encoding='utf8').write(json.dumps(pres, indent=2, ensure_ascii=False) + '\n')
     n = {k: sum(1 for v in plan.values() if v == k) for k in old}
     print(f"gear {n['gear']}장 {old['gear']}->{new['gear']} bytes / item-renders {n['render']}장 {old['render']}->{new['render']} bytes")
 

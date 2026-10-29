@@ -57,7 +57,7 @@
     },
     {
       "id": "w_void",
-      "sha256": "681ec2cb3dbedb77ab3158ae2d343dfe4d86c6ff547555482f4052e1f8d0e6d2"
+      "sha256": "d212854724a7f41e9ae6847d381f662234f8812bc603800a2e69f6390905a4e5"
     },
     {
       "id": "w_dragon",
@@ -73,51 +73,51 @@
     },
     {
       "id": "gear_weapon_n_1",
-      "sha256": "06ee8b1ce0423ffc90650e0655f458700ae195f681f739f68a7118c01ec15894"
+      "sha256": "732c4061651a9f2caf993dac03696c67dcc9bbba7266f6731c051b14985aefb9"
     },
     {
       "id": "gear_weapon_n_2",
-      "sha256": "a0d7b07abbd821452277810f6a29176dd6d814b7cb9fac8ff92eaad3a7625884"
+      "sha256": "3f80da1336a7619b501056b2bc4bd972c74b5d18e21617f1aeb1240c7b606173"
     },
     {
       "id": "gear_weapon_n_3",
-      "sha256": "4a4cca9bc1794a338ba9cb0ad3f270b085335d84b49e2b2117c821e5ebf4bff8"
+      "sha256": "12267c603f4dd0d8239a2ba7f62f66aa252d3790a294fb91d8c5569bb40ce9aa"
     },
     {
       "id": "gear_weapon_s_1",
-      "sha256": "3f6bc9155b1aed7b61b3f1408810b92cfe0a2068f310db233f4319afe5619a01"
+      "sha256": "0a5c65f66ec79e93db2acc4213572c3fe95f5faf7478eb8affcdbace673c0f4c"
     },
     {
       "id": "gear_weapon_s_2",
-      "sha256": "3c6b1a40c032e1b84d8e8c4b098cb7c77e4b09da20ac4b6c397d53d5b9702847"
+      "sha256": "439608ccc99e7f8e8bddd1850618a77df6fd2001658e406bdd492bbf86178485"
     },
     {
       "id": "gear_weapon_s_3",
-      "sha256": "fb29478becd2deb1ccd3022916a2f22b9d0c40c7ad6bcec772f8300c0010fc56"
+      "sha256": "2ba595e69f5c1a15685a3c33e9a3ce18b7205d92d1fbcafb652e19074ff3a136"
     },
     {
       "id": "gear_weapon_e_1",
-      "sha256": "6a1567583baf1218e632294b417724c3db5dc80725f1b20980b6914e2b8e6eaa"
+      "sha256": "5df5118da3133aa57309fe5382263f197c167ae1fd40a905a188036b7c665248"
     },
     {
       "id": "gear_weapon_e_2",
-      "sha256": "614c67cff74d2e09ee1ceaa4bdf6c64d2fe2abdaccad707aba95755483600034"
+      "sha256": "9520760b72f622cd014eaadcf4982f24bff75f5025e0c6b193db6af476005cbb"
     },
     {
       "id": "gear_weapon_e_3",
-      "sha256": "7ed68a028317cb6eebb9112aa2830e79ff35cd7e794f5778d76a7019ccc3571e"
+      "sha256": "2badc4db09e08041b8f906706be31e2cbec40b1b67ba5d11ce642bd25f4fdcbc"
     },
     {
       "id": "gear_weapon_l_1",
-      "sha256": "e22ca02aa87a81b26dc104124242513ea6c6d91d59737131a62d1a50d55fbe2c"
+      "sha256": "805b3eea51d5675de2a71eb402ffe84adfbbada8cb648e50364bb7554fc6e39d"
     },
     {
       "id": "gear_weapon_l_2",
-      "sha256": "72606aeffe54eb8b344cdbb5ed5f1406225f9b3b95aca50e7324d28d2bf9c49d"
+      "sha256": "60652dd2b6d33536e2109927c4c2a08ec2d6ead6600e93d981257d60b9038da4"
     },
     {
       "id": "gear_weapon_l_3",
-      "sha256": "d64de45636f44388391ac2af200fc7b0595023c5d64b87384f249f3691e22c22"
+      "sha256": "e920adb48b211fa34cf30a49a0007f519fb418f8bc76c2141a386793b5d5f700"
     },
     {
       "id": "a_leather",
@@ -169,7 +169,7 @@
     },
     {
       "id": "a_void",
-      "sha256": "41da323b5f2929c5c3d59e41b65746119022371efe742218a0016337406839ee"
+      "sha256": "131a730f5d2ed403bd119745c2739173a6e8d8015ae0e28aee2953181631d2e6"
     },
     {
       "id": "a_titan",
@@ -185,51 +185,51 @@
     },
     {
       "id": "gear_armor_n_1",
-      "sha256": "7207ba9aeba2b62f7afa67db07f45813126b6e3ff5bb9098a7bd1838fbdc993f"
+      "sha256": "268f10dbde858f306583ba0a478c39fff59401d2fe19a78136fa2f43fe9ee00f"
     },
     {
       "id": "gear_armor_n_2",
-      "sha256": "96332a206e38e8197b0ea779864e948c589d4da8e54873761aaca4fa5e626675"
+      "sha256": "e00cbf09531c36f915b48607d11d6d4ba44bc1cafa1f535f4de7b1773b081fcb"
     },
     {
       "id": "gear_armor_n_3",
-      "sha256": "5c0607901c0d9135771d6ed603dc6231515bf289a813a14ca3882121ad496074"
+      "sha256": "bcb4907286d2df94ba558cc6eb112bb570fc1dd6fa4f1b6ac171504822ed7709"
     },
     {
       "id": "gear_armor_s_1",
-      "sha256": "c9df5473da80ef79ca2eeeca3f010381da2584a2f43924650aae0be9b4915053"
+      "sha256": "7dfce3d409d2131adf0f425a1c3955b1a320db81d0870452f10fec3408ea3506"
     },
     {
       "id": "gear_armor_s_2",
-      "sha256": "68caa1502056cc81b477bbb3827cf3906ab718d2b8e097f4e8f0ef4e68b6d401"
+      "sha256": "cb0bdd66bdc50466ed46f9b31629ba25914b73b998570d0c0859b7b73e7ea845"
     },
     {
       "id": "gear_armor_s_3",
-      "sha256": "9f840bda7119e5c9fd9e83344d89636d5016c101d185fcce3e37230ac3f9987f"
+      "sha256": "d6c797d3bfc7369cfe53ef25ec6d284c284cf2574a83f335d03aa0ab3d60e8cd"
     },
     {
       "id": "gear_armor_e_1",
-      "sha256": "0fc385a4f18a983ac9e946a2263e830777fac99bd07c9dad12b0df13579a926b"
+      "sha256": "3b2c26896f9fa982fb6044c5abe2755984a68abcd18afafe884f2e43dcfcf881"
     },
     {
       "id": "gear_armor_e_2",
-      "sha256": "a0e29bb94fbd8823854e854c3823fa045cfa1c11d0e533da2ffc1663d850d525"
+      "sha256": "98b4496b01ae58681b5c621632d50cf479b2352d03640b5752386c38cb384391"
     },
     {
       "id": "gear_armor_e_3",
-      "sha256": "9c13bdcc6f73049182d0f9ed3046b82f16d832c3cde7f8a3c151b2ee0701b151"
+      "sha256": "4f575dd1adeb1de5dd6c49beeddd1532951db6a79a33bde63d8792e4a980fc96"
     },
     {
       "id": "gear_armor_l_1",
-      "sha256": "219c69ba4773d0d097592c8e8f1108d26c04eb6998e4604bbb0dce0ec15a6c06"
+      "sha256": "8210706a84fb0fe4434c7e88ef95dedf5500b351b64510547c444b5dfa6ae8d5"
     },
     {
       "id": "gear_armor_l_2",
-      "sha256": "d2752ee2b87b5cd371a3bf9319ef4e5760fe3aa513287062cbe07eb990ce65c5"
+      "sha256": "2760f52857064999daafc604141e5c747d00512d27c3bdda14e6e2cdbec3ed14"
     },
     {
       "id": "gear_armor_l_3",
-      "sha256": "eea9cdfe99d8694baab5459d40a3e83bf204e72e7a3447eed827ad455cb1710b"
+      "sha256": "7d03cad73770561d61d2165d75a204f5993aa04b6659f7a0af24a63f1dc0f155"
     },
     {
       "id": "r_copper",
@@ -253,7 +253,7 @@
     },
     {
       "id": "r_jade",
-      "sha256": "cc115749ad86dfab2c2f27084528c4960ecaf6d6c950654a1b1443388fa83557"
+      "sha256": "218c54bf47e8378455d47312f5db43f1083d36d5e31d954df9a0bc3f49802b59"
     },
     {
       "id": "r_amber",
@@ -281,7 +281,7 @@
     },
     {
       "id": "r_void",
-      "sha256": "013ae2ab7adf8c80bba05645f23f53bc2c070227ecd6fa9f236cb92b2dd38d77"
+      "sha256": "29c75e3ceb591912accf0000e12a8d28932574b3063da695fed6145f925fb13a"
     },
     {
       "id": "r_abyss",
@@ -297,51 +297,51 @@
     },
     {
       "id": "gear_ring_n_1",
-      "sha256": "b2134e3b352340552587b99f5edf9bf4c9aee995547d3d23a5173fb34c2395d9"
+      "sha256": "4e721db1bb01e4565e74399e420fa4a026b7dc935ee6946daf9c1cd05dc7d284"
     },
     {
       "id": "gear_ring_n_2",
-      "sha256": "403208fbd55a31eacd408d7e63381533cc33ef0c2f841b7c38283f18563d690b"
+      "sha256": "7cb61c701da8a85bf82631da7b1135e6986f1d9ed62c3ce9930ba58d4e32976a"
     },
     {
       "id": "gear_ring_n_3",
-      "sha256": "349bc7d3a3aee01a6946dbd5add5f12ef7453556986b42f4a949c7973ffa6453"
+      "sha256": "4fa0bd4e9509a9615a72e9e2123034d2bf3d18b595375e31fb3d54c2f06a6457"
     },
     {
       "id": "gear_ring_s_1",
-      "sha256": "53748b6c33dd4fb1111f379da72e1b7408d63dd3f288bc3058751bded5f53997"
+      "sha256": "ad3bf03f2ea53318823392e162b397b6253d8674ac3285fe4ca22265624348fb"
     },
     {
       "id": "gear_ring_s_2",
-      "sha256": "4b05315fa4a436dd3f7c15ea01e9a32431dfeff60a639518c421a477ea3360c0"
+      "sha256": "f0964f7df9fe941a57e8979c770de1fa9f4b1f2372a12394524d19c5b87f7e7d"
     },
     {
       "id": "gear_ring_s_3",
-      "sha256": "655112add46a0683fd3c93a92b5bd4f7219776d479f1b57aaefaa267fb3f73d3"
+      "sha256": "bde9d52bd336e048ffa506fbb435bd2fc31e57e8aebc121c434e562655a89c2a"
     },
     {
       "id": "gear_ring_e_1",
-      "sha256": "2b3a181c1c4db11a4558af13c211db13dd196625925b6e6a963b9e27fc56b7f7"
+      "sha256": "8c86d8872a0f6cf82a8f6314af0415a21ed3affffdb074b7a105925c0f14bb10"
     },
     {
       "id": "gear_ring_e_2",
-      "sha256": "11ed6a79322da91b109038776256d5568222679b7c9d7745fccb144fe68a8751"
+      "sha256": "7de7b3dab72429a2e781bfce0cc54f2846659c1ff62389cacb7443dd7865a689"
     },
     {
       "id": "gear_ring_e_3",
-      "sha256": "999da16df16c14a04674cbd555a32a2c3dcd002b99d9de5e9970039c5f9e286a"
+      "sha256": "c0a9286d996bda5f9e949096317d86b869715a1327cb440fbd5fb408e52262d4"
     },
     {
       "id": "gear_ring_l_1",
-      "sha256": "43ae89409f63e9d749e0a26c8d3cadb5514f043a60a010845140f9ecb6cb7e85"
+      "sha256": "7db1148fe8cad87dd272d7aef98afbf276787713ceeb99d887b356631a2cad95"
     },
     {
       "id": "gear_ring_l_2",
-      "sha256": "9ade7b970665f32ef0231f82193c9bde9b73b305854ceba8da5c24d55d3b9b13"
+      "sha256": "7cf44e92ebe99b248d778ebb80d8eea6234e16794f278b7dbb070129061bc4ff"
     },
     {
       "id": "gear_ring_l_3",
-      "sha256": "742f4beeb4b74fcc19a2fb800aa4e0c412609df8b10acbbaaccb89f6810a4720"
+      "sha256": "5cf8df60fa259ebec69271498f85fc5600d89b673cfd7b46f0a296c9ec46fc81"
     },
     {
       "id": "b_cloth",
@@ -377,7 +377,7 @@
     },
     {
       "id": "b_wind",
-      "sha256": "f7de64627c8a09ab896a92126adc444b30f293f52b2f8f1dab572e95eda7b819"
+      "sha256": "f93878345abb52d7621e2d72b213d4f23bf8b27bae5848a3f111fb79ab79da1e"
     },
     {
       "id": "b_knight",
@@ -389,11 +389,11 @@
     },
     {
       "id": "b_mithril",
-      "sha256": "b6ce55b6b11de3b597f334cd11629026648291179d7d57564281b1b49e077260"
+      "sha256": "e5f4ab4896017966df49e4781af8862d759ac8d65daf61813d1a0f54444a7416"
     },
     {
       "id": "b_void",
-      "sha256": "fe18d5035cf5d1ea0ae74c478302a75d392be61e4a6592be4d056ef120006654"
+      "sha256": "ec0b7cc33529d2bc4b4e0a8d3c37c2f5644a15e292b31b36d6b295b7faf0d064"
     },
     {
       "id": "b_sky",
@@ -409,75 +409,75 @@
     },
     {
       "id": "gear_boots_n_1",
-      "sha256": "f85b40c5ea438a3b3813398d730266947fe6333df97e6980c06e4ddc3606dbee"
+      "sha256": "ffe67b9c4b8e8b7ad76353186805adefe8b840c73ca9c52cac152fa23568a89e"
     },
     {
       "id": "gear_boots_n_2",
-      "sha256": "310fdc4d279f430255de172055b6fed48e71f0136114b69ee71c34e9da5a0fdf"
+      "sha256": "8f04fcdde3e299f7a0b3f0a6c949f8c6049f24d6d9393e18b6356bd7d77d9825"
     },
     {
       "id": "gear_boots_n_3",
-      "sha256": "5d774451532e8ae3a364c2c2469d1cd0da6634b698b807b0c0dd1704aa6cdf45"
+      "sha256": "d5e07cb996db1ffdc4463b9eed029e36c5ae24aed363f5e254dcdc31eac79c8c"
     },
     {
       "id": "gear_boots_s_1",
-      "sha256": "a4019b2b1d0ad7a701a3aa5e7cd741c5c19bf4a893fa2963ebb20220aaf6edeb"
+      "sha256": "438a129a6258911a83e4a302e82fd86a294c2b972216cf0b7c801abd0dcaebb8"
     },
     {
       "id": "gear_boots_s_2",
-      "sha256": "16497c8e1523206c8339053fddf0e3c607cf071d47e2a4c42a49bf3838d336fb"
+      "sha256": "59294bcaf20d8a8d37fb012ea0ebaf7fc31e26ea020268e5cffe8afaf7685e7b"
     },
     {
       "id": "gear_boots_s_3",
-      "sha256": "34a85811a3edff26c25804a74b32451962da3b400bca3d3c1694e4e18e1767c2"
+      "sha256": "2e0321840f8ece25fb9ea36ef8954dab637ffcc55f6467ca9dcb7d23432894be"
     },
     {
       "id": "gear_boots_e_1",
-      "sha256": "66b3862f1e87e48bcbc625c3fb4a1a2653be664b7827e60de35f11af06e2988d"
+      "sha256": "6a4de611ea16af932fb5e2a55b4d3bdfc923a70334b304094587e5fb1deae639"
     },
     {
       "id": "gear_boots_e_2",
-      "sha256": "c6750766138fab88591468f296f1b1c055f7490a251b17c91d170b1a48875c6b"
+      "sha256": "ee3735ac578a30e0e467323082754456fa0311cff68acb71c34ed62d186d776e"
     },
     {
       "id": "gear_boots_e_3",
-      "sha256": "8a224eb5f54c0ca707b573bf7da1e16bdbc5f936e574740c640771717598204b"
+      "sha256": "53177d1ebb4414c76d3878e572cced752f654e1ec4fefa2dd7353babcec1ddda"
     },
     {
       "id": "gear_boots_l_1",
-      "sha256": "4e4c0c3bb0b8ec9eebefb2b22a4f074a16b73d15d6c64d2f0f8a87f9262b2712"
+      "sha256": "a5a84f913f7c996a7a9c74bd9c332a6e062b738fe972e46bfe9c27369ff1bdd5"
     },
     {
       "id": "gear_boots_l_2",
-      "sha256": "91f3b200764b570496e87ab49e49182a6f3517d4c1113e5e898e6a122884df46"
+      "sha256": "584c49c059450ee68f612319010e858237dc73348ecafec4450fad7a02b6f0fe"
     },
     {
       "id": "gear_boots_l_3",
-      "sha256": "12842490fac95430480f7c5927951b09cb1ec74af9926f2793cfc0ce916296f0"
+      "sha256": "e4017a2772616024f9079689df567c9773bae6a9d03a448fb9bf72c3cde86c7e"
     },
     {
       "id": "w_town_oath",
-      "sha256": "a89843c3c1db51e4c75bd5af19865a03a5cd10fc8dac109a15d67ce7e7224819"
+      "sha256": "844310124edfef1bf39c4a0e2df9247d8c4652d0ca5ebb8373f801b6bd53d64e"
     },
     {
       "id": "a_town_oath",
-      "sha256": "d847631b5e03e30e48f0d94891f3c8120f7e5fd4060c2b7bc636c33b29e2b438"
+      "sha256": "9763c0feaaa45ad6d1cc395c30941e24c3a3da5f0c67e759fe05f81bbaf92447"
     },
     {
       "id": "w_town_ember",
-      "sha256": "0ade7d542eb1cae09bb12d24dc58946f862176d862da5bfbd07b70ed88f71016"
+      "sha256": "fc55b50c8e9c1d73b3eb61d3aaaa563fff04872fa714d062bc69fcf7a76363f3"
     },
     {
       "id": "a_town_ember",
-      "sha256": "19202c9dbd6f0b703730a06ddbc29374ea91764d53cffca3513dead644d11559"
+      "sha256": "3ecd8b041f4c943d405ee855f820a6c66c3273757b710a6c16ba62c2b372d4b8"
     },
     {
       "id": "w_town_star",
-      "sha256": "4b365b962b88d0937902024371ef5e529014438e2aa6ee63d90fedfddd775f69"
+      "sha256": "06ec26f3af83c33870a5f14490c6061118a5ad8daa974d0302f6bb22a0532840"
     },
     {
       "id": "a_town_star",
-      "sha256": "50c71f6a2b60d94d9cd263d4b4082497d4daec9f4aef4eccc60bbeaaaa17b6d7"
+      "sha256": "29789f6664b4343326f5eac0d5ddf6a412846a8d288aa1117d9b26c705c4349e"
     }
   ]
 }
