@@ -18,7 +18,8 @@ export const CARD_TIERS = Object.freeze({
 export const CARD_TIER_ORDER = Object.freeze(['common', 'rare', 'epic', 'legend']);
 /** 카드 종류. repair 는 착용 무기가 닳았을 때만 후보가 된다. scroll 은 영웅·전설에서만. */
 export const CARD_KINDS = Object.freeze(['gold', 'stones', 'gear', 'fragments', 'repair', 'scroll']);
-const GEAR_RARITY = Object.freeze({ common: 'S', rare: 'E', epic: 'E', legend: 'U' });
+// 장비 카드 등급: 판매가가 커서(에픽 4,000·유니크 12,000) 희귀까지는 스페셜로 둔다. 금화 카드보다 늘 이득이 되지 않게(인플레 방지).
+const GEAR_RARITY = Object.freeze({ common: 'S', rare: 'S', epic: 'E', legend: 'U' });
 const STONE_N = Object.freeze({ common: 2, rare: 3, epic: 5, legend: 8 });
 const FRAGMENT_N = Object.freeze({ common: 5, rare: 10, epic: 18, legend: 35 });
 export const CARD_COUNT = 3;
