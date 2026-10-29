@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { normalizeSave } from '../src/game/save.js';
-import { IDLE, idleQuote, claimIdle, normalizeIdle } from '../src/game/idle-rewards.js';
+import { IDLE, idleQuote, claimIdle, normalizeIdle, markSeen } from '../src/game/idle-rewards.js';
 import { stageDef } from '../src/data/stages.js';
 
 const memory = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } }; };
@@ -10,7 +10,7 @@ const H = 3600000, DAY = 86400000, T = Date.UTC(2026, 9, 29, 3);
 
 describe('방치 보급 규칙', () => {
   test('시간 비례, 12시간 상한, 관문 0이면 없음', () => {
-    const st = { since: T, comebackAt: 0 };
+    const st = { since: T, seen: T, comebackAt: 0 };
     expect(idleQuote(st, { unlocked: 1 }, T + 5 * H).ready).toBe(false);
     const q2: any = idleQuote(st, { unlocked: 31 }, T + 2 * H);
     expect(q2.minutes).toBe(120);
@@ -20,16 +20,28 @@ describe('방치 보급 규칙', () => {
     expect(q30.minutes).toBe(IDLE.capHours * 60); expect(q30.capped).toBe(true);
     expect(q30.comeback).toBe(false);
   });
-  test('수령하면 기준이 지금으로, 시계가 뒤로 가면 보상 없이 당긴다', () => {
-    const st = { since: T, comebackAt: 0 };
+  test('수령하면 기준이 지금으로, 시계가 뒤로 가면 기록을 건드리지 않고 거부', () => {
+    const st = { since: T, seen: T, comebackAt: 0 };
     const r = claimIdle(st, { unlocked: 11 }, T + 3 * H);
     expect(r.ok).toBe(true); expect(st.since).toBe(T + 3 * H);
     expect(claimIdle(st, { unlocked: 11 }, T + 3 * H).ok).toBe(false);
-    const back = claimIdle(st, { unlocked: 11 }, T);
-    expect(back).toEqual({ ok: false, error: 'clock' }); expect(st.since).toBe(T);
+    expect(claimIdle(st, { unlocked: 11 }, T)).toEqual({ ok: false, error: 'clock' }); expect(st.since).toBe(T + 3 * H);
+    // 되돌렸다 복구해도 쌓인 시간은 실제 경과만큼
+    expect((claimIdle(st, { unlocked: 11 }, T + 4 * H) as any).minutes).toBe(60);
+  });
+  test('보급 팝업을 닫기만 해도 매일 접속(markSeen)하면 복귀로 잡지 않는다', () => {
+    const st = { since: T, seen: T, comebackAt: 0 };
+    for (let d = 1; d <= 9; d++) expect(markSeen(st, { unlocked: 20 }, T + d * DAY)).toBe(true);
+    expect(idleQuote(st, { unlocked: 20 }, T + 9 * DAY + H).comeback).toBe(false);
+    expect(markSeen(st, { unlocked: 20 }, T + 9 * DAY + 60000)).toBe(false); // 30분 간격
+  });
+  test('복귀 보상이 걸려 있으면 접속 표시가 지우지 않는다', () => {
+    const st = { since: T, seen: T, comebackAt: 0 };
+    expect(markSeen(st, { unlocked: 20 }, T + 8 * DAY)).toBe(false);
+    expect(idleQuote(st, { unlocked: 20 }, T + 8 * DAY).comeback).toBe(true);
   });
   test('7일 이상 비우면 복귀 보상, 30일 쿨다운, 신규(3관문 미만)는 제외', () => {
-    const st = { since: T, comebackAt: 0 };
+    const st = { since: T, seen: T, comebackAt: 0 };
     expect(idleQuote(st, { unlocked: 2 }, T + 8 * DAY).comeback).toBe(false);
     const r: any = claimIdle(st, { unlocked: 20 }, T + 8 * DAY);
     expect(r.comeback).toBe(true); expect(r.rewards.gems).toBe(IDLE.comeback.rewards.gems);
@@ -38,7 +50,7 @@ describe('방치 보급 규칙', () => {
     expect(claimIdle(st, { unlocked: 20 }, T + 8 * DAY + 40 * DAY).comeback).toBe(true);
   });
   test('정규화: 잘못된 값은 기본값, 도입 전 저장은 fresh 시각부터', () => {
-    expect(normalizeIdle({ since: -1, comebackAt: 'x' }, { since: 5, comebackAt: 0 })).toEqual({ since: 5, comebackAt: 0 });
+    expect(normalizeIdle({ since: -1, comebackAt: 'x' }, { since: 5, comebackAt: 0 })).toEqual({ since: 5, seen: 5, comebackAt: 0 });
     let clock = T;
     const eco: any = new Economy({ now: () => clock, storage: memory(), rng: () => .5 });
     const raw = JSON.parse(JSON.stringify(eco.s)); delete raw.idle;

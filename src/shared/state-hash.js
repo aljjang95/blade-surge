@@ -32,7 +32,7 @@ export function hashValue(value) { return hashText(canonicalJson(value)); }
 export const PARITY_KEYS = Object.freeze([
   'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless',
   'transcendStones', 'skillResets', 'heroes', 'selected', 'inventory', 'invSeq', 'vault', 'avatars', 'progress', 'pass',
-  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims', 'idle', 'newbie', 'achievements',
+  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims', 'newbie', 'achievements',
 ]);
 export function paritySubset(state) {
   const out = {};
@@ -45,7 +45,8 @@ export function parityHash(state) { return hashValue(paritySubset(state)); }
  * 서버 권위 계정에서 서버 문서가 덮어쓰는 필드(P1 범위). 설정·튜토리얼·원정·마을·여정 등 아직 서버 명령이 없는
  * 필드는 로컬 값을 유지한다. 그래서 서버 권위 컷오버(V1_SERVER_AUTHORITY_PERCENT)는 해당 시스템이 서버로 옮겨진 뒤에 연다.
  */
-export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT']);
+// idle(방치 보급 시각)은 서버·기기가 각자 시각을 찍어 해시에서 뺀다(energyT 와 같은 이유). 서버 권위에서는 서버 값을 쓴다.
+export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT', 'idle']);
 /** 0·빈 값이면 서버 문서가 필드를 생략하는 서버 소유 키. 서버 문서에 없으면 "삭제(0)"로 반영한다(로컬 값을 남기면 서버가 지운 잔액이 되살아난다). */
 export const OPTIONAL_SERVER_KEYS = Object.freeze(['lineageSigil', 'gearDex', 'sigilClaims']);
 export function mergeServerOwned(local, server) {

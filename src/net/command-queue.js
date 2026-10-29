@@ -12,7 +12,7 @@ const TO_ARGS = {
   enhance: (uid, opts) => opts?.sure ? [uid, !!opts?.protect, !!opts?.bless, true] : [uid, !!opts?.protect, !!opts?.bless],
   equipAvatar: (heroId, id = null) => [heroId, id ?? null],
   setDifficulty: (id, ch = 1, st = 1) => [id, ch, st],
-  claimDaily: () => [], claimIdle: () => [], claimMonthly: () => [],
+  claimDaily: () => [], claimIdle: () => [], markSeen: () => [], claimMonthly: () => [],
   pull: (n, banner = 'hero') => [n, banner], pullSSR: () => [], exchangeMileage: () => [],
 };
 

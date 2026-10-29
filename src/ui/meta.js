@@ -183,7 +183,7 @@ export class Meta {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
     // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-achieve', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-achieve', 'dot-mail', 'dot-quest', 'dot-journey'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
       + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
@@ -229,6 +229,7 @@ export class Meta {
     return this.app.startStage(this.eco.nextStage());
   }
   tick() {
+    if (this.app.mode === 'lobby') this.eco.markSeen(); // 30분 간격 접속 표시(복귀 보상 기준)
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
     if (this.billingOn() && $('promo-timer')) $('promo-timer').textContent = '한정 상품';
     const rot = rotationWindow(Date.now()); $('banner-timer').textContent = hms(rot.end - Date.now());
@@ -1056,7 +1057,9 @@ export class Meta {
   /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
-    if (!this.eco.dailyAvailable()) { if (!this.dailyDeferrable() && this.eco.idleQuote().notable) this.showIdle(); return; }
+    // 접속 표시는 팝업 판단 뒤에 남긴다(복귀 보상이 걸려 있으면 markSeen 이 스스로 건너뛴다).
+    if (!this.eco.dailyAvailable()) { if (!this.dailyDeferrable() && this.eco.idleQuote().notable) this.showIdle(); this.eco.markSeen(); return; }
+    this.eco.markSeen();
     // 신규 계정은 첫 전투 결과를 보기 전에는 출석 보상 팝업으로 흐름을 끊지 않는다. 보상은 그대로 남아 있고 첫 전투 뒤 로비·메뉴에서 받는다.
     if (this.dailyDeferrable()) { this.dailyDeferred = true; return; }
     this.dailyDeferred = false;

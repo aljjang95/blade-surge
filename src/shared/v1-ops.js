@@ -54,6 +54,7 @@ export const OPS = {
   claimMail: { args: [(v) => int(v, 0)], run: (e, id) => e.claimMail(id), ok: okValue },
   claimQuest: { args: [str], run: (e, id) => e.claimQuest(id), ok: okValue },
   claimIdle: { args: [], run: (e) => e.claimIdle(), ok: okValue },
+  markSeen: { args: [], run: (e) => e.markSeen(), ok: () => true }, // 이미 표시돼 바뀐 것이 없어도 거절이 아니다
   claimNewbie: { args: [str], run: (e, id) => e.claimNewbie(id), ok: okValue },
   claimAchievement: { args: [str], run: (e, id) => e.claimAchievement(id), ok: okValue },
   // 외형·설정
