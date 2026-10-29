@@ -174,6 +174,9 @@ export function heroCombatProfile(eco, heroId) {
   return { atk: Math.max(1, Math.floor(stats.atk || 1)), maxHp: Math.max(1, Math.floor(stats.hp || 1)), level: hero.level };
 }
 
+/** 서버 권위 정산의 클리어 카드 지급(#404 완주 증거 검증 뒤 true). */
+export const SERVER_CLEAR_CARDS = false;
+
 /**
  * 판정이 끝난 정산을 EconomyCore에 적용한다. 반환값이 영수증의 got/loot다.
  * verdict 'soft'는 골드·재료 수량을 절반으로 줄인다(첫 클리어 보석·경험치·장비는 그대로).
@@ -205,6 +208,10 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
     const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),
       fieldFragments: half(loot.fragments), fieldLoot: items, fullClear: rating.fullClear,
+      // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 권위 정산에서는 아직 만들지 않는다. 지금 개연성 검사는 보고 값(방·처치 수)만 보므로
+      // 가짜 승리를 막지 못한다(보안 리뷰, #404). 서버가 검증 가능한 완주 증거를 받기 전까지 카드 보상을 이 경로에 붙이지 않는다.
+      // 서버 권위 출시는 현재 0%이고, 클라이언트 정본(로컬·그림자) 판은 그대로 카드를 받는다.
+      clearCards: SERVER_CLEAR_CARDS && verdict === 'ok' && (facts.roomsCleared | 0) > 0,
     });
     return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear };
   } finally { eco.rng = previousRng; }

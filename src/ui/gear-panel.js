@@ -22,6 +22,7 @@ import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
 import { openVault } from './vault-panel.js';
+import { durabilityLineHtml } from './clear-loop.js';
 import { canTransfer } from './enhance-transfer-panel.js';
 
 /**
@@ -386,7 +387,7 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
       (foreign ? '<p class="is-note stat-down">' + (inst.owner === 'vault' ? '금고에 보관 중인 장비입니다. 금고에서 이 영웅에게 꺼내야 장착할 수 있습니다.' : esc(HEROES[inst.owner]?.name || '다른 영웅') + ' 소유 장비입니다. 그 영웅이 금고에 맡긴 뒤 꺼내야 장착할 수 있습니다.') + '</p>' : '') +
       (look ? '<div class="item-look" style="--wl:' + look.color + '">착용 모습 · ' + esc([visual.formLabel, look.glow > 0 ? look.element + ' 발광' : '발광 없음', look.tier ? '+' + look.enh + ' ' + look.tier : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
       (it.summon ? '<p class="is-note" style="color:' + RARITY_COLOR[it.rarity] + '">✦ ' + esc(it.summon.name) + ' 소환 · ' + it.summon.interval + '초마다 ' + Math.round(it.summon.ratio * 100) + '% 공격</p>' : '') +
-      setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
+      durabilityLineHtml(eco, inst, it) + setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
         (side === 'rune' ? '<div class="is-side-body">' + runePaneHtml(meta, uid, heroId, runeState.socket) + '</div>' : enhanceHtml(meta, inst)) + '</div>' : enhanceHtml(meta, inst)) + '</div>' +
       '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button>' + (foreign ? '' : '<button type="button" class="btn btn-ghost btn-sm" id="i-vault" title="금고에 맡기면 다른 영웅이 꺼내 쓸 수 있습니다">금고에 맡기기</button>') + '<button type="button" class="btn btn-gold" id="i-eq"' + (foreign ? ' disabled' : '') + '>' + primary + '</button></footer></div>',
     { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); disposeRuneStage(); },
@@ -439,6 +440,14 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         if (!r.ok) { ui.toast(r.reason === 'full' ? '금고가 가득 찼습니다 — 금고에서 칸을 늘려 주세요' : '맡길 수 없습니다', 'red'); audio.play('ui_error'); return; }
         audio.play('ui_confirm', { vol: 0.5 }); ui.toast(esc(it.name) + ' 금고에 맡김'); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
         if (heroId === eco.s.selected && equipped) meta.app.showcaseHero(heroId);
+      };
+      // 무기 내구도 수리(클리어 루프): 닳은 만큼 골드를 내고 100으로.
+      const repairBtn = b.querySelector('#i-repair');
+      if (repairBtn) repairBtn.onclick = () => {
+        const r = eco.repairItem(uid);
+        if (!r?.ok && !r?.saveError) { ui.toast(r?.reason === 'gold' ? '골드가 부족합니다' : '수리할 수 없습니다', 'red'); audio.play('ui_error'); return; }
+        audio.pick('hit_metal', 3, { vol: 0.6, rate: 0.9 }); ui.toast('무기 정비 완료 · 골드 -' + fmt(r.cost), 'gold');
+        meta._sheetDirty = true; meta.refreshTop(); render();
       };
       b.querySelector('#i-sell').onclick = async () => {
         if (await ui.confirm('판매', esc(it.name) + ' +' + inst.enh + ' 을(를) 판매할까요?')) { const g = eco.sellItem(uid); ui.toast('골드 +' + fmt(g), 'gold'); audio.pick('coin', 2); meta._sheetDirty = false; meta.renderHeroes(); meta.focusInventory(uid, it.slot); }

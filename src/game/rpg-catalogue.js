@@ -6,7 +6,7 @@ export function buildCatalogue() {
   const entries = new Map(Object.entries(ENEMIES).map(([id, def]) => [id, { id, def, locations: [] }]));
   for (const ch of CHAPTERS) for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(ch.id, st), roster = stage.rosterFor();
-    // 장 전용 종(CHAPTER_SPECIES: 1~6장 Tripo 몸)은 보상 명단의 원래 적 자리에 실제로 나오므로 출현 위치를 함께 잡는다.
+    // 장 전용 종(CHAPTER_SPECIES: 1~7장 Tripo 몸)은 보상 명단의 원래 적 자리에 실제로 나오므로 출현 위치를 함께 잡는다.
     // 6장(잔향)은 경로의 고향 장 몸도 함께 나온다(chapterSpeciesSwap).
     const swap = chapterSpeciesSwap(ch.id, stage.dungeon.id) || {};
     const base = [...roster.trash, ...roster.ranged, ...roster.elite];
