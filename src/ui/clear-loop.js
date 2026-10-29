@@ -216,11 +216,17 @@ export class ClearLoop {
     if (li && !reducedMotion()) { li.classList.add('gone'); this.after(() => this.afterChange(), 220); } else this.afterChange();
   }
 
+  /** 지금 장비 상태로 행을 다시 만든다. 결과 화면의 '더 좋은 장비 장착'처럼 다른 곳에서 착용·강화가 바뀌어도 옛 행으로 팔지 않게. */
+  freshRows() { const s = this.state; s.rows = shopRows(this.eco, s.uids, { heroId: s.heroId }); return s.rows; }
+
   async sell(uid) {
-    const s = this.state, row = s.rows.find((r) => r.uid === uid); if (!row || !this.ready()) return;
+    const s = this.state; if (!s || !this.ready()) return;
+    const row = this.freshRows().find((r) => r.uid === uid); if (!row) return;
     const def = ITEM_BY_ID[row.id];
     if (row.sellConfirm && !(await this.ui.confirm('판매', `${esc(def.name)}${row.enh ? ` +${row.enh}` : ''}을(를) 판매할까요? <b>골드 +${fmt(row.sell)}</b>`))) return;
     if (!this.live()) return;
+    const now = this.freshRows().find((r) => r.uid === uid);
+    if (!now || now.equipped !== row.equipped || now.enh !== row.enh) { this.ui.toast('장비 상태가 바뀌어 판매를 취소했어요.', 'red'); audio.play('ui_error', { vol: 0.5 }); this.afterChange(); return; }
     const g = this.eco.sellItem(uid);
     if (g === undefined || g === null) { this.ui.toast('판매하지 못했어요.', 'red'); audio.play('ui_error', { vol: 0.5 }); return; }
     this.ui.toast(`골드 +${fmt(g)}`, 'gold'); audio.pick('coin', 2, { vol: 0.6 });
@@ -235,12 +241,15 @@ export class ClearLoop {
     this.dropRow(uid);
   }
   async bulkSell() {
-    const plan = bulkSellPlan(this.state.rows); if (!plan.count || !this.ready()) return;
+    if (!this.state || !this.ready()) return;
+    const plan = bulkSellPlan(this.freshRows()); if (!plan.count) return;
     if (!(await this.ui.confirm('노말·스페셜 모두 판매', `이번에 얻은 노말·스페셜 장비 <b>${plan.count}개</b>를 판매할까요? <b>골드 +${fmt(plan.gold)}</b><br>착용 중이거나 강화한 장비, 에픽 이상은 그대로 남겨요.`))) return;
     if (!this.live()) return;
+    // 확인 창이 떠 있는 동안 착용·강화가 바뀐 장비는 빼고(지금 행 기준으로 다시 고른 것과 처음 보여 준 목록의 교집합) 판다.
+    const still = new Set(bulkSellPlan(this.freshRows()).uids), uids = plan.uids.filter((u) => still.has(u));
     let gold = 0, n = 0;
-    for (const uid of plan.uids) { const g = this.eco.sellItem(uid); if (typeof g === 'number') { gold += g; n++; } }
-    this.state.uids = this.state.uids.filter((u) => !plan.uids.includes(u));
+    for (const uid of uids) { const g = this.eco.sellItem(uid); if (typeof g === 'number') { gold += g; n++; } }
+    this.state.uids = this.state.uids.filter((u) => !uids.includes(u));
     this.ui.toast(`장비 ${n}개 판매 · 골드 +${fmt(gold)}`, 'gold'); audio.pick('coin', 2, { vol: 0.7 });
     this.afterChange();
   }

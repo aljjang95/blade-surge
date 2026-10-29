@@ -115,6 +115,15 @@ describe('클리어 결과 뷰 모델: 정비소', () => {
     ];
     expect(bulkSellPlan(rows)).toEqual({ uids: [1, 2], count: 2, gold: 1100 });
   });
+  test('결과 화면에서 새로 장착한 장비는 다시 만든 행의 일괄 판매에서 빠진다(옛 행으로 팔지 않음)', () => {
+    const eco = fresh();
+    const it = eco.addItem('S', 'armor');
+    const before = bulkSellPlan(shopRows(eco, [it.uid], { heroId: 'knight' }) as any[]);
+    expect(before.uids).toContain(it.uid);
+    eco.s.heroes.knight.equip.armor = it.uid;   // '더 좋은 장비 장착'과 같은 결과
+    const after = bulkSellPlan(shopRows(eco, [it.uid], { heroId: 'knight' }) as any[]);
+    expect(after.uids).not.toContain(it.uid);
+  });
   test('강화 시트 견적', () => {
     const eco = fresh();
     const it = eco.addItem('N', 'ring');
