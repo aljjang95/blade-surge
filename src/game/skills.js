@@ -670,6 +670,7 @@ export const SKILLS = {
     dur: 0.85,
     start(game, p, c) {
       knightRune(game, p.pos, 2, 0.85);
+      skillPrelude(game, p, 'chain_bind'); // 예비 표식(인스턴스 층, 난수 미사용): 사방으로 던지는 사슬
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -715,7 +716,7 @@ export const SKILLS = {
   sanctuary: {
     dur: 1.0,
     // 준비 마법진은 낮은 밝기(.55)로: 성역 경계가 나타나기 전부터 금빛이 바닥을 다 덮지 않게 한다.
-    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
+    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); skillPrelude(game, p, 'sanctuary'); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
     cast(game, p, c) {
       const center = p.pos.clone().setY(0); const R = 8.0, LIFE = 7.0;
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
@@ -1195,7 +1196,7 @@ export const SKILLS = {
   },
   // ================= 고위 액티브 Lv.35 / Lv.50 =================
   sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xff9a20,{r1:4.5,life:.4}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
-  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
+  heavenfall: { dur:1, start(game,p){ skillPrelude(game,p,'heavenfall'); }, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
   bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.fx.shockTex(at,0xc81810,{r1:6.5,life:.4}); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});game.fx.shockTex(at,0xff4a1a,{r1:echo?10:8.5,life:.5});game.fx.scorch(at,{radius:5,life:5});}); } },
   cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },

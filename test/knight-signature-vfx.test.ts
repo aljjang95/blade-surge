@@ -55,11 +55,13 @@ test('화면을 가로지르는 큰 빌보드 고리(지름 3.5m 초과)·굵은
   }
 });
 
-test('지연 칸은 skills.js 판정 시각과 맞는다: 태양파쇄 2타 .18, 신벌 .28 착탄, 결박 파열 1.75', () => {
+test('지연 칸은 판정 시각과 맞는다: 태양파쇄 노드 0/.1/.2/.3 전진·.48~.78 되감기, 신벌 .28 착탄, 결박 파열 1.75', () => {
   const starts = (id: string, kind: number) => { const v = make(); SIGNATURES[id](ctxOf(v)); const s = slots(v).filter(x => x.kind === kind).map(x => x.start); v.dispose(); return s; };
-  expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
-  expect(starts('sunbreaker', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(.18, 5));
-  expect(starts('sunbreaker', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.18, 5));
+  expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerStep: .1, sunbreakerReturn: .48, sunbreakerNodes: 4, sunbreakerGap: 2.5, heavenfallHit: .28, chainBurst: 1.75 });
+  // 태양파쇄 실제 구현(awakening-iii.js): 전진 판정 i×.1초, 되감기 .48+i×.1초. 원반 고리는 전진 노드마다, 초승달은 되감기마다 켜진다.
+  for (const t of [0, .1, .2, .3]) expect(starts('sunbreaker', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(t, 5));
+  for (const t of [.48, .58, .68, .78]) expect(starts('sunbreaker', IMPACT_KIND.cut)).toContainEqual(expect.closeTo(t, 5));
+  expect(starts('sunbreaker', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(.48, 5));
   expect(starts('heavenfall', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.28, 5));
   expect(starts('chain_bind', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(1.75, 5));
   expect(starts('chain_bind', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(1.75, 5));
@@ -95,10 +97,10 @@ test('성역 기둥 지오메트리는 기둥 수별로 캐시돼 lite↔정상 
   expect(a4.getIndex()!.count).toBe(4 * 6);
 });
 
-test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 모두 있고, 결정적이며 칸 상한·지면 표식 반경 안에서 그린다', async () => {
+test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 + 각성 4 모두 있고, 결정적이며 칸 상한·지면 표식 반경 안에서 그린다', async () => {
   const { PRELUDES } = await import('../src/engine/sig-knight.js');
   const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
-  for (const id of ['holy_slash', 'shield_bash', 'judgment', 'dragon_slash']) {
+  for (const id of HERO_SKILLS.knight) {
     expect(typeof (PRELUDES as any)[id]).toBe('function');
     expect((SKILL_PRELUDES as any)[id]).toBe((PRELUDES as any)[id]);
     const v = make(), l = make(); const real = Math.random; let calls = 0;
@@ -155,4 +157,19 @@ test('심판 표적 박자(knightJudgmentStrike): 하늘 별빛은 판정 .1초 
   for (const b of s.filter(x => x.kind === IMPACT_KIND.beam)) expect(b.start).toBeCloseTo(.21, 5);
   const lite = make(); expect(knightJudgmentStrike(lite, new THREE.Vector3(), 0, 0, true)).toBeLessThan(n);
   v.dispose(); lite.dispose();
+});
+
+test('태양파쇄 서명의 원반 노드는 awakening-iii 판정 노드(solarLaneNodes)와 같은 자리다', async () => {
+  const { solarLaneNodes } = await import('../src/game/awakening-iii.js');
+  const ctx = ctxOf(make());
+  const nodes = solarLaneNodes(ctx.player.pos.clone().setY(0), ctx.f.clone(), KNIGHT_SIG_TIMING.sunbreakerNodes);
+  const v = ctx.impact; SIGNATURES.sunbreaker(ctx);
+  const rings = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.ring && v.ring.a.aLife[i * 2] < .35);
+  expect(rings.length).toBe(nodes.length);
+  for (const i of rings) {
+    const node = nodes[Math.round(v.ring.a.aLife[i * 2] / KNIGHT_SIG_TIMING.sunbreakerStep)];
+    expect(v.ring.a.aOrigin[i * 3]).toBeCloseTo(node.x, 4);
+    expect(v.ring.a.aOrigin[i * 3 + 2]).toBeCloseTo(node.z, 4);
+  }
+  v.dispose();
 });
