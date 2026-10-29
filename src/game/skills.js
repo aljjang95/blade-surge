@@ -6,7 +6,7 @@ import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { WEREWOLF_HOWL, WEREWOLF_HUNT } from './werewolf-kit.js';
 import { BLACKCAT_OMEN, BLACKCAT_NIGHT } from './blackcat-kit.js';
-import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { SKILL_VFX, castSkillVfx, impactReady } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
@@ -115,7 +115,7 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
 /** 궁극기 예비 표식: 시전 연출 동안 판정이 늦게 오므로 start 에서 바로 인스턴스 층 표식을 깐다(판정·난수 무관, 동작 줄이기 생략). */
 function skillPrelude(game, p, id) {
   const impact = game.fx?.impact, fn = SKILL_PRELUDES[id];
-  if (!impact || !fn || game.app?.reducedMotion?.matches || typeof p.forward !== 'function') return;
+  if (!impactReady(impact) || !fn || game.app?.reducedMotion?.matches || typeof p.forward !== 'function') return;
   try { fn({ fx: game.fx, impact, player: p, at: p.pos, f: p.forward(new THREE.Vector3()), lite: !!game.fx.lite, scale: 1 }); } catch (error) { console.warn('skill prelude', id, error); }
 }
 /** 암살자 그림자 파동: 노란 shockwave 원화에 보라를 곱하면 갈색이 돼서, 보라 소용돌이 원화(singularity)를 지면에 눕힌다.
