@@ -18,7 +18,7 @@ describe('캠페인 합류 동료 시작 장비', () => {
     for (const slot of SLOTS) {
       const inst = eco.s.inventory.find((x: any) => x.uid === mage.equip[slot]);
       expect(inst).toBeTruthy();
-      expect(ITEM_BY_ID[inst.id]).toMatchObject({ rarity: 'E', slot });
+      expect((ITEM_BY_ID as any)[inst.id]).toMatchObject({ rarity: 'E', slot });
       expect(inst).toMatchObject({ enh: 0, il, owner: 'mage' });
     }
     expect(eco.heroBag('mage')).toHaveLength(4);
@@ -40,7 +40,7 @@ describe('캠페인 합류 동료 시작 장비', () => {
     for (const slot of SLOTS) expect(eco.s.inventory.find((x: any) => x.uid === eco.s.heroes.rogue.equip[slot])).toMatchObject({ owner: 'rogue', il: dropItemLevel({ ch: 4, st: 1 }) });
     const free = lead(); free.s.heroes.ranger.level = 1;
     free.s.roster.owned = [...free.s.roster.owned, 'ranger'];   // 소환·상품 경로: 합류 호출 없음
-    expect(free.heroBag('ranger')).toHaveLength(0); expect(Object.values(free.s.heroes.ranger.equip).every((v) => !v)).toBe(true);
+    expect(free.heroBag('ranger')).toHaveLength(0); expect(Object.values(free.s.heroes.ranger.equip as Record<string, unknown>).every((v) => !v)).toBe(true);
   });
   test('서버 정산 경로(EconomyCore.completeStage)도 같은 장비를 같은 상태 해시로 지급한다', () => {
     const run = () => {
