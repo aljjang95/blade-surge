@@ -174,6 +174,7 @@ export class ClearLoop {
       else if (act === 'salvage') this.salvage(uid);
       else if (act === 'enhance') this.enhance(uid);
       else if (act === 'detail') this.detail(uid);
+      else if (act === 'transfer') this.transfer(uid);
     };
   }
   rowHtml(r, ok) {
@@ -190,6 +191,8 @@ export class ClearLoop {
       + (cmp ? `<span class="cl-cmp ${cmpCls}">${esc(cmp)}</span>` : '') + '</div>'
       + '<div class="cl-acts">'
       + `<button type="button" class="btn btn-ghost cl-btn" data-act="detail" title="영웅 장비 화면에서 자세히 보기">상세</button>`
+      // 강화 전승(성장·경제 레인 #398 소유, 진입점 meta.openTransfer 만 호출). 그 기능이 없는 빌드에서는 버튼을 숨긴다.
+      + (typeof this.ui.app?.meta?.openTransfer === 'function' ? `<button type="button" class="btn btn-ghost cl-btn" data-act="transfer"${dis(false)} title="낡은 장비의 강화 단계를 이 장비로 옮기기">전승</button>` : '')
       + `<button type="button" class="btn btn-ghost cl-btn" data-act="sell"${dis(r.sellDisabled)} title="판매">판매 +${fmt(r.sell)}</button>`
       + `<button type="button" class="btn btn-ghost cl-btn" data-act="salvage"${dis(!r.canSalvage)} title="${esc(r.salvageText)}">${r.canSalvage ? '분해' : r.equipped ? '착용 중' : '분해 불가'}</button>`
       + `<button type="button" class="btn btn-blue cl-btn${r.enhanceLack ? ' lack' : ''}" data-act="enhance"${dis(!r.canEnhance)}>${esc(r.enhanceText)}</button>`
@@ -237,6 +240,16 @@ export class ClearLoop {
     const heroId = eco.s.heroes[row.owner] ? row.owner : eco.s.selected;
     app.toLobby(); if (app.mode !== 'lobby') return;
     app.meta.heroSel = heroId; app.meta.bagSlot = def.slot; app.meta.openTab('heroes'); app.meta.showItem(uid, heroId);
+  }
+
+  /** 강화 전승 시트로(로직은 성장·경제 레인의 meta.openTransfer). */
+  transfer(uid) {
+    const s = this.state, app = this.ui.app, eco = this.eco; if (!this.ready() || typeof app.meta?.openTransfer !== 'function') return;
+    const row = s.rows.find((r) => r.uid === uid); if (!row) return;
+    clearFresh(uid);
+    const heroId = eco.s.heroes[row.owner] ? row.owner : eco.s.selected;
+    app.toLobby(); if (app.mode !== 'lobby') return;
+    app.meta.heroSel = heroId; app.meta.openTab('heroes'); app.meta.openTransfer(uid, heroId);
   }
 
   // ---------- 수리 ----------
