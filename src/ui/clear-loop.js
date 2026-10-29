@@ -51,8 +51,12 @@ export class ClearLoop {
     return true;
   }
   /** 저장 상태가 바뀌어 누를 수 있는지 달라졌을 때 ui.refreshResultGrowth 가 부른다. */
-  refresh() {
-    if (this.state) this.renderShop();
+  refresh(result) {
+    if (this.state) { this.renderShop(); return; }
+    // 첫 정산 저장이 실패했다가 다시 저장에 성공하면(retryResultSave) 그때 카드·정비소를 올린다(리뷰 P2).
+    const app = this.ui.app;
+    if (result?.win && result.reward?.ok !== false && result.reward?.clearCard && this.ui.resultData === result && app?.battle?.result === result
+      && this.mount(result, app.battle)) { const details = $('result-loot-details'); if (details) details.hidden = true; }
   }
 
   // ---------- 카드 ----------

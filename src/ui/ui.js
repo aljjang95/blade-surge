@@ -697,7 +697,7 @@ export class UI {
     }
     for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
     renderGrowthPreparation($('result-growth'), this.app, result);
-    this.clearLoopOf().refresh();
+    this.clearLoopOf().refresh(result);
     this.refreshResultUse(result);
   }
   /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */

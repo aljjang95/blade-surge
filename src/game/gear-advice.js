@@ -31,12 +31,12 @@ function slotCandidates(list, keep) {
 }
 
 /** 같은 상태로 다시 그릴 때(필터·정렬 변경, 골드 획득 같은 무관한 갱신) 장비 비교를 다시 돌리지 않는다.
- *  상태 지문 = 가방 전체(uid·강화·소유자·장비 레벨·룬)와 모든 영웅의 장착·레벨·별·초월 + 전설 수련. 가방 1,600개 기준 계산 0.1ms 미만. */
+ *  상태 지문 = 가방 전체(uid·강화·소유자·장비 레벨·무기 내구도·룬)와 모든 영웅의 장착·레벨·별·초월 + 전설 수련. 가방 1,600개 기준 계산 0.1ms 미만. */
 const memo = new WeakMap();
 function stateKey(eco) {
   let h = 2166136261;
   const mix = (v) => { const t = String(v); for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); };
-  for (const x of eco.s.inventory || []) { mix(x.uid); mix(x.id); mix(x.enh); mix(x.owner ?? ''); mix(x.il ?? ''); mix(x.tp ?? ''); mix(x.sockets ? JSON.stringify(x.sockets) : ''); }
+  for (const x of eco.s.inventory || []) { mix(x.uid); mix(x.id); mix(x.enh); mix(x.owner ?? ''); mix(x.il ?? ''); mix(x.tp ?? ''); mix(x.dur ?? ''); mix(x.sockets ? JSON.stringify(x.sockets) : ''); }
   for (const [id, hero] of Object.entries(eco.s.heroes || {})) { mix(id); mix(JSON.stringify(hero?.equip || {})); mix(hero?.level); mix(hero?.star); mix(hero?.grade ?? hero?.awaken ?? ''); }
   mix(JSON.stringify(eco.s.legend || null)); mix(JSON.stringify(eco.s.roster?.owned || null));
   return h >>> 0;
