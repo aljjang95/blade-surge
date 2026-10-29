@@ -216,7 +216,7 @@ export const SIGNATURES = {
       const d = i * .12, hit = d + FLY, c = BEAT[i], side = (i - 1) * .22;
       // 창 다발: 박자마다 옆 간격만 다른 밝은 심(금 → 금연두 → 뜨거운 금) + 바닥 진한 쌍나선 번짐.
       _e.copy(o).addScaledVector(_d, side);
-      impact.beam(_e, f, AIM + 5, i === 2 ? GOLD_HOT : i ? LIME : GOLD, { speed: SPEED, tail: 5, width: .18, delay: d });
+      impact.beam(_e, f, AIM + 5, i === 1 ? LIME : GOLD, { speed: SPEED, tail: 4, width: .14, delay: d });
       _e.copy(player.pos).setY(.1).addScaledVector(_d, side);
       impact.beam(_e, f, AIM + 1, DEEP, { width: .42, fade: .4, delay: d, style: BEAM_STYLE.gale });
       impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + i * .25, i === 2 ? GOLD_HOT : GOLD, .09, { angle: .3 + i * .5, grow: .5, delay: d });
@@ -225,7 +225,7 @@ export const SIGNATURES = {
         const dd = AIM * dc;
         for (const s of [-1, 1]) {
           _e.copy(player.pos).setY(.1).addScaledVector(f, dd).addScaledVector(_d, side);
-          impact.beam(_e, rotY(f, Math.PI + s * .55, _a2), .75 + i * .12, i ? c : JADE, { width: .15, fade: .32, delay: d + dd / SPEED });
+          impact.beam(_e, rotY(f, Math.PI + s * .7, _a2), 1.1 + i * .15, i ? c : JADE, { width: .22, fade: .42, delay: d + dd / SPEED });
         }
       }
       // 과녁 세 겹 고리(1.5·2.6·3.7m): 모두 같은 때(마지막 박자 + .8초) 사라지므로 1 → 2 → 3 겹으로 쌓인다. 가운데 빌보드 고리는 쓰지 않는다(백화).
@@ -256,11 +256,11 @@ export const SIGNATURES = {
       const a0 = Math.abs(i), t = SN / SPEED + a0 * .03;
       _e.copy(_b).addScaledVector(_d, SN * (1 - a0 * .06));
       impact.mark(_e, i ? VINE : GOLD, { radius: 1.1, life: .9, style: MARK_STYLE.thorn, angle: i * 1.3, delay: t });
-      impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, 1.2, i ? LIME : GOLD, .5, { grow: 2.4, delay: t });
+      impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, .9, i ? VINE : GOLD, .45, { grow: 1.9, delay: t });
       // 덩굴 가시: 매듭 둘레 세 곳에서 위로 솟았다가 떨어진다(결정적 수식).
       for (let j = 0; j < 3; j++) {
         const a = j * 2.094 + i;
-        impact._emit(IMPACT_KIND.shard, _e.x + Math.cos(a) * .5, .1, _e.z + Math.sin(a) * .5, .28, j === 2 ? GOLD : j ? VINE : LIME, .55,
+        impact._emit(IMPACT_KIND.shard, _e.x + Math.cos(a) * .5, .1, _e.z + Math.sin(a) * .5, .28, j === 2 ? LIME : j ? VINE : MOSS, .55,
           { vx: Math.cos(a) * 1.2, vy: 7 + j, vz: Math.sin(a) * 1.2, angle: a, stretch: 2.2, grow: .6, gravity: 14, delay: t });
       }
     }
@@ -277,17 +277,17 @@ export const SIGNATURES = {
     // 질풍 드릴: 접선 속도(회전 + 앞으로)를 가진 불똥이 나선 위상대로 놓여, 화살이 지나는 순간 차례로 튄다.
     const n = lite ? 6 : 12;
     for (let j = 0; j < n; j++) {
-      const d = (1 + j * (8 / (n - 1))) * k, th = j * (12 / n) * 1.1, r = .55 + j * (.36 / n);
+      const d = (1 + j * (8 / (n - 1))) * k, th = j * (12 / n) * 1.1, r = 1 + j * (.6 / n);
       const c = Math.cos(th), s = Math.sin(th);
       impact._emit(IMPACT_KIND.streak, player.pos.x + f.x * d + _d.x * c * r, 1 + s * r, player.pos.z + f.z * d + _d.z * c * r, .3, j % 3 === 1 ? GOLD : j % 3 ? JADE : LIME, .32,
         { vx: -_d.x * s * 7 + f.x * 6, vy: c * 7, vz: -_d.z * s * 7 + f.z * 6, stretch: 1, grow: 1, delay: d / SPEED });
     }
     for (let w = 0; w < 3; w++) {
       const t0 = w * .12;
-      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1 + w * .25, w === 2 ? GOLD_HOT : GOLD, .1, { angle: .3 + w * .6, grow: .5, delay: t0 });
+      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + w * .2, GOLD, .09, { angle: .3 + w * .6, grow: .5, delay: t0 });
       for (let i = -1; i <= 1; i++) {
         if (lite && i && w !== 2) continue;
-        impact.beam(o, rotY(f, i * .18, _e), END + 3, i ? LIME : GOLD, { speed: SPEED, tail: i ? 5 : 7, width: i ? .3 : .2, style: i ? BEAM_STYLE.gale : BEAM_STYLE.line, delay: t0 });
+        impact.beam(o, rotY(f, i * .18, _e), END + 3, i ? LIME : GOLD, { speed: SPEED, tail: i ? 4 : 6, width: i ? .26 : .14, style: i ? BEAM_STYLE.gale : BEAM_STYLE.line, delay: t0 });
       }
       const hit = t0 + END / SPEED; _b.copy(player.pos).addScaledVector(f, END);
       if (w < 2) impact.mark(_b, w ? LIME : DEEP, { radius: 1.3 + w * .5, life: .9 - t0, style: MARK_STYLE.thorn, angle: w, delay: hit });
@@ -307,14 +307,14 @@ export const SIGNATURES = {
     for (let i = 0; i < 5; i++) {
       const hitT = .16 + i * .09, c = i % 2 ? LIME : GOLD;
       _b.set(at.x + Math.cos(i * 2.4) * 2.2, 0, at.z + Math.sin(i * 2.4) * 2.2);
-      impact.mark(_b, c, { radius: 1.5, life: hitT + .25, style: MARK_STYLE.reticle, angle: i });
+      impact.mark(_b, c, { radius: 1, life: hitT + .2, style: MARK_STYLE.reticle, angle: i });
       _a.set(_b.x - 1.4, FALL, _b.z - .8); _d.copy(_b).sub(_a); const len = _d.length();
       const start = Math.max(0, hitT - len / SPEED);
       if (!lite) impact.beam(_a, _d, len, DEEP, { speed: SPEED, tail: 10, width: .42, delay: start });
       impact.beam(_a, _d, len, LIME, { speed: SPEED, tail: 6, width: .26, style: BEAM_STYLE.gale, delay: start });
       impact.beam(_a, _d, len, i % 2 ? GOLD_HOT : GOLD, { speed: SPEED, tail: 7, width: .14, delay: start });
-      impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 2.4, c, .3, { grow: 1, delay: hitT });
-      impact._emit(IMPACT_KIND.star, _b.x, .5, _b.z, 1.4, GOLD_HOT, .1, { angle: .3 + i, grow: .5, delay: hitT });
+      impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 1.8, c, .28, { grow: 1, delay: hitT });
+      impact._emit(IMPACT_KIND.star, _b.x, .5, _b.z, 1.1, GOLD, .1, { angle: .3 + i, grow: .5, delay: hitT });
       if (!lite) {
         impact._emit(IMPACT_KIND.mark, _b.x, .06, _b.z, 2.4, DEEP, .55, { stretch: MARK_STYLE.thorn, angle: i, delay: hitT });
         for (let j = 0; j < 3; j++) {
