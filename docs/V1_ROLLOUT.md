@@ -54,9 +54,10 @@ npx wrangler d1 migrations list <DB> --remote
 ```
 
 - `v1_schema`가 없다는 오류(`no such table`) = 0001 미적용. `version`이 1/2/3/4 = 마지막으로 적용된 마이그레이션 번호.
-- 기대 표(0001~0004 적용 후 25개): `account_archive`, `account_docs`, `account_keys`, `account_links`, `accounts`, `audit_flags`, `funnel_active`, `funnel_milestones`, `iap_debt`, `iap_entitlements`, `iap_grants`, `iap_meta`, `iap_obf`, `iap_purchases`, `iap_refund_guard`, `iap_rtdn`, `iap_web_payments`, `legacy_saves`, `mail`, `parity_log`, `run_tickets`, `sanctions`, `v1_rate`, `v1_schema`, `wallet_ledger`. (`test/v1-rollout.test.ts`가 마이그레이션 파일과 이 목록의 일치를 고정한다.)
+- 기대 표(0001~0004 적용 후 25개): `account_archive`, `account_docs`, `account_keys`, `account_links`, `accounts`, `audit_flags`, `funnel_active`, `funnel_milestones`, `iap_debt`, `iap_entitlements`, `iap_grants`, `iap_meta`, `iap_obf`, `iap_purchases`, `iap_refund_guard`, `iap_rtdn`, `iap_web_payments`, `legacy_saves`, `mail`, `oauth_states`, `parity_log`, `run_tickets`, `sanctions`, `v1_rate`, `v1_schema`, `wallet_ledger`. (0005 `oidc_providers`가 `oauth_states`를 더하고 `account_links`를 같은 이름으로 다시 만든다 — 카카오·ChatGPT 제공자 허용. 2026-10-29부터 `SCHEMA_VERSION = 5`라 0001~0005가 모두 적용돼야 V1이 열린다. `test/v1-rollout.test.ts`가 마이그레이션 파일과 이 목록의 일치를 고정한다.)
 - 결제 표 행 수: `SELECT (SELECT COUNT(*) FROM iap_purchases), (SELECT COUNT(*) FROM iap_grants), (SELECT COUNT(*) FROM iap_web_payments)` — 0003/0004 적용 전엔 `no such table`이 정상.
 - 2026-10-24 기록: 운영 D1에는 결제 표가 없다(GACHA_HANDOFF).
+- 2026-10-29 확인(Cloudflare D1 조회, SELECT만): 운영 D1에는 `store_*` 표만 있고 `v1_schema`가 없다 = **0001부터 미적용**. 계정 로그인(docs/ACCOUNT_POLICY.md)을 켜려면 0001~0005를 한 번에 적용한다.
 
 ### 2.3 SESSION_HMAC 바인딩 존재(값은 보지 않는다)
 

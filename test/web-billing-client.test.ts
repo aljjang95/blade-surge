@@ -3,7 +3,7 @@ import { validateCustomer } from '../src/ui/customer-info.js';
 import { createHeroPurchase, PENDING_KEY } from '../src/platform/hero-purchase.js';
 
 const PID = 'bsw_' + 'a'.repeat(32);
-const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId, storeId: 'store-x', channelKey: 'channel-key-x', orderName: '영웅 해금', totalAmount: 5900, currency: 'KRW', payMethod: 'CARD', customData: '{"productId":"' + productId + '"}' });
+const intentOf = (productId = 'hero_knight_v1') => ({ paymentId: PID, productId, storeId: 'store-x', channelKey: 'channel-key-x', orderName: '영웅 해금', totalAmount: 30000, currency: 'KRW', payMethod: 'CARD', customData: '{"productId":"' + productId + '"}' });
 
 class MemStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
 
@@ -85,7 +85,7 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
     expect(t.calls.map((c) => c[1])).toEqual(['/iap/web/intent', '/iap/web/complete']);
     expect(t.calls[0][2]).toEqual({ productId: 'hero_knight_v1' }); // 금액은 보내지 않는다
     expect(t.calls[1][2]).toEqual({ paymentId: PID });
-    expect(t.payCalls[0]).toMatchObject({ paymentId: PID, totalAmount: 5900, currency: 'KRW', storeId: 'store-x', channelKey: 'channel-key-x' });
+    expect(t.payCalls[0]).toMatchObject({ paymentId: PID, totalAmount: 30000, currency: 'KRW', storeId: 'store-x', channelKey: 'channel-key-x' });
     expect(t.payCalls[0].redirectUrl).toBe('https://blade.example/?bs_pay=' + PID);
     expect(t.applied).toHaveLength(1);
     expect(t.storage.getItem(PENDING_KEY)).toBeNull();
@@ -190,7 +190,7 @@ describe('영웅 해금 구매 클라이언트 (hero-purchase)', () => {
 
   test('가격 문구: 웹은 카탈로그 금액, Play는 스토어가 확인한 판매 가능 가격만, 없으면 null', async () => {
     const web = rig(); expect(web.hp.price('hero_knight_v1')).toBeNull(); await web.hp.init();
-    expect(web.hp.price('hero_knight_v1')).toBe('₩5,900'); expect(web.hp.price('nope')).toBeNull();
+    expect(web.hp.price('hero_knight_v1')).toBe('₩30,000'); expect(web.hp.price('nope')).toBeNull();
     const store = new Map<string, any>([['hero_knight_v1', { formattedPrice: '₩6,100', sellable: true }], ['hero_mage_v1', { formattedPrice: '₩6,100', sellable: false }]]);
     const play = rig({ channel: 'googleplay', billing: { available: () => true, product: (id: string) => store.get(id) ?? null } });
     expect(play.hp.price('hero_knight_v1')).toBe('₩6,100');
@@ -302,7 +302,7 @@ describe('웹 간편결제 선택', () => {
   const who = { fullName: '홍길동', phoneNumber: '01012345678', email: 'a@b.co' };
   test('서버가 켠 수단만 묻고, 고른 간편결제는 intent 본문(method)과 결제창(easyPay)에 실린다', async () => {
     let asked: any = null;
-    const intent = { paymentId: 'bsw_' + 'c'.repeat(32), productId: 'hero_knight_v1', storeId: 's', channelKey: 'k', orderName: 'o', totalAmount: 5900, currency: 'KRW',
+    const intent = { paymentId: 'bsw_' + 'c'.repeat(32), productId: 'hero_knight_v1', storeId: 's', channelKey: 'k', orderName: 'o', totalAmount: 30000, currency: 'KRW',
       payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' }, customData: '{}' };
     const { hp, calls, payCalls } = rig({ flags: { webKakaoPay: true }, intent, askCustomer: async (m?: any) => { asked = m; return { ...who, method: 'KAKAOPAY' }; } });
     await hp.init();
