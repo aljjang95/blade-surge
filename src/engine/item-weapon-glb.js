@@ -14,6 +14,14 @@ const warned = new Set();
 let active = MANIFEST;
 let pending = null;
 let loader = null;
+// GLB 하나가 멈춰도 영웅 로딩 전체가 기다리지 않게 항목별 상한. 넘기면 실패로 보고 절차적 무기로 폴백.
+const LOAD_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, id) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(Error(`시간 초과 ${LOAD_TIMEOUT_MS}ms: ${id}`)), LOAD_TIMEOUT_MS); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 function warnOnce(key, message, error) {
   if (warned.has(key)) return;
@@ -48,6 +56,10 @@ function bakeRecord(entry, gltf) {
   // 정점색·보조 속성은 쓰지 않는다. forgeGlow / forgeMetal 이 없는 GLB 라 위치·법선·UV 만 남긴다.
   for (const name of Object.keys(geometry.attributes)) if (!['position', 'normal', 'uv'].includes(name)) geometry.deleteAttribute(name);
   if (!geometry.attributes.normal) geometry.computeVertexNormals();
+  // 호출 쪽(look.js·loot-models·item-visual-model)은 재질을 배열로 붙인다. 그룹이 없으면 three 가 아무것도 그리지 않으므로
+  // 절차적 무기(item-forge finish)와 같이 전체를 0번 재질 그룹 하나로 둔다.
+  geometry.clearGroups();
+  geometry.addGroup(0, geometry.index ? geometry.index.count : geometry.attributes.position.count, 0);
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
   if (!(box.min.y < 0 && box.max.y > 0)) throw Error('무기 GLB 손잡이 원점이 길이축(+Y) 안에 없음');
@@ -78,7 +90,7 @@ export function preloadItemWeaponGlbs(options = {}) {
   pending = Promise.all(active.items.map(async entry => {
     if (records.has(entry.id) || failed.has(entry.id)) return;
     if (!ITEM_WEAPON_GLB_FORMS.includes(entry.form)) { failed.add(entry.id); warnOnce(entry.id, `[item-weapon-glb] 지원하지 않는 형태: ${entry.id}:${entry.form}`); return; }
-    try { records.set(entry.id, bakeRecord(entry, await load(entry.file))); }
+    try { records.set(entry.id, bakeRecord(entry, await withTimeout(load(entry.file), entry.id))); }
     catch (error) { failed.add(entry.id); warnOnce(entry.id, `[item-weapon-glb] 로딩 실패, 절차적 무기로 대체: ${entry.id}`, error); }
   })).then(() => undefined);
   return pending;

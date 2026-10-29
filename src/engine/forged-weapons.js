@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { preloadItemWeaponGlbs } from './item-weapon-glb.js';
+import { ITEM_WEAPON_GLB_FORMS, preloadItemWeaponGlbs } from './item-weapon-glb.js';
 
 export const WEAPON_FORGE_REVISION = 'dungeon-forge-v2';
 // 부모 노드 이름과 손 소켓은 기존 장착·애니메이션 계약을 그대로 사용한다.
@@ -61,8 +61,8 @@ export function fitForgedWeapon(geometry, bounds, form = 'sword') {
 /** 로딩할 때 한 번만 실행한다. 전투 프레임과 캐릭터 생성에서는 버퍼를 공유한다. */
 export async function forgeHeroWeapons(gltf, heroName) {
   // 장비 무기 GLB(검성 전용)는 영웅 무기 템플릿과 같은 시점에 한 번만 선로드한다. 실패해도 절차적 무기로 폴백.
-  await preloadItemWeaponGlbs();
   const forms = FORGED_WEAPON_FORMS[heroName];
+  if (forms && Object.values(forms).some(form => ITEM_WEAPON_GLB_FORMS.includes(form))) await preloadItemWeaponGlbs();
   if (!forms || gltf.scene.userData.weaponForge) return gltf;
   gltf.scene.updateMatrixWorld(true);
   const oldGeometries = new Set(), oldMaterials = new Set();

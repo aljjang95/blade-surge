@@ -98,6 +98,9 @@ test('런타임: 매니페스트에 있고 형태가 같으면 GLB 지오메트�
   const geometry = buildItemGeometry('sword', weapon);
   expect(geometry.attributes.position.count).toBeGreaterThan(0);
   expect(geometry.attributes.color).toBeUndefined();
+  // 렌더 계약: 재질 배열로 붙으므로 0번 재질을 가리키는 그룹이 전체를 덮어야 그려진다.
+  const drawCount = geometry.index ? geometry.index.count : geometry.attributes.position.count;
+  expect(geometry.groups).toEqual([{ start: 0, count: drawCount, materialIndex: 0 }]);
   expect(geometry.boundingBox || (geometry.computeBoundingBox(), geometry.boundingBox)).toBeTruthy();
   const [material] = createItemMaterial(weapon, 'sword');
   expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
@@ -112,6 +115,8 @@ test('런타임: 매니페스트에 있고 형태가 같으면 GLB 지오메트�
   const lease = acquireItemGeometry('sword', weapon, bounds);
   expect(lease.geometry.boundingBox!.min.y).toBeCloseTo(-.25, 4);
   expect(lease.geometry.boundingBox!.max.y).toBeCloseTo(1.4, 4);
+  expect(lease.geometry.groups.length).toBe(1);
+  expect(lease.geometry.groups[0].materialIndex).toBe(0);
   lease.release();
   for (const part of [material]) part.dispose();
 });
