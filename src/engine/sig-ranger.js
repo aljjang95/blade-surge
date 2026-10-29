@@ -254,7 +254,8 @@ export const SIGNATURES = {
       if (lite && i % 2) continue;
       rotY(f, i * .18, _d);
       rail(impact, _b, _d, 1, 10, 3, i ? MOSS : VINE, { width: .5, speed: SPEED, life: .75, style: BEAM_STYLE.vine });
-      impact.beam(_b, _d, SN + 1.5, i ? LIME : GOLD, { speed: SPEED, tail: 3.5, width: .16, style: BEAM_STYLE.vine });
+      // 덩굴 채찍: 가운데만 금, 옆 갈래는 어두운 이끼빛(2차 — 다섯 갈래 연두 심이 적 무리 위 세로 띠에서 가산으로 백화).
+      impact.beam(_b, _d, SN + 1.5, i ? MOSS : GOLD, { speed: SPEED, tail: 3.5, width: .16, style: BEAM_STYLE.vine });
       // 올가미: 바깥 갈래는 조금 짧고 늦게(부채 끝이 둥글게 닫힌다).
       const a0 = Math.abs(i), t = SN / SPEED + a0 * .03;
       _e.copy(_b).addScaledVector(_d, SN * (1 - a0 * .06));
