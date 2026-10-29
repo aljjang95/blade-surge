@@ -34,9 +34,9 @@ test('여우 몸 v1(교정 전)은 이 검사에서 걸린다(검사가 결함�
 // 기본 궁수 0.77%, 검은 고양이 0.30%, 다른 아바타 최대 2.63%(용암 오니).
 const MAX_LEG_TORN_PCT = 4;
 test('궁수 아바타 두 벌은 모든 클립에서 다리 찢김이 상한 안이고 여우는 기본 몸의 1.6배 상한 안에서 전체 찢김이 같은 수준이다', async () => {
-  const base = await measureBodyDeform('hero_ranger_t1');
+  const base: any = await measureBodyDeform('hero_ranger_t1');
   for (const id of ['avatar_ranger_fox', 'avatar_ranger_blackcat']) {
-    const body = await measureBodyDeform(id);
+    const body: any = await measureBodyDeform(id);
     expect(body.clips.run, id).toBeDefined();
     expect(body.maxLegTornPct, id).toBeLessThanOrEqual(MAX_LEG_TORN_PCT);
     expect(body.maxTornPct, id).toBeLessThanOrEqual(base.maxTornPct * 1.6);
