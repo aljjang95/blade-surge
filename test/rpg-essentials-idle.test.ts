@@ -15,7 +15,7 @@ describe('방치 보급 규칙', () => {
     const q2: any = idleQuote(st, { unlocked: 31 }, T + 2 * H);
     expect(q2.minutes).toBe(120);
     expect(q2.rewards.gold).toBe(Math.floor(stageDef(3, 10).rewards.gold * IDLE.goldRunShare * 2));
-    expect(q2.rewards.stones).toBe(1);
+    expect(q2.rewards.stones || 0).toBe(Math.floor(IDLE.stonesPerHour * 2));
     const q30 = idleQuote(st, { unlocked: 31 }, T + 30 * H);
     expect(q30.minutes).toBe(IDLE.capHours * 60); expect(q30.capped).toBe(true);
     expect(q30.comeback).toBe(false);

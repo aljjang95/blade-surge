@@ -110,6 +110,7 @@ export class Meta {
     $('btn-mail').addEventListener('click', () => this.showMail());
     $('btn-idle').addEventListener('click', () => this.showIdle());
     $('btn-newbie').addEventListener('click', () => this.showNewbie());
+    $('btn-achieve').addEventListener('click', () => this.showAchievements());
     $('btn-quest').addEventListener('click', () => this.showQuests());
     $('btn-settings').addEventListener('click', () => this.showSettings());
     $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
@@ -182,7 +183,7 @@ export class Meta {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
     // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-achieve', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
       + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
@@ -199,7 +200,7 @@ export class Meta {
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
     $('top-vip-wrap').hidden = !this.vipShown(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
-    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); { const nb = this.eco.newbieView(); $('btn-newbie').hidden = !nb.open; $('dot-newbie').classList.toggle('on', nb.open && nb.claimable > 0); } $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
+    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); $('dot-achieve').classList.toggle('on', this.eco.achievementClaimable() > 0); { const nb = this.eco.newbieView(); $('btn-newbie').hidden = !nb.open; $('dot-newbie').classList.toggle('on', nb.open && nb.claimable > 0); } $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     // 장비 도감 마일스톤(영웅 → 가방 → 금고 → 도감)을 놓치지 않게 영웅 탭에 점(docs/RPG_ESSENTIALS.md E1).
     $('dot-heroes')?.classList.toggle('on', gearDexClaimable(s, this.eco.ownedHeroIds()) > 0);
@@ -867,6 +868,16 @@ export class Meta {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelectorAll('[data-nb-day]').forEach((el) => el.onclick = () => { if (+el.dataset.nbDay <= v.dayNo) this.showNewbie(+el.dataset.nbDay); });
       b.querySelectorAll('[data-nb]').forEach((el) => el.onclick = () => { const got = this.eco.claimNewbie(el.dataset.nb); if (got) { this.trackFunnel('reward_claim', { source: 'quest' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showNewbie(sel); });
+    } });
+  }
+  /** 업적(docs/RPG_ESSENTIALS.md E4): 평생 누적 목표를 단계별로 받는다. */
+  showAchievements() {
+    const rows = this.eco.achievementRows();
+    const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const list = rows.map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name} <small>${x.tier}/${x.tiers}단계</small></div><div class="q-r">${x.done ? '모든 단계 달성' : label(x.rewards)}</div><div class="bar"><div style="width:${Math.min(100, Math.round(x.cur / x.target * 100))}%"></div></div><small>${fmt(Math.min(x.cur, x.target))} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-ach="${x.id}" ${x.ready ? '' : 'disabled'}>${x.done ? '완료' : x.ready ? '받기' : '진행 중'}</button></div>`).join('');
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelectorAll('[data-ach]').forEach((el) => el.onclick = () => { const got = this.eco.claimAchievement(el.dataset.ach); if (got) { this.trackFunnel('reward_claim', { source: 'achievement' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showAchievements(); });
     } });
   }
   showMail() {

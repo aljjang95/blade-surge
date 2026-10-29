@@ -7,8 +7,8 @@ const H = 3600000, DAY = 86400000;
 export const IDLE = Object.freeze({
   capHours: 12,
   minMinutes: 30, // 이보다 짧으면 자동 안내를 띄우지 않는다(메뉴에서는 언제든 수령)
-  goldRunShare: 0.8, // 시간당 = 최고 클리어 관문 기본 골드 × 0.8 (관문 30 ≈ 4천/시간, 12시간 ≈ 4.8만)
-  stonesPerHour: 0.5,
+  goldRunShare: 0.4, // 시간당 = 최고 클리어 관문 기본 골드 × 0.4 (관문 30 ≈ 2천/시간, 12시간 ≈ 2.4만). 0.8은 sim:90d 라이트 일수입 +36%라 반으로
+  stonesPerHour: 0.3,
   comeback: Object.freeze({ awayDays: 7, cooldownDays: 30, minCleared: 3,
     rewards: Object.freeze({ gems: 300, energy: 60, sweep: 5, stones2: 10, tickets: 2 }) }),
 });

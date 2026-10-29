@@ -32,7 +32,7 @@ export function hashValue(value) { return hashText(canonicalJson(value)); }
 export const PARITY_KEYS = Object.freeze([
   'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless',
   'transcendStones', 'skillResets', 'heroes', 'selected', 'inventory', 'invSeq', 'vault', 'avatars', 'progress', 'pass',
-  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims', 'idle', 'newbie',
+  'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims', 'idle', 'newbie', 'achievements',
 ]);
 export function paritySubset(state) {
   const out = {};
