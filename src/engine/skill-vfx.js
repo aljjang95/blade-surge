@@ -35,11 +35,13 @@ export const SKILL_VFX = Object.freeze({
   sanctuary: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .5 }),
   sunbreaker: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 4, { noRune: true, sig: true, gain: .15 }),
   heavenfall: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 5, { dist: 0, seek: [15, 5], sig: true, gain: .15 }),
-  // 광전사
-  whirlwind: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff4a1a, 5),
-  quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),
-  berserk: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff3030, 6, { noRune: true, sig: true }),
-  hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 4, seek: [13, 4], noRune: true, sig: true }),
+  // 광전사: 영웅 둘레 붉은 원형 지면 원화(용암 균열·룬)가 네 스킬을 같은 모양으로 만들었다(강화 레인 2026-10-29).
+  // 기본 4종은 원화·공용 룬을 끄고 모양을 sig-barbarian.js 서명(회전 궤적 고리·전방 균열·나선 기둥·3박 낙하)이 맡는다.
+  // 지진·지옥의 도끼는 착탄 중심 코어(크림 덩어리)도 끈다(noBurst) — 지옥의 도끼는 시전 순간이 아니라 .5초 뒤 낙하에 터진다.
+  whirlwind: R(VIOLET, 'lava-crack', 'self', 'none', 0xff4a1a, 5, { noRune: true, sig: true }),
+  quake: R(GOLD, 'lava-crack', 'aim', 'none', 0xff9a4a, 8, { dist: 1.5, noRune: true, sig: true, noBurst: true }),
+  berserk: R(VIOLET, 'lava-crack', 'self', 'none', 0xff3030, 6, { noRune: true, sig: true }),
+  hell_axe: R(GOLD, 'meteor', 'aim', 'none', 0xff7a30, 10, { dist: 4, seek: [13, 4], noRune: true, sig: true, noBurst: true }),
   // 늑대인간 족장 고유 스킬: 핏빛 진홍·분홍(포효), 월광 은백 + 진홍(사냥). 모양은 sig-barbarian.js 서명이 맡는다.
   blood_howl: R(VIOLET, 'lava-crack', 'self', 'ground', 0xc81830, 6, { noRune: true, sig: true }),
   moonlit_hunt: R(VIOLET, 'meteor', 'self', 'flash', 0xd8e4ff, 8, { noRune: true, sig: true }),
@@ -60,9 +62,10 @@ export const SKILL_VFX = Object.freeze({
   absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자: 질주·야행·궁극기만 그림자 참격 원화를 쓰고, 나머지는 모양을 나눈다(독무 = 원화 없이 조준 룬, 표식 = 보라 룬 지면,
   // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
-  // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다.
-  shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0x9a4cff, 5, { dist: 3, ghost: true }),
-  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true }),
+  // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다. 질주는 전방 3m 참격 원화(시전 순간 영웅을 덮는 보라 덩어리)를 끄고 잔상 기둥·X 자로,
+  // 독무는 병이 닿기 전 착탄점에 터지던 코어(noBurst)를 끈다(병이 닿는 .5초 뒤 서명이 터뜨린다).
+  shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'none', 0x9a4cff, 5, { dist: 3, ghost: true }),
+  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true, noBurst: true }),
   flurry: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb070ff, 4, { dist: 2, ghost: true }),
   thousand: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xa060ff, 11, { ghost: true }),
   shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a4aff, 7, { gain: .8 }),
@@ -70,13 +73,15 @@ export const SKILL_VFX = Object.freeze({
   night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true }),
   eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, gain: .8 }),
   // 레인저: 큰 바람 텍스처 섬광(전방 4m 흰 덩어리) 대신 발밑 비취 룬만 두고, 모양은 skill-signatures.js 의 광선·표식이 맡는다.
-  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true }),
-  ranger_volley: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3.5, { sig: true }),
-  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true, ghost: true }),
-  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 5, { sig: true, gain: .6 }),
-  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x9fffd8, 3, { sig: true }),
-  ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { sig: true }),
-  gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { sig: true, gain: .6 }),
+  // 궁수: 공용 금빛 룬(영웅 둘레 원형 문양)을 끄고 실루엣은 sig-ranger.js 서명(터널·휘는 갈래·뒤로 튀는 V·일곱 빛줄기)이 맡는다.
+  // 기본 4종 레시피 색(발목 섬광·먼지)은 청록 바닥과 갈리는 금연두.
+  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3, { noRune: true, sig: true }),
+  ranger_volley: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3.5, { noRune: true, sig: true }),
+  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3, { noRune: true, sig: true, ghost: true }),
+  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 5, { noRune: true, sig: true, gain: .6 }),
+  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x9fffd8, 3, { noRune: true, sig: true }),
+  ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { noRune: true, sig: true }),
+  gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { noRune: true, sig: true, gain: .6 }),
   skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x3fe0a0, 12, { dist: 7, seek: [18, 6], sig: true, gain: .5 }),
   // 검은 고양이 사냥꾼 고유 스킬: 명사수 비취 대신 보라(0xb070ff 계열). 모양은 skill-signatures.js 서명이 맡는다.
   cat_omen: R(VIOLET, 'wind-arrow-trail', 'self', 'none', 0xb070ff, 3.5, { sig: true }),
@@ -111,6 +116,9 @@ let _seek = null;
 const LAYER_CAP = 60, LAYER_CAP_LITE = 28;
 // 표시 전용 난수. 전투·드랍의 Math.random 진행을 바꾸지 않는다.
 let seed = 0x2f6e2b1;
+/** 서명이 쓰는 인스턴스 층 API(mark·beam·_emit·rng)를 모두 갖춘 실제 ImpactVfx 인지. 일부만 흉내 낸 가짜 fx 에서는 서명을 건너뛴다. */
+export const impactReady = (impact) => !!impact && typeof impact.mark === 'function' && typeof impact.beam === 'function'
+  && typeof impact._emit === 'function' && !!impact.rng;
 const vfxRandom = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 
 /**
@@ -161,7 +169,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
       }
     }
     // 스킬 고유 모양 언어(광선·지면 표식·고리, 인스턴스 층). 동작 줄이기에서는 생략한다.
-    if (!reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
+    if (!reduced && impactReady(fx.impact) && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !r.noRune && !(r.mode === 'ground' && size >= 10)) {

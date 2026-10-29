@@ -86,7 +86,8 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(8);
   v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;
-  expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(16);
+  // 3박자(궤적·착탄·용암 균열)로 늘었지만 한 발은 한 프레임에 낸다: 프레임 예산(72)의 절반 이하.
+  expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(30);
   const blast = slots(v).slice(before).filter((s) => s.kind === IMPACT_KIND.core);
   expect(blast.length).toBe(1); expect(blast[0].start).toBeCloseTo(.4, 5);
   v.dispose();

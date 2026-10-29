@@ -29,5 +29,6 @@ test('dense Judgment keeps eight damage pulses and particle cues with bounded me
   SKILLS.judgment.cast(game, player, { dmg: 100 });
   expect(timers).toHaveLength(8);
   timers.forEach(run => run());
-  expect(counts).toEqual({ hits: 8, pillars: 4, flashes: 5, bursts: 8, lights: 3 });
+  // 성광 원화(holyBurst)는 크림 고리라 뺐다(메시 0): 착지 섬광은 인스턴스 층 knightJudgmentStrike 가 맡는다.
+  expect(counts).toEqual({ hits: 8, pillars: 4, flashes: 0, bursts: 8, lights: 3 });
 });
