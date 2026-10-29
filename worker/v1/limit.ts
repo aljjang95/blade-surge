@@ -10,6 +10,11 @@ const HOUR = 60 * MINUTE;
 export const LIMITS = {
   session: [60, 10 * MINUTE],      // IP: /auth/session (기존 계정 갱신 포함)
   sessionNew: [30, HOUR],          // IP: 새 계정 생성
+  sessionNewDay: [100, 24 * HOUR], // IP: 새 계정 생성 하루 상한(리세마라 대량 생성 비용 방어, docs/ACCOUNT_POLICY.md)
+  providers: [60, 10 * MINUTE],    // IP: /auth/providers
+  oauthStart: [20, 10 * MINUTE],   // IP: /auth/oauth/start (state 행 생성)
+  oauthCallback: [30, 10 * MINUTE], // IP: /auth/oauth/callback/* (토큰 교환 호출 예산)
+  accountDelete: [5, HOUR],        // IP: /auth/delete
   recover: [20, 10 * MINUTE],      // IP: /auth/recover
   import: [20, HOUR],              // IP: /import
   cmd: [240, MINUTE],              // 계정: /cmd

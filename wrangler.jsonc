@@ -50,7 +50,11 @@
     "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
     "RTDN_AUDIENCE": "",
     "RTDN_PUSH_SUBJECT": "",
-    "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com",
+    // 리다이렉트 로그인(docs/ACCOUNT_POLICY.md). 비면 그 제공자는 꺼진다. 카카오 Client Secret·ChatGPT 기밀 비밀은 vars가 아니라 Worker secret으로만.
+    // KAKAO_REST_KEY: Kakao Developers 앱 등록 후. CHATGPT_CLIENT_ID(oaiapp_…): OpenAI 상업 파트너 승인 후.
+    "KAKAO_REST_KEY": "",
+    "CHATGPT_CLIENT_ID": ""
   },
   "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" },
     { "binding": "PORTONE_API_SECRET", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PORTONE_API_SECRET" }],

@@ -8,6 +8,8 @@ export interface VerifierOptions {
   fetch?: (url: string) => Promise<Response>;
   now?: () => number;
   jwksUrl?: string;
+  /** 허용 발급자(iss). 기본은 구글. 카카오·OpenAI OIDC도 같은 RS256 검증기를 쓴다. */
+  issuers?: string[];
 }
 
 const b64urlBytes = (value: string): Uint8Array<ArrayBuffer> => {
@@ -27,6 +29,7 @@ const b64urlJson = (value: string): any => {
 export function createGoogleVerifier(options: VerifierOptions = {}) {
   const now = options.now ?? (() => Date.now());
   const url = options.jwksUrl ?? GOOGLE_JWKS_URL;
+  const issuers = options.issuers ? new Set(options.issuers) : ISSUERS;
   const fetcher = options.fetch ?? ((target: string) => fetch(target));
   let cache: { keys: Map<string, CryptoKey>; expires: number } | null = null;
   let lastFetch = -Infinity;
@@ -61,7 +64,7 @@ export function createGoogleVerifier(options: VerifierOptions = {}) {
   }
 
   // maxIatAgeMs: 발급 후 허용 경과(기본 10분). Pub/Sub push OIDC 토큰은 만료(1시간) 전까지 재사용될 수 있어 호출자가 넓힌다.
-  async function verify(token: string, clientIds: string[], maxIatAgeMs = 600000): Promise<{ sub: string }> {
+  async function verify(token: string, clientIds: string[], maxIatAgeMs = 600000): Promise<{ sub: string; nonce?: string }> {
     if (typeof token !== 'string' || token.length > 4096) throw new SocialError('bad-token', 401);
     const parts = token.split('.');
     if (parts.length !== 3) throw new SocialError('bad-token', 401);
@@ -73,12 +76,14 @@ export function createGoogleVerifier(options: VerifierOptions = {}) {
     if (!ok) throw new SocialError('bad-token', 401);
     const t = now();
     if (!claims || typeof claims !== 'object') throw new SocialError('bad-token', 401);
-    if (!ISSUERS.has(claims.iss)) throw new SocialError('bad-token', 401);
-    if (typeof claims.aud !== 'string' || !clientIds.includes(claims.aud)) throw new SocialError('bad-token', 401);
+    if (!issuers.has(claims.iss)) throw new SocialError('bad-token', 401);
+    // aud는 문자열 또는 배열(OIDC 허용). 배열이면 우리 클라이언트 ID가 하나라도 들어 있어야 한다.
+    const auds = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (!auds.length || !auds.every((a: unknown) => typeof a === 'string') || !auds.some((a: string) => clientIds.includes(a))) throw new SocialError('bad-token', 401);
     if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= t) throw new SocialError('token-expired', 401);
     if (!Number.isFinite(claims.iat) || claims.iat * 1000 > t + 60000 || claims.iat * 1000 < t - maxIatAgeMs) throw new SocialError('token-expired', 401);
     if (typeof claims.sub !== 'string' || !/^[A-Za-z0-9_-]{1,255}$/.test(claims.sub)) throw new SocialError('bad-token', 401);
-    return { sub: claims.sub };
+    return typeof claims.nonce === 'string' ? { sub: claims.sub, nonce: claims.nonce } : { sub: claims.sub };
   }
   return { verify };
 }
