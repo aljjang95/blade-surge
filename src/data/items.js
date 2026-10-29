@@ -96,7 +96,7 @@ export const ITEM_POOL = {
   ring: [
     R('r_copper', '구리 반지', 'N'), R('r_bone', '뼈 반지', 'N', 0.9), R('r_wood', '나무 반지', 'N', 0.85, { crit: 0.01 }), R('r_iron', '철 반지', 'N', 1.1),
     R('r_silver', '은 반지', 'S', 1, { crit: 0.02 }), R('r_jade', '옥 반지', 'S', 0.95, { crit: 0.03 }), R('r_amber', '호박 반지', 'S', 1.05), R('r_pearl', '진주 반지', 'S', 0.9, { crit: 0.04 }),
-    R('r_ruby', '루비 반지', 'E', 1, { crit: 0.05 }), R('r_sapphire', '사파이어 반지', 'E', 0.95, { crit: 0.06 }), R('r_emerald', '에메랄드 반지', 'E', 1.05, { crit: 0.03 }), R('r_moon', '달빛 반지', 'E', 1, { crit: 0.05 }),
+    R('r_ruby', '루비 반지', 'E', 1, { crit: 0.05 }), R('r_sapphire', '사파이어 반지', 'E', 0.95, { crit: 0.055 }), R('r_emerald', '에메랄드 반지', 'E', 1.05, { crit: 0.03 }), R('r_moon', '달빛 반지', 'E', 1, { crit: 0.05 }),
     R('r_storm', '뇌전의 고리', 'U', 1, { set: 'storm', crit: 0.06, icon: '/img/it_storm_ring.webp' }),
     R('r_blood', '피의 서약 반지', 'U', 1.1, { set: 'blood', crit: 0.03, icon: '/img/it_blood_ring.webp' }),
     R('r_gravity', '사건의 지평선', 'U', 0.95, { set: 'gravity', crit: 0.05, icon: '/img/it_gravity_ring.webp' }),
@@ -105,7 +105,7 @@ export const ITEM_POOL = {
     R('r_plague', '창궐의 인장', 'U', 1.05, { set: 'plague', crit: 0.03, icon: '/img/it_plague_ring.webp' }),
     R('r_sigil', '장전의 고리', 'U', 1, { set: 'rune', crit: 0.06, icon: '/img/it_rune_ring.webp' }),
     R('r_chain', '심연의 고리', 'U', 1.05, { set: 'tether', crit: 0.04, icon: '/img/it_tether_ring.webp' }),
-    R('r_void', '공허의 인장', 'U', 1.1, { crit: 0.1 }),
+    R('r_void', '공허의 인장', 'U', 1.1, { crit: 0.08 }),
     R('r_abyss', '심연의 반지', 'L', 1, { crit: 0.12 }), R('r_sun', '태양의 인장', 'L', 1.08, { crit: 0.1 }), R('r_king', '왕의 반지', 'L', 0.95, { crit: 0.15 }),
   ],
   boots: [
