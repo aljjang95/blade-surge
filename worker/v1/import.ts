@@ -21,7 +21,7 @@ async function paidContext(c: Ctx, accountId: string, serverState?: Record<strin
   const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined, serverGacha: serverState?.gacha as Record<string, unknown> | undefined,
     serverPaidGems: Number(serverState?.paidGems) || 0,
     // 진행도 바닥값: 서버 문서가 이미 가진 진행(서버 정산·이전 정화 결과). 가져오기 원본은 이보다 낮게는 깎이지 않는다.
-    serverProgress: serverState?.progress as Record<string, unknown> | undefined, serverEndgame: serverState?.endgame as Record<string, unknown> | undefined };
+    serverProgress: serverState?.progress as Record<string, unknown> | undefined, serverEndgame: serverState?.endgame as Record<string, unknown> | undefined, serverGearDex: serverState?.gearDex, serverLineageSigil: Number(serverState?.lineageSigil) || 0, serverSigilClaims: serverState?.sigilClaims };
   if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
   return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };
@@ -106,7 +106,7 @@ export async function shadowSnapshot(c: Ctx, auth: Authed, body: Record<string, 
   // 가져오기 때 서버가 조회해 둔 소셜 시각을 재사용한다(이 PR 이전 가져오기 행에는 없으므로 그때만 허브를 부른다).
   const storedAt = (JSON.parse(imported.report || '{}') as { socialAt?: unknown }).socialAt;
   const age = await serverAge(c, accountId, storedAt === null || Number.isSafeInteger(storedAt) ? storedAt as number | null : undefined);
-  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: age.createdAt, legacyProof: age.legacyProof, ...await paidContext(c, accountId, doc.state) });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: age.createdAt, legacyProof: age.legacyProof, snapshot: true, ...await paidContext(c, accountId, doc.state) });
   if (!result.ok) fail(400, 'save');
   const eco = loadEconomy(result.state, { now: c.now });
   const next = docOf(eco), hash = parityHash(eco.s);

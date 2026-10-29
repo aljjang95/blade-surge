@@ -35,6 +35,9 @@ export const OPS = {
   // 금고(docs/GEAR_OWNERSHIP_VAULT.md): 서버 시계로 하루 유료 꺼내기를 센다.
   vaultDeposit: { args: [(v) => int(v, 1)], run: (e, uid) => e.vaultDeposit(uid), ok: okResult },
   vaultWithdraw: { args: [(v) => int(v, 1), str], run: (e, uid, h) => e.vaultWithdraw(uid, h), ok: okResult },
+  vaultRitual: { args: [(v) => int(v, 1), str], run: (e, uid, h) => e.vaultRitual(uid, h), ok: okResult },
+  gearDexClaim: { args: [str, str], run: (e, h, m) => e.gearDexClaim(h, m), ok: okResult },
+  claimJourneySigil: { args: [(v) => v === 'daily' || v === 'weekly', str], run: (e, kind, id) => e.claimJourneySigil(kind, id), ok: okResult },
   vaultExpand: { args: [], run: (e) => e.vaultExpand(), ok: okResult },
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)

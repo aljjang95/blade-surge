@@ -15,6 +15,7 @@ import { AVATAR_BY_ID, AVATAR_PARTS } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
+import { normalizeGearDex, seedGearDex, setGearDex } from './gear-dex.js';
 import { normalizeGearOwnership } from './gear-vault.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -104,6 +105,8 @@ export function normalizeSave(raw, fresh) {
   }
   // 장비 영웅 귀속(docs/GEAR_OWNERSHIP_VAULT.md 4절): 장착 = 소유, 귀속 이전 저장의 미장착 장비는 지금 고른 영웅 + 첫 이동 무료.
   normalizeGearOwnership(s, raw);
+  // 장비 도감(5.1): 원본에 gearDex 가 있으면 정화만, 없으면(이전 저장) 지금 영웅 소유 장비로 한 번 소급한다. 소급이 비어도 빈 도감 표지를 남겨 다음 로드가 다시 소급하지 않게 한다.
+  setGearDex(s, record(raw.gearDex) ? normalizeGearDex(raw.gearDex) : seedGearDex(s));
   // 순번은 줄지 않는다: 가장 큰 uid를 팔아도 저장된 invSeq를 유지해 uid 재사용과 서버(로드마다 정규화)·클라이언트 순번 차이를 막는다.
   s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), integer(s.invSeq, 1, 1));
   // 이후 드랍에 쓸 순번을 확보하고, 전투 시작 전 장착 참조까지 함께 재배정한다.
@@ -113,6 +116,13 @@ export function normalizeSave(raw, fresh) {
     for (const item of s.inventory) item.uid = remap.get(item.uid);
     s.invSeq = s.inventory.length + 1;
   }
+  // 계승 문장(docs/GEAR_VAULT_INHERIT.md 5.1): 최상위 정수 재료. 0이면 필드를 두지 않아 이전 저장은 정규화 뒤에도 같다.
+  delete s.lineageSigil;
+  if (integer(raw.lineageSigil, 0, 0) > 0) s.lineageSigil = integer(raw.lineageSigil, 0, 0);
+  // 의뢰 문장 수령 기록(claimJourneySigil): 'daily|weekly:<의뢰>:<기간>' 문자열만, 최근 16개. 비면 필드를 두지 않는다.
+  delete s.sigilClaims;
+  { const claims = (Array.isArray(raw.sigilClaims) ? raw.sigilClaims : []).filter((k) => typeof k === 'string' && /^(daily|weekly):[A-Za-z0-9_-]{1,40}:\d{1,9}$/.test(k));
+    const uniq = [...new Set(claims)].slice(-16); if (uniq.length) s.sigilClaims = uniq; }
   const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
   s.progress.unlocked = integer(s.progress.unlocked, 1, 1, floors);
   s.progress.stars = {};
