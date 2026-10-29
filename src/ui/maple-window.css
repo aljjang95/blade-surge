@@ -182,3 +182,6 @@
 .danger-zone .danger-check input { margin-top: 2px; width: 20px; height: 20px; flex: none; }
 .mpl-up { right: 2px; top: 2px; padding: 1px 4px; border-radius: 2px; background: #3fdc7a; color: #052a14; font-size: 11px; font-weight: 900; text-shadow: none; }
 .mpl-cell.is-better:not(.is-selected) { outline: 2px solid #3fdc7a; outline-offset: -2px; }
+
+/* 기간이 끝난 입구(7일 여정 등)는 hidden 으로 숨긴다. 위 display:flex 가 UA [hidden] 을 이기므로 명시한다(docs/RPG_ESSENTIALS.md). */
+:root:root:root:root .oath-menu-list > button[hidden] { display: none !important; }

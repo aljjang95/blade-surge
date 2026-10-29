@@ -120,6 +120,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
       else base.setScalar(0);
       // 강화 빛: 무기 자체가 속성색으로 달아오른다(+6 부터). 위에서 base 를 매번 새로 정하므로 다시 불러도 쌓이지 않는다.
       if (owner === 'w' && wCol && enhGlow > 0) base.add(_enh.copy(wCol).multiplyScalar(enhGlow));
+      // 텍스처 GLB 무기(item-weapon-glb)는 발광이 무늬를 덮지 않게 줄여 칠한다.
+      if (owner === 'w' && material.userData.emissiveScale) base.multiplyScalar(material.userData.emissiveScale);
       material.emissive.copy(base);
     }
   });
@@ -158,7 +160,7 @@ function applyItemWeapons(model, looks, item) {
     // 소켓을 모르는 임시/외부 리그에는 적용하지 않는다. 원점 계약을 추측해 이동하지 않는다.
     const axis = form === 'bow' ? 'z' : 'y';
     if (bounds.isEmpty() || bounds.min[axis] >= 0 || bounds.max[axis] <= 0) continue;
-    const lease = acquireItemGeometry(form, item, bounds), material = createItemMaterial(item).map(excludeFromBloom);
+    const lease = acquireItemGeometry(form, item, bounds), material = createItemMaterial(item, form).map(excludeFromBloom);
     const target = meshes[0], relative = new THREE.Matrix4().multiplyMatrices(inverse, target.matrixWorld);
     let geometry = lease.geometry, localOwned = false;
     // 대장간 v2 메시의 항등 변환은 버퍼를 그대로 공유한다. 구형 자식 변환은 한 번 역변환한다.

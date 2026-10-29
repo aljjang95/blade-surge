@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { beforeEach, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from 'three';
@@ -10,6 +10,7 @@ import { buildItemGeometry, acquireItemGeometry, itemForgeCacheSize, buildGearMo
 import { WEAPON_ELEMENT } from '../src/data/weapon-looks.js';
 import { applyLook, LOOKS } from '../src/game/look.js';
 import { HEROES } from '../src/data/heroes.js';
+import { resetItemWeaponGlbsForTest } from '../src/engine/item-weapon-glb.js';
 import { Actor } from '../src/game/actor.js';
 import { disposeCharacter } from '../src/engine/assets.js';
 
@@ -56,6 +57,9 @@ test('원료·속성 팔레트와 금속/손잡이 PBR 마스크를 게임·아�
     geometry.dispose(); material.dispose();
   }
 });
+
+// 다른 시험 파일이 선로드한 실제 무기 GLB가 남아 절차적 형상 시험을 흐리지 않게 한다.
+beforeEach(() => resetItemWeaponGlbsForTest());
 
 test('기사 N/S/E 기존 무기 12종은 색을 제외한 실제 정점 형상이 서로 다르다', () => {
   const ids = ['w_iron', 'w_rusty', 'w_wood', 'w_cleaver', 'w_steel', 'w_bronze', 'w_hunter', 'w_guard', 'w_flame', 'w_frost', 'w_rune', 'w_knight'];
