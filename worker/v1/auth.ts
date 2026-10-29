@@ -5,6 +5,7 @@ import { ipKey, rateLimit } from './limit';
 import { fail, onlyKeys } from './http';
 import { CHANNELS, TOKEN_TTL_MS, type Channel, type SessionClaims, resolveSecret, sha256Hex, signToken, verifyToken, randomHex } from './token';
 import { createAccountDoc } from './state';
+import { restoreIdle } from './archive';
 
 export const DEVICE_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 export const PROVIDERS = ['google', 'play_games', 'toss', 'kakao', 'chatgpt'] as const;
@@ -124,6 +125,8 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
     if (!account) fail(503, 'account-unavailable');
     created = account.account_id === player.playerId && account.last_seen === c.now;
   } else if (c.now - account.last_seen > 60000) {
+    // 오래 쉬어 보관된 게스트가 돌아왔으면 진행 문서를 먼저 되돌린다(archive.ts).
+    await restoreIdle(c.db, account.account_id, c.now);
     await c.db.batch([
       c.db.prepare('UPDATE account_keys SET last_seen = ? WHERE key_hash = ?').bind(c.now, keyHash),
       c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id),
@@ -294,6 +297,14 @@ export async function deleteAccount(c: Ctx, auth: Authed, body: Record<string, u
       (SELECT COUNT(*) FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?) AS web`)
     .bind(id, id, c.now - 3600_000).first<{ debt: number; web: number }>();
   if (pending && (pending.debt > 0 || pending.web > 0)) fail(409, 'billing-pending');
+  // 소셜 허브(채팅·친구·명예의 전당)의 기기 키·연동·관계를 먼저 지운다. 허브가 응답하지 않으면 탈퇴를 진행하지 않는다(재시도 가능).
+  if (c.env.SOCIAL) {
+    const hub = c.env.SOCIAL.get(c.env.SOCIAL.idFromName('hub:' + GAME_ID));
+    const res = await hub.fetch(new Request('https://social.internal/internal/delete', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-social-internal': '1' }, body: JSON.stringify({ playerId: id }),
+    }));
+    if (!res.ok) fail(503, 'social-unavailable');
+  }
   const doc = await c.db.prepare("SELECT doc FROM account_docs WHERE account_id = ? AND doc_name = 'core'").bind(id).first<{ doc: string }>();
   await c.db.batch([
     c.db.prepare('INSERT INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) VALUES (?, ?, ?, ?, ?, ?)')

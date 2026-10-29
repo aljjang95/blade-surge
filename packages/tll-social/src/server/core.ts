@@ -451,6 +451,25 @@ export class SocialCore {
     const p = this.player(playerId);
     return p ? { createdAt: Number(p.created_at), banned: !!p.banned } : { createdAt: null, banned: false };
   }
+  /**
+   * 게임 서버의 회원 탈퇴(Worker→DO 내부 전용). 기기 키·연동·친구·차단·모집·쪽지를 지우고 이름을 익명화한다.
+   * 플레이어 행과 id는 남긴다(게시글·명예의 전당 기록의 참조 유지). 없는 플레이어도 성공으로 본다(멱등).
+   */
+  internalDelete(playerId: unknown): { ok: true } {
+    if (typeof playerId !== 'string' || !/^p_[0-9a-f]{24}$/.test(playerId)) throw new SocialError('bad-player', 400);
+    this.tx(() => {
+      for (const [q, n] of [
+        ['DELETE FROM player_keys WHERE player_id = ?', 1], ['DELETE FROM account_links WHERE player_id = ?', 1],
+        ['DELETE FROM friends WHERE a = ? OR b = ?', 2], ['DELETE FROM friend_requests WHERE from_id = ? OR to_id = ?', 2],
+        ['DELETE FROM blocks WHERE owner = ? OR target = ?', 2], ['DELETE FROM listings WHERE host_id = ?', 1],
+        ['DELETE FROM dm_inbox WHERE to_id = ?', 1],
+      ] as const) this.run(q, ...Array(n).fill(playerId));
+      if (this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) this.run('DELETE FROM reserved_ids WHERE player_id = ?', playerId);
+      // (name, tag)는 고유하다. 번호(no)를 태그로 써서 익명 이름끼리 겹치지 않게 한다.
+      this.run("UPDATE players SET name = '탈퇴한 모험가', tag = CAST(no AS TEXT), title_id = NULL WHERE id = ?", playerId);
+    });
+    return { ok: true };
+  }
   private reservedId(keyHash: string): string | null {
     if (!this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) return null;
     const row = this.one('SELECT player_id FROM reserved_ids WHERE key_hash = ?', keyHash);

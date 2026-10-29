@@ -76,9 +76,10 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
       // Worker 내부 호출 전용. 공개 라우터는 /internal 경로를 막고 이 헤더를 절대 전달하지 않는다.
       if (url.pathname.startsWith('/internal/')) {
         if (request.headers.get('x-social-internal') !== '1' || request.method !== 'POST') return json({ error: 'not-found' }, 404);
-        if (url.pathname !== '/internal/account' && url.pathname !== '/internal/evidence') return json({ error: 'not-found' }, 404);
+        if (url.pathname !== '/internal/account' && url.pathname !== '/internal/evidence' && url.pathname !== '/internal/delete') return json({ error: 'not-found' }, 404);
         try {
           const body = JSON.parse(await request.text()) as { keyHash?: unknown; playerId?: unknown } | null;
+          if (url.pathname === '/internal/delete') return json(this.core.internalDelete(body?.playerId));
           return json(url.pathname === '/internal/account' ? this.core.internalAccount(body?.keyHash) : this.core.internalEvidence(body?.playerId));
         }
         catch (error) {
