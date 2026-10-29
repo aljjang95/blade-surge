@@ -3,6 +3,7 @@
 // 바인드 자세 대비 삼각형 변 길이 비를 잰다. 시점마다 전체 배율(변 길이 비 중앙값)로 나눠 크기 차이는 뺀다.
 //   찢김(torn): 한 변이라도 1.6배 넘게 늘어난 삼각형. 관절 접힘(눌림)은 정상 변형에도 흔해 판정에서 뺀다.
 //   tornPct = 찢긴 삼각형 수 / (삼각형 수 × 시점 수) × 100. 클립별·관절(첫 정점의 최대 가중치 뼈)별로 남긴다.
+//   legTornPct = 그중 다리 사슬 관절 몫. tornAreaPct = 바인드 면적 가중 비율(잘게 쪼갠 삼각형이 많은 몸의 과대 집계 보정).
 // 같은 영웅 기본 몸과 비교하는 것이 판정의 기준이다(test/avatar-body-deform.test.ts).
 //   bun tools/art/measure-body-deform.mjs <자산 id>[,<자산 id>…] [보고.json] [--body=<자산 id>=<파일 경로>]
 //   --body 는 교정 후보 GLB 를 그 자산의 게임 경로 대신 싣는다(파일 해시 계약은 건드리지 않는 측정 전용).
@@ -17,6 +18,8 @@ import { resolveAssetSource } from '../../src/engine/library-assets.js';
 
 export const TORN_RATIO = 1.6;
 export const SAMPLES = 8;
+/** 다리 사슬 관절(찢김을 다리 몫으로 따로 센다). */
+export const LEG_BONE = /^(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End)$/;
 const round = (x, n = 3) => Math.round(x * 10 ** n) / 10 ** n;
 
 /** 몸 메시 하나를 준비한다(바인드 변 길이). */
@@ -74,12 +77,14 @@ export async function measureBodyDeform(assetId, { torn = Number(process.env.BOD
         for (const q of prep) { const r = scan(q, torn, byBone); count += r.count; tornArea += r.tornArea; worst = Math.max(worst, r.worst); }
       }
       action.stop();
-      out.clips[clip.name] = { tornPct: round(100 * count / (tris * (SAMPLES + 1))), tornAreaPct: round(100 * tornArea / (totalArea * (SAMPLES + 1))), maxStretch: round(worst, 2),
+      const legCount = Object.entries(byBone).filter(([name]) => LEG_BONE.test(name)).reduce((sum, [, n]) => sum + n, 0);
+      out.clips[clip.name] = { tornPct: round(100 * count / (tris * (SAMPLES + 1))), legTornPct: round(100 * legCount / (tris * (SAMPLES + 1))), tornAreaPct: round(100 * tornArea / (totalArea * (SAMPLES + 1))), maxStretch: round(worst, 2),
         topBones: Object.fromEntries(Object.entries(byBone).sort((a, b) => b[1] - a[1]).slice(0, 5)) };
     }
     const list = Object.values(out.clips);
     out.maxTornPct = Math.max(...list.map((c) => c.tornPct));
     out.meanTornPct = round(list.reduce((s, c) => s + c.tornPct, 0) / list.length);
+    out.maxLegTornPct = Math.max(...list.map((c) => c.legTornPct));
     out.maxTornAreaPct = Math.max(...list.map((c) => c.tornAreaPct));
     out.meanTornAreaPct = round(list.reduce((s, c) => s + c.tornAreaPct, 0) / list.length);
     disposeCharacter(inst.root, inst.mixer);
@@ -101,7 +106,7 @@ if (import.meta.main) {
   for (const id of ids.split(',')) {
     const r = await measureBodyDeform(id); results.push(r);
     const worstClip = Object.entries(r.clips).sort((a, b) => b[1].tornPct - a[1].tornPct)[0];
-    console.log(`${id}\tmean ${r.meanTornPct}%\tmax ${r.maxTornPct}% (${worstClip[0]})\tarea mean ${r.meanTornAreaPct}% max ${r.maxTornAreaPct}%\t${JSON.stringify(worstClip[1].topBones)}`);
+    console.log(`${id}\tmean ${r.meanTornPct}%\tmax ${r.maxTornPct}% (${worstClip[0]})\tarea mean ${r.meanTornAreaPct}% max ${r.maxTornAreaPct}%\tleg max ${r.maxLegTornPct}%\t${JSON.stringify(worstClip[1].topBones)}`);
   }
   if (reportPath) writeFileSync(reportPath, JSON.stringify({ tool: 'tools/art/measure-body-deform.mjs', tornRatio: TORN_RATIO, samples: SAMPLES + 1, results }, null, 2) + '\n');
 }
