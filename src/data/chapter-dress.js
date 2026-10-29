@@ -93,6 +93,13 @@ export const CHAPTER_DRESS = Object.freeze({
       // 무덤 균사 잠행꾼 자리: 묘혈에서 솟는 원령 — 몸에 묘지 백합이 엉켜 있다.
       ch1_gravewisp: { emissive: '#12382f', props: ['graveLilies'] },
       ch1_mourner_dirge: { emissive: '#174a40', props: ['candleCrown'] },
+      // 소환 전용 1장 갈래(3차): 던전 대장·주술사가 부르는 졸병도 관꾼·원령 몸에 원래 종의 기척(종·혜성 빛·밤유리 베일·이끼·서리)을 남긴다.
+      ch1_mourner_bell: { emissive: '#1d5a4e', props: ['brokenBell'] },
+      ch1_mourner_comet: { color: '#a8c8f0', amount: 0.25, emissive: '#14284a' },
+      ch1_mourner_night: { emissive: '#16365a', props: ['mourningVeil'] },
+      ch1_hoodbearer_mirage: { ...GARDEN_BONE, color: '#b8a8d8', amount: 0.3, props: ['darkHood'] },
+      ch1_coffinbearer_moss: { ...GARDEN_BONE, color: '#7f9a72', amount: 0.35, props: ['mossCap'] },
+      ch1_tombguard_frost: { ...GARDEN_BONE, color: '#b8d4e8', amount: 0.3 },
       garden_finalboss: { ...GARDEN_BONE, emissive: '#0e2c25', props: ['bellCrown', 'brokenBellLarge'] },
     },
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.
@@ -142,6 +149,15 @@ export const CHAPTER_DRESS = Object.freeze({
       ch2_anvilguard: { ...FORGE_SKIN, props: ['anvilShield'] },
       ch2_ashimp: { ...FORGE_SKIN, props: ['emberCap'] },
       ch2_emberimp_bomb: { ...FORGE_SKIN, emissive: '#3a0a00', props: ['emberWick'] },
+      // 소환 전용 2장 갈래(3차): 꼬마 오크 자리 임프는 등에 망치, 사슬 주조공·서리 거울 자리 장인은 모루 방패, 해골 병사 자리는 앞치마 견습.
+      ch2_emberimp_hammer: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
+      ch2_anvilguard_chain: { ...FORGE_SKIN, props: ['anvilShield', 'emberChains'] },
+      ch2_emberimp_haze: { ...FORGE_SKIN, color: '#e8b0a0', amount: 0.3 },
+      ch2_smith_apprentice: { ...FORGE_SKIN, props: ['smithApron'] },
+      ch2_emberimp_scribe: { ...FORGE_SKIN, props: ['openTome'] },
+      ch2_anvilguard_mirror: { ...FORGE_SKIN, color: '#9fb4c8', amount: 0.3, props: ['anvilShield'] },
+      ch2_emberimp_spark: { ...FORGE_SKIN, emissive: '#3a1400', props: ['emberCap'] },
+      ch2_anvilguard_star: { ...FORGE_SKIN, color: '#a8b8e0', amount: 0.25, emissive: '#0c1838', props: ['anvilShield'] },
       forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
     },
     assets: {
@@ -201,6 +217,14 @@ export const CHAPTER_DRESS = Object.freeze({
       // 금서는 로스터 weapon(tll_ch3_tome)으로 오른손에 든다. 사제 자리는 얼음 깃펜 관으로 구분한다.
       ch3_censor_tome: { emissive: '#16365a' },
       ch3_censor_quill: { emissive: '#16365a', props: ['iceQuillCrown'] },
+      // 소환 전용 3장 갈래(3차): 서고·역류·법정·합류·행렬 경로 대장과 서기관들이 부르는 졸병도 사서·검열관 몸.
+      ch3_censor_night: { emissive: '#1d4470', props: ['censorSeal'] },
+      ch3_shelfguard_mirror: { ...FROST_BONE },
+      ch3_librarian_shade: { ...FROST_BONE, color: '#b0a8d0', amount: 0.3, props: ['darkHood'] },
+      ch3_censor_comet: { emissive: '#1a3a6a' },
+      ch3_censor_bell: { emissive: '#16365a', props: ['brokenBell'] },
+      ch3_censor_astral: { emissive: '#24346a', props: ['frozenPages'] },
+      ch3_shelfguard_star: { ...FROST_BONE, emissive: '#0c1838' },
       frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
     },
     assets: {
@@ -267,6 +291,11 @@ export const CHAPTER_DRESS = Object.freeze({
       ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouchesLarge'] },
       // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
       ch4_lurer_glim: { emissive: '#06302e' },
+      // 소환 전용 4장 갈래(3차): 합류·서고·법정 경로 대장이 부르는 졸병도 아귀·수부 몸.
+      ch4_lurer_comet: { emissive: '#06302e' },
+      ch4_lurer_night: { emissive: '#06302e', props: ['glowPouches'] },
+      ch4_plankguard_mirror: { emissive: '#021a1c', props: ['barnacles'] },
+      ch4_drowned_mist: { color: '#a8c0d0', amount: 0.3, emissive: '#06302e' },
       tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
     },
     assets: {
@@ -390,6 +419,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420', props: ['mossCap'] },
       // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛, 앞으로 내민 서리빛 장대 등.
       ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420', props: ['lostLantern'] },
+      // 꼬마 오크 자리(6-3 주소 경로 소환·용광로 경로 일반 방) — 작은 승객, 등에 묶은 가방.
+      ch6_passenger_stray: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420', props: ['luggagePack'] },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},

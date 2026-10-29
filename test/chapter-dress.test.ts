@@ -444,3 +444,84 @@ test('5장 법정 경로(와 모든 5장 관문)에는 옛 몸이 섞이지 않�
   expect(E.ch5_dawnninja_mirage.tint).toBeUndefined();
   expect(E.ch5_crownsoldier_levy.atk).toBe(E.orc_blob.atk);
 });
+
+test('1~4·6·7장 모든 관문·6장 심층 원정의 소환 졸병(연쇄 소환 포함)은 그 장 전용 몸으로 나온다', async () => {
+  const { chapterSpeciesId, speciesSourceId, CHAPTER_SPECIES: SP } = await import('../src/data/stages.js');
+  const { buildExpeditionStage, expeditionRoster } = await import('../src/game/expedition-combat.js');
+  const { ALL_DUNGEONS } = await import('../src/data/expansion.js');
+  const { EXPEDITION_ROUTES: ROUTES } = await import('../src/data/expedition-routes.js');
+  const E = ENEMIES as Record<string, any>;
+  // 잔향 장(6장)은 승객 갈래 또는 경로 고향 장 몸이면 된다.
+  const bodyOk = (ch: number, model: string) => ch === 6 ? /^Ch[1-6]_/.test(model) : new RegExp(`^Ch${ch}_`).test(model);
+  const check = (s: any, ch: number, starts: string[]) => {
+    const q = [...starts], seen = new Set<string>();
+    while (q.length) {
+      const raw = q.shift()!;
+      if (seen.has(raw)) continue;
+      seen.add(raw);
+      const id = chapterSpeciesId(s, raw);
+      if (E[id].summon) q.push(E[id].summon);
+      expect(id !== speciesSourceId(id) && bodyOk(ch, E[id].model), `${s.code} ${s.dungeon?.id} ${raw}→${id} ${E[id].model}`).toBe(true);
+      // 수치·행동은 원본 그대로(보상·경제 불변).
+      for (const k of ['hp', 'atk', 'spd', 'range', 'exp', 'gold', 'scale', 'ranged', 'behavior', 'summon', 'meleeRole', 'dodge']) expect(E[id][k], `${id}.${k}`).toEqual(E[raw][k]);
+    }
+    return seen.size;
+  };
+  for (const ch of [1, 2, 3, 4, 6, 7]) for (let st = 1; st <= 10; st++) {
+    const s: any = stageDef(ch, st), R = s.combatRosterFor();
+    const starts = [s.encounter.enemyId, s.dungeonBossId].filter(Boolean).map((b: string) => E[b].summon || 'skel_minion');
+    for (const id of [...R.trash, ...R.ranged, ...R.elite]) { const d = E[chapterSpeciesId(s, id)]; if (d.summon) starts.push(d.summon); }
+    check(s, ch, starts);
+    // 보상 명단은 원래 종 id 그대로다.
+    for (const id of [...s.rosterFor().trash, ...s.rosterFor().ranged, ...s.rosterFor().elite]) expect(/^ch\d_/.test(id), `${s.code} ${id}`).toBe(false);
+  }
+  // 6장 심층 원정: 심층 보스(소환 유지)와 원정 명단의 주술사가 부르는 졸병.
+  let deepRuns = 0;
+  for (const d of [...(ALL_DUNGEONS as any[]), ...((ROUTES || []) as any[])]) {
+    let deep: any;
+    try { deep = buildExpeditionStage('dungeon', d.id, null, { depth: 'deep' }); } catch { continue; }
+    if (deep.chapter?.id !== 6) continue;
+    deepRuns++;
+    const starts = deep.expeditionEnemy.summon ? [deep.expeditionEnemy.summon] : [];
+    for (const type of ['normal', 'elite', 'treasure']) for (const id of expeditionRoster(deep, { type })) { const def = E[chapterSpeciesId(deep, id)]; if (def?.summon) starts.push(def.summon); }
+    check(deep, 6, starts);
+  }
+  expect(deepRuns).toBeGreaterThan(0);
+  // 대표 자리: 1-1 행렬 대장의 종의 잔영 → 종소리 원령, 2-1 용광로 → 사슬 방패 장인, 3-8 역류 → 성운 쪽지 검열관과 별자리 서가 사서.
+  expect(chapterSpeciesId(stageDef(1, 1), 'bell_wisp')).toBe('ch1_mourner_bell');
+  expect(chapterSpeciesId(stageDef(2, 1), 'chain_forger')).toBe('ch2_anvilguard_chain');
+  expect(chapterSpeciesId(stageDef(3, 8), 'astral_orbitling')).toBe('ch3_shelfguard_star');
+  // 6장 용광로 경로는 2장 몸의 잔향, 꼬마 오크만 승객 갈래.
+  expect(chapterSpeciesId(stageDef(6, 2), 'chain_forger')).toBe(SP[2].chain_forger);
+  expect(chapterSpeciesId(stageDef(6, 3), 'orc_blob')).toBe('ch6_passenger_stray');
+  // 원정(표준)은 그대로다.
+  expect(chapterSpeciesId(buildExpeditionStage('dungeon', 'star_archive', null), 'nightglass_page')).toBe('nightglass_page');
+});
+
+test('소환 갈래는 의상·색조·불투명 몸 규칙을 따르고, 소환으로만 나오는 갈래는 도감에 싣지 않는다', async () => {
+  const { speciesSourceId } = await import('../src/data/stages.js');
+  const E = ENEMIES as Record<string, any>;
+  const summonOnly = ['ch1_mourner_bell', 'ch1_mourner_comet', 'ch1_mourner_night', 'ch1_hoodbearer_mirage', 'ch1_coffinbearer_moss', 'ch1_tombguard_frost',
+    'ch2_emberimp_hammer', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
+    'ch3_censor_night', 'ch3_shelfguard_mirror', 'ch3_librarian_shade', 'ch3_censor_comet', 'ch3_censor_bell', 'ch3_censor_astral', 'ch3_shelfguard_star',
+    'ch4_lurer_comet', 'ch4_lurer_night', 'ch4_plankguard_mirror', 'ch4_drowned_mist', 'ch6_passenger_stray'];
+  for (const id of summonOnly) {
+    const ch = Number(id[2]);
+    expect(E[id].tint, id).toBeUndefined();
+    expect(CHAPTER_DRESS[ch].species[id], id).toBeTruthy();
+    for (const key of CHAPTER_DRESS[ch].species[id].props || []) expect(DRESS_PROP_KEYS).toContain(key);
+    expect(chapterDressFor(stageDef(ch, 1), id, null), id).toBe(CHAPTER_DRESS[ch].species[id]);
+    expect((CHAPTER_SPECIES as any)[ch][speciesSourceId(id)], id).toBe(id);
+  }
+  // 혼령 자리 임프·아귀·검열관은 불투명한 Tripo 몸이다(원본 혜성 불씨·밤유리 서기관은 그대로 반투명).
+  for (const id of ['ch2_emberimp_spark', 'ch3_censor_comet', 'ch4_lurer_comet']) expect(E[id].ghostly, id).toBeUndefined();
+  expect(E.comet_spark.ghostly).toBe(true);
+  // 도감은 전투 편성에 나오는 id만 싣는다 — 소환 전용 갈래는 없다.
+  const { CODEX, codexEnemyId } = await import('../src/data/lore.js');
+  const codexIds = new Set(CODEX.map((entry: any) => codexEnemyId(entry)).filter(Boolean));
+  // 꼬마 오크 자리(2장 일반 방·6장 용광로 경로)는 일반 방에도 나와 도감에 있다.
+  const inRooms = new Set(['ch2_emberimp_hammer', 'ch6_passenger_stray']);
+  for (const id of summonOnly) expect(codexIds.has(id), id).toBe(inRooms.has(id));
+  // 원래 종의 도감 항목은 그대로 남는다(소환 전용 원본은 원래도 없을 수 있어 편성 갈래로 확인).
+  for (const id of ['skel_minion', 'ghost', 'orc', 'squidle']) expect(codexIds.has(id), id).toBe(true);
+});

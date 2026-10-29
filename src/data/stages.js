@@ -68,14 +68,18 @@ const DUNGEON_ROSTERS = {
 export const CHAPTER_SPECIES = Object.freeze({
   // 2026-10-28 운영 캡처: 편성 곡선(squads stageCurve)이 먼저 세우는 종(1장 방패·원거리, 2장 부족 전사·임프)이 옛 몸이라
   // 2-1 일반 방에 새 몸이 하나도 없었다. 처음 소개되는 주력 종도 장 전용 몸으로 바꾼다(수치·행동은 각 원본 복사).
-  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp' }),
-  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
+  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp',
+    bell_wisp: 'ch1_mourner_bell', comet_spark: 'ch1_mourner_comet', nightglass_page: 'ch1_mourner_night', mirage_hound: 'ch1_hoodbearer_mirage', mossbound_scout: 'ch1_coffinbearer_moss', frost_mirror: 'ch1_tombguard_frost' }),
+  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp',
+    orc_blob: 'ch2_emberimp_hammer', chain_forger: 'ch2_anvilguard_chain', mirage_hound: 'ch2_emberimp_haze', skel_minion: 'ch2_smith_apprentice', nightglass_page: 'ch2_emberimp_scribe', frost_mirror: 'ch2_anvilguard_mirror', comet_spark: 'ch2_emberimp_spark', astral_orbitling: 'ch2_anvilguard_star' }),
   // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
   // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
   // 4장(2026-10-29 Tripo): 따개비 수부(부유 촉수·심연 슬라임·이계 침입자·포자 괴물·골렘 수호자 자리, 합류 경로의 해골 병사·원령)·
   // 미끼등 아귀(심연 눈알·심연 폭탄·심연 주시자 자리, 합류 경로의 해골 망령). 진화한 독침벌은 옛 몸 그대로 소수로 남긴다.
-  4: Object.freeze({ squidle: 'ch4_drowned', blob_pink: 'ch4_drowned_line', alien: 'ch4_drowned_anchor', mushnub: 'ch4_drowned_coral', golem_guard: 'ch4_plankguard', skel_minion: 'ch4_deckhand', ghost: 'ch4_drowned_drift', bomb_abyss: 'ch4_lurer_bomb', glub: 'ch4_lurer', abyss_seer: 'ch4_lurer_seer', ghost_skull: 'ch4_lurer_glim' }),
-  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
+  4: Object.freeze({ squidle: 'ch4_drowned', blob_pink: 'ch4_drowned_line', alien: 'ch4_drowned_anchor', mushnub: 'ch4_drowned_coral', golem_guard: 'ch4_plankguard', skel_minion: 'ch4_deckhand', ghost: 'ch4_drowned_drift', bomb_abyss: 'ch4_lurer_bomb', glub: 'ch4_lurer', abyss_seer: 'ch4_lurer_seer', ghost_skull: 'ch4_lurer_glim',
+    comet_spark: 'ch4_lurer_comet', nightglass_page: 'ch4_lurer_night', frost_mirror: 'ch4_plankguard_mirror', mirage_hound: 'ch4_drowned_mist' }),
+  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer',
+    nightglass_page: 'ch3_censor_night', frost_mirror: 'ch3_shelfguard_mirror', mirage_hound: 'ch3_librarian_shade', comet_spark: 'ch3_censor_comet', bell_wisp: 'ch3_censor_bell', astral_pagelet: 'ch3_censor_astral', astral_orbitling: 'ch3_shelfguard_star' }),
   // 5장(2026-10-29 Tripo): 새벽 가면 닌자(닌자·임프·심연 폭탄 자리)·왕관 병사(방패병·뼈 오크·이계 침입자 자리)·
   // 왕관 고리 주술사(심연 주시자·화염 정령·부족 주술사 자리). 왕관 일반 방의 9종을 모두 바꾸고 정예만 옛 몸으로 남긴다.
   // 소환으로만 나오는 자리도 5장 몸으로 바꾼다(2026-10-29): 법정·빈 왕좌 경로 던전 대장의 환영 사냥개(옛 Big_Ninja 몸),
@@ -86,7 +90,11 @@ export const CHAPTER_SPECIES = Object.freeze({
     bell_wisp: 'ch5_dawnninja_wisp', comet_spark: 'ch5_dawnninja_spark', skel_minion: 'ch5_crownsoldier_watch' }),
   // 6장(2026-10-29 Tripo, 잔향 장): 경로마다 가장 흔한 근접 졸병 자리를 귀환 열차 승객 잔향 갈래로 바꾼다(일반 방의 약 40~60%).
   // 나머지 자리는 그 경로의 고향 장(DUNGEON_HOME) 전용 몸으로 나온다 — 1~5장 적의 잔향이다(chapterSpeciesSwap).
-  6: Object.freeze({ skel_minion: 'ch6_passenger', ghost: 'ch6_passenger_drift', skel_rogue: 'ch6_passenger_hurry', imp: 'ch6_passenger_child', tribal: 'ch6_passenger_porter', cacto_wall: 'ch6_passenger_trunk', golem_guard: 'ch6_passenger_gate', squidle: 'ch6_passenger_tide', mushnub: 'ch6_passenger_moss', frost_burrower: 'ch6_passenger_lost' }),
+  6: Object.freeze({ skel_minion: 'ch6_passenger', ghost: 'ch6_passenger_drift', skel_rogue: 'ch6_passenger_hurry', imp: 'ch6_passenger_child', tribal: 'ch6_passenger_porter', cacto_wall: 'ch6_passenger_trunk', golem_guard: 'ch6_passenger_gate', squidle: 'ch6_passenger_tide', mushnub: 'ch6_passenger_moss', frost_burrower: 'ch6_passenger_lost',
+    orc_blob: 'ch6_passenger_stray' }),
+  // 1~4·6장 소환 전용 갈래(2026-10-29 3차): 경로 던전 대장(행렬 종의 잔영·법정 환영 사냥개·온실 이끼 척후·합류 혜성 불씨·서고 밤유리 서기관·
+  // 역류 성운 쪽지령·용광로 사슬 주조공·봉기 해골 병사)과 그 주술사들이 부르는 졸병(서리 거울·별자리 궤도령·불씨 임프의 꼬마 오크)이
+  // 장 전용 몸 방에 옛 몸으로 섞이던 자리. 6장은 고향 장 표(잔향)가 대부분을 덮고, 6-3 주소 경로의 꼬마 오크만 승객 갈래로 둔다.
   // 7장(2026-10-29 Tripo): 해골 시민(졸병·방패병·자객·뼈 오크·폭탄 슬라임 자리)·굽쇠 주술사(주술사·사제·해골 망령·원령 자리).
   // 종지기는 이미 7장 전용 Tripo 몸이라 그대로 두고, 부패 슬라임(경로 6~10에서 약 12%)만 옛 몸으로 소수 남긴다. 정예도 옛 몸 그대로.
   7: Object.freeze({ skel_minion: 'ch7_citizen', skel_rogue: 'ch7_citizen_late', skel_shield: 'ch7_citizen_ledger', bone_orc: 'ch7_citizen_hauler', bomb_slime: 'ch7_citizen_fuse', skel_mage: 'ch7_tuner', skel_priest: 'ch7_tuner_cantor', ghost_skull: 'ch7_tuner_echo', ghost: 'ch7_tuner_drift' }),
@@ -542,6 +550,34 @@ const CHAPTER_SPECIES_DEFS = {
   ch5_crownsoldier_watch: ['skel_minion', '왕관 파수병', 'Ch5_CrownSoldier'],
   ch5_dawnninja_wisp: ['bell_wisp', '종소리에 홀린 닌자', 'Ch5_DawnNinjaSpirit'],
   ch5_dawnninja_spark: ['comet_spark', '혜성불 닌자', 'Ch5_DawnNinjaSpirit'],
+  // 1~4장 소환 갈래(꼬마 오크 자리만 일반 방에도 나와 도감에 싣고, 나머지는 소환 전용이라 싣지 않는다). 원본 수치·행동 그대로, 몸만 그 장 전용 Tripo 몸.
+  ch1_mourner_bell: ['bell_wisp', '종소리 원령', 'Ch1_Mourner'],
+  ch1_mourner_comet: ['comet_spark', '혜성불 원령', 'Ch1_Mourner'],
+  ch1_mourner_night: ['nightglass_page', '밤유리 만가 원령', 'Ch1_Mourner'],
+  ch1_hoodbearer_mirage: ['mirage_hound', '신기루 길잡이', 'Ch1_CoffinBearer'],
+  ch1_coffinbearer_moss: ['mossbound_scout', '이끼 낀 관꾼', 'Ch1_CoffinBearer'],
+  ch1_tombguard_frost: ['frost_mirror', '서리 묘비 방패병', 'Ch1_TombGuard'],
+  // 꼬마 오크는 2장 일반 방(과 6-2·6-7 용광로 경로)에도 나와 도감에 싣는다. 나머지 소환 전용 갈래는 도감 제외.
+  ch2_emberimp_hammer: ['orc_blob', '망치 멘 꼬마 임프', 'Ch2_EmberImp'],
+  ch2_anvilguard_chain: ['chain_forger', '사슬 방패 장인', 'Ch2_Smith'],
+  ch2_emberimp_haze: ['mirage_hound', '아지랑이 임프', 'Ch2_EmberImp'],
+  ch2_smith_apprentice: ['skel_minion', '견습 장인', 'Ch2_Smith'],
+  ch2_emberimp_scribe: ['nightglass_page', '잿불 기록 임프', 'Ch2_EmberImpSpirit'],
+  ch2_anvilguard_mirror: ['frost_mirror', '담금질 방패 장인', 'Ch2_Smith'],
+  ch2_emberimp_spark: ['comet_spark', '불똥 임프', 'Ch2_EmberImpSpirit'],
+  // 6장 심층 혜성 요새(용광로 고향)의 궤도 붕괴에서 부르는 별자리 궤도령 — 6장 잔향이 2장 몸으로 입는다.
+  ch2_anvilguard_star: ['astral_orbitling', '별빛 모루 방패 장인', 'Ch2_Smith'],
+  ch3_censor_night: ['nightglass_page', '밤유리 검열관', 'Ch3_Censor'],
+  ch3_shelfguard_mirror: ['frost_mirror', '거울 서가 방패 사서', 'Ch3_ShelfGuard'],
+  ch3_librarian_shade: ['mirage_hound', '그림자 사서', 'Ch3_Librarian'],
+  ch3_censor_comet: ['comet_spark', '혜성 쪽지 검열관', 'Ch3_Censor'],
+  ch3_censor_bell: ['bell_wisp', '종소리 검열관', 'Ch3_Censor'],
+  ch3_censor_astral: ['astral_pagelet', '성운 쪽지 검열관', 'Ch3_Censor'],
+  ch3_shelfguard_star: ['astral_orbitling', '별자리 서가 사서', 'Ch3_ShelfGuard'],
+  ch4_lurer_comet: ['comet_spark', '혜성불 아귀', 'Ch4_LurerGlim'],
+  ch4_lurer_night: ['nightglass_page', '밤유리 아귀', 'Ch4_LurerGlim'],
+  ch4_plankguard_mirror: ['frost_mirror', '거울 판자 방패 수부', 'Ch4_PlankGuard'],
+  ch4_drowned_mist: ['mirage_hound', '물안개 수부', 'Ch4_Drowned'],
   // 6장: 귀환 열차 승객 잔향(tll_ch6_passenger) 갈래 10종. 원본 종 크기가 다른 자리(원령 1.25)는 로스터 항목을 나눴다.
   ch6_passenger: ['skel_minion', '귀환 열차 승객', 'Ch6_Passenger'],
   ch6_passenger_drift: ['ghost', '떠도는 승객 잔향', 'Ch6_PassengerDrift'],
@@ -553,6 +589,8 @@ const CHAPTER_SPECIES_DEFS = {
   ch6_passenger_tide: ['squidle', '바닷길 승객', 'Ch6_PassengerBare'],
   ch6_passenger_moss: ['mushnub', '이끼 낀 승객', 'Ch6_PassengerBare'],
   ch6_passenger_lost: ['frost_burrower', '길 잃은 승객', 'Ch6_PassengerBare'],
+  // 꼬마 오크 자리: 6-3 주소 경로의 부족 주술사 소환과 6-2·6-7 용광로 경로 일반 방(도감에 싣는다).
+  ch6_passenger_stray: ['orc_blob', '짐 진 꼬마 승객', 'Ch6_PassengerSmall'],
   // 7장: 해골 시민(tll_ch7_citizen) 갈래 5종·굽쇠 주술사(tll_ch7_tuner) 갈래 4종. 원본 종 크기가 다른 자리(폭탄 슬라임 0.33·해골 망령 1.2·원령 1.25)는 로스터 항목을 나눴다.
   ch7_citizen: ['skel_minion', '해골 시민', 'Ch7_Citizen'],
   ch7_citizen_late: ['skel_rogue', '늦은 해골 시민', 'Ch7_CitizenLate'],
@@ -570,14 +608,19 @@ export function speciesSourceId(id) { return SPECIES_SOURCE[id] || id; }
 // 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
 // 4장 수부·아귀도 원령·해골 망령 자리(ch4_drowned_drift·ch4_lurer_glim)를 맡지만 불투명한 Tripo 몸이다.
 // 6장 떠도는 승객 잔향(원령 자리)도 불투명한 Tripo 몸이다(얼굴의 청록 발광은 텍스처에 있다). 7장 굽쇠 주술사의 해골 망령·원령 자리도 같다.
-const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim', 'Ch5_DawnNinjaSpirit', 'Ch6_PassengerDrift', 'Ch7_TunerEcho', 'Ch7_TunerDrift']);
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim', 'Ch5_DawnNinjaSpirit', 'Ch2_EmberImpSpirit', 'Ch6_PassengerDrift', 'Ch7_TunerEcho', 'Ch7_TunerDrift']);
 // 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래(null = 색조 없음). 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을
 // 보라로 물들였다 — 붉은 색조도 남색과 섞이면 보라가 되어, 경고등 아귀는 색조를 빼고 의상의 붉은 발광으로 경고한다. 빛주머니 아귀는 청록.
 // 수치·행동은 그대로다.
 // 5장 봉화 닌자(심연 폭탄 분홍)·주술사 갈래(주시자 연보라·부족 주술사 살구)·6장 길 잃은 승객(서리 하늘색)은 원본 색조가 보라·금, 회색·청록
 // 몸을 탁하게 물들여 색조를 뺀다(봉화 닌자는 의상의 붉은 금 발광으로 자폭을 경고한다). 7장 명부 낭송 주술사도 해골 사제의 연두 색조가
 // 바랜 황동·석회 몸을 초록으로 물들여 뺀다(폭음 시민은 폭탄 슬라임의 금빛 색조가 황동과 맞아 그대로 둔다).
-const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch5_dawnninja_mirage: null, ch5_dawnninja_wisp: null, ch5_dawnninja_spark: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });
+// 1~4·6장 소환 전용 갈래(3차)도 원본 종의 보라·하늘·연두 색조가 전용 몸 팔레트를 물들여 색조를 빼고 의상으로만 구분한다.
+const SUMMON_ONLY_SPECIES = ['ch1_mourner_bell', 'ch1_mourner_comet', 'ch1_mourner_night', 'ch1_hoodbearer_mirage', 'ch1_coffinbearer_moss', 'ch1_tombguard_frost',
+  'ch2_emberimp_hammer', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
+  'ch3_censor_night', 'ch3_shelfguard_mirror', 'ch3_librarian_shade', 'ch3_censor_comet', 'ch3_censor_bell', 'ch3_censor_astral', 'ch3_shelfguard_star',
+  'ch4_lurer_comet', 'ch4_lurer_night', 'ch4_plankguard_mirror', 'ch4_drowned_mist', 'ch6_passenger_stray'];
+const BODY_TINTS = Object.freeze({ ...Object.fromEntries(SUMMON_ONLY_SPECIES.map((id) => [id, null])), ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch5_dawnninja_mirage: null, ch5_dawnninja_wisp: null, ch5_dawnninja_spark: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
   ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
   if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
