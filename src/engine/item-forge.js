@@ -374,6 +374,7 @@ export function acquireItemGeometry(form, item, bounds = null) {
 }
 
 export function itemForgeCacheSize() { return cache.size; }
+/** @param {any} item @param {string|null} [form] 검성 GLB 형태(sword/greatsword). 생략하면 절차적 재질. */
 export function createItemMaterial(item, form = null) {
   const glb = form ? itemWeaponGlb(item.id, form) : null;
   if (glb) return [glb.material.clone()];
