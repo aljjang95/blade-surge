@@ -138,12 +138,21 @@ function describe(item) {
 const ORDER = { N: 0, S: 1, E: 2, L: 3, U: 4 };
 const SLOT_ORDER = ['weapon', 'armor', 'ring', 'boots'];
 
-const CELL_POS = { 6: ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'], 4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] };
+// 승인 60종 중 다시 그릴 것(외형 레인 40px 대조 결과, 2026-10-29): 신발 구분 약함·S 반지 링이 구리색이라 N처럼 보임
+const REGEN = {
+  b_mithril: 'mithril greaves: bright silver-blue chain-mail texture with sharp angular plate cuffs, clearly different silhouette from winged white knight boots (no wings)',
+  b_wind: 'wind boots: low ankle boots with swirling teal wind ribbons wrapping around them and a feather tuft, light green-teal, clearly lower and rounder than sky boots',
+  r_jade: 'a polished SILVER ring band (not copper) with a jade green gem on top',
+  r_amber: 'a polished SILVER ring band (not copper) with an amber orange gem on top and a tiny green leaf engraving on the band',
+  r_pearl: 'a polished SILVER ring band (not copper) with a white pearl on top and a tiny green leaf engraving on the band',
+};
+
+const CELL_POS = { 6: ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'], 5: ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center'], 4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'] };
 const SUMMON_U = ['sg_ember_lantern', 'sg_moonward_aegis', 'sg_astral_prism', 'sg_stormstep_treads'];
 const SUMMON_L = ['sg_solar_grimoire', 'sg_abyss_husk', 'sg_orbit_crown', 'sg_comet_stride'];
 
 function sheet(id, cells, family = null) {
-  const n = cells.length <= 4 ? 4 : 6;
+  const n = cells.length <= 4 ? 4 : cells.length;
   const grid = n === 4 ? [2, 2] : [3, 2];
   const views = [...new Set(cells.map((it) => it.slot))].map((slot) => SLOT_VIEW[slot]).join(' ');
   const lines = cells.map((it, k) => {
@@ -175,6 +184,12 @@ export function buildBrief(done = new Set()) {
     cells.forEach((it) => taken.add(it.id));
     if (cells.length) sheets.push(sheet(name, cells));
   }
+  // ② 재생성(승인 60종 보정)
+  const regen = Object.keys(REGEN).map((id) => ITEM_BY_ID[id]).filter((it) => it && !done.has(it.id));
+  if (regen.length) {
+    regen.forEach((it) => { DESC[it.id] = REGEN[it.id]; });
+    sheets.push(sheet('fix-01', regen));
+  }
   // ③ 나머지(N~L 도감·마을 장비): 부위별 6장씩, 등급 순
   for (const slot of SLOT_ORDER) {
     const list = todo.filter((it) => it.slot === slot && !taken.has(it.id))
@@ -187,7 +202,7 @@ export function buildBrief(done = new Set()) {
   }
   const missed = todo.filter((it) => !taken.has(it.id)).map((it) => it.id);
   if (missed.length) throw new Error('요청서에서 빠진 장비: ' + missed.join(','));
-  return { generatedFor: 'blade-surge gear icon tone (approved 2026-10-29 sheet_C)', style: STYLE, total: todo.length, sheetCount: sheets.length, sheets };
+  return { generatedFor: 'blade-surge gear icon tone (approved 2026-10-29 sheet_C)', style: STYLE, total: todo.length + regen.length, sheetCount: sheets.length, sheets };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

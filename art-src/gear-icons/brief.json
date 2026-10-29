@@ -1,8 +1,8 @@
 {
   "generatedFor": "blade-surge gear icon tone (approved 2026-10-29 sheet_C)",
   "style": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects.",
-  "total": 134,
-  "sheetCount": 30,
+  "total": 139,
+  "sheetCount": 31,
   "sheets": [
     {
       "id": "set-storm",
@@ -763,6 +763,51 @@
         }
       ],
       "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order:\n1. (top-left) weapon: a golden sun grimoire book with a radiant sun clasp and a tiny golden hawk emblem (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n2. (top-right) armor: a living symbiotic abyss armor, violet #b26bff carapace with golden legendary trim and a halo of tendrils (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n3. (bottom-left) ring: a ring shaped like a tiny crown with small orbiting golden spheres (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n4. (bottom-right) boots: comet marching boots trailing pink #ff9ad8 comet tails with golden wings (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "fix-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "b_mithril",
+          "slot": "boots",
+          "name": "미스릴 장화",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "b_wind",
+          "slot": "boots",
+          "name": "바람의 장화",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "r_jade",
+          "slot": "ring",
+          "name": "옥 반지",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "r_amber",
+          "slot": "ring",
+          "name": "호박 반지",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "r_pearl",
+          "slot": "ring",
+          "name": "진주 반지",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. A 3 by 2 grid sheet of 5 different items, in this exact order:\n1. (top-left) boots: mithril greaves: bright silver-blue chain-mail texture with sharp angular plate cuffs, clearly different silhouette from winged white knight boots (no wings) — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n2. (top-center) boots: wind boots: low ankle boots with swirling teal wind ribbons wrapping around them and a feather tuft, light green-teal, clearly lower and rounder than sky boots — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) ring: a polished SILVER ring band (not copper) with a jade green gem on top — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n4. (bottom-left) ring: a polished SILVER ring band (not copper) with an amber orange gem on top and a tiny green leaf engraving on the band — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) ring: a polished SILVER ring band (not copper) with a white pearl on top and a tiny green leaf engraving on the band — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
     },
     {
       "id": "weapon-01",
