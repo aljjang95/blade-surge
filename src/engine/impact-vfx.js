@@ -49,18 +49,15 @@ export const IMPACT_TIERS = Object.freeze({
  *  기본 평타는 짧은 꼬리, 관통은 길고 굵은 곧은 선 + 넓은 번짐, 일제 사격은 중간, 폭풍(궁극기)·이탈·질풍은 쌍나선 바람, 속박은 덩굴 물결이다.
  *  스킬 화살은 내려다보는 카메라에서 짧게 보이므로 평타보다 굵게(h1b 레인 B). */
 export const ARROW_STREAKS = Object.freeze({
-  // 2026-10-29 궁수 VFX 개선: 심은 hot(흰빛 비취, 블룸 임계 위), 번짐은 color(진한 채도). 폭 ×1.3~1.6, 번짐 ×1.5.
-  // 관통 = 청록 바람창, 일제 = 비취, 이탈 = 물빛, 폭풍(궁극) = 금빛 심 + 비취 폭풍, 연속 = 연비취, 속박 = 이끼, 질풍 = 연두, 징조(검은 고양이) = 보라.
-  basic: Object.freeze({ tail: 5, width: .085, color: 0x3fe0a0, hot: 0xbfffe2, glow: .16, style: 0, muzzle: .35 }),
-  finisher: Object.freeze({ tail: 8, width: .14, color: 0x2fd896, hot: 0xd8fff0, glow: .4, style: 0, muzzle: .8 }),
-  pierce: Object.freeze({ tail: 18, width: .24, color: 0x22e6c4, hot: 0xe6fff8, glow: .82, style: 0, muzzle: 1.5 }),
-  volley: Object.freeze({ tail: 7, width: .12, color: 0x3fe0a0, hot: 0xc8ffe4, glow: .32, style: 0, muzzle: .75 }),
-  retreat: Object.freeze({ tail: 7, width: .14, color: 0x4ad8d8, hot: 0xd8fffa, glow: .34, style: 2, muzzle: .85 }),
-  storm: Object.freeze({ tail: 11, width: .18, color: 0x2fe0a8, hot: 0xfff2c0, glow: .5, style: 2, muzzle: 1.1 }),
-  quick: Object.freeze({ tail: 8, width: .16, color: 0x6affc4, hot: 0xe4fff4, glow: .42, style: 0, muzzle: .95 }),
-  bind: Object.freeze({ tail: 10, width: .17, color: 0x56d878, hot: 0xe8ffc8, glow: .44, style: 1, muzzle: .9 }),
-  gale: Object.freeze({ tail: 9, width: .17, color: 0x8af04a, hot: 0xf2ffd8, glow: .46, style: 2, muzzle: .9 }),
-  omen: Object.freeze({ tail: 8, width: .16, color: 0x9a5cff, hot: 0xf0e2ff, glow: .42, style: 0, muzzle: .95 }),
+  basic: Object.freeze({ tail: 4.5, width: .065, color: 0x3fe0a0, glow: 0, style: 0, muzzle: 0 }),
+  finisher: Object.freeze({ tail: 7, width: .1, color: 0x3fe0a0, glow: .26, style: 0, muzzle: .55 }),
+  pierce: Object.freeze({ tail: 16, width: .17, color: 0x52f0b4, glow: .55, style: 0, muzzle: 1.1 }),
+  volley: Object.freeze({ tail: 6, width: .08, color: 0x3fe0a0, glow: .2, style: 0, muzzle: .5 }),
+  retreat: Object.freeze({ tail: 6, width: .1, color: 0x7affc8, glow: .22, style: 2, muzzle: .6 }),
+  storm: Object.freeze({ tail: 9, width: .12, color: 0x3fe0a0, glow: .3, style: 2, muzzle: .7 }),
+  quick: Object.freeze({ tail: 7, width: .12, color: 0x7affc8, glow: .3, style: 0, muzzle: .7 }),
+  bind: Object.freeze({ tail: 9, width: .13, color: 0x63e08a, glow: .3, style: 1, muzzle: .65 }),
+  gale: Object.freeze({ tail: 8, width: .12, color: 0x3fe0a0, glow: .32, style: 2, muzzle: .6 }),
 });
 /** 링 칸 수. 표식·광선은 지연 포함 수명이 2.2초까지 길다(결박 파열 1.75초 지연 + .45초, 독무 웅덩이·성역 문양 1.5~1.6초). 점수표 실측 최대 생성 속도는 단일 스킬
  * 425칸/초(대마도사 프리즘, 적 8기)라, 군중 전투에서 그 두 배(850칸/초)가 나와도 한 바퀴(2.4초)가 가장 긴 수명보다 길게 2048칸을 둔다.
@@ -418,10 +415,7 @@ export class ImpactVfx {
     } else if (hero === 'mage') {
       this._emit(IMPACT_KIND.ring, x, y, z, T.ring * .8, P.accent, .16, { grow: 1 });
     } else if (hero === 'ranger' && dir) {
-      // 바람 관통: 꿰뚫은 선(굵게) + 작은 바람 고리 + 화살 진행 방향으로 튀는 깃 파편 두 줄.
-      _dir.set(dir.x, 0, dir.z); if (_dir.lengthSq() > 1e-6) { _dir.normalize(); _pos.copy(at).addScaledVector(_dir, -1.2); this.beam(_pos, _dir, 3, P.core, { width: heavy ? .11 : .08, fade: .14 }); }
-      this._emit(IMPACT_KIND.ring, x, y, z, T.ring * .75, P.accent, .18, { grow: 1 });
-      this._streaks(at, dir, heavy ? 3 : 2, T.speed * 1.2, T.streakLife, 0xeaff9a, { spread: .45, size: .24, up: 1.2 });
+      _dir.set(dir.x, 0, dir.z); if (_dir.lengthSq() > 1e-6) { _dir.normalize(); _pos.copy(at).addScaledVector(_dir, -1.1); this.beam(_pos, _dir, 2.4, P.accent, { width: .05, fade: .12 }); }
     }
   }
   /** 처치 확정: 작고 날카로운 영웅색 섬광 + 고리 + 방사형 파편 + 위로 오르는 영혼 불꽃. elite/boss 는 더 크다.
@@ -603,12 +597,10 @@ export class ImpactVfx {
   arrowStreak(pos, dir, speed, life, style = 'basic') {
     if (!this.enabled || !pos || !dir) return null;
     const S = ARROW_STREAKS[style] || ARROW_STREAKS.basic, len = speed * life;
-    const hot = S.hot ?? S.color;
-    if (this.lite) return this.beam(pos, dir, len, hot, { speed, tail: S.tail * .7, width: S.width, style: S.style });
-    // 번짐(진한 색, 넓고 짧은 꼬리) 위에 심(흰빛, 가늘고 긴 꼬리)을 그어 두 톤으로 읽힌다.
-    const glow = S.glow > 0 ? this.beam(pos, dir, len, S.color, { speed, tail: S.tail * .55, width: S.glow, style: 0 }) : null;
-    const h = this.beam(pos, dir, len, hot, { speed, tail: S.tail, width: S.width, style: S.style });
-    if (S.muzzle > 0) this._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, S.muzzle, S.color, .2, { grow: 1 });
+    if (this.lite && !S.glow) return this.beam(pos, dir, len, S.color, { speed, tail: S.tail * .7, width: S.width, style: S.style });
+    const glow = S.glow > 0 && !this.lite ? this.beam(pos, dir, len, S.color, { speed, tail: S.tail * .55, width: S.glow, style: 0 }) : null;
+    const h = this.beam(pos, dir, len, S.color, { speed, tail: S.tail, width: S.width, style: S.style });
+    if (S.muzzle > 0) this._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, S.muzzle, S.color, .16, { grow: 1 });
     if (h && glow) h.glow = glow;
     return h || glow;
   }
