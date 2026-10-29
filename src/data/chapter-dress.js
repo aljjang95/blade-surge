@@ -263,8 +263,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch4_lurer: { emissive: '#021a1c' },
       // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
       ch4_lurer_bomb: { emissive: '#5a1206' },
-      // 심연 주시자 자리(지원 소환): 몸에 빛 주머니.
-      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouches'] },
+      // 심연 주시자 자리(지원 소환): 몸에 큰 빛 주머니(일반 아귀와 실루엣으로 갈리게 키웠다).
+      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouchesLarge'] },
       // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
       ch4_lurer_glim: { emissive: '#06302e' },
       tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
@@ -320,8 +320,8 @@ export const CHAPTER_DRESS = Object.freeze({
       // 5장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 새벽 보라·금이라 색을 장 팔레트 그대로 두고 발광만 준다.
       // 닌자의 해 가면, 병사의 금관 투구, 주술사의 떠 있는 금빛 고리와 겹치는 소품(dawnMask·soldierCirclet·crownRing)은 뺀다.
       ch5_dawnninja: { emissive: '#120a1c' },
-      // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로.
-      ch5_dawnninja_squire: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c' },
+      // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로, 키는 작게(로스터 Ch5_DawnNinjaSquire), 등에 연습용 목검.
+      ch5_dawnninja_squire: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c', props: ['squireBokken'] },
       // 심연 폭탄 자리: 자폭 경고 — 붉은 금 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
       ch5_dawnninja_flare: { emissive: '#5a2206' },
       ch5_crownsoldier: { emissive: '#120a1c' },
@@ -330,8 +330,8 @@ export const CHAPTER_DRESS = Object.freeze({
       // 성벽 검 방패는 로스터 offhand(tll_ch5_swordwall)로 왼손에 든다.
       ch5_swordwall: { emissive: '#120a1c' },
       ch5_seer: { emissive: '#120a1c' },
-      // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광.
-      ch5_seer_ember: { color: '#f0b49a', amount: 0.25, emissive: '#4a1e06' },
+      // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광과 머리 위로 솟은 화로 장대.
+      ch5_seer_ember: { color: '#f0b49a', amount: 0.25, emissive: '#4a1e06', props: ['dawnBrazier'] },
       // 부족 주술사 자리(지원 소환): 칙령을 낭독하는 주술사 — 등에 맹세 깃발.
       ch5_seer_herald: { emissive: '#120a1c', props: ['oathBanner'] },
       crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
@@ -370,8 +370,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch6_passenger_drift: { color: '#c8e4dc', amount: 0.2, emissive: '#16443c' },
       ch6_passenger_hurry: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
       ch6_passenger_child: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420' },
-      // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로.
-      ch6_passenger_porter: { color: '#8c6a50', amount: 0.5, emissive: '#0a2420' },
+      // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로, 등에 묶은 가방 두 개.
+      ch6_passenger_porter: { color: '#8c6a50', amount: 0.5, emissive: '#0a2420', props: ['luggagePack'] },
       ch6_passenger_trunk: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
       // 골렘 수호자 자리: 개찰구를 지키던 승객 — 푸른 철빛.
       ch6_passenger_gate: { color: '#6a84a0', amount: 0.5, emissive: '#0a2420' },
@@ -379,8 +379,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch6_passenger_tide: { color: '#4f8fa0', amount: 0.5, emissive: '#0a2420', props: ['barnacles'] },
       // 포자 괴물 자리: 이끼 낀 승객.
       ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420' },
-      // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛.
-      ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420' },
+      // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛, 앞으로 내민 서리빛 장대 등.
+      ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420', props: ['lostLantern'] },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},

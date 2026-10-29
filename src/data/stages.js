@@ -504,7 +504,7 @@ const CHAPTER_SPECIES_DEFS = {
   ch4_lurer_glim: ['ghost_skull', '깜빡이 아귀', 'Ch4_LurerGlim'],
   // 5장: 새벽 가면 닌자(tll_ch5_dawnninja) 갈래 3종·왕관 병사(tll_ch5_crownsoldier) 갈래 3종·왕관 고리 주술사(tll_ch5_seer) 갈래 3종.
   ch5_dawnninja: ['ninja', '새벽 가면 닌자', 'Ch5_DawnNinja'],
-  ch5_dawnninja_squire: ['imp', '새벽 견습 닌자', 'Ch5_DawnNinjaBare'],
+  ch5_dawnninja_squire: ['imp', '새벽 견습 닌자', 'Ch5_DawnNinjaSquire'],
   ch5_dawnninja_flare: ['bomb_abyss', '봉화 닌자', 'Ch5_DawnNinjaBare'],
   ch5_crownsoldier: ['alien', '왕관 병사', 'Ch5_CrownSoldier'],
   ch5_crownsoldier_chain: ['bone_orc', '금사슬 왕관 병사', 'Ch5_CrownSoldier'],

@@ -296,3 +296,13 @@ test('6장 승객 갈래 의상은 귀환 청록 발광이고, 잔향 몸은 고
   expect(echo.props).toEqual(CHAPTER_DRESS[4].species.ch4_drowned_anchor.props);
   expect(echo.emissive).toBe('#13403a');
 });
+
+test('가독성 약한 갈래는 색만이 아니라 실루엣 소품으로 갈린다(4장 빛주머니·5장 견습·새벽불·6장 짐꾼·길 잃은 승객)', () => {
+  const pick = (ch: number, id: string) => (CHAPTER_DRESS as any)[ch].species[id].props || [];
+  expect(pick(4, 'ch4_lurer_seer')).toContain('glowPouchesLarge');
+  expect(pick(5, 'ch5_dawnninja_squire')).toContain('squireBokken');
+  expect(pick(5, 'ch5_seer_ember')).toContain('dawnBrazier');
+  expect(pick(6, 'ch6_passenger_porter')).toContain('luggagePack');
+  expect(pick(6, 'ch6_passenger_lost')).toContain('lostLantern');
+  for (const key of ['glowPouchesLarge', 'squireBokken', 'dawnBrazier', 'luggagePack', 'lostLantern']) expect(DRESS_PROP_KEYS).toContain(key);
+});
