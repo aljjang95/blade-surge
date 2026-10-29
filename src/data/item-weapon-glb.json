@@ -1,6 +1,18 @@
 {
   "items": [
     {
+      "id": "w_blood",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_blood.glb",
+      "sha256": "7391e78dbc791917d61e4d0e7af941dcc6646f902a6ccb92094319c94c7bea36",
+      "bytes": 512304,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "667fe7c6-ef1f-4b13-a1ba-d7915dc58d55",
+        "concept": "vampire fang greatsword: curved bone-white fang blade with crimson edge, dark red and black bat-wing shaped cross guard with a red diamond gem, dark red wrapped grip, black pommel with a red blood drop shape"
+      }
+    },
+    {
       "id": "w_bronze",
       "form": "sword",
       "file": "/models/item-weapons/w_bronze.glb",
@@ -10,6 +22,18 @@
       "source": {
         "tripoTaskId": "5f939b04-1e00-4126-b522-66961ece5425",
         "concept": "curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel"
+      }
+    },
+    {
+      "id": "w_chain",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_chain.glb",
+      "sha256": "90852258d3cc6687cf4cf7e2595158b3aef2cb8bf4c7e84b2baa9bde48af01f9",
+      "bytes": 648488,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "15dcf295-c1ed-4dde-bd1b-f9255f7275d4",
+        "concept": "abyss chain greatsword: teal-green crystal blade wrapped by a heavy dark iron chain spiraling around it, teal crystal cross guard with a teal gem, grip with the chain end hanging solidly attached at the pommel with a teal crystal tip"
       }
     },
     {
@@ -58,6 +82,18 @@
       "source": {
         "tripoTaskId": "f30e3e71-1232-457f-9480-2a003ab3095b",
         "concept": "R2 tripo-3d/weapons/w_frost/w_frost-concept.png"
+      }
+    },
+    {
+      "id": "w_gravity",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_gravity.glb",
+      "sha256": "a55dd7a138990907f0beca552471e7f600f5d1232c5830eb34189c2cc4bf3ddc",
+      "bytes": 637916,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "459b04c7-7bd7-4e58-8dfe-09f627f81167",
+        "concept": "singularity greatsword: broad dark grey-silver frame blade with a starry purple-black cosmic inlay and a swirling purple black-hole spiral in the middle, ornate silver cross guard with a purple black-hole disc, thin purple rings with small dark orbs fused solidly to the blade, dark purple grip, purple crystal pommel"
       }
     },
     {
@@ -121,6 +157,42 @@
       }
     },
     {
+      "id": "w_phoenix",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_phoenix.glb",
+      "sha256": "68f3c9735bfeaaa7b3376cf16bc8dbde3e75fe4da8dfc3ea3bab39c34efc05e5",
+      "bytes": 678784,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "2beae90c-ed18-48ae-9bdc-ffe94cd53e8a",
+        "concept": "phoenix greatsword: very WIDE blade shaped like a large spread flame-feather wing with layered orange, yellow and red feathers and flame tongues at the sides, a golden phoenix bird emblem with red gem at the cross guard, brown wrapped grip, gold and red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_plague",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_plague.glb",
+      "sha256": "91c98b6bf7f2259afd1c41ec1be6aaf5bbe92d871ed7f6c194360aa65f4cc290",
+      "bytes": 599392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "6f49b2f3-444e-4a2d-b3f4-51ecb659478c",
+        "concept": "plague scythe-like weapon: long twisted dark brown wooden vine staff handle with green moss and glowing green mushrooms along it, large curved crescent bone-cream blade with holes and sickly green glow at the top, small mushrooms at the bottom end; vertical staff with the curved blade on top"
+      }
+    },
+    {
+      "id": "w_rime",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_rime.glb",
+      "sha256": "7f1245c0ff80d76b0a4f274ea3842af42b5aa3cd0ec37a2b5dd4998c11cce034",
+      "bytes": 515856,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "79cb7b6b-382f-4e83-ac85-ca5b0b241b4d",
+        "concept": "frost greatsword: translucent pale ice-blue crystal blade with a white snowflake emblem near the top, faceted ice crystal shards fused to the cross guard around a silver diamond, steel-blue wrapped grip, ice crystal pommel"
+      }
+    },
+    {
       "id": "w_rune",
       "form": "sword",
       "file": "/models/item-weapons/w_rune.glb",
@@ -145,6 +217,18 @@
       }
     },
     {
+      "id": "w_sigil",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sigil.glb",
+      "sha256": "7d8dcfb299fe7560584f5f2a657ecd440f87edc7a338a7312b32bff831ab6ec7",
+      "bytes": 621532,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "77a728f2-ea23-4562-838f-6c0ae48ca1e4",
+        "concept": "sigil greatsword: broad stone-tan blade with glowing orange-yellow angular rune patterns inlaid, gold cross guard with square diamond ornaments and a round gold gem, brown wrapped grip, gold diamond-shaped pommel"
+      }
+    },
+    {
       "id": "w_steel",
       "form": "sword",
       "file": "/models/item-weapons/w_steel.glb",
@@ -157,6 +241,18 @@
       }
     },
     {
+      "id": "w_storm",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_storm.glb",
+      "sha256": "393e2178e7638f8d73fcfbc9a6ab0b0dd08203dc9c2f73b15584470cb865cec4",
+      "bytes": 659392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "4102c457-fccc-4cca-a188-85fd56699614",
+        "concept": "thunder greatsword: wide wavy blade of glowing electric blue with white lightning-crack patterns inside a silver-grey frame, silver winged cross guard with a round blue gem, dark blue wrapped grip with silver bands, blue crystal pommel; electric arcs rendered as solid blue crystal shards attached to the blade edges"
+      }
+    },
+    {
       "id": "w_sun",
       "form": "greatsword",
       "file": "/models/item-weapons/w_sun.glb",
@@ -166,6 +262,18 @@
       "source": {
         "tripoTaskId": "8186b758-9d60-4f9d-a346-d478209ffd72",
         "concept": "sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_void",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_void.glb",
+      "sha256": "2969a9664827da38936a3a4e0d175f808c966b9f780a04eb2b0063b060ce83a5",
+      "bytes": 652288,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "7774bd9d-f2d7-4b74-b1f2-a8ef09a6682e",
+        "concept": "void shard greatsword: dark black-grey cracked stone blade with glowing purple cracks, broken blade fragments fused to the blade as solid attached shards, black-grey claw-like cross guard with a purple gem, dark grip, purple crystal pommel"
       }
     },
     {
