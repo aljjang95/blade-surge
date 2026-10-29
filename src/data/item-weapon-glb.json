@@ -59,6 +59,18 @@
         "tripoTaskId": "39724b82-1247-4d09-bf32-30fc0a121032",
         "concept": "R2 tripo-3d/weapons/w_rusty/w_rusty-concept.png"
       }
+    },
+    {
+      "id": "w_wood",
+      "form": "sword",
+      "file": "/models/item-weapons/w_wood.glb",
+      "sha256": "c041856ffb6361dbd8324451a3612ad872d10a5717394693944c1d8e1c5e54f8",
+      "bytes": 441336,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fc04553d-3fb1-45aa-9db1-6bd23b9445e5",
+        "concept": "wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel"
+      }
     }
   ]
 }
