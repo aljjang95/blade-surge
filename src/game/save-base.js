@@ -202,6 +202,7 @@ export function normalizeSave(raw, fresh) {
     beginner: integer(g.beginner, 0, 0, GACHA_BANNERS.beginner.limit), beginnerSsr: g.beginnerSsr === true, mileage: integer(g.mileage, 0, 0, 100000) };
   s.pity = pity;
   // 유료 보석 몫은 총 잔액을 넘지 않는다(소비는 무료부터).
+  s.linkBonus = raw.linkBonus === 1 ? 1 : 0;   // 로그인 연동 보상 수령 표시(0|1, 서버 소유)
   s.paidGems = Math.min(integer(raw.paidGems, 0, 0, Number.MAX_SAFE_INTEGER), Math.max(0, Math.floor(Number(s.gems) || 0)));
   s.schemaVersion = SAVE_SCHEMA_VERSION;
   return s;

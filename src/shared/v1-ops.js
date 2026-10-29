@@ -46,6 +46,8 @@ export const OPS = {
   // 네 번째 인자 sure(확정 강화, 골드 웃돈)는 선택이다: 이전 클라이언트의 3인자 명령도 그대로 받는다.
   enhance: { args: [(v) => int(v, 1), bool, bool, bool], optional: 1, run: (e, uid, protect, bless, sure = false) => e.enhance(uid, { protect, bless, sure }), ok: okResult, random: true },
   // 강화 전승(난수 없음, data/enhance-transfer.js): 원본 uid · 대상 uid · 전승 보호 주문서 사용 여부.
+  // 로그인 연동 보상(계정당 1회). 서버 /cmd 가 연동 제공자 유무를 먼저 확인한다(worker/v1/cmd.ts).
+  claimLinkBonus: { args: [], run: (e) => e.claimLinkBonus(), ok: okResult },
   enhanceTransfer: { args: [(v) => int(v, 1), (v) => int(v, 1), bool], run: (e, src, dst, scroll) => e.enhanceTransfer(src, dst, { scroll }), ok: okResult },
   // 소환 (서버 난수·서버 시계 픽업). 배너 표는 src/data/gacha-banners.js 하나를 클라이언트·서버가 함께 읽는다.
   pull: { args: [(v) => v === 1 || v === 10, (v) => v === 'hero' || v === 'gear' || v === 'beginner'], run: (e, n, banner) => e.pull(n, banner), ok: okValue, random: true },

@@ -32,6 +32,8 @@ export async function runCommand(c: Ctx, auth: Authed, body: Record<string, unkn
   const accountId = auth.account.account_id, opId = `cid:${accountId}:${body.cid}`;
   const replay = await ledgerReceipt(c.db, opId, accountId);
   if (replay) return { ...(replay.receipt as object), replayed: true };
+  // 로그인 연동 보상은 연동된 제공자가 하나 이상 있는 계정만 받는다(클라이언트 단독 요청 차단). 이미 받은 계정은 아래에서 422 claimed.
+  if (body.op === 'claimLinkBonus' && !(await links(c.db, accountId)).length) fail(403, 'not-linked');
   const doc = await loadAccountDoc(c.db, accountId);
   if (body.baseRev !== undefined && body.baseRev !== doc.rev) fail(409, 'stale', { rev: doc.rev });
   // 결제 권한(월정액·시즌 패스)은 문서가 아니라 서버 권한 표가 정본이다. 명령 직전에 얹는다.
