@@ -63,16 +63,23 @@ function equippedItems(save) {
     return list(save.inventory).find(item=>item?.uid===uid&&Object.hasOwn(ITEM_BY_ID,item.id)&&ITEM_BY_ID[item.id].slot===slot)||null;
   }).filter(Boolean);
 }
-export function journeySteps(save) {
+/**
+ * 서버 판정(attest)에서 기기 전용 단계(원정·공방·숙련은 아직 서버 명령이 없다)를 인정하는 서버 진행 바닥값(클리어한 관문 수).
+ * 갑옷·강화 단계는 서버 문서로 실제 판정한다. docs/SERVER_AUTHORITY_GATES.md 4절.
+ */
+export const JOURNEY_ATTEST_MIN_CLEARED=Object.freeze({oath:0,garden:1,craft:1,mastery:1});
+/** @param {any} save @param {{ attest?: boolean }} [opts] attest = 서버 명령 판정(기기 전용 단계는 순서 + 진행 바닥값) */
+export function journeySteps(save,{attest=false}={}) {
   const s=object(save)?save:{},items=equippedItems(s),claimed=ids(s.journey?.claimedSteps,JOURNEY_STEPS);
-  const completed={oath:list(s.expedition?.claimed).includes('first_oath'),garden:integer(s.expedition?.stats?.glass_garden)>=1,
-    craft:integer(s.expedition?.stats?.crafts)>=1,equip:items.some(i=>ITEM_BY_ID[i.id].slot==='armor'),
-    enhance:items.some(i=>integer(i.enh)>=1),mastery:ids(s.masterworks?.unlocked,MASTERY_NODES).length>=1};
+  const cleared=Math.max(0,integer(s.progress?.unlocked,MAX_DAY)-1),attested=id=>attest&&cleared>=JOURNEY_ATTEST_MIN_CLEARED[id];
+  const completed={oath:attested('oath')||list(s.expedition?.claimed).includes('first_oath'),garden:attested('garden')||integer(s.expedition?.stats?.glass_garden)>=1,
+    craft:attested('craft')||integer(s.expedition?.stats?.crafts)>=1,equip:items.some(i=>ITEM_BY_ID[i.id].slot==='armor'),
+    enhance:items.some(i=>integer(i.enh)>=1),mastery:attested('mastery')||ids(s.masterworks?.unlocked,MASTERY_NODES).length>=1};
   return JOURNEY_STEPS.map((def,i)=>({...def,rewards:structuredClone(def.rewards),complete:completed[def.id],claimed:claimed.includes(def.id),
     ready:completed[def.id]&&!claimed.includes(def.id)&&JOURNEY_STEPS.slice(0,i).every(previous=>claimed.includes(previous.id))}));
 }
-export function claimJourneyStep(state,save,id) {
-  const row=journeySteps({...save,journey:state}).find(r=>r.id===id);
+export function claimJourneyStep(state,save,id,opts={}) {
+  const row=journeySteps({...save,journey:state},opts).find(r=>r.id===id);
   if(!row)return fail('unknown');if(row.claimed)return fail('claimed');if(!row.complete)return fail('incomplete');if(!row.ready)return fail('prerequisite');
   state.claimedSteps.push(id);return {ok:true,rewards:row.rewards};
 }

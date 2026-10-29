@@ -15,7 +15,7 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
-import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods, claimJourneyStep as claimJourneyStepCore } from './journey-core.js';
 import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
 import { freshMailbox, mailOpen } from '../data/mail.js';
 import { freshTownState } from '../data/towns.js';
@@ -1507,6 +1507,25 @@ export class Economy {
     if (!r.ok) return null;
     const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
     this.emit(); return got;
+  }
+  // ---------- 성장 여정 단계(서버 명령, docs/SERVER_AUTHORITY_GATES.md 4절) ----------
+  /** 여정 상태. 이미 정규화된 객체(JourneyService 가 쥔 참조)는 그대로 쓴다. */
+  journeyState() {
+    const j = this.s.journey;
+    if (!j || typeof j !== 'object' || Array.isArray(j) || !Array.isArray(j.claimedSteps)) this.s.journey = normalizeJourney(j);
+    return this.s.journey;
+  }
+  /**
+   * 단계 보상 수령(골드 + 강화석, VIP 배율 없음 — 이전 로컬 지급과 같다). 서버(/cmd)는 attest 로 판정한다:
+   * 갑옷·강화는 서버 문서로, 기기 전용 단계(서약·정원·제작·숙련)는 순서 + 서버 진행 바닥값으로.
+   */
+  claimJourneyStep(id, { attest = false } = {}) {
+    const r = claimJourneyStepCore(this.journeyState(), this.s, id, { attest });
+    if (!r.ok) return r;
+    const rw = r.rewards || {};
+    this.s.gold += rw.gold || 0;
+    for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.s[key] += rw[key] || 0;
+    this.emit(); return r;
   }
   // ---------- 우편 ----------
   // 우편(docs/RPG_ESSENTIALS.md E5). 본문·보상·기간은 제품 데이터(src/data/mail.js)가 소유하고 저장에는 수령 여부만 남는다.
