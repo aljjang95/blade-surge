@@ -9,6 +9,7 @@
   - A4: 업적 `hunter`(slain 종 수 10/25/50/80/120).
   - A5: **D1 스키마 변경 없음** → 단독 마이그레이션 PR·운영 D1 적용 해당 없음. 되돌리기 = revert 후 배포. 가져오기 1회 병합(진행 범위 풀·처치 상한·서버 바닥), `quests.kills` 상한 3,000 + 20,000×경과일.
   - A6: `bun run check` 6,339 pass / 0 fail(9d0c446) + main 병합 뒤 `bun run test` 6,341 pass·typecheck·build 통과, `sim:90d` 밴드 통과. `V1_SERVER_AUTHORITY_PERCENT`=0 유지, 결제 플래그 무변경.
+- **배포(2026-10-30 04:34 KST)**: PC `D:\Work\tasks\blade-deploy-27ca3f4`(C: 여유 0.25GB라 D:로, bun 캐시도 D:)에서 `node tools/deploy.mjs --auth=wrangler`. readback `https://blade.tllhouse.com/version.json` sha `27ca3f4`, dirty=false. 라이브 Playwright 844×390(모바일·터치): 200, 콘솔 오류 0. `/api/v1/me` 토큰 없이 401. 운영 D1 작업 없음.
 - 리뷰: Codex 코드 P1 1·P2 4 + 보안 Medium 2, 독립 Sonnet 교차 리뷰 P1 3 모두 반영 또는 스레드 답변. 최종 head Codex 코드·보안 지적 없음.
 
 ## 남은 게이트(컷오버 전)
@@ -20,4 +21,4 @@
 
 ## 참고
 - 테스트: `test/server-authority-gates.test.ts`(49개, 위조·중복·경계). `tools/tests/rpg-battle-contract.test.mjs`는 rpg-battle.js 소스 주입 목록에 `slainOf`·`recordSlain`을 넣어야 한다.
-- 배포: PC `C:\Work\tasks\blade-deploy-27ca3f4.ps1`(로그 `.log`).
+- 배포 스크립트: PC `C:\Work\tasks\blade-deploy-27ca3f4.ps1`(로그 `-2.log`). **PC C: 드라이브 여유 0.25GB** — 다음 배포도 D:에 worktree를 두거나 C: 정리 필요(다른 세션 파일이라 이 레인은 지우지 않음).
