@@ -72,13 +72,15 @@ export const SKILL_VFX = Object.freeze({
   night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true }),
   eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, gain: .8 }),
   // 레인저: 큰 바람 텍스처 섬광(전방 4m 흰 덩어리) 대신 발밑 비취 룬만 두고, 모양은 skill-signatures.js 의 광선·표식이 맡는다.
-  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true }),
-  ranger_volley: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3.5, { sig: true }),
-  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true, ghost: true }),
-  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 5, { sig: true, gain: .6 }),
-  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x9fffd8, 3, { sig: true }),
-  ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { sig: true }),
-  gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { sig: true, gain: .6 }),
+  // 궁수: 공용 금빛 룬(영웅 둘레 원형 문양)을 끄고 실루엣은 sig-ranger.js 서명(터널·휘는 갈래·뒤로 튀는 V·일곱 빛줄기)이 맡는다.
+  // 기본 4종 레시피 색(발목 섬광·먼지)은 청록 바닥과 갈리는 금연두.
+  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3, { noRune: true, sig: true }),
+  ranger_volley: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3.5, { noRune: true, sig: true }),
+  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 3, { noRune: true, sig: true, ghost: true }),
+  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0xc8f25a, 5, { noRune: true, sig: true, gain: .6 }),
+  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x9fffd8, 3, { noRune: true, sig: true }),
+  ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { noRune: true, sig: true }),
+  gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { noRune: true, sig: true, gain: .6 }),
   skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x3fe0a0, 12, { dist: 7, seek: [18, 6], sig: true, gain: .5 }),
   // 검은 고양이 사냥꾼 고유 스킬: 명사수 비취 대신 보라(0xb070ff 계열). 모양은 skill-signatures.js 서명이 맡는다.
   cat_omen: R(VIOLET, 'wind-arrow-trail', 'self', 'none', 0xb070ff, 3.5, { sig: true }),
