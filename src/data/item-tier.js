@@ -2,6 +2,7 @@
 // 기존 장비·저장은 tp 가 없어 배율 1이다(마이그레이션 없음). items.js 의 itemStats 를 감싸는 얇은 층이라 items.js(렌더 매니페스트가 해시를 고정)는 건드리지 않는다.
 import { itemStats as baseItemStats, ITEM_BY_ID, SLOT_BASE, enhanceUnits } from './items.js';
 import { TORMENT } from './content-90d.js';
+import { durMul } from '../game/clear-loop.js';
 
 /** 고통 단계 장비 파워 배율. tp 가 양의 정수가 아니면 1. */
 export const itemTierMul = (tp) => Number.isSafeInteger(tp) && tp > 0 ? 1 + TORMENT.itemPowerStep * Math.min(TORMENT.maxTier, tp) : 1;
@@ -33,5 +34,8 @@ export function itemStats(inst) {
   const sb = def ? SLOT_BASE[def.slot] : null;
   // il 보너스: 슬롯 기준치 × 단위 × 0.6(공격·HP)·0.5(방어) — items.js itemStats 의 강화 평탄 보너스와 같은 식
   const b = units ? { atk: base.atk + Math.floor((sb.atk || 0) * units * 0.6), hp: base.hp + Math.floor((sb.hp || 0) * units * 0.6), def: base.def + Math.floor((sb.def || 0) * units * 0.5), crit: base.crit } : base;
-  return t === 1 ? b : { atk: Math.floor(b.atk * t), hp: Math.floor(b.hp * t), def: Math.floor(b.def * t), crit: b.crit };
+  const out = t === 1 ? b : { atk: Math.floor(b.atk * t), hp: Math.floor(b.hp * t), def: Math.floor(b.def * t), crit: b.crit };
+  // 무기 내구도(docs/CLEAR_LOOP.md): 닳으면 공격력만 소폭 감소(깨지지 않는다). dur 필드가 없으면 배율 1.
+  const dm = inst.dur === undefined ? 1 : durMul(inst);
+  return dm === 1 ? out : { ...out, atk: Math.floor(out.atk * dm) };
 }
