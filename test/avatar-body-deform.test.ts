@@ -42,3 +42,12 @@ test('궁수 아바타 두 벌은 모든 클립에서 다리 찢김이 상한 �
     expect(body.maxTornPct, id).toBeLessThanOrEqual(base.maxTornPct * 1.6);
   }
 }, 120000);
+
+// 흡혈 백작: --head-rigid 1 이 Head 100%를 어깨·가슴 깃까지 굳혀 팔·가슴 정점과 맞닿은 목·어깨가 찢겼다(2026-10-29, v1 찢김 최대 8.26%,
+// 그중 Head 몫 1,464 삼각형). v2(soften-rigid-seam) 측정은 최대 5.62%·Head 몫 490. 남은 찢김은 긴 외투 골반·팔 쪽이다.
+test('흡혈 백작 몸은 전체 찢김이 상한 안이고 머리·목 경계 찢김이 교정 전의 절반 아래다', async () => {
+  const body: any = await measureBodyDeform('avatar_rogue_vampire');
+  expect(body.maxTornPct).toBeLessThanOrEqual(6.2);
+  const headTorn = Math.max(...Object.values(body.clips).map((clip: any) => clip.topBones.Head || 0));
+  expect(headTorn).toBeLessThanOrEqual(700);
+}, 120000);
