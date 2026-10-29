@@ -36,6 +36,8 @@ const RECORD_ONLY: Record<string, string[]> = {
   'models/heroes-next/ranger-t3-body-fit-v1.glb': ['src/data/higher-body-revisions-v1.json', 'src/data/higher-body-motion-v1.json', 'src/data/ranger-t3-body-revision-v2.json'],
   // 여우 아바타 몸 v1 은 다리 가중치를 가른 v2 가 대신한다. 자기 기록과 v2 기록(authoring.base)에만 나온다.
   'models/heroes-next/ranger-fox-body-fit-v1.glb': ['src/data/fox-body-revision-v1.json', 'src/data/fox-body-revision-v2.json'],
+  // 흡혈 백작 아바타 몸 v1 은 v2 가 대신한다. t5 기록의 이전 개정(previous)과 v1 띠 곡선 기록(body)에만 나온다.
+  'models/heroes-next/rogue-vampire-body-fit-v1.glb': ['src/data/t5-avatar-body-revisions-v1.json', 'src/data/rogue-vampire-body-motion-v1.json'],
   'models/heroes-next/rogue-library-t1-axis-v1.glb': ['src/data/rogue-library-revision-v1.json', 'src/data/rogue-library-revision-v2.json'],
   'models/oathhall-v2': ['src/engine/oathhall-asset.js'],
 };

@@ -145,7 +145,7 @@ export function validateT4BodyRevisions(value) {
 // (t4-body-revisions-v1) 계약은 그대로 두고, 같은 검사(원본 SHA = manifest, 고정 출력 경로, GENERATED 실제 SHA, 재결합 base = 1단계
 // 클립 원본)를 별도 기록·목표로 얹는다.
 const T5_AVATAR_BODY_TARGETS = Object.freeze([
-  Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v1', prefix: '/models/heroes-next/rogue-vampire-body-fit-v1' }),
+  Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v2', prefix: '/models/heroes-next/rogue-vampire-body-fit-v2' }),
   Object.freeze({ asset: 'avatar_ranger_blackcat', id: 'ranger-blackcat-body-fit-v1', prefix: '/models/heroes-next/ranger-blackcat-body-fit-v1' }),
 ]);
 
