@@ -158,14 +158,14 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'skel_minion')).toBe('ch6_passenger');
   expect(chapterSpeciesId({ chapter: { id: 1 }, expedition: {} }, 'skel_minion')).toBe('skel_minion');
   expect(chapterSpeciesId({ chapter: { id: 1 } }, 'bone_orc')).toBe('bone_orc');
-  // 3장: 서리 해골 사서·망령 검열관 갈래. 같은 종이 나오는 6·7장과 원정은 그대로다.
+  // 3장: 서리 해골 사서·망령 검열관 갈래. 같은 종이 나오는 6장과 원정은 그대로, 7장은 7장 해골 시민 몸이다.
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'ghost')).toBe('ch3_censor');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'skel_shield')).toBe('ch3_shelfguard');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'bone_orc')).toBe('ch3_keykeeper');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'golem_guard')).toBe('golem_guard');
   expect(chapterSpeciesId({ chapter: { id: 3 }, expedition: {} }, 'ghost')).toBe('ghost');
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'ghost')).toBe('ch6_passenger_drift');
-  expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('skel_shield');
+  expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('ch7_citizen_ledger');
   // 4장: 따개비 수부·미끼등 아귀 갈래. 같은 종이 나오는 5장(왕관)·원정은 그대로, 진화한 독침벌은 옛 몸.
   expect(chapterSpeciesId({ chapter: { id: 4 } }, 'squidle')).toBe('ch4_drowned');
   expect(chapterSpeciesId({ chapter: { id: 4 } }, 'golem_guard')).toBe('ch4_plankguard');
