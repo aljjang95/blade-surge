@@ -5,6 +5,7 @@ import { ipKey, rateLimit } from './limit';
 import { fail, onlyKeys } from './http';
 import { CHANNELS, TOKEN_TTL_MS, type Channel, type SessionClaims, resolveSecret, sha256Hex, signToken, verifyToken, randomHex } from './token';
 import { createAccountDoc } from './state';
+import { restoreIdle } from './archive';
 
 export const DEVICE_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 export const PROVIDERS = ['google', 'play_games', 'toss', 'kakao', 'chatgpt'] as const;
@@ -100,8 +101,10 @@ async function ensureAccount(c: Ctx, accountId: string, keyHash: string, channel
     c.db.prepare(`INSERT OR IGNORE INTO accounts(account_id, created_at, last_seen, status, channel_first, shard, level, stage_idx, gold, gems_free)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(accountId, c.now, c.now, banned ? 'banned' : 'active', channel, shardOf(accountId),
       doc.projection.level, doc.projection.stageIdx, doc.projection.gold, doc.projection.gemsFree),
-    c.db.prepare(`INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) VALUES (?, 'core', 1, ?, ?, ?)`)
-      .bind(accountId, doc.text, doc.bytes, c.now),
+    // 미접속 보관된 계정에는 새 문서를 심지 않는다(뒤이은 restoreIdle이 보관본을 그대로 되돌리게).
+    c.db.prepare(`INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) SELECT ?, 'core', 1, ?, ?, ?
+      WHERE NOT EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'idle-archived')`)
+      .bind(accountId, doc.text, doc.bytes, c.now, accountId),
     c.db.prepare('INSERT OR IGNORE INTO account_keys(key_hash, account_id, created_at, last_seen) VALUES (?, ?, ?, ?)').bind(keyHash, accountId, c.now, c.now),
   ]);
 }
@@ -123,12 +126,18 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
     account = await accountByKey(c.db, keyHash);
     if (!account) fail(503, 'account-unavailable');
     created = account.account_id === player.playerId && account.last_seen === c.now;
+    // 키만 새로 붙은 기존 계정(키 5개 한도로 밀려난 기기 등)도 접속 시각을 남겨 보관 크론이 다시 고르지 않게 한다.
+    if (!created) await c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id).run();
   } else if (c.now - account.last_seen > 60000) {
+    // last_seen을 먼저 갱신해 보관 크론이 이 계정을 더는 고르지 못하게 한 뒤, 이미 보관됐으면 진행 문서를 되돌린다(archive.ts).
+    // 순서가 반대면 확인과 갱신 사이에 보관된 문서를 60초 동안 놓친다.
     await c.db.batch([
       c.db.prepare('UPDATE account_keys SET last_seen = ? WHERE key_hash = ?').bind(c.now, keyHash),
       c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id),
     ]);
   }
+  // 60초 안의 재시도도 확인한다(복원이 한 번 실패해 last_seen만 올라간 경우 문서 없는 세션이 나가지 않게).
+  if (!created) await restoreIdle(c.db, account.account_id, c.now);
   assertActive(account);
   account = await maybeCutover(c, account);
   return { ...await issueSession(c.env, account, channel, c.now), created };
@@ -253,7 +262,9 @@ export async function recoverSubject(c: Ctx, provider: string, hash: string, key
       c.db.prepare('UPDATE account_keys SET account_id = ?, last_seen = ? WHERE key_hash = ?').bind(target.account_id, c.now, keyHash),
     );
   }
-  if (writes.length) await c.db.batch(writes);
+  // 연동 로그인으로만 쓰는 계정도 접속 시각을 남긴다(연동 해제 뒤 활성 이용자가 미접속 보관 대상으로 잡히지 않게).
+  writes.push(c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, target.account_id));
+  await c.db.batch(writes);
   // 키가 5개를 넘으면 가장 오래 안 쓴 키부터 지운다(방금 쓴 키는 남긴다).
   const keys = await c.db.prepare('SELECT key_hash FROM account_keys WHERE account_id = ? AND key_hash != ? ORDER BY last_seen, created_at').bind(target.account_id, keyHash).all<{ key_hash: string }>();
   const stale = (keys.results ?? []).slice(0, Math.max(0, (keys.results ?? []).length + 1 - KEYS_PER_ACCOUNT));
@@ -294,6 +305,14 @@ export async function deleteAccount(c: Ctx, auth: Authed, body: Record<string, u
       (SELECT COUNT(*) FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?) AS web`)
     .bind(id, id, c.now - 3600_000).first<{ debt: number; web: number }>();
   if (pending && (pending.debt > 0 || pending.web > 0)) fail(409, 'billing-pending');
+  // 소셜 허브(채팅·친구·명예의 전당)의 기기 키·연동·관계를 먼저 지운다. 허브가 응답하지 않으면 탈퇴를 진행하지 않는다(재시도 가능).
+  if (c.env.SOCIAL) {
+    const hub = c.env.SOCIAL.get(c.env.SOCIAL.idFromName('hub:' + GAME_ID));
+    const res = await hub.fetch(new Request('https://social.internal/internal/delete', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-social-internal': '1' }, body: JSON.stringify({ playerId: id }),
+    }));
+    if (!res.ok) fail(503, 'social-unavailable');
+  }
   const doc = await c.db.prepare("SELECT doc FROM account_docs WHERE account_id = ? AND doc_name = 'core'").bind(id).first<{ doc: string }>();
   await c.db.batch([
     c.db.prepare('INSERT INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) VALUES (?, ?, ?, ?, ?, ?)')

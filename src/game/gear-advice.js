@@ -21,7 +21,7 @@ function wornMap(eco) {
 const byUid = (eco) => new Map((eco.s.inventory || []).map((x) => [x.uid, x]));
 
 /** 같은 장비·강화·장비 레벨·룬 구성의 중복은 하나만 남긴다(후보 상한을 변화 없는 중복이 다 차지하지 않게). */
-const dupKey = (x) => x.id + '|' + (x.enh || 0) + '|' + (x.il || 0) + '|' + (x.tp || '') + '|' + JSON.stringify(x.sockets || null);
+const dupKey = (x) => x.id + '|' + (x.enh || 0) + '|' + (x.il || 0) + '|' + (x.tp || '') + '|' + (x.dur ?? '') + '|' + JSON.stringify(x.sockets || null);   // dur: 닳은 무기는 같은 장비라도 능력치가 다르다
 /** 단독 점수(gearScore)가 모르는 가치 — 착용 세트 동료·박힌 룬 — 가 있으면 점수와 무관하게 실제 빌드 비교로 보낸다. */
 const hasRunes = (x) => Array.isArray(x.sockets) && x.sockets.some(Boolean);
 const worthComparing = (x, minScore, sets) => gearScore(x) > minScore || sets.has(ITEM_BY_ID[x.id]?.set) || hasRunes(x);
@@ -32,12 +32,12 @@ function slotCandidates(list, keep) {
 }
 
 /** 같은 상태로 다시 그릴 때(필터·정렬 변경, 골드 획득 같은 무관한 갱신) 장비 비교를 다시 돌리지 않는다.
- *  상태 지문 = 가방 전체(uid·강화·소유자·장비 레벨·룬)와 모든 영웅의 장착·레벨·별·초월 + 전설 수련. 가방 1,600개 기준 계산 0.1ms 미만. */
+ *  상태 지문 = 가방 전체(uid·강화·소유자·장비 레벨·무기 내구도·룬)와 모든 영웅의 장착·레벨·별·초월 + 전설 수련. 가방 1,600개 기준 계산 0.1ms 미만. */
 const memo = new WeakMap();
 function stateKey(eco) {
   let h = 2166136261;
   const mix = (v) => { const t = String(v); for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); };
-  for (const x of eco.s.inventory || []) { mix(x.uid); mix(x.id); mix(x.enh); mix(x.owner ?? ''); mix(x.il ?? ''); mix(x.tp ?? ''); mix(x.sockets ? JSON.stringify(x.sockets) : ''); }
+  for (const x of eco.s.inventory || []) { mix(x.uid); mix(x.id); mix(x.enh); mix(x.owner ?? ''); mix(x.il ?? ''); mix(x.tp ?? ''); mix(x.dur ?? ''); mix(x.sockets ? JSON.stringify(x.sockets) : ''); }
   for (const [id, hero] of Object.entries(eco.s.heroes || {})) { mix(id); mix(JSON.stringify(hero?.equip || {})); mix(hero?.level); mix(hero?.star); mix(hero?.grade ?? hero?.awaken ?? ''); }
   mix(JSON.stringify(eco.s.legend || null)); mix(JSON.stringify(eco.s.roster?.owned || null));
   return h >>> 0;
