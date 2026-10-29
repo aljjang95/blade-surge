@@ -163,5 +163,9 @@ test('gems get a visible use: summon quotes pity and affordable pulls, scrolls a
   expect(options.find(o => o.kind === 'summon')).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
   expect(options.find(o => o.kind === 'scroll')).toMatchObject({ item: 'protect', have: 0, gems: eco.sku('protect1')!.price });
   save.protect = 3; expect(scrolls()).toEqual([]);
+  // 초보자 배너는 계정당 20회 한도: 10회 썼으면 보석이 넉넉해도 1번만 안내한다(리뷰 P2).
+  save.gacha.beginner = 10;
+  expect((growthOptions(save, eco) as any[]).find(o => o.kind === 'summon')).toMatchObject({ banner: 'beginner', pulls: 1 });
+  save.gacha.beginner = 20;
   save.protect = 0; save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'scroll')).toBe(false);
 });

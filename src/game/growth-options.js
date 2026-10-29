@@ -92,7 +92,9 @@ function gearAndSinkOptions(eco, save, heroId) {
       const g = save.gacha || {}, used = banner === 'gear' ? g.gearPity : banner === 'hero' ? g.pity : null;
       // 천장까지 남은 횟수(읽기 전용: 저장 상태를 만들지 않는다). 초보자 배너는 천장 개념이 없다.
       const pityLeft = used === null ? null : Math.max(0, quote.banner.pity - (Number.isFinite(used) ? Math.max(0, Math.floor(used)) : 0));
-      const pulls = quote.currency === 'gems' && quote.cost > 0 ? Math.floor((save.gems || 0) / quote.cost) : 0;
+      let pulls = quote.currency === 'gems' && quote.cost > 0 ? Math.floor((save.gems || 0) / quote.cost) : 0;
+      // 횟수 한도가 있는 배너(초보자 20회)는 남은 10연 수를 넘겨 안내하지 않는다.
+      if (Number.isFinite(quote.banner?.limit)) pulls = Math.min(pulls, Math.floor(Math.max(0, quote.banner.limit - (Number(g[banner]) || 0)) / 10));
       out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets, pityLeft, pulls });
       break;
     }
