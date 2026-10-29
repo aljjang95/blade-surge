@@ -116,9 +116,11 @@ export function openTransferSheet(meta, uid, heroId = meta.eco.s.selected, pick 
           if (busy) return;
           if (inBattle(meta)) { ui.toast(TRANSFER_FAIL_TEXT.battle, 'red'); return; }
           busy = true; yes.disabled = true;
-          const { srcUid, dstUid, scroll } = state;
+          const { srcUid, dstUid, scroll } = state, seq = ui.modalSeq;
           const r = await performTransfer(meta, srcUid, dstUid, scroll);
           busy = false; confirming = false;
+          // 서버 응답을 기다리는 동안 시트를 닫았거나 다른 창을 열었으면 그 창을 덮지 않는다(gear-panel 강화 처리와 같은 규칙). 결과는 토스트로만 알린다.
+          if (ui.modalSeq !== seq || !ui.el?.modal?.classList?.contains('show')) { meta.refreshTop?.(); ui.toast(r.ok ? '강화 전승 완료! +' + r.to : (TRANSFER_FAIL_TEXT[r.reason] || '전승할 수 없습니다'), r.ok ? 'gold' : 'red'); return; }
           // 서버 대기(pending)·거절(server)은 로컬에 이미 반영됐을 수 있어 고른 짝을 버리고 다시 판정한 화면에 상태 문구를 남긴다.
           if (!r.ok) { const text = TRANSFER_FAIL_TEXT[r.reason] || '전승할 수 없습니다'; ui.toast(text, 'red'); audio.play('ui_error'); if (r.reason === 'pending' || r.reason === 'server') { notice = text; state = { srcUid: undefined, dstUid: undefined, scroll: false }; } render(); return; }
           audio.play('ui_confirm', { vol: 0.6 });

@@ -100,7 +100,9 @@ describe('Codex 리뷰 재현', () => {
     const queue: any = { lastCid: 'a', settled: async () => ({ ok: false, timeout: true }) };
     const origin = x.eco.enhanceTransfer.bind(x.eco);
     x.eco.enhanceTransfer = (...a: any[]) => { const r = origin(...a); queue.lastCid = 'b'; return r; };
-    const meta: any = { eco: x.eco, app: { account: { authority: 'server', queue } }, ui: { modal: (h: string, o: any) => { html = h; open = o; }, toast: () => {}, closeModal: () => {} } };
+    const shown = new Set<string>(['show']);
+    const ui: any = { modalSeq: 0, el: { modal: { classList: { contains: (c: string) => shown.has(c) } } }, modal: (h: string, o: any) => { ui.modalSeq++; html = h; open = o; }, toast: () => {}, closeModal: () => {} };
+    const meta: any = { eco: x.eco, app: { account: { authority: 'server', queue } }, ui };
     openTransferSheet(meta, x.src.uid, 'knight');
     const fakeBox = (map: Record<string, any>) => ({ querySelector: (s: string) => map[s] || null, querySelectorAll: () => [], set onkeydown(_v: any) {} });
     const go = { onclick: null as any, focus: () => {} };
@@ -108,5 +110,28 @@ describe('Codex 리뷰 재현', () => {
     open.onOpen(fakeBox({ '#et-close': { focus: () => {} }, '#et-yes': yes }));
     await yes.onclick();
     expect(html).toContain('id="et-notice"'); expect(html).toContain(TRANSFER_FAIL_TEXT.pending);
+  });
+
+  test('시트: 서버 응답을 기다리는 사이 다른 창이 열리면 그 창을 덮지 않는다(Codex 리뷰)', async () => {
+    const x = setup(); let html = '', open: any = null, release: any = null, closed = 0;
+    const yes = { disabled: false, onclick: null as any, focus: () => {} };
+    const queue: any = { lastCid: 'a', settled: () => new Promise((r) => { release = r; }) };
+    const origin = x.eco.enhanceTransfer.bind(x.eco);
+    x.eco.enhanceTransfer = (...a: any[]) => { const r = origin(...a); queue.lastCid = 'b'; return r; };
+    const toasts: string[] = [];
+    const ui: any = { modalSeq: 0, el: { modal: { classList: { contains: () => true } } }, modal: (h: string, o: any) => { ui.modalSeq++; html = h; open = o; }, toast: (t: string) => toasts.push(t), closeModal: () => { closed++; } };
+    const meta: any = { eco: x.eco, app: { account: { authority: 'server', queue } }, ui, showItem: () => { throw new Error('다른 창을 덮으면 안 된다'); } };
+    openTransferSheet(meta, x.src.uid, 'knight');
+    const fakeBox = (map: Record<string, any>) => ({ querySelector: (s: string) => map[s] || null, querySelectorAll: () => [], set onkeydown(_v: any) {} });
+    const go = { onclick: null as any, focus: () => {} };
+    open.onOpen(fakeBox({ '#et-close': { focus: () => {} }, '#et-go': go })); go.onclick();
+    open.onOpen(fakeBox({ '#et-close': { focus: () => {} }, '#et-yes': yes }));
+    const pending = yes.onclick();
+    ui.modal('<div id="other-dialog"></div>', {});   // 대기 중에 다른 창을 연다
+    release({ ok: true });
+    await pending;
+    expect(html).toBe('<div id="other-dialog"></div>');
+    expect(closed).toBe(0);
+    expect(toasts.length).toBe(1);
   });
 });
