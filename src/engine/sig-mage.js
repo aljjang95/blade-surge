@@ -118,8 +118,8 @@ export function mageMeteorFall(game, start, pt, fall = .4) {
   const impact = game?.fx?.impact; if (!live(impact) || !start || !pt || reducedOf(game)) return 0;
   const before = impact.spawned, lite = !!game.fx.lite;
   _d.copy(pt).sub(start); const len = _d.length(), v = len / fall;
-  impact.beam(start, _d, len, C.fireDeep, { speed: v, tail: 8, width: .95 });
-  if (!lite) impact.beam(start, _d, len, C.fire, { speed: v, tail: 4.5, width: .35, delay: .01 });
+  impact.beam(start, _d, len, C.fireDeep, { speed: v, tail: 8, width: 1.6 });
+  if (!lite) impact.beam(start, _d, len, C.fire, { speed: v, tail: 5, width: .6, delay: .01 });
   // 불 머리: 궤적 머리와 같은 속도로 떨어지는 작은 진홍 코어(흰 덩어리 금지 — 작게, 본색).
   impact._emit(IMPACT_KIND.flame, start.x, start.y, start.z, 1.1, C.fire, fall, { vx: _d.x / fall, vy: _d.y / fall, vz: _d.z / fall, grow: 0 });
   // 궤적에 남는 불꽃(머리가 지나는 순간 켜져 위로 흩어진다).
@@ -236,8 +236,8 @@ export const PRELUDES = {
     const { impact, player, lite } = ctx; const c = player.pos;
     impact.mark(c, C.fire, { radius: 3.6, life: 1.1, style: MARK_STYLE.compass, angle: .3 });
     // 하늘에 열리는 룬(1박자): 영웅 위 하늘에 불의 나침 고리·오각 별이 그려진다.
-    // 화면 안에 들도록 영웅 위(운석이 내려올 오른쪽)로 6.5m.
-    _q.set(c.x + 3, 6.5, c.z + 1);
+    // 화면 안에 들도록 영웅 위(운석이 내려올 오른쪽) 5m.
+    _q.set(c.x + 2.5, 5, c.z + .8);
     skyRune(impact, _q, 2.6, 1.1, { delay: .08, lite });
     _d.set(0, 1, 0);
     for (let i = 0; i < 3; i++) {
@@ -313,8 +313,8 @@ export const SIGNATURES = {
     const { impact, at, lite } = ctx;
     impact.mark(at, C.fire, { radius: 4.5, life: 1.8, style: MARK_STYLE.compass });
     impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 4.5, C.fire, .36, { grow: 1 });
-    // 낙하 원점 쪽(skills.js 운석 출발점 +5,+8,+1.5 의 .85배) 하늘에 큰 룬이 열리고, 운석 궤적이 그 룬에서 대각선으로 내리꽂힌다.
-    _q.set(at.x + 4.25, 6.8, at.z + 1.3);
+    // 낙하 원점 쪽(skills.js 운석 출발점 +4.5,+6.5,+1.2 의 .85배) 하늘에 큰 룬이 열리고, 운석 궤적이 그 룬에서 대각선으로 내리꽂힌다.
+    _q.set(at.x + 3.8, 5.5, at.z + 1);
     skyRune(impact, _q, 3.4, 1.6, { lite });
   },
   // 프리즘 난반사: 손끝 두 겹 고리에서 빛이 스펙트럼 다섯 갈래(보라 → 비취)로 부채처럼 갈라져 앞으로 뻗고, 바닥에 굴절 각을 재는

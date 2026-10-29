@@ -526,9 +526,10 @@ export const SKILLS = {
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
-        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(5, 8, 1.5)); // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하 orb.position.copy(start); game.scene.add(orb);
+        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(4.5, 6.5, 1.2)); // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하 orb.position.copy(start); game.scene.add(orb);
         mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
-        game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
+        // 착탄 예고 원: 다섯 발의 4m 주황 원이 겹쳐 바닥 전체가 크림 번짐이 됐다 — 작고 진한 진홍(호출은 유지: 난수 순서).
+        game.fx.castCircle(pt, 0xd8261a, { radius: 2.4, life: 0.45, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
         game.after(0.4, () => {
           game.vacuum(pt, 6, 8);
