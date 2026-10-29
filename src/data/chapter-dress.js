@@ -225,7 +225,7 @@ export const CHAPTER_DRESS = Object.freeze({
       squidle: { ...DEEP_SKIN, props: ['lureLamp'] },
       glub: { ...DEEP_SKIN, props: ['lureLamp'] },
       abyss_seer: { ...DEEP_SKIN, props: ['lureLamp', 'glowPouches'] },
-      // 심연 슬라임: 분홍을 심해 청록으로, 따개비가 붙는다. 심연 폭탄은 자폭 경고 색(자홍)을 유지한다.
+      // 심연 슬라임: 분홍을 심해 청록으로, 따개비가 붙는다. 심연 폭탄은 자폭 경고 색(자홍)을 유지한다(4장 캠페인 일반 방은 ch4_lurer_bomb로 바뀌고, 원본은 다른 경로·정예 소환에 남는다).
       blob_pink: { ...DEEP_SLIME, props: ['barnaclesTop'] },
       bomb_abyss: { props: ['barnaclesTop'] },
       // 이계 침입자 → 난파선 판자 방패를 든 수부.
