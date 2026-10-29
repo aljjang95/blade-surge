@@ -1,3 +1,4 @@
+import { progressItemLevel } from '../src/data/loot-tables.js';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { v1Harness } from './helpers/v1-harness';
@@ -40,8 +41,9 @@ describe('MMO P1-G 로컬 세이브 임포트·정화 (골든 세이브)', () =>
     expect(r.body.doc.progress.unlocked).toBe(25);
     expect(r.body.doc.heroes.knight.level).toBe(32);
     // 장비 귀속 이관은 owner·legacy 만 더한다(장비 수·uid·강화 그대로, docs/GEAR_OWNERSHIP_VAULT.md 4절).
-    expect(r.body.doc.inventory.map(({ owner, legacy, ...rest }: any) => rest)).toEqual(src.inventory);
-    expect(r.body.doc.inventory.every((x: any) => typeof x.owner === 'string')).toBe(true);
+    // il 은 정화된 진행도의 장비 레벨로 다시 붙는다(가져온 il 은 버림, 2026-10-29 등급 역전 수정).
+    expect(r.body.doc.inventory.map(({ owner, legacy, il, ...rest }: any) => rest)).toEqual(src.inventory);
+    expect(r.body.doc.inventory.every((x: any) => typeof x.owner === 'string' && x.il === progressItemLevel(r.body.doc.progress))).toBe(true);
     expect(r.body.doc.heroes.knight.equip).toEqual(src.heroes.knight.equip);
     expect(r.body.report.days).toBe(10);
   });
