@@ -157,6 +157,18 @@
       }
     },
     {
+      "id": "w_storm",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_storm.glb",
+      "sha256": "393e2178e7638f8d73fcfbc9a6ab0b0dd08203dc9c2f73b15584470cb865cec4",
+      "bytes": 659392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "4102c457-fccc-4cca-a188-85fd56699614",
+        "concept": "thunder greatsword: wide wavy blade of glowing electric blue with white lightning-crack patterns inside a silver-grey frame, silver winged cross guard with a round blue gem, dark blue wrapped grip with silver bands, blue crystal pommel; electric arcs rendered as solid blue crystal shards attached to the blade edges"
+      }
+    },
+    {
       "id": "w_sun",
       "form": "greatsword",
       "file": "/models/item-weapons/w_sun.glb",
