@@ -31,7 +31,7 @@ function plan() {
   if (flag('full')) return IN_APP_VIEWPORTS.flatMap(viewport => uas.map(ua => ({ ua, viewport })));
   const runs = IN_APP_VIEWPORTS.map((viewport, i) => ({ ua: uas[i], viewport }));
   runs.push({ ua: uas[3], viewport: IN_APP_VIEWPORTS[0] });
-  return runs;
+  return arg('limit') ? runs.slice(0, Number(arg('limit'))) : runs;
 }
 
 // 페이지 시작 전에 설치: 페이지 기본 동작(스크롤·당겨서 새로고침)이 일어났는지 window 버블 단계에서 기록한다.
@@ -55,7 +55,14 @@ async function enterLobby(page, url) {
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });
   await page.locator('#boot-start').tap();
-  await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), null, { timeout: 180000 });
+  // 운영(계정 서버 열림)은 첫 실행에 로그인 시트를 띄운다. 인앱 첫 방문자처럼 '게스트로 시작'을 누른다.
+  const guest = page.getByRole('button', { name: '게스트로 시작' });
+  const deadline = Date.now() + 180000;
+  while (!(await page.evaluate(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show')))) {
+    if (Date.now() > deadline) throw Error('lobby wait timed out');
+    if (await guest.isVisible().catch(() => false)) await guest.tap().catch(() => {});
+    await page.waitForTimeout(500);
+  }
   await page.evaluate(() => window.app.ui.closeModal?.());
   // 인앱 브라우저는 전체화면·회전 잠금을 못 하는 경우가 많아 세로 이용자는 '세로로 계속하기'를 누른다.
   if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').tap();
@@ -249,7 +256,10 @@ try {
       await startBattle(page);
       await battleChecks(page, cdp, viewport, run);
       await page.screenshot({ path: path.join(out, `${ua}-${viewport.width}x${viewport.height}.png`) });
-    } catch (e) { run.errors.push(String(e?.stack || e).slice(0, 400)); }
+    } catch (e) {
+      run.errors.push(String(e?.stack || e).slice(0, 400));
+      await page.screenshot({ path: path.join(out, `fail-${ua}-${viewport.width}x${viewport.height}.png`) }).catch(() => {});
+    }
     const prefixed = (name, pass) => Object.fromEntries(Object.entries(pass || {}).map(([k, v]) => [name + '.' + k, v]));
     const passes = { ...(run.battle?.pass || {}), ...prefixed('lobby', run.lobby?.pass), ...prefixed('keyboard', run.keyboard?.pass) };
     run.failed = Object.entries(passes).filter(([, v]) => !v).map(([k]) => k);
