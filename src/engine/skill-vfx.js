@@ -45,10 +45,13 @@ export const SKILL_VFX = Object.freeze({
   // 늑대인간 족장 고유 스킬: 핏빛 진홍·분홍(포효), 월광 은백 + 진홍(사냥). 모양은 sig-barbarian.js 서명이 맡는다.
   blood_howl: R(VIOLET, 'lava-crack', 'self', 'ground', 0xc81830, 6, { noRune: true, sig: true }),
   moonlit_hunt: R(VIOLET, 'meteor', 'self', 'flash', 0xd8e4ff, 8, { noRune: true, sig: true }),
+  // 각성 4종(강화 레인 2026-10-30): 영웅 둘레 원형 원화(용암 균열 8~9m·금빛 룬·종말의 12m 운석 섬광)를 끄고 모양을 서명이 맡는다.
+  // 돌진은 길 앞 균열 원화(위치 신호)를 남긴다. 종말은 시전 순간이 아니라 .3초 뒤 분화에 터지므로 착탄 코어도 끈다(noBurst).
+  // 위치 신호는 skills.js 의 castCircle·groundTex·shockTex(파티 손님도 보는 바깥 fx)가 그대로 맡는다.
   bull_rush: R(GOLD, 'lava-crack', 'front', 'ground', 0xff6a30, 6, { dist: 5, noRune: true, sig: true }),
-  magma_zone: R(GOLD, 'lava-crack', 'self', 'ground', 0xff5a20, 8),
-  bloodquake: R(VIOLET, 'lava-crack', 'self', 'ground', 0xd02020, 9, { noRune: true, sig: true }),
-  cataclysm: R(GOLD, 'meteor', 'aim', 'flash', 0xff5a3c, 12, { dist: 2 }),
+  magma_zone: R(GOLD, 'lava-crack', 'self', 'none', 0xff5a20, 8, { noRune: true, sig: true }),
+  bloodquake: R(VIOLET, 'lava-crack', 'self', 'none', 0xd02020, 9, { noRune: true, sig: true }),
+  cataclysm: R(GOLD, 'meteor', 'aim', 'none', 0xff5a3c, 12, { dist: 2, noRune: true, sig: true, noBurst: true }),
   // 대마도사
   // 화염구·프리즘: 시전 순간 전방 3~4m 허공에 운석 원화·임팩트 코어(옅은 하늘색·주황 덩어리)가 먼저 터져 '덩어리'로 읽혔다(h1c).
   // 착탄 중심은 투사체 폭발(_fireImpact)·서명이 맡고, 레시피는 원화·섬광·코어를 생략한다(noBurst).

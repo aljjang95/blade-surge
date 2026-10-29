@@ -19,7 +19,7 @@ const TAU = Math.PI * 2;
 const DEEP_EMBER = 0xb8380e, DEEP_CRIMSON = 0xa0140e;
 /** 가시 고리 표식은 반경이 커지면 옅은 바퀴(크림·분홍 원판)로 읽힌다. 넓은 판정은 용암 균열 길이로 보이고 표식은 이 반경까지만. */
 const THORN_MAX = 4.5;
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _g = new THREE.Vector3(), _p = new THREE.Vector3();
 /** 실제 임팩트 층인지(테스트 대역·미초기화 FX 에서 도우미가 전투 루프를 깨지 않게). */
 const live = (impact) => !!impact && impact.enabled !== false && typeof impact.beam === 'function' && typeof impact.mark === 'function' && !!impact.rng;
 const yawOf = (f) => Math.atan2(f.z, f.x);
@@ -139,8 +139,10 @@ export function barbRushEnd(game, center, f) {
   const lite = !!game.fx.lite, before = impact.spawned;
   impact.mark(center, DEEP_CRIMSON, { radius: THORN_MAX, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
   impact._emit(IMPACT_KIND.ring, center.x, .6, center.z, 4.5, EMBER, .3, { grow: 1 });
-  lavaFissures(impact, center, lite ? 4 : 8, .8, 7, EMBER, { phase: yawOf(f) });
-  risingEmbers(impact, center, lite ? 5 : 12, 3, FLAME);
+  // 사방 균열 대신 밀어붙인 방향(±40°)으로만 달려 나가는 균열 부채: 돌진의 화살촉 실루엣이 끝에서 앞으로 터진다.
+  _p.copy(center).setY(0);
+  runningFissures(impact, _p, f, lite ? 3 : 5, 7.5, .7, EMBER, { speed: 40, width: .16, shards: false });
+  risingEmbers(impact, center, lite ? 5 : 10, 3, FLAME);
   // 밀어붙인 방향으로 펼쳐지는 불씨 부채 + 앞쪽 불꽃 혀(벽처럼 뭉친 적이 터진 자리).
   _a.copy(center).addScaledVector(f, -2.4);
   impact.mark(_a, DEEP_EMBER, { radius: 6.2, life: .45, style: MARK_STYLE.fan, angle: yawOf(f) });
@@ -178,6 +180,29 @@ export const PRELUDES = {
     impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 3.6, MOON, .5, { grow: 1 });
     risingEmbers(impact, player.pos, lite ? 6 : 14, 2.2, MOON, { rise: 11, life: .8 });
     risingEmbers(impact, player.pos, lite ? 3 : 6, 1.6, WOLF_PINK, { rise: 8, life: .6, delay: .1 });
+  },
+  // 용암 분출·진 예비(시전 .43초 전): 여섯 기둥이 솟을 자리(반경 4.6m, 각 .4+i×60°)에 짙은 조준 원이 잡히고, 발밑에서 그 자리로
+  // 가는 가는 균열이 .38초에 걸쳐 기어간다. 각 조준 원은 제 기둥이 솟는 순간(.43+i×.11초) 사라진다 — '어디서 솟는지'를 미리 읽힌다.
+  magma_zone(ctx) {
+    const { impact, player, lite } = ctx; const c = player.pos, LEAD = .43;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + .4;
+      _p.set(c.x + Math.cos(a) * 4.6, 0, c.z + Math.sin(a) * 4.6);
+      impact.mark(_p, DEEP_EMBER, { radius: 1.3, life: LEAD + i * .11 + .04, style: MARK_STYLE.reticle, angle: a });
+      if (!lite) { _d.set(Math.cos(a), 0, Math.sin(a)); _a.set(c.x + _d.x * .6, .07, c.z + _d.z * .6); impact.beam(_a, _d, 3.4, DEEP_EMBER, { speed: 9, width: .06, fade: .2 }); }
+    }
+  },
+  // 종말·화산심장 예비(도약 전): 발밑이 짓눌려 짧은 진홍 균열 다섯 갈래가 퍼지고, 도약 순간(.35초) 바위 파편이 튀며
+  // 발밑에서 하늘로 도약 궤적(불꽃 + 금빛 심)이 솟는다. 지옥의 도끼(사방에서 빨려 드는 불씨 + 나침 표식)와 다른 '눌렀다 튀는' 박자.
+  cataclysm(ctx) {
+    const { impact, player, lite } = ctx; const p = player.pos, UP = .35;
+    impact.mark(p, DEEP_EMBER, { radius: 1.4, life: UP + .1, style: MARK_STYLE.reticle });
+    lavaFissures(impact, p, lite ? 3 : 5, .4, 2.4, CRIMSON, { speed: 12, width: .12, fade: .25 });
+    debris(impact, p.x, p.z, lite ? 3 : 6, MOLTEN, { delay: UP, up: 8, out: 2.6, size: .26 });
+    _d.set(0, 1, 0);
+    for (const [k, c] of (lite ? [[0, FLAME]] : [[0, FLAME], [1, GOLD]])) {
+      _a.set(p.x + (k ? .4 : -.3), .3, p.z); impact.beam(_a, _d, 8, c, { speed: 30, tail: 3.5, width: k ? .1 : .18, delay: UP + k * .03 });
+    }
   },
 };
 
@@ -265,74 +290,119 @@ export const SIGNATURES = {
     risingEmbers(impact, t, lite ? 7 : 16, 4, MOON, { delay: LAND, rise: 9 });
     sparks(impact, t, lite ? 4 : 8, 13, WOLF_PINK, { delay: LAND });
   },
-  // 광란의 돌진: 돌진 길을 따라 용암 균열이 영웅과 같은 속도(21m/s)로 그어지고, 길가에 불씨가 차례로 솟는다. 끝 폭발은 barbRushEnd.
+  // 광란의 돌진(각성 1) — '불도저 화살촉': 길 한가운데 용암 균열(주황 + 금빛 심)이 영웅과 같은 속도(21m/s)로 그어지고,
+  // 몸이 지나간 자리마다 뒤로 벌어지는 V자 선수파(지면 광선 두 줄)가 남아 화살촉 실루엣이 된다. 몸 앞에는 밀어붙이는 초승달
+  // 베기 자국이 3m마다 찍히고 길가로 바위 파편이 튄다. 끝 폭발 자리(남은 돌진 약 12.4m + 2.4m)에 금빛 나침 표식이 미리 잡힌다.
   bull_rush(ctx) {
-    const { impact, player, f, lite } = ctx;
+    const { impact, player, f, lite } = ctx; const V = 21, yaw = yawOf(f);
     _a.copy(player.pos).setY(.07);
-    impact.beam(_a, f, 12, EMBER, { speed: 21, width: .16, fade: .45 });
-    _d.set(-f.z, 0, f.x);
-    for (const s of [-1, 1]) { _b.copy(_a).addScaledVector(_d, s * 1.1); impact.beam(_b, f, 10, CRIMSON, { speed: 21, width: .08, fade: .3, delay: .05 }); }
-    for (let i = 0; i < (lite ? 3 : 6); i++) {
-      _b.copy(player.pos).addScaledVector(f, 1.5 + i * 1.9);
-      risingEmbers(impact, _b, 2, .8, i % 2 ? FLAME : EMBER, { delay: (1.5 + i * 1.9) / 21, rise: 6 });
+    impact.beam(_a, f, 12.4, EMBER, { speed: V, width: .2, fade: .5 });
+    impact.beam(_a, f, 12.4, GOLD, { speed: V, width: .07, fade: .3 });
+    _b.copy(player.pos).addScaledVector(f, 14.8);
+    impact.mark(_b, GOLD, { radius: 2.2, life: .72, style: MARK_STYLE.compass, angle: yaw });
+    _e.set(-f.z, 0, f.x); // 옆 방향
+    const n = lite ? 3 : 6;
+    for (let i = 0; i < n; i++) {
+      const d = 1.2 + i * (11 / n), t = d / V;
+      // 선수파: 지나간 점에서 뒤·바깥(진행 반대 방향 ±38°)으로 벌어지는 두 줄. 뒤로 갈수록 길어져 V가 넓어진다.
+      for (const s of [-1, 1]) {
+        _p.copy(player.pos).addScaledVector(f, d).addScaledVector(_e, s * .5).setY(.07);
+        _g.copy(f).multiplyScalar(-.79).addScaledVector(_e, s * .62);
+        impact.beam(_p, _g, 2 + i * .3, i % 2 ? CRIMSON : FLAME, { speed: 16, width: .1, delay: t, fade: .3 });
+      }
+      if (!lite) { _p.copy(player.pos).addScaledVector(f, d); risingEmbers(impact, _p, 2, .8, i % 2 ? FLAME : EMBER, { delay: t, rise: 6 }); }
     }
-    // 돌진 앞머리: 몸 앞 부채꼴 분노 표식이 길을 연다.
-    impact.mark(player.pos, DEEP_CRIMSON, { radius: 4, life: .35, style: MARK_STYLE.fan, angle: yawOf(f) });
+    // 앞머리 초승달(몸 1.4m 앞, 어깨 높이): 3m마다 한 장, 금빛·불꽃 번갈아.
+    for (let i = 0; i < (lite ? 2 : 4); i++) {
+      const d = 1.4 + i * 3;
+      _p.copy(player.pos).addScaledVector(f, d);
+      impact._emit(IMPACT_KIND.cut, _p.x, 1.1, _p.z, 2.6, i % 2 ? GOLD : FLAME, .16, { angle: impact._screenAngle(_e), stretch: 1.2, grow: .7, delay: Math.max(0, d - 1.4) / V });
+      if (!lite && i % 2 === 0) debris(impact, _p.x, _p.z, 3, MOLTEN, { delay: Math.max(0, d - 1.4) / V, up: 5, out: 3, phase: yaw });
+    }
   },
-  // 용암 분출·진: 여섯 기둥이 솟는 박자(i×.11초)마다 중심→기둥 자리로 용암 균열이 뻗고 고리·불씨가 솟는다. .75초에 균열 장판 가시 고리.
+  // 용암 분출·진(각성 2) — '용암 육망성': 기둥이 솟는 박자(i×.11초)마다 중심→기둥 균열이 닿고, 앞 기둥에서 이 기둥으로 육각 테두리가
+  // 이어 그어지며(42m/s), 기둥 자리에서 불기둥 심 광선·바깥으로 기운 바위 가시·파편이 솟는다. .75초 장판 순간 기둥 i→i+2 를 잇는
+  // 두 삼각형(육망성)이 그어져 1초 남는다 — 원이 아니라 직선 별 실루엣. 기둥 자리 예고는 PRELUDES.magma_zone.
   magma_zone(ctx) {
-    const { impact, player, lite } = ctx; const c = player.pos;
+    const { impact, player, lite } = ctx; const c = player.pos, R = 4.6, A0 = .4;
     for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * TAU + .4, d = i * .11;
+      const a = (i / 6) * TAU + A0, d = i * .11;
       _d.set(Math.cos(a), 0, Math.sin(a)); _a.set(c.x + _d.x * .8, .07, c.z + _d.z * .8);
-      impact.beam(_a, _d, 3.8, EMBER, { speed: 40, width: .14, delay: Math.max(0, d - .08), fade: .5 });
-      _b.set(c.x + _d.x * 4.6, 0, c.z + _d.z * 4.6);
-      impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 3, i % 2 ? CRIMSON : EMBER, .28, { grow: 1, delay: d });
-      if (!lite) risingEmbers(impact, _b, 3, 1, MOLTEN, { delay: d, rise: 10 });
+      impact.beam(_a, _d, R - .8, EMBER, { speed: 40, width: .14, delay: Math.max(0, d - .08), fade: .5 });
+      _p.set(c.x + _d.x * R, .07, c.z + _d.z * R);
+      if (i > 0) {
+        const ap = ((i - 1) / 6) * TAU + A0;
+        _b.set(c.x + Math.cos(ap) * R, .07, c.z + Math.sin(ap) * R); _g.set(_p.x - _b.x, 0, _p.z - _b.z);
+        impact.beam(_b, _g, R, i % 2 ? GOLD : FLAME, { speed: 42, width: .1, delay: d - .11, fade: .45 });
+      }
+      _g.set(_d.x * .12, 1, _d.z * .12);
+      impact.beam(_p, _g, 7.5, i % 2 ? CRIMSON : FLAME, { speed: 46, tail: 4, width: .26, delay: d });
+      if (!lite) earthSpikes(impact, _p, 3, .9, 1.5, EMBER, { delay: d, h: 1.8, width: .24, out: .8, phase: a });
+      debris(impact, _p.x, _p.z, lite ? 1 : 2, MOLTEN, { delay: d, up: 9, out: 2.4, phase: a });
     }
-    impact.mark(c, DEEP_EMBER, { radius: 3.6, life: 1.4, style: MARK_STYLE.thorn, delay: .75 });
-    lavaFissures(impact, c, lite ? 4 : 8, 1, 6.4, CRIMSON, { delay: .75, speed: 30, width: .09, fade: 1 });
+    // .75초 육망성: 각 기둥에서 두 칸 건너 기둥으로(길이 R√3 ≈ 8m), 짙은 색으로 낮춰 바닥이 바래지 않게.
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + A0, b = ((i + 2) / 6) * TAU + A0;
+      _a.set(c.x + Math.cos(a) * R, .07, c.z + Math.sin(a) * R); _g.set(Math.cos(b) * R - Math.cos(a) * R, 0, Math.sin(b) * R - Math.sin(a) * R);
+      impact.beam(_a, _g, R * Math.sqrt(3), i % 2 ? DEEP_CRIMSON : DEEP_EMBER, { speed: 32, width: .11, delay: .75, fade: 1 });
+    }
+    lavaFissures(impact, c, lite ? 3 : 5, 1, 6.4, CRIMSON, { delay: .75, speed: 30, width: .08, fade: 1 });
+    impact.mark(c, GOLD, { radius: 1.6, life: .5, style: MARK_STYLE.compass, delay: .75 });
   },
-  // 혈왕·대지붕괴: 두 번 무너진다 — 0초 진홍 가시 고리(6m) + 핏빛 균열, .2초 불씨 가시 고리(8m) + 더 긴 균열·큰 고리·불기둥 불씨.
+  // 혈왕·대지붕괴(각성 3) — '피의 소용돌이 → 왕관': 0~.15초 여섯 갈래 핏빛 나선 팔이 8.5m 밖에서 몸 쪽으로 감겨 들어오고(흡인이 보인다),
+  // 0초 1차 붕괴(진홍 세로 도끼 자국 + 고리 + 짧은 핏빛 균열), .2초 2차 붕괴(불씨 도끼 자국 + 가시 고리 + 긴 균열 + 바깥으로 기운
+  // 바위 가시 왕관 + 핏빛 기둥). 원형 문양은 고리 하나·가시 고리 하나만.
   bloodquake(ctx) {
     const { impact, player, lite } = ctx; const c = player.pos;
-    impact.mark(c, DEEP_CRIMSON, { radius: 3.4, life: .5, style: MARK_STYLE.thorn });
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
-    lavaFissures(impact, c, lite ? 4 : 8, .6, 6, BLOOD, { speed: 50, width: .16 });
-    // 두 번 내리찍는 세로 도끼 호(핏빛 → 불씨): 혈왕의 두 박자.
+    const arms = lite ? 3 : 6, SP = 55;
+    for (let k = 0; k < arms; k++) {
+      const a0 = (k / arms) * TAU; let t = 0;
+      for (const [r0, da0, r1, da1] of [[8.5, 0, 5, .55], [5, .55, 1.4, 1.25]]) {
+        _a.set(c.x + Math.cos(a0 + da0) * r0, .08, c.z + Math.sin(a0 + da0) * r0);
+        _g.set(c.x + Math.cos(a0 + da1) * r1 - _a.x, 0, c.z + Math.sin(a0 + da1) * r1 - _a.z);
+        const L = _g.length();
+        impact.beam(_a, _g, L, k % 2 ? CRIMSON : BLOOD, { speed: SP, tail: 2.6, width: .15, delay: t });
+        t += L / SP;
+      }
+    }
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 4, CRIMSON, .24, { angle: -Math.PI / 2 + .3, grow: .7 });
+    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
+    lavaFissures(impact, c, lite ? 3 : 6, .6, 5, BLOOD, { speed: 50, width: .16 });
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 5, EMBER, .26, { angle: -Math.PI / 2 - .3, grow: .7, delay: .2 });
     impact.mark(c, DEEP_EMBER, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
-    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.6, EMBER, .34, { grow: 1, delay: .2 });
-    lavaFissures(impact, c, lite ? 6 : 12, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });
-    risingEmbers(impact, c, lite ? 5 : 10, 5, FLAME, { delay: .2, rise: 8 });
-    // 두 번째 붕괴 순간 둘레에서 솟는 핏빛 기둥 여섯(혈왕의 '피의 대지').
+    lavaFissures(impact, c, lite ? 4 : 8, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });
+    earthSpikes(impact, c, lite ? 5 : 10, 5, 7, CRIMSON, { delay: .2, h: 3.2, width: .34, out: .9, phase: .3 });
     _d.set(0, 1, 0);
-    for (let i = 0; i < (lite ? 3 : 6); i++) {
-      const a = (i / 6) * TAU + .26; _a.set(c.x + Math.cos(a) * 4.2, 0, c.z + Math.sin(a) * 4.2);
+    for (let i = 0; i < (lite ? 2 : 4); i++) {
+      const a = (i / 4) * TAU + .7; _a.set(c.x + Math.cos(a) * 3.6, 0, c.z + Math.sin(a) * 3.6);
       impact.beam(_a, _d, 6, i % 2 ? CRIMSON : BLOOD, { speed: 40, tail: 4, width: .34, delay: .2 + i * .02 });
     }
-    // 무너지는 대지: 핏빛 바위 가시(0초, 6m 안) → 불씨 바위 가시(.2초, 8m 안)가 바깥으로 비스듬히 솟는다.
-    earthSpikes(impact, c, lite ? 4 : 8, 3, 6, CRIMSON, { h: 2.2, width: .32 });
-    earthSpikes(impact, c, lite ? 5 : 10, 5, 8.5, EMBER, { delay: .2, h: 2.8, width: .36, phase: .3 });
+    risingEmbers(impact, c, lite ? 3 : 6, 4, FLAME, { delay: .2, rise: 8 });
   },
-  // 종말·화산심장(최상위 각성): 화산 심장이 맥동(진홍 가시 고리)하다 .3초에 분화 — 하늘로 솟는 불의 기둥 광선 다섯,
-  // 용암 균열 열네 갈래, 거대 고리 두 겹, 불씨 분수.
+  // 종말·화산심장(각성 4) — '혜성 낙하 → 화산탄 분수': 착탄점에 금빛 나침 + 진홍 가시 표식(조준), 도약 정점(영웅 위 7.5m)에서
+  // 착탄점으로 비스듬히 내리꽂는 불의 궤적 두 줄이 .3초(판정 순간)에 닿는다. 분화: 중심 불기둥 + 금빛 심, 포물선으로 솟아 바깥에
+  // 떨어지는 화산탄 마름모 분수, 용암 균열, 고리 하나, .16초 뒤 바깥 6~8.5m 여진 바위 가시.
   cataclysm(ctx) {
-    const { impact, at, lite } = ctx; const T = .3;
-    impact.mark(at, DEEP_CRIMSON, { radius: THORN_MAX, life: T + .55, style: MARK_STYLE.thorn });
-    impact.mark(at, EMBER, { radius: 2.6, life: T + .2, style: MARK_STYLE.thorn, angle: .31 });
-    risingEmbers(impact, at, lite ? 3 : 7, 2, CRIMSON, { rise: 4 });
-    _d.set(0, 1, 0);
-    for (let i = 0; i < (lite ? 3 : 5); i++) {
-      const a = (i / 5) * TAU, r = i === 0 ? 0 : 3.2;
-      _a.set(at.x + Math.cos(a) * r, 0, at.z + Math.sin(a) * r);
-      impact.beam(_a, _d, 9 + (i === 0 ? 4 : 0), i === 0 ? FLAME : EMBER, { speed: 55, tail: 6, width: i === 0 ? .42 : .24, delay: T + i * .03 });
+    const { impact, player, at, lite } = ctx; const T = .3;
+    impact.mark(at, GOLD, { radius: 2, life: T + .15, style: MARK_STYLE.compass });
+    impact.mark(at, DEEP_CRIMSON, { radius: THORN_MAX, life: T + .5, style: MARK_STYLE.thorn, angle: .31 });
+    risingEmbers(impact, at, lite ? 2 : 4, 1.6, CRIMSON, { rise: 4 });
+    _a.set(player.pos.x, 7.5, player.pos.z); _g.set(at.x - _a.x, .3 - _a.y, at.z - _a.z);
+    const L = _g.length();
+    impact.beam(_a, _g, L, FLAME, { speed: L / T, tail: 6, width: .36 });
+    if (!lite) { _a.x += .35; impact.beam(_a, _g, L, GOLD, { speed: L / T, tail: 3.5, width: .12 }); }
+    _d.set(0, 1, 0); _a.set(at.x, 0, at.z);
+    impact.beam(_a, _d, 13, FLAME, { speed: 55, tail: 6, width: .44, delay: T });
+    _a.x += .35; impact.beam(_a, _d, 10, GOLD, { speed: 60, tail: 4, width: .14, delay: T });
+    const n = lite ? 6 : 12;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + impact.rng.next() * .4, s = 5 + impact.rng.next() * 3;
+      impact._emit(IMPACT_KIND.shard, at.x, .6, at.z, .42, i % 3 ? MOLTEN : GOLD, .9,
+        { vx: Math.cos(a) * s, vy: 11 + impact.rng.next() * 4, vz: Math.sin(a) * s, angle: a, stretch: 1.6, grow: .9, gravity: 22, delay: T });
     }
     impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 5.5, EMBER, .38, { grow: 1, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 3.6, CRIMSON, .3, { grow: 1, delay: T + .1 });
-    lavaFissures(impact, at, lite ? 7 : 14, 1, 11, EMBER, { speed: 65, delay: T, width: .14 });
-    risingEmbers(impact, at, lite ? 8 : 16, 5, FLAME, { delay: T, rise: 11 });
-    sparks(impact, at, lite ? 4 : 8, 15, MOLTEN, { delay: T });
+    lavaFissures(impact, at, lite ? 6 : 10, 1, 11, EMBER, { speed: 65, delay: T, width: .14 });
+    earthSpikes(impact, at, lite ? 3 : 7, 6, 8.5, CRIMSON, { delay: T + .16, h: 2.6, width: .32, out: .9, phase: .2 });
+    risingEmbers(impact, at, lite ? 4 : 8, 4, FLAME, { delay: T, rise: 10 });
   },
 };
