@@ -250,6 +250,41 @@ export const PRELUDES = {
         { vx: -Math.cos(a) * 3, vy: 6, vz: -Math.sin(a) * 3, stretch: 1.2, grow: 1, gravity: -2, delay: (k % 4) * .1 });
     }
   },
+  // 성좌·별감옥 예비(시전 .4초 동안): 치켜든 손끝으로 별가루가 나선으로 모이고, 손끝 위로 금빛 별 셋이 차례로 떠올라
+  // 하늘에 별자리를 거는 동작이 읽힌다. 발밑에는 작은 남색 나침 고리만(큰 원 금지).
+  star_prison(ctx) {
+    const { impact, player, f, lite } = ctx; const c = player.pos;
+    const H = _stars[0].set(c.x + f.x * .4, 2.4, c.z + f.z * .4);
+    impact.mark(c, C.star, { radius: 1.6, life: .5, style: MARK_STYLE.compass, angle: .2 });
+    const n = lite ? 4 : 10, life = .32;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * TAU, r = 1.8, d = (k % 3) * .04;
+      impact._emit(IMPACT_KIND.streak, H.x + Math.cos(a) * r, H.y - .9 + (k % 2) * .5, H.z + Math.sin(a) * r, .2, k % 2 ? C.starGold : C.starLine, life - d,
+        { vx: (-Math.cos(a) - Math.sin(a) * .8) * r / (life - d), vy: .9 / (life - d), vz: (-Math.sin(a) + Math.cos(a) * .8) * r / (life - d), stretch: 1.2, grow: 1, delay: d });
+    }
+    for (let k = 0; k < (lite ? 1 : 3); k++) {
+      impact._emit(IMPACT_KIND.star, H.x + (k - 1) * .7, H.y + .3 + k * .35, H.z, .7, C.starGold, .4, { vy: 2.2, angle: .3 + k, grow: .6, delay: .1 + k * .07 });
+    }
+  },
+  // 절대영도 예비(시전 .5초 동안): 몸 둘레 냉기가 손끝으로 빨려 들고(진한 하늘색 줄기), 발밑에서 작은 얼음 가시 고리가
+  // 순서대로 솟는다. 판정 구역 쪽은 서명이 맡는다.
+  absolute_zero(ctx) {
+    const { impact, player, f, lite } = ctx; const c = player.pos;
+    const H = _stars[0].set(c.x + f.x * .5, 2.3, c.z + f.z * .5);
+    const n = lite ? 4 : 10, life = .42;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * TAU + .3, r = 1.6 + (k % 3) * .3, up = k % 2 ? .5 : -.5, d = (k % 4) * .05;
+      _d.set(Math.cos(a), up, Math.sin(a)).normalize();
+      impact._emit(IMPACT_KIND.streak, H.x + _d.x * r, H.y + _d.y * r, H.z + _d.z * r, .26, k % 2 ? C.frost : C.frostDeep, life - d,
+        { vx: -_d.x * r / (life - d), vy: -_d.y * r / (life - d), vz: -_d.z * r / (life - d), stretch: 1.4, grow: 1, delay: d });
+    }
+    impact._emit(IMPACT_KIND.star, H.x, H.y, H.z, .8, C.frost, .2, { angle: .3, grow: .6, delay: life - .08 });
+    impact.mark(c, C.frostDeep, { radius: 1.8, life: .6, style: MARK_STYLE.thorn, angle: .3 });
+    if (!lite) for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * TAU + .52; _a.set(c.x + Math.cos(a) * 1.3, .02, c.z + Math.sin(a) * 1.3); _b.set(Math.cos(a) * .35, 1, Math.sin(a) * .35);
+      impact.beam(_a, _b, 1.1, k % 2 ? C.frostMid : C.frostDeep, { speed: 10, width: .16, delay: k * .06, fade: .4, style: BEAM_STYLE.ice });
+    }
+  },
 };
 
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
@@ -339,6 +374,36 @@ export const SIGNATURES = {
     // 바닥: 발밑 청록 조준 원 + 앞으로 펼쳐지는 보라 빛 부채(굴절이 시작되는 방향).
     impact.mark(player.pos, C.prismDeep, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
     if (!lite) impact.mark(player.pos, C.arcane, { radius: 5, life: .45, style: MARK_STYLE.fan, angle: base, delay: .03 });
+    // 각성 강화(2026-10-30): ① 분광 쓸기 — 스펙트럼 일곱 줄이 왼쪽에서 오른쪽으로 .15초 동안 차례로 그어져 '빛이 갈라지며 훑는' 부채
+    // (원형 문양이 아닌 전방 부채 실루엣). ② 손끝 프리즘 결정 둘레를 도는 분광 파편 여섯. ③ 창이 튀어 나가는 반동으로 뒤로 튀는 불똥.
+    const sweep = lite ? 3 : 7;
+    for (let k = 0; k < sweep; k++) {
+      const t = sweep > 1 ? k / (sweep - 1) : .5, a = base - .5 + t; _d.set(Math.cos(a), 0, Math.sin(a));
+      impact.beam(_p1, _d, 7 - Math.abs(t - .5) * 3, PRISM_SPECTRUM[k % PRISM_SPECTRUM.length], { speed: 42, tail: 2.4, width: .12, delay: .1 + k * .022, style: BEAM_STYLE.prism });
+    }
+    if (!lite) {
+      for (let k = 0; k < 6; k++) {
+        const a = base + (k / 6) * TAU, r = 1.1;
+        impact._emit(IMPACT_KIND.shard, _a.x + Math.cos(a) * r, _a.y + (k % 2 ? .25 : -.2), _a.z + Math.sin(a) * r, .36, PRISM_SPECTRUM[k % 5], .4,
+          { vx: -Math.sin(a) * 7, vy: 0, vz: Math.cos(a) * 7, angle: a, stretch: 1.8, grow: .4, delay: k * .015 });
+      }
+      for (let k = 0; k < 4; k++) {
+        const a = base + Math.PI + (k - 1.5) * .35;
+        impact._emit(IMPACT_KIND.streak, _a.x, _a.y, _a.z, .2, k % 2 ? C.prismDeep : C.arcane, .3, { vx: Math.cos(a) * 9, vy: 1.5, vz: Math.sin(a) * 9, stretch: 1.2, grow: 1, gravity: 10 });
+      }
+    }
+    // ④ 첫 굴절 예고: 창 직선(반폭 1.7m) 위 가장 가까운 적 발밑에 창이 닿는 순간(거리/30m/s) 보라 나침 표식. 표시 전용(판정은 skills.js).
+    const foes = player.game?.enemies;
+    if (Array.isArray(foes)) {
+      let best = 15, hit = null;
+      for (const e of foes) {
+        if (!e?.alive || !e.pos) continue;
+        const dx = e.pos.x - _a.x, dz = e.pos.z - _a.z, along = dx * f.x + dz * f.z;
+        if (along <= .2 || along >= best || Math.abs(dx * f.z - dz * f.x) > 1.7) continue;
+        best = along; hit = e;
+      }
+      if (hit) { _q.set(hit.pos.x, 0, hit.pos.z); impact.mark(_q, C.arcane, { radius: 1.3, life: .4, style: MARK_STYLE.compass, angle: base, delay: Math.max(0, best - 1.7) / 30 }); }
+    }
   },
   // 시간 봉인: 바닥 시계판(skills.js)에 더해 열두 시각 눈금 자리에 보라 별빛이 한 바퀴 차례로 켜지고 큰 보라 고리가 퍼진다.
   chrono_seal(ctx) {
@@ -346,8 +411,35 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.5, C.arcane, .4, { grow: 1 });
     // 발밑 작은 시계판(봉인 시간 동안 바늘이 한 바퀴) + 위로 떠오르는 보라 시간 입자.
     impact.mark(c, C.arcaneHot, { radius: 2.2, life: 3, style: MARK_STYLE.clock });
-    for (let k = 0; k < (lite ? 4 : 10); k++) {
-      const a = (k / 10) * TAU, r = 1.5 + (k % 3) * 1.6;
+    // 각성 강화(2026-10-30): 원형 문양 대신 '시계 바늘' 실루엣. 긴 분침이 .4초 동안 시계 방향으로 여덟 칸 쓸고(마디마다 짧게 남아 회전이 읽힌다),
+    // 굵은 시침은 봉인 시간 동안 멈춰 선다. 판정 반경(9.5m)을 넘지 않게 6m.
+    const sweeps = lite ? 4 : 8;
+    for (let k = 0; k < sweeps; k++) {
+      const a = Math.PI / 2 - (k / sweeps) * Math.PI * 1.5; _d.set(Math.cos(a), 0, -Math.sin(a));
+      _a.set(c.x, .12, c.z);
+      impact.beam(_a, _d, 6, k % 2 ? C.arcane : C.star, { width: .24, fade: .16, delay: k * (.4 / sweeps) });
+    }
+    _d.set(Math.cos(.6), 0, -Math.sin(.6)); _a.set(c.x, .14, c.z);
+    impact.beam(_a, _d, 3.4, C.arcane, { width: .42, fade: 1.6, delay: .05 });
+    // 봉인된 적 옆구리의 모래시계(X 자 두 획): skills.js 와 같은 9.5m 안 살아 있는 적, 앞 다섯까지. 표시 전용.
+    // 머리 위는 조준 표식·체력 막대 자리라 비켜서 몸 오른쪽 .8m 에 세운다(적 몸을 덮지 않는다).
+    const foes = player.game?.enemies;
+    if (Array.isArray(foes) && !lite) {
+      let shown = 0;
+      for (const e of foes) {
+        if (shown >= 5) break;
+        if (!e?.alive || e.spawning || !e.pos) continue;
+        const dx = e.pos.x - c.x, dz = e.pos.z - c.z; if (dx * dx + dz * dz >= 9.5 * 9.5) continue;
+        const mid = 1.75 * (e.def?.scale || 1) * .55;
+        for (let s = -1; s <= 1; s += 2) {
+          _a.set(e.pos.x + .8 - .28 * s, mid + .42, e.pos.z); _d.set(.56 * s, -.84, 0);
+          impact.beam(_a, _d, _d.length(), C.arcane, { width: .14, fade: 1.2, delay: .06 + shown * .04 });
+        }
+        shown++;
+      }
+    }
+    for (let k = 0; k < (lite ? 4 : 8); k++) {
+      const a = (k / 8) * TAU, r = 1.5 + (k % 3) * 1.6;
       impact._emit(IMPACT_KIND.streak, c.x + Math.cos(a) * r, .3, c.z + Math.sin(a) * r, .2, k % 2 ? C.arcane : C.arcaneHot, .7,
         { vx: 0, vy: 3.5, vz: 0, stretch: 1.4, grow: 1, gravity: -1, delay: k * .04 });
     }
@@ -370,29 +462,76 @@ export const SIGNATURES = {
       const j = (k + 3) % N; _d.copy(_stars[j]).sub(_stars[k]);
       impact.beam(_stars[k], _d, _d.length(), C.starLine, { speed: 70, width: .24, delay: k * .025, fade: .45 });
     }
-    impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 2.6, C.star, .2, { angle: .3, grow: .4, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
-    const n = lite ? 5 : 12;
+    // 각성 강화(2026-10-30): 감옥이 조여 드는 두 번째 칠각성(반지름 3m, 반 칸 돌림)이 판정 직전 그어지고,
+    // 별가루가 나선으로 감겨 들어(접선 + 안쪽 속도, 판정 순간 중심 도착) '중력에 끌려온다'가 읽힌다.
+    if (!lite) {
+      const r2 = 3;
+      for (let k = 0; k < N; k++) {
+        const a0 = ((k + .5) / N) * TAU + .2, a1 = ((k + 3.5) / N) * TAU + .2;
+        _p0.set(at.x + Math.cos(a0) * r2, .3, at.z + Math.sin(a0) * r2);
+        _d.set(Math.cos(a1) * r2 - Math.cos(a0) * r2, 0, Math.sin(a1) * r2 - Math.sin(a0) * r2);
+        impact.beam(_p0, _d, _d.length(), C.star, { speed: 60, width: .2, delay: T - .1 + k * .012, fade: .3 });
+      }
+    }
+    const n = lite ? 5 : 10, life = T + .02;
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU, r = 6;
-      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .6 + (i % 3) * .3, at.z + Math.sin(a) * r, .2, i % 2 ? C.starGold : C.star, .3,
-        { vx: -Math.cos(a) * 18, vy: 0, vz: -Math.sin(a) * 18, stretch: 1, grow: 1, delay: T - .08 });
+      const a = (i / n) * TAU, r = 6.4, sw = 1.1;
+      // 시작점에서 중심까지 life 초: 안쪽 속도 r/life + 접선 속도(시계 반대) → 나선으로 감겨 든다.
+      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .6 + (i % 3) * .3, at.z + Math.sin(a) * r, .22, i % 2 ? C.starGold : C.star, life,
+        { vx: (-Math.cos(a) - Math.sin(a) * sw) * r / life, vy: 0, vz: (-Math.sin(a) + Math.cos(a) * sw) * r / life, stretch: 1.3, grow: 1, delay: 0 });
+    }
+    // 판정(T): 감옥이 닫히는 순간 중심에서 하늘로 솟는 별빛 기둥(남색 굵은 + 금 가는 심) — 원형이 아닌 수직 실루엣.
+    _a.set(at.x, .2, at.z); _d.set(0, 1, 0);
+    impact.beam(_a, _d, 9, C.star, { speed: 60, tail: 7, width: .9, delay: T });
+    impact.beam(_a, _d, 9, C.starGold, { speed: 60, tail: 5, width: .22, delay: T });
+    impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 1.8, C.star, .2, { angle: .3, grow: .4, delay: T });
+    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
+    // 별 파편: 일곱 꼭짓점 쪽으로 땅을 긋는 짧은 금빛 선(폭발이 별 모양으로 갈라진다).
+    for (let k = 0, m = lite ? 0 : N; k < m; k++) {
+      const a = (k / N) * TAU + .2; _d.set(Math.cos(a), 0, Math.sin(a)); _a.set(at.x + _d.x * .9, .1, at.z + _d.z * .9);
+      impact.beam(_a, _d, 3.2, k % 2 ? C.starGold : C.starLine, { speed: 30, width: .18, fade: .3, delay: T + .03 });
     }
   },
   // 절대영도·종언(최상위 각성): 서리 가시 고리(9m)가 조여 들고 .35초(판정)에 바닥 전체에서 얼음 가시 숲이 솟으며
   // 진한 하늘색 결정 균열이 바깥으로 뻗는다. 흰 텍스처 덩어리 대신 가시·선의 실루엣.
+  // 각성 강화(2026-10-30): 3박자 + 눈결정 실루엣. ① 얼어붙기(0~T) — 구역 가장자리(9m)에 얼음 가시가 서고 여섯 갈래 서리가
+  // 가장자리에서 중심으로 기어 들어 판정 순간 중심에 닿는다. ② 판정(T) — 중심에서 여섯 팔 + 곁가지의 거대한 눈결정이 바닥에 뻗고,
+  // 그 뒤를 따라 얼음 가시 물결이 안에서 밖으로 솟는다. ③ 파쇄(T+.12) — 결정 파편이 바깥으로 튄다. 흰 원판·옅은 frostHot 은 쓰지 않는다.
   absolute_zero(ctx) {
-    const { impact, at, lite } = ctx; const T = .35;
-    iceSpikes(impact, at, lite ? 6 : 12, 8, 9.2, C.frostMid, { h: 1.6, width: .14, fade: .5 });
+    const { impact, at, lite } = ctx; const T = .35, R = 8;
+    iceSpikes(impact, at, lite ? 5 : 8, 8, 9.2, C.frostMid, { h: 1.6, width: .14, fade: .5 });
     impact.mark(at, C.frostMid, { radius: 4, life: T + .1, style: MARK_STYLE.thorn, angle: .3 });
-    const n = lite ? 7 : 14;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + (impact.rng.next() - .5) * .3; _d.set(Math.cos(a), 0, Math.sin(a));
-      _a.set(at.x + _d.x * .8, .08, at.z + _d.z * .8);
-      impact.beam(_a, _d, 7 + impact.rng.next() * 3, i % 2 ? C.frost : C.frostHot, { speed: 55, width: .12, delay: T, fade: .55 });
+    const arms = 6;
+    for (let k = 0; k < arms; k++) {
+      const a = (k / arms) * TAU + .52 + Math.PI / arms; _d.set(-Math.cos(a), 0, -Math.sin(a));
+      _a.set(at.x + Math.cos(a) * 8.6, .07, at.z + Math.sin(a) * 8.6);
+      if (!lite || k % 2 === 0) impact.beam(_a, _d, 8.2, k % 2 ? C.frostDeep : C.frostMid, { speed: 8.2 / T, tail: 3, width: .3, style: BEAM_STYLE.ice });
     }
-    iceSpikes(impact, at, lite ? 8 : 18, 1, 8, C.frost, { delay: T, h: 2.4, width: .32, fade: .8 });
+    // ② 눈결정: 여섯 팔(판정 순간 동시에 바깥으로 45m/s) + 팔마다 4.2m 지점 곁가지 두 획(±60°).
+    for (let k = 0; k < arms; k++) {
+      const a = (k / arms) * TAU + .52; _d.set(Math.cos(a), 0, Math.sin(a)); _a.set(at.x + _d.x * .6, .08, at.z + _d.z * .6);
+      impact.beam(_a, _d, R, k % 2 ? C.frost : C.frostMid, { speed: 45, width: .36, delay: T, fade: .6, style: BEAM_STYLE.ice });
+      if (lite) continue;
+      _p0.set(at.x + _d.x * 4.2, .08, at.z + _d.z * 4.2);
+      for (let s = -1; s <= 1; s += 2) {
+        const b = a + s * 1.05; _b.set(Math.cos(b), 0, Math.sin(b));
+        impact.beam(_p0, _b, 1.9, C.frostDeep, { speed: 30, width: .22, delay: T + 4.2 / 45, fade: .5, style: BEAM_STYLE.ice });
+      }
+      impact._emit(IMPACT_KIND.star, at.x + _d.x * R, .5, at.z + _d.z * R, .8, C.frost, .3, { angle: a, grow: .5, delay: T + R / 45 });
+    }
+    // 얼음 가시 물결: 반지름이 클수록 늦게(안 → 밖) 솟는다. 판정 뒤 .2초 안에 모두 시작.
+    const spikes = lite ? 6 : 12;
+    for (let i = 0; i < spikes; i++) {
+      const a = (i / spikes) * TAU * 2.6 + .3, r = 1.2 + (i / spikes) * 6.6;
+      _a.set(at.x + Math.cos(a) * r, .02, at.z + Math.sin(a) * r); _b.set(Math.cos(a) * .4, 1, Math.sin(a) * .4);
+      impact.beam(_a, _b, 1.7 + (i % 3) * .4, i % 2 ? C.frostMid : C.frostDeep, { speed: 14, width: .26, delay: T + r * .02, fade: .7, style: BEAM_STYLE.ice });
+    }
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 5, C.frost, .4, { grow: 1, delay: T });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 3.2, C.frostHot, .3, { grow: 1, delay: T + .06 });
+    // ③ 파쇄: 결정 파편이 바깥·위로 튀고 떨어진다.
+    for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
+      const a = (i / n) * TAU + .2, sp = 9 + (i % 3) * 2;
+      impact._emit(IMPACT_KIND.shard, at.x + Math.cos(a) * 1.5, 1, at.z + Math.sin(a) * 1.5, .5, i % 2 ? C.frost : C.frostDeep, .5,
+        { vx: Math.cos(a) * sp, vy: 6, vz: Math.sin(a) * sp, angle: a, stretch: 1.6, grow: .6, gravity: 18, delay: T + .12 });
+    }
   },
 };
