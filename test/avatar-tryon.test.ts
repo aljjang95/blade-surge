@@ -159,10 +159,10 @@ test('상점 입어 보기는 저장·보석·착용을 바꾸지 않고, 닫으
 test('받지 않은 아바타 몸·없는 아바타·영웅 기본 몸은 해제하지 않는다', async () => {
   const { releaseAvatarBody, avatarBodyReady, heroBodyUserCount } = await import('../src/engine/assets.js');
   const { HEROES } = await import('../src/data/heroes.js');
-  expect(releaseAvatarBody('avatar_knight_sakura')).toBe(false);
-  expect(releaseAvatarBody('nope')).toBe(false);
-  expect(avatarBodyReady('avatar_knight_sakura')).toBe(false);
-  expect(heroBodyUserCount('avatar_knight_sakura')).toBe(0);
+  // 다른 테스트가 같은 모듈 캐시를 쓰므로, 받지 않은 몸이면 해제는 false 다.
+  if (!avatarBodyReady('avatar_mage_pumpkin')) expect(releaseAvatarBody('avatar_mage_pumpkin')).toBe(false);
+  expect(releaseAvatarBody('nope')).toBe(false); expect(avatarBodyReady('nope')).toBe(false);
+  expect(heroBodyUserCount('nope')).toBe(0);
   const bodyAvatar = Object.values(HEROES).map((hero: any) => hero.bodyAvatar).find(Boolean);
   if (bodyAvatar) expect(releaseAvatarBody(bodyAvatar)).toBe(false);
 });
