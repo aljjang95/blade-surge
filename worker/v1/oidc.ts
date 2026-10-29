@@ -78,7 +78,7 @@ const verifiers = new Map<RedirectProvider, ReturnType<typeof createGoogleVerifi
 /** 운영 id_token 검증기: 제공자별 JWKS·발급자. 코드 교환 직후 검증하므로 iat 허용은 기본 10분. */
 export function verifyRedirectIdToken(provider: RedirectProvider, token: string, clientIds: string[]) {
   let v = verifiers.get(provider);
-  if (!v) verifiers.set(provider, v = createGoogleVerifier({ jwksUrl: OIDC[provider].jwks, issuers: [OIDC[provider].issuer] }));
+  if (!v) verifiers.set(provider, v = createGoogleVerifier({ jwksUrl: OIDC[provider].jwks, issuers: [OIDC[provider].issuer], maxLength: 8192, subPattern: /^[\x21-\x7e]{1,255}$/ }));
   return v.verify(token, clientIds);
 }
 

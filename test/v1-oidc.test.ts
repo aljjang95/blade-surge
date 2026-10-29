@@ -252,8 +252,57 @@ describe('OIDC 검증기 공용화', () => {
       return body + '.' + Buffer.from(sig).toString('base64url');
     };
     const base = { iss: 'https://auth.openai.com', sub: 'user-abc', iat: now / 1000, exp: now / 1000 + 600, nonce: 'n1' };
-    expect(await v.verify(await sign({ ...base, aud: ['oaiapp_x', 'other'] }), ['oaiapp_x'])).toEqual({ sub: 'user-abc', nonce: 'n1' });
+    expect(await v.verify(await sign({ ...base, aud: ['oaiapp_x', 'other'], azp: 'oaiapp_x' }), ['oaiapp_x'])).toEqual({ sub: 'user-abc', nonce: 'n1' });
     await expect(v.verify(await sign({ ...base, aud: ['other'] }), ['oaiapp_x'])).rejects.toThrow();
     await expect(v.verify(await sign({ ...base, aud: 'oaiapp_x', iss: 'https://accounts.google.com' }), ['oaiapp_x'])).rejects.toThrow();
+  });
+});
+
+describe('리뷰 반영', () => {
+  test('탈퇴: 환불 부채·진행 중 웹 결제가 있으면 409 billing-pending', async () => {
+    const h = await oidcHarness();
+    const a = await h.session();
+    h.db.sqlite.query('INSERT INTO iap_debt(account_id, reward_key, amount, updated_at) VALUES (?, ?, 5, 1)').run(a.accountId, 'gems');
+    expect((await h.send('POST', '/auth/delete', { confirm: 'DELETE' }, a.token)).body.error).toBe('billing-pending');
+    h.db.sqlite.query('UPDATE iap_debt SET amount = 0').run();
+    expect((await h.send('POST', '/auth/delete', { confirm: 'DELETE' }, a.token)).body).toEqual({ ok: true });
+  });
+
+  test('탈퇴 중 계정에는 연동이 새로 붙지 않는다(경쟁)', async () => {
+    const h = await oidcHarness();
+    const a = await h.session();
+    const r = await h.login('kakao', 'link', 'k-race', { token: a.token, skipFinish: true });
+    // 티켓을 내기 직전에 탈퇴가 먼저 반영된 경우를 흉내 낸다(세션 검사는 지나간 뒤).
+    const { linkSubject, accountById } = await import('../worker/v1/auth');
+    const row = await accountById(h.db as any, a.accountId);
+    h.db.sqlite.exec(`UPDATE accounts SET status = 'deleting' WHERE account_id = '${a.accountId}'`);
+    await expect(linkSubject({ env: h.env, db: h.db as any, deps: h.deps, now: h.now(), request: new Request(ORIGIN) }, row!, 'kakao', 'f'.repeat(64))).rejects.toThrow('deleted');
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM account_links').get()).toEqual({ n: 0 });
+    expect(r.ticket).toBeTruthy();
+  });
+
+  test('IPv6 한도는 /64 단위', async () => {
+    const { ipBucket } = await import('../worker/v1/limit');
+    expect(ipBucket('2001:db8:1:2:aaaa::1')).toBe(ipBucket('2001:0db8:0001:0002:ffff:1:2:3'));
+    expect(ipBucket('2001:db8:1:2::1')).not.toBe(ipBucket('2001:db8:1:3::1'));
+    expect(ipBucket('::1')).toBe('0:0:0:0::/64');
+    expect(ipBucket('203.0.113.5')).toBe('203.0.113.5');
+  });
+
+  test('다중 aud면 azp가 우리 클라이언트여야 하고, OpenAI형 sub·긴 토큰도 받는다', async () => {
+    const keys = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+    const jwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
+    const now = 1_800_000_000_000;
+    const v = createGoogleVerifier({ now: () => now, issuers: ['https://auth.openai.com'], maxLength: 8192, subPattern: /^[\x21-\x7e]{1,255}$/,
+      fetch: async () => Response.json({ keys: [{ ...jwk, kid: 'k1', alg: 'RS256', use: 'sig' }] }) });
+    const sign = async (claims: Record<string, unknown>) => {
+      const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+      const body = enc({ alg: 'RS256', kid: 'k1' }) + '.' + enc(claims);
+      const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', keys.privateKey, new TextEncoder().encode(body));
+      return body + '.' + Buffer.from(sig).toString('base64url');
+    };
+    const base = { iss: 'https://auth.openai.com', sub: 'auth0|user.abc', iat: now / 1000, exp: now / 1000 + 600, pad: 'x'.repeat(4000) };
+    expect((await v.verify(await sign({ ...base, aud: ['oaiapp_x', 'api'], azp: 'oaiapp_x' }), ['oaiapp_x'])).sub).toBe('auth0|user.abc');
+    await expect(v.verify(await sign({ ...base, aud: ['oaiapp_x', 'api'] }), ['oaiapp_x'])).rejects.toThrow();
   });
 });

@@ -28,7 +28,15 @@ export type LimitName = keyof typeof LIMITS;
 
 /** 요청 IP를 해시한다. 헤더가 없으면(로컬·테스트) 한 버킷으로 모인다. */
 export async function ipKey(request: Request): Promise<string> {
-  return (await sha256Hex('v1-rl:' + (request.headers.get('cf-connecting-ip') ?? 'local'))).slice(0, 32);
+  return (await sha256Hex('v1-rl:' + ipBucket(request.headers.get('cf-connecting-ip') ?? 'local'))).slice(0, 32);
+}
+/** IPv6는 /64 단위로 묶는다(한 회선이 /64 안에서 주소를 돌려 한도를 피하지 못하게). IPv4·기타는 그대로. */
+export function ipBucket(ip: string): string {
+  if (!ip.includes(':')) return ip;
+  const [head, tail = ''] = ip.toLowerCase().split('::');
+  const h = head ? head.split(':') : [], t = ip.includes('::') && tail ? tail.split(':') : [];
+  const groups = ip.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map(g => (parseInt(g, 16) || 0).toString(16)).join(':') + '::/64';
 }
 
 /** 창 안에서 이번 시도를 세고, max를 넘으면 429(Retry-After 초 포함)로 거부한다. 한 문장 UPSERT라 동시 요청에도 정확하다. */

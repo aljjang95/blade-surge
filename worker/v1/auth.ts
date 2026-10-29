@@ -198,8 +198,10 @@ export async function linkSubject(c: Ctx, account: AccountRow, provider: string,
     const mine = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND account_id = ?').bind(provider, account.account_id).first();
     if (mine) fail(409, 'already-linked');
     try {
-      await c.db.prepare('INSERT INTO account_links(provider, subject_hash, account_id, created_at) VALUES (?, ?, ?, ?)')
-        .bind(provider, hash, account.account_id, c.now).run();
+      // 탈퇴와 경쟁해도 deleting 계정에 연동이 남지 않게 계정 상태를 같은 문장에서 확인한다.
+      const added = await c.db.prepare("INSERT INTO account_links(provider, subject_hash, account_id, created_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status IN ('active','muted'))")
+        .bind(provider, hash, account.account_id, c.now, account.account_id).run();
+      if (!added.meta?.changes) fail(403, 'deleted');
     } catch (error) {
       // 동시 요청이 먼저 같은 제공자 계정(PRIMARY KEY) 또는 이 계정의 같은 제공자(UNIQUE)를 차지했다: 500이 아니라 409.
       if (!isConstraint(error)) throw error;
@@ -286,6 +288,12 @@ export async function deleteAccount(c: Ctx, auth: Authed, body: Record<string, u
   onlyKeys(body, ['confirm']);
   if (body.confirm !== 'DELETE') fail(400, 'confirm');
   const id = auth.account.account_id;
+  // 환불 부채가 남았거나 1시간 안에 시작한 웹 결제(결제창 진행 중)가 있으면 탈퇴를 미룬다(새 키로 부채를 털고 다시 시작하는 회피 차단).
+  const pending = await c.db.prepare(`SELECT
+      (SELECT COUNT(*) FROM iap_debt WHERE account_id = ? AND amount > 0) AS debt,
+      (SELECT COUNT(*) FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?) AS web`)
+    .bind(id, id, c.now - 3600_000).first<{ debt: number; web: number }>();
+  if (pending && (pending.debt > 0 || pending.web > 0)) fail(409, 'billing-pending');
   const doc = await c.db.prepare("SELECT doc FROM account_docs WHERE account_id = ? AND doc_name = 'core'").bind(id).first<{ doc: string }>();
   await c.db.batch([
     c.db.prepare('INSERT INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) VALUES (?, ?, ?, ?, ?, ?)')
