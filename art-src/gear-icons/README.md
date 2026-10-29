@@ -8,3 +8,5 @@
    - 출력: `<dir>/<id>.png`(RGBA, 1024² 이하, 여백 8%), `contact.png`(체커 배경 대조 시트), `report.json`(id, bbox, 면적비, sha256). 반드시 contact.png를 눈으로 확인한다.
 4. 256 webp 변환은 외형 레인의 변환 도구(`claude/icon-tone-60` 브랜치의 `tools/art/`, 머지 후)와 같은 규격으로 한다 -> `public/img/gear/<id>.webp`.
 5. 도구 시험: `python3 tools/art/icon-collage-split.test.py`(승인된 개별 아이콘으로 가짜 시트를 실행 시 합성, 알파 IoU >= 0.97 확인).
+
+주의: 진주처럼 큰 흰 하이라이트가 있는 물건은 기본값(`--hole 0.004`)에서 하이라이트가 구멍으로 뚫린다. 그런 시트는 `--hole 0.012`로 자른다(fix-02 진주 반지). 기본값을 올리면 후광 안쪽(w_king) 같은 큰 구멍이 메워진다.
