@@ -1,5 +1,6 @@
 import { CompanionAgent, type CompanionContext, type CompanionSnapshot, type CompanionTactic } from './companion-agent';
 import { CompanionCombatant } from './combatant.js';
+import { CompanionPresence } from '../ui/companion-intro.js';
 import { DialogueError, requestDialogue, type DialogueTransport } from './dialogue-client';
 
 export function safeCompanionStorage(): Storage | undefined {
@@ -42,6 +43,7 @@ interface BattleLike {
   enemies: EnemyLike[];
   boss?: EnemyLike | null;
   combo: number;
+  renderer?: unknown;
   roomsCleared: number;
   world?: { rooms?: unknown[] };
 }
@@ -52,7 +54,7 @@ interface AppLike {
   models: Record<string, unknown>;
   renderer?: { quality?: CompanionSnapshot['quality'] };
   showcase?: { def?: { name?: string } };
-  eco?: { s?: { selected?: string; settings?: { quality?: CompanionSnapshot['quality'] | 'auto' } }; heroPower?: (id: string) => number; nextStage?: () => { idx: number } };
+  eco?: { save?: () => unknown; s?: { selected?: string; settings?: { quality?: CompanionSnapshot['quality'] | 'auto'; companionIntroSeen?: boolean } }; heroPower?: (id: string) => number; nextStage?: () => { idx: number } };
 }
 
 export class CompanionDirector {
@@ -60,6 +62,7 @@ export class CompanionDirector {
   private readonly app: AppLike;
   private battle: BattleLike | null = null;
   private actor: CompanionCombatant | null = null;
+  private presence: CompanionPresence | null = null;
   private telemetryT = 0;
   private lowHpAnnounced = false;
   private epoch = 0;
@@ -189,6 +192,13 @@ export class CompanionDirector {
       this.actor = new CompanionCombatant(battle, model, (event: string) => this.mind.observe(event));
       this.actor.setTactic(this.mind.getSnapshot().tactic);
       this.actor.pos.set(battle.player.pos.x + 1.2, 0, battle.player.pos.z + 1.5);
+      // 이름표·첫 등장 소개 카드·일시정지 메뉴 동료 줄(어떤 동료인지 알아보게).
+      this.presence ??= new CompanionPresence({
+        getSeen: () => this.app.eco?.s?.settings?.companionIntroSeen === true,
+        markSeen: () => { const settings = this.app.eco?.s?.settings; if (settings) { settings.companionIntroSeen = true; this.app.eco?.save?.(); } },
+        getTactic: () => this.mind.getSnapshot().tactic,
+      });
+      this.presence.start();
     }
     this.mind.observe('battle-start', { floor: battle.stage?.idx ?? 1 });
   }
@@ -197,6 +207,7 @@ export class CompanionDirector {
     if (battle !== this.battle) this.battle = battle;
     this.actor?.setTactic(this.mind.getSnapshot().tactic);
     this.actor?.update(dt);
+    if (this.actor) this.presence?.update(this.actor, battle.renderer, realDt);
     this.telemetryT -= realDt;
     if (this.telemetryT <= 0) {
       this.telemetryT = 0.25;
@@ -218,6 +229,7 @@ export class CompanionDirector {
 
   endBattle(disconnect = true): void {
     this.cancelDialogue();
+    this.presence?.stop();
     if (this.actor) {
       this.actor.dispose();
       this.actor = null;
