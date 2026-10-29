@@ -9,7 +9,7 @@ import { BLACKCAT_OMEN, BLACKCAT_NIGHT } from './blackcat-kit.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
-import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
+import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
@@ -459,7 +459,9 @@ export const SKILLS = {
   fireball: {
     dur: 0.6,
     // 시전 원·발사 섬광·탄 후광의 밝은 주황(0xff7a20·0xff9a40)이 블룸에서 크림 번짐이 됐다(h1b): 진홍 쪽 주황으로 낮추고 발사 섬광은 작게.
-    start(game, p) { game.fx.castCircle(p.pos, 0xe8401a, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.5, life: 0.42 }); },
+    // 발밑 옅은 원판(abilitySignature·2.4m 시전 원)이 '영웅 둘레 원'으로만 읽혀, 작게 줄이고 손끝으로 모이는 불꽃(mageCharge)을 더한다.
+    // 공용 fx 호출 자체는 남긴다(재질 생성의 Math.random 소비 순서 = 시드 전투 결정성 보존).
+    start(game, p, c) { game.fx.castCircle(p.pos, 0xe8401a, { radius: 1.4, life: 0.4 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.35, life: 0.3 }); mageCharge(game, p, 'fire', 0.6 * (c?.sk?.castAt ?? 0.35)); },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3()); const sp = fwd(p, 1); sp.y = 1.4;
       const split = hasTownSkillVariant(p, 'fireball', 'split');
@@ -470,7 +472,8 @@ export const SKILLS = {
   },
   chain: {
     dur: 0.9,
-    start(game, p) { game.fx.castCircle(p.pos, 0x3a8cff, { radius: 3, life: 0.8, demon: true }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 0.72, life: 0.58 }); },
+    // 발밑 청색 원판은 작게(호출은 유지: 난수 소비 순서 보존) + 들어 올린 손끝으로 모이는 전하(mageCharge).
+    start(game, p, c) { game.fx.castCircle(p.pos, 0x3a8cff, { radius: 1.6, life: 0.6, demon: true }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 0.35, life: 0.3 }); mageCharge(game, p, 'bolt', 0.9 * (c?.sk?.castAt ?? 0.45)); },
     cast(game, p, c) {
       let from = p.pos.clone().setY(1.6); let cur = p; const hit = new Set(); const chainN = 10;
       let step = 0;
@@ -479,8 +482,9 @@ export const SKILLS = {
         for (const e of game.enemies) { if (!e.alive || e.spawning || hit.has(e)) continue; const d = Math.hypot(e.pos.x - cur.pos.x, e.pos.z - cur.pos.z); if (d < bd) { bd = d; best = e; } }
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
-        game.fx.boltTex(from, to, 0x80c8ff, { width: 1.8, life: 0.28 }); mageBolt(game, from, to, step); // 번개 학파: 청백 지그재그
-        game.fx.flash(to, 0x6fbcff, { size: 2.4 }); game.fx.burst(to, 0x6fbcff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
+        game.fx.boltTex(from, to, 0x4a90ff, { width: 1.8, life: 0.3 }); mageBolt(game, from, to, step); // 번개 학파: 굵은 청색 지그재그 + 전기 별빛
+        // 맞은 적 몸을 덮던 2.4m 섬광·바닥 원판은 작게(적 몸·피해 숫자 가독성). 호출 수는 유지(난수 소비 순서 보존).
+        game.fx.flash(to, 0x4a90ff, { size: 1.3 }); game.fx.burst(to, 0x6fbcff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.35, life: 0.2 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);
         game.damageEnemy(best, c.dmg * (1 - step * 0.05), { kind: 'magic', kb: 1, stun: hasTownSkillVariant(p, 'chain', 'bind') ? .8 : .4, source: p, dirx: to.x - from.x, dirz: to.z - from.z, quietStop: step > 2 });
         audio.zap({ vol: 0.4, dur: 0.22 }); game.renderer.shake(0.15); if (step < 2) audio.vibe(20);
@@ -492,7 +496,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a8cff, { radius: 6.8, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .6, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); /* 6.8m 시전 원(3.2초)·서리 원판은 옅은 청색 큰 원으로만 읽혀 짧고 어둡게: 판정 반경은 mageFrostTick 의 얇은 조준 원, 폭풍은 소용돌이·결정이 맡는다. 호출은 유지(난수 순서). */ game.fx.castCircle(p.pos, 0x1650c8, { radius: 6.8, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .35, life: 0.4, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
@@ -503,9 +507,10 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
-        game.fx.shockTex(p.pos, 0x1f6fd0, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.4, life: 0.32 });
+        // 틱마다의 7.5m 충격 원판·서리 원판은 옅은 큰 원이라 작고 어둡게(호출은 유지: 난수 순서).
+        game.fx.shockTex(p.pos, 0x1650c8, { r1: 3.2, life: 0.3 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.35, life: 0.24 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
-        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 3, life: 0.45, color: 0x1f6fe8 });
+        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 2.2, life: 0.45, color: 0x1f6fe8 });
         game.fx.burst(p.pos.clone().setY(0.3), 0x2a84ff, { n: 20, speed: 8, size: 0.3, up: 0.6, spread: 0.6 });
         mageFrostTick(game, p.pos, i, wide ? 8.6 : 6.8); // 냉기 학파: 서리 가시 고리·얼음 가시
         audio.ice({ vol: 0.45, dur: 0.5 }); audio.whoosh({ vol: 0.28, pitch: 1.5, dur: 0.4 }); game.renderer.shake(0.15);
@@ -514,15 +519,16 @@ export const SKILLS = {
   },
   meteor: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
+    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 3.6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
     cast(game, p, c) {
       const focus = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.meteor.range, 5) || fwd(p, 4);
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
-        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(6, 18, 4)); orb.position.copy(start); game.scene.add(orb);
+        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(4.5, 6.5, 1.2)); // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하 orb.position.copy(start); game.scene.add(orb);
         mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
-        game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
+        // 착탄 예고 원: 다섯 발의 4m 주황 원이 겹쳐 바닥 전체가 크림 번짐이 됐다 — 작고 진한 진홍(호출은 유지: 난수 순서).
+        game.fx.castCircle(pt, 0xd8261a, { radius: 2.4, life: 0.45, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
         game.after(0.4, () => {
           game.vacuum(pt, 6, 8);
