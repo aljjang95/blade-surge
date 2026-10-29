@@ -12,6 +12,7 @@ import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
+import { rogueXCut } from '../engine/sig-rogue.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
@@ -109,7 +110,7 @@ function skillPrelude(game, p, id) {
  *  shockTex 와 같은 드로우콜 1·같은 밝기 감쇠(decorativeBurstGain)·Math.random 미사용. */
 function shadowWave(game, pos, r1, life) {
   const fx = game.fx;
-  if (typeof fx.groundTex === 'function') fx.groundTex(pos, 'singularity', 0xc890ff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
+  if (typeof fx.groundTex === 'function') fx.groundTex(pos, 'singularity', 0x9a5cff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
   else fx.shockTex?.(pos, 0xb26bff, { r1, life });
 }
 /** 적이 가장 밀집한 지점 (몹몰이 조준 보정) */
@@ -556,13 +557,13 @@ export const SKILLS = {
     start(game, p, c) {
       const t = c.data.aimPoint || densest(game, p, 13, 3.5); if (t) p.face(t.x, t.z);
       const f = p.forward(new THREE.Vector3()); p.vel.copy(f).multiplyScalar(28); p.invuln = 0.6; c.data.hit = new Set(); c.data.g = 0;
-      audio.whoosh({ vol: 0.7, pitch: 0.5, dur: 0.5 }); game.fx.dustPuff(p.pos, { size: 2.5, life: 0.5 }); game.fx.flash(p.pos.clone().setY(1), 0xb26bff, { size: 3.5 });
-      game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.72, life: 0.38 });
+      audio.whoosh({ vol: 0.7, pitch: 0.5, dur: 0.5 }); game.fx.dustPuff(p.pos, { size: 2.5, life: 0.5 }); game.fx.flash(p.pos.clone().setY(1), 0xb26bff, { size: 2.2 });
+      game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.55, life: 0.38 });
       game.renderer.aberr = 0.9; game.renderer.radial = 0.4; audio.vibe(30);
     },
     update(game, p, c, dt) {
       c.data.g += dt; if (c.data.g > 0.035) { c.data.g = 0; game.fx.ghost(p.model, 0x6a2cff, { life: 0.35, opacity: 0.7 }); game.fx.embers(p.pos, 0xb26bff, { n: 3, radius: 0.5, life: 0.5 }); }
-      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
+      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3, life: 0.22, tilt: -1.2 }); rogueXCut(game.fx.impact, e.pos, p.vel); } }
       if (c.t > 0.42) p.vel.multiplyScalar(Math.pow(0.001, dt));
     },
     end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 4.5, life: 0.3, tilt: -1.4 }); shadowWave(game, p.pos, 4, 0.3); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
@@ -577,15 +578,15 @@ export const SKILLS = {
       audio.whoosh({ vol: 0.3, pitch: 1.5, dur: 0.3 });
       game.after(fl, () => {
         audio.play('hit_glass', { vol: 0.7, rate: 0.8 }); audio.fire({ vol: 0.3, dur: 0.8 });
-        game.fx.abilitySignature?.(target, 'nature', { scale: 1.15, life: 0.58, heavy: true });
-        game.fx.castCircle(target, 0x60ff80, { radius: 4.5, life: 4.2, demon: true });
+        game.fx.abilitySignature?.(target, 'nature', { scale: 0.55, life: 0.58, heavy: true });
+        game.fx.castCircle(target, 0x2a9a3c, { radius: 4.5, life: 4.2, demon: true });
         let ticks = 9; const tick = () => {
           if (ticks-- <= 0) return;
           const radius = hasTownSkillVariant(p, 'poison_bomb', 'wide') ? 5.4 : 4.2;
           game.vacuum(target, radius, 3);
           game.hitRadius(target, radius, c.dmg, { kb: 0, kind: 'magic', poison: true, source: p, dirFrom: target, quiet: true });
           for (let i = 0; i < (game.fx.lite ? 4 : 9); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 4; game.fx.smoke.emit(target.x + Math.cos(a) * r, 0.3, target.z + Math.sin(a) * r, 0, 0.8, 0, new THREE.Color(0x3aa050), 2.4, 1.2, { grav: -0.4, drag: 0.95, shrink: 1.6 }); }
-          game.fx.embers(target, 0x80ff90, { n: 6, radius: 3, life: 0.9, rise: 1.5 });
+          game.fx.embers(target, 0x4fc23a, { n: 6, radius: 3, life: 0.9, rise: 1.5 });
           game.after(0.45, tick);
         }; tick();
       });
@@ -593,7 +594,7 @@ export const SKILLS = {
   },
   flurry: {
     dur: 1.4, total: 1.4,
-    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3, demon: true }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
+    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0x6a2cff, { radius: 3, life: 1.3, demon: true }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
     update(game, p, c, dt) {
       if (c.t > 0.3) p.vel.set(0, 0, 0);
       game.vacuum(p.pos, 4.5, 6);
@@ -602,10 +603,10 @@ export const SKILLS = {
         c.data.tick = 0.115; const i = c.data.n++;
         const anims = ['Dualwield_Melee_Attack_Stab', 'Dualwield_Melee_Attack_Slice', 'Dualwield_Melee_Attack_Chop']; p.playTimed(anims[i % 3], 0.24, { fade: 0.03 });
         game.hitArea(p, p.pos, p.yaw, 3.4, 150, c.dmg, { kb: 0.6, kind: 'slash', source: p, quietStop: true });
-        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
+        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x5a20d0, { size: 2.5, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
         if (i % 2 === 0) game.fx.ghost(p.model, i % 4 ? 0x6a2cff : 0xb26bff, { life: 0.25, opacity: 0.5 });
         audio.whoosh({ vol: 0.32, pitch: 1.3 + i * 0.07, dur: 0.12 });
-        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); shadowWave(game, p.pos, 5, 0.4); game.renderer.shake(0.5); }
+        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0x8a3cff, life: 0.4, opacity: .55 }); shadowWave(game, p.pos, 5, 0.4); game.renderer.shake(0.5); }
       }
     },
     end(game, p, c) {
@@ -616,22 +617,22 @@ export const SKILLS = {
   },
   thousand: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0xd0a0ff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0x9a4cff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); game.renderer.flashScreen?.(0.35, 0x2a0a60); },
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
-        if (wave++ >= 8) { shadowWave(game, p.pos, 15, 0.8); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
+        if (wave++ >= 8) { shadowWave(game, p.pos, 15, 0.8); game.fx.explosion(p.pos, { size: 10, color: 0x7a2cff, life: 0.6, opacity: .5 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
         game.vacuum(p.pos, 8, 5);
         const ts = targets(game, p, 3, 8); const pts = ts.length ? ts.map((e) => e.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5))) : [fwd(p, 3 + Math.random() * 3)];
         for (const pt of pts) {
           const dir = new THREE.Vector3(0.15, -1, 0.1).normalize(); const sp = pt.clone().add(new THREE.Vector3(-1.2, 8, -0.8));
           game.fx.slashSprite(sp, dir, 0x7030ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
-          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); shadowWave(game, pt, 2.4, 0.28); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
+          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xa060ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); shadowWave(game, pt, 2.4, 0.28); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
         }
         audio.whoosh({ vol: 0.28, pitch: 1.6, dur: 0.15 });
         game.after(0.15, tick);
       }; tick();
-      game.renderer.flashScreen(0.22, 0xb27aff); game.renderer.aberr = 1;
+      game.renderer.flashScreen(0.22, 0x5a20c0); game.renderer.aberr = 1;
     },
   },
   // ================================================================

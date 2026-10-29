@@ -62,9 +62,10 @@ export const SKILL_VFX = Object.freeze({
   absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자: 질주·야행·궁극기만 그림자 참격 원화를 쓰고, 나머지는 모양을 나눈다(독무 = 원화 없이 조준 룬, 표식 = 보라 룬 지면,
   // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
-  // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다.
-  shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0x9a4cff, 5, { dist: 3, ghost: true }),
-  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true }),
+  // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다. 질주는 전방 3m 참격 원화(시전 순간 영웅을 덮는 보라 덩어리)를 끄고 잔상 기둥·X 자로,
+  // 독무는 병이 닿기 전 착탄점에 터지던 코어(noBurst)를 끈다(병이 닿는 .5초 뒤 서명이 터뜨린다).
+  shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'none', 0x9a4cff, 5, { dist: 3, ghost: true }),
+  poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true, noBurst: true }),
   flurry: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb070ff, 4, { dist: 2, ghost: true }),
   thousand: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xa060ff, 11, { ghost: true }),
   shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a4aff, 7, { gain: .8 }),
