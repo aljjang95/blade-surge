@@ -302,7 +302,7 @@ test('7장 관문·보스 지원병은 해골 시민 몸, 갈래는 원본 수�
   const ENEMIES = E as Record<string, any>;
   for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) expect(ENEMIES[`belltower_${rank}`].summon, rank).toBe('ch7_citizen');
   expect(ENEMIES.bell_ringer.model).toBe('Bell_Ringer');
-  expect(CHAPTER_SPECIES[7].bell_ringer).toBeUndefined();
+  expect((CHAPTER_SPECIES[7] as Record<string, string>).bell_ringer).toBeUndefined();
   for (const [src, id] of Object.entries(CHAPTER_SPECIES[7]) as [string, string][]) {
     expect(speciesSourceId(id), id).toBe(src);
     for (const k of ['hp', 'atk', 'spd', 'range', 'atkTime', 'exp', 'gold', 'scale', 'visualScale', 'ranged', 'behavior', 'summon', 'armor', 'meleeRole', 'dodge']) expect(ENEMIES[id][k], `${id}.${k}`).toEqual(ENEMIES[src][k]);
