@@ -9,6 +9,7 @@ import './journey.css';
 import { itemVisual } from './item-presentation.js';
 import { eventCalendar } from '../game/endgame-core.js';
 import { TOWER } from '../data/content-90d.js';
+import { journeyClaimable, towerChestReady } from '../game/reward-badges.js';
 
 const node=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const button=(text,fn,key,cls='journey-action')=>{const e=node('button',cls,text);e.type='button';e.dataset.control=key;e.addEventListener('click',fn);return e;};
@@ -34,6 +35,8 @@ export class JourneyView {
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();this.close();});
     this.dialog.addEventListener('close',()=>this.releasePause());
     this.lobby=button('성장 여정',()=>this.open('journey'),'lobby','sq-btn journey-lobby');document.querySelector('.lobby-left')?.append(this.lobby);
+    // 받을 보상이 있으면 입구에 점(docs/RPG_ESSENTIALS.md E1). 메뉴 점은 meta.refreshMenuBadge 가 합산한다.
+    this.lobbyDot=node('em','dot');this.lobbyDot.id='dot-journey';this.lobbyDot.setAttribute('aria-hidden','true');this.lobby.append(this.lobbyDot);
     this.strip=button('',()=>this.open(this.nextTab||'journey'),'next-goal','journey-strip');document.querySelector('.lobby-bottom')?.prepend(this.strip);
     app.eco.onChange(()=>this.refresh());this.refresh();
   }
@@ -91,6 +94,9 @@ export class JourneyView {
     const snap=this.app.journey.snapshot(),next=snap.steps.find(s=>!s.claimed);
     this.strip.textContent=next?`${next.ready?'보상 받기':'다음 목표'} · ${next.name}`:'성장 여정 완주 · 오늘의 의뢰 확인';
     this.nextTab=next?'journey':'contracts';
+    const chest=towerChestReady(this.app.eco.towerSummary?.());this.lobbyDot.classList.toggle('on',journeyClaimable(snap)+(chest?1:0)>0);
+    const tower=document.getElementById('menu-tower');if(tower){let dot=tower.querySelector('.dot');if(!dot){dot=node('em','dot');dot.id='dot-tower';dot.setAttribute('aria-hidden','true');tower.append(dot);}dot.classList.toggle('on',chest);}
+    this.app.meta?.refreshMenuBadge?.();
     const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(this.frontier())]);
     if(this.dialog.open&&(force||signature!==this.signature))this.render(snap);
     this.signature=signature;

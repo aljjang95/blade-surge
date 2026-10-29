@@ -22,6 +22,7 @@ import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
 import { openVault } from './vault-panel.js';
+import { gearDexClaimable } from '../game/reward-badges.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -249,7 +250,7 @@ export function renderBag(meta, heroId) {
     '<select class="bag-select" data-bag-rarity aria-label="등급 필터"><option value="all">등급</option>' + RARITIES.map((r) => '<option value="' + r + '"' + (r === rarity ? ' selected' : '') + '>' + RARITY_INFO[r].name + '</option>').join('') + '</select>' +
     '<select class="bag-select" data-bag-sort aria-label="정렬 기준">' + BAG_SORTS.map((entry) => '<option value="' + entry.id + '"' + (entry.id === sort ? ' selected' : '') + '>' + entry.label + '</option>').join('') + '</select>' +
     '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span>' +
-    '<button type="button" class="bag-vault" data-bag-vault aria-label="금고 열기, ' + vault.used + '/' + vault.slots + '칸 사용 중"><img src="' + uiArt('treasure-chest') + '" alt="" onerror="this.remove()">금고 <b>' + vault.used + '/' + vault.slots + '</b></button></div>' +
+    '<button type="button" class="bag-vault" data-bag-vault aria-label="금고 열기, ' + vault.used + '/' + vault.slots + '칸 사용 중"><img src="' + uiArt('treasure-chest') + '" alt="" onerror="this.remove()">금고 <b>' + vault.used + '/' + vault.slots + '</b>' + (gearDexClaimable(eco.s, eco.ownedHeroIds()) > 0 ? '<em class="dot on" aria-hidden="true"></em>' : '') + '</button></div>' +
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
       const isNew = isFresh(inst.uid);

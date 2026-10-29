@@ -13,6 +13,7 @@ import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards } from '../
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
+import { gearDexClaimable } from '../game/reward-badges.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
@@ -179,7 +180,7 @@ export class Meta {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
     // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-mail', 'dot-quest'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
       + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
@@ -198,6 +199,8 @@ export class Meta {
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
+    // 장비 도감 마일스톤(영웅 → 가방 → 금고 → 도감)을 놓치지 않게 영웅 탭에 점(docs/RPG_ESSENTIALS.md E1).
+    $('dot-heroes')?.classList.toggle('on', gearDexClaimable(s, this.eco.ownedHeroIds()) > 0);
     this.refreshMenuBadge();
     this.refreshGachaOdds();
     // 홈 프로모션 버튼은 부트 때 결제가 없으면 DOM에서 치워진다(나중에 결제가 연결돼도 상점 탭으로만 판매).

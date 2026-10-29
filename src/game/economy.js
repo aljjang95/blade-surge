@@ -1329,8 +1329,10 @@ export class Economy {
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(prem ? r : { ...r, blessingCharm: Runes.passCharms(lv) }); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
-  dailyAvailable() { const d = Math.floor(nowOf(this) / 86400000); return this.s.daily.last !== d; }
-  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = Math.floor(nowOf(this) / 86400000); s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  // 하루 경계는 의뢰·금고와 같은 05:00 KST(periodAt). 옛 저장의 UTC 자정 일 번호와 같은 눈금이라 그대로 비교한다
+  // (전환 첫날 UTC 0~4시에 받은 기록만 같은 날 한 번 더 열릴 수 있다 — 보상 하루치, docs/RPG_ESSENTIALS.md E1).
+  dailyAvailable() { return this.s.daily.last !== periodAt(nowOf(this)).day; }
+  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = periodAt(nowOf(this)).day; s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
   // ---------- 우편 ----------
   claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read) return null; m.read = true; return this.addRewards(m.rewards); }
   unreadMail() { return this.s.mail.filter((m) => !m.read).length; }
