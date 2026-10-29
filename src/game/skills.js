@@ -8,6 +8,7 @@ import { WEREWOLF_HOWL, WEREWOLF_HUNT } from './werewolf-kit.js';
 import { BLACKCAT_OMEN, BLACKCAT_NIGHT } from './blackcat-kit.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
+import { knightJudgmentStrike } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
@@ -261,7 +262,8 @@ export const SKILLS = {
   // ================= 검성 (성스러운 빛 · 몹몰이 심판) =================
   holy_slash: {
     dur: 0.6,
-    start(game, p) { knightRune(game, p.pos, 2.2, 0.5); },
+    // 예비: 발밑 원형 룬 대신 칼 쥔 손으로 빛이 모이는 줄기(sig-knight PRELUDES).
+    start(game, p) { skillPrelude(game, p, 'holy_slash'); },
     cast(game, p, c) {
       const variant = knightSlashVariantForBattle(game, p);
       if (variant === 'pierce') return applyKnightSlashVariant(game, p, c, variant);
@@ -283,7 +285,8 @@ export const SKILLS = {
     start(game, p, c) {
       c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.shield_bash.range);
       gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
-      game.fx.castCircle(c.data.gatherCenter, 0xff9a18, { radius: 5, life: .25 });
+      // 예비: 5m 원형 시전진 대신 방패 앞으로 끌려 오는 줄기(몰이)와 방패 별빛(sig-knight PRELUDES).
+      skillPrelude(game, p, 'shield_bash');
     },
     update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 7, 22); },
     cast(game, p, c) {
@@ -302,7 +305,8 @@ export const SKILLS = {
   },
   judgment: {
     dur: 1.0, total: 1.5,
-    start(game, p) { knightRune(game, p.pos, 2.4, 1.0); },
+    // 예비: 원형 룬 대신 검을 타고 하늘로 솟는 금빛 입자 + 신호 광선(sig-knight PRELUDES).
+    start(game, p) { skillPrelude(game, p, 'judgment'); },
     cast(game, p, c) {
       // 인력의 심판(교관): 표적을 고르기 전에 주변 적을 시전자 쪽으로 끌어온다.
       if (hasTownSkillVariant(p, 'judgment', 'pull')) game.vacuum(p.pos, 12, 18);
@@ -314,6 +318,8 @@ export const SKILLS = {
         // 표적마다 조준 원(예고)이 먼저 잡히고, 하늘 광선은 판정 시각(delay)에 바닥에 닿도록 미리 출발한다.
         game.fx.impact?.mark?.(pt, 0xffb21e, { radius: 1.5, life: delay + .35, style: MARK_STYLE.reticle });
         game.fx.impact?.beam?.(_judgeSky.set(pt.x - .6, 12, pt.z - .4), _judgeDir.set(.6, -12, .4), 12, 0xffc23a, { speed: 160, width: .14, fade: .25, delay: Math.max(0, delay - .075) });
+        // 박자 장식: 낙하 직전 하늘의 금 별빛 + 판정 순간 바닥 균열(표적 6개까지, 칸 예산).
+        if (i < 6) knightJudgmentStrike(game.fx.impact, pt, delay, i, !!game.fx.lite);
         game.after(delay, () => {
           // Keep all eight hits/particle cues; only the first four get the
           // two-plane pillar so a dense Judgment stays within the render budget.
@@ -334,8 +340,8 @@ export const SKILLS = {
     dur: 1.2, total: 2.1,
     start(game, p, c) {
       // 기 모으기: 큰 금빛 마법진(6m) 대신 작은 진 + 진한 주황 금 기둥(폭 1.6m).
-      knightRune(game, p.pos, 2.4, 1.2);
-      game.fx.firePillar(p.pos, { height: 10, width: 1.6, life: 1.0, color: 0xff9a18 });
+      // 영웅을 덮던 주황 기둥(폭 1.6m)·원형 룬 대신 검에 모이는 빛 두 물결 + 검을 따라 서는 가는 금 기둥 + 벨 부채꼴 예고선(sig-knight PRELUDES).
+      skillPrelude(game, p, 'dragon_slash');
       game.fx.embers(p.pos, 0xffcf5a, { n: 30, radius: 1.5, life: 1.2, rise: 5 });
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;

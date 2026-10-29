@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
-import { SIGNATURES as KNIGHT } from './sig-knight.js';
+import { SIGNATURES as KNIGHT, PRELUDES as KNIGHT_PRELUDES } from './sig-knight.js';
 import { SIGNATURES as MAGE, PRELUDES as MAGE_PRELUDES } from './sig-mage.js';
 import { SIGNATURES as ROGUE, PRELUDES as ROGUE_PRELUDES } from './sig-rogue.js';
 import { SIGNATURES as BARBARIAN, PRELUDES as BARBARIAN_PRELUDES } from './sig-barbarian.js';
@@ -298,6 +298,7 @@ export const SKILL_PRELUDES = {
         { vx: -Math.cos(a) * 6 - Math.sin(a) * 5, vy: 2, vz: -Math.sin(a) * 6 + Math.cos(a) * 5, stretch: 1, grow: 1, delay: (i % 4) * .15 });
     }
   },
+  ...KNIGHT_PRELUDES,
   ...ROGUE_PRELUDES,
   ...MAGE_PRELUDES,
   ...BARBARIAN_PRELUDES,
