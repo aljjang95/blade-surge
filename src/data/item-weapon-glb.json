@@ -205,6 +205,18 @@
       }
     },
     {
+      "id": "w_sigil",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sigil.glb",
+      "sha256": "7d8dcfb299fe7560584f5f2a657ecd440f87edc7a338a7312b32bff831ab6ec7",
+      "bytes": 621532,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "77a728f2-ea23-4562-838f-6c0ae48ca1e4",
+        "concept": "sigil greatsword: broad stone-tan blade with glowing orange-yellow angular rune patterns inlaid, gold cross guard with square diamond ornaments and a round gold gem, brown wrapped grip, gold diamond-shaped pommel"
+      }
+    },
+    {
       "id": "w_steel",
       "form": "sword",
       "file": "/models/item-weapons/w_steel.glb",
