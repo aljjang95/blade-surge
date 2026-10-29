@@ -56,6 +56,11 @@ export function bellGeometry(r, segments = 10) {
 }
 
 // 소품: bones 후보(앞이 우선) 또는 root(모델 원점=발밑 기준, 뼈 없는 슬라임·원령), at(몸 키 비율, 모델 축), rot(도), scale(배), build(h) → { solid: [], glow: [] }
+const glowPouchesBuild = (h) => ({
+  solid: [piece(new THREE.BoxGeometry(.18 * h, .02 * h, .02 * h), C.kelp, [0, .06 * h, 0])],
+  glow: [[-.06, 0], [0, -.02], [.06, .005]].map(([x, y]) => piece(new THREE.SphereGeometry(.032 * h, 7, 5), C.glowAbyss, [x * h, y * h, -.01 * h], [0, 0, 0], [1, 1.25, 1])),
+});
+
 const PROPS = {
   coffin: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .02, -.12], rot: [-8, 0, 0], scale: 1.25, build: (h) => ({
     solid: [
@@ -346,10 +351,9 @@ const PROPS = {
     }
     return { solid, glow };
   } },
-  glowPouches: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, 0, -.12], rot: [0, 0, 0], scale: 1.5, build: (h) => ({
-    solid: [piece(new THREE.BoxGeometry(.18 * h, .02 * h, .02 * h), C.kelp, [0, .06 * h, 0])],
-    glow: [[-.06, 0], [0, -.02], [.06, .005]].map(([x, y]) => piece(new THREE.SphereGeometry(.032 * h, 7, 5), C.glowAbyss, [x * h, y * h, -.01 * h], [0, 0, 0], [1, 1.25, 1])),
-  }) },
+  glowPouches: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, 0, -.12], rot: [0, 0, 0], scale: 1.5, build: glowPouchesBuild },
+  // 빛주머니 아귀(심연 주시자 자리): 같은 주머니를 크게 — 1.5배 주머니는 일반 아귀와 근접 캡처에서 구분되지 않았다.
+  glowPouchesLarge: { bones: ['Spine2', 'Spine1', 'Spine', 'head'], at: [0, .02, -.14], rot: [0, 0, 0], scale: 2.4, build: glowPouchesBuild },
   lighthouseLens: { bones: ['Head', 'head'], at: [0, .27, 0], rot: [0, 0, 0], scale: 1.9, build: (h) => ({
     solid: [piece(new THREE.CylinderGeometry(.05 * h, .06 * h, .02 * h, 8), C.brass), piece(new THREE.CylinderGeometry(.05 * h, .045 * h, .015 * h, 8), C.brass, [0, .085 * h, 0]), piece(new THREE.ConeGeometry(.05 * h, .04 * h, 8), C.rust, [0, .11 * h, 0])].concat([0, 1, 2, 3].map((i) => piece(new THREE.CylinderGeometry(.004 * h, .004 * h, .07 * h, 3), C.brass, [Math.sin(i * 1.57) * .045 * h, .045 * h, Math.cos(i * 1.57) * .045 * h]))),
     // 꺼진 등대의 마지막 렌즈 — 희미한 청록.
@@ -401,6 +405,31 @@ const PROPS = {
   oathBanner: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.09, .1, -.16], rot: [-6, 0, -6], scale: 1.6, build: (h) => ({
     solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .62 * h, 5), C.goldDark, [0, .12 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .26 * h, .006 * h), C.violet, [-.085 * h, .27 * h, 0]), piece(new THREE.BoxGeometry(.16 * h, .03 * h, .008 * h), C.gold, [-.085 * h, .41 * h, 0]), piece(new THREE.ConeGeometry(.012 * h, .05 * h, 4), C.gold, [0, .45 * h, 0])],
     glow: [piece(new THREE.TorusGeometry(.03 * h, .005 * h, 3, 10), C.glowDawn, [-.085 * h, .28 * h, .005 * h])],
+  }) },
+  // 새벽 견습 닌자: 등에 비스듬히 멘 연습용 목검과 금빛 매듭 — 진짜 닌자(단검·해 가면)와 실루엣으로 갈린다.
+  squireBokken: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.13], rot: [0, 0, 38], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.BoxGeometry(.03 * h, .5 * h, .018 * h), C.oak, [0, .06 * h, 0]), piece(new THREE.BoxGeometry(.08 * h, .018 * h, .03 * h), C.woodDark, [0, -.13 * h, 0]),
+      piece(new THREE.BoxGeometry(.034 * h, .12 * h, .022 * h), C.violet, [0, -.2 * h, 0]), piece(new THREE.BoxGeometry(.2 * h, .02 * h, .02 * h), C.leatherDark, [0, .02 * h, .012 * h], [0, 0, -38])],
+    glow: [piece(new THREE.TorusGeometry(.018 * h, .005 * h, 3, 8), C.glowDawn, [0, -.27 * h, 0]), piece(new THREE.BoxGeometry(.008 * h, .07 * h, .004 * h), C.glowDawn, [.012 * h, -.31 * h, 0], [0, 0, 12])],
+  }) },
+  // 새벽불 주술사: 등 뒤로 머리 위까지 솟은 화로 장대 — 왕관 고리 주술사와 높이·불빛으로 갈린다.
+  dawnBrazier: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.06, .04, -.15], rot: [0, 0, -6], scale: 1.6, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.009 * h, .009 * h, .4 * h, 5), C.goldDark, [0, .06 * h, 0]),
+      piece(bellGeometry(.07 * h, 8), C.gold, [0, .27 * h, 0], [180, 0, 0], [1, .055 * h, 1]), piece(new THREE.TorusGeometry(.072 * h, .007 * h, 3, 10), C.goldDark, [0, .28 * h, 0], [90, 0, 0])],
+    glow: [piece(new THREE.ConeGeometry(.055 * h, .15 * h, 6), C.glowDawn, [0, .36 * h, 0]), piece(new THREE.ConeGeometry(.03 * h, .1 * h, 5), C.glowEmber, [.02 * h, .38 * h, .012 * h]), piece(new THREE.SphereGeometry(.036 * h, 6, 4), C.glowHot, [0, .3 * h, 0])],
+  }) },
+  // 6장 짐꾼 승객: 등에 끈으로 묶은 여행 가방 두 개 — 어깨 위로 솟는 네모난 실루엣.
+  luggagePack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .06, -.16], rot: [-4, 0, 4], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.BoxGeometry(.26 * h, .18 * h, .11 * h), C.leather, [0, 0, 0]), piece(new THREE.BoxGeometry(.2 * h, .14 * h, .09 * h), C.clay, [.015 * h, .16 * h, 0], [0, 0, -6]),
+      piece(new THREE.BoxGeometry(.03 * h, .36 * h, .118 * h), C.leatherDark, [-.06 * h, .07 * h, 0]), piece(new THREE.BoxGeometry(.03 * h, .36 * h, .118 * h), C.leatherDark, [.07 * h, .07 * h, 0]),
+      piece(new THREE.TorusGeometry(.03 * h, .006 * h, 3, 8, Math.PI), C.brass, [.015 * h, .24 * h, 0])],
+    glow: [piece(new THREE.BoxGeometry(.05 * h, .03 * h, .004 * h), C.glowTeal, [.06 * h, .02 * h, -.057 * h])],
+  }) },
+  // 6장 길 잃은 승객: 등에 세운 장대 끝 갈고리에 매달린 서리빛 등 — 어두운 청록 조명에서 혼자 하늘빛으로 떠 보인다.
+  lostLantern: { bones: ['Spine2', 'Spine1', 'Spine'], at: [-.07, .04, -.14], rot: [0, 0, 10], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .44 * h, 5), C.woodDark, [0, .1 * h, 0]), piece(new THREE.BoxGeometry(.12 * h, .01 * h, .01 * h), C.iron, [-.05 * h, .31 * h, 0]),
+      piece(new THREE.ConeGeometry(.042 * h, .035 * h, 6), C.iron, [-.1 * h, .27 * h, 0]), piece(new THREE.CylinderGeometry(.04 * h, .036 * h, .014 * h, 6), C.iron, [-.1 * h, .17 * h, 0])],
+    glow: [piece(new THREE.CylinderGeometry(.034 * h, .034 * h, .08 * h, 6), C.glowFrost, [-.1 * h, .215 * h, 0]), piece(new THREE.SphereGeometry(.026 * h, 6, 4), C.glowWhite, [-.1 * h, .215 * h, 0])],
   }) },
   // ---- 7장 금 간 종탑의 도시: 어긋난 박자 ----
   bellLedger: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.15], rot: [-8, 0, 8], scale: 1.4, build: (h) => ({

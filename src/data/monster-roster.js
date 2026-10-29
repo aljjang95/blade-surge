@@ -122,6 +122,8 @@ export const MONSTER_ROSTER = Object.freeze({
     weapon: { asset: 'tll_ch5_dawnblade', hand: 'right', grip: [0, 0.12, 0], at: [0, 0.07, 0.02], rot: [90, 0, 0] } },
   // 맨손 닌자(견습·봉화 닌자 자리): 단검 없이.
   Ch5_DawnNinjaBare: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 1.05, fallbackScale: 0.76 },
+  // 새벽 견습 닌자(임프 자리): 한 뼘 작은 맨손 닌자, 등에 연습용 목검(의상 squireBokken).
+  Ch5_DawnNinjaSquire: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 0.9, fallbackScale: 0.66 },
   Ch5_CrownSoldier: { asset: 'tll_ch5_crownsoldier', fallback: 'shadow_soldier', scale: 1.0, fallbackScale: 0.79 },
   // 성벽 검 방패병: 왼손에 검을 엮은 큰 방패(해골 방패병 shield 행동 자리).
   Ch5_SwordWall: { asset: 'tll_ch5_crownsoldier', fallback: 'bone_knight', scale: 0.97, fallbackScale: 1.03,
