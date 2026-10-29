@@ -676,7 +676,7 @@ export class Economy {
   enhance(uid, { protect = false, bless = false, sure = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
-    const sureGold = sure ? enhanceSureCost(lv) : 0;
+    const sureGold = sure ? enhanceSureCost(lv) : 0;   // 결과에 늘 싣는다(0 = 확정 강화 안 씀)
     if (sure && sureGold === null) return { ok: false, reason: 'sure' };
     if (sure && bless) return { ok: false, reason: 'stack' };
     if (this.s.gold < cost + sureGold) return { ok: false, reason: 'gold' };
@@ -695,7 +695,7 @@ export class Economy {
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.recordJourneyAction('upgrades');
-    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance, ...(sure ? { sureGold } : {}) };
+    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance, sureGold };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } Runes.recoverItemRunes(this, inst, 'sell'); this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   isUpgrade(heroId, inst) {

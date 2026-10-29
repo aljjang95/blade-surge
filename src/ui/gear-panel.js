@@ -6,6 +6,7 @@ import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown, ENH_SAFE_MAX } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
+import { enhanceSureCost } from '../data/enhance.js';
 import { weaponLook } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { GACHA } from '../data/shop.js';
@@ -319,16 +320,18 @@ function enhanceHtml(meta, inst) {
   if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p></section>';
   const cur = itemStats(inst), nxt = itemStats({ ...inst, enh: Math.min(ENH_MAX, lv + 1) });
   const cost = enhanceCost(lv), stones = enhanceStones(lv), tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
-  const chance = enhanceChance(lv), destroy = destroyChance(lv);
+  const chance = enhanceChance(lv), destroy = destroyChance(lv), sureGold = enhanceSureCost(lv);
   const rows = [['공격력', cur.atk, nxt.atk], ['HP', cur.hp, nxt.hp], ['방어', cur.def, nxt.def]].filter((row) => row[1] || row[2]);
   return '<section class="is-enh" aria-label="장비 강화"><h3>강화 <small class="is-lv">+' + lv + ' → <b>+' + (lv + 1) + '</b></small></h3>' +
     '<div class="enh-stats">' + rows.map((row) => '<div><span>' + row[0] + '</span><span>' + fmt(row[1]) + ' → <b>' + fmt(row[2]) + '</b></span></div>').join('') + '</div>' +
     '<div class="enh-rate">성공 <b id="e-rate">' + Math.round(chance * 100) + '%</b>' + (destroy > 0 ? ' · <span class="warn" id="e-destroy">파괴 ' + Math.round(destroy * 100) + '%</span>' : '') + (enhanceDown(lv) ? ' · 실패 시 <b>-1</b>' : '') + '</div>' +
     '<div class="enh-opts"><button type="button" class="enh-opt" data-opt="bless" aria-pressed="false"><img src="' + resourceArt('bless') + '" alt="" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×' + s.bless + '</span></button>' +
-    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') + '</div>' +
-    '<div class="enh-cost"><span class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
+    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') +
+    // 확정 강화(골드 웃돈): +3 → +11 구간. 축복과 함께 쓰지 않는다(규칙은 enhance.js enhanceSureCost).
+    (sureGold ? '<button type="button" class="enh-opt" data-opt="sure" data-sure-gold="' + sureGold + '" aria-pressed="false" aria-label="확정 강화, 골드 ' + fmt(sureGold) + ' 추가"><i class="ic ic-gold"></i><span>확정 강화</span><span class="cnt">+' + fmt(sureGold) + '</span></button>' : '') + '</div>' +
+    '<div class="enh-cost"><span id="e-gold" class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
     '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' +
-    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험</p></section>';
+    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험' + (sureGold ? ' · +11까지는 골드를 더 내고 확정 강화할 수 있습니다' : '') + '</p></section>';
 }
 
 /** 가방 장비를 눌렀을 때 열리는 시트. 현재 장비와 나란히 비교하고 주 버튼 하나로 장착한다. */
@@ -433,11 +436,21 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         else showItemSheet(meta, uid, heroId);
       };
       // 강화
-      const opts = { bless: false, protect: false };
+      const opts = { bless: false, protect: false, sure: false };
+      const setOpt = (key, on) => { opts[key] = on; const el = b.querySelector('.enh-opt[data-opt="' + key + '"]'); if (el) { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); } };
       b.querySelectorAll('.enh-opt').forEach((el) => el.onclick = () => {
-        const key = el.dataset.opt; if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
-        opts[key] = !opts[key]; el.classList.toggle('on', opts[key]); el.setAttribute('aria-pressed', String(opts[key]));
-        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100) + '%';
+        const key = el.dataset.opt;
+        if (key === 'sure') {
+          // 확정 강화는 골드만 쓴다. 켜면 축복을 끈다(함께 쓰지 않음).
+          const total = enhanceCost(inst.enh) + (enhanceSureCost(inst.enh) || 0);
+          if (!opts.sure && eco.s.gold < total) { ui.toast('골드 부족 — 확정 강화에는 ' + fmt(total) + ' 골드가 필요합니다', 'red'); audio.play('ui_error'); return; }
+          setOpt('sure', !opts.sure); if (opts.sure) setOpt('bless', false);
+        } else {
+          if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
+          setOpt(key, !opts[key]); if (key === 'bless' && opts.bless) setOpt('sure', false);
+        }
+        const gold = b.querySelector('#e-gold'); if (gold) gold.innerHTML = '<i class="ic ic-gold"></i> ' + fmt(enhanceCost(inst.enh) + (opts.sure ? enhanceSureCost(inst.enh) || 0 : 0));
+        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = (opts.sure ? 100 : Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100)) + '%';
         const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : '파괴 ' + Math.round(destroyChance(inst.enh) * 100) + '%';
         audio.play('ui_click', { vol: 0.4 });
       });

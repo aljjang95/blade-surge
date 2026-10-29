@@ -63,5 +63,5 @@ export function validateOp(op, args) {
   if (typeof op !== 'string' || !Object.hasOwn(OPS, op)) return null;
   const def = OPS[op];
   if (!Array.isArray(args) || args.length > def.args.length || args.length < def.args.length - (def.optional || 0)) return null;
-  return def.args.every((check, i) => check(args[i])) ? def : null;
+  return args.every((value, i) => def.args[i](value)) ? def : null;
 }
