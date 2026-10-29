@@ -8,7 +8,7 @@
 |---|---|---|
 | 처치 원장 저장 위치 | 계정 문서(`account_docs.core`)의 서버 소유 필드 `slain` + 기존 `quests.kills`. 감사 기록은 기존 `ledger` 행(`run:<runId>`)의 delta | 새 D1 표 `kill_ledger` — 정산이 이미 티켓당 1회·원장 op_id로 멱등이라 같은 사실을 두 곳에 쓰게 된다. 운영 D1 마이그레이션·배포 순서 위험만 늘어 버림 |
 | 처치 수 근거 | 서버 개연성 검사(T1)를 통과한 정산 사실의 계급별 처치 수(`kills` + `summonedKills`) | 클라이언트 `quests.kills` 값 수신 — 상한 검사가 불가능해 버림 |
-| 종(도감) 근거 | 정산 사실의 새 선택 필드 `species`. 서버가 그 관문의 등장 가능 종 풀과 계급별 처치 수로 자른다 | 관문 명단으로 종 계산 — 전투 명단(`combatRosterFor`)과 실제 처치가 달라 버림(RPG_ESSENTIALS) |
+| 종(도감) 근거 | 정산 사실의 새 선택 필드 `species`. 서버가 그 관문의 등장 가능 종 풀과 처치 합으로 자른다 | 관문 명단으로 종 계산 — 전투 명단(`combatRosterFor`)과 실제 처치가 달라 버림(RPG_ESSENTIALS) |
 | 여정 단계 | 서버 명령 `claimJourneyStep(id)`. 서버가 아는 조건(갑옷 장착·강화)은 서버 문서로 판정, 기기 전용 조건(서약·정원·제작·숙련)은 순서 + 서버 진행 바닥값으로 상한 검사한 "기기 증언" | 원정·숙련 전체 서버 이전 — 범위가 커서 별도 덩어리(남은 게이트) |
 | 도감 보상 | 업적 계열 `hunter`(stat `species` = 서버 원장에서 1마리 이상 처치한 종 수) | 별도 도감 보상 표 — 업적이 이미 순서 수령·서버 명령·멱등을 가진다 |
 | 마이그레이션 | **D1 스키마 변경 없음**(A5의 단독 마이그레이션 PR은 해당 없음). 문서 필드 추가만 | — |
@@ -21,7 +21,7 @@
   1. 판정 `rejected` 또는 닫힌 지역이면 아무것도 세지 않는다.
   2. `counted = Σ kills[rank] + Σ summonedKills[rank]` (개연성 표 상한 안). 승리·패배 모두 센다(패배도 처치 경험치를 주던 기존 규칙과 같다).
   3. `quests.kills += counted`.
-  4. 종: 관문 종 풀(`stageSpeciesPool` = 전투 명단 + 보상 명단 + 관문 보스·던전 보스 + 각 종의 `summon`, 장 전용 몸 id 포함) 밖의 id는 버리고 `dropped`로 보고한다(판정에는 영향 없음). 계급(`boss`·`elite`·그 외 normal)별 합이 그 계급 처치 수(소환 포함)를 넘으면 id 순서로 잘라 맞춘다.
+  4. 종: 관문 종 풀(`stageSpeciesPool` = 전투 명단 + 보상 명단 + 관문 보스·던전 보스 + 각 종의 `summon`, 장 전용 몸 id 포함) 밖의 id는 버리고 `dropped`로 보고한다(판정에는 영향 없음). 종 합이 `counted`를 넘으면 id 정렬 순서로 잘라 맞춘다(정예 접사 등으로 같은 종의 계급이 판마다 달라 계급별 대조는 하지 않는다).
   5. `slain.kills[id] += n` (종당 상한 1e9).
 - 영수증에 `killLedger: { kills: counted, species: <이번에 센 종 수>, dropped: <버린 수> }`, 원장 delta에도 같은 값.
 - 멱등: 기존 그대로 — 티켓 상태(`open`→`settled|rejected`) + 원장 op_id `run:<runId>` + rev 가드. 같은 티켓 재전송은 같은 영수증만 돌려준다(추가 집계 없음).
