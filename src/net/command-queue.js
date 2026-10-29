@@ -10,6 +10,7 @@ import { newCid } from './account-client.js';
 const TO_ARGS = {
   resetSkills: (id, opts) => [id, !!opts?.useGems],
   enhance: (uid, opts) => opts?.sure ? [uid, !!opts?.protect, !!opts?.bless, true] : [uid, !!opts?.protect, !!opts?.bless],
+  enhanceTransfer: (src, dst, opts) => [src, dst, !!opts?.scroll],
   equipAvatar: (heroId, id = null) => [heroId, id ?? null],
   setDifficulty: (id, ch = 1, st = 1) => [id, ch, st],
   claimDaily: () => [], claimMonthly: () => [],
