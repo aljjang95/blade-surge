@@ -39,6 +39,9 @@ export const OPS = {
   gearDexClaim: { args: [str, str], run: (e, h, m) => e.gearDexClaim(h, m), ok: okResult },
   claimJourneySigil: { args: [(v) => v === 'daily' || v === 'weekly', str], run: (e, kind, id) => e.claimJourneySigil(kind, id), ok: okResult },
   vaultExpand: { args: [], run: (e) => e.vaultExpand(), ok: okResult },
+  // 클리어 루프(docs/CLEAR_LOOP.md): 카드는 정산 때 해시로 정해져 고르기만 한다. 수리는 닳은 만큼 골드.
+  pickClearCard: { args: [(v) => int(v, 0, 2)], run: (e, i) => e.pickClearCard(i), ok: okResult },
+  repairItem: { args: [(v) => int(v, 1)], run: (e, uid) => e.repairItem(uid), ok: okResult },
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)
   // 네 번째 인자 sure(확정 강화, 골드 웃돈)는 선택이다: 이전 클라이언트의 3인자 명령도 그대로 받는다.

@@ -33,6 +33,7 @@ import { RUNE_SOURCES, RUNE_MERGE_COST, RUNE_DUPLICATE_CAP } from '../src/data/r
 import { socketCount, runeEffects } from '../src/game/rune-core.js';
 import { rollRuneDrops, giftBag, craftRuneExact } from '../src/game/rune-economy.js';
 import { applyBuildStats } from '../src/game/masterworks-combat.js';
+import { repairFullCost, DUR_WEAR, CLEAR_CARD_SIM } from '../src/game/clear-loop.js';
 
 const DAY_MS = 86400000;
 export const PERSONAS = Object.freeze({
@@ -198,6 +199,10 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     const mulG = decay * (1 + legendFx.goldPct), mulS = decay * (1 + legendFx.stonePct);
     earn('gold', Math.floor((comp.gold + v.fieldGold) * mulG)); earn('stones', Math.floor(comp.stones * mulS)); earn('stones2', Math.floor(v.stones2 * mulS)); earn('stones3', Math.floor(v.stones3 * mulS));
     if (first) earn('gems', v.firstGems);
+    // 클리어 루프(docs/CLEAR_LOOP.md): 카드 3장 중 1장(기댓값을 골드·강화석 몫으로) + 착용 무기 마모를 그 판에 수리한다고 본다(골드 소모처).
+    earn('gold', Math.floor(comp.gold * CLEAR_CARD_SIM.goldShare * mulG)); earn('stones', CLEAR_CARD_SIM.stones);
+    const w = st.gear.weapon;
+    if (w) { const fix = Math.ceil(repairFullCost(w, w.r) * DUR_WEAR.win / 100); if (st.gold >= fix) { st.gold -= fix; totals.goldSpent += fix; totals.repairGold = (totals.repairGold || 0) + fix; } }
     gainExp(v.combatExp + Math.floor(comp.exp * levelExperienceMultiplier(st.level, v.recLevel)));
     st.shards += v.heroShards * decay; st.transcendStones += v.transcendStones * decay;
     // 처치 수는 기댓값을 반올림해 장비 드랍을 굴린다(보스 1·정예·일반).
