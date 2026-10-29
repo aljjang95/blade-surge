@@ -1352,11 +1352,11 @@ export class Economy {
     // 결제가 연결돼도 현금 상품은 서버 검증(billing.buy → applyIapState)으로만 지급한다. 여기서 직접 주지 않는다.
     if (this.billing) return { ok: false, reason: 'use-billing' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
-    // cash (목업): 첫 결제 2배 보너스
+    // cash (목업): 서버 카탈로그와 같게 보석 팩은 표기 수량만 준다(보너스 없음)
     s.purchases.push(id); s.spentKRW += sku.price;
     const vipBefore = s.vip; s.vip = s.spentKRW >= 300000 ? 5 : s.spentKRW >= 100000 ? 4 : s.spentKRW >= 50000 ? 3 : s.spentKRW >= 20000 ? 2 : s.spentKRW > 0 ? 1 : 0;
     let got;
-    if (sku.gems) { const first = !s.firstPurchaseUsed[id]; s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems + (first ? sku.bonus : Math.floor(sku.gems * 0.1)) }); got.first = first; }
+    if (sku.gems) { s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems }); }
     else got = this.addRewards(sku.rewards);
     this.emit(); return { ok: true, got, vipUp: s.vip > vipBefore ? s.vip : 0 };
   }

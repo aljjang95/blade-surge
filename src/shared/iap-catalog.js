@@ -89,13 +89,14 @@ export const IAP_PRODUCTS = Object.freeze([
   { id: HERO_ALL_PRODUCT_ID, type: 'non_consumable', enabled: false, gate: 'gacha-only', priceKRW: HERO_ALL_PRICE_KRW, shopSku: 'hero_all', channels: CHANNELS_ALL,
     title: '영웅 전원 해금', description: '다섯 영웅을 모두 계정에 영구 해금합니다(4명 개별 구매 합계 120,000원 대비 약 26% 할인).',
     grant: { entitlements: HERO_LEGACY_IDS.map((id) => ({ key: heroEntitlementKey(id) })) } },
+  // 보석 팩 가격 사다리(docs/PRICING.md): 보석 1개당 13.0 → 12.2 → 11.1원, 묶음이 클수록 싸다(최대 약 15%). 지급은 grant의 보석만(첫 결제 보너스 없음).
   // 보석 팩: 유료/무료 분리(paidGems, 무료부터 소비, 환불 역분개)는 BM 12.4로 준비됐다. 판매 시작·가격 공개는 대표님 확인 뒤(gate 유지).
   // Play 단독(channels 없음): 저장형 재화 충전은 웹(KG이니시스)에서 팔지 않는다(PAYMENT_COMPLIANCE 4.1-2).
   { id: 'gems_300_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 3900, shopSku: 'gem1',
     title: '보석 300', description: '보석 300', grant: { rewards: { gems: 300 } } },
   { id: 'gems_980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 12000, shopSku: 'gem2',
     title: '보석 980', description: '보석 980', grant: { rewards: { gems: 980 } } },
-  { id: 'gems_1980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 25000, shopSku: 'gem3',
+  { id: 'gems_1980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 22000, shopSku: 'gem3',
     title: '보석 1,980', description: '보석 1,980', grant: { rewards: { gems: 1980 } } },
 ]);
 
