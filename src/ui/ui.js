@@ -28,6 +28,7 @@ import './combo-feedback.css';
 import './skill-feedback.css';
 import { itemIconHtml } from './item-presentation.js';
 import { currentRewardAction, openRewardTarget } from './reward-next.js';
+import { ClearLoop } from './clear-loop.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -306,6 +307,7 @@ export class UI {
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
   /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
+  clearLoopOf() { return this._clearLoop ||= new ClearLoop(this); }
   lootHeroId() { return this.app.battle?.player?.def?.id ?? this.app.eco.s.selected; }
   lootPopup(def, rarity, inst = null) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
@@ -693,6 +695,7 @@ export class UI {
     }
     for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
     renderGrowthPreparation($('result-growth'), this.app, result);
+    this.clearLoopOf().refresh();
     this.refreshResultUse(result);
   }
   /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */
@@ -775,6 +778,7 @@ export class UI {
       || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
     this.prepareResultLayout();
+    this.clearLoopOf().reset();
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
@@ -843,7 +847,10 @@ export class UI {
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
+      // 클리어 루프: 카드 3장 선택 + 즉석 정비소가 올라가면 기존 '획득 보상' 목록과 그 소리는 쓰지 않는다(요약 칩 + 정비소가 대신: 목록은 CSS 로 숨기고 소리만 끈다).
+      const clearCards = this.clearLoopOf().mount(r, b);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      if (clearCards) lootDetails.hidden = true;
       lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
       lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
@@ -864,8 +871,8 @@ export class UI {
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}${tierTone(x.it) ? ` tier-${tierTone(x.it)}` : ''}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${tierName(def.name, x.it)}</div>${tierTag(x.it) ? `<em class="tier-tag">${tierTag(x.it)}</em>` : ''}`; if (d.dataset.cmp) { const lc = document.createElement('div'); lc.className = 'lc'; lc.textContent = d.dataset.cmp; d.appendChild(lc); } if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
-        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}${tierTone(x.it) ? ` tier-${tierTone(x.it)}` : ''}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${tierName(def.name, x.it)}</div>${tierTag(x.it) ? `<em class="tier-tag">${tierTag(x.it)}</em>` : ''}`; if (d.dataset.cmp) { const lc = document.createElement('div'); lc.className = 'lc'; lc.textContent = d.dataset.cmp; d.appendChild(lc); } if (!clearCards) { if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); } }
+        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; if (!clearCards) audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));
       later(() => {
@@ -899,5 +906,5 @@ export class UI {
     return false;
   }
   cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
-  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.show(this.el.result, false); }
+  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.clearLoopOf().reset(); this.show(this.el.result, false); }
 }
