@@ -176,6 +176,6 @@ describe('도감 마일스톤 보상 · 우편', () => {
   test('이전 저장도 정규화하면 새 우편이 읽지 않음으로 붙고 기존 수령 표시는 유지', () => {
     const eco = newEco(); const raw = JSON.parse(JSON.stringify(eco.s)); raw.mail = [{ id: 1, read: true }, { id: 2, read: true }];
     const out = normalizeSave(raw, eco.fresh());
-    expect(out.mail.map((m: any) => [m.id, m.read])).toEqual([[1, true], [2, true], [3, false], [4, false]]);
+    expect(out.mail.map((m: any) => [m.id, m.read])).toEqual([[1, true], [2, true], [3, false], [4, false], [5, false]]);
   });
 });
