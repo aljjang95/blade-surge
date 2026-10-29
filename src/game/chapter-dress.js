@@ -414,9 +414,9 @@ const PROPS = {
   }) },
   // 새벽불 주술사: 등 뒤로 머리 위까지 솟은 화로 장대 — 왕관 고리 주술사와 높이·불빛으로 갈린다.
   dawnBrazier: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.06, .04, -.15], rot: [0, 0, -6], scale: 1.6, build: (h) => ({
-    solid: [piece(new THREE.CylinderGeometry(.009 * h, .009 * h, .6 * h, 5), C.goldDark, [0, .14 * h, 0]),
-      piece(bellGeometry(.06 * h, 8), C.gold, [0, .46 * h, 0], [180, 0, 0], [1, .05 * h, 1]), piece(new THREE.TorusGeometry(.062 * h, .006 * h, 3, 10), C.goldDark, [0, .47 * h, 0], [90, 0, 0])],
-    glow: [piece(new THREE.ConeGeometry(.045 * h, .13 * h, 6), C.glowDawn, [0, .54 * h, 0]), piece(new THREE.ConeGeometry(.026 * h, .09 * h, 5), C.glowEmber, [.018 * h, .56 * h, .01 * h]), piece(new THREE.SphereGeometry(.03 * h, 6, 4), C.glowHot, [0, .49 * h, 0])],
+    solid: [piece(new THREE.CylinderGeometry(.009 * h, .009 * h, .4 * h, 5), C.goldDark, [0, .06 * h, 0]),
+      piece(bellGeometry(.07 * h, 8), C.gold, [0, .27 * h, 0], [180, 0, 0], [1, .055 * h, 1]), piece(new THREE.TorusGeometry(.072 * h, .007 * h, 3, 10), C.goldDark, [0, .28 * h, 0], [90, 0, 0])],
+    glow: [piece(new THREE.ConeGeometry(.055 * h, .15 * h, 6), C.glowDawn, [0, .36 * h, 0]), piece(new THREE.ConeGeometry(.03 * h, .1 * h, 5), C.glowEmber, [.02 * h, .38 * h, .012 * h]), piece(new THREE.SphereGeometry(.036 * h, 6, 4), C.glowHot, [0, .3 * h, 0])],
   }) },
   // 6장 짐꾼 승객: 등에 끈으로 묶은 여행 가방 두 개 — 어깨 위로 솟는 네모난 실루엣.
   luggagePack: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .06, -.16], rot: [-4, 0, 4], scale: 1.5, build: (h) => ({
@@ -425,11 +425,11 @@ const PROPS = {
       piece(new THREE.TorusGeometry(.03 * h, .006 * h, 3, 8, Math.PI), C.brass, [.015 * h, .24 * h, 0])],
     glow: [piece(new THREE.BoxGeometry(.05 * h, .03 * h, .004 * h), C.glowTeal, [.06 * h, .02 * h, -.057 * h])],
   }) },
-  // 6장 길 잃은 승객: 앞으로 내민 장대 끝에 매단 서리빛 손등 — 어두운 청록 조명에서 혼자 하늘빛으로 떠 보인다.
-  lostLantern: { bones: ['Spine2', 'Spine1', 'Spine'], at: [.1, .08, .02], rot: [52, 0, -10], scale: 1.5, build: (h) => ({
-    solid: [piece(new THREE.CylinderGeometry(.007 * h, .007 * h, .42 * h, 5), C.woodDark, [0, .1 * h, 0]), piece(new THREE.TorusGeometry(.02 * h, .004 * h, 3, 8, Math.PI), C.iron, [0, .32 * h, 0], [0, 0, 180]),
-      piece(new THREE.CylinderGeometry(.034 * h, .03 * h, .012 * h, 6), C.iron, [0, .255 * h, .03 * h]), piece(new THREE.ConeGeometry(.034 * h, .03 * h, 6), C.iron, [0, .335 * h, .03 * h])],
-    glow: [piece(new THREE.CylinderGeometry(.028 * h, .028 * h, .065 * h, 6), C.glowFrost, [0, .295 * h, .03 * h])],
+  // 6장 길 잃은 승객: 등에 세운 장대 끝 갈고리에 매달린 서리빛 등 — 어두운 청록 조명에서 혼자 하늘빛으로 떠 보인다.
+  lostLantern: { bones: ['Spine2', 'Spine1', 'Spine'], at: [-.07, .04, -.14], rot: [0, 0, 10], scale: 1.5, build: (h) => ({
+    solid: [piece(new THREE.CylinderGeometry(.008 * h, .008 * h, .44 * h, 5), C.woodDark, [0, .1 * h, 0]), piece(new THREE.BoxGeometry(.12 * h, .01 * h, .01 * h), C.iron, [-.05 * h, .31 * h, 0]),
+      piece(new THREE.ConeGeometry(.042 * h, .035 * h, 6), C.iron, [-.1 * h, .27 * h, 0]), piece(new THREE.CylinderGeometry(.04 * h, .036 * h, .014 * h, 6), C.iron, [-.1 * h, .17 * h, 0])],
+    glow: [piece(new THREE.CylinderGeometry(.034 * h, .034 * h, .08 * h, 6), C.glowFrost, [-.1 * h, .215 * h, 0]), piece(new THREE.SphereGeometry(.026 * h, 6, 4), C.glowWhite, [-.1 * h, .215 * h, 0])],
   }) },
   // ---- 7장 금 간 종탑의 도시: 어긋난 박자 ----
   bellLedger: { bones: ['Spine2', 'Spine1', 'Spine'], at: [0, .02, -.15], rot: [-8, 0, 8], scale: 1.4, build: (h) => ({
