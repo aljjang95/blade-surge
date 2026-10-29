@@ -71,7 +71,7 @@ export const CHAPTER_SPECIES = Object.freeze({
   1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp',
     bell_wisp: 'ch1_mourner_bell', comet_spark: 'ch1_mourner_comet', nightglass_page: 'ch1_mourner_night', mirage_hound: 'ch1_hoodbearer_mirage', mossbound_scout: 'ch1_coffinbearer_moss', frost_mirror: 'ch1_tombguard_frost' }),
   2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp',
-    orc_blob: 'ch2_emberimp_called', chain_forger: 'ch2_anvilguard_chain', mirage_hound: 'ch2_emberimp_haze', skel_minion: 'ch2_smith_apprentice', nightglass_page: 'ch2_emberimp_scribe', frost_mirror: 'ch2_anvilguard_mirror', comet_spark: 'ch2_emberimp_spark', astral_orbitling: 'ch2_anvilguard_star' }),
+    orc_blob: 'ch2_emberimp_hammer', chain_forger: 'ch2_anvilguard_chain', mirage_hound: 'ch2_emberimp_haze', skel_minion: 'ch2_smith_apprentice', nightglass_page: 'ch2_emberimp_scribe', frost_mirror: 'ch2_anvilguard_mirror', comet_spark: 'ch2_emberimp_spark', astral_orbitling: 'ch2_anvilguard_star' }),
   // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
   // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
   // 4장(2026-10-29 Tripo): 따개비 수부(부유 촉수·심연 슬라임·이계 침입자·포자 괴물·골렘 수호자 자리, 합류 경로의 해골 병사·원령)·
@@ -550,14 +550,15 @@ const CHAPTER_SPECIES_DEFS = {
   ch5_crownsoldier_watch: ['skel_minion', '왕관 파수병', 'Ch5_CrownSoldier'],
   ch5_dawnninja_wisp: ['bell_wisp', '종소리에 홀린 닌자', 'Ch5_DawnNinjaSpirit'],
   ch5_dawnninja_spark: ['comet_spark', '혜성불 닌자', 'Ch5_DawnNinjaSpirit'],
-  // 1~4장 소환 전용 갈래(도감에 싣지 않는다). 원본 수치·행동 그대로, 몸만 그 장 전용 Tripo 몸.
+  // 1~4장 소환 갈래(꼬마 오크 자리만 일반 방에도 나와 도감에 싣고, 나머지는 소환 전용이라 싣지 않는다). 원본 수치·행동 그대로, 몸만 그 장 전용 Tripo 몸.
   ch1_mourner_bell: ['bell_wisp', '종소리 원령', 'Ch1_Mourner'],
   ch1_mourner_comet: ['comet_spark', '혜성불 원령', 'Ch1_Mourner'],
   ch1_mourner_night: ['nightglass_page', '밤유리 만가 원령', 'Ch1_Mourner'],
   ch1_hoodbearer_mirage: ['mirage_hound', '신기루 길잡이', 'Ch1_CoffinBearer'],
   ch1_coffinbearer_moss: ['mossbound_scout', '이끼 낀 관꾼', 'Ch1_CoffinBearer'],
   ch1_tombguard_frost: ['frost_mirror', '서리 묘비 방패병', 'Ch1_TombGuard'],
-  ch2_emberimp_called: ['orc_blob', '풀무에 불려 온 임프', 'Ch2_EmberImp'],
+  // 꼬마 오크는 2장 일반 방(과 6-2·6-7 용광로 경로)에도 나와 도감에 싣는다. 나머지 소환 전용 갈래는 도감 제외.
+  ch2_emberimp_hammer: ['orc_blob', '망치 멘 꼬마 임프', 'Ch2_EmberImp'],
   ch2_anvilguard_chain: ['chain_forger', '사슬 방패 장인', 'Ch2_Smith'],
   ch2_emberimp_haze: ['mirage_hound', '아지랑이 임프', 'Ch2_EmberImp'],
   ch2_smith_apprentice: ['skel_minion', '견습 장인', 'Ch2_Smith'],
@@ -588,7 +589,7 @@ const CHAPTER_SPECIES_DEFS = {
   ch6_passenger_tide: ['squidle', '바닷길 승객', 'Ch6_PassengerBare'],
   ch6_passenger_moss: ['mushnub', '이끼 낀 승객', 'Ch6_PassengerBare'],
   ch6_passenger_lost: ['frost_burrower', '길 잃은 승객', 'Ch6_PassengerBare'],
-  // 6-3 주소 경로의 부족 주술사가 부르는 꼬마 오크(소환 전용, 도감 제외).
+  // 꼬마 오크 자리: 6-3 주소 경로의 부족 주술사 소환과 6-2·6-7 용광로 경로 일반 방(도감에 싣는다).
   ch6_passenger_stray: ['orc_blob', '짐 진 꼬마 승객', 'Ch6_PassengerSmall'],
   // 7장: 해골 시민(tll_ch7_citizen) 갈래 5종·굽쇠 주술사(tll_ch7_tuner) 갈래 4종. 원본 종 크기가 다른 자리(폭탄 슬라임 0.33·해골 망령 1.2·원령 1.25)는 로스터 항목을 나눴다.
   ch7_citizen: ['skel_minion', '해골 시민', 'Ch7_Citizen'],
@@ -616,7 +617,7 @@ const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_Drown
 // 바랜 황동·석회 몸을 초록으로 물들여 뺀다(폭음 시민은 폭탄 슬라임의 금빛 색조가 황동과 맞아 그대로 둔다).
 // 1~4·6장 소환 전용 갈래(3차)도 원본 종의 보라·하늘·연두 색조가 전용 몸 팔레트를 물들여 색조를 빼고 의상으로만 구분한다.
 const SUMMON_ONLY_SPECIES = ['ch1_mourner_bell', 'ch1_mourner_comet', 'ch1_mourner_night', 'ch1_hoodbearer_mirage', 'ch1_coffinbearer_moss', 'ch1_tombguard_frost',
-  'ch2_emberimp_called', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
+  'ch2_emberimp_hammer', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
   'ch3_censor_night', 'ch3_shelfguard_mirror', 'ch3_librarian_shade', 'ch3_censor_comet', 'ch3_censor_bell', 'ch3_censor_astral', 'ch3_shelfguard_star',
   'ch4_lurer_comet', 'ch4_lurer_night', 'ch4_plankguard_mirror', 'ch4_drowned_mist', 'ch6_passenger_stray'];
 const BODY_TINTS = Object.freeze({ ...Object.fromEntries(SUMMON_ONLY_SPECIES.map((id) => [id, null])), ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch5_dawnninja_mirage: null, ch5_dawnninja_wisp: null, ch5_dawnninja_spark: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });

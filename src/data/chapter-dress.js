@@ -150,7 +150,7 @@ export const CHAPTER_DRESS = Object.freeze({
       ch2_ashimp: { ...FORGE_SKIN, props: ['emberCap'] },
       ch2_emberimp_bomb: { ...FORGE_SKIN, emissive: '#3a0a00', props: ['emberWick'] },
       // 소환 전용 2장 갈래(3차): 꼬마 오크 자리 임프는 등에 망치, 사슬 주조공·서리 거울 자리 장인은 모루 방패, 해골 병사 자리는 앞치마 견습.
-      ch2_emberimp_called: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
+      ch2_emberimp_hammer: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
       ch2_anvilguard_chain: { ...FORGE_SKIN, props: ['anvilShield', 'emberChains'] },
       ch2_emberimp_haze: { ...FORGE_SKIN, color: '#e8b0a0', amount: 0.3 },
       ch2_smith_apprentice: { ...FORGE_SKIN, props: ['smithApron'] },
@@ -419,7 +419,7 @@ export const CHAPTER_DRESS = Object.freeze({
       ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420', props: ['mossCap'] },
       // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛, 앞으로 내민 서리빛 장대 등.
       ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420', props: ['lostLantern'] },
-      // 소환 전용: 6-3 주소 경로 주술사가 부르는 꼬마 오크 자리 — 작은 승객, 등에 묶은 가방.
+      // 꼬마 오크 자리(6-3 주소 경로 소환·용광로 경로 일반 방) — 작은 승객, 등에 묶은 가방.
       ch6_passenger_stray: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420', props: ['luggagePack'] },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },

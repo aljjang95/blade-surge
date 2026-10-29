@@ -498,11 +498,11 @@ test('1~4·6·7장 모든 관문·6장 심층 원정의 소환 졸병(연쇄 소
   expect(chapterSpeciesId(buildExpeditionStage('dungeon', 'star_archive', null), 'nightglass_page')).toBe('nightglass_page');
 });
 
-test('소환 전용 갈래는 도감에 싣지 않고 의상·색조·불투명 몸 규칙을 따른다', async () => {
+test('소환 갈래는 의상·색조·불투명 몸 규칙을 따르고, 소환으로만 나오는 갈래는 도감에 싣지 않는다', async () => {
   const { speciesSourceId } = await import('../src/data/stages.js');
   const E = ENEMIES as Record<string, any>;
   const summonOnly = ['ch1_mourner_bell', 'ch1_mourner_comet', 'ch1_mourner_night', 'ch1_hoodbearer_mirage', 'ch1_coffinbearer_moss', 'ch1_tombguard_frost',
-    'ch2_emberimp_called', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
+    'ch2_emberimp_hammer', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
     'ch3_censor_night', 'ch3_shelfguard_mirror', 'ch3_librarian_shade', 'ch3_censor_comet', 'ch3_censor_bell', 'ch3_censor_astral', 'ch3_shelfguard_star',
     'ch4_lurer_comet', 'ch4_lurer_night', 'ch4_plankguard_mirror', 'ch4_drowned_mist', 'ch6_passenger_stray'];
   for (const id of summonOnly) {
@@ -519,7 +519,9 @@ test('소환 전용 갈래는 도감에 싣지 않고 의상·색조·불투명 
   // 도감은 전투 편성에 나오는 id만 싣는다 — 소환 전용 갈래는 없다.
   const { CODEX, codexEnemyId } = await import('../src/data/lore.js');
   const codexIds = new Set(CODEX.map((entry: any) => codexEnemyId(entry)).filter(Boolean));
-  for (const id of summonOnly) expect(codexIds.has(id), id).toBe(false);
+  // 꼬마 오크 자리(2장 일반 방·6장 용광로 경로)는 일반 방에도 나와 도감에 있다.
+  const inRooms = new Set(['ch2_emberimp_hammer', 'ch6_passenger_stray']);
+  for (const id of summonOnly) expect(codexIds.has(id), id).toBe(inRooms.has(id));
   // 원래 종의 도감 항목은 그대로 남는다(소환 전용 원본은 원래도 없을 수 있어 편성 갈래로 확인).
   for (const id of ['skel_minion', 'ghost', 'orc', 'squidle']) expect(codexIds.has(id), id).toBe(true);
 });
