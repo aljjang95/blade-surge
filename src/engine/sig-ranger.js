@@ -230,7 +230,7 @@ export const SIGNATURES = {
         }
       }
       // 화면 가로 진행(2차): 마지막 박자 화살이 지나는 자리마다 화면 가로 빗장(정면 카메라에서 쐐기·심이 영웅 위 좁은 띠로 몰린다).
-      if (i === 2) screenSweep(impact, ctx.fx?.camera, player.pos, f, AIM * .3, AIM * .8, { n: 3, speed: SPEED, half: 1.4, width: .18, delay: d, colors: [GOLD, LIME] });
+      if (i === 2) screenSweep(impact, ctx.fx?.camera, player.pos, f, AIM * .3, AIM * .8, { n: 3, speed: SPEED, half: 1.9, width: .28, delay: d, colors: [GOLD, LIME] });
       // 과녁 세 겹 고리(1.5·2.6·3.7m): 모두 같은 때(마지막 박자 + .8초) 사라지므로 1 → 2 → 3 겹으로 쌓인다. 가운데 빌보드 고리는 쓰지 않는다(백화).
       impact.mark(_b, c, { radius: 1.5 + i * 1.1, life: 1.05 - d, style: MARK_STYLE.thorn, angle: i * .6, delay: hit });
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9 + i * .3, i ? c : JADE, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: hit });
@@ -259,7 +259,8 @@ export const SIGNATURES = {
       const a0 = Math.abs(i), t = SN / SPEED + a0 * .03;
       _e.copy(_b).addScaledVector(_d, SN * (1 - a0 * .06));
       impact.mark(_e, i ? VINE : GOLD, { radius: 1.1, life: .9, style: MARK_STYLE.thorn, angle: i * 1.3, delay: t });
-      impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, .9, i ? VINE : GOLD, .45, { grow: 1.9, delay: t });
+      // 조이는 빌보드 고리는 가운데 갈래만(2차): 다섯 갈래 끝이 적 무리 위에서 겹치면 가산 고리 다섯 겹이 적 몸을 흰빛으로 덮었다.
+      if (!i) impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, .9, GOLD, .45, { grow: 1.9, delay: t });
       // 덩굴 가시: 매듭 둘레 세 곳에서 위로 솟았다가 떨어진다(결정적 수식).
       for (let j = 0; j < 3; j++) {
         const a = j * 2.094 + i;
@@ -287,7 +288,7 @@ export const SIGNATURES = {
     }
     // 화면 가로 진행(2차): 정면 카메라에서 앞으로 뻗는 드릴이 영웅 위 좁은 띠로 몰리므로, 첫 연발이 지나는 자리마다 화면 가로 빗장이 지그재그로 켜진다.
     _b.copy(player.pos);
-    screenSweep(impact, ctx.fx?.camera, _b, f, 2 * k, END, { n: lite ? 3 : 5, speed: SPEED, half: 1.7, width: .2, colors: [LIME, GOLD, JADE] });
+    screenSweep(impact, ctx.fx?.camera, _b, f, 2 * k, END, { n: lite ? 3 : 5, speed: SPEED, half: 2.2, width: .3, colors: [LIME, GOLD, JADE] });
     for (let w = 0; w < 3; w++) {
       const t0 = w * .12;
       impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + w * .2, GOLD, .09, { angle: .3 + w * .6, grow: .5, delay: t0 });

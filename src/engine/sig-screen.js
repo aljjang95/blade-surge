@@ -24,7 +24,7 @@ export function cameraGroundForward(camera, out) {
  * @param {{ n?: number, speed?: number, half?: number, width?: number, life?: number, delay?: number, colors?: number[], y?: number }} [o]
  * @returns {number} 쓴 칸 수
  */
-export function screenSweep(impact, camera, from, f, d0, d1, { n = 4, speed = 28, half = 1.6, width = .18, life = .42, delay = 0, colors = [0xffffff], y = .1 } = {}) {
+export function screenSweep(impact, camera, from, f, d0, d1, { n = 4, speed = 28, half = 2, width = .3, life = .6, delay = 0, colors = [0xffffff], y = .1 } = {}) {
   if (typeof impact?.beam !== 'function' || n < 1) return 0;
   const cf = cameraGroundForward(camera, _c);
   // 화면 오른쪽(바닥): 카메라 시선 × 위. 카메라가 없으면 진행 방향에 수직.
@@ -33,10 +33,11 @@ export function screenSweep(impact, camera, from, f, d0, d1, { n = 4, speed = 28
   let used = 0;
   for (let k = 0; k < n; k++) {
     const d = n === 1 ? d1 : d0 + (d1 - d0) * k / (n - 1);
-    const w = half * (.35 + .65 * into) * (1 + .12 * k), s = k % 2 ? -1 : 1; // 번갈아 좌→우·우→좌로 쓸어 지그재그 진행
+    const w = half * (.35 + .65 * into) * (1 + .12 * k), s = k % 2 ? -1 : 1; // 빗장 중심은 경로 위, 방향만 번갈아(가산 겹침 대칭)
     _p.copy(from).addScaledVector(f, d); _p.y = y;
     _p.addScaledVector(_r, -s * w); _m.copy(_r).multiplyScalar(s);
-    if (impact.beam(_p, _m, w * 2, colors[k % colors.length], { speed: w * 2 / .08, tail: w * 1.2, width, fade: life, delay: delay + d / speed })) used++;
+    // 정지 빗장(쓸기 머리 없이 통째로 켜졌다 흐려짐): 쓸기 머리만 밝은 광선은 갤러리 844×390 에서 거의 보이지 않았다.
+    if (impact.beam(_p, _m, w * 2, colors[k % colors.length], { width, fade: life, delay: delay + d / speed })) used++;
   }
   return used;
 }

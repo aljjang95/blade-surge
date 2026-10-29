@@ -928,7 +928,8 @@ export class Battle {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
             this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen, tint: p.streak === 'bind' ? BIND_HIT_TINT : undefined });
-            if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
+            // 속박 매듭은 적 하나에 시전당 한 번만(다섯 발 관통이 같은 적에 가산 가시 고리를 다섯 겹 쌓아 흰빛으로 실루엣을 덮었다), 어두운 덩굴빛.
+            if (p.streak === 'bind' && !(e._bindMarkAt > this.elapsed - .4)) { e._bindMarkAt = this.elapsed; this.fx.impact?.mark(e.pos, BIND_HIT_TINT, { radius: 1.1, life: .9, style: 2 }); }
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
