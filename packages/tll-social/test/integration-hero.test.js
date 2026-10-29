@@ -12,8 +12,10 @@ function setup({ selected = 'knight', hero = null, deferred = false, failure = n
   let current = selected, profile = { ...ME, hero };
   const calls = [], pending = [];
   const json = (body, status = 200) => Response.json(body, { status });
+  const storage = memoryStorage();
+  storage.setItem('tll-social:hero-integration:key', 'A'.repeat(43)); // 이미 프로필이 있는 기기
   const client = createSocialClient({
-    gameId: 'hero-integration', storage: memoryStorage(), window: null, document: null,
+    gameId: 'hero-integration', storage, window: null, document: null,
     fetch: async (url, init) => {
       const body = init.body ? JSON.parse(init.body) : undefined;
       calls.push({ url, body });
