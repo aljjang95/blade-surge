@@ -38,6 +38,8 @@ export const SKUS = [
   { id: 'stone_legend', tab: 'enh', kind: 'gem', name: '전설 강화석 3', price: 900, icon: '/img/icon_stone_3.webp', desc: '전설 강화석 ×3 (+15 이상 강화용)', rewards: { stones3: 3 } },
   { id: 'protect1', tab: 'enh', kind: 'gem', name: '보호 주문서', price: 300, icon: '/img/icon_protect.webp', desc: '강화 실패 시 파괴 방지 ×1', rewards: { protect: 1 } },
   { id: 'protect5', tab: 'enh', kind: 'gem', name: '보호 주문서 ×5', price: 1250, icon: '/img/icon_protect.webp', desc: '파괴 방지 ×5', rewards: { protect: 5 }, badge: '인기' },
+  // 전승 보호 주문서: 강화 전승의 −1 손실을 없앤다(보석 소모처). +11 기준 1단계 ≈ 확정 강화 웃돈 17만 골드 ≈ 골드 상점 환산 약 620 보석이라 500.
+  { id: 'transfer1', tab: 'enh', kind: 'gem', name: '전승 보호 주문서', price: 500, icon: '/img/icon_protect.webp', desc: '강화 전승 시 단계 손실 없음 ×1', rewards: { transferScroll: 1 } },
   { id: 'bless1', tab: 'enh', kind: 'gem', name: '축복 주문서', price: 200, icon: '/img/icon_bless.webp', desc: '강화 성공률 +20% ×1', rewards: { bless: 1 } },
 
   // ---- 골드 (보석 소모) ----

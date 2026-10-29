@@ -23,6 +23,7 @@ import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect
 import { skuGate } from '../data/shop-gates.js';
 import { THEMED_SETS } from '../data/items.js';
 import { enhanceSureCost } from '../data/enhance.js';
+import { transferQuote } from '../data/enhance-transfer.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
@@ -187,7 +188,7 @@ export class Economy {
   fresh() {
     return {
       expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), legend: normalizeLegend(), actionSequence: 0,
-      schemaVersion: 1, gearIl: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      schemaVersion: 1, gearIl: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1, transferScroll: 0,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
@@ -312,6 +313,7 @@ export class Economy {
     if (r.fragments) { s.fragments = (s.fragments || 0) + r.fragments; got.push({ k: 'fragments', n: r.fragments }); }
     if (r.protect) { s.protect += r.protect; got.push({ k: 'protect', n: r.protect }); }
     if (r.bless) { s.bless += r.bless; got.push({ k: 'bless', n: r.bless }); }
+    if (r.transferScroll) { s.transferScroll = (s.transferScroll || 0) + r.transferScroll; got.push({ k: 'transferScroll', n: r.transferScroll }); }
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
     if (r.runeDust) { const runes = Runes.runesOf(this); runes.dust += r.runeDust; got.push({ k: 'runeDust', n: r.runeDust }); }
     if (r.blessingCharm) { const n = Runes.grantCharms(this, r.blessingCharm); if (n) got.push({ k: 'blessingCharm', n }); }
@@ -842,6 +844,23 @@ export class Economy {
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.recordJourneyAction('upgrades');
     this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance, sureGold };
+  }
+  /** 강화 전승 견적(읽기 전용). 규칙·비용은 data/enhance-transfer.js. UI 미리보기와 서버가 같은 값을 쓴다. */
+  enhanceTransferQuote(srcUid, dstUid, { scroll = false } = {}) { return transferQuote(this, srcUid, dstUid, { scroll }); }
+  /** 강화 전승: 원본의 강화 단계를 같은 부위·같은 주인의 다른 장비로 옮긴다. 대상 = 원본 − 1(전승 보호 주문서면 손실 없음), 원본은 +0.
+   *  골드·강화석·(선택)주문서만 차감한다. 원본이 착용 중이면 대상이 그 자리를 이어 낀다. 룬·내구도·il·tp 는 각 장비에 남는다. 난수 없음.
+   *  서버 /cmd enhanceTransfer 가 같은 메서드를 부른다. */
+  enhanceTransfer(srcUid, dstUid, { scroll = false } = {}) {
+    const q = transferQuote(this, srcUid, dstUid, { scroll });
+    if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, stones: q.stones, stoneKey: q.stoneKey };
+    const src = this.s.inventory.find((x) => x.uid === srcUid), dst = this.s.inventory.find((x) => x.uid === dstUid);
+    this.s.gold -= q.gold; this.s[q.stoneKey] -= q.stones; if (scroll) this.s.transferScroll--;
+    const prevTarget = q.targetEnh;
+    dst.enh = q.to; src.enh = 0;
+    if (q.swapEquip) this.s.heroes[src.owner ?? this.s.selected].equip[ITEM_BY_ID[dst.id].slot] = dstUid;
+    // 강화 시도 임무(quests.enh)는 세지 않는다: 전승은 강화 시도가 아니고, 서버 문서도 이 명령으로 임무 수치를 바꾸지 않게 둔다.
+    this.emit();
+    return { ok: true, from: q.from, to: q.to, loss: q.loss, prevTarget, gold: q.gold, stones: q.stones, stoneKey: q.stoneKey, scroll: q.scroll, equipped: q.swapEquip };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } Runes.recoverItemRunes(this, inst, 'sell'); this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   isUpgrade(heroId, inst) {
@@ -1399,6 +1418,6 @@ export class Economy {
   questClaimable() { return this.quests().filter((q) => q.done && !q.claimed).length; }
 }
 
-export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
+export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], transferScroll: ['전승 보호 주문서', '/img/icon_protect.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
 // 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
 Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], lineageSigil: ['계승 문장', '/img/icon_fragment.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
