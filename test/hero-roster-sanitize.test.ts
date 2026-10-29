@@ -84,16 +84,16 @@ describe('영웅 상품 카탈로그', () => {
       const p = IAP_BY_ID[`hero_${id}_v1`];
       expect(Object.hasOwn(HEROES, id)).toBe(true);
       expect(p.type).toBe('non_consumable');
-      expect(p.priceKRW).toBe(5900);
+      expect(p.priceKRW).toBe(30000);
       expect(p.channels).toEqual(['web', 'play']);
       expect(entitlementKeys(p)).toEqual([heroEntitlementKey(id)]);
       expect(heroIdFromEntitlement(entitlementKeys(p)[0])).toBe(id);
       expect(soldOn(p, 'web') && soldOn(p, 'play')).toBe(true);
     }
     const all = IAP_BY_ID.hero_all_v1;
-    expect(all.priceKRW).toBe(17900);
+    expect(all.priceKRW).toBe(89000);
     expect(entitlementKeys(all).sort()).toEqual(HERO_LEGACY_IDS.map((id) => 'hero:' + id).sort());
-    expect(all.priceKRW).toBeLessThan(5900 * 4); // 4명 개별 대비 할인
+    expect(all.priceKRW).toBeLessThan(30000 * 4); // 4명 개별 대비 할인
     // 즉시 지급형(스타터 등)은 웹·Play 둘 다, 보석 팩은 Play 단독(PAYMENT_COMPLIANCE 4.1)
     expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(true);
     expect(soldOn(IAP_BY_ID.gems_300_v1, 'web')).toBe(false);
