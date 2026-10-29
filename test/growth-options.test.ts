@@ -146,3 +146,26 @@ test('summary never invents gains for missing or foreign snapshots, unknown XP o
   input.after = { level: 1, exp: 0 }; input.before = { heroId: 'mage', level: 1 }; input.combatXp = 0;
   expect(growthSummary(input)).toMatchObject({ levels: 0, combatXp: 0, unlocked: [] });
 });
+
+test('gems get a visible use: summon quotes pity and affordable pulls, scrolls are offered only where they help, nothing is mutated', () => {
+  const eco = fixture(), save: any = eco.s;
+  save.gems = 6430; save.tickets = 0; save.gacha = { ...(save.gacha || {}), beginner: 20, pity: 25 };
+  save.protect = 0; save.bless = 0;
+  const scrolls = () => (growthOptions(save, eco) as any[]).filter(o => o.kind === 'scroll').map(o => o.item).sort();
+  // 확정 강화 구간(+3~+10)에서는 주문서가 쓸모없어 안내하지 않는다.
+  save.inventory[0].enh = ENH_SAFE_MAX; expect(scrolls()).toEqual([]);
+  // +11: 확정이 끝난 확률 단계 → 축복만. +12: 파괴 가능 → 보호(축복은 파괴 구간에서 함께 안내하지 않음).
+  save.inventory[0].enh = 11; expect(scrolls()).toEqual(['bless']);
+  save.inventory[0].enh = 12;
+  const before = JSON.stringify(save);
+  const options: any[] = growthOptions(save, eco);
+  expect(JSON.stringify(save)).toBe(before);
+  expect(options.find(o => o.kind === 'summon')).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
+  expect(options.find(o => o.kind === 'scroll')).toMatchObject({ item: 'protect', have: 0, gems: eco.sku('protect1')!.price });
+  save.protect = 3; expect(scrolls()).toEqual([]);
+  // 초보자 배너는 계정당 20회 한도: 10회 썼으면 보석이 넉넉해도 1번만 안내한다(리뷰 P2).
+  save.gacha.beginner = 10;
+  expect((growthOptions(save, eco) as any[]).find(o => o.kind === 'summon')).toMatchObject({ banner: 'beginner', pulls: 1 });
+  save.gacha.beginner = 20;
+  save.protect = 0; save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'scroll')).toBe(false);
+});
