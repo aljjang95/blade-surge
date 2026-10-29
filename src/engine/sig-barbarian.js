@@ -357,10 +357,10 @@ export const SIGNATURES = {
     for (let k = 0; k < arms; k++) {
       const a0 = (k / arms) * TAU; let t = 0;
       for (const [r0, da0, r1, da1] of [[8.5, 0, 5, .55], [5, .55, 1.4, 1.25]]) {
-        _a.set(c.x + Math.cos(a0 + da0) * r0, .08, c.z + Math.sin(a0 + da0) * r0);
+        _a.set(c.x + Math.cos(a0 + da0) * r0, .25, c.z + Math.sin(a0 + da0) * r0); // 바닥 장판 원화에 묻히지 않게 발목 높이
         _g.set(c.x + Math.cos(a0 + da1) * r1 - _a.x, 0, c.z + Math.sin(a0 + da1) * r1 - _a.z);
         const L = _g.length();
-        impact.beam(_a, _g, L, k % 2 ? EMBER : CRIMSON, { speed: SP, tail: 4, width: .22, delay: t });
+        impact.beam(_a, _g, L, k % 2 ? HOT : CRIMSON, { speed: SP, tail: 4, width: .24, delay: t });
         t += L / SP;
       }
     }
