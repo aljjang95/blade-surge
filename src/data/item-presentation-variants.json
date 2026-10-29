@@ -15,7 +15,7 @@
     "src/data/items.js": "d2dc940822c31e32831f7f6f549074350719b72c47dd359b81b149cacb76f20a",
     "src/data/armory.js": "5551d3b7a8543b08bd5e53d350027877a7f6283535c0ca489bbd9c222346efeb",
     "src/engine/item-forge.js": "e7e140bb7a6a2c1ca4c8679ae10fbf232f6e184fb0d3075fc098ce0c5d34e718",
-    "src/engine/forged-weapons.js": "04253d846d919c9b4eb0271a9fd2d06bb02d63645707af63d50ed8dd9c9280fe",
+    "src/engine/forged-weapons.js": "cf260d8c89c6fd6c09b029da874988b17fe8adaf3fd061aa6a3ab411a230a42d",
     "src/engine/armory-assets.js": "cbb1345a845cac3077480cfde1e335300914513b4150ea68e43caaaa3475e21a",
     "src/engine/hero-model-paths.js": "48d5a8977b1aa4421064674185711965b58092f0562a7037f035fa40dd5ec057",
     "src/ui/item-visual-model.js": "771789a1a2a184694bb9057831f2b87b92d1de9562ea3865e78a18f52a7abed2",
