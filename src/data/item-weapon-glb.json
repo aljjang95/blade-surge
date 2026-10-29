@@ -157,6 +157,18 @@
       }
     },
     {
+      "id": "w_rime",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_rime.glb",
+      "sha256": "7f1245c0ff80d76b0a4f274ea3842af42b5aa3cd0ec37a2b5dd4998c11cce034",
+      "bytes": 515856,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "79cb7b6b-382f-4e83-ac85-ca5b0b241b4d",
+        "concept": "frost greatsword: translucent pale ice-blue crystal blade with a white snowflake emblem near the top, faceted ice crystal shards fused to the cross guard around a silver diamond, steel-blue wrapped grip, ice crystal pommel"
+      }
+    },
+    {
       "id": "w_rune",
       "form": "sword",
       "file": "/models/item-weapons/w_rune.glb",
