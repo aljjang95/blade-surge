@@ -15,6 +15,12 @@ import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { rogueXCut } from '../engine/sig-rogue.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
+// 시각 강화로 뺀·줄인 fx 호출이 쓰던 Math.random 소비량(실측: 재질·메시 UUID 8회, burst 입자당 5회, embers 입자당 8회, 저화질은 입자 수 절반 올림).
+// 시드 전투의 이후 난수(치명·드랍)를 원래 순서로 두려고 같은 자리에서 같은 횟수를 소비한다.
+const RETIRED_UUID = 8;
+const burstDraws = (fx, n) => 5 * (fx.lite ? Math.ceil(n / 2) : n);
+const embersDraws = (fx, n) => 8 * (fx.lite ? Math.ceil(n / 2) : n);
+
 const _v = new THREE.Vector3();
 // 눈보라 눈송이: 옅은 하늘색(0x5cbcff) 큰 입자는 화면 위쪽에 흰 거품으로 보였다(h1b). 진한 청으로, 매 프레임 새 색을 만들지 않는다.
 const _blizzardFlake = new THREE.Color(0x2a8cff);
@@ -399,7 +405,7 @@ export const SKILLS = {
   // ================= 광전사 (불 · 회전 몹몰이) =================
   whirlwind: {
     dur: 1.6, total: 1.6,
-    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); }, // 붉은 바닥 마법진 대신 회전 궤적 고리(sig-barbarian whirlwind·barbWhirlTick)
+    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); knightRetiredDraws(game.fx, RETIRED_UUID); }, // 붉은 바닥 마법진 대신 회전 궤적 고리(sig-barbarian whirlwind·barbWhirlTick)
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.6; p.vel.set(m.x * spd, 0, m.y * spd);
       gatherEnemies(game, p.pos, 5.5, 12); // 첫 접촉 전에 모으고 연타 중 군집을 유지한다.
@@ -425,10 +431,10 @@ export const SKILLS = {
       game.hitRadius(center, SKILL_AIM_SHAPES.quake.radius, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
       // 시각: 13m 까지 퍼지던 충격파 세 겹·크기 8 폭발은 0.5초 뒤 화면 전체를 주황 덩어리로 덮었다(강화 레인). 충격 한 겹·작은 폭발로 줄이고 모양은 전방 균열 서명이 맡는다.
-      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { if (i === 0) game.fx.shockTex(center, 0xff7a2a, { r1: 4.5, life: 0.4 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
+      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { if (i === 0) game.fx.shockTex(center, 0xff7a2a, { r1: 4.5, life: 0.4 }); else knightRetiredDraws(game.fx, RETIRED_UUID); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
       game.fx.explosion(center, { size: 2.4, color: 0xff7a30, life: 0.4 });
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 4, life: 0.9 });
-      game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 20, speed: 12, size: 0.4, up: 1.5, grav: 20 });
+      game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 20, speed: 12, size: 0.4, up: 1.5, grav: 20 }); knightRetiredDraws(game.fx, burstDraws(game.fx, 40) - burstDraws(game.fx, 20));
       game.fx.light(center, 0xff8040, 8, 10, 0.4);
       game.renderer.shake(1); game.renderer.punch(1.2); game.renderer.flashScreen(0.12, 0xffa060);
       audio.boom({ vol: 1, dur: 0.8, low: 45 }); audio.play('hit_mining', { vol: 1, rate: 0.7 }); audio.vibe([60, 30, 90]);
@@ -439,7 +445,9 @@ export const SKILLS = {
     cast(game, p, c) {
       p.buffs.atk = 1.6; p.buffs.atkSpd = 1.3; p.buffs.spd = 1.2; p.buffs.t = 8; p.tintEmissive = new THREE.Color(0.35, 0.02, 0.02);
       // 시각: 바닥 붉은 마법진·7m 충격파 대신 몸에서 솟는 기둥(불기둥 + 서명의 나선·불꽃 혀)으로 읽힌다(강화 레인).
+      knightRetiredDraws(game.fx, RETIRED_UUID); // 뺀 castCircle
       game.fx.firePillar(p.pos, { height: 7, width: 1.8, life: 0.9, color: 0xff4a20 });
+      knightRetiredDraws(game.fx, RETIRED_UUID); // 뺀 7m shockTex
       game.fx.embers(p.pos, 0xff4040, { n: 40, radius: 1.5, life: 1.5, rise: 4 });
       game.fx.light(p.pos, 0xff2020, 12, 12, 0.8);
       game.renderer.flashScreen(0.2, 0xff2020); game.renderer.shake(0.5); game.renderer.aberr = 0.8;
@@ -449,11 +457,12 @@ export const SKILLS = {
   },
   hell_axe: {
     dur: 1.0, total: 2.4,
-    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.embers(p.pos, 0xff5020, { n: 20, radius: 2, life: 1.2, rise: 6 }); }, // 예비 모으기는 서명 서곡(PRELUDES.hell_axe)
+    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); knightRetiredDraws(game.fx, RETIRED_UUID); game.fx.embers(p.pos, 0xff5020, { n: 20, radius: 2, life: 1.2, rise: 6 }); knightRetiredDraws(game.fx, embersDraws(game.fx, 30) - embersDraws(game.fx, 20)); }, // 예비 모으기는 서명 서곡(PRELUDES.hell_axe)
     cast(game, p, c) {
       const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
       const orb = game.fx.orb(0xff5a20, 1.4); orb.position.copy(target).setY(16); game.scene.add(orb);
+      knightRetiredDraws(game.fx, RETIRED_UUID); // 뺀 8m castCircle
       const fall = 0.5; // 착탄 조준은 서명의 금빛 나침 표식(8m 붉은 마법진 대신)
       game.fx.add(orb, fall, (k) => { orb.position.y = 16 * (1 - k * k); orb.children[1].scale.setScalar(Math.min(4.5, 2.6 * (1 + k))); /* 시각: 14m 후광은 카메라 가까이서 화면을 주황으로 덮었다 */ game.fx.embers(orb.position, 0xff7a30, { n: 3, radius: 0.5, life: 0.5, rise: -2 }); });
       // 낙하 중 진공
@@ -463,9 +472,10 @@ export const SKILLS = {
         game.fx.explosion(target, { size: 6, color: 0xff7a30, life: 0.6 }); // 시각: 크기 14 폭발은 화면을 크림 덩어리로 덮었다
         game.fx.firePillar(target, { height: 12, width: 3.4, life: 0.7, color: 0xff4a1a }); // 광전사: 착탄 불기둥
         game.fx.scorch(target, { radius: 6, life: 8 });
-        game.fx.shockTex(target, 0xff6a20, { r1: 7, life: 0.5 }); // 3박 사방 균열은 서명이 그린다
-        game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 30, speed: 16, size: 0.5, up: 1.4, grav: 18 });
-        game.fx.dustPuff(target, { size: 6, life: 1.2 }); game.fx.embers(target, 0xff6020, { n: 30, radius: 5, life: 1.8, rise: 4 });
+        // 충격파는 첫 박 하나만(3박 사방 균열은 서명이 그린다). 원래 세 박의 예약 시각·난수 소비는 유지한다.
+        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => { if (i === 0) game.fx.shockTex(target, 0xff6a20, { r1: 7, life: 0.5 }); else knightRetiredDraws(game.fx, RETIRED_UUID); }));
+        game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 30, speed: 16, size: 0.5, up: 1.4, grav: 18 }); knightRetiredDraws(game.fx, burstDraws(game.fx, 70) - burstDraws(game.fx, 30));
+        game.fx.dustPuff(target, { size: 6, life: 1.2 }); game.fx.embers(target, 0xff6020, { n: 30, radius: 5, life: 1.8, rise: 4 }); knightRetiredDraws(game.fx, embersDraws(game.fx, 60) - embersDraws(game.fx, 30));
         game.fx.light(target, 0xff6020, 9, 12, 0.6); // 시각: 20/22m 조명은 바닥 전체를 주황으로 물들였다
         game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.22, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.3, 0.6);
         audio.boom({ vol: 1, dur: 1.2, low: 40 }); audio.play('hit_mining', { vol: 1, rate: 0.5 }); audio.fire({ vol: 0.5, dur: 1.5 }); audio.vibe([100, 50, 150]);
@@ -543,7 +553,9 @@ export const SKILLS = {
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
-        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(4.5, 6.5, 1.2)); // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하 orb.position.copy(start); game.scene.add(orb);
+        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(4.5, 6.5, 1.2));
+        // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하
+        orb.position.copy(start); game.scene.add(orb);
         mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
         // 착탄 예고 원: 다섯 발의 4m 주황 원이 겹쳐 바닥 전체가 크림 번짐이 됐다 — 작고 진한 진홍(호출은 유지: 난수 순서).
         game.fx.castCircle(pt, 0xd8261a, { radius: 2.4, life: 0.45, demon: true });
@@ -967,7 +979,8 @@ export const SKILLS = {
       const state = { pos: fwd(p, 1.2).setY(1.3), dir: p.forward(new THREE.Vector3()), bounces: 0, hit: new Set(), acc: 0 };
       const MAXB = 12, SPEED = 30;
       const prev = new THREE.Vector3();
-      const lance = game.fx.orb(0x2f8cff, 0.5);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다 lance.position.copy(state.pos);
+      // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다
+      const lance = game.fx.orb(0x2f8cff, 0.5); lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
       lance.userData.halo?.scale?.setScalar(1.1);   // 표시만: 2m 가산 후광이 시전 직후 옅은 청색 원으로 보였다(h1c). 판정 반경(1.7m)과 무관
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
