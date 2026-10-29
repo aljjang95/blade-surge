@@ -1,9 +1,72 @@
 // 계정 후속(지휘 2026-10-29): 탈퇴 시 소셜 허브 정리, 미접속 게스트 보관·복원, 계정 표시(test).
 import { describe, expect, test } from 'bun:test';
-import { newDeviceKey, v1Harness } from './helpers/v1-harness';
+import { Database } from 'bun:sqlite';
+import { createSocialHub } from '../packages/tll-social/src/server/hub';
+import { SOCIAL_CONFIG } from '../src/social/config.js';
+import { newDeviceKey, T0, v1Harness } from './helpers/v1-harness';
 import { archiveIdleGuests, IDLE_MS, restoreIdle } from '../worker/v1/archive';
 
+// 실제 SocialHub + 가짜 WebSocket(열린 소켓·close 코드·수신 메시지를 볼 수 있다). v1 하네스의 허브는 소켓을 받지 못해 따로 만든다.
+class FakeSocket {
+  sent: any[] = []; att: unknown = null; tags: string[] = []; closed: { code?: number; reason?: string } | null = null;
+  send(data: string) { this.sent.push(JSON.parse(data)); }
+  close(code?: number, reason?: string) { this.closed = { code, reason }; }
+  serializeAttachment(v: unknown) { this.att = structuredClone(v); }
+  deserializeAttachment() { return structuredClone(this.att); }
+}
+function socketHub() {
+  const sqlite = new Database(':memory:');
+  const sockets: FakeSocket[] = [];
+  let t = T0;
+  const ctx = {
+    storage: { sql: { exec: (q: string, ...b: any[]) => { const rows = sqlite.query(q).all(...b); return { toArray: () => rows }; } }, transactionSync: <T>(fn: () => T) => sqlite.transaction(fn)() as T },
+    acceptWebSocket(ws: FakeSocket, tags: string[] = []) { ws.tags = tags; sockets.push(ws); },
+    getWebSockets: (tag?: string) => sockets.filter(s => !tag || s.tags.includes(tag)), waitUntil() {},
+  };
+  const Hub = createSocialHub(SOCIAL_CONFIG as any, { now: () => t, createPair: () => [new FakeSocket(), new FakeSocket()] as any, upgradeResponse: () => Response.json({}) });
+  const hub = new Hub(ctx as any, {});
+  const call = async (method: string, path: string, key?: string, body?: unknown) => {
+    const headers: Record<string, string> = { 'x-social-ip': 'ip-test' };
+    if (key) headers['x-social-key'] = key;
+    const res = await hub.fetch(new Request('https://social.internal' + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }));
+    return { status: res.status, body: await res.json() as any };
+  };
+  const connect = async (key: string) => {
+    const { ticket } = (await call('POST', '/ws-ticket', key)).body;
+    await call('GET', '/ws?ticket=' + ticket);
+    const ws = sockets[sockets.length - 1];
+    await hub.webSocketMessage(ws as any, JSON.stringify({ t: 'hello' }));
+    return ws;
+  };
+  const say = (ws: FakeSocket, m: unknown) => hub.webSocketMessage(ws as any, JSON.stringify(m));
+  return { advance: (ms: number) => { t += ms; }, namespace: { idFromName: (n: string) => n, get: () => hub }, call, connect, say };
+}
+
 describe('회원 탈퇴 → 소셜 허브 정리', () => {
+  test('탈퇴하면 그 플레이어의 열린 소켓이 4003으로 닫히고 파티 메시지가 더 이상 오지 않는다', async () => {
+    const sh = socketHub();
+    const h = await v1Harness({ env: { SOCIAL: sh.namespace as any } });
+    const key = newDeviceKey(), otherKey = newDeviceKey();
+    const profile = (await sh.call('POST', '/profile', key, { name: '떠날소켓' })).body;
+    await sh.call('POST', '/profile', otherKey, { name: '남는소켓' });
+    const gone = await sh.connect(key), stay = await sh.connect(otherKey);
+    const party = 'party:ABCDEF0123456789ABCD';
+    await sh.say(gone, { t: 'join', channel: party });
+    await sh.say(stay, { t: 'join', channel: party });
+    await sh.say(stay, { t: 'say', channel: party, text: '탈퇴 전', nonce: 'before-0001' });
+    expect(gone.sent.some(m => m.t === 'msg' && m.m.text === '탈퇴 전')).toBe(true); // 대조: 탈퇴 전에는 받는다
+    const s = await h.session(key);
+    expect(s.accountId).toBe(profile.id);
+    expect((await h.send('POST', '/auth/delete', { confirm: 'DELETE' }, s.token)).body).toEqual({ ok: true });
+    expect(gone.closed?.code).toBe(4003);
+    expect(stay.closed).toBeNull();
+    const received = gone.sent.length;
+    sh.advance(2000); // 채팅 최소 간격
+    await sh.say(stay, { t: 'say', channel: party, text: '탈퇴 후', nonce: 'after-0002' });
+    expect(stay.sent.some(m => m.t === 'msg' && m.m.text === '탈퇴 후')).toBe(true);
+    expect(gone.sent.length).toBe(received);
+    expect(gone.sent.some(m => m.t === 'msg' && m.m.text === '탈퇴 후')).toBe(false);
+  });
   test('기기 키·친구가 지워지고 이름이 익명화된다. 같은 키로는 다시 입양되지 않는다', async () => {
     const h = await v1Harness({ social: true });
     const key = newDeviceKey(), friendKey = newDeviceKey();
@@ -52,5 +115,24 @@ describe('미접속 게스트 보관(영구 삭제 아님)', () => {
     expect((await h.send('GET', '/me', undefined, back.token)).status).toBe(200);
     expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_flags WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 0 });
     expect(await restoreIdle(h.db as any, idle.accountId, h.now())).toBe(false);
+  });
+  test('조회 뒤 배치 전에 게스트가 돌아와(last_seen 갱신) 있으면 문서를 지우지도 플래그를 만들지도 않는다', async () => {
+    const h = await v1Harness();
+    const idle = await h.session();
+    h.advance(IDLE_MS + 1000);
+    const before = h.db.sqlite.query("SELECT rev, doc FROM account_docs WHERE account_id = ?").get(idle.accountId) as any;
+    let raced = false;
+    const racing = {
+      prepare: (q: string) => h.db.prepare(q),
+      batch: async (stmts: any[]) => {
+        if (!raced) { raced = true; h.db.sqlite.exec(`UPDATE accounts SET last_seen = ${h.now()} WHERE account_id = '${idle.accountId}'`); } // SELECT 뒤 돌아온 게스트
+        return h.db.batch(stmts);
+      },
+    };
+    expect(await archiveIdleGuests(racing as any, h.now())).toBe(0);
+    expect(raced).toBe(true);
+    expect(h.db.sqlite.query("SELECT rev, doc FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual(before);
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_archive WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 0 });
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_flags WHERE account_id = ? AND flag = 'idle-archived'").get(idle.accountId)).toEqual({ n: 0 });
   });
 });
