@@ -212,6 +212,8 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 그림자 스냅샷(snapshot)은 외부 가져오기가 아니라 같은 계정의 반복 동기화다: 문장 잔액·도감은 서버 문서 값을 그대로 유지하고(소급·삭제 없음),
   // 로컬이 보낸 값은 쓰지 않는다. 문장·도감은 서버 명령(vaultRitual·gearDexClaim·claimJourneySigil)으로만 바뀐다.
   delete s.lineageSigil; delete s.sigilClaims;
+  // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 정산(completeStage)만 만든다. 가져온 카드 보상은 버린다(조작 세이브로 보상 주입 방지, 보안 리뷰 P2).
+  delete s.clearCard;
   if (snapshot) {
     const claims = (Array.isArray(serverSigilClaims) ? serverSigilClaims : []).filter((k) => typeof k === 'string');   // 의뢰 문장 수령 기록도 서버 값 그대로(재수령 차단)
     if (claims.length) s.sigilClaims = claims.slice(-16);

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ENEMIES, stageDef, CHAPTERS, recommendedPowerFor } from '../src/data/stages.js';
+import { ENEMIES, stageDef, CHAPTERS, recommendedPowerFor, CH1_REC_POWER_MUL } from '../src/data/stages.js';
 import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, campaignHpMul, CH1_RAMP, LATE_CHAPTER_ATK } from '../src/game/squads.js';
 import { Battle } from '../src/game/battle.js';
 import { towerStage } from '../src/game/endgame-core.js';
@@ -175,7 +175,14 @@ test('후반 곡선: 권장 전투력은 배율^0.7, 5장부터 캠페인 적 �
 test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력 ×1.15, 2장·원정·파티는 1', () => {
   expect(campaignAtkMul(stageDef(1, 1))).toBe(1); expect(campaignHpMul(stageDef(1, 1))).toBe(1);
   expect(campaignAtkMul(stageDef(1, 2))).toBe(1.8); expect(campaignAtkMul(stageDef(1, 10))).toBe(1.3);
-  for (let st = 2; st <= 10; st++) { expect(campaignHpMul(stageDef(1, st))).toBe(1.15); if (st > 2) expect(CH1_RAMP[st - 1].atk).toBeLessThan(CH1_RAMP[st - 2].atk); }
+  // 2026-10-29: 1장 체력은 ×1.15 에 권장 전투력 배율(CH1_REC_POWER_MUL)의 √ 를 곱한다. 1-2 가 가장 높고 1-10 쪽으로 줄어든다.
+  for (let st = 2; st <= 10; st++) {
+    expect(campaignHpMul(stageDef(1, st))).toBeCloseTo(1.15 * Math.sqrt(CH1_REC_POWER_MUL[st - 1]), 3);
+    expect(stageDef(1, st).recPower).toBe(Math.floor(recommendedPowerFor(stageDef(1, st).scale) * CH1_REC_POWER_MUL[st - 1]));
+    if (st > 2) { expect(CH1_RAMP[st - 1].atk).toBeLessThan(CH1_RAMP[st - 2].atk); expect(CH1_RAMP[st - 1].hp).toBeLessThan(CH1_RAMP[st - 2].hp); }
+  }
+  expect(stageDef(1, 1).recPower).toBe(recommendedPowerFor(1)); expect(stageDef(2, 1).recPower).toBe(recommendedPowerFor(stageDef(2, 1).scale));
+  expect(stageDef(1, 10).recPower).toBeLessThan(stageDef(2, 1).recPower);
   expect(campaignAtkMul(stageDef(2, 1))).toBe(1); expect(campaignHpMul(stageDef(2, 1))).toBe(1);
   expect(campaignHpMul(stageDef(5, 1))).toBe(1);
   expect(campaignAtkMul({ ...stageDef(1, 5), party: true })).toBe(1); expect(campaignHpMul({ ...stageDef(1, 5), expedition: true })).toBe(1);

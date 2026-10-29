@@ -5,7 +5,7 @@ import { ENCOUNTER_ART, MOB_ART, RIFT_ART, resolveEnemyPortrait } from '../src/d
 import { CAMPAIGN_MODELS } from '../src/data/encounter-models.js';
 import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
 import { BOSS_SIGNATURES } from '../src/data/boss-encounters.js';
-import { CHAPTERS, CHAPTER_SPECIES, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../src/data/stages.js';
+import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, chapterSpeciesSwap, stageDef } from '../src/data/stages.js';
 import { RIGS, rigOf } from '../src/data/rigs.js';
 import { buildCatalogue } from '../src/game/rpg-catalogue.js';
 import { Enemy } from '../src/game/enemies.js';
@@ -38,7 +38,7 @@ test('all campaign objectives, card/detail portraits and catalogue locations sel
     expect(stageKeyArt(stage)).toBe(actual.portrait ?? null); // 전용 초상이 아직 없는 지역(7장 Tripo 슬롯)은 키 아트가 없다.
     const roster = stage.rosterFor();
     // 1·2장 전용 종(CHAPTER_SPECIES)은 원래 적 자리에 실제로 나오므로 도감 출현 위치에 함께 잡힌다.
-    const swap = (CHAPTER_SPECIES as Record<number, Record<string, string>>)[stage.chapter.id] || {};
+    const swap = (chapterSpeciesSwap(stage.chapter.id, stage.dungeon.id) || {}) as Record<string, string>;
     const base = [...roster.trash, ...roster.ranged, ...roster.elite];
     const expected = [...new Set([...base, ...base.filter(e => swap[e]).map(e => swap[e]), id])].sort();
     const listed = catalogue.filter(entry => entry.locations.some((place: any) => place.code === stage.code)).map(entry => entry.id).sort();

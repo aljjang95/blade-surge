@@ -37,14 +37,14 @@ describe('다음 출격 안내', () => {
     expect(g.status).toBe('ready');
   });
   test('1-10 클리어(unlocked 11) → 2-1 새 지역, 권장 레벨 부족이면 under', () => {
-    const g = nextGuide({ unlocked: 11, stars: { '1-10': 3 } }, 15);
+    const g = nextGuide({ unlocked: 11, stars: { '1-10': 3 } }, recommendedLevel(2, 1) - 4);
     expect(g.stage.code).toBe('2-1');
     expect(g.stage.title).toBe(stageDef(2, 1).title);
     expect(g.newRegion).toBe(true);
     expect(g.chapterName).toBe(stageDef(2, 1).chapter.name);
     expect(g.recommendedLevel).toBe(recommendedLevel(2, 1));
     expect(g.status).toBe('under');
-    expect(g.levelGap).toBe(g.recommendedLevel - 15);
+    expect(g.levelGap).toBe(4);
   });
   test('장 중간 스테이지는 새 지역이 아니다', () => {
     expect(nextGuide({ unlocked: 15 }, 30).newRegion).toBe(false);

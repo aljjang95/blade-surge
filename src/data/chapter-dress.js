@@ -5,7 +5,7 @@
 // 소품 키는 src/game/chapter-dress.js PROP_BUILDERS 에 있다. 새 Tripo 몸이 오면 monster-roster.js 의 asset 만 바꾸고
 // 여기서 그 종의 소품을 빼면 된다(소품은 몸에 이미 있는 실루엣을 대신하던 것).
 
-import { DUNGEON_HOME } from './stages.js';
+import { DUNGEON_HOME, speciesStageOf } from './stages.js';
 
 /** @typedef {{ dark: string, light: string, hues: [number, number], mix: number, baseMix?: number }} DressRemap */
 /** @typedef {{ color?: string, amount?: number, emissive?: string, remap?: DressRemap, props?: string[] }} DressSpec */
@@ -93,6 +93,13 @@ export const CHAPTER_DRESS = Object.freeze({
       // 무덤 균사 잠행꾼 자리: 묘혈에서 솟는 원령 — 몸에 묘지 백합이 엉켜 있다.
       ch1_gravewisp: { emissive: '#12382f', props: ['graveLilies'] },
       ch1_mourner_dirge: { emissive: '#174a40', props: ['candleCrown'] },
+      // 소환 전용 1장 갈래(3차): 던전 대장·주술사가 부르는 졸병도 관꾼·원령 몸에 원래 종의 기척(종·혜성 빛·밤유리 베일·이끼·서리)을 남긴다.
+      ch1_mourner_bell: { emissive: '#1d5a4e', props: ['brokenBell'] },
+      ch1_mourner_comet: { color: '#a8c8f0', amount: 0.25, emissive: '#14284a' },
+      ch1_mourner_night: { emissive: '#16365a', props: ['mourningVeil'] },
+      ch1_hoodbearer_mirage: { ...GARDEN_BONE, color: '#b8a8d8', amount: 0.3, props: ['darkHood'] },
+      ch1_coffinbearer_moss: { ...GARDEN_BONE, color: '#7f9a72', amount: 0.35, props: ['mossCap'] },
+      ch1_tombguard_frost: { ...GARDEN_BONE, color: '#b8d4e8', amount: 0.3 },
       garden_finalboss: { ...GARDEN_BONE, emissive: '#0e2c25', props: ['bellCrown', 'brokenBellLarge'] },
     },
     // 관문 대장·수문장(던전 경로 보스)처럼 종 표에 없는 1장 적은 몸(asset) 기준으로 장 정체성을 입힌다.
@@ -142,6 +149,15 @@ export const CHAPTER_DRESS = Object.freeze({
       ch2_anvilguard: { ...FORGE_SKIN, props: ['anvilShield'] },
       ch2_ashimp: { ...FORGE_SKIN, props: ['emberCap'] },
       ch2_emberimp_bomb: { ...FORGE_SKIN, emissive: '#3a0a00', props: ['emberWick'] },
+      // 소환 전용 2장 갈래(3차): 꼬마 오크 자리 임프는 등에 망치, 사슬 주조공·서리 거울 자리 장인은 모루 방패, 해골 병사 자리는 앞치마 견습.
+      ch2_emberimp_hammer: { ...FORGE_SKIN, props: ['forgeHammerBack'] },
+      ch2_anvilguard_chain: { ...FORGE_SKIN, props: ['anvilShield', 'emberChains'] },
+      ch2_emberimp_haze: { ...FORGE_SKIN, color: '#e8b0a0', amount: 0.3 },
+      ch2_smith_apprentice: { ...FORGE_SKIN, props: ['smithApron'] },
+      ch2_emberimp_scribe: { ...FORGE_SKIN, props: ['openTome'] },
+      ch2_anvilguard_mirror: { ...FORGE_SKIN, color: '#9fb4c8', amount: 0.3, props: ['anvilShield'] },
+      ch2_emberimp_spark: { ...FORGE_SKIN, emissive: '#3a1400', props: ['emberCap'] },
+      ch2_anvilguard_star: { ...FORGE_SKIN, color: '#a8b8e0', amount: 0.25, emissive: '#0c1838', props: ['anvilShield'] },
       forge_finalboss: { ...FORGE_SKIN, emissive: '#2a0c02', props: ['crucibleCrown', 'emberChains'] },
     },
     assets: {
@@ -201,6 +217,14 @@ export const CHAPTER_DRESS = Object.freeze({
       // 금서는 로스터 weapon(tll_ch3_tome)으로 오른손에 든다. 사제 자리는 얼음 깃펜 관으로 구분한다.
       ch3_censor_tome: { emissive: '#16365a' },
       ch3_censor_quill: { emissive: '#16365a', props: ['iceQuillCrown'] },
+      // 소환 전용 3장 갈래(3차): 서고·역류·법정·합류·행렬 경로 대장과 서기관들이 부르는 졸병도 사서·검열관 몸.
+      ch3_censor_night: { emissive: '#1d4470', props: ['censorSeal'] },
+      ch3_shelfguard_mirror: { ...FROST_BONE },
+      ch3_librarian_shade: { ...FROST_BONE, color: '#b0a8d0', amount: 0.3, props: ['darkHood'] },
+      ch3_censor_comet: { emissive: '#1a3a6a' },
+      ch3_censor_bell: { emissive: '#16365a', props: ['brokenBell'] },
+      ch3_censor_astral: { emissive: '#24346a', props: ['frozenPages'] },
+      ch3_shelfguard_star: { ...FROST_BONE, emissive: '#0c1838' },
       frost_finalboss: { emissive: '#0a1c30', props: ['iceCrown', 'keyRing'] },
     },
     assets: {
@@ -263,10 +287,15 @@ export const CHAPTER_DRESS = Object.freeze({
       ch4_lurer: { emissive: '#021a1c' },
       // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
       ch4_lurer_bomb: { emissive: '#5a1206' },
-      // 심연 주시자 자리(지원 소환): 몸에 빛 주머니.
-      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouches'] },
+      // 심연 주시자 자리(지원 소환): 몸에 큰 빛 주머니(일반 아귀와 실루엣으로 갈리게 키웠다).
+      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouchesLarge'] },
       // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
       ch4_lurer_glim: { emissive: '#06302e' },
+      // 소환 전용 4장 갈래(3차): 합류·서고·법정 경로 대장이 부르는 졸병도 아귀·수부 몸.
+      ch4_lurer_comet: { emissive: '#06302e' },
+      ch4_lurer_night: { emissive: '#06302e', props: ['glowPouches'] },
+      ch4_plankguard_mirror: { emissive: '#021a1c', props: ['barnacles'] },
+      ch4_drowned_mist: { color: '#a8c0d0', amount: 0.3, emissive: '#06302e' },
       tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
     },
     assets: {
@@ -314,7 +343,34 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_bone_lord: { ...CROWN_SKIN, props: ['goldChains'] },
       elite_wraith: { ...CROWN_SKIN, props: ['crownRing'] },
       // 첫 기사 아스텔(중간 보스)·빈 왕관(최종 보스: 몸 위에 떠 있는 빈 금관).
-      crown_midboss: { ...CROWN_SKIN, props: ['hornCrown', 'swordWallShield', 'oathBanner'] },
+      // 아스텔은 Tripo 몸(tll_ch5_astel)의 큰 투구에 왕관이 붙어 있고 찢긴 왕실 깃발을 망토로 두르며 손에 맹세 대검을 들어(로스터 weapon)
+      // 뿔 왕관·성벽 검 방패·맹세 깃발 소품을 뺀다.
+      crown_midboss: { emissive: '#120a1c' },
+      // 5장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 새벽 보라·금이라 색을 장 팔레트 그대로 두고 발광만 준다.
+      // 닌자의 해 가면, 병사의 금관 투구, 주술사의 떠 있는 금빛 고리와 겹치는 소품(dawnMask·soldierCirclet·crownRing)은 뺀다.
+      ch5_dawnninja: { emissive: '#120a1c' },
+      // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로, 키는 작게(로스터 Ch5_DawnNinjaSquire), 등에 연습용 목검.
+      ch5_dawnninja_squire: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c', props: ['squireBokken'] },
+      // 심연 폭탄 자리: 자폭 경고 — 붉은 금 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
+      ch5_dawnninja_flare: { emissive: '#5a2206' },
+      ch5_crownsoldier: { emissive: '#120a1c' },
+      // 뼈 오크 자리(분쇄): 어두운 강철 몸빛(금 사슬 소품은 병사 몸에서 머리 위로 떠 보여 뺐다).
+      ch5_crownsoldier_chain: { color: '#5e5470', amount: 0.45, emissive: '#120a1c' },
+      // 성벽 검 방패는 로스터 offhand(tll_ch5_swordwall)로 왼손에 든다.
+      ch5_swordwall: { emissive: '#120a1c' },
+      ch5_seer: { emissive: '#120a1c' },
+      // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광과 머리 위로 솟은 화로 장대.
+      ch5_seer_ember: { color: '#f0b49a', amount: 0.25, emissive: '#4a1e06', props: ['dawnBrazier'] },
+      // 부족 주술사 자리(지원 소환): 칙령을 낭독하는 주술사 — 등에 맹세 깃발.
+      ch5_seer_herald: { emissive: '#120a1c', props: ['oathBanner'] },
+      // 소환 전용 5장 갈래(stages.js CHAPTER_SPECIES[5]): 던전 대장·주술사가 부르는 졸병도 5장 몸에 발광만.
+      // 신기루 닌자는 몸빛을 옅은 라일락으로 바래게, 종소리·혜성불 닌자는 불빛 발광으로 원래 종의 기척을 남긴다.
+      ch5_dawnninja_mirage: { color: '#c8b4e8', amount: 0.35, emissive: '#1c0e2c' },
+      ch5_dawnninja_called: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c', props: ['squireBokken'] },
+      ch5_crownsoldier_levy: { emissive: '#120a1c' },
+      ch5_crownsoldier_watch: { emissive: '#120a1c' },
+      ch5_dawnninja_wisp: { color: '#b8e8e0', amount: 0.3, emissive: '#0e3a34' },
+      ch5_dawnninja_spark: { color: '#a8c8f0', amount: 0.3, emissive: '#14284a' },
       crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
     },
     assets: {
@@ -334,14 +390,37 @@ export const CHAPTER_DRESS = Object.freeze({
       frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
-  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 따로 의상 표를 두지 않고, 그 경로의 고향 장 의상을
-  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스만 직접 정한다.
+  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 그 경로의 고향 장 의상(고향 장 전용 몸 포함)을
+  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스와 6장 전용 승객 갈래(ch6_*)만 직접 정한다.
   6: {
     name: '다섯 명령의 잔향',
     echo: true,
     species: {
       // 빈 의자의 증인: 상복 베일과 맹세 깃발. 고립의 잔향: 금 간 큰 종과 후광.
-      homecoming_midboss: { ...ECHO_SKIN, props: ['mourningVeil', 'oathBanner'] },
+      // 증인은 Tripo 몸(tll_ch6_witness)이 깊은 두건을 쓰고 등에 빈 의자를 져 상복 베일·맹세 깃발 소품을 뺀다.
+      homecoming_midboss: { emissive: ECHO_SKIN.emissive },
+      // 6장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[6]): 귀환 열차 승객 잔향. 밝은 잿빛 몸이 6장 청록 조명에서 하얗게 날아가
+      // 몸빛을 한 톤 눌러 주고 발광은 약하게(#0a2420) 둔다.
+      // 갈래는 몸빛(고향 지역의 흔적)과 손의 여행 가방(로스터 offhand)으로 나눈다. 나머지 자리는 고향 장 의상의 잔향(아래 echo 분기)이다.
+      ch6_passenger: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      // 원령 자리: 더 바래고 청록 발광이 조금 센 승객.
+      ch6_passenger_drift: { color: '#c8e4dc', amount: 0.2, emissive: '#16443c' },
+      // 해골 자객 자리: 서두르는 승객 — 어깨 위로 솟은 큰 회중시계(같은 맨손 몸의 다른 승객과 윤곽으로 갈린다).
+      ch6_passenger_hurry: { color: '#8a9896', amount: 0.35, emissive: '#0a2420', props: ['hurryClock'] },
+      ch6_passenger_child: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420' },
+      // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로, 등에 묶은 가방 두 개.
+      ch6_passenger_porter: { color: '#8c6a50', amount: 0.5, emissive: '#0a2420', props: ['luggagePack'] },
+      ch6_passenger_trunk: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      // 골렘 수호자 자리: 개찰구를 지키던 승객 — 푸른 철빛.
+      ch6_passenger_gate: { color: '#6a84a0', amount: 0.5, emissive: '#0a2420' },
+      // 4장 바닷길에서 돌아온 승객: 바닷물빛 몸에 어깨 따개비, 등에 엇갈려 멘 노와 둥근 부표.
+      ch6_passenger_tide: { color: '#4f8fa0', amount: 0.5, emissive: '#0a2420', props: ['barnacles', 'tideOar'] },
+      // 포자 괴물 자리: 이끼 낀 승객 — 머리를 덮는 넓은 버섯 갓과 늘어진 이끼.
+      ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420', props: ['mossCap'] },
+      // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛, 앞으로 내민 서리빛 장대 등.
+      ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420', props: ['lostLantern'] },
+      // 꼬마 오크 자리(6-3 주소 경로 소환·용광로 경로 일반 방) — 작은 승객, 등에 묶은 가방.
+      ch6_passenger_stray: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420', props: ['luggagePack'] },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},
@@ -364,8 +443,25 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_skel_captain: { ...BRASS_BONE, props: ['doorShield', 'clapperBack'] },
       elite_wraith: { ...BRASS_SPIRIT, props: ['spiritBell', 'spiritHalo'] },
       elite_bone_lord: { ...BRASS_BONE, props: ['brokenBellLarge'] },
+      // 7장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[7]): 몸이 이미 바랜 황동·석회 팔레트라 BRASS_* 재배치를 걸지 않고 발광·몸빛만 준다.
+      // 시민은 손에 타종 명부(로스터 offhand), 주술사는 굽쇠 지팡이(weapon)와 몸의 작은 종이 있어 bellLedger·tuningFork·spiritBell 소품은 뺀다.
+      ch7_citizen: { emissive: '#140f04' },
+      // 해골 자객 자리: 종소리에 늦어 뛰는 시민 — 먼지 낀 석회 몸빛, 뒤로 휘날리는 붉은 목도리(손에는 로스터 손종).
+      ch7_citizen_late: { color: '#b8b2a2', amount: 0.3, emissive: '#140f04', props: ['lateScarf'] },
+      ch7_citizen_ledger: { emissive: '#140f04' },
+      // 뼈 오크 자리(분쇄): 종루 짐꾼 — 그을린 청동 몸빛, 등에 종추와 가슴을 가로지른 밧줄 타래.
+      ch7_citizen_hauler: { color: '#9a7c52', amount: 0.4, emissive: '#140f04', props: ['clapperBack', 'haulerRope'] },
+      // 폭탄 슬라임 자리: 자폭 경고 — 그을린 황동 몸빛과 붉은 금 발광, 등에 불 붙은 종 폭약통(머리 위로 튀는 불꽃 윤곽).
+      ch7_citizen_fuse: { color: '#c89a5a', amount: 0.35, emissive: '#6a2a06', props: ['fuseKeg'] },
+      ch7_tuner: { emissive: '#140f04' },
+      // 해골 사제 자리(지원 소환): 명부를 낭송하는 주술사 — 따뜻한 황동 발광.
+      ch7_tuner_cantor: { color: '#e0c68c', amount: 0.25, emissive: '#2a1e08' },
+      // 해골 망령 자리: 불투명 몸에 옅은 석회빛, 발광을 조금 올린 울림 잔향 — 등 뒤 동심원 음파 고리.
+      ch7_tuner_echo: { color: '#d8d6c8', amount: 0.3, emissive: '#2a2210', props: ['echoRings'] },
+      // 원령 자리: 떠도는 조율사 — 앞으로 휜 장대 끝에 매단 풍경 셋.
+      ch7_tuner_drift: { color: '#c4cfc8', amount: 0.3, emissive: '#2a2210', props: ['driftChimes'] },
     },
-    // 종지기·오르벤·카델은 7장 전용 Tripo 몸이라 의상을 입히지 않는다.
+    // 종지기·오르벤·카델과 해골 시민·굽쇠 주술사 갈래는 7장 전용 Tripo 몸이라 BRASS 재배치를 입히지 않는다.
     assets: {
       bone_knight: { ...BRASS_BONE, props: ['bellLedger'] },
       void_wisp: { ...BRASS_SPIRIT, props: ['spiritBell'] },
@@ -381,21 +477,22 @@ const THEME_CHAPTER = Object.freeze({ garden: 1, forge: 2, frost: 3, tide: 4, cr
 const ECHO_GLOW = '#13403a';
 
 /**
- * 이 관문의 적에게 입힐 의상. 원정(전용 로스터·아트)은 제외한다.
- * @param {{ expedition?: unknown, ch?: number, chapter?: { id?: number }, dungeon?: { id?: string } } | null | undefined} stage
+ * 이 관문의 적에게 입힐 의상. 원정(전용 로스터·아트)은 제외한다 — 6장 심층 원정만 6장 몸·의상을 입는다(stages.js speciesStageOf).
+ * @param {{ expedition?: { depth?: string, [key: string]: unknown } | null, ch?: number, st?: number, chapter?: { id?: number }, dungeon?: { id?: string } | null } | null | undefined} stage
  * @param {string} species 런타임 적 id
  * @param {string | null | undefined} asset 실제 로드된 라이브러리 asset id
  * @returns {DressSpec | null}
  */
 export function chapterDressFor(stage, species, asset) {
-  if (!stage || stage.expedition) return null;
-  const ch = stage.chapter?.id ?? stage.ch;
+  const key = speciesStageOf(stage);
+  if (!key) return null;
+  const ch = key.chapterId;
   const table = CHAPTER_DRESS[ch];
   if (!table) return null;
   if (Object.hasOwn(table.species, species)) return table.species[species];
   if (table.echo) {
     // 잔향: 이 경로의 고향 장 의상(없으면 1~5장 중 먼저 찾은 것)에 귀환 청록 발광을 덧입힌다.
-    const home = THEME_CHAPTER[DUNGEON_HOME[stage.dungeon?.id]];
+    const home = THEME_CHAPTER[DUNGEON_HOME[key.dungeonId]];
     for (const c of [home, 1, 2, 3, 4, 5]) {
       const t = c && c !== ch ? CHAPTER_DRESS[c] : null;
       const spec = t && (Object.hasOwn(t.species, species) ? t.species[species] : asset && Object.hasOwn(t.assets, asset) ? t.assets[asset] : null);

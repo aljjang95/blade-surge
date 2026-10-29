@@ -19,6 +19,9 @@ export const CAMPAIGN_MODELS = {
   frost_midboss: 'Ch3_Ordin',
   // 4장 중간 보스: 등대지기 마렌(tll_ch4_maren, 장대 등롱).
   tide_midboss: 'Ch4_Maren',
+  // 5장 중간 보스: 첫 기사 아스텔(tll_ch5_astel, 맹세 대검). 6장 중간 보스: 빈 의자의 증인(tll_ch6_witness, 등에 빈 의자).
+  crown_midboss: 'Ch5_Astel',
+  homecoming_midboss: 'Ch6_Witness',
   garden_finalboss: 'Skeleton_BellKing',
   forge_finalboss: 'Big_KilnTyrant',
   frost_finalboss: 'Big_ArchiveMonarch',

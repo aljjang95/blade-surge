@@ -4,11 +4,16 @@ import { Floor } from '../src/game/world.js';
 import { ENEMIES, CHAPTERS, stageDef } from '../src/data/stages.js';
 import { levelExp } from '../src/data/heroes.js';
 import { grantCombatXp, monsterXp } from '../src/game/rpg-core.js';
+import { levelExperienceMultiplier, stageRecommendedLevel } from '../src/data/loot-tables.js';
 
-test('첫 원정 2000개 로스터의 성장은 각성 구간을 건너뛰지 않는다', () => {
+// 2026-10-29 입문 레벨 곡선(heroes.js EARLY_LEVEL_EXP): 1-1 첫 클리어는 Lv3 에서 끝난다(예전 곡선은 Lv3~5, 대표님 실기기 Lv1→5).
+// 판 안의 처치 EXP 만으로는 Lv2~3 이라 첫 판에 쓰는 기본 스킬은 둘까지다(skill-tree.js BASIC_SKILL_GATES 1·2·5).
+test('첫 원정 2000개 로스터: 처치 EXP 는 Lv2~3, 클리어 EXP 까지 받으면 정확히 Lv3', () => {
   const originalRandom = Math.random, stage = stageDef(1, 1);
   const game = { stage, rosterSize: Battle.prototype.rosterSize };
   const defs = ENEMIES as unknown as Record<string, { exp: number; hp: number }>;
+  const clearExp = (fullClear: boolean) => Math.floor((stage.rewards.exp + (fullClear ? Math.floor(stage.rewards.exp * .5) : 0))
+    * levelExperienceMultiplier(1, stageRecommendedLevel(stage, 1)));
   let minimum = 80, maximum = 1;
   try {
     for (let seed = 1; seed <= 2000; seed++) {
@@ -19,11 +24,16 @@ test('첫 원정 2000개 로스터의 성장은 각성 구간을 건너뛰지 �
         grantCombatXp(hero, monsterXp(defs[id], stage.scale), levelExp);
       }
       minimum = Math.min(minimum, hero.level); maximum = Math.max(maximum, hero.level);
-      expect(hero.level).toBeGreaterThanOrEqual(3);
-      expect(hero.level).toBeLessThanOrEqual(5);
+      expect(hero.level).toBeGreaterThanOrEqual(2);
+      expect(hero.level).toBeLessThanOrEqual(3);
+      for (const fullClear of [false, true]) {
+        const settled = { ...hero };
+        grantCombatXp(settled, clearExp(fullClear), levelExp);
+        expect(settled.level).toBe(3);
+      }
     }
   } finally { Math.random = originalRandom; }
-  expect(minimum).toBeGreaterThanOrEqual(3); expect(maximum).toBeLessThanOrEqual(5);
+  expect(minimum).toBeGreaterThanOrEqual(2); expect(maximum).toBeLessThanOrEqual(3);
 });
 
 test('관문 보스는 기존 첫 보스의 체력 기준과 계급별 증가를 유지한다', () => {
