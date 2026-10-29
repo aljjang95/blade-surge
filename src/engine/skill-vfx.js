@@ -116,6 +116,9 @@ let _seek = null;
 const LAYER_CAP = 60, LAYER_CAP_LITE = 28;
 // 표시 전용 난수. 전투·드랍의 Math.random 진행을 바꾸지 않는다.
 let seed = 0x2f6e2b1;
+/** 서명이 쓰는 인스턴스 층 API(mark·beam·_emit·rng)를 모두 갖춘 실제 ImpactVfx 인지. 일부만 흉내 낸 가짜 fx 에서는 서명을 건너뛴다. */
+export const impactReady = (impact) => !!impact && typeof impact.mark === 'function' && typeof impact.beam === 'function'
+  && typeof impact._emit === 'function' && !!impact.rng;
 const vfxRandom = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 
 /**
@@ -166,7 +169,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
       }
     }
     // 스킬 고유 모양 언어(광선·지면 표식·고리, 인스턴스 층). 동작 줄이기에서는 생략한다.
-    if (!reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
+    if (!reduced && impactReady(fx.impact) && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !r.noRune && !(r.mode === 'ground' && size >= 10)) {
