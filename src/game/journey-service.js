@@ -1,5 +1,5 @@
 import { heroItems } from './gear-vault.js';
-import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJourneyStep, claimContract, setTargetRecipe } from './journey-core.js';
+import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimContract, setTargetRecipe } from './journey-core.js';
 import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { contractBonus } from './rune-economy.js';
@@ -37,7 +37,8 @@ export class JourneyService {
     for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.app.eco.s[key] += r[key] || 0;
     return result;
   }
-  claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
+  /** 단계 수령은 Economy 명령(claimJourneyStep)이라 서버 권위 계정에서는 서버가 같은 판정·지급을 한다(docs/SERVER_AUTHORITY_GATES.md 4절). */
+  claimStep(id) { return this.transact(() => this.app.eco.claimJourneyStep(id)); }
   /** 무한의 성이 이번 주 상한에 닿았으면 탑 임무는 채울 방법이 없으므로 달성으로 본다. */
   waivers() { const t = this.app.eco.towerSummary?.(); return { waived: t?.unlocked && t.capped ? ['towerFloors'] : [] }; }
   /** 의뢰 표시·수령이 같은 옵션을 쓴다: 탑 상한 면제 + 이 저장에서 열린 던전(오늘의 원정지는 잠긴 곳을 가리키지 않는다). */

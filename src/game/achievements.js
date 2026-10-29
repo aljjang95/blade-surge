@@ -1,6 +1,7 @@
 // 업적(docs/RPG_ESSENTIALS.md E4). 평생 누적 목표를 단계별로 받는다. 진척은 저장에 이미 있는 값에서 읽어
 // 새 카운터·훅 없이 서버도 같은 판정을 한다. 단계는 차례로만 받을 수 있다(건너뛰기 없음).
 import { newbieStats } from './newbie-event.js';
+import { slainSpecies } from './kill-ledger.js';
 
 const f = Object.freeze;
 const a = (id, name, stat, tiers) => f({ id, name, stat, tiers: f(tiers.map(([target, rewards]) => f({ target, rewards: f(rewards) }))) });
@@ -14,6 +15,8 @@ export const ACHIEVEMENTS = f([
   a('faithful', '개근', 'attend', [[7, { gems: 50 }], [30, { gems: 100 }], [60, { tickets: 2 }], [100, { gems: 200 }], [180, { ssrTicket: 1 }]]),
   a('company', '동료 수집가', 'heroes', [[2, { gems: 50 }], [4, { tickets: 1 }], [6, { gems: 120 }], [9, { tickets: 2 }], [12, { gems: 250 }]]),
   a('wayfarer', '여정의 끝', 'steps', [[3, { gold: 20000 }], [6, { gems: 100 }]]),
+  // 몬스터 도감 수집 보상(감사 #9): 서버 처치 원장(slain)에서 1마리 이상 처치한 종 수. 기기 도감(rpg.bestiary)은 쓰지 않는다(docs/SERVER_AUTHORITY_GATES.md 5절).
+  a('hunter', '몬스터 사냥꾼', 'species', [[10, { gold: 15000 }], [25, { gems: 50 }], [50, { stones2: 10 }], [80, { gems: 120 }], [120, { stones3: 3 }]]),
 ]);
 const BY_ID = Object.fromEntries(ACHIEVEMENTS.map((x) => [x.id, x]));
 
@@ -25,7 +28,7 @@ export function normalizeAchievements(raw) {
   return { claimed };
 }
 
-export function achievementStats(save, ownedHeroCount = 0) { return { ...newbieStats(save), heroes: ownedHeroCount }; }
+export function achievementStats(save, ownedHeroCount = 0) { return { ...newbieStats(save), heroes: ownedHeroCount, species: slainSpecies(save) }; }
 
 export function achievementRows(state, stats) {
   const st = normalizeAchievements(state);

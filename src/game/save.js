@@ -11,6 +11,7 @@ import { normalizeNewbie } from './newbie-event.js';
 import { normalizeAchievements } from './achievements.js';
 import { normalizeRunes, normalizeBlessing, restoreSockets } from './rune-economy.js';
 import { normalizeClearCard } from './clear-loop.js';
+import { normalizeSlain } from './kill-ledger.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
 export function normalizeSave(raw, fresh) {
@@ -27,6 +28,8 @@ export function normalizeSave(raw, fresh) {
   save.idle = normalizeIdle(raw.idle, fresh.idle);
   save.newbie = normalizeNewbie(raw.newbie, fresh.newbie);
   save.achievements = normalizeAchievements(raw.achievements);
+  // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md). 도입 전 저장은 seeded:false — 기기 도감 기록은 전투 코드(로컬)나 가져오기(서버, 상한 검사)가 한 번 옮긴다.
+  save.slain = normalizeSlain(raw.slain);
   // 룬·전운(2026-10-24). 룬 도입 전 세이브는 네 가문 I 룬 1개씩을 한 번 받는다(giftClaimed).
   save.runes = normalizeRunes(raw.runes);
   save.blessing = normalizeBlessing(raw.blessing);

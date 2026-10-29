@@ -22,7 +22,9 @@ async function paidContext(c: Ctx, accountId: string, serverState?: Record<strin
     serverPaidGems: Number(serverState?.paidGems) || 0,
     // 진행도 바닥값: 서버 문서가 이미 가진 진행(서버 정산·이전 정화 결과). 가져오기 원본은 이보다 낮게는 깎이지 않는다.
     serverProgress: serverState?.progress as Record<string, unknown> | undefined, serverEndgame: serverState?.endgame as Record<string, unknown> | undefined, serverGearDex: serverState?.gearDex, serverLineageSigil: Number(serverState?.lineageSigil) || 0, serverSigilClaims: serverState?.sigilClaims,
-    serverIdle: serverState?.idle, serverNewbie: serverState?.newbie, serverAchievements: serverState?.achievements };
+    serverIdle: serverState?.idle, serverNewbie: serverState?.newbie, serverAchievements: serverState?.achievements,
+    // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md): 서버 값이 바닥이고, 이미 병합된(seeded) 종 원장은 서버 값만 쓴다.
+    serverSlain: serverState?.slain, serverKills: Number((serverState?.quests as Record<string, unknown> | undefined)?.kills) || 0, serverJourney: serverState?.journey };
   if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
   return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };

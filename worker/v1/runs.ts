@@ -106,13 +106,16 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (!isChapterOpen(at.ch, c.now)) fail(403, 'chapter-closed');
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
-  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed }, facts, check.verdict);
+  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed, wallMs: c.now - ticket.started_at,
+    // 처치 원장은 서버 권위 계정만: 그림자 계정은 클라이언트가 티켓을 쓰지 않아 정산이 직접 API 호출뿐이고, 그 값이 컷오버까지 남는다(Codex 보안 리뷰 PR #435).
+    killLedger: auth.account.authority === 'server' }, facts, check.verdict);
   // 결제 환불로 생긴 미상환 부채는 서버 정산 획득분에서 먼저 갚는다(같은 배치, 영수증에 상환량 표시).
   const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
   const next = docOf(eco);
   const state = check.verdict === 'rejected' ? 'rejected' : 'settled';
   const receipt = { receiptId: runId, verdict: check.verdict, issues: check.issues, win: !!facts.win && check.verdict !== 'rejected',
     got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, stars: outcome.stars ?? null, fullClear: outcome.fullClear ?? false, exp: outcome.exp, combatExp: outcome.combatExp,
+    killLedger: outcome.killLedger ?? { kills: 0, species: 0, dropped: 0 },
     rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION,
     ...(Object.keys(debt.repaid).length ? { debtRepaid: debt.repaid } : {}) };
   const writes: GuardedWrite[] = [
@@ -123,7 +126,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (check.verdict !== 'ok') writes.push({ sql: `INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) SELECT ?, ?, ?, ?, ?, ? WHERE ${REV_GUARD}`,
     values: [accountId, runId, 'settle-' + check.verdict, check.verdict === 'rejected' ? 2 : 1, JSON.stringify(check.issues), c.now] });
   const result = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot }, receipt },
+    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot, killLedger: outcome.killLedger ?? null }, receipt },
     projection: next.projection, writes });
   if (!result.ok) {
     if (result.reason === 'duplicate') {

@@ -383,10 +383,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-item img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
 .shop-item .si-name { font-weight: 900; font-size: 13px; }
 .shop-item .si-desc { font-size: 10px; color: var(--muted); line-height: 1.3; }
-.shop-item .si-bonus { font-size: 11px; color: var(--green); font-weight: 900; }
 .shop-item .btn { width: 100%; padding: 7px 4px; font-size: 13px; border-radius: 10px; margin-top: 4px; }
 .shop-item .badge { position: absolute; top: -6px; left: -4px; font-size: 9px; padding: 2px 7px; border-radius: 6px; background: var(--red); color: #fff; font-weight: 900; transform: rotate(-5deg); box-shadow: 0 2px 6px rgba(0,0,0,.5); }
-.shop-item .badge.first { background: var(--green); color: #052; }
 .shop-item .timer { font-size: 10px; color: var(--red); }
 .shop-item .sold { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--muted); }
 .avatar-shop-item { min-height: 178px; }
@@ -1057,7 +1055,6 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .shop-item img { width:40px; height:40px; }
   .avatar-shop-item > img { width:64px; height:64px; }
   .shop-item .si-desc { font-size:9px; }
-  .shop-item .si-bonus { font-size:10px; }
   .shop-item .btn { margin-top:2px; padding:4px 3px; font-size:11px; }
   .shop-item .badge { font-size:8px; }
 }
