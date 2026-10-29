@@ -805,7 +805,7 @@ export class Economy {
     const prevTarget = q.targetEnh;
     dst.enh = q.to; src.enh = 0;
     if (q.swapEquip) this.s.heroes[src.owner ?? this.s.selected].equip[ITEM_BY_ID[dst.id].slot] = dstUid;
-    this.s.quests.enh = (this.s.quests.enh || 0) + 1;
+    // 강화 시도 임무(quests.enh)는 세지 않는다: 전승은 강화 시도가 아니고, 서버 문서도 이 명령으로 임무 수치를 바꾸지 않게 둔다.
     this.emit();
     return { ok: true, from: q.from, to: q.to, loss: q.loss, prevTarget, gold: q.gold, stones: q.stones, stoneKey: q.stoneKey, scroll: q.scroll, equipped: q.swapEquip };
   }
