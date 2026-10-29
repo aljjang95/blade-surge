@@ -11,7 +11,7 @@ import ROGUE_T1S_MOTION from '../data/rogue-t1s-body-motion-v1.json';
 import ROGUE_T2U_MOTION from '../data/rogue-t2u-body-motion-v1.json';
 import RANGER_T1S_MOTION from '../data/ranger-t1s-body-motion-v1.json';
 import RANGER_T2U_MOTION from '../data/ranger-t2u-body-motion-v1.json';
-import ROGUE_VAMPIRE_MOTION from '../data/rogue-vampire-body-motion-v1.json';
+import ROGUE_VAMPIRE_MOTION from '../data/rogue-vampire-body-motion-v2.json';
 import RANGER_BLACKCAT_MOTION from '../data/ranger-blackcat-body-motion-v1.json';
 import ORIGINAL_DODGE_BAND from '../data/original-dodge-band-v1.json';
 import { higherBodyRevisions, rangerClipSource, rangerLibraryRevision, revisedLibraryFile, tierRebindBodyRevisions, validateHigherBodyRevisions } from './library-assets.js';

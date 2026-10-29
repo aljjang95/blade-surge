@@ -113,6 +113,10 @@
     {
       "path": "models/heroes-next/ranger-fox-body-fit-v1.glb",
       "reason": "여우 아바타 몸 v1 은 다리 가중치를 가른 v2(fox-body-revision-v2, FOX_BODY_REVISION_ID)가 대신한다. 기록 JSON 과 v2 저작 원본으로만 남는다."
+    },
+    {
+      "path": "models/heroes-next/rogue-vampire-body-fit-v1.glb",
+      "reason": "흡혈 백작 아바타 몸 v1 은 목·어깨 굳힘 경계를 푼 v2(t5-avatar-body-revisions 의 rogue-vampire-body-fit-v2)가 대신한다. 기록 JSON 으로만 남는다."
     }
   ],
   "channelExcludes": {
