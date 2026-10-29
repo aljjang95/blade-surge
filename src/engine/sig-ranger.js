@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
+import { screenSweep } from './sig-screen.js';
 
 /**
  * 스킬별 '모양 언어' 서명. castSkillVfx 가 레시피(바닥 룬·텍스처) 뒤에 한 번 부른다.
@@ -228,6 +229,8 @@ export const SIGNATURES = {
           impact.beam(_e, rotY(f, Math.PI + s * .7, _a2), 1.1 + i * .15, i ? c : JADE, { width: .22, fade: .42, delay: d + dd / SPEED });
         }
       }
+      // 화면 가로 진행(2차): 마지막 박자 화살이 지나는 자리마다 화면 가로 빗장(정면 카메라에서 쐐기·심이 영웅 위 좁은 띠로 몰린다).
+      if (i === 2) screenSweep(impact, ctx.fx?.camera, player.pos, f, AIM * .3, AIM * .8, { n: 3, speed: SPEED, half: 1.4, width: .18, delay: d, colors: [GOLD, LIME] });
       // 과녁 세 겹 고리(1.5·2.6·3.7m): 모두 같은 때(마지막 박자 + .8초) 사라지므로 1 → 2 → 3 겹으로 쌓인다. 가운데 빌보드 고리는 쓰지 않는다(백화).
       impact.mark(_b, c, { radius: 1.5 + i * 1.1, life: 1.05 - d, style: MARK_STYLE.thorn, angle: i * .6, delay: hit });
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9 + i * .3, i ? c : JADE, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: hit });
@@ -282,6 +285,9 @@ export const SIGNATURES = {
       impact._emit(IMPACT_KIND.streak, player.pos.x + f.x * d + _d.x * c * r, 1 + s * r, player.pos.z + f.z * d + _d.z * c * r, .42, j % 3 === 1 ? GOLD : j % 3 ? JADE : LIME, .36,
         { vx: -_d.x * s * 7 + f.x * 6, vy: c * 7, vz: -_d.z * s * 7 + f.z * 6, stretch: 1, grow: 1, delay: d / SPEED });
     }
+    // 화면 가로 진행(2차): 정면 카메라에서 앞으로 뻗는 드릴이 영웅 위 좁은 띠로 몰리므로, 첫 연발이 지나는 자리마다 화면 가로 빗장이 지그재그로 켜진다.
+    _b.copy(player.pos);
+    screenSweep(impact, ctx.fx?.camera, _b, f, 2 * k, END, { n: lite ? 3 : 5, speed: SPEED, half: 1.7, width: .2, colors: [LIME, GOLD, JADE] });
     for (let w = 0; w < 3; w++) {
       const t0 = w * .12;
       impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + w * .2, GOLD, .09, { angle: .3 + w * .6, grow: .5, delay: t0 });
