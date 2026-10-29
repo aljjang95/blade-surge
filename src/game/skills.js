@@ -389,7 +389,7 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = .22; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, hasTownSkillVariant(p, 'whirlwind', 'wide') ? 4.8 : 3.8, c.dmg, { kb: 2.5, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 2 === 0 });
-        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff5a1e, { size: 4.4, life: 0.22, tilt: -1.45 });
+        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff5a1e, { size: 3.4, life: 0.2, tilt: -1.45 }); // 4.4m 는 몸을 크림 고리로 덮었다(강화 레인)
         game.fx.burst(p.pos.clone().setY(1), 0xff6a20, { n: 5, speed: 6, size: 0.3 });
         barbWhirlTick(game, p.pos, i); // 광전사: 몸을 감는 불씨 도끼 호(판정 틱과 같은 순간)
         if (i % 3 === 0) game.fx.dustPuff(p.pos, { size: 3, life: 0.5 });
@@ -408,7 +408,7 @@ export const SKILLS = {
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
       // 시각: 13m 까지 퍼지던 충격파 세 겹·크기 8 폭발은 0.5초 뒤 화면 전체를 주황 덩어리로 덮었다(강화 레인). 충격 한 겹·작은 폭발로 줄이고 모양은 전방 균열 서명이 맡는다.
       [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { if (i === 0) game.fx.shockTex(center, 0xff7a2a, { r1: 4.5, life: 0.4 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
-      game.fx.explosion(center, { size: 3.5, color: 0xff9a50, life: 0.45 });
+      game.fx.explosion(center, { size: 2.4, color: 0xff7a30, life: 0.4 });
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 4, life: 0.9 });
       game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 20, speed: 12, size: 0.4, up: 1.5, grav: 20 });
       game.fx.light(center, 0xff8040, 14, 16, 0.5);
@@ -435,9 +435,9 @@ export const SKILLS = {
     cast(game, p, c) {
       const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
-      const orb = game.fx.orb(0xff5a20, 1.8); orb.position.copy(target).setY(16); game.scene.add(orb);
+      const orb = game.fx.orb(0xff5a20, 1.4); orb.position.copy(target).setY(16); game.scene.add(orb);
       const fall = 0.5; // 착탄 조준은 서명의 금빛 나침 표식(8m 붉은 마법진 대신)
-      game.fx.add(orb, fall, (k) => { orb.position.y = 16 * (1 - k * k); orb.children[1].scale.setScalar(7 * (1 + k)); game.fx.embers(orb.position, 0xff7a30, { n: 3, radius: 0.5, life: 0.5, rise: -2 }); });
+      game.fx.add(orb, fall, (k) => { orb.position.y = 16 * (1 - k * k); orb.children[1].scale.setScalar(Math.min(4.5, 2.6 * (1 + k))); /* 시각: 14m 후광은 카메라 가까이서 화면을 주황으로 덮었다 */ game.fx.embers(orb.position, 0xff7a30, { n: 3, radius: 0.5, life: 0.5, rise: -2 }); });
       // 낙하 중 진공
       let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
@@ -448,7 +448,7 @@ export const SKILLS = {
         game.fx.shockTex(target, 0xff6a20, { r1: 7, life: 0.5 }); // 3박 사방 균열은 서명이 그린다
         game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 30, speed: 16, size: 0.5, up: 1.4, grav: 18 });
         game.fx.dustPuff(target, { size: 6, life: 1.2 }); game.fx.embers(target, 0xff6020, { n: 30, radius: 5, life: 1.8, rise: 4 });
-        game.fx.light(target, 0xff6020, 20, 22, 1);
+        game.fx.light(target, 0xff6020, 9, 12, 0.6); // 시각: 20/22m 조명은 바닥 전체를 주황으로 물들였다
         game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.22, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.3, 0.6);
         audio.boom({ vol: 1, dur: 1.2, low: 40 }); audio.play('hit_mining', { vol: 1, rate: 0.5 }); audio.fire({ vol: 0.5, dur: 1.5 }); audio.vibe([100, 50, 150]);
       });

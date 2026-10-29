@@ -119,7 +119,7 @@ export function barbWhirlTick(game, pos, i) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || game.app?.reducedMotion?.matches) return 0;
   const lite = !!game.fx.lite, before = impact.spawned, R = 2.3, a0 = Math.PI / 2 - i * 1.5;
   // 회전 궤적 반 바퀴(시계 방향, 0.2초에 3.4라디안). 홀수 틱은 살짝 낮게 그어 두 겹 고리처럼 엇갈린다.
-  sweepArc(impact, pos, R + (i % 2) * .5, i % 2 ? .6 : .95, a0, 3.4, lite ? 3 : 5, 42, i % 2 ? FLAME : MOLTEN, { tail: 3.2, width: .13, dir: -1 });
+  sweepArc(impact, pos, R + (i % 2) * .5, i % 2 ? .6 : .95, a0, 3.4, lite ? 3 : 5, 42, i % 2 ? FLAME : MOLTEN, { tail: 4.5, width: .17, dir: -1 });
   // 날 끝 베기 자국(금빛, 작게): 크게 여러 장 겹치면 영웅을 덮는 옅은 기둥이 됐다.
   _d.set(-Math.sin(a0), 0, Math.cos(a0));
   impact._emit(IMPACT_KIND.cut, pos.x + Math.cos(a0) * R, .9, pos.z + Math.sin(a0) * R, 1.5, GOLD, .18, { angle: impact._screenAngle(_d), stretch: 1.3, grow: .8 });
@@ -187,8 +187,8 @@ export const SIGNATURES = {
   // (바깥 금빛 .4초, 안쪽 불꽃 .3초), 원심력으로 불똥이 바깥으로 튄다. 틱마다의 반 바퀴 궤적은 barbWhirlTick.
   whirlwind(ctx) {
     const { impact, player, lite } = ctx; const p = player.pos;
-    sweepArc(impact, p, 3.8, .3, 0, TAU, lite ? 6 : 12, 60, GOLD, { tail: 6, width: .1, dir: -1 });
-    sweepArc(impact, p, 2.4, 1.1, Math.PI, TAU, lite ? 4 : 8, 50, FLAME, { tail: 4, width: .15, dir: -1, delay: .04 });
+    sweepArc(impact, p, 3.8, .3, 0, TAU, lite ? 6 : 12, 60, GOLD, { tail: 9, width: .17, dir: -1 });
+    sweepArc(impact, p, 2.6, 1.1, Math.PI, TAU, lite ? 4 : 8, 50, FLAME, { tail: 6, width: .2, dir: -1, delay: .04 });
     sparks(impact, p, lite ? 5 : 10, 11, MOLTEN, { up: 3, life: .45, size: .22, y: .9 });
   },
   // 대지 분쇄: 내리찍은 자리(at)에 금빛 세로 도끼 자국 + 작은 충격 고리, 거기서 전방 부채(±26°)로 용암 균열 다섯 갈래가
@@ -197,7 +197,7 @@ export const SIGNATURES = {
     const { impact, at, f, lite } = ctx;
     impact._emit(IMPACT_KIND.cut, at.x, 1.4, at.z, 3, GOLD, .2, { angle: -Math.PI / 2 + .2, grow: .7 });
     impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 2.6, MOLTEN, .26, { grow: 1 });
-    runningFissures(impact, at, f, lite ? 3 : 5, 9.5, .45, EMBER, { speed: 28, lite });
+    runningFissures(impact, at, f, lite ? 3 : 5, 9.5, .45, EMBER, { speed: 28, width: .2, lite });
     // 뒤쪽 짧은 잔균열 세 갈래(내리찍은 반동).
     _b.copy(f).multiplyScalar(-1);
     runningFissures(impact, at, _b, lite ? 1 : 3, 2.6, .7, DEEP_EMBER, { speed: 28, width: .1, shards: false });
@@ -207,14 +207,14 @@ export const SIGNATURES = {
   // 몸을 따라 핥아 오르는 불꽃 혀 두 물결, 위로 떠오르는 영혼 불꽃. 바닥 원형 문양은 금빛 작은 고리 하나뿐.
   berserk(ctx) {
     const { impact, player, lite } = ctx; const p = player.pos;
-    const segs = lite ? 4 : 7, turns = 1.25, H = 5.2, R0 = 1.05;
+    const segs = lite ? 4 : 7, turns = 1.25, H = 5.4, R0 = 1.55;
     for (let s = 0; s < 2; s++) {
       for (let k = 0; k < segs; k++) {
         const t0 = k / segs, t1 = (k + 1) / segs, a0 = s * Math.PI + t0 * turns * TAU, a1 = s * Math.PI + t1 * turns * TAU;
         const r0 = R0 * (1 - t0 * .35), r1 = R0 * (1 - t1 * .35);
         _a.set(p.x + Math.cos(a0) * r0, .3 + t0 * H, p.z + Math.sin(a0) * r0);
         _b.set(p.x + Math.cos(a1) * r1 - _a.x, (t1 - t0) * H, p.z + Math.sin(a1) * r1 - _a.z);
-        impact.beam(_a, _b, _b.length(), s ? GOLD : FLAME, { speed: 26, tail: 2.2, width: s ? .1 : .14, delay: s * .06 + k * .045 });
+        impact.beam(_a, _b, _b.length(), s ? GOLD : FLAME, { speed: 26, tail: 3.6, width: s ? .14 : .2, delay: s * .06 + k * .045 });
       }
     }
     for (let w = 0; w < 2; w++) earthSpikes(impact, p, lite ? 3 : 6, .7, 1, w ? EMBER : CRIMSON, { delay: w * .2, h: 4.2, width: .3, out: .12, phase: w * .5, fade: .3 });
