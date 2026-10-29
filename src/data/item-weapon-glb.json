@@ -145,6 +145,18 @@
       }
     },
     {
+      "id": "w_phoenix",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_phoenix.glb",
+      "sha256": "68f3c9735bfeaaa7b3376cf16bc8dbde3e75fe4da8dfc3ea3bab39c34efc05e5",
+      "bytes": 678784,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "2beae90c-ed18-48ae-9bdc-ffe94cd53e8a",
+        "concept": "phoenix greatsword: very WIDE blade shaped like a large spread flame-feather wing with layered orange, yellow and red feathers and flame tongues at the sides, a golden phoenix bird emblem with red gem at the cross guard, brown wrapped grip, gold and red crystal spike pommel"
+      }
+    },
+    {
       "id": "w_rune",
       "form": "sword",
       "file": "/models/item-weapons/w_rune.glb",
