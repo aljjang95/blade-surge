@@ -165,3 +165,16 @@ test('고통 단계 감쇠가 카드 골드·재료에도 적용된다(교차 �
   a.dealClearCards(stage, 'knight', false, 'k', 0.35); b.dealClearCards(stage, 'knight', false, 'k', 1);
   expect(a.s.clearCard.cards).toEqual(b.s.clearCard.cards.map((c: any) => decayCard(c, 0.35)));
 });
+
+test('서버 정산: 의심 판정(soft)·방 0개 보고에는 카드를 주지 않는다(보안 리뷰 P2)', async () => {
+  const { applySettlement } = await import('../src/shared/settlement.js');
+  const facts = (rooms: number) => ({ win: true, elapsedMs: 600000, kills: { normal: 30, elite: 2, boss: 1 }, roomsCleared: rooms, hpLost: 0, revives: 0, damageDealt: 1000 });
+  const run = (rooms: number, verdict: string) => {
+    const base = fresh(); const core: any = EconomyCore.fromState(JSON.parse(JSON.stringify(base.snapshot?.() ?? base.s)), { now: () => T0, rng: createSeededRng(1), gachaRng: createSeededRng(2) });
+    applySettlement(core, stageDef(1, 1), { heroId: 'knight', lootSeed: 7 }, facts(rooms), verdict);
+    return core.s.clearCard;
+  };
+  expect(run(5, 'ok')?.cards).toHaveLength(3);
+  expect(run(0, 'ok')).toBeUndefined();
+  expect(run(5, 'soft')).toBeUndefined();
+});

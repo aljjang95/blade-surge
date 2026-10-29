@@ -205,6 +205,8 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
     const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),
       fieldFragments: half(loot.fragments), fieldLoot: items, fullClear: rating.fullClear,
+      // 클리어 카드(docs/CLEAR_LOOP.md)는 의심 판정(soft)·방을 하나도 깨지 않은 보고에는 주지 않는다(보안 리뷰: 가짜 승리로 카드 보상을 키우지 않게).
+      clearCards: verdict !== 'soft' && (facts.roomsCleared | 0) > 0,
     });
     return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear };
   } finally { eco.rng = previousRng; }
