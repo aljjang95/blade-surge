@@ -84,6 +84,9 @@ export const MONSTER_ROSTER = Object.freeze({
   // 등잔은 위 손잡이 고리를 쥐고 아래로 늘어뜨린다(발광 Glow 재질은 라이브러리 tllAuthored 로 유지된다).
   Ch2_EmberImp: { asset: 'tll_ch2_emberimp', fallback: 'goblin_raider', scale: 1.2, fallbackScale: 1.07,
     weapon: { asset: 'tll_ch2_lantern', hand: 'right', grip: [0, 0.28, 0], at: [0, 0.05, 0.01], rot: [0, 0, 180] } },
+  // 혼령 자리 임프(던전 대장의 혜성 불씨·밤유리 서기관, 원본 def.scale 1.25): 같은 등잔 임프를 1.0 자리와 같은 키로 맞춘다.
+  Ch2_EmberImpSpirit: { asset: 'tll_ch2_emberimp', fallback: 'goblin_raider', scale: 0.96, fallbackScale: 0.86,
+    weapon: { asset: 'tll_ch2_lantern', hand: 'right', grip: [0, 0.28, 0], at: [0, 0.05, 0.01], rot: [0, 0, 180] } },
   Ch2_Igran: { asset: 'tll_ch2_igran', fallback: 'goblin_brute', scale: 0.75, fallbackScale: 0.77,
     weapon: { asset: 'tll_ch2_anvil_hammer', hand: 'right', grip: [0, 0.3, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] } },
   // ---- 3장 전용 Tripo 몸(2026-10-28, docs/asset-library/ch3-tripo.md) ----
