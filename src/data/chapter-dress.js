@@ -321,17 +321,17 @@ export const CHAPTER_DRESS = Object.freeze({
       // 닌자의 해 가면, 병사의 금관 투구, 주술사의 떠 있는 금빛 고리와 겹치는 소품(dawnMask·soldierCirclet·crownRing)은 뺀다.
       ch5_dawnninja: { emissive: '#120a1c' },
       // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로.
-      ch5_dawnninja_squire: { color: '#b8a6d6', amount: 0.3, emissive: '#120a1c' },
+      ch5_dawnninja_squire: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c' },
       // 심연 폭탄 자리: 자폭 경고 — 붉은 금 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
       ch5_dawnninja_flare: { emissive: '#5a2206' },
       ch5_crownsoldier: { emissive: '#120a1c' },
-      // 뼈 오크 자리(분쇄): 어두운 강철 몸빛에 금 사슬.
-      ch5_crownsoldier_chain: { color: '#7d6f94', amount: 0.3, emissive: '#120a1c', props: ['goldChains'] },
+      // 뼈 오크 자리(분쇄): 어두운 강철 몸빛(금 사슬 소품은 병사 몸에서 머리 위로 떠 보여 뺐다).
+      ch5_crownsoldier_chain: { color: '#5e5470', amount: 0.45, emissive: '#120a1c' },
       // 성벽 검 방패는 로스터 offhand(tll_ch5_swordwall)로 왼손에 든다.
       ch5_swordwall: { emissive: '#120a1c' },
       ch5_seer: { emissive: '#120a1c' },
       // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광.
-      ch5_seer_ember: { emissive: '#3a1a04' },
+      ch5_seer_ember: { color: '#f0b49a', amount: 0.25, emissive: '#4a1e06' },
       // 부족 주술사 자리(지원 소환): 칙령을 낭독하는 주술사 — 등에 맹세 깃발.
       ch5_seer_herald: { emissive: '#120a1c', props: ['oathBanner'] },
       crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
@@ -362,24 +362,25 @@ export const CHAPTER_DRESS = Object.freeze({
       // 빈 의자의 증인: 상복 베일과 맹세 깃발. 고립의 잔향: 금 간 큰 종과 후광.
       // 증인은 Tripo 몸(tll_ch6_witness)이 깊은 두건을 쓰고 등에 빈 의자를 져 상복 베일·맹세 깃발 소품을 뺀다.
       homecoming_midboss: { emissive: ECHO_SKIN.emissive },
-      // 6장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[6]): 귀환 열차 승객 잔향. 몸이 이미 잿빛·청록이라 귀환 청록 발광만 주고,
+      // 6장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[6]): 귀환 열차 승객 잔향. 밝은 잿빛 몸이 6장 청록 조명에서 하얗게 날아가
+      // 몸빛을 한 톤 눌러 주고 발광은 약하게(#0a2420) 둔다.
       // 갈래는 몸빛(고향 지역의 흔적)과 손의 여행 가방(로스터 offhand)으로 나눈다. 나머지 자리는 고향 장 의상의 잔향(아래 echo 분기)이다.
-      ch6_passenger: { emissive: '#13403a' },
+      ch6_passenger: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
       // 원령 자리: 더 바래고 청록 발광이 조금 센 승객.
-      ch6_passenger_drift: { color: '#d6ece6', amount: 0.3, emissive: '#1a5048' },
-      ch6_passenger_hurry: { emissive: '#13403a' },
-      ch6_passenger_child: { color: '#c4d6d0', amount: 0.2, emissive: '#13403a' },
+      ch6_passenger_drift: { color: '#c8e4dc', amount: 0.2, emissive: '#16443c' },
+      ch6_passenger_hurry: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      ch6_passenger_child: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420' },
       // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로.
-      ch6_passenger_porter: { color: '#a08670', amount: 0.3, emissive: '#13403a' },
-      ch6_passenger_trunk: { emissive: '#13403a' },
+      ch6_passenger_porter: { color: '#8c6a50', amount: 0.5, emissive: '#0a2420' },
+      ch6_passenger_trunk: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
       // 골렘 수호자 자리: 개찰구를 지키던 승객 — 푸른 철빛.
-      ch6_passenger_gate: { color: '#8ea4b4', amount: 0.3, emissive: '#13403a' },
-      // 4장 바닷길에서 돌아온 승객: 물빛 몸에 머리 따개비.
-      ch6_passenger_tide: { color: '#8cc4cc', amount: 0.3, emissive: '#13403a', props: ['barnaclesTop'] },
+      ch6_passenger_gate: { color: '#6a84a0', amount: 0.5, emissive: '#0a2420' },
+      // 4장 바닷길에서 돌아온 승객: 바닷물빛 몸에 어깨 따개비.
+      ch6_passenger_tide: { color: '#4f8fa0', amount: 0.5, emissive: '#0a2420', props: ['barnacles'] },
       // 포자 괴물 자리: 이끼 낀 승객.
-      ch6_passenger_moss: { color: '#94b48e', amount: 0.32, emissive: '#13403a' },
+      ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420' },
       // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛.
-      ch6_passenger_lost: { color: '#c4d8ee', amount: 0.3, emissive: '#13403a' },
+      ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420' },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},
