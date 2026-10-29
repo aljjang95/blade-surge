@@ -51,6 +51,7 @@ import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
 import { NewsView } from './ui/news.js';
 import { setupAccount } from './net/account.js';
+import { setupLogin } from './ui/login-sheet.js';
 import { setupBilling } from './platform/billing-service.js';
 import { setupFunnelUpload } from './net/funnel-upload.js';
 import './ui/mobile-combat.css';
@@ -263,6 +264,7 @@ class App {
     this.experienceView = new ExperienceView(this);
     // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
     await setupAccount(this).catch(() => null);
+    void setupLogin(this).catch(() => null); // 콜백 복귀 처리·첫 로그인 시트·설정 계정 진입점
     setupBilling(this); setupFunnelUpload(this); // 서버 검증 결제·가입 퍼널 업로드(v1이 닫혀 있으면 아무 것도 바뀌지 않는다)
     setupCommunity(this);
     this.news = new NewsView(this); // 공지·패치노트·개발 노트(content/news). 로비 메뉴의 '소식'
