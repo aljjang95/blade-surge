@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { EliteAffixes } from './elite-affixes.js';
-import { speciesSourceId } from '../data/stages.js';
+import { ENEMIES, speciesSourceId } from '../data/stages.js';
 
 export const REGION_TRAITS = {
   garden: { id: 'echo', name: '망각의 잔향', hint: '평타로 쓰러진 해골은 한 번 다시 일어납니다. 마무리 타격·스킬로 뼈를 부수세요.' },
@@ -23,8 +23,14 @@ export const REGION_SPECIES_VERBS = {
   tide: { squidle: { key: 'tether', name: '촉수 낚아채기' } },
   crown: { ninja: { key: 'blink', name: '그림자 걸음' } },
 };
-// 1장 전용 Tripo 몸(Ch1_*), 3장 해골 사서 몸, 6장 승객 잔향도 망각의 잔향으로 되살아난다(6장 귀환로는 정원 테마라 이 특성이 켜진다).
-export const SKELETAL = /^Skeleton_|Skull|^Ch1_|^Ch3_(Librarian|ShelfGuard)|^Ch6_Passenger/;
+// 1장 전용 Tripo 몸(Ch1_*)도 언데드라 망각의 잔향으로 되살아난다.
+export const SKELETAL = /^Skeleton_|Skull|^Ch1_/;
+// 다른 장의 Tripo 몸 갈래(3장 사서·6장 승객 등)는 몸이 아니라 원본 종이 해골일 때만 되살아난다 — 교체 전과 같은 적만 부활한다.
+export function isSkeletalSpecies(model, speciesId) {
+  if (SKELETAL.test(model || '')) return true;
+  const src = speciesId ? speciesSourceId(speciesId) : null;
+  return !!(src && src !== speciesId && SKELETAL.test(ENEMIES[src]?.model || ''));
+}
 const POOLS = 12;
 const _v = new THREE.Vector3();
 
@@ -85,7 +91,7 @@ export class RegionTraits {
   onDeath(e, flair) {
     if (!this.trait || e.isBoss) return;
     const g = this.game, id = this.trait.id;
-    if (id === 'echo' && !flair && !e.echoed && !e.summoned && !e.isElite && SKELETAL.test(e.def.model || '')) {
+    if (id === 'echo' && !flair && !e.echoed && !e.summoned && !e.isElite && isSkeletalSpecies(e.def.model, e.runtimeSpeciesId)) {
       const room = e.homeRoom, type = e.runtimeSpeciesId, x = e.pos.x, z = e.pos.z;
       if (!room || !type) return;
       room.spawnsDue = (room.spawnsDue || 0) + 1;
