@@ -1,14 +1,14 @@
 /* 클리어 결과 화면: 보상 카드 3장 · 요약 칩 · 즉석 정비소 · 수리. 마크업은 index.html #result, 동작은 clear-loop.js.
    연출은 transform/opacity 만 움직인다. 기준 844×390, 640×360·1280×720 도 같은 규칙. 터치 44px, 글자 11px 이상, 전폭 버튼 없음. */
-#result.has-clear { --cl-card-h: clamp(132px, 45vh, 192px); }
+#result.has-clear { --cl-card-h: clamp(124px, 39vh, 190px); }
 #result.has-clear .result-box { width: min(94vw, 780px); }
 #result.has-clear #result-loot-details, #result.has-clear .result-scroll > .exp-row { display: none !important; }
 #result.has-clear .result-scroll > .result-title { order: 0; font-size: 34px; }
 #result.has-clear .result-scroll > .stars { order: 1; }
-#result.has-clear .result-scroll > .result-endless { order: 2; }
-#result.has-clear .result-scroll > .result-stats { order: 3; }
-#result.has-clear .result-scroll > .cl-cards { order: 4; }
-#result.has-clear .result-scroll > .cl-chips { order: 5; }
+#result.has-clear .result-scroll > .result-stats { order: 2; }
+#result.has-clear .result-scroll > .cl-cards { order: 3; }
+#result.has-clear .result-scroll > .cl-chips { order: 4; }
+#result.has-clear .result-scroll > .result-endless { order: 5; }
 #result.has-clear .result-scroll > .result-growth { order: 6; }
 #result.has-clear .result-scroll > .cl-shop { order: 7; }
 #result.has-clear .result-scroll > details { order: 8; }
@@ -21,7 +21,7 @@
   --tc: #9aa3ab; --tg: rgba(170, 180, 190, .35); --tbg: #232a31;
   position: relative; isolation: isolate; display: block; width: calc(var(--cl-card-h) * .79); height: var(--cl-card-h); padding: 0; margin: 0;
   border: 0; background: none; color: #f4efe6; cursor: pointer; font: inherit; text-align: center; -webkit-tap-highlight-color: transparent;
-  transition: transform .4s cubic-bezier(.2, 1.3, .3, 1), opacity .35s ease; animation: clIn .42s cubic-bezier(.2, 1.2, .3, 1) both; animation-delay: calc((var(--d, .5s) - .5s) * .4);
+  transition: transform .4s cubic-bezier(.2, 1.3, .3, 1), opacity .35s ease; animation: clIn .42s cubic-bezier(.2, 1.2, .3, 1) backwards; animation-delay: calc((var(--d, .5s) - .5s) * .4);
 }
 .cl-card.cl-rare { --tc: #4aa8ff; --tg: rgba(74, 168, 255, .55); --tbg: #14304f; }
 .cl-card.cl-epic { --tc: #b377ff; --tg: rgba(179, 119, 255, .6); --tbg: #2d1a52; }
@@ -39,13 +39,13 @@
 .cl-front {
   transform: rotateY(180deg); border: 3px solid var(--tc); background: radial-gradient(circle at 50% 28%, rgba(255, 255, 255, .16), transparent 58%), linear-gradient(180deg, var(--tbg), #0f0e1a);
   box-shadow: 0 0 14px var(--tg), 0 4px 0 rgba(0, 0, 0, .45), inset 0 0 16px var(--tg);
-  display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 2px; padding: 6px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 1px; padding: 4px 4px;
 }
 .cl-tier { font-size: 11px; line-height: 14px; font-weight: 900; letter-spacing: .12em; color: var(--tc); text-shadow: 0 0 6px var(--tg); }
-.cl-ico { display: grid; place-items: center; width: clamp(40px, 15vh, 66px); height: clamp(40px, 15vh, 66px); }
+.cl-ico { display: grid; place-items: center; width: clamp(36px, 13.5vh, 64px); height: clamp(36px, 13.5vh, 64px); }
 .cl-ico img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .6)); }
 .cl-name { font-size: 14px; line-height: 17px; font-weight: 900; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cl-val { font-size: 13px; line-height: 16px; font-weight: 800; color: #ffe29a; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-val { font-size: 13px; line-height: 15px; font-weight: 800; color: #ffe29a; max-width: 100%; overflow: hidden; text-wrap: balance; overflow-wrap: anywhere; }
 .cl-extra { font-size: 11px; line-height: 14px; font-weight: 800; color: #8dffb4; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cl-extra.cl-owner { color: #ffd070; }
 .cl-shine { position: absolute; top: 0; bottom: 0; left: 0; width: 55%; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 20%, rgba(255, 240, 170, .5) 50%, transparent 80%); transform: translateX(-130%); }
@@ -148,9 +148,13 @@
   :root:root #result.has-clear .result-box { width: min(94vw, 760px); }
   :root:root #result.has-clear .result-box > .result-scroll {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3px 12px;
-    grid-template-areas: 'title stars' 'stats endless' 'cards cards' 'chips chips' 'growth growth' 'shop shop' 'story story' 'ad ad';
+    grid-template-areas: 'title stars' 'stats stats' 'cards cards' 'chips chips' 'endless endless' 'growth growth' 'shop shop' 'story story' 'ad ad';
   }
-  :root:root #result.has-clear .result-scroll > .result-title { font-size: 26px; }
+  :root:root #result.has-clear .result-scroll > .result-title { font-size: 24px; }
+  :root:root #result.has-clear .result-scroll > .result-stats { min-height: 20px; }
+  /* 성장 준비 줄은 전폭 버튼 대신 두 칸, 작은 글자는 11px 이상 */
+  :root:root #result.has-clear .growth-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :root:root #result.has-clear .next-guide-detail, :root:root #result.has-clear .campaign-eyebrow { font-size: 11px; }
   :root:root #result.has-clear .result-scroll > .cl-cards { grid-area: cards; }
   :root:root #result.has-clear .result-scroll > .cl-chips { grid-area: chips; }
   :root:root #result.has-clear .result-scroll > .cl-shop { grid-area: shop; margin-top: 4px; }
