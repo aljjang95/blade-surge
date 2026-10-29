@@ -53,6 +53,9 @@ try {
       const app = window.app; app.testPause = true; const b = app.battle; b.player.auto = false;
       window.__stage = () => {
         const p = b.player; p.yaw = Math.PI; p.mp = p.maxMp; p.cds?.fill?.(0); p.ult = p.ultMax; p.invuln = 1e9; p.hp = p.maxHp;
+        // 각성 스킬(슬롯 4~7)도 찍도록 레벨·습득을 연다(갤러리 전용, 저장하지 않는다). 앞 스킬이 길면 다음 시전이 막히므로 시전 상태를 끝낸다.
+        p.heroLevel = Math.max(p.heroLevel || 1, 99); if (Array.isArray(p.skillLevels)) p.skillLevels = p.skillLevels.map(v => Math.max(v || 0, 1)); else p.skillLevels = Array(8).fill(1);
+        if (p.skillCtx) p.skillCtx.done = true; if (p.state === 'skill' || p.state === 'ult') p.state = 'idle';
         // 적이 생길 때까지 진행한 뒤 4마리를 영웅 앞 고정 자리로 옮긴다.
         if (!window.__foeType) window.__foeType = Object.keys(window.__EN).find(k => { const d = window.__EN[k]; return d && !d.boss && app.models?.[d.model] && (d.scale || 1) <= 1.2; });
         for (let k = b.enemies.filter(e => e.alive).length; k < 4 && window.__foeType; k++) b.spawnEnemy(window.__foeType, p.pos);
