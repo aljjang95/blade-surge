@@ -1,0 +1,30 @@
+{
+ "id": "tll_ch5_seer",
+ "workspace_task_id": "52df39e2-3a8b-431d-81f1-b1aa103ae537",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, stylized chunky chibi, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: deep dawn violet and royal purple, with glowing gold #ffd27a accent points. No religious symbols, no crosses. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: a crown-ring sorcerer: a hooded abyssal sorcerer in a deep violet long-sleeved wide-sleeve robe with gold embroidery, the face hidden in deep hood shadow with two glowing gold #ffd27a eyes, a thin glowing golden crown ring of light floating above the head, a small glowing gold orb hovering just above the open right palm (part of the body, no staff), pale thin hands.",
+ "image_refs": [
+  "skeleton_mage.gpt-image-2.5.png (asset-library/concepts, origin/main)",
+  "tll_ch1_coffinbearer front render (asset-library/normalized, origin/main)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), Ultra Mesh Quality on, generation texture 2K, PBR off (price 40); export texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0, target 11000",
+ "retopo_tris": 10575,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "bones_note": "rigged.fbx = 65 Mixamo joints (verified by Blender FBX import); rigged.glb export from Tripo now omits end/leaf joints (glb bones: 52)",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch5/tll_ch5_seer/raw.glb"
+}
