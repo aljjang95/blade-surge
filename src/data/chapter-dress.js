@@ -314,7 +314,26 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_bone_lord: { ...CROWN_SKIN, props: ['goldChains'] },
       elite_wraith: { ...CROWN_SKIN, props: ['crownRing'] },
       // 첫 기사 아스텔(중간 보스)·빈 왕관(최종 보스: 몸 위에 떠 있는 빈 금관).
-      crown_midboss: { ...CROWN_SKIN, props: ['hornCrown', 'swordWallShield', 'oathBanner'] },
+      // 아스텔은 Tripo 몸(tll_ch5_astel)의 큰 투구에 왕관이 붙어 있고 찢긴 왕실 깃발을 망토로 두르며 손에 맹세 대검을 들어(로스터 weapon)
+      // 뿔 왕관·성벽 검 방패·맹세 깃발 소품을 뺀다.
+      crown_midboss: { emissive: '#120a1c' },
+      // 5장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 새벽 보라·금이라 색을 장 팔레트 그대로 두고 발광만 준다.
+      // 닌자의 해 가면, 병사의 금관 투구, 주술사의 떠 있는 금빛 고리와 겹치는 소품(dawnMask·soldierCirclet·crownRing)은 뺀다.
+      ch5_dawnninja: { emissive: '#120a1c' },
+      // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로.
+      ch5_dawnninja_squire: { color: '#b8a6d6', amount: 0.3, emissive: '#120a1c' },
+      // 심연 폭탄 자리: 자폭 경고 — 붉은 금 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
+      ch5_dawnninja_flare: { emissive: '#5a2206' },
+      ch5_crownsoldier: { emissive: '#120a1c' },
+      // 뼈 오크 자리(분쇄): 어두운 강철 몸빛에 금 사슬.
+      ch5_crownsoldier_chain: { color: '#7d6f94', amount: 0.3, emissive: '#120a1c', props: ['goldChains'] },
+      // 성벽 검 방패는 로스터 offhand(tll_ch5_swordwall)로 왼손에 든다.
+      ch5_swordwall: { emissive: '#120a1c' },
+      ch5_seer: { emissive: '#120a1c' },
+      // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광.
+      ch5_seer_ember: { emissive: '#3a1a04' },
+      // 부족 주술사 자리(지원 소환): 칙령을 낭독하는 주술사 — 등에 맹세 깃발.
+      ch5_seer_herald: { emissive: '#120a1c', props: ['oathBanner'] },
       crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
     },
     assets: {
@@ -334,14 +353,33 @@ export const CHAPTER_DRESS = Object.freeze({
       frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
-  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 따로 의상 표를 두지 않고, 그 경로의 고향 장 의상을
-  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스만 직접 정한다.
+  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 그 경로의 고향 장 의상(고향 장 전용 몸 포함)을
+  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스와 6장 전용 승객 갈래(ch6_*)만 직접 정한다.
   6: {
     name: '다섯 명령의 잔향',
     echo: true,
     species: {
       // 빈 의자의 증인: 상복 베일과 맹세 깃발. 고립의 잔향: 금 간 큰 종과 후광.
-      homecoming_midboss: { ...ECHO_SKIN, props: ['mourningVeil', 'oathBanner'] },
+      // 증인은 Tripo 몸(tll_ch6_witness)이 깊은 두건을 쓰고 등에 빈 의자를 져 상복 베일·맹세 깃발 소품을 뺀다.
+      homecoming_midboss: { emissive: ECHO_SKIN.emissive },
+      // 6장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[6]): 귀환 열차 승객 잔향. 몸이 이미 잿빛·청록이라 귀환 청록 발광만 주고,
+      // 갈래는 몸빛(고향 지역의 흔적)과 손의 여행 가방(로스터 offhand)으로 나눈다. 나머지 자리는 고향 장 의상의 잔향(아래 echo 분기)이다.
+      ch6_passenger: { emissive: '#13403a' },
+      // 원령 자리: 더 바래고 청록 발광이 조금 센 승객.
+      ch6_passenger_drift: { color: '#d6ece6', amount: 0.3, emissive: '#1a5048' },
+      ch6_passenger_hurry: { emissive: '#13403a' },
+      ch6_passenger_child: { color: '#c4d6d0', amount: 0.2, emissive: '#13403a' },
+      // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로.
+      ch6_passenger_porter: { color: '#a08670', amount: 0.3, emissive: '#13403a' },
+      ch6_passenger_trunk: { emissive: '#13403a' },
+      // 골렘 수호자 자리: 개찰구를 지키던 승객 — 푸른 철빛.
+      ch6_passenger_gate: { color: '#8ea4b4', amount: 0.3, emissive: '#13403a' },
+      // 4장 바닷길에서 돌아온 승객: 물빛 몸에 머리 따개비.
+      ch6_passenger_tide: { color: '#8cc4cc', amount: 0.3, emissive: '#13403a', props: ['barnaclesTop'] },
+      // 포자 괴물 자리: 이끼 낀 승객.
+      ch6_passenger_moss: { color: '#94b48e', amount: 0.32, emissive: '#13403a' },
+      // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛.
+      ch6_passenger_lost: { color: '#c4d8ee', amount: 0.3, emissive: '#13403a' },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},
