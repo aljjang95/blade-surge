@@ -29,6 +29,7 @@ import './combo-feedback.css';
 import './skill-feedback.css';
 import { itemIconHtml } from './item-presentation.js';
 import { currentRewardAction, openRewardTarget } from './reward-next.js';
+import { ClearLoop } from './clear-loop.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -304,10 +305,20 @@ export class UI {
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; if (on) this.bag?.close(); b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
-  toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
+  toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); if (this.el.result.classList.contains('show')) { this.placeResultToasts(); setTimeout(() => { if (this.el.result.classList.contains('show')) this.placeResultToasts(); }, 600); } }
+  /** 세로 결과 화면: 알림 띠를 VICTORY·카드 위가 아니라 바닥 행동 줄(소환 권유·로비/다시/다음) 바로 위 가장자리에 둔다.
+   *  행동 줄 높이가 상황마다 달라 알림이 생길 때 재고, 결과 상자 등장 애니메이션(0.5초)·소환 권유가 늦게 붙는 경우를 위해 0.6초 뒤 한 번 더 잰다(가로는 density-result.css 고정 규칙). */
+  placeResultToasts() {
+    const layer = this.el.toast, box = this.el.result;
+    if (!layer?.style || typeof box?.querySelectorAll !== 'function' || !globalThis.matchMedia?.('(orientation: portrait)').matches) { layer?.style?.removeProperty?.('--result-toast-bottom'); return; }
+    const tops = [...box.querySelectorAll('.result-use:not([hidden]), .result-btns')].map((el) => el.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.top);
+    if (!tops.length) { layer.style.removeProperty('--result-toast-bottom'); return; }
+    layer.style.setProperty('--result-toast-bottom', Math.max(8, Math.round(innerHeight - Math.min(...tops) + 6)) + 'px');
+  }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
   /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
+  clearLoopOf() { return this._clearLoop ||= new ClearLoop(this); }
   lootHeroId() { return this.app.battle?.player?.def?.id ?? this.app.eco.s.selected; }
   lootPopup(def, rarity, inst = null) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
@@ -695,6 +706,7 @@ export class UI {
     }
     for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
     renderGrowthPreparation($('result-growth'), this.app, result);
+    this.clearLoopOf().refresh(result);
     this.refreshResultUse(result);
   }
   /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */
@@ -777,6 +789,8 @@ export class UI {
       || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
     this.prepareResultLayout();
+    this.clearLoopOf().reset();
+    const levelUpEl = $('result-levelup'); if (levelUpEl) { levelUpEl.hidden = true; levelUpEl.classList.remove('in'); }
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
@@ -845,7 +859,10 @@ export class UI {
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
+      // 클리어 루프: 카드 3장 선택 + 즉석 정비소가 올라가면 기존 '획득 보상' 목록과 그 소리는 쓰지 않는다(요약 칩 + 정비소가 대신: 목록은 CSS 로 숨기고 소리만 끈다).
+      const clearCards = this.clearLoopOf().mount(r, b);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      if (clearCards) lootDetails.hidden = true;
       lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
       lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
@@ -866,8 +883,8 @@ export class UI {
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}${tierTone(x.it) ? ` tier-${tierTone(x.it)}` : ''}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${tierName(def.name, x.it)}</div>${tierTag(x.it) ? `<em class="tier-tag">${tierTag(x.it)}</em>` : ''}`; if (d.dataset.cmp) { const lc = document.createElement('div'); lc.className = 'lc'; lc.textContent = d.dataset.cmp; d.appendChild(lc); } if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
-        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}${tierTone(x.it) ? ` tier-${tierTone(x.it)}` : ''}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${tierName(def.name, x.it)}</div>${tierTag(x.it) ? `<em class="tier-tag">${tierTag(x.it)}</em>` : ''}`; if (d.dataset.cmp) { const lc = document.createElement('div'); lc.className = 'lc'; lc.textContent = d.dataset.cmp; d.appendChild(lc); } if (!clearCards) { if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); } }
+        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; if (!clearCards) audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));
       later(() => {
@@ -877,7 +894,13 @@ export class UI {
         $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`;
         const pl = eco.passLevel; $('result-bp').style.width = (eco.s.pass.xp % 100) + '%';
         $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`;
-        if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); }
+        if (rw.ups) {
+          // 전투 중 연출과 같은 톤의 금빛 오로라 배지. 전투 중 이미 연출했으면 소리는 짧은 징글로만 낮춘다.
+          const el = $('result-levelup');
+          if (el) { el.innerHTML = `<b>LEVEL UP</b><span>Lv.${h.level}${rw.ups > 1 ? ` <small>+${rw.ups}</small>` : ''}</span>`; el.hidden = false; void el.offsetWidth; el.classList.add('in'); }
+          else this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold');
+          if (b.levelUpsInBattle) audio.play('jingle_win1', { vol: 0.6 }); else audio.levelUp({ vol: 0.55 });
+        }
         if (rw.awakened?.length) later(() => { if (canPrepareGrowth(this.app, r)) this.awakenBanner(rw.awakened); }, 700);
         if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold');
       }, 1500);
@@ -901,5 +924,5 @@ export class UI {
     return false;
   }
   cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
-  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.show(this.el.result, false); }
+  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.clearLoopOf().reset(); this.show(this.el.result, false); }
 }

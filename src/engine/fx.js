@@ -10,6 +10,8 @@ import { kitOf } from '../data/heroes.js';
 import { bossSignatureFragmentShader, bossWarnVertexShader } from './boss-warn-shader.js';
 import { bloomLoadFor, compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
+// 레벨업 연출용 재사용 임시 객체(할당 없음).
+const _lvPos = new THREE.Vector3(), _lvUp = new THREE.Vector3(0, 1, 0), _lvColor = new THREE.Color(), _lvColor2 = new THREE.Color();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color(), _sigRing = new THREE.Color(), _fireMarkPos = new THREE.Vector3();
 /** 불꽃·폭발 원화(주황 결)를 차가운 영웅색(보라·청·비취)으로 칠할 때 원화 색을 밝기로 바꿔 색을 살리는 비율.
@@ -1147,6 +1149,36 @@ export class FX {
   /** 얼음 결정 폭발 */
   // 얼음 결정 원화는 중심이 거의 흰색이라 진한 하늘색으로 칠한다(옅은 0xc0f0ff 는 가산으로 흰 덩어리가 됐다).
   iceBurst(pos, { size = 3, life = 0.5, color = 0x6cc8ff } = {}) { this.texFlash(pos, 'ice', color, { size, life, spin: 0.5, grow: 1.0, y: 0.6, gain: .8 }); }
+  /**
+   * 전투 중 레벨업 연출(대표님 2026-10-29 "오로라나 충격파가 터지면서"). 총 약 0.9초, 화면 흔들림 없음.
+   * 발밑 충격파 고리 3겹 → 금빛·영웅색 오로라 광선 기둥(위로 솟는 광선 묶음) → 발밑 문양 → 솟는 불씨.
+   * 모두 인스턴스 임팩트 층(드로우콜 1)·입자 풀·조명 풀만 쓴다. 전투 중 메시·재질·지오메트리를 만들지 않고, 입자는 빈 칸에만 넣어 전투 난수 순서를 건드리지 않는다.
+   * @param {THREE.Vector3} pos @param {THREE.ColorRepresentation} [accent]
+   */
+  levelUpBurst(pos, accent = 0x7feac0) {
+    const gold = 0xffd36a, hot = 0xfff4cf, I = this.impact, x = pos.x, y = pos.y, z = pos.z;
+    const acc = typeof accent === 'number' ? accent : _lvColor.set(accent).getHex();
+    if (I) {
+      I._emit(IMPACT_KIND.ring, x, y + .1, z, 5.2, gold, .7, { grow: 1 });
+      I._emit(IMPACT_KIND.ring, x, y + .1, z, 3.4, hot, .5, { grow: 1, delay: .05 });
+      I._emit(IMPACT_KIND.ring, x, y + .1, z, 2.2, acc, .62, { grow: 1, delay: .1 });
+      _lvPos.set(x, .06, z); I.mark(_lvPos, gold, { radius: 1.7, life: .9, style: MARK_STYLE.compass });
+      // 오로라 기둥: 발밑 원 둘레에서 위로 솟는 광선 묶음(가운데 굵은 금빛 + 둘레 영웅색·금빛 교차).
+      _lvPos.set(x, y + .05, z); I.beam(_lvPos, _lvUp, 9, gold, { speed: 26, tail: 7, width: .42 });
+      const n = this.lite ? 4 : 8;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * 6.2831853, r = .55 + (i % 2) * .25;
+        _lvPos.set(x + Math.cos(a) * r, y + .05, z + Math.sin(a) * r);
+        I.beam(_lvPos, _lvUp, 7 + (i % 3), i % 2 ? acc : gold, { speed: 18 + (i % 4) * 3, tail: 5, width: .1 + (i % 2) * .05, delay: .04 * (i % 3) });
+      }
+    }
+    const c = _lvColor.set(gold), cc = _lvColor2.set(acc), m = this.lite ? 12 : 26;
+    for (let i = 0; i < m; i++) {
+      const ang = (i / m) * Math.PI * 2, r = 0.5 + (i % 3) * 0.3;
+      this.glow.emitIfFree(x + Math.cos(ang) * r, y + 0.2, z + Math.sin(ang) * r, Math.cos(ang) * 0.6, 4.2 + (i % 5) * 0.55, Math.sin(ang) * 0.6, i % 3 ? c : cc, 0.26 + (i % 4) * 0.05, 0.75 + (i % 4) * 0.08, { grav: -0.6, drag: 0.96, shrink: 0.3 });
+    }
+    this.light(pos, gold, 7, 10, 0.6);
+  }
   holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
   /** @param {THREE.Vector3} pos
    * @param {THREE.ColorRepresentation} [color]

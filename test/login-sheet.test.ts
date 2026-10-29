@@ -208,7 +208,8 @@ describe('로그인 흐름', () => {
     const out = await deleteAccount(app, { reset: async (o: any) => { resetOpts = o; return { ok: true }; }, pending: () => false, reload: () => { reloaded = true; } });
     expect(out.ok).toBe(true);
     expect(localStorage.getItem(REGISTERED_KEY)).toBeNull();
-    expect(srv.calls.at(-1)!.body).toEqual({ confirm: 'DELETE' });
+    // ensure()는 세션만 기다리므로 연결 마무리(그림자 스냅샷)가 뒤따를 수 있다: 탈퇴 요청 자체를 찾는다.
+    expect(srv.calls.find((c) => c.path === '/auth/delete')!.body).toEqual({ confirm: 'DELETE' });
     expect(resetOpts).toEqual({ keepIdentity: false });
     expect(reloaded).toBe(true);
   });
