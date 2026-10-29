@@ -465,8 +465,10 @@ export class SocialCore {
         ['DELETE FROM dm_inbox WHERE to_id = ?', 1],
       ] as const) this.run(q, ...Array(n).fill(playerId));
       if (this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) this.run('DELETE FROM reserved_ids WHERE player_id = ?', playerId);
-      // (name, tag)는 고유하다. 번호(no)를 태그로 써서 익명 이름끼리 겹치지 않게 한다.
-      this.run("UPDATE players SET name = '탈퇴한 모험가', tag = CAST(no AS TEXT), title_id = NULL WHERE id = ?", playerId);
+      // (name, tag)는 고유하다. 'x'+번호(no)는 일반 숫자 태그와 겹치지 않아 누가 같은 이름을 써도 충돌하지 않는다.
+      // 가입 IP 해시·대표 영웅·명예 기록의 제공자 주체 해시도 지운다(기록 자체는 참조용으로 남김).
+      this.run("UPDATE players SET name = '탈퇴한 모험가', tag = 'x' || no, title_id = NULL, hero = NULL, created_ip_hash = NULL WHERE id = ?", playerId);
+      this.run('UPDATE clears SET subject_hash = NULL WHERE player_id = ?', playerId);
     });
     return { ok: true };
   }

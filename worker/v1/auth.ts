@@ -131,8 +131,9 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
       c.db.prepare('UPDATE account_keys SET last_seen = ? WHERE key_hash = ?').bind(c.now, keyHash),
       c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id),
     ]);
-    await restoreIdle(c.db, account.account_id, c.now);
   }
+  // 60초 안의 재시도도 확인한다(복원이 한 번 실패해 last_seen만 올라간 경우 문서 없는 세션이 나가지 않게).
+  if (!created) await restoreIdle(c.db, account.account_id, c.now);
   assertActive(account);
   account = await maybeCutover(c, account);
   return { ...await issueSession(c.env, account, channel, c.now), created };
@@ -257,7 +258,9 @@ export async function recoverSubject(c: Ctx, provider: string, hash: string, key
       c.db.prepare('UPDATE account_keys SET account_id = ?, last_seen = ? WHERE key_hash = ?').bind(target.account_id, c.now, keyHash),
     );
   }
-  if (writes.length) await c.db.batch(writes);
+  // 연동 로그인으로만 쓰는 계정도 접속 시각을 남긴다(연동 해제 뒤 활성 이용자가 미접속 보관 대상으로 잡히지 않게).
+  writes.push(c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, target.account_id));
+  await c.db.batch(writes);
   // 키가 5개를 넘으면 가장 오래 안 쓴 키부터 지운다(방금 쓴 키는 남긴다).
   const keys = await c.db.prepare('SELECT key_hash FROM account_keys WHERE account_id = ? AND key_hash != ? ORDER BY last_seen, created_at').bind(target.account_id, keyHash).all<{ key_hash: string }>();
   const stale = (keys.results ?? []).slice(0, Math.max(0, (keys.results ?? []).length + 1 - KEYS_PER_ACCOUNT));
