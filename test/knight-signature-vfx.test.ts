@@ -116,6 +116,10 @@ test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 모두 있고, 결정
 test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX 호출의 캐시 뒤 횟수와 같고, 가짜 fx 에서는 소비하지 않는다', async () => {
   const { FX } = await import('../src/engine/fx.js');
   const { KNIGHT_RETIRED_DRAWS, knightRetiredDraws } = await import('../src/engine/sig-knight.js');
+  // 실제 게임처럼 원화가 로드된 경로로 잰다(원화가 없으면 firePillar 가 pillar 대체 경로로 빠져 횟수가 달라진다).
+  const { VFX_TEX, VFX_LIST } = await import('../src/engine/assets.js');
+  const savedTex = { ...VFX_TEX };
+  for (const n of VFX_LIST) VFX_TEX[n] ||= new THREE.Texture();
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const gradient = { addColorStop() {} };
   const context = { createRadialGradient: () => gradient, createLinearGradient: () => gradient, fillRect() {}, clearRect() {} };
@@ -137,6 +141,7 @@ test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX �
   } finally {
     fx.dispose();
     if (descriptor) Object.defineProperty(globalThis, 'document', descriptor); else delete (globalThis as any).document;
+    for (const n of Object.keys(VFX_TEX)) if (!(n in savedTex)) delete VFX_TEX[n];
   }
 });
 
