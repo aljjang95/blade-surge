@@ -82,12 +82,14 @@ export const SIGNATURES = {
   // 접선 방향 단검 광선(위아래로 기울어 공처럼 감싸는 궤적) + 같은 자리 칼날 자국. 바닥엔 앞 부채꼴 + 대상 둘레 가시 원.
   // 10타(1.035초) 마무리에 큰 X 자 + 짙은 고리 + 사방으로 튀는 칼날 파편.
   flurry(ctx) {
-    const { impact, f, player, lite } = ctx; const BEAT = .115, HITS = 10, FIN = (HITS - 1) * BEAT, ang = cutAngle(impact, f);
+    // 서명은 시전 시각(dur 1.4 × castAt .2 = .28초)에 불리고 베기 틱은 시전 시작부터 돈다 → 박자를 LAG 만큼 당긴다(이미 지난 박자는 생략).
+    const { impact, f, player, lite } = ctx; const BEAT = .115, HITS = 10, LAG = .28, FIN = (HITS - 1) * BEAT - LAG, ang = cutAngle(impact, f);
     impact.mark(player.pos, DEEP, { radius: 3.6, life: 1.2, style: MARK_STYLE.fan, angle: yawOf(f) });
     const cx = player.pos.x + f.x * 1.8, cz = player.pos.z + f.z * 1.8;
     _b.set(cx, 0, cz); impact.mark(_b, NIGHT, { radius: 2.2, life: 1.2, style: MARK_STYLE.thorn, angle: .5 });
     for (let i = 0, step = lite ? 2 : 1; i < HITS; i += step) {
-      const a = i * 2.1 + .3, y = .5 + (i % 3) * .45, R = 1.7, t = i * BEAT;
+      const a = i * 2.1 + .3, y = .5 + (i % 3) * .45, R = 1.7, t = i * BEAT - LAG;
+      if (t < 0) continue;
       _a.set(cx + Math.cos(a) * R, y, cz + Math.sin(a) * R);
       _d.set(-Math.sin(a), i % 2 ? .35 : -.35, Math.cos(a));
       impact.beam(_a, _d, 3.2, i % 2 ? MAGENTA : VIOLET, { speed: 30, tail: 1.4, width: .17, delay: t });

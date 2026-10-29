@@ -99,3 +99,12 @@ test('궁극기 예비 표식(시전 연출 중): 폭풍·천 개의 칼날 둘 
     lite.dispose(); v.dispose();
   }
 });
+
+test('환영 난무 서명은 시전 시각(.28초) 뒤에 불리므로 마무리 X 가 마지막 베기 틱(9×.115초)에 맞춰 당겨져 있다', () => {
+  const v = make(); SIGNATURES.flurry(ctxOf(v));
+  const starts = slots(v).map(s => s.start);
+  const lastHit = 9 * .115 - .28;
+  expect(Math.max(...starts)).toBeLessThan(lastHit + .1);
+  expect(Math.max(...starts)).toBeGreaterThan(lastHit - .01);
+  expect(Math.min(...starts)).toBeGreaterThanOrEqual(0);
+});
