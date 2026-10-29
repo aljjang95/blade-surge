@@ -79,7 +79,16 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
         if (url.pathname !== '/internal/account' && url.pathname !== '/internal/evidence' && url.pathname !== '/internal/delete') return json({ error: 'not-found' }, 404);
         try {
           const body = JSON.parse(await request.text()) as { keyHash?: unknown; playerId?: unknown } | null;
-          if (url.pathname === '/internal/delete') return json(this.core.internalDelete(body?.playerId));
+          if (url.pathname === '/internal/delete') {
+            const done = this.core.internalDelete(body?.playerId);
+            // 탈퇴한 플레이어의 열린 소켓도 바로 닫는다(키만 지우면 조용한 소켓이 파티·쪽지를 계속 받는다).
+            for (const ws of this.ctx.getWebSockets(body!.playerId as string)) {
+              const s = ws.deserializeAttachment() as Session | null;
+              if (s && !s.closed) this.shut(ws, s, 4003, 'deleted');
+              else { try { ws.close(4003, 'deleted'); } catch { /* 이미 닫힘 */ } }
+            }
+            return json(done);
+          }
           return json(url.pathname === '/internal/account' ? this.core.internalAccount(body?.keyHash) : this.core.internalEvidence(body?.playerId));
         }
         catch (error) {

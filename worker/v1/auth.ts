@@ -125,12 +125,13 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
     if (!account) fail(503, 'account-unavailable');
     created = account.account_id === player.playerId && account.last_seen === c.now;
   } else if (c.now - account.last_seen > 60000) {
-    // 오래 쉬어 보관된 게스트가 돌아왔으면 진행 문서를 먼저 되돌린다(archive.ts).
-    await restoreIdle(c.db, account.account_id, c.now);
+    // last_seen을 먼저 갱신해 보관 크론이 이 계정을 더는 고르지 못하게 한 뒤, 이미 보관됐으면 진행 문서를 되돌린다(archive.ts).
+    // 순서가 반대면 확인과 갱신 사이에 보관된 문서를 60초 동안 놓친다.
     await c.db.batch([
       c.db.prepare('UPDATE account_keys SET last_seen = ? WHERE key_hash = ?').bind(c.now, keyHash),
       c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id),
     ]);
+    await restoreIdle(c.db, account.account_id, c.now);
   }
   assertActive(account);
   account = await maybeCutover(c, account);

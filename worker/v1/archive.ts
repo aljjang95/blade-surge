@@ -21,14 +21,19 @@ export async function archiveIdleGuests(db: D1Database, now: number, limit = 100
       AND NOT EXISTS (SELECT 1 FROM iap_web_payments w WHERE w.account_id = a.account_id)
     ORDER BY a.last_seen LIMIT ?`).bind(now - IDLE_MS, IDLE_MAX_LEVEL, limit).all<DocRow>();
   let archived = 0;
+  const cutoff = now - IDLE_MS;
+  // 문서 rev가 그대로이고 아직 미접속·활성일 때만 옮긴다. 조회와 배치 사이에 돌아온 게스트(createSession이 last_seen을 먼저 갱신)는
+  // 세 문장 모두에서 걸러진다. 배치는 한 트랜잭션이다.
+  const still = "EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ?) AND EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'active' AND last_seen < ?)";
   for (const r of rows.results ?? []) {
-    // 문서 rev가 그대로일 때만 옮긴다(사이에 접속해 진행이 바뀌었으면 건너뛴다). 배치는 한 트랜잭션이다.
+    const guard = [r.account_id, r.rev, r.account_id, cutoff];
     const out = await db.batch([
-      db.prepare("INSERT OR IGNORE INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) SELECT ?, ?, 'idle', ?, ?, ? WHERE EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ?)")
-        .bind(`idle:${r.account_id}:${r.rev}`, r.account_id, r.doc, now, now + IDLE_PURGE_MS, r.account_id, r.rev),
-      db.prepare("INSERT OR IGNORE INTO account_flags(account_id, flag, at) SELECT ?, 'idle-archived', ? WHERE EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ?)")
-        .bind(r.account_id, now, r.account_id, r.rev),
-      db.prepare("DELETE FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ?").bind(r.account_id, r.rev),
+      db.prepare(`INSERT OR IGNORE INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) SELECT ?, ?, 'idle', ?, ?, ? WHERE ${still}`)
+        .bind(`idle:${r.account_id}:${r.rev}`, r.account_id, r.doc, now, now + IDLE_PURGE_MS, ...guard),
+      db.prepare(`INSERT OR IGNORE INTO account_flags(account_id, flag, at) SELECT ?, 'idle-archived', ? WHERE ${still}`)
+        .bind(r.account_id, now, ...guard),
+      db.prepare(`DELETE FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ? AND EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'active' AND last_seen < ?)`)
+        .bind(...guard),
     ]);
     if (out[2]?.meta?.changes) archived++;
   }
