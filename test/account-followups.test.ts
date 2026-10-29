@@ -149,4 +149,30 @@ describe('미접속 게스트 보관(영구 삭제 아님)', () => {
     expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 1 });
     expect((await h.send('GET', '/me', undefined, back.token)).status).toBe(200);
   });
+  test('키 한도로 밀려났지만 허브 매핑은 남은 기기가 보관 뒤 돌아오면 보관본(rev>1)이 그대로 복원된다', async () => {
+    const h = await v1Harness({ social: true });
+    const idle = await h.session();
+    h.db.sqlite.exec(`UPDATE account_docs SET rev = 7 WHERE account_id = '${idle.accountId}'`); // 진행이 쌓인 계정
+    const before = h.db.sqlite.query("SELECT rev, doc FROM account_docs WHERE account_id = ?").get(idle.accountId) as any;
+    expect(before.rev).toBe(7);
+    h.advance(IDLE_MS + 1000);
+    expect(await archiveIdleGuests(h.db as any, h.now())).toBe(1);
+    h.db.sqlite.exec(`DELETE FROM account_keys WHERE account_id = '${idle.accountId}'`); // 5개 한도로 밀려난 키(허브 매핑은 그대로)
+    const back = await h.session(idle.deviceKey);
+    expect(back.accountId).toBe(idle.accountId); // 허브가 같은 플레이어를 돌려줌
+    expect(h.db.sqlite.query("SELECT rev, doc FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual(before);
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_flags WHERE account_id = ? AND flag = 'idle-archived'").get(idle.accountId)).toEqual({ n: 0 });
+    expect(h.db.sqlite.query("SELECT last_seen FROM accounts WHERE account_id = ?").get(idle.accountId)).toEqual({ last_seen: h.now() });
+  });
+  test('restoreIdle: 이미 다른 문서가 있으면 false, 보관본과 표시는 남는다', async () => {
+    const h = await v1Harness();
+    const idle = await h.session();
+    h.advance(IDLE_MS + 1000);
+    expect(await archiveIdleGuests(h.db as any, h.now())).toBe(1);
+    h.db.sqlite.exec(`INSERT INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) VALUES ('${idle.accountId}', 'core', 1, '{"other":1}', 11, ${h.now()})`);
+    expect(await restoreIdle(h.db as any, idle.accountId, h.now())).toBe(false);
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_flags WHERE account_id = ? AND flag = 'idle-archived'").get(idle.accountId)).toEqual({ n: 1 });
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_archive WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 1 });
+    expect(h.db.sqlite.query("SELECT doc FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual({ doc: '{"other":1}' });
+  });
 });
