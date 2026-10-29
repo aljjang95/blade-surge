@@ -73,6 +73,18 @@
       }
     },
     {
+      "id": "w_steel",
+      "form": "sword",
+      "file": "/models/item-weapons/w_steel.glb",
+      "sha256": "d44d760f50a6f8018eaf95a0a773f498a93f29fd743dbb375289e6347e7a43be",
+      "bytes": 498664,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "72abb372-bc6f-48bd-aada-6eba2835fad0",
+        "concept": "steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
       "id": "w_wood",
       "form": "sword",
       "file": "/models/item-weapons/w_wood.glb",
