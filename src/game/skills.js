@@ -303,7 +303,9 @@ export const SKILLS = {
       c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.shield_bash.range);
       gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
       // 예비: 5m 원형 시전진 대신 방패 앞으로 끌려 오는 줄기(몰이)와 방패 별빛(sig-knight PRELUDES).
-      knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.castCircle); skillPrelude(game, p, 'shield_bash');
+      // 몰이 지점 표시는 옅은 가는 고리(groundTex)로 남긴다: 파티 손님 화면에 복제되는 위치 신호이고, castCircle 과 같은 호출이라 난수 소비도 같다.
+      game.fx.groundTex?.(c.data.gatherCenter, 'circle_gold', 0xff9a18, { r0: 4.3, r1: 5, life: .25, spin: 0, y: .07, fadeIn: .05, hold: 0, gain: .35 });
+      skillPrelude(game, p, 'shield_bash');
     },
     update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 7, 22); },
     cast(game, p, c) {
@@ -510,7 +512,7 @@ export const SKILLS = {
         for (const e of game.enemies) { if (!e.alive || e.spawning || hit.has(e)) continue; const d = Math.hypot(e.pos.x - cur.pos.x, e.pos.z - cur.pos.z); if (d < bd) { bd = d; best = e; } }
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
-        game.fx.boltTex(from, to, 0x4a90ff, { width: 1.8, life: 0.3 }); mageBolt(game, from, to, step); // 번개 학파: 굵은 청색 지그재그 + 전기 별빛
+        game.fx.boltTex(from, to, 0x4a90ff, { width: 1.8, life: 0.28 }); mageBolt(game, from, to, step); // 번개 학파: 굵은 청색 지그재그 + 전기 별빛
         // 맞은 적 몸을 덮던 2.4m 섬광·바닥 원판은 작게(적 몸·피해 숫자 가독성). 호출 수는 유지(난수 소비 순서 보존).
         game.fx.flash(to, 0x4a90ff, { size: 1.3 }); game.fx.burst(to, 0x6fbcff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.35, life: 0.2 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);

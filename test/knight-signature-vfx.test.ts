@@ -117,7 +117,8 @@ test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX �
   const { FX } = await import('../src/engine/fx.js');
   const { KNIGHT_RETIRED_DRAWS, knightRetiredDraws } = await import('../src/engine/sig-knight.js');
   // 실제 게임처럼 원화가 로드된 경로로 잰다(원화가 없으면 firePillar 가 pillar 대체 경로로 빠져 횟수가 달라진다).
-  const { VFX_TEX, VFX_LIST } = await import('../src/engine/assets.js');
+  const { VFX_TEX: tex, VFX_LIST } = await import('../src/engine/assets.js');
+  const VFX_TEX = tex as Record<string, unknown>;
   const savedTex = { ...VFX_TEX };
   for (const n of VFX_LIST) VFX_TEX[n] ||= new THREE.Texture();
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
