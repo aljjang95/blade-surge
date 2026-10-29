@@ -230,7 +230,7 @@ export const SIGNATURES = {
   // 착탄: 세로 도끼 자국 + 충격 고리 + 파편 분출 + 화염 분수 → .08초 뒤 사방 용암 균열, .14초 뒤 금빛 2차 균열(3박).
   hell_axe(ctx) {
     const { impact, at: t, lite } = ctx; const FALL = .5;
-    impact.mark(t, GOLD, { radius: 2.4, life: FALL + .25, style: MARK_STYLE.compass });
+    impact.mark(t, GOLD, { radius: 1.9, life: FALL + .2, style: MARK_STYLE.compass });
     _d.set(0, -1, 0);
     _a.set(t.x, 16, t.z); impact.beam(_a, _d, 16, FLAME, { speed: 32, tail: 7, width: .32 });
     _a.set(t.x + .4, 16, t.z); impact.beam(_a, _d, 16, GOLD, { speed: 32, tail: 4, width: .12, delay: .02 });

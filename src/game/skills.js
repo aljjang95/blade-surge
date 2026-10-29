@@ -389,7 +389,7 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = .22; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, hasTownSkillVariant(p, 'whirlwind', 'wide') ? 4.8 : 3.8, c.dmg, { kb: 2.5, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 2 === 0 });
-        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff5a1e, { size: 3.4, life: 0.2, tilt: -1.45 }); // 4.4m 는 몸을 크림 고리로 덮었다(강화 레인)
+        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xe0461a, { size: 3.4, life: 0.2, tilt: -1.45 }); // 4.4m 는 몸을 크림 고리로 덮었다(강화 레인)
         game.fx.burst(p.pos.clone().setY(1), 0xff6a20, { n: 5, speed: 6, size: 0.3 });
         barbWhirlTick(game, p.pos, i); // 광전사: 몸을 감는 불씨 도끼 호(판정 틱과 같은 순간)
         if (i % 3 === 0) game.fx.dustPuff(p.pos, { size: 3, life: 0.5 });
@@ -411,7 +411,7 @@ export const SKILLS = {
       game.fx.explosion(center, { size: 2.4, color: 0xff7a30, life: 0.4 });
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 4, life: 0.9 });
       game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 20, speed: 12, size: 0.4, up: 1.5, grav: 20 });
-      game.fx.light(center, 0xff8040, 14, 16, 0.5);
+      game.fx.light(center, 0xff8040, 8, 10, 0.4);
       game.renderer.shake(1); game.renderer.punch(1.2); game.renderer.flashScreen(0.12, 0xffa060);
       audio.boom({ vol: 1, dur: 0.8, low: 45 }); audio.play('hit_mining', { vol: 1, rate: 0.7 }); audio.vibe([60, 30, 90]);
     },
