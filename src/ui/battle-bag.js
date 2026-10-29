@@ -26,9 +26,11 @@ export class BattleBag {
       + '<div class="bag-list" role="list"></div><p class="bag-note">장착·판매·강화는 결과 화면 정비소에서</p>';
     this.list = sheet.querySelector('.bag-list'); this.tabEls = [...sheet.querySelectorAll('[data-tab]')];
     this.hud.append(btn, sheet);
-    btn.addEventListener('click', () => this.toggle());
-    sheet.querySelector('.bag-close').addEventListener('click', () => this.close());
-    for (const tab of this.tabEls) tab.addEventListener('click', () => { this.tab = tab.dataset.tab; this.render(); });
+    // 포인터로 누른 버튼은 포커스를 놓는다(포커스가 버튼에 남으면 input.js 가 전투 키 입력을 막는다). 키보드 탐색(detail 0)은 유지.
+    const release = (e) => { if (e?.detail > 0 && e.currentTarget instanceof HTMLElement && document.activeElement === e.currentTarget) e.currentTarget.blur(); };
+    btn.addEventListener('click', (e) => { this.toggle(); release(e); });
+    sheet.querySelector('.bag-close').addEventListener('click', (e) => { this.close(); release(e); });
+    for (const tab of this.tabEls) tab.addEventListener('click', (e) => { this.tab = tab.dataset.tab; this.render(); release(e); });
     // Esc 는 일시정지보다 먼저 가방을 닫는다(캡처 단계에서 기본 동작 표시를 남기면 일시정지 핸들러가 물러난다).
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !this.isOpen) return;
