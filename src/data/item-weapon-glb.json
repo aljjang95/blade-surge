@@ -1,6 +1,18 @@
 {
   "items": [
     {
+      "id": "w_blood",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_blood.glb",
+      "sha256": "7391e78dbc791917d61e4d0e7af941dcc6646f902a6ccb92094319c94c7bea36",
+      "bytes": 512304,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "667fe7c6-ef1f-4b13-a1ba-d7915dc58d55",
+        "concept": "vampire fang greatsword: curved bone-white fang blade with crimson edge, dark red and black bat-wing shaped cross guard with a red diamond gem, dark red wrapped grip, black pommel with a red blood drop shape"
+      }
+    },
+    {
       "id": "w_bronze",
       "form": "sword",
       "file": "/models/item-weapons/w_bronze.glb",
