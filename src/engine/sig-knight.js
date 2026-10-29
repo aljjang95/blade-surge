@@ -271,7 +271,7 @@ Object.assign(SIGNATURES, {
       const ang = yaw + (i / ribs) * Math.PI * 2 + Math.PI / 8;
       _a.set(c.x + Math.cos(ang) * (R - .2), .1, c.z + Math.sin(ang) * (R - .2));
       _d.set(c.x - _a.x, AP - .1, c.z - _a.z);
-      impact.beam(_a, _d, _d.length(), i % 2 ? GOLD : AMBER, { speed: 48, width: .07, fade: .55, delay: .02 * i });
+      impact.beam(_a, _d, _d.length(), i % 2 ? GOLD : AMBER, { speed: 48, width: .09, fade: .6, delay: .02 * i });
     }
     // 갈빗대 길이 ≈ 8.9m / 48m/s ≈ .19초 + 마지막 출발 .14초 → 정수리가 .33초쯤 닫힌다.
     impact._emit(IMPACT_KIND.star, c.x, AP, c.z, 1.8, HOT, .24, { angle: .3, grow: .4, delay: .34 });
@@ -301,7 +301,7 @@ Object.assign(SIGNATURES, {
       const last = i === N - 1, dl = i * STEP, k = scale * (1 + i * .12);
       _b.copy(c).addScaledVector(f, GAP * (i + 1));
       impact._emit(IMPACT_KIND.ring, _b.x, 1.3, _b.z, Math.min(3.4, 2.4 * k), AMBER, .2, { grow: .8, delay: dl });
-      impact._emit(IMPACT_KIND.star, _b.x, 1.3, _b.z, 1.4 * k, i % 2 ? HOT : GOLD, .13, { angle: .4 + i * .5, grow: .5, delay: dl });
+      impact._emit(IMPACT_KIND.star, _b.x, 1.3, _b.z, 1.2 * k, i % 2 ? AMBER : GOLD, .13, { angle: .4 + i * .5, grow: .5, delay: dl });
       _b.y = 0; impact.mark(_b, AMBER, { radius: Math.min(KNIGHT_MARK_MAX_RADIUS, 1.3 + i * .15), life: .4, style: MARK_STYLE.compass, angle: i * .8, delay: dl });
       if (lite && !last) continue;
       // 원반이 지나간 자리마다 햇빛 파편이 튄다(앞 세 노드 넷씩), 마지막 노드는 사방 햇살 균열 + 파편 여섯.
