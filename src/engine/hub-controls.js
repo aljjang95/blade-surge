@@ -41,7 +41,10 @@ export class HubControls {
     });
     this._listen(this.host, 'keyup', event => { delete this.keys[event.code]; });
     this._listen(this.document, 'focusin', event => { if (event.target?.closest?.(FOCUS_UI)) this.clear(); });
-    for (const type of ['blur', 'pagehide', 'resize', 'orientationchange']) this._listen(this.host, type, () => this.clear());
+    for (const type of ['blur', 'pagehide', 'orientationchange']) this._listen(this.host, type, () => this.clear());
+    // 인앱 브라우저 앱 바가 접혔다 펴질 때의 높이만 바뀌는 resize로는 걷기 입력을 끊지 않는다.
+    let lastWidth = this.host?.innerWidth;
+    this._listen(this.host, 'resize', () => { if (this.host.innerWidth !== lastWidth) { lastWidth = this.host.innerWidth; this.clear(); } });
     this._listen(this.document, 'visibilitychange', () => { if (this.document.hidden) this.clear(); });
 
     this._listen(this.joystick, 'pointerdown', event => {
@@ -61,6 +64,10 @@ export class HubControls {
     // 다음 UI 버튼의 네이티브 click은 그대로 유지한다.
     this._listen(this.joystick, 'touchstart', event => {
       if (this.active && this.pointer !== null && event.cancelable) event.preventDefault();
+    }, { passive: false });
+    // 끄는 동안의 터치 이동은 페이지 스크롤·인앱 브라우저 제스처로 넘기지 않는다.
+    this._listen(this.joystick, 'touchmove', event => {
+      if (this.pointer !== null && event.cancelable) event.preventDefault();
     }, { passive: false });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) this._listen(this.joystick, type, event => {
       if (this.pointer?.id === event.pointerId) this._releasePointer();

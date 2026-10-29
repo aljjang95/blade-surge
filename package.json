@@ -17,6 +17,7 @@
     "preview": "vite preview --host",
     "studio": "node tools/studio-server.mjs",
     "qa:mobile": "node tools/mobile-qa.mjs",
+    "qa:inapp": "node tools/qa/inapp-touch.mjs",
     "build:aab:cloud": "bash tools/build-aab-cloud.sh",
     "deploy": "node tools/deploy.mjs",
     "pc:bridge": "node tools/pc-bridge.mjs",
