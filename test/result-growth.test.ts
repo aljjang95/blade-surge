@@ -66,7 +66,8 @@ function fixture(win = true, lootCount = 1) {
   save.invSeq = lootCount + 1; save.heroes.mage.equip.weapon = lootCount ? 1 : null;
   const result: any = { win, stars: 3, fullClear: false }, calls: string[] = [];
   const battle: any = { result, active: false, rpgDirty: false, stage: stageDef(1, 1), heroId: 'mage',
-    growthStart: { heroId: 'mage', level: 1, exp: 0 }, combatXp: 130, kills: 12, maxCombo: 20, dmgDealt: 8400, elapsed: 30,
+    // 처치 XP 230 은 입문 곡선 Lv1 필요치(180)를 넘어 Lv.1 → 2 를 보인다(heroes.js EARLY_LEVEL_EXP).
+    growthStart: { heroId: 'mage', level: 1, exp: 0 }, combatXp: 230, kills: 12, maxCombo: 20, dmgDealt: 8400, elapsed: 30,
     drops: { gold: 1200, stones: 2, stones2: 0, stones3: 0, fragments: 0, loot: [...save.inventory] },
     chronicle: { open: (tab: string) => calls.push(`mastery:${tab}`), dialog: new El('dialog') },
     flushRpg: () => { const saved = eco.save(); battle.rpgDirty = !saved; return saved; },
@@ -165,7 +166,7 @@ test('victory settles before offering affordable actions and shows actual hunt X
   const f = fixture(); f.ui.showResult(f.battle, true);
   expect(f.settlements()).toBe(1); expect(f.action('equipment')).toBeDefined(); expect(f.action('skill')).toBeDefined(); expect(f.action('mastery')).toBeDefined();
   expect(get('result-growth').hidden).toBe(false);
-  expect(get('result-growth').textContent).toContain('처치 XP +130');
+  expect(get('result-growth').textContent).toContain('처치 XP +230');
   expect(get('result-growth').textContent).toContain(`클리어 XP +${f.result.reward.exp}`);
   expect(get('result-growth').textContent).toContain('Lv.1 →'); expect(get('result-growth').textContent).toContain('다음 해금 · Lv.10');
   const before = JSON.stringify(f.save); f.ui.showResult(f.battle, true);
@@ -266,12 +267,12 @@ test('saving a defeat retries pending combat XP persistence, retaining the exact
   expect(f.action('save')).toBeDefined(); expect(get('btn-result-lobby').disabled).toBe(true);
   const before = JSON.stringify(f.save); storageFail = false; f.action('save').click();
   expect(f.battle.rpgDirty).toBe(false); expect(f.settlements()).toBe(0); expect(JSON.stringify(f.save)).toBe(before);
-  expect(get('result-growth').textContent).toContain('처치 XP +130'); expect(get('btn-result-lobby').disabled).toBe(false);
+  expect(get('result-growth').textContent).toContain('처치 XP +230'); expect(get('btn-result-lobby').disabled).toBe(false);
 });
 
 test('defeat uses synchronous Battle XP and start snapshot without claiming clear XP or settling a win', () => {
   const f = fixture(false); f.save.gold = 1000; f.ui.showResult(f.battle, false);
-  expect(f.settlements()).toBe(0); expect(get('result-growth').textContent).toContain('처치 XP +130');
+  expect(f.settlements()).toBe(0); expect(get('result-growth').textContent).toContain('처치 XP +230');
   expect(get('result-growth').textContent).toContain('Lv.1 → 2'); expect(get('result-growth').textContent).not.toContain('클리어 XP');
   f.action('skill').click(); expect(f.calls).toContain('skill:mage:0');
 });

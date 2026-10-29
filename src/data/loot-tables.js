@@ -78,7 +78,8 @@ export function levelExperienceMultiplier(heroLevel, recommendedLevel) {
 }
 // RPG 즉시 처치 XP + 정화 포함 클리어 XP로 검증한다(tools/progression-estimate.mjs).
 // 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다(7장은 46→50).
-const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46, 50];
+// 2026-10-29 입문 레벨 곡선(heroes.js EARLY_LEVEL_EXP, 첫 각성 약 1시간)에 맞춰 2장 시작 20→9, 3장 시작 30→22(1장 끝 Lv8, 2장 끝 Lv21).
+const CHAPTER_START_LEVEL = [1, 9, 22, 35, 40, 43, 46, 50];
 export function recommendedLevel(chapter, stage = 1) {
   const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(STAGES_PER_CHAPTER, Math.floor(Number(stage) || 1)));
   const from = CHAPTER_START_LEVEL[ch - 1], to = CHAPTER_START_LEVEL[ch];
