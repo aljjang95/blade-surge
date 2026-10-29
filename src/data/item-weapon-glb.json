@@ -1,0 +1,184 @@
+{
+  "items": [
+    {
+      "id": "w_bronze",
+      "form": "sword",
+      "file": "/models/item-weapons/w_bronze.glb",
+      "sha256": "dc0378e377f1fb543d848a3bce34742bdb90b8c71677e8641fb40846af75bf01",
+      "bytes": 485736,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "5f939b04-1e00-4126-b522-66961ece5425",
+        "concept": "curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "sword",
+      "file": "/models/item-weapons/w_cleaver.glb",
+      "sha256": "b713d9fef34e18d62eefd233875487b08ea0fd737a5d954ac859649a55a09def",
+      "bytes": 487732,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "69c05944-f982-4704-8431-2860d8e9d6a3",
+        "concept": "butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_dragon.glb",
+      "sha256": "e3043f7fa61b62b96bdb2583d87ca57fd114251b72586c6df3b108150d007590",
+      "bytes": 599136,
+      "triangles": 2998,
+      "source": {
+        "tripoTaskId": "4d1b2e05-829e-4af6-930c-512fed4931d7",
+        "concept": "dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "sword",
+      "file": "/models/item-weapons/w_flame.glb",
+      "sha256": "210f2e3a98a485d01146f38d2c9668cd5f8524de8ae8e7d3d8da15cac5bd69d9",
+      "bytes": 546632,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fced7943-80db-4ac4-9fb2-d4fb3a1cf928",
+        "concept": "flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "sword",
+      "file": "/models/item-weapons/w_frost.glb",
+      "sha256": "de52adec6a9a6c7f518bce4b97d5c70cc8f5163e80bcdf704379347c22500179",
+      "bytes": 1060868,
+      "triangles": 2503,
+      "source": {
+        "tripoTaskId": "f30e3e71-1232-457f-9480-2a003ab3095b",
+        "concept": "R2 tripo-3d/weapons/w_frost/w_frost-concept.png"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "sword",
+      "file": "/models/item-weapons/w_guard.glb",
+      "sha256": "ed27f990eadd155de118fe2d125615213bc1872327355306382c00fddb249336",
+      "bytes": 504812,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "139c93a4-b2cc-4552-97a5-c2a3c05e2221",
+        "concept": "city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "sword",
+      "file": "/models/item-weapons/w_hunter.glb",
+      "sha256": "aa394848132c1d8e794e6989e4d5908baf2be944960fee66241836f55ff174e8",
+      "bytes": 742020,
+      "triangles": 2756,
+      "source": {
+        "tripoTaskId": "2cc3b2c5-1945-410f-b3fa-bd26c06a05da",
+        "concept": "R2 tripo-3d/weapons/w_hunter/w_hunter-concept.png"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "sword",
+      "file": "/models/item-weapons/w_iron.glb",
+      "sha256": "0b5351e1c2c8ea5df5abd11c7cd604b7dab12231c9ac389370e3f2f103cd3f16",
+      "bytes": 467524,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "30576d06-3f9b-48a3-840c-4cf5e2ef33a1",
+        "concept": "plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_king.glb",
+      "sha256": "caa859dbde73b8896512398b66a6bcf399e2477174c680638aa3c41407216e81",
+      "bytes": 1189452,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "bf43e6f7-efa4-49f4-99b1-740bd1ce44a9",
+        "concept": "R2 tripo-3d/weapons/w_king/w_king-concept.png"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "sword",
+      "file": "/models/item-weapons/w_knight.glb",
+      "sha256": "b4f2ff8119dae3b0fec50da55edc99cde9f731d534d485c2287542e04b2cd661",
+      "bytes": 554968,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "b73938b8-24cc-44b7-a206-5faac25a16ce",
+        "concept": "knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rune.glb",
+      "sha256": "0a884de8a4913d35b2dfebd345265d8561b796d21a33b1f4415dd99eb949f869",
+      "bytes": 586656,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "505d9ec1-3f11-42fd-bd07-db521bf0823d",
+        "concept": "rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rusty.glb",
+      "sha256": "48b3fe84ebf73a3db50cf9df2a869b08c98029a8b18e7f7ffdcaede9c71cd862",
+      "bytes": 822420,
+      "triangles": 2700,
+      "source": {
+        "tripoTaskId": "39724b82-1247-4d09-bf32-30fc0a121032",
+        "concept": "R2 tripo-3d/weapons/w_rusty/w_rusty-concept.png"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "sword",
+      "file": "/models/item-weapons/w_steel.glb",
+      "sha256": "d44d760f50a6f8018eaf95a0a773f498a93f29fd743dbb375289e6347e7a43be",
+      "bytes": 498664,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "72abb372-bc6f-48bd-aada-6eba2835fad0",
+        "concept": "steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sun.glb",
+      "sha256": "5dc4f5fcafce029a384ab53753d7c661fb08e63f7777b3a76368b50a12d36d9d",
+      "bytes": 640948,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "8186b758-9d60-4f9d-a346-d478209ffd72",
+        "concept": "sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "sword",
+      "file": "/models/item-weapons/w_wood.glb",
+      "sha256": "c041856ffb6361dbd8324451a3612ad872d10a5717394693944c1d8e1c5e54f8",
+      "bytes": 441336,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fc04553d-3fb1-45aa-9db1-6bd23b9445e5",
+        "concept": "wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel"
+      }
+    }
+  ]
+}

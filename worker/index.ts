@@ -8,6 +8,7 @@ import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router
 import { reconcileVoided } from './v1/iap';
 import { reconcileWebPayments } from './v1/portone';
 import { archiveIdleGuests } from './v1/archive';
+import { runRetention } from './v1/retention';
 import { schemaReady, type D1Database } from './v1/db';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
@@ -192,10 +193,20 @@ export async function archiveIdle(env: Env, now = Date.now()): Promise<void> {
   if (n) console.log('idle guests archived', n);
 }
 
+/** 시간당 보관·파기(worker/v1/retention.ts): 탈퇴 30일·기기 이관 90일·미접속 보관본 1년 파기, 남용 방지 묘비 갱신·만료 삭제. 1회 최대 100건. */
+export async function purgeRetention(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const r = await runRetention(db, now);
+  if (r.withdrawn || r.archives || r.idleAccounts || r.tombstones || r.banned) console.log('retention', JSON.stringify(r));
+}
+
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
   // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
   await cleanupStoreMetadata(env);
   try { await reconcileIap(env); } catch (error) { console.warn('iap reconcile failed', error instanceof Error ? error.name : 'unknown'); }
   try { await reconcileWeb(env); } catch (error) { console.warn('web payment reconcile failed', error instanceof Error ? error.name : 'unknown'); }
   try { await archiveIdle(env); } catch (error) { console.warn('idle archive failed', error instanceof Error ? error.name : 'unknown'); }
+  try { await purgeRetention(env); } catch (error) { console.warn('retention failed', error instanceof Error ? error.name : 'unknown'); }
 } };

@@ -17,6 +17,7 @@ import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
+import { freshMailbox, mailOpen } from '../data/mail.js';
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
@@ -36,6 +37,9 @@ import { recordTormentRun, tormentStatus } from './torment-core.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
 import { recordGearDex, milestoneOf, milestoneReached, milestoneClaimed } from './gear-dex.js';
+import { normalizeIdle, idleQuote, claimIdle as claimIdleCore, markSeen as markSeenCore } from './idle-rewards.js';
+import { normalizeAchievements, achievementStats, achievementRows, claimAchievement as claimAchievementCore } from './achievements.js';
+import { normalizeNewbie, newbieView, claimNewbie as claimNewbieCore } from './newbie-event.js';
 import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, relayToday, VAULT_INHERIT } from './gear-vault.js';
 import { rollClearCards, decayCard, repairCost, durOf, wornDur, DUR_MAX } from './clear-loop.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
@@ -201,13 +205,8 @@ export class Economy {
       pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
-      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false },
-        // 장비 귀속·금고 안내(docs/GEAR_OWNERSHIP_VAULT.md). 보상 없는 안내 우편이라 경제·정산에는 영향이 없다.
-        { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false },
-        // 계승 의식·도감 안내(docs/GEAR_VAULT_INHERIT.md 4.6). 안내만 있고 보상은 없다. 문장은 의뢰·고통 단계·도감 보상으로만 얻고 상점에서 팔지 않는다.
-        { id: 3, title: '레전드리는 계승 의식으로 물려줘요', body: '레전드리 장비는 얻은 영웅의 것입니다. 되돌리기와 같은 무기 계열 이동은 그대로 무료이고, 다른 계열에게 주려면 금고의 [계승 의식]을 치르세요. 골드와 계승 문장이 들고 하루 2회까지이며, 확률 없이 반드시 성공하고 강화·룬은 그대로 이어집니다. 계승 문장은 일일·주간 의뢰(계승 장비로 캠페인 승리), 고통 단계 5단계마다 새 기록, 도감 보상으로 얻습니다.', rewards: {}, read: false },
-        { id: 4, title: '장비 도감 마일스톤', body: '금고의 [도감]에서 영웅별 드랍 도감(직접 얻은 장비)과 계승 도감(의식으로 받은 장비)을 확인하세요. 25·50·75·100%와 계승 5·15·30종마다 영웅당 한 번씩 강화석·세트 조각·계승 문장 보상을 받고, 칭호도 얻습니다. 능력치는 오르지 않습니다.', rewards: {}, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
+      daily: { day: 0, last: 0 }, mail: freshMailbox(),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
     };
   }
   load() {
@@ -1470,11 +1469,51 @@ export class Economy {
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(prem ? r : { ...r, blessingCharm: Runes.passCharms(lv) }); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
-  dailyAvailable() { const d = Math.floor(nowOf(this) / 86400000); return this.s.daily.last !== d; }
-  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = Math.floor(nowOf(this) / 86400000); s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  // 하루 경계는 의뢰·금고와 같은 05:00 KST(periodAt). 옛 저장의 UTC 자정 일 번호와 같은 눈금이라 그대로 비교한다
+  // (전환 전에 KST 05~09시에 받은 기록만 전환 뒤 같은 시간대에 한 번 더 열릴 수 있다 — 출석 1칸, docs/RPG_ESSENTIALS.md E1).
+  dailyAvailable() { return this.s.daily.last !== periodAt(nowOf(this)).day; }
+  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = periodAt(nowOf(this)).day; s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  // ---------- 방치 보급·복귀 보상(docs/RPG_ESSENTIALS.md E2) ----------
+  // 읽기 경로는 저장을 바꾸지 않는다(정규화 결과를 대입하지 않음). 변경 함수만 대입한다.
+  idleQuote() { return idleQuote(normalizeIdle(this.s.idle, { since: endgameNow(this) }), this.s.progress, endgameNow(this)); }
+  claimIdle() {
+    this.s.idle = normalizeIdle(this.s.idle, { since: endgameNow(this) });
+    const r = claimIdleCore(this.s.idle, this.s.progress, endgameNow(this));
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return { got, minutes: r.minutes, comeback: r.comeback, awayDays: r.awayDays };
+  }
+  /** 로비 접속 표시(30분 간격). 복귀 보상 판정의 기준. */
+  markSeen() {
+    const st = normalizeIdle(this.s.idle, { since: endgameNow(this) });
+    if (!markSeenCore(st, this.s.progress, endgameNow(this))) return false;
+    this.s.idle = st; this.emit(); return true;
+  }
+  // ---------- 신규 7일 여정(docs/RPG_ESSENTIALS.md E3) ----------
+  newbieState() { return this.s.newbie = normalizeNewbie(this.s.newbie, { start: periodAt(endgameNow(this)).day }); }
+  newbieView() { return newbieView(normalizeNewbie(this.s.newbie, { start: periodAt(endgameNow(this)).day }), this.s, endgameNow(this)); }
+  claimNewbie(id) {
+    const r = claimNewbieCore(this.newbieState(), this.s, endgameNow(this), id);
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return got;
+  }
+  // ---------- 업적(docs/RPG_ESSENTIALS.md E4) ----------
+  achievementRows() { return achievementRows(this.s.achievements, achievementStats(this.s, this.ownedHeroIds().length)); }
+  achievementClaimable() { return this.achievementRows().filter((r) => r.ready).length; }
+  claimAchievement(id) {
+    this.s.achievements = normalizeAchievements(this.s.achievements);
+    const r = claimAchievementCore(this.s.achievements, achievementStats(this.s, this.ownedHeroIds().length), id);
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return got;
+  }
   // ---------- 우편 ----------
-  claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read) return null; m.read = true; return this.addRewards(m.rewards); }
-  unreadMail() { return this.s.mail.filter((m) => !m.read).length; }
+  // 우편(docs/RPG_ESSENTIALS.md E5). 본문·보상·기간은 제품 데이터(src/data/mail.js)가 소유하고 저장에는 수령 여부만 남는다.
+  // 기간(from~until)은 서버 시각 우선(endgameNow). 기간 밖 우편은 보이지 않고 받을 수 없다.
+  mailbox() { const now = endgameNow(this); return this.s.mail.filter((m) => mailOpen(m, now)); }
+  claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read || !mailOpen(m, endgameNow(this))) return null; m.read = true; return this.addRewards(m.rewards); }
+  unreadMail() { const now = endgameNow(this); return this.s.mail.filter((m) => !m.read && mailOpen(m, now)).length; }
   // ---------- 임무 ----------
   quests() {
     const q = this.s.quests; return [
