@@ -449,7 +449,8 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
           if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
           setOpt(key, !opts[key]); if (key === 'bless' && opts.bless) setOpt('sure', false);
         }
-        const gold = b.querySelector('#e-gold'); if (gold) gold.innerHTML = '<i class="ic ic-gold"></i> ' + fmt(enhanceCost(inst.enh) + (opts.sure ? enhanceSureCost(inst.enh) || 0 : 0));
+        const goldNeed = enhanceCost(inst.enh) + (opts.sure ? enhanceSureCost(inst.enh) || 0 : 0);
+        const gold = b.querySelector('#e-gold'); if (gold) { gold.innerHTML = '<i class="ic ic-gold"></i> ' + fmt(goldNeed); gold.classList.toggle('lack', eco.s.gold < goldNeed); }
         const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = (opts.sure ? 100 : Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100)) + '%';
         const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : '파괴 ' + Math.round(destroyChance(inst.enh) * 100) + '%';
         audio.play('ui_click', { vol: 0.4 });

@@ -753,7 +753,7 @@ export class Economy {
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
     const sureGold = sure ? enhanceSureCost(lv) : 0;   // 결과에 늘 싣는다(0 = 확정 강화 안 씀)
     if (sure && sureGold === null) return { ok: false, reason: 'sure' };
-    if (sure && bless) return { ok: false, reason: 'stack' };
+    if (sure && (bless || protect)) return { ok: false, reason: 'stack' };   // 확정이면 축복·보호 주문서가 쓸모없이 차감된다
     if (this.s.gold < cost + sureGold) return { ok: false, reason: 'gold' };
     const sk = STONE_KEY[enhanceStoneTier(lv)];
     if ((this.s[sk] || 0) < stones) return { ok: false, reason: 'stones', tier: enhanceStoneTier(lv) };

@@ -36,7 +36,7 @@ test('확정 강화는 난수가 실패여도 성공하고 일반 비용 + 웃�
 });
 
 test('범위 밖·골드 부족·축복과 함께는 거절하고 아무것도 쓰지 않는다', () => {
-  for (const [enh, gold, opts, reason] of [[11, 5e6, { sure: true }, 'sure'], [2, 5e6, { sure: true }, 'sure'], [5, enhanceCost(5) + 100, { sure: true }, 'gold'], [5, 5e6, { sure: true, bless: true }, 'stack']] as const) {
+  for (const [enh, gold, opts, reason] of [[11, 5e6, { sure: true }, 'sure'], [2, 5e6, { sure: true }, 'sure'], [5, enhanceCost(5) + 100, { sure: true }, 'gold'], [5, 5e6, { sure: true, bless: true }, 'stack'], [5, 5e6, { sure: true, protect: true }, 'stack']] as const) {
     const { eco, inst } = core(enh, gold);
     const before = JSON.stringify(eco.s);
     const r: any = eco.enhance(inst.uid, opts as any);
