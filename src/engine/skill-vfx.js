@@ -76,8 +76,8 @@ export const SKILL_VFX = Object.freeze({
   // 각성: 표식은 바닥 룬·원화 없이 서명(거미줄 실·분신 낙하)만, 일식은 공용 룬 없이 원화를 옅게 깔아 서명의 사슬·코로나가 읽히게 한다.
   shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a4aff, 7, { noRune: true, sig: true }),
   void_step: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x7a3cff, 6, { ghost: true }),
-  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true }),
-  eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, noRune: true, sig: true, gain: .55 }),
+  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true, noBurst: true, sig: true }),
+  eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 8, { dist: 5, seek: [16, 5], ghost: true, noRune: true, sig: true, gain: .55 }),
   // 레인저: 큰 바람 텍스처 섬광(전방 4m 흰 덩어리) 대신 발밑 비취 룬만 두고, 모양은 skill-signatures.js 의 광선·표식이 맡는다.
   // 궁수: 공용 금빛 룬(영웅 둘레 원형 문양)을 끄고 실루엣은 sig-ranger.js 서명(터널·휘는 갈래·뒤로 튀는 V·일곱 빛줄기)이 맡는다.
   // 기본 4종 레시피 색(발목 섬광·먼지)은 청록 바닥과 갈리는 금연두.

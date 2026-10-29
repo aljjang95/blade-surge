@@ -153,17 +153,17 @@ export const SIGNATURES = {
       const mx = player.pos.x + Math.cos(a) * r, mz = player.pos.z + Math.sin(a) * r;
       // ① 표식 새기는 실: 발밑에서 표식 자리까지 빠르게 뻗는 가는 선 + 표식 조준 원.
       _a.copy(player.pos).setY(.12); _d.set(mx - _a.x, 0, mz - _a.z);
-      impact.beam(_a, _d, _d.length(), i % 2 ? VIOLET : DEEP, { speed: 40, tail: 2.2, width: .08, delay: i * .02 });
+      impact.beam(_a, _d, _d.length(), i % 2 ? VIOLET : MAGENTA, { speed: 30, tail: 3.2, width: .14, delay: i * .02 });
       _b.set(mx, 0, mz); impact.mark(_b, i % 2 ? MAGENTA : VIOLET, { radius: 1, life: PULL + .1, style: MARK_STYLE.reticle, angle: i * .7 });
       // ② 분신 낙하: 표식 바깥 위(높이 3.2m)에서 비스듬히 내리꽂혀 t 에 몸통(1m)에 닿는 단검 빛 + 엇갈린 X 자.
       const ca = i * 2.1;
       _a.set(mx + Math.cos(ca) * 1.6, 3.2, mz + Math.sin(ca) * 1.6); _d.set(mx - _a.x, 1 - _a.y, mz - _a.z);
-      const dl = _d.length(); impact.beam(_a, _d, dl, i % 2 ? MAGENTA : VIOLET, { speed: 36, tail: 1.6, width: .15, delay: Math.max(0, t - dl / 36) });
+      const dl = _d.length(); impact.beam(_a, _d, dl, i % 2 ? MAGENTA : VIOLET, { speed: 30, tail: 2.2, width: .2, delay: Math.max(0, t - dl / 30) });
       impact._emit(IMPACT_KIND.cut, mx, 1, mz, 2, MAGENTA, .22, { angle: ang + .8, stretch: 1.15, grow: .9, delay: t });
       impact._emit(IMPACT_KIND.cut, mx, 1, mz, 2, DEEP, .22, { angle: ang - .8, stretch: 1.15, grow: .9, delay: t + .04 });
       // ③ 끌어당기는 실: PULL 에 표식에서 출발해 HUB 에 중심에 닿는다.
       _a.set(mx, .8, mz); _d.set(hx - mx, 0, hz - mz); const pl = _d.length();
-      if (pl > .3) impact.beam(_a, _d, pl, i % 2 ? DEEP : MAGENTA, { speed: pl / .18, tail: 1.4, width: .13, delay: PULL });
+      if (pl > .3) impact.beam(_a, _d, pl, i % 2 ? VIOLET : MAGENTA, { speed: pl / .18, tail: 1.8, width: .18, delay: PULL });
     }
     _b.set(hx, 0, hz);
     impact.mark(_b, MAGENTA, { radius: 3, life: .5, style: MARK_STYLE.thorn, delay: HUB, angle: .4 });
@@ -186,12 +186,12 @@ export const SIGNATURES = {
       const j = (i * 3) % P, k = ((i + 1) * 3) % P, R0 = 3.4 + i * .18, R1 = 3.4 + (i + 1) * .18;
       node(_a, j, R0); node(_b, k, R1);
       _d.copy(_b).sub(_a); const len = _d.length(), t = i * .13 - LAG;
-      impact.beam(_a, _d, len, i % 2 ? DEEP : VIOLET, { speed: 90, tail: 0, width: .2, fade: .34, delay: t });
-      const hit = t + len / 90;
+      impact.beam(_a, _d, len, i % 2 ? MAGENTA : VIOLET, { speed: 70, tail: 0, width: .3, fade: .5, delay: t });
+      const hit = t + len / 70;
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9, i % 2 ? MAGENTA : VIOLET, .2, { angle: cutAngle(impact, _d) + (i % 2 ? .8 : -.8), stretch: 1.1, grow: .9, delay: hit });
       // 도착점 공허 기둥: 바닥에서 솟는 짙은 세로 빛(점멸해 나타난 자리).
       _b.y = .05; _d.set(0, 1, 0);
-      impact.beam(_b, _d, 2.4, i % 2 ? NIGHT : DEEP, { speed: 18, tail: 1.6, width: .3, delay: hit });
+      impact.beam(_b, _d, 2.8, i % 2 ? VIOLET : DEEP, { speed: 14, tail: 2.2, width: .42, delay: hit });
     }
     // 닫힘: 별 바깥 점들에서 시작점으로 빨려드는 선(END 에 도착) + 시계판 + 작은 고리.
     for (let k = 0, n = lite ? 4 : 8; k < n; k++) {
@@ -242,9 +242,9 @@ export const SIGNATURES = {
     const { impact, at, player, lite } = ctx; const HIT = .3, K = 5, RUN = HIT - .06, seg = RUN / K;
     impact.mark(at, DEEP, { radius: 7.5, life: HIT + .1, style: MARK_STYLE.thorn, angle: .3 });
     _d.set(at.x - player.pos.x, 0, at.z - player.pos.z); const D = Math.max(.5, _d.length()); _d.multiplyScalar(1 / D);
-    const nx = -_d.z, nz = _d.x;
+    const nx = -_d.z, nz = _d.x, O = Math.min(1.8, .35 * D);
     for (let i = 0, step = lite ? 2 : 1; i < K; i += step) {
-      const k0 = i / K, k1 = (i + 1) / K, o0 = i ? (i % 2 ? 1.8 : -1.8) : 0, o1 = i + 1 < K ? ((i + 1) % 2 ? 1.8 : -1.8) : 0;
+      const k0 = i / K, k1 = (i + 1) / K, o0 = i ? (i % 2 ? O : -O) : 0, o1 = i + 1 < K ? ((i + 1) % 2 ? O : -O) : 0;
       _a.set(player.pos.x + (at.x - player.pos.x) * k0 + nx * o0, .9, player.pos.z + (at.z - player.pos.z) * k0 + nz * o0);
       _b.set(player.pos.x + (at.x - player.pos.x) * k1 + nx * o1, .9, player.pos.z + (at.z - player.pos.z) * k1 + nz * o1);
       const t = RUN * k0; _b.sub(_a); const l = _b.length(); if (!(l > .1)) continue;
@@ -254,6 +254,9 @@ export const SIGNATURES = {
     _a.set(at.x, 10, at.z); _d.set(0, -1, 0);
     impact.beam(_a, _d, 9.9, DEEP, { speed: 90, tail: 6, width: .5, delay: HIT - 9.9 / 90 });
     impact.beam(_a, _d, 9.9, MAGENTA, { speed: 90, tail: 5, width: .16, delay: HIT - 9.9 / 90 });
+    // 일섬이 박힌 자리에 남는 칼날 기둥(땅에서 솟아 .5초 남는다).
+    _a.set(at.x, .05, at.z); _d.set(0, 1, 0);
+    impact.beam(_a, _d, 5, MAGENTA, { speed: 16, tail: 4, width: .3, delay: HIT });
     impact.mark(at, NIGHT, { radius: 8.2, life: .9, style: MARK_STYLE.clock, delay: HIT });
     impact.mark(at, MAGENTA, { radius: 5.6, life: .7, style: MARK_STYLE.thorn, angle: 1.2, delay: HIT + .05 });
     impact._emit(IMPACT_KIND.ring, at.x, 1, at.z, 3.4, MAGENTA, .4, { grow: 1, delay: HIT });
@@ -262,7 +265,7 @@ export const SIGNATURES = {
     for (let i = 0, n = lite ? 6 : 12; i < n; i++) {
       const a = (i / n) * 6.2831853 + .13;
       _a.set(at.x + Math.cos(a) * 2, .12, at.z + Math.sin(a) * 2); _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(_a, _d, i % 2 ? 4.2 : 6, i % 2 ? DEEP : MAGENTA, { speed: 34, tail: 2.6, width: i % 2 ? .12 : .18, delay: HIT });
+      impact.beam(_a, _d, i % 2 ? 4.2 : 6, i % 2 ? VIOLET : MAGENTA, { speed: 20, tail: 3.4, width: i % 2 ? .16 : .24, delay: HIT });
     }
     for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
       const a = (i / n) * 6.2831853;
