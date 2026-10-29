@@ -71,12 +71,15 @@ function emberField(canvas) {
     }
     raf = requestAnimationFrame(frame);
   };
-  if (!reduce) raf = requestAnimationFrame(frame); else frame(0), cancelAnimationFrame(raf);
-  addEventListener('resize', fit);
+  // 동작 줄이기: 움직이지 않는 한 장만 그리고, 색·크기가 바뀔 때만 다시 그린다.
+  const still = () => { if (reduce) { frame(0); cancelAnimationFrame(raf); } };
+  const onResize = () => { fit(); still(); };
+  if (!reduce) raf = requestAnimationFrame(frame); else still();
+  addEventListener('resize', onResize);
   return {
-    color(hex) { const n = parseInt(String(hex).replace('#', ''), 16); if (Number.isFinite(n)) rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255]; },
+    color(hex) { const n = parseInt(String(hex).replace('#', ''), 16); if (Number.isFinite(n)) rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255]; still(); },
     burst() { boost = 1; },
-    stop() { cancelAnimationFrame(raf); removeEventListener('resize', fit); },
+    stop() { cancelAnimationFrame(raf); removeEventListener('resize', onResize); },
   };
 }
 
@@ -92,6 +95,8 @@ export function runStarterSelect(app, { root = document } = {}) {
     const choices = starterChoices();
     // 다른 영웅으로 넘길 때 첫 프레임이 비지 않게 전신 그림을 미리 받는다.
     for (const src of ['/img/tll/stage/stage-bg-v1.webp', ...choices.map((c) => c.stage)]) { const img = new Image(); img.decoding = 'async'; img.src = src; }
+    // bark 는 처음 부를 때 받기만 하고 소리를 내지 않는다. 첫 선택부터 목소리가 나게 미리 받는다.
+    audio.preloadBarks?.(choices.map((c) => `hero_${c.id}_select`));
     const el = root.createElement('div');
     el.id = 'starter-select'; el.className = 'starter-select'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ss-title');
     const tab = (c) => `<button type="button" class="ss-card" role="radio" aria-checked="false" data-hero="${esc(c.id)}" style="--hc:${esc(c.color)}"><span class="ss-art"><img src="${esc(c.portrait)}" alt="" onerror="this.style.visibility='hidden'"></span><span class="ss-info"><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span></button>`;
@@ -115,7 +120,7 @@ export function runStarterSelect(app, { root = document } = {}) {
       for (const card of cards) { const on = card.dataset.hero === id; card.classList.toggle('on', on); card.setAttribute('aria-checked', String(on)); card.tabIndex = on ? 0 : -1; if (on && focus) card.focus({ preventScroll: true }); }
       el.style.setProperty('--hc', c.color); embers.color(c.color);
       if (hero.getAttribute('src')) { heroOut.src = hero.src; heroOut.classList.remove('out'); void heroOut.offsetWidth; heroOut.classList.add('out'); }
-      hero.alt = c.name; hero.classList.remove('in'); hero.onerror = () => { hero.onerror = null; hero.src = c.portrait; };
+      hero.alt = c.name; hero.classList.remove('in'); hero.style.visibility = ''; hero.onerror = () => { hero.onerror = () => { hero.onerror = null; hero.style.visibility = 'hidden'; }; hero.src = c.portrait; };
       hero.src = c.stage; void hero.offsetWidth; hero.classList.add('in');
       show.classList.remove('summon'); void show.offsetWidth; show.classList.add('summon');
       detail.querySelector('h3').textContent = c.name; detail.querySelector('.ss-drole').textContent = `${c.title} · ${c.role}`; detail.querySelector('p').textContent = c.line;

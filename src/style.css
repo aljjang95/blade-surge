@@ -615,6 +615,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .result-levelup b { font-size: 15px; letter-spacing: .18em; background: linear-gradient(180deg,#fff7d6,#ffd36a 55%,#e8a63a); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .result-levelup span { font-size: 24px; font-weight: 900; color: #fff1b8; text-shadow: 0 0 12px #ffb63a, 0 2px 0 #6b3d00; }
 .result-levelup small { font-size: .6em; color: #7feac0; }
+.result-levelup[hidden] { display: none; }
 .result-levelup.in { animation: resultLevelUp .9s cubic-bezier(.16,.9,.28,1) both; }
 .result-levelup.in::before { animation: resultAurora 1.6s ease-out both; }
 @keyframes resultLevelUp { 0% { opacity: 0; transform: translateY(10px) scale(.6) } 30% { opacity: 1; transform: translateY(-3px) scale(1.12) } 55% { transform: none } 100% { opacity: 1; transform: none } }

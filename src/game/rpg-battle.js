@@ -125,8 +125,9 @@ export class Battle extends BaseBattle {
           this.fx?.levelUpBurst?.(p.pos, (p.def || HEROES[this.heroId])?.color || 0x7feac0);
           this.fx?.damage?.(p.pos, 0, { text: `Lv.${hero.level}`, kind: 'levelup' });
           audio.levelUp({ vol: 0.55 });
+          // 실제로 연출을 보여 준 레벨업만 센다(결과 화면이 소리를 낮출지 정한다).
+          this.levelUpsInBattle = (this.levelUpsInBattle || 0) + award.levels;
         }
-        this.levelUpsInBattle = (this.levelUpsInBattle || 0) + award.levels;
         this.rpgView.levelUp(award.level, award.levels);
         this.flushRpg();
       }
