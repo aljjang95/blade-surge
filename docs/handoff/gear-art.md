@@ -15,6 +15,12 @@
 2. w_blood 재생성 후보: 3D 날이 아이보리라 아이콘(검붉은 날)과 다름. 프롬프트에 "blade itself is dark blackish crimson red metal, not white or ivory".
 3. 다른 직업 형태(도끼·지팡이·쌍단검·활) 3D와 `forms/` 215장 재작화 — 매니페스트 키를 `{id, form}`으로 확장.
 
+## 4·5차 진행 상태 (2026-10-30, 브랜치 `claude/gear-weapon-w4`)
+- 대표님 지시: Tripo **heartytn 계정(이메일 heartytn@naver.com, 비밀번호 로그인)**으로 18자루 + w_blood 재생성. 공유 계정·`tripo` 금고는 쓰지 않음.
+- 브리프: `art-src/gear-icons/weapon-3d-brief-w4.json`(무기별 extra, 아이콘 보고 작성).
+- 로그인 경로: PC Chrome 릴레이는 Tripo 탭 접근 불가(확장 권한 밖), PC MCP는 세션 한도 → 클라우드 데스크톱 전용 프로필(`~/.grok-persist/tripo-heartytn`, CDP 127.0.0.1:9333)에 Password Login 화면 + 이메일 입력해 둠. **대표님 비밀번호 입력 대기**(약 3시간, 생성 0, 크레딧 사용 0).
+- 이어받을 때: 같은 컨테이너면 그 브라우저에서 바로, 새 컨테이너면 데스크톱 브라우저를 `--remote-debugging-port`로 띄워 대표님 로그인 1회 → Playwright `connectOverCDP`로 조작. 로그인 직후 잔여 크레딧 기록, 자루당 50~70 기준으로 가능한 만큼.
+
 ## Tripo 비용 실측 (화면 가격을 믿지 말 것)
 - 생성 H3.1(2K·PBR) 45, 리토폴로지는 화면 5인데 25가 빠지는 경우가 많음 → 자루당 50~70으로 계산. GLB 내보내기(기본 GLB 2k)는 직전·직후 잔량 측정 3회 모두 0.
 - 컨셉 이미지(Nano Banana 2)도 장당 약 8로 보임(미확정).
