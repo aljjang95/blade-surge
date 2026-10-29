@@ -6,7 +6,7 @@ import { stageDef } from '../src/data/stages.js';
 import { itemStats } from '../src/data/item-tier.js';
 import { createSeededRng } from '../src/shared/rng.js';
 import { validateOp } from '../src/shared/v1-ops.js';
-import { PARITY_KEYS, mergeServerOwned } from '../src/shared/state-hash.js';
+import { PARITY_KEYS, SERVER_OWNED_KEYS, mergeServerOwned } from '../src/shared/state-hash.js';
 import { rollClearCards, repairCost, repairFullCost, durMul, DUR_WEAR, CARD_COUNT, normalizeClearCard, ITEM_LEVEL_CAP } from '../src/game/clear-loop.js';
 import { normalizeSave } from '../src/game/save.js';
 
@@ -77,7 +77,7 @@ describe('클리어 카드 보상', () => {
     expect(validateOp('pickClearCard', [0])).toBeTruthy();
     expect(validateOp('pickClearCard', [3])).toBeNull();
     expect(validateOp('repairItem', [1])).toBeTruthy();
-    expect(PARITY_KEYS).toContain('clearCard');
+    expect(PARITY_KEYS).not.toContain('clearCard'); expect(SERVER_OWNED_KEYS).toContain('clearCard');
     // 서버 문서에 카드가 없으면 로컬 카드도 지운다(이미 고른 카드가 되살아나지 않게)
     expect(mergeServerOwned({ clearCard: { id: 'x' } }, { gold: 1 }).clearCard).toBeUndefined();
   });
