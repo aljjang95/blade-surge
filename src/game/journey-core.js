@@ -72,9 +72,11 @@ export const JOURNEY_ATTEST_MIN_CLEARED=Object.freeze({oath:0,garden:1,craft:1,m
 export function journeySteps(save,{attest=false}={}) {
   const s=object(save)?save:{},items=equippedItems(s),claimed=ids(s.journey?.claimedSteps,JOURNEY_STEPS);
   const cleared=Math.max(0,integer(s.progress?.unlocked,MAX_DAY)-1),attested=id=>attest&&cleared>=JOURNEY_ATTEST_MIN_CLEARED[id];
-  const completed={oath:attested('oath')||list(s.expedition?.claimed).includes('first_oath'),garden:attested('garden')||integer(s.expedition?.stats?.glass_garden)>=1,
-    craft:attested('craft')||integer(s.expedition?.stats?.crafts)>=1,equip:items.some(i=>ITEM_BY_ID[i.id].slot==='armor'),
-    enhance:items.some(i=>integer(i.enh)>=1),mastery:attested('mastery')||ids(s.masterworks?.unlocked,MASTERY_NODES).length>=1};
+  // 서버 판정에서는 기기 원정·숙련 기록을 읽지 않는다(조작 저장으로 진행 바닥값 우회 차단, Codex 리뷰 PR #435). 로컬 판정만 원래 조건.
+  const device=(id,local)=>attest?attested(id):local;
+  const completed={oath:device('oath',list(s.expedition?.claimed).includes('first_oath')),garden:device('garden',integer(s.expedition?.stats?.glass_garden)>=1),
+    craft:device('craft',integer(s.expedition?.stats?.crafts)>=1),equip:items.some(i=>ITEM_BY_ID[i.id].slot==='armor'),
+    enhance:items.some(i=>integer(i.enh)>=1),mastery:device('mastery',ids(s.masterworks?.unlocked,MASTERY_NODES).length>=1)};
   return JOURNEY_STEPS.map((def,i)=>({...def,rewards:structuredClone(def.rewards),complete:completed[def.id],claimed:claimed.includes(def.id),
     ready:completed[def.id]&&!claimed.includes(def.id)&&JOURNEY_STEPS.slice(0,i).every(previous=>claimed.includes(previous.id))}));
 }

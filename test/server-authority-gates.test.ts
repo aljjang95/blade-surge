@@ -632,3 +632,18 @@ describe('Codex 리뷰 반영(PR #435)', () => {
     expect(out.gold).toBe(9);
   });
 });
+
+describe('Codex 재리뷰 반영(PR #435)', () => {
+  test('attest 판정은 기기 원정·숙련 통계로 진행 바닥값을 우회하지 못한다', async () => {
+    const { journeySteps } = await import('../src/game/journey-core.js');
+    const save = fresh(Date.UTC(2026, 10, 20)).snapshot() as any;
+    save.progress.unlocked = 1;
+    save.expedition = { ...(save.expedition || {}), claimed: ['first_oath'], stats: { glass_garden: 1, crafts: 1 } };
+    save.masterworks = { unlocked: ['x'] };
+    const rows = Object.fromEntries(journeySteps(save, { attest: true }).map((r: any) => [r.id, r.complete]));
+    expect(rows.garden).toBe(false);
+    expect(rows.craft).toBe(false);
+    const local = Object.fromEntries(journeySteps(save).map((r: any) => [r.id, r.complete]));
+    expect(local.garden).toBe(true);
+  });
+});
