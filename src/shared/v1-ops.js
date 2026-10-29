@@ -61,7 +61,8 @@ export const OPS = {
   claimMail: { args: [(v) => int(v, 0)], run: (e, id) => e.claimMail(id), ok: okValue },
   claimQuest: { args: [str], run: (e, id) => e.claimQuest(id), ok: okValue },
   claimIdle: { args: [], run: (e) => e.claimIdle(), ok: okValue },
-  markSeen: { args: [], run: (e) => e.markSeen(), ok: () => true }, // 이미 표시돼 바뀐 것이 없어도 거절이 아니다
+  // 서버는 이미 표시돼 바뀐 것이 없어도 거절하지 않는다(ok). 기기는 실제로 표시를 남긴 때만 보낸다(send) — 로비 1초 틱마다 명령이 쌓이지 않게.
+  markSeen: { args: [], run: (e) => e.markSeen(), ok: () => true, send: (r) => r === true },
   claimNewbie: { args: [str], run: (e, id) => e.claimNewbie(id), ok: okValue },
   claimAchievement: { args: [str], run: (e, id) => e.claimAchievement(id), ok: okValue },
   // 외형·설정

@@ -9,6 +9,12 @@ const memory = () => { const m = new Map<string, string>(); return { getItem: (k
 const H = 3600000, DAY = 86400000, T = Date.UTC(2026, 9, 29, 3);
 
 describe('방치 보급 규칙', () => {
+  test('기록이 하루 넘게 앞서면(기기 날짜가 틀렸다 바로잡힘) 지금으로 내려 잠기지 않는다', () => {
+    const st = { since: T + 40 * DAY, seen: T + 40 * DAY, comebackAt: 0 };
+    expect(markSeen(st, { unlocked: 11 }, T)).toBe(true); expect(st.seen).toBe(T); expect(st.since).toBe(T);
+    const near = { since: T + 10 * H, seen: T + 10 * H, comebackAt: 0 };
+    expect(claimIdle(near, { unlocked: 11 }, T)).toEqual({ ok: false, error: 'clock' }); expect(near.since).toBe(T + 10 * H);
+  });
   test('시간 비례, 12시간 상한, 관문 0이면 없음', () => {
     const st = { since: T, seen: T, comebackAt: 0 };
     expect(idleQuote(st, { unlocked: 1 }, T + 5 * H).ready).toBe(false);

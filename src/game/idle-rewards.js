@@ -47,9 +47,16 @@ export function idleQuote(state, progress, nowMs) {
     notable: comeback || minutes >= IDLE.minMinutes && Object.keys(rewards).length > 0 };
 }
 
+/** 기록이 지금보다 하루 넘게 앞서면(기기 날짜가 크게 틀렸다가 바로잡힘) 지금으로 내린다. 하루 안쪽은 되돌림 반복 수령 방지로 그대로 둔다. */
+function healFuture(state, now) {
+  if (state.since > now + DAY) state.since = now;
+  if (state.seen > now + DAY) state.seen = now;
+}
+
 /** 수령. 시계가 기록보다 뒤면 거부만 한다(기록을 당기지 않는다 — 되돌렸다 복구해 12시간분을 반복 수령하는 것을 막음). */
 export function claimIdle(state, progress, nowMs) {
   const now = safeTime(nowMs, 0);
+  healFuture(state, now);
   if (state.since > now || state.seen > now) return { ok: false, error: 'clock' };
   const q = idleQuote(state, progress, now);
   if (!q.ready) return { ok: false, error: 'empty' };
@@ -63,6 +70,9 @@ export function claimIdle(state, progress, nowMs) {
 /** 접속 표시. 복귀 보상이 걸려 있으면(아직 안 받음) 남기지 않아 보상을 지우지 않는다. 바뀌면 true. */
 export function markSeen(state, progress, nowMs) {
   const now = safeTime(nowMs, 0);
+  const healed = state.seen > now + DAY;
+  healFuture(state, now);
+  if (healed) return true;
   if (state.seen > now || now - state.seen < IDLE.seenEveryMs) return false;
   if (idleQuote(state, progress, now).comeback) return false;
   state.seen = now; return true;
