@@ -72,7 +72,7 @@ test('목표 밖 기록·다른 경로·원본 SHA 위조·base 불일치·초�
     value => { delete value.revisions[0].authoring; },
     value => { value.revisions[0].status = 'DRAFT'; },
     value => { value.revisions[0].output.sha256 = 'not-a-sha'; },
-    value => { value.revisions[0].id = 'rogue-vampire-body-fit-v2'; },
+    value => { value.revisions[0].id = 'rogue-vampire-body-fit-v1'; },
     value => { value.revisions[0].asset = 'avatar_rogue_crow'; },
     // 궁수 base 는 v6 출력(재결합 결과라 바인드 자세 아님)도, 도적 base 도 아니다.
     value => { value.revisions[1].authoring.base = { path: '/models/heroes-next/ranger-library-t1-v6.glb', sha256: value.revisions[1].authoring.base.sha256 }; },

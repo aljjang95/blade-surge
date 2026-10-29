@@ -1,0 +1,36 @@
+{
+  "tool": "tools/art/author-fox-body-motion-v2.mjs",
+  "body": {
+    "path": "/models/heroes-next/ranger-fox-body-fit-v2.glb",
+    "sha256": "181ab3b1bb48cea0aeaac84ab16a28154d87b64c57a64e88d5086bf6d48664f6"
+  },
+  "input": {
+    "path": "src/data/fox-body-motion-v1.json",
+    "sha256": "5e5388a30c6c9b00e4e7e975a10bc58ca9ea7a6bac190dcdd7a5bcbfd04b2586"
+  },
+  "target": 0.002,
+  "clips": {
+    "dodge": {
+      "samples": 98,
+      "denseSamples": 389,
+      "iterations": 1,
+      "minBeforeMeters": -0.030045,
+      "minAfterMeters": -0.006516,
+      "maxLiftMeters": 0.033647,
+      "endMeters": 0.038188
+    },
+    "death": {
+      "samples": 153,
+      "denseSamples": 609,
+      "iterations": 1,
+      "minBeforeMeters": -0.003449,
+      "minAfterMeters": 0.002272,
+      "maxLiftMeters": 0.005722,
+      "endMeters": 0.005575
+    }
+  },
+  "output": {
+    "path": "src/data/fox-body-motion-v2.json",
+    "sha256": "d89e73c1a96c34cfc57e1a3380242e55615d41dba77af6d1e3359b185ced95ce"
+  }
+}

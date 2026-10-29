@@ -227,8 +227,19 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
           const ddx = gx - p.pos.x, ddz = gz - p.pos.z, dl = Math.hypot(ddx, ddz) || 1;
           let dir = null;
           if (W.buildFlow && W.walkable) {
-            let clr = true; for (let s = 1; s <= 8; s++) if (!W.walkable(p.pos.x + ddx * s / 8, p.pos.z + ddz * s / 8)) { clr = false; break; }
-            if (!clr) { if (!m.flow || m.flowKey !== gx + ',' + gz) { m.flow = W.buildFlow(gx, gz); m.flowKey = gx + ',' + gz; } dir = W.flowDir(m.flow, p.pos.x, p.pos.z); }
+            // 직선은 몸 반경(0.7)만큼 좌우도 바닥일 때만 쓴다. 중심선만 보면 복도 벽 가장자리(5-8 x=11,z=-3)를 따라 밀다 벽에 낀다.
+            const nx = -ddz / dl * 0.7, nz = ddx / dl * 0.7;
+            let clr = true; for (let s = 1; s <= 8 && clr; s++) { const qx = p.pos.x + ddx * s / 8, qz = p.pos.z + ddz * s / 8; if (!W.walkable(qx, qz) || !W.walkable(qx + nx, qz + nz) || !W.walkable(qx - nx, qz - nz)) clr = false; }
+            if (!clr) {
+              if (!m.flow || m.flowKey !== gx + ',' + gz) { m.flow = W.buildFlow(gx, gz); m.flowKey = gx + ',' + gz; }
+              dir = W.flowDir(m.flow, p.pos.x, p.pos.z);
+              // 벽 가장자리 칸(침식 마스크 밖)이라 거리장이 방향을 못 주면 가장 가까운 안쪽 칸으로 먼저 빠져나온다.
+              if (!dir && W.inner) {
+                let best = null, bd = 1e9; const cx = Math.floor(p.pos.x - W.minX), cz = Math.floor(p.pos.z - W.minZ);
+                for (let oz = -3; oz <= 3; oz++) for (let ox = -3; ox <= 3; ox++) { const x = cx + ox, z = cz + oz; if (x < 0 || z < 0 || x >= W.cols || z >= W.rows || !W.inner[z * W.cols + x]) continue; const d = ox * ox + oz * oz; if (d < bd) { bd = d; best = [ox, oz]; } }
+                if (best) { const bl = Math.hypot(best[0] + 0.5, best[1] + 0.5) || 1; dir = [(best[0] + 0.5) / bl, (best[1] + 0.5) / bl]; }
+              }
+            }
           }
           if (dir) { wx = dir[0]; wz = dir[1]; } else { wx = ddx / dl; wz = ddz / dl; }
         }
@@ -291,7 +302,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
     if (a.mode !== 'lobby') a.toLobby?.();
     a.ui.closeModal?.();
     const id = e.s.selected;
-    const gold0 = e.s.gold;
+    const gold0 = e.s.gold, gems0 = e.s.gems;
     try {
       // 1) 보상 수령: 출석·우편·임무·여정·패스
       if (e.dailyAvailable?.()) { const r = e.claimDaily(); did('claimDaily', { r: r && JSON.stringify(r).slice(0, 80) }); }
@@ -301,12 +312,14 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (let lv = 1; lv <= e.passLevel; lv++) if (!e.s.pass.claimedFree.includes(lv)) { const r = e.claimPass(lv, false); if (r) did('claimPass', { lv }); }
       // 2) 소환: 게임 견적이 가능한 배너(초보자 → 영웅)를 10연으로
       for (let g = 0; g < 4 && pullEnabled; g++) {
-        const banner = ['beginner', 'hero'].find((bid) => e.pullQuote(10, bid).ok);
+        const banner = ['beginner', 'hero', 'gear'].find((bid) => e.pullQuote(10, bid).ok);
         if (!banner) break;
         const q = e.pullQuote(10, banner), res = e.pull(10, banner);
         if (!res) break;
         did('pull10', { banner, currency: q.currency, results: res.map((x) => (x.id || x.item?.id || x.hero || '?') + (x.rar ? '/' + x.rar : '')) });
       }
+      // 2b) 초월: 성장 가이드가 제안할 때(견적 ok) 같은 함수로 실행
+      for (let g = 0; g < 3; g++) { const tq = e.transcendQuote?.(id); if (!tq?.ok || !tq.next) break; const tr = e.transcend(id); if (!tr?.ok) { did('transcendBlocked', { reason: tr?.reason }); break; } did('transcend', { to: tq.next, cost: JSON.stringify(tq.cost) }); }
       // 3a) 장비(새 UI 그대로): 영웅 탭 가방의 "더 좋은 장비 장착" → "가방 정리"(확인 단계 포함)를 사람이 누르듯 눌러 본다.
       {
         a.meta.heroSel = id; a.meta.heroPane = 'gear'; a.meta.bagClean = null; a.meta.openTab('heroes');
@@ -391,7 +404,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
     // 골드 소비처별 합계(이번 정비): 훈련·일반 강화·확정 강화 웃돈. 나머지(소환 등 보석·소환권)는 골드를 쓰지 않는다.
     const spend = { training: 0, enhance: 0, sure: 0 };
     for (const x of acts) { if (x.kind === 'trainLevelUp') spend.training += x.gold || 0; else if (x.kind === 'enhance') spend.enhance += x.gold || 0; else if (x.kind === 'enhanceSure') { spend.enhance += (x.gold || 0) - (x.sureGold || 0); spend.sure += x.sureGold || 0; } }
-    return { acts, inv, spend, gold: [gold0, e.s.gold], gems: e.s.gems, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
+    return { acts, inv, spend, gold: [gold0, e.s.gold], gems: e.s.gems, gems0, bag: e.s.inventory.length, res: { stones: e.s.stones, stones2: e.s.stones2, stones3: e.s.stones3, fragments: e.s.fragments, tickets: e.s.tickets, transcendStones: e.s.transcendStones }, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
   };
 
   C.state = () => { const hid = e.s.selected; return { mode: a.mode, hero: hid, level: e.hero().level, exp: e.hero().exp, power: e.heroPower(hid), unlocked: e.s.progress.unlocked, gold: e.s.gold, gems: e.s.gems, energy: e.s.energy, energyMax: e.energyMax, owned: [...(e.s.roster?.owned || [])], inventory: e.s.inventory.length, equip: e.hero().equip, levels: Object.fromEntries(Object.entries(e.s.heroes).map(([k, v]) => [k, v.level])) }; };
@@ -452,7 +465,7 @@ async function playStage(code, attempt, { tag = '' } = {}) {
 
 async function doMeta(label) {
   const r = await page.evaluate(() => window.__C.meta());
-  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, spend: r.spend, gems: r.gems, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
+  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, spend: r.spend, gems: r.gems, gems0: r.gems0, bag: r.bag, res: r.res, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
   return r;
 }
 
