@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
-import { INTRO_DELAY_SEC, INTRO_SHOW_SEC, introPhase, pauseSummary, NEB_ROLE, NEB_ROUTE } from '../src/ui/companion-intro.js';
+import { INTRO_DELAY_SEC, INTRO_SHOW_SEC, introPhase, pauseSummary, NEB_ROLE, NEB_ROUTE, CompanionPresence } from '../src/ui/companion-intro.js';
 
 test('소개 카드: 이미 봤으면 뜨지 않고, 처음이면 1.5초 뒤 6초간 보인 뒤 끝난다', () => {
   expect(introPhase(true, 3)).toBe('none');
@@ -32,4 +32,11 @@ test('소개 카드 본 기록은 설정에 저장되고 서버 소유 키가 �
   expect(reload.s.settings.companionIntroSeen).toBe(true);
   const { SERVER_OWNED_KEYS } = await import('../src/shared/state-hash.js');
   expect((SERVER_OWNED_KEYS as readonly string[]).includes('settings')).toBe(false);
+});
+
+test('띄운 카드는 저장된 본 기록이 바로 true 가 돼도 6초 뒤 닫힌다(리뷰 P2)', () => {
+  let seen = false, shown = 0, hidden = 0;
+  const fake: any = { elapsed: 0, cardState: 'idle', getSeen: () => seen, markSeen: () => { seen = true; }, showCard: () => { shown++; }, hideCard: () => { hidden++; } };
+  for (let t = 0; t < 10; t += 0.1) CompanionPresence.prototype.updateCard.call(fake, 0.1);
+  expect(shown).toBe(1); expect(hidden).toBe(1); expect(fake.cardState).toBe('done');
 });

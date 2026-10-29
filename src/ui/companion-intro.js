@@ -42,7 +42,7 @@ export class CompanionPresence {
     this.card.querySelector('.neb-intro-role').textContent = NEB_ROLE;
     this.card.querySelector('.neb-intro-route').textContent = NEB_ROUTE;
     hud?.append(this.card);
-    this.card.addEventListener('click', () => this.hideCard());
+    this.card.addEventListener('click', () => { this.cardState = 'done'; this.card.blur(); this.hideCard(); });
     // 일시정지 메뉴의 동료 줄(다시 보기). 네브가 있는 전투에서만 보인다.
     this.pauseRow = document.getElementById('battle-companion-info');
     this.blockers = []; this.blockerT = 0; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 }; this.placed = { dx: 0, dy: 0, hidden: false };
@@ -87,9 +87,10 @@ export class CompanionPresence {
 
   updateCard(dt) {
     this.elapsed += dt;
+    // 이미 띄운 카드는 저장된 '봄' 값과 무관하게 시간으로만 닫는다(띄우는 순간 markSeen 이 seen 을 true 로 바꾼다).
+    if (this.cardState === 'shown') { if (introPhase(false, this.elapsed) === 'done') { this.cardState = 'done'; this.hideCard(); } return; }
     const phase = introPhase(this.getSeen(), this.elapsed);
     if (phase === 'show' && this.cardState === 'idle') { this.cardState = 'shown'; this.showCard(); this.markSeen(); }
-    else if (phase === 'done' && this.cardState === 'shown') { this.cardState = 'done'; this.hideCard(); }
   }
 
   /** 카드는 왼쪽 가장자리 띠. 시점 버튼 오른쪽, 영웅 카드·안내 카드 아래에서 시작하고 화면 가운데(주인공)는 넘지 않는다. */
