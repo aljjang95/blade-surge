@@ -193,7 +193,7 @@ export function simulate(options = {}) {
   for (const m of start.mail) addReward(w, m.rewards);                   // 환영 우편은 첫날 수령
   const sku = o.dayOneSku ? SKUS.find(s => s.id === o.dayOneSku) : null;
   if (o.dayOneSku && !sku) throw new RangeError('알 수 없는 상품 ' + o.dayOneSku);
-  const gift = o.dayOneRewards || (sku?.gems ? { gems: sku.gems + sku.bonus } : sku?.rewards) || {};
+  const gift = o.dayOneRewards || (sku?.gems ? { gems: sku.gems + (sku.bonus ?? 0) } : sku?.rewards) || {};
   addReward(w, gift);
   let grade = heroBaseGrade(def), bank = ENERGY.max, passXp = 0, passClaimed = 0, kills = 0, runsTotal = 0, cleared = 0, dailyIdx = 0;
   const claimedQuests = new Set(), frontierCap = o.strategy === 'ch1' ? o.ch1FarmIdx : TOTAL_STAGES;
