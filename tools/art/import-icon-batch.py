@@ -35,7 +35,8 @@ def main():
     pres_path = os.path.join(REPO, 'src/data/item-presentation.json')
     pres = json.load(open(pres_path, encoding='utf8'))
     rendered = {e['id']: e for e in pres['items']}
-    ids = sorted(f[:-4] for f in os.listdir(a.src) if f.endswith('.png'))
+    # icon-collage-split.py 출력 폴더를 그대로 받을 수 있게 그 도구가 만드는 대조 시트(contact.png)는 뺀다
+    ids = sorted(f[:-4] for f in os.listdir(a.src) if f.endswith('.png') and f != 'contact.png')
     plan, bad = {}, []
     for i in ids:
         if i not in icons: bad.append(i + ':아이템 없음')
