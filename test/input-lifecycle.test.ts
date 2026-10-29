@@ -31,6 +31,7 @@ beforeEach(() => {
   Object.defineProperty(globalThis, 'window', { configurable: true, value: host });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: documentStub });
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { getGamepads: () => gamepads ?? (gamepad ? [gamepad] : []) } });
+  (host as any).innerWidth = 390; (host as any).innerHeight = 700;
   input = new Input(); input.enabled = true;
 });
 
@@ -207,11 +208,43 @@ describe('사람 입력 수명주기', () => {
     for (const type of ['resize','orientationchange','pagehide']) {
       input.joy.active = true; input.screenMove.x = 1; input.screenMove.y = .5;
       input.attackHeld = true; input.press('skill0');
+      if (type === 'resize') (host as any).innerWidth += 100; // 폭이 바뀐 resize(회전·창 크기)만 clear
       host.dispatchEvent(new Event(type)); input.update();
       expect(input.joy.active).toBe(false);
       expect(input.screenMove).toEqual({x:0,y:0});
       expect(input.move).toEqual({x:0,y:0});
       expect(input.attackHeld).toBe(false); expect(input.queue).toEqual([]);
     }
+  });
+  test('드래그 중 높이만 바뀐 resize(인앱 앱 바)는 조이스틱·이동·공격 홀드를 유지하고, 폭이 바뀌면 지운다', () => {
+    const start = new Event('touchstart', {cancelable:true});
+    Object.defineProperty(start, 'changedTouches', {value:[{identifier:4,clientX:80,clientY:550}]});
+    elements.get('joy')!.dispatchEvent(start);
+    input.screenMove.x = 1; input.screenMove.y = .5; input.attackHeld = true;
+    (host as any).innerHeight = 560; host.dispatchEvent(new Event('resize')); input.update();
+    expect(input.joy.active).toBe(true);
+    expect(input.screenMove).toEqual({x:1,y:.5});
+    expect(input.attackHeld).toBe(true);
+    (host as any).innerHeight = 700; host.dispatchEvent(new Event('resize'));
+    expect(input.joy.active).toBe(true);
+    (host as any).innerWidth = 844; host.dispatchEvent(new Event('resize')); input.update();
+    expect(input.joy.active).toBe(false);
+    expect(input.screenMove).toEqual({x:0,y:0});
+    expect(input.move).toEqual({x:0,y:0});
+    expect(input.attackHeld).toBe(false);
+    // 폭이 한 번 바뀐 뒤에는 새 폭이 기준이다: 같은 폭 resize는 다시 지우지 않는다
+    input.joy.active = true; host.dispatchEvent(new Event('resize'));
+    expect(input.joy.active).toBe(true);
+  });
+  test('비활성 상태의 #joy touchmove도 cancelable이면 preventDefault, 아니면 건드리지 않는다', () => {
+    expect(input.joy.active).toBe(false);
+    const mk = (cancelable:boolean) => {
+      const e = new Event('touchmove', {cancelable});
+      Object.defineProperty(e, 'changedTouches', {value:[{identifier:1,clientX:50,clientY:500}]});
+      elements.get('joy')!.dispatchEvent(e); return e;
+    };
+    expect(mk(true).defaultPrevented).toBe(true);
+    expect(mk(false).defaultPrevented).toBe(false);
+    expect(input.joy.active).toBe(false);
   });
 });
