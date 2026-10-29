@@ -98,6 +98,19 @@ export class ReadabilityView {
     this.chevronEdge = new THREE.Mesh(chevGeo, new THREE.MeshBasicMaterial({ color: 0x14060a, transparent: true, depthTest: false, depthWrite: false, side: THREE.BackSide }));
     this.chevronEdge.scale.setScalar(1.35); this.chevron.add(this.chevronEdge);
     this.chevron.renderOrder = 986; this.chevronEdge.renderOrder = 985; this.chevron.visible = false; scene.add(this.chevron);
+    // 화면 밖 대상: 화면 가장자리에 대상 쪽을 가리키는 화살 표식(원거리 영웅이 '허공에 쏘는' 것처럼 보이지 않게).
+    const px = new Uint8Array(32 * 32 * 4);
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      // 위(+y)를 향하는 굵은 삼각형 + 어두운 외곽
+      const u = (x - 15.5) / 16, v = (y - 2) / 28, half = (1 - v) * .9, i = (y * 32 + x) * 4;
+      if (v < 0 || v > 1 || Math.abs(u) > half) continue;
+      const edge = Math.abs(u) > half - .2 || v > .82;
+      px.set(edge ? [20, 8, 10, 235] : [255, 255, 255, 255], i);
+    }
+    this.edgeTex = new THREE.DataTexture(px, 32, 32); this.edgeTex.needsUpdate = true;
+    this.edge = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.edgeTex, color: 0xffffff, depthTest: false, depthWrite: false, sizeAttenuation: false, transparent: true }));
+    this.edge.scale.set(.05, .05, 1); this.edge.renderOrder = 987; this.edge.visible = false; scene.add(this.edge);
+    this._ndc = new THREE.Vector3();
 
     // 4) 조준선(원거리 영웅): 바닥 위 점선이 대상 쪽으로 흐른다
     this.tracer = new THREE.Mesh(flat, new THREE.ShaderMaterial({
@@ -140,6 +153,7 @@ export class ReadabilityView {
   setHeroColor(color) {
     this.reticle.material.uniforms.uColor.value.set(color);
     this.chevron.material.color.set(color);
+    this.edge.material.color.set(color);
     this.tracer.material.uniforms.uColor.value.set(color);
   }
 
@@ -166,11 +180,12 @@ export class ReadabilityView {
   }
 
   /** 조준 대상 표시. target 이 없으면 서서히 숨긴다. */
-  setTarget(target, show, pulse, dt) {
+  setTarget(target, show, pulse, dt, camera = null) {
     const u = this.reticle.material.uniforms;
     u.uShow.value = show; u.uPulse.value = pulse;
-    const vis = show > .01 && !!target; this.reticle.visible = vis; this.chevron.visible = vis;
+    const vis = show > .01 && !!target; this.reticle.visible = vis; this.chevron.visible = vis; this.edge.visible = false;
     if (!vis) return;
+    if (camera) this.placeEdge(target, camera, show);
     const r = Math.max(.7, target.radius * 1.55) * (1 + pulse * .22);
     this.reticle.position.set(target.pos.x, .06, target.pos.z); this.reticle.scale.setScalar(r * 2);
     const top = target.headY + .8 + Math.sin(this.time * 5.2) * .09 - pulse * .12;
@@ -178,6 +193,20 @@ export class ReadabilityView {
     this.chevron.rotation.y += dt * 2.4;
     this.chevron.material.opacity = show; this.chevronEdge.material.opacity = show * .8;
     this.chevron.scale.setScalar(1 + pulse * .45);
+  }
+
+  /** 대상이 화면 안전 영역 밖이면 가장자리에 대상 쪽 화살 표식을 둔다. */
+  placeEdge(target, camera, show) {
+    const n = this._ndc.set(target.pos.x, .9, target.pos.z).project(camera);
+    const behind = n.z > 1, lx = .9, ly = .78;
+    if (!behind && Math.abs(n.x) <= lx && n.y <= ly && n.y >= -.86) return;
+    let x = behind ? -n.x : n.x, y = behind ? -n.y : n.y;
+    const k = Math.max(Math.abs(x) / lx, y > 0 ? y / ly : -y / .86, 1e-6);
+    x /= k; y /= k;
+    // 화면 비율을 보정한 각도로 화살 머리를 대상 쪽으로 돌린다.
+    this.edge.material.rotation = Math.atan2(y, x * (camera.aspect || 1)) - Math.PI / 2;
+    this.edge.position.set(x, y, .5).unproject(camera);
+    this.edge.material.opacity = show; this.edge.visible = true;
   }
 
   setTracer(from, to, show) {
@@ -208,6 +237,6 @@ export class ReadabilityView {
   clear() {
     this.rings.geometry.instanceCount = 0; this.bars.geometry.instanceCount = 0; this.whiffs.geometry.instanceCount = 0;
     for (const w of this.whiffList) w.t = 1;
-    this.reticle.visible = false; this.chevron.visible = false; this.tracer.visible = false;
+    this.reticle.visible = false; this.chevron.visible = false; this.tracer.visible = false; this.edge.visible = false;
   }
 }

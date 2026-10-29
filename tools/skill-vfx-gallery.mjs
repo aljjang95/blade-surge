@@ -3,7 +3,7 @@
 // 픽스처 주입(명시): 적 4마리를 영웅 앞 고정 위치로 옮기고 체력을 크게·경직을 길게 둔다. 판정·피해 공식은 건드리지 않는다.
 // 사용: node tools/skill-vfx-gallery.mjs --tag before|after [--dist dist] [--heroes knight,...] [--w 844 --h 390]
 import { chromium } from 'playwright';
-import { preview } from 'vite';
+import { preview, createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -23,7 +23,9 @@ const report = { tag, viewport: { w: W, h: H }, times: TIMES, heroes: {}, errors
 
 let server, browser;
 try {
-  server = await preview({ root, logLevel: 'error', build: { outDir: arg('dist', 'dist') }, preview: { host: '127.0.0.1', port: 0 } });
+  // --dev: 빌드 없이 vite 개발 서버로 연다(반복 작업용). 기본은 빌드 산출물(--dist) 미리보기.
+  if (process.argv.includes('--dev')) { server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } }); await server.listen(); }
+  else server = await preview({ root, logLevel: 'error', build: { outDir: arg('dist', 'dist') }, preview: { host: '127.0.0.1', port: 0 } });
   const url = 'http://127.0.0.1:' + server.httpServer.address().port;
   browser = await chromium.launch(launchOpts());
   for (const hero of heroes) {
@@ -55,7 +57,7 @@ try {
         if (!window.__foeType) window.__foeType = Object.keys(window.__EN).find(k => { const d = window.__EN[k]; return d && !d.boss && app.models?.[d.model] && (d.scale || 1) <= 1.2; });
         for (let k = b.enemies.filter(e => e.alive).length; k < 4 && window.__foeType; k++) b.spawnEnemy(window.__foeType, p.pos);
         for (let i = 0; i < 240 && b.enemies.filter(e => e.alive && !e.spawning).length < 4; i++) app.step(1 / 60, false);
-        const spots = [[0, -3.2], [-1.8, -5.2], [1.9, -5.4], [0.2, -7.6]];
+        const spots = [[0, -2.2], [-1.4, -3.2], [1.5, -3.4], [0.3, -4.6]];
         const foes = b.enemies.filter(e => e.alive && !e.spawning).slice(0, 4);
         foes.forEach((e, i) => { e.pos.set(p.pos.x + spots[i][0], 0, p.pos.z + spots[i][1]); e.maxHp = e.hp = 1e9; e.stun = 99; e.vel?.set?.(0, 0, 0); });
         p.yaw = Math.PI; p._shownYaw = Math.PI; p.lockTarget = foes[0] || null;
@@ -96,6 +98,7 @@ try {
 } catch (e) { report.status = 'fail'; report.failure = String(e?.stack || e); process.exitCode = 1; }
 finally {
   await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
-  await browser?.close(); await new Promise(r => server?.httpServer.close(r) || r());
+  await browser?.close(); await server?.close?.().catch?.(() => {});
   console.log(JSON.stringify({ status: report.status, heroes: report.heroes, errors: report.errors.slice(0, 5), failure: report.failure?.slice(0, 400) }));
 }
+process.exit(process.exitCode || 0);

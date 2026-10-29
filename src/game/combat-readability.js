@@ -77,7 +77,7 @@ export class CombatReadability {
     this.pulse = Math.max(0, this.pulse - dt * READABILITY.pulseDecay);
     this.shotT = Math.max(0, this.shotT - dt);
     if (t) t.headY = 1.75 * (t.def?.scale || 1);
-    this.view.setTarget(t, this.show, this.pulse, dt);
+    this.view.setTarget(t, this.show, this.pulse, dt, b.renderer?.camera);
     if (this.ranged && t) {
       this._tracerFrom.x = p.pos.x; this._tracerFrom.z = p.pos.z; this._tracerTo.x = t.pos.x; this._tracerTo.z = t.pos.z;
       this.view.setTracer(this._tracerFrom, this._tracerTo, this.show * (.35 + .65 * Math.min(1, this.shotT / .3)));
@@ -88,7 +88,7 @@ export class CombatReadability {
       if (!e.alive || e.spawning) continue;
       const scale = e.def?.scale || 1;
       // 정예·보스는 이미 자기 색 고리(금·적)가 있다. 일반 적만 붉은 고리를 얹는다.
-      if (!e.isBoss && !e.isElite && nr < ringRows.length) { const r = ringRows[nr++]; r.x = e.pos.x; r.z = e.pos.z; r.radius = e.radius * 1.15; r.alpha = e === t ? 1 : .6; }
+      if (!e.isBoss && !e.isElite && nr < ringRows.length) { const r = ringRows[nr++]; r.x = e.pos.x; r.z = e.pos.z; r.radius = e.radius * 1.15; r.alpha = e === t ? 1 : .48; }
       const hitT = e._rdHitT || 0;
       if (hitT > 0) e._rdHitT = hitT - dt;
       const fill = Math.max(0, Math.min(1, e.hp / (e.maxHp || 1)));

@@ -3,7 +3,7 @@
 // 픽스처 주입: 저장의 선택 영웅·보유·진행도·에너지만 바꾼다(HP·피해·처치·승리는 건드리지 않는다).
 // 사용: node tools/combat-readability-qa.mjs [--tag before|after] [--heroes knight,ranger] [--cases 1-1,3-2,3-5] [--w 844 --h 390]
 import { chromium } from 'playwright';
-import { preview } from 'vite';
+import { preview, createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -25,7 +25,9 @@ await fs.mkdir(out, { recursive: true });
 
 let server, browser;
 try {
-  server = await preview({ root, logLevel: 'error', build: { outDir: arg('dist', 'dist') }, preview: { host: '127.0.0.1', port: 0 } });
+  // --dev: 빌드 없이 vite 개발 서버로 연다(반복 작업용). 기본은 빌드 산출물(--dist) 미리보기.
+  if (process.argv.includes('--dev')) { server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } }); await server.listen(); }
+  else server = await preview({ root, logLevel: 'error', build: { outDir: arg('dist', 'dist') }, preview: { host: '127.0.0.1', port: 0 } });
   const url = 'http://127.0.0.1:' + server.httpServer.address().port;
   browser = await chromium.launch(launchOpts());
   for (const hero of heroes) {
@@ -88,6 +90,7 @@ try {
 } catch (e) { report.status = 'fail'; report.failure = String(e?.stack || e); process.exitCode = 1; }
 finally {
   await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
-  await browser?.close(); await new Promise(r => server?.httpServer.close(r) || r());
+  await browser?.close(); await server?.close?.().catch?.(() => {});
   console.log(JSON.stringify({ status: report.status, runs: report.runs.map(r => ({ id: r.id, ok: !r.failure, m: r.metrics?.readability })), errors: report.errors.slice(0, 5), failure: report.failure?.slice(0, 400) }));
 }
+process.exit(process.exitCode || 0);
