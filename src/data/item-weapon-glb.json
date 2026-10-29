@@ -265,6 +265,18 @@
       }
     },
     {
+      "id": "w_void",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_void.glb",
+      "sha256": "2969a9664827da38936a3a4e0d175f808c966b9f780a04eb2b0063b060ce83a5",
+      "bytes": 652288,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "7774bd9d-f2d7-4b74-b1f2-a8ef09a6682e",
+        "concept": "void shard greatsword: dark black-grey cracked stone blade with glowing purple cracks, broken blade fragments fused to the blade as solid attached shards, black-grey claw-like cross guard with a purple gem, dark grip, purple crystal pommel"
+      }
+    },
+    {
       "id": "w_wood",
       "form": "sword",
       "file": "/models/item-weapons/w_wood.glb",
