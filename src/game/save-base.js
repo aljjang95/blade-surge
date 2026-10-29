@@ -176,6 +176,8 @@ export function normalizeSave(raw, fresh) {
   s.settings.autoSalvageN = raw.settings?.autoSalvageN === true;
   // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
   s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
+  // 동료 네브 첫 등장 소개 카드를 이미 봤는지. 서버 소유 키가 아니라 기기 설정이다.
+  s.settings.companionIntroSeen = raw.settings?.companionIntroSeen === true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   dropUnownedJob(s);
