@@ -101,7 +101,7 @@ export class CommandQueue {
           this.stats.sent++;
         }
         catch (error) {
-          if (epoch !== this.epoch) break; // 전송 중 계정이 바뀌었다: 이전 계정 결과는 버린다
+          if (epoch !== this.epoch) continue; // 전송 중 계정이 바뀌었다: 이전 계정 결과는 버리고 새 계정 항목을 이어 보낸다
           const status = /** @type {any} */ (error)?.status;
           // 네트워크 오류: 큐를 보존하고 다음 기회에 다시 보낸다.
           if (!status) { this.hooks.onError?.(error); break; }
@@ -112,7 +112,7 @@ export class CommandQueue {
           if (this.hooks.authority() === 'server') await this.resync();
           continue;
         }
-        if (epoch !== this.epoch) break;
+        if (epoch !== this.epoch) continue;
         this.pending.shift();
         if (response.match === false) this.stats.mismatched++; else if (response.match) this.stats.matched++;
         this.hooks.onResult?.(entry, response);

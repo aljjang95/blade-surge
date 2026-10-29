@@ -52,14 +52,19 @@ export function askConfirm(message, yes = '네', no = '아니요') {
 function ensureSocialLayer() {
   try {
     injectStyles(document);
-    if (document.querySelector('.tls-root')) return;
+    if (document.querySelector('.tls-root')) return null;
     const root = document.createElement('div');
     root.className = 'tls-root';
     applyTheme(root);
     document.body.append(root);
-  } catch { /* 층을 못 만들면 대화상자가 body에 붙는다 */ }
+    return root;
+  } catch { return null; /* 층을 못 만들면 대화상자가 body에 붙는다 */ }
 }
-const signInGoogle = () => { ensureSocialLayer(); return googleSignIn(); };
+/** 임시 층은 대화상자가 끝나면 지운다(커뮤니티가 나중에 만든 층과 겹쳐 이후 구글 대화상자를 가리지 않게). */
+const signInGoogle = async () => {
+  const temp = ensureSocialLayer();
+  try { return await googleSignIn(); } finally { temp?.remove(); }
+};
 
 const toastOf = (app) => (message) => { try { app.ui.toast(message); } catch {} };
 

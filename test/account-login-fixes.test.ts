@@ -96,4 +96,24 @@ describe('계정 전환 전 대기 명령 격리', () => {
     expect(sent).toEqual(['cmd:selectHero']);
     expect(q.pending.length).toBe(0);
   });
+
+  test('전환 뒤 새 계정 명령은 이전 응답이 끝나면 이어서 보낸다(flush(old) → reset → push(new) → resolve(old))', async () => {
+    const sent: string[] = [];
+    let release: () => void = () => {};
+    const client: any = { cmd: async (c: any) => { sent.push(c.cid); if (c.cid === 'old') await new Promise<void>(r => { release = r; }); return { match: true }; } };
+    const eco = new Economy({ storage: createMemoryStorage() } as any);
+    eco.chooseStarter('knight');
+    const q = new CommandQueue(eco, client, { authority: () => 'shadow', adopt: () => {} });
+    q.pending.push({ cid: 'old', op: 'selectHero', args: ['knight'], clientHash: 'x' });
+    const flushing = q.flush();
+    await until(() => sent.length === 1);
+    q.reset();
+    q.pending.push({ cid: 'new', op: 'selectHero', args: ['knight'], clientHash: 'x' });
+    void q.flush(); // busy라 바로 돌아온다
+    release();
+    await flushing;
+    await until(() => !q.pending.length && !q.busy);
+    expect(sent).toEqual(['old', 'new']);
+    expect(q.pending.length).toBe(0);
+  });
 });
