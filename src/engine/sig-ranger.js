@@ -262,9 +262,10 @@ export const SIGNATURES = {
       // 조이는 빌보드 고리는 가운데 갈래만(2차): 다섯 갈래 끝이 적 무리 위에서 겹치면 가산 고리 다섯 겹이 적 몸을 흰빛으로 덮었다.
       if (!i) impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, .9, GOLD, .45, { grow: 1.9, delay: t });
       // 덩굴 가시: 매듭 둘레 세 곳에서 위로 솟았다가 떨어진다(결정적 수식).
-      for (let j = 0; j < 3; j++) {
-        const a = j * 2.094 + i;
-        impact._emit(IMPACT_KIND.shard, _e.x + Math.cos(a) * .5, .1, _e.z + Math.sin(a) * .5, .28, j === 2 ? LIME : j ? VINE : MOSS, .55,
+      // 가시는 매듭마다 두 개·어두운 덩굴빛(2차: 다섯 매듭 × 연두 가시 셋이 적 몸 앞 세로 흰 줄로 겹쳤다).
+      for (let j = 0; j < 2; j++) {
+        const a = j * 3.14 + i;
+        impact._emit(IMPACT_KIND.shard, _e.x + Math.cos(a) * .5, .1, _e.z + Math.sin(a) * .5, .28, j ? VINE : MOSS, .55,
           { vx: Math.cos(a) * 1.2, vy: 7 + j, vz: Math.sin(a) * 1.2, angle: a, stretch: 2.2, grow: .6, gravity: 14, delay: t });
       }
     }

@@ -58,7 +58,8 @@ export const ARROW_STREAKS = Object.freeze({
   retreat: Object.freeze({ tail: 7, width: .14, color: 0x4ad8d8, hot: 0xd8fffa, glow: .34, style: 2, muzzle: .85 }),
   storm: Object.freeze({ tail: 11, width: .18, color: 0x2fe0a8, hot: 0xfff2c0, glow: .5, style: 2, muzzle: 1.1 }),
   quick: Object.freeze({ tail: 8, width: .16, color: 0x6affc4, hot: 0xe4fff4, glow: .42, style: 0, muzzle: .95 }),
-  bind: Object.freeze({ tail: 10, width: .17, color: 0x56d878, hot: 0xe8ffc8, glow: .44, style: 1, muzzle: .9 }),
+  // 숲의 속박(2차): 다섯 발이 정면 카메라에서 적 무리 위 같은 세로 띠로 겹쳐 흰 심이 적 몸을 덮었다 — 심을 덩굴 연두로 낮춘다.
+  bind: Object.freeze({ tail: 10, width: .17, color: 0x56d878, hot: 0xb4ee98, glow: .34, style: 1, muzzle: .9 }),
   gale: Object.freeze({ tail: 9, width: .17, color: 0x8af04a, hot: 0xf2ffd8, glow: .46, style: 2, muzzle: .9 }),
   omen: Object.freeze({ tail: 8, width: .16, color: 0x9a5cff, hot: 0xf0e2ff, glow: .42, style: 0, muzzle: .95 }),
 });
