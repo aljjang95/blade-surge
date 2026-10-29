@@ -437,7 +437,7 @@ export const SIGNATURES = {
     for (let k = 0; k < sweeps; k++) {
       const a = Math.PI / 2 - (k / sweeps) * Math.PI * 1.5; _d.set(Math.cos(a), 0, -Math.sin(a));
       _a.set(c.x, .12, c.z);
-      impact.beam(_a, _d, 6, k % 2 ? C.arcane : C.star, { width: .18, fade: .16, delay: k * (.4 / sweeps) });
+      impact.beam(_a, _d, 6, k % 2 ? C.arcane : C.star, { width: .16, fade: .16, delay: k * (.4 / sweeps) });
     }
     _d.set(Math.cos(.6), 0, -Math.sin(.6)); _a.set(c.x, .14, c.z);
     impact.beam(_a, _d, 3.4, C.arcane, { width: .42, fade: 1.6, delay: .05 });
@@ -452,10 +452,12 @@ export const SIGNATURES = {
         const dx = e.pos.x - c.x, dz = e.pos.z - c.z; if (dx * dx + dz * dz >= 9.5 * 9.5) continue;
         const mid = 1.75 * (e.def?.scale || 1) * .55;
         for (let s = -1; s <= 1; s += 2) {
-          _a.set(e.pos.x + .8 - .28 * s, mid + .42, e.pos.z); _d.set(.56 * s, -.84, 0);
+          _a.set(e.pos.x + .95 - .45 * s, mid + .65, e.pos.z); _d.set(.9 * s, -1.3, 0);
           // 모래시계 = 금빛 모래(보라 시계판 위에서 갈린다).
-          impact.beam(_a, _d, _d.length(), C.starGold, { width: .12, fade: 1.2, delay: .06 + shown * .04 });
+          impact.beam(_a, _d, _d.length(), C.starGold, { width: .2, fade: 2.8, delay: .06 + shown * .04 });
         }
+        // 모래가 갈리는 허리 자리 작은 금빛 별(봉인 동안 반짝임 하나).
+        impact._emit(IMPACT_KIND.star, e.pos.x + .95, mid, e.pos.z, .45, C.starGold, .5, { angle: .4, grow: .4, delay: .1 + shown * .04 });
         shown++;
       }
     }
