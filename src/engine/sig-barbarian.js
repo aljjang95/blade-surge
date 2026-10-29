@@ -316,7 +316,7 @@ export const SIGNATURES = {
     for (let i = 0; i < (lite ? 2 : 4); i++) {
       const d = 1.4 + i * 3;
       _p.copy(player.pos).addScaledVector(f, d);
-      impact._emit(IMPACT_KIND.cut, _p.x, 1.1, _p.z, 2.6, i % 2 ? GOLD : FLAME, .16, { angle: impact._screenAngle(_e), stretch: 1.2, grow: .7, delay: Math.max(0, d - 1.4) / V });
+      impact._emit(IMPACT_KIND.cut, _p.x, 1.1, _p.z, 2, i % 2 ? HOT : FLAME, .16, { angle: impact._screenAngle(_e), stretch: 1.2, grow: .7, delay: Math.max(0, d - 1.4) / V });
       if (!lite && i % 2 === 0) debris(impact, _p.x, _p.z, 3, MOLTEN, { delay: Math.max(0, d - 1.4) / V, up: 5, out: 3, phase: yaw });
     }
   },
@@ -354,14 +354,14 @@ export const SIGNATURES = {
   // 바위 가시 왕관 + 핏빛 기둥). 원형 문양은 고리 하나·가시 고리 하나만.
   bloodquake(ctx) {
     const { impact, player, lite } = ctx; const c = player.pos;
-    const arms = lite ? 3 : 6, SP = 55;
+    const arms = lite ? 3 : 6, SP = 40;
     for (let k = 0; k < arms; k++) {
       const a0 = (k / arms) * TAU; let t = 0;
       for (const [r0, da0, r1, da1] of [[8.5, 0, 5, .55], [5, .55, 1.4, 1.25]]) {
         _a.set(c.x + Math.cos(a0 + da0) * r0, .08, c.z + Math.sin(a0 + da0) * r0);
         _g.set(c.x + Math.cos(a0 + da1) * r1 - _a.x, 0, c.z + Math.sin(a0 + da1) * r1 - _a.z);
         const L = _g.length();
-        impact.beam(_a, _g, L, k % 2 ? CRIMSON : BLOOD, { speed: SP, tail: 2.6, width: .15, delay: t });
+        impact.beam(_a, _g, L, k % 2 ? CRIMSON : BLOOD, { speed: SP, tail: 4, width: .18, delay: t });
         t += L / SP;
       }
     }
@@ -379,18 +379,19 @@ export const SIGNATURES = {
     }
     risingEmbers(impact, c, lite ? 3 : 6, 4, FLAME, { delay: .2, rise: 8 });
   },
-  // 종말·화산심장(각성 4) — '혜성 낙하 → 화산탄 분수': 착탄점에 금빛 나침 + 진홍 가시 표식(조준), 도약 정점(영웅 위 7.5m)에서
+  // 종말·화산심장(각성 4) — '혜성 낙하 → 화산탄 분수': 착탄점에 금빛 나침 + 진홍 가시 표식(조준), 도약 정점(영웅 뒤 3m·위 7.5m)에서
   // 착탄점으로 비스듬히 내리꽂는 불의 궤적 두 줄이 .3초(판정 순간)에 닿는다. 분화: 중심 불기둥 + 금빛 심, 포물선으로 솟아 바깥에
   // 떨어지는 화산탄 마름모 분수, 용암 균열, 고리 하나, .16초 뒤 바깥 6~8.5m 여진 바위 가시.
   cataclysm(ctx) {
-    const { impact, player, at, lite } = ctx; const T = .3;
+    const { impact, player, at, f, lite } = ctx; const T = .3;
     impact.mark(at, GOLD, { radius: 2, life: T + .15, style: MARK_STYLE.compass });
     impact.mark(at, DEEP_CRIMSON, { radius: THORN_MAX, life: T + .5, style: MARK_STYLE.thorn, angle: .31 });
     risingEmbers(impact, at, lite ? 2 : 4, 1.6, CRIMSON, { rise: 4 });
-    _a.set(player.pos.x, 7.5, player.pos.z); _g.set(at.x - _a.x, .3 - _a.y, at.z - _a.z);
+    // 영웅 뒤 3m·높이 7.5m(도약 정점)에서 출발해 착탄점까지 비스듬히 — 조준점이 발밑 가까이여도 사선으로 읽힌다.
+    _a.copy(player.pos).addScaledVector(f, -3).setY(7.5); _g.set(at.x - _a.x, .3 - _a.y, at.z - _a.z);
     const L = _g.length();
     impact.beam(_a, _g, L, FLAME, { speed: L / T, tail: 6, width: .36 });
-    if (!lite) { _a.x += .35; impact.beam(_a, _g, L, GOLD, { speed: L / T, tail: 3.5, width: .12 }); }
+    if (!lite) { _a.y += .4; impact.beam(_a, _g, L, GOLD, { speed: L / T, tail: 3.5, width: .12 }); }
     _d.set(0, 1, 0); _a.set(at.x, 0, at.z);
     impact.beam(_a, _d, 13, FLAME, { speed: 55, tail: 6, width: .44, delay: T });
     _a.x += .35; impact.beam(_a, _d, 10, GOLD, { speed: 60, tail: 4, width: .14, delay: T });
