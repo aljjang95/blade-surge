@@ -633,7 +633,7 @@ export class Economy {
     h.shards += GACHA.dupShards; return { dup: false, locked: true, shards: GACHA.dupShards };
   }
   // ---------- 장비 ----------
-  /** @param {string} rarity @param {string|null} slot */
+  /** @param {string} rarity @param {string|null} slot @param {number|null} [il] */
   addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault(), il = null) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
@@ -648,6 +648,7 @@ export class Economy {
   /** 새 장비의 주인: 진행 중인 전투 장부의 영웅, 없으면 지금 고른 영웅. */
   gearOwnerDefault() { const led = this._fieldRewards; return led && !led.settled && this.s.heroes[led.heroId] ? led.heroId : this.s.selected; }
   /** 장비 인스턴스 하나를 인벤토리에 넣는다(모든 획득 경로의 단일 형태). */
+  /** @param {string} id @param {{ tp?: number, owner?: string, il?: number|null }} [opts] */
   pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = null } = {}) {
     // il = 스테이지 장비 레벨(item-tier.js). 필드 드랍은 그 스테이지 값을 명시하고(0 이면 필드 없음), 생략한 경로(가챠·제작·상점·보상)는
     // 지금까지 깬 가장 깊은 관문의 장비 레벨을 받는다. 생략 경로가 il 없이 나오면 같은 진행의 필드 드랍 하위 등급이 유니크·레전드리를 이겼다(2026-10-29 신고).
