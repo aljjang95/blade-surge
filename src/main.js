@@ -104,6 +104,7 @@ import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 import './ui/density.css';
 import './ui/density-hero.css';
 import './ui/density-result.css';
+import './ui/clear-loop.css';
 import './ui/density-panels.css';
 import './ui/density-shell.css';
 import './ui/density-hud.css';

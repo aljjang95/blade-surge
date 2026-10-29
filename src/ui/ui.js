@@ -28,6 +28,7 @@ import './combo-feedback.css';
 import './skill-feedback.css';
 import { itemIconHtml } from './item-presentation.js';
 import { currentRewardAction, openRewardTarget } from './reward-next.js';
+import { ClearLoop } from './clear-loop.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -99,6 +100,7 @@ export class UI {
     $('btn-ignore-rotate').addEventListener('click', () => document.body.classList.remove('force-landscape'));
     this._bindGlobal();
     this.modalStack = [];
+    this.clearLoop = new ClearLoop(this);
     this.resultTimers = []; this.resultData = null; this.adTimer = null; this.adResult = null;
   }
   _bindGlobal() {
@@ -693,6 +695,7 @@ export class UI {
     }
     for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
     renderGrowthPreparation($('result-growth'), this.app, result);
+    this.clearLoop.refresh();
     this.refreshResultUse(result);
   }
   /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */
@@ -775,6 +778,7 @@ export class UI {
       || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
     this.prepareResultLayout();
+    this.clearLoop.reset();
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
@@ -843,10 +847,13 @@ export class UI {
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
-      const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      // 클리어 루프: 카드 3장 선택 + 즉석 정비소가 올라가면 기존 '획득 보상' 목록과 그 소리는 쓰지 않는다(요약 칩 + 정비소가 대신).
+      const clearCards = this.clearLoop.mount(r, b);
+      const items = clearCards ? [] : [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      if (clearCards) lootDetails.hidden = true;
       lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 눌러서 비교`;
       lootDetails.open = items.length <= 8; // 보상이 적을 때는 처음부터 펼쳐 스크롤 없이 보이게(표시만, 정산과 무관). 많으면 접어 둔다.
-      if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
+      if (!clearCards && r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
         if (x.it) {
@@ -899,5 +906,5 @@ export class UI {
     return false;
   }
   cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
-  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.show(this.el.result, false); }
+  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.clearLoop?.reset(); this.show(this.el.result, false); }
 }

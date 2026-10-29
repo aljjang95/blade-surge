@@ -28,7 +28,7 @@ describe('클리어 카드 보상', () => {
     expect(a[1].tier).not.toBe('common');
     for (let i = 0; i < 200; i++) {
       const cards = rollClearCards({ ...ctx, seed: `s${i}`, first: false });
-      for (const c of cards) if (c.kind === 'gear') expect((ITEM_BY_ID as any)[c.id]).toBeTruthy();
+      for (const c of cards) if (c.kind === 'gear') expect((ITEM_BY_ID as any)[(c as any).id]).toBeTruthy();
       expect(cards.some((c) => c.kind === 'repair')).toBe(false);   // 무기가 닳지 않았으면 수리 카드 없음
     }
   });
