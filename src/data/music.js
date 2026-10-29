@@ -168,3 +168,7 @@ export const MUSIC_TRACKS = Object.freeze([...new Set([
   ...REGION_IDS.map(regionTrack),
   ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack), ...REGION_CUE_PLAN.map(cueTrack),
 ])].sort());
+
+/** 첫 실행 시작 영웅 선택 화면 곡(2026-10-29). 전용 곡(FlowMusic)이 배송되기 전에는 왕관 지역곡(장엄한 행진풍)을 쓴다. */
+export const STARTER_SELECT_CUE = Object.freeze({ id: 'hero-select-20261029', scene: 'starter-select', fallback: 'regions/crown', status: 'external-gui-pending' });
+export const STARTER_SELECT_MUSIC = STARTER_SELECT_CUE.status === 'shipped' && STARTER_SELECT_CUE.file ? STARTER_SELECT_CUE.file : STARTER_SELECT_CUE.fallback;
