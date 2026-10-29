@@ -146,3 +146,20 @@ test('summary never invents gains for missing or foreign snapshots, unknown XP o
   input.after = { level: 1, exp: 0 }; input.before = { heroId: 'mage', level: 1 }; input.combatXp = 0;
   expect(growthSummary(input)).toMatchObject({ levels: 0, combatXp: 0, unlocked: [] });
 });
+
+test('gems get a visible use: summon quotes pity and affordable pulls, protect scroll is offered during risky enhancing, nothing is mutated', () => {
+  const eco = fixture(), save: any = eco.s;
+  save.gems = 6430; save.tickets = 0; save.gacha = { ...(save.gacha || {}), beginner: 20, pity: 25 };
+  save.inventory[0].enh = ENH_SAFE_MAX; save.protect = 0;
+  const before = JSON.stringify(save);
+  const options: any[] = growthOptions(save, eco);
+  expect(JSON.stringify(save)).toBe(before);
+  const summon = options.find(o => o.kind === 'summon');
+  expect(summon).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
+  const protect = options.find(o => o.kind === 'protect');
+  expect(protect).toMatchObject({ have: 0, gems: eco.sku('protect1')!.price });
+  // 충분히 쌓였거나 위험 구간이 아니면 안내하지 않는다.
+  save.protect = 3; expect(growthOptions(save, eco).some(o => o.kind === 'protect')).toBe(false);
+  save.protect = 0; save.inventory[0].enh = 0; expect(growthOptions(save, eco).some(o => o.kind === 'protect')).toBe(false);
+  save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'protect')).toBe(false);
+});

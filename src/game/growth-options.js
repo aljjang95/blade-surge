@@ -9,10 +9,12 @@ import { planBestEquip, junkItems, salvagePreview } from './gear-advice.js';
 
 // 강화 규칙은 다른 작업이 바꿀 수 있어 값을 박지 않고 items.js 의 함수를 호출 시점에 읽는다(없으면 0 = 위험 없음).
 const rule = (name, level) => { const fn = Items[name]; const value = typeof fn === 'function' ? Number(fn(level)) : 0; return Number.isFinite(value) ? value : 0; };
+export const PROTECT_STOCK_GOAL = 3;   // 위험 구간 강화 중 보호 주문서가 이 수보다 적으면 보석 구매를 안내
 export const JUNK_MIN = 5;   // 가방 정리 안내를 띄우는 최소 개수
 
-/** Read-only next steps, each affordable on its own. Never a bulk purchase quote. */
-export function growthOptions(save, eco = null) {
+/** Read-only next steps, each affordable on its own. Never a bulk purchase quote.
+ * @param {any} save @param {any} [eco] */
+export function growthOptions(save, eco = undefined) {
   const heroId = save?.selected, hero = save?.heroes?.[heroId], def = HEROES[heroId];
   if (!hero || !def) return [];
   const options = [];
@@ -86,7 +88,20 @@ function gearAndSinkOptions(eco, save, heroId) {
   if (transcend?.ok && transcend.next) out.push({ kind: 'transcend', heroId, from: transcend.grade, to: transcend.next });
   for (const banner of ['beginner', 'hero', 'gear']) {
     const quote = eco.pullQuote?.(10, banner) ?? { ok: false };
-    if (quote.ok) { out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets }); break; }
+    if (quote.ok) {
+      const g = save.gacha || {}, used = banner === 'gear' ? g.gearPity : banner === 'hero' ? g.pity : null;
+      // 천장까지 남은 횟수(읽기 전용: 저장 상태를 만들지 않는다). 초보자 배너는 천장 개념이 없다.
+      const pityLeft = used === null ? null : Math.max(0, quote.banner.pity - (Number.isFinite(used) ? Math.max(0, Math.floor(used)) : 0));
+      const pulls = quote.currency === 'gems' && quote.cost > 0 ? Math.floor((save.gems || 0) / quote.cost) : 0;
+      out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets, pityLeft, pulls });
+      break;
+    }
+  }
+  // 위험 구간 강화 중이고 보호 주문서가 부족하면, 보석으로 살 수 있다는 안내(기존 상점 상품 protect1 가격 그대로, 구매는 상점 화면에서 사람이 한다).
+  if (eco.sku && (save.protect || 0) < PROTECT_STOCK_GOAL) {
+    const sku = eco.sku('protect1');
+    const risky = Object.values(save.heroes?.[heroId]?.equip || {}).some((uid) => { const it = save.inventory?.find((x) => x.uid === uid); return it && it.enh >= ENH_SAFE_MAX && it.enh < ENH_MAX; });
+    if (risky && sku?.kind === 'gem' && Number.isFinite(sku.price) && (save.gems || 0) >= sku.price) out.push({ kind: 'protect', heroId, have: save.protect || 0, gems: sku.price });
   }
   return out;
 }
