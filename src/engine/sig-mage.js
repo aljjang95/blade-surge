@@ -99,12 +99,12 @@ export function mageCharge(game, p, school = 'fire', castAt = .2) {
   const before = impact.spawned, lite = !!game.fx.lite;
   const bolt = school === 'bolt', a0 = bolt ? C.boltDeep : C.fireDeep, a1 = bolt ? C.bolt : C.fire;
   const H = _stars[0]; p.forward(_f); H.copy(p.pos).addScaledVector(_f, bolt ? .4 : .9); H.y = bolt ? 2.3 : 1.4;
-  const n = lite ? 4 : 10, life = Math.max(.12, castAt * .8);
+  const n = lite ? 4 : 12, life = Math.max(.12, castAt * .8);
   for (let k = 0; k < n; k++) {
     const a = (k / n) * TAU + .3, r = 1.5 + (k % 3) * .35, up = (k % 2 ? .6 : -.4);
     _d.set(Math.cos(a), up, Math.sin(a)).normalize();
     const delay = (k % 4) * life * .12;
-    impact._emit(IMPACT_KIND.streak, H.x + _d.x * r, H.y + _d.y * r, H.z + _d.z * r, .2, k % 2 ? a1 : a0, life - delay,
+    impact._emit(IMPACT_KIND.streak, H.x + _d.x * r, H.y + _d.y * r, H.z + _d.z * r, .3, k % 2 ? a1 : a0, life - delay,
       { vx: -_d.x * r / (life - delay), vy: -_d.y * r / (life - delay), vz: -_d.z * r / (life - delay), stretch: 1.4, grow: 1, delay });
   }
   impact._emit(IMPACT_KIND.star, H.x, H.y, H.z, bolt ? .9 : .8, a1, .18, { angle: .3, grow: .6, delay: life * .7 });
@@ -233,11 +233,12 @@ export function magePrismTrail(game, from, to) {
 export const PRELUDES = {
   // 메테오 스톰: 발밑 주황 나침 진이 조여들고, 하늘로 불길 광선 셋이 솟아 운석을 부른다. 몸 둘레 불씨가 위로 빨려 오른다.
   meteor(ctx) {
-    const { impact, player, f, lite } = ctx; const c = player.pos;
+    const { impact, player, lite } = ctx; const c = player.pos;
     impact.mark(c, C.fire, { radius: 3.6, life: 1.1, style: MARK_STYLE.compass, angle: .3 });
-    // 하늘에 열리는 룬(1박자): 영웅 앞 높이 7m 에 불의 나침 고리·오각 별이 그려진다.
-    _q.copy(c).addScaledVector(f, 3.5); _q.y = 7;
-    skyRune(impact, _q, 3, 1.1, { delay: .08, lite });
+    // 하늘에 열리는 룬(1박자): 영웅 위 하늘에 불의 나침 고리·오각 별이 그려진다.
+    // 화면 안에 들도록 영웅 위(운석이 내려올 오른쪽)로 6.5m.
+    _q.set(c.x + 3, 6.5, c.z + 1);
+    skyRune(impact, _q, 2.6, 1.1, { delay: .08, lite });
     _d.set(0, 1, 0);
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * TAU + .5; _a.set(c.x + Math.cos(a) * 1.4, .2, c.z + Math.sin(a) * 1.4);
@@ -254,7 +255,7 @@ export const PRELUDES = {
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
 export const SIGNATURES = {
   // 화염구: 손끝 진홍 고리(손끝 모임 빛은 start 의 mageCharge) → 꼬리가 긴 불덩이 궤적(진홍 굵은 꼬리 + 주황 나선 + 가는 심,
-  // 화염구와 같은 15m/s) → 첫 적(직선 위)에 닿는 순간 착탄 폭발 고리·나침 표식·불똥. 대상이 없으면 6.5m 궤적만.
+  // 화염구와 같은 15m/s, 첫 적(직선 위)까지 — 대상이 없으면 6.5m) → 착탄 폭발 고리는 투사체 폭발(fx._fireImpact)이 맡는다.
   // 손끝 밝은 주황(fireHot) 큰 고리·불똥은 화염구 후광과 겹쳐 크림 번짐이 됐다(h1b): 진홍 본색 위주.
   fireball(ctx) {
     const { impact, player, f, lite } = ctx;
@@ -282,18 +283,7 @@ export const SIGNATURES = {
       const d = .8 + k * 1.1; if (d > L) break; _b.copy(_a).addScaledVector(f, d);
       impact._emit(IMPACT_KIND.streak, _b.x, _b.y, _b.z, .22, k % 2 ? C.fire : C.fireDeep, .4, { vx: f.z * 3 * (k % 2 ? 1 : -1), vy: 1, vz: -f.x * 3 * (k % 2 ? 1 : -1), stretch: 1, grow: 1, gravity: 14, delay: d / 15 });
     }
-    if (hit > 0) {
-      // 착탄 폭발 고리: 맞은 자리에 진홍 두 겹 고리 + 바닥 나침 폭발 표식 + 사방 불똥(코어 없음 — 공용 착탄 섬광이 이미 있다).
-      const t = hit / 15; _b.copy(_a).addScaledVector(f, hit); _b.y = .9;
-      impact._emit(IMPACT_KIND.ring, _b.x, _b.y, _b.z, 3.4, C.fireDeep, .3, { grow: 1, delay: t });
-      impact._emit(IMPACT_KIND.ring, _b.x, _b.y, _b.z, 2.2, C.fire, .24, { grow: 1, delay: t + .04 });
-      _q.set(_b.x, 0, _b.z);
-      impact.mark(_q, C.fire, { radius: 2.6, life: .5, style: MARK_STYLE.compass, angle: impact.rng.next() * TAU, delay: t });
-      for (let k = 0, n = lite ? 4 : 8; k < n; k++) {
-        const a = (k / n) * TAU + .2, sp = 8 + (k % 3) * 2;
-        impact._emit(IMPACT_KIND.streak, _b.x, _b.y, _b.z, .22, k % 2 ? C.fire : C.fireDeep, .4, { vx: Math.cos(a) * sp, vy: 4 + (k % 2) * 3, vz: Math.sin(a) * sp, stretch: .9, grow: 1, gravity: 16, delay: t });
-      }
-    }
+    // 착탄 폭발 고리·나침 표식은 투사체 폭발(fx._fireImpact)이 같은 자리에 이미 그린다: 겹쳐 쌓지 않는다(블룸 번짐 방지).
   },
   // 번개 사슬: 하늘에서 들어 올린 손으로 청백 번개가 내리꽂히고 발밑 짧은 고리. 연쇄 마디는 mageBolt.
   chain(ctx) {
@@ -323,9 +313,9 @@ export const SIGNATURES = {
     const { impact, at, lite } = ctx;
     impact.mark(at, C.fire, { radius: 4.5, life: 1.8, style: MARK_STYLE.compass });
     impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 4.5, C.fire, .36, { grow: 1 });
-    // 낙하 원점 쪽(skills.js 운석 출발점 +6,+18,+4 의 .45배) 하늘에 큰 룬이 열리고, 운석 궤적이 그 룬에서 내리꽂힌다.
-    _q.set(at.x + 2.7, 8.1, at.z + 1.8);
-    skyRune(impact, _q, 3.8, 1.6, { lite });
+    // 낙하 원점 쪽(skills.js 운석 출발점 +5,+8,+1.5 의 .85배) 하늘에 큰 룬이 열리고, 운석 궤적이 그 룬에서 대각선으로 내리꽂힌다.
+    _q.set(at.x + 4.25, 6.8, at.z + 1.3);
+    skyRune(impact, _q, 3.4, 1.6, { lite });
   },
   // 프리즘 난반사: 손끝 두 겹 고리에서 빛이 스펙트럼 다섯 갈래(보라 → 비취)로 부채처럼 갈라져 앞으로 뻗고, 바닥에 굴절 각을 재는
   // 조준 원과 앞으로 펼쳐지는 빛 부채 표식이 남는다. 튕길 때는 magePrismBounce, 궤적은 magePrismTrail.

@@ -520,13 +520,13 @@ export const SKILLS = {
   },
   meteor: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
+    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 3.6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
     cast(game, p, c) {
       const focus = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.meteor.range, 5) || fwd(p, 4);
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
-        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(6, 18, 4)); orb.position.copy(start); game.scene.add(orb);
+        const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(5, 8, 1.5)); // 표시 전용 출발점: 18m 위는 화면 밖이라 궤적이 안 보였다 — 화면 안 대각선 낙하 orb.position.copy(start); game.scene.add(orb);
         mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
         game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
