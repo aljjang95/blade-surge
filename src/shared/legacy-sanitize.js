@@ -15,7 +15,7 @@ import { normalizeIdle, importedIdle } from '../game/idle-rewards.js';
 import { normalizeNewbie } from '../game/newbie-event.js';
 import { normalizeAchievements } from '../game/achievements.js';
 import { trustedSlain } from '../game/kill-ledger.js';
-import { periodAt, normalizeJourney } from '../game/journey-core.js';
+import { periodAt, normalizeJourney, journeySteps } from '../game/journey-core.js';
 import { CHAPTERS } from '../data/stages.js';
 import { progressItemLevel } from '../data/loot-tables.js';
 import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
@@ -248,6 +248,16 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     // 여정 단계 수령 기록도 서버 명령(claimJourneyStep)이 소유한다: 반복 스냅샷으로 비워 재수령하지 못하게 서버 값만(docs/SERVER_AUTHORITY_GATES.md 4절).
     if (s.journey && typeof s.journey === 'object') s.journey.claimedSteps = normalizeJourney(serverJourney).claimedSteps;
   } else {
+    // 외부 가져오기의 여정 단계 기록은 서버 판정(attest)으로도 받을 수 있는 단계만 순서대로 남긴다(파생 보상 wayfarer·d3c·7일 최종 상자 위조 차단, 교차 리뷰).
+    if (s.journey && typeof s.journey === 'object') {
+      const device = new Set(normalizeJourney(raw?.journey).claimedSteps), kept = new Set(normalizeJourney(serverJourney).claimedSteps);
+      for (const step of journeySteps({ ...s, journey: { claimedSteps: [] } }, { attest: true })) {
+        if (kept.has(step.id)) continue;
+        if (!device.has(step.id) || !step.complete) break;
+        kept.add(step.id);
+      }
+      s.journey.claimedSteps = [...kept];
+    }
     s.idle = importedIdle(now);
     s.newbie = normalizeNewbie(raw?.newbie, { start: periodAt(now).day });
     s.achievements = normalizeAchievements(raw?.achievements);

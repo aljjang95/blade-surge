@@ -106,7 +106,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (!isChapterOpen(at.ch, c.now)) fail(403, 'chapter-closed');
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
-  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed }, facts, check.verdict);
+  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed, wallMs: c.now - ticket.started_at }, facts, check.verdict);
   // 결제 환불로 생긴 미상환 부채는 서버 정산 획득분에서 먼저 갚는다(같은 배치, 영수증에 상환량 표시).
   const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
   const next = docOf(eco);

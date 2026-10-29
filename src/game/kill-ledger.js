@@ -58,7 +58,8 @@ export function stageSpeciesPool(stage) {
   const pool = new Set(), queue = [...raw];
   while (queue.length) {
     const id = queue.pop();
-    for (const x of [id, chapterSpeciesId(stage, id)]) {
+    // 전투 생성은 항상 장 전용 몸으로 바꾼 id(battle-base spawnEnemy → chapterSpeciesId)라 바뀐 id 만 풀에 넣는다(원본 id 위조 차단, 교차 리뷰).
+    for (const x of [chapterSpeciesId(stage, id)]) {
       if (!known(x) || pool.has(x)) continue;
       pool.add(x);
       if (typeof ENEMIES[x].summon === 'string') queue.push(ENEMIES[x].summon);
@@ -84,15 +85,19 @@ export function poolUpToFloor(floor) {
  * 정산 사실의 species 를 관문 풀과 처치 합으로 자른다. id 정렬 순서로 total 을 넘지 않게 채운다.
  * @returns {{ species: Record<string, number>, dropped: number }}
  */
-export function clampSpecies(species, pool, total) {
+export function clampSpecies(species, pool, total, { boss = Infinity, elite = Infinity } = {}) {
   const out = {};
   let left = Number.isSafeInteger(total) && total > 0 ? total : 0, dropped = 0;
+  // 계급 상한: 보스 종은 보스 처치 수까지, 정예 종은 정예 처치 수까지(정예 접사로 일반 종이 정예가 될 수는 있어도 그 반대는 없다).
+  const rankLeft = { boss: Math.max(0, boss), elite: Math.max(0, elite) };
   if (!record(species)) return { species: out, dropped };
   for (const id of Object.keys(species).sort()) {
     const n = count(species[id]);
     if (!n) continue;
     if (!known(id) || !pool.has(id)) { dropped += n; continue; }
-    const take = Math.min(n, left);
+    const rank = ENEMIES[id].boss ? 'boss' : ENEMIES[id].elite ? 'elite' : null;
+    const take = Math.min(n, left, rank ? rankLeft[rank] : Infinity);
+    if (rank) rankLeft[rank] -= take;
     dropped += n - take; left -= take;
     if (take) out[id] = take;
   }
@@ -122,13 +127,18 @@ export function trustedSlain(raw, { server, floor, killsCap }) {
 
 /**
  * 서버 정산 처치 원장 적용. 판정을 통과한 처치 수(계급별 + 소환)를 quests.kills 에, 종을 slain 에 더한다.
+ * wallMs(서버 시계 경과)·minClearMs·killCap(관문 처치 상한 합)을 주면 경과 비율만큼만 인정한다.
  * @returns {{ kills: number, species: number, dropped: number }}
  */
-export function applyKillLedger(save, stage, facts) {
+export function applyKillLedger(save, stage, facts, { wallMs, minClearMs, killCap } = {}) {
   const ranks = ['normal', 'elite', 'boss'];
-  const total = ranks.reduce((a, k) => a + (facts.kills?.[k] ?? 0) + (facts.summonedKills?.[k] ?? 0), 0);
+  let total = ranks.reduce((a, k) => a + (facts.kills?.[k] ?? 0) + (facts.summonedKills?.[k] ?? 0), 0);
+  // 시간 근거: 개연성 검사의 최소 시간은 승리에만 걸린다. 그래서 원장은 서버 시계로 잰 경과(wallMs)가 최소 클리어 시간에 못 미치면
+  // 그 비율만큼만 관문 처치 상한을 인정한다(티켓 직후 패배 정산으로 상한 처치를 찍는 위조 차단, Codex 보안 리뷰 PR #435).
+  if (Number.isFinite(wallMs) && minClearMs > 0 && killCap > 0) total = Math.min(total, Math.floor(killCap * Math.min(1, Math.max(0, wallMs) / minClearMs)));
   if (record(save.quests)) save.quests.kills = Math.min(SLAIN_MAX, (Number.isSafeInteger(save.quests.kills) ? save.quests.kills : 0) + total);
-  const { species, dropped } = clampSpecies(facts.species, stageSpeciesPool(stage), total);
+  const rankCap = (k) => (facts.kills?.[k] ?? 0) + (facts.summonedKills?.[k] ?? 0);
+  const { species, dropped } = clampSpecies(facts.species, stageSpeciesPool(stage), total, { boss: rankCap('boss'), elite: rankCap('elite') });
   for (const [id, n] of Object.entries(species)) recordSlain(save, id, n);
   return { kills: total, species: Object.keys(species).length, dropped };
 }

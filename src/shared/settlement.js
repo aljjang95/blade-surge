@@ -197,7 +197,9 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
   const loot = rollRunLoot(stage, ticket.lootSeed, facts);
   const half = (n) => verdict === 'soft' ? Math.floor(n / 2) : n;
   // 서버 처치 원장: 개연성 검사를 통과한 처치 수·종만 quests.kills·slain 에 더한다(승패 무관, 티켓당 1회는 호출자가 보장).
-  const killLedger = applyKillLedger(eco.s, stage, facts);
+  const lim = plausibilityFor(stage);
+  const killLedger = applyKillLedger(eco.s, stage, facts, { wallMs: ticket.wallMs, minClearMs: lim.minClearMs,
+    killCap: lim.kills.normal + lim.kills.elite + lim.kills.boss + lim.summonedKills });
   if (!facts.win) {
     // 패배: 기존처럼 전투 중 처치 경험치만 남는다(필드 재화는 정산되지 않는다).
     const ups = eco.addHeroExp(heroId, loot.combatExp, { silent: true });
