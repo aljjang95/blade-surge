@@ -7,7 +7,8 @@ import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
  * 검성 색 언어: 진한 금(GOLD)·주황 금(AMBER) 실루엣 + 아주 얇은 밝은 금(HOT) 심. 크림·흰 덩어리 대신 선·고리·표식으로 읽힌다.
  * 큰 화면 고리(IMPACT_KIND.ring, 카메라를 보는 빌보드)는 지름 3m 이하로만 쓴다: 7~10m 고리는 화면을 가로지르는 뿌연 크림 띠가 됐다.
  * 넓은 범위는 바닥에 눕는 얇은 선 표식(mark)으로 그린다.
- * 일섬=긴 수평 빛 칼날 / 강타=방패 충격 고리+지면 균열 / 심판=(skills.js 의 하늘 광선) 시전자 나침 / 용살검=거대 수직 참격+전방 부채 균열 /
+ * 일섬=쓸고 가는 칼 궤적+날아가는 두 겹 초승달+잔광 파편 / 강타=전방 부채 충격 파동+균열 / 심판=하늘로 오르는 광선+표적 박자(knightJudgmentStrike) /
+ * 용살검=예비(검에 모이는 빛)→거대 수직 참격→달려 나가는 균열 / 예비 표식은 PRELUDES /
  * 결박=사슬 가시 고리 / 성역=돔 경계 문양 / 태양파쇄=전진하는 태양 원반 / 신벌=하늘 낙하 성광 기둥.
  * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
  */
@@ -106,7 +107,7 @@ export const PRELUDES = {
   // 일섬 예비: 칼 쥔 손으로 금빛 줄기가 빨려 들고 칼끝 별빛이 켜진다(.24초 뒤 판정).
   holy_slash(ctx) {
     const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a);
-    gather(impact, h, lite ? 4 : 8, 2.2, GOLD, { life: .24, size: .2 });
+    gather(impact, h, lite ? 5 : 12, 2.4, GOLD, { life: .26, size: .3 });
     impact._emit(IMPACT_KIND.star, h.x, h.y, h.z, .9, HOT, .2, { angle: .2, grow: .3, delay: .1 });
   },
   // 강타 예비: 바깥에서 방패 앞으로 끌려 오는 줄기(몰이) + 방패 별빛. 원형 시전진(5m) 대신.
@@ -204,11 +205,11 @@ Object.assign(SIGNATURES, {
     impact._emit(IMPACT_KIND.cut, hit.x, 2.2, hit.z, 7 * scale, AMBER, .3, { angle: Math.PI / 2 + .18, stretch: 1.25, grow: .9 });
     impact._emit(IMPACT_KIND.cut, hit.x, 2.2, hit.z, 5.4 * scale, GOLD, .26, { angle: Math.PI / 2 - .12, stretch: 1.2, grow: .9, delay: .05 });
     impact._emit(IMPACT_KIND.star, hit.x, .6, hit.z, 1.8 * scale, AMBER, .14, { angle: .3, grow: .4, delay: .06 });
-    // 달려 나가는 균열: 영웅 앞 2.5m 에서 11m 를 지그재그 마디로 30m/s 로 차례로 켜고, 짝수 마디마다 금 파편이 튄다.
-    const SPEED = 30, segs = lite ? 5 : 12, L = 11 * scale / segs, sx = -f.z, sz = f.x;
-    _p.copy(player.pos).addScaledVector(f, 2.5).setY(.07);
+    // 달려 나가는 균열: 영웅 앞 1.8m 에서 7m 를 지그재그 마디로 18m/s 로 차례로 켜고(가로 화면 위 끝 안쪽), 짝수 마디마다 금 파편이 튄다.
+    const SPEED = 18, segs = lite ? 5 : 12, L = 7 * scale / segs, sx = -f.z, sz = f.x;
+    _p.copy(player.pos).addScaledVector(f, 1.8).setY(.07);
     for (let i = 0; i < segs; i++) {
-      const jag = (i % 2 ? 1 : -1) * .35 * (1 - i / segs * .5);
+      const jag = (i % 2 ? 1 : -1) * .3 * (1 - i / segs * .5);
       _e.set(f.x * L + sx * jag, 0, f.z * L + sz * jag);
       const dl = .04 + (i * L) / SPEED;
       impact.beam(_p, _e, _e.length(), i % 3 ? AMBER : HOT, { width: .24 - i * .01, fade: .6, delay: dl });

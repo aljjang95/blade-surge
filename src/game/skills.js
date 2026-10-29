@@ -329,7 +329,7 @@ export const SKILLS = {
           // 성광 원화(holyBurst)는 표적마다 크림 고리를 남겼다 → 생략. 착지 섬광·균열은 knightJudgmentStrike(인스턴스 층).
           game.fx.impact?.mark?.(pt, 0xff9a18, { radius: 1.3, life: .4, style: MARK_STYLE.thorn });
           game.fx.burst(pt.clone().setY(0.6), 0xffb040, { n: 12, speed: 7, size: 0.32, up: 1.2 });
-          if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
+          if (i < 3) game.fx.light(pt, 0xffb040, 8, 8, 0.4); // 크림(0xfff0c0) 조명은 바닥을 하얗게 띄웠다 → 금빛
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });
       });
@@ -378,7 +378,7 @@ export const SKILLS = {
       game.fx.explosion(hitC, { size: 3.4, color: 0xff8a10, life: 0.5 });
       game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
       game.fx.dustPuff(hitC, { size: 4 }); game.fx.burst(hitC.setY(1), 0xffa830, { n: 24, speed: 14, size: 0.42, up: 0.8 });
-      game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
+      game.fx.light(fwd(p, 3), 0xffa030, 16, 18, 0.6); // 크림빛 조명 → 진한 금(수직 참격이 크림 기둥으로 번지지 않게)
       game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.14, 0xffa030); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 1 }); audio.holy({ vol: 0.45, base: 523, dur: 1.1 }); audio.vibe([80, 40, 120]);
     },
