@@ -157,6 +157,18 @@
       }
     },
     {
+      "id": "w_plague",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_plague.glb",
+      "sha256": "91c98b6bf7f2259afd1c41ec1be6aaf5bbe92d871ed7f6c194360aa65f4cc290",
+      "bytes": 599392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "6f49b2f3-444e-4a2d-b3f4-51ecb659478c",
+        "concept": "plague scythe-like weapon: long twisted dark brown wooden vine staff handle with green moss and glowing green mushrooms along it, large curved crescent bone-cream blade with holes and sickly green glow at the top, small mushrooms at the bottom end; vertical staff with the curved blade on top"
+      }
+    },
+    {
       "id": "w_rime",
       "form": "greatsword",
       "file": "/models/item-weapons/w_rime.glb",
