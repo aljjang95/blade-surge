@@ -14,7 +14,7 @@ import { installAutoStarter } from './qa-starter.mjs';
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname));
 const args = process.argv.slice(2), outAt = args.indexOf('--out');
 const OUT = resolve(PROJ, outAt >= 0 ? args[outAt + 1] : 'work/qa/summon'), PORT = 4299;
-const STAGES = args.filter((a, i) => /^\d+-\d+$/.test(a) && i !== outAt + 1);
+const STAGES = args.filter((a, i) => /^\d+-\d+$/.test(a) && !(outAt >= 0 && i === outAt + 1));
 mkdirSync(OUT, { recursive: true });
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
