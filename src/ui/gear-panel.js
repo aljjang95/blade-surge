@@ -227,7 +227,7 @@ export function renderBag(meta, heroId) {
   // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
   const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
   const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
-  const junk = junkItems(eco, { heroId, rarities: clean?.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
+  const junk = junkItems(eco, { heroId, rarities: !clean || clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
   const cleanHtml = clean ? '<div class="bag-clean" role="group" aria-label="가방 정리"><b>가방 정리</b>' + (junk.length
       ? '<p>착용 중인 장비보다 약해 쓸 일이 없는 장비 <b>' + junk.length + '개</b>를 분해합니다 (노말 ' + (sum.byRarity.N || 0) + ' · 스페셜 ' + (sum.byRarity.S || 0) + (clean.includeE ? ' · 에픽 ' + (sum.byRarity.E || 0) : '') + ').<br>받는 것: 골드 +' + fmt(sum.gold) + ' · 강화석 +' + fmt(sum.stones) + (sum.stones2 ? ' · 상급 강화석 +' + fmt(sum.stones2) : '') + '</p>'
       : '<p>지금 정리할 장비가 없습니다. 장착 중인 장비보다 약한 장비가 쌓이면 여기에 나타납니다.</p>') +
@@ -269,7 +269,7 @@ export function renderBag(meta, heroId) {
     refreshHero();
     if (done.swaps.length && heroId === eco.s.selected) meta.app.showcaseHero?.(heroId);   // 로비 캐릭터 외형도 바로 반영
   });
-  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: false }; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: true }; rerender('[data-bag-clean]'); });
   bag.querySelector('[data-clean-e]')?.addEventListener('change', (event) => { meta.bagClean = { open: true, step: 0, includeE: event.target.checked }; rerender('[data-clean-e]'); });
   bag.querySelector('[data-clean-go]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 1 }; rerender('[data-clean-confirm]'); });
   bag.querySelector('[data-clean-back]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 0 }; rerender('[data-clean-go]'); });

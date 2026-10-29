@@ -146,7 +146,7 @@ export function renderGrowthPreparation(container, app, result) {
       if (app.mode !== 'lobby') return;
       if (current.kind === 'gear' || current.kind === 'training' || current.kind === 'transcend') {
         app.meta.heroSel = current.heroId; app.meta.heroPane = current.kind === 'gear' ? 'gear' : 'growth';   // 훈련·초월 버튼은 성장 칸에만 있다
-        if (current.mode === 'cleanup') app.meta.bagClean = { open: true, step: 0, includeE: false };
+        if (current.mode === 'cleanup') app.meta.bagClean = { open: true, step: 0, includeE: true };
         app.meta.openTab('heroes');
         if (current.kind === 'transcend') app.meta.openTranscend?.(current.heroId);   // 초월은 성장 칸 아래 별도 창
       } else if (current.kind === 'summon') {

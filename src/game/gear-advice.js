@@ -126,12 +126,13 @@ export function applyBestEquipAll(eco) {
 
 /**
  * 가방 정리 후보(분해해도 손해 없는 장비). 영웅 한 명의 가방(heroBag)만 본다. 조건 전부:
- *  · 등급이 rarities 안(기본 N·S; 분해 가능 등급은 N·S·E뿐) · 누구도 장착하지 않음
+ *  · 등급이 rarities 안(기본 N·S·E; 분해 가능 등급은 N·S·E뿐) · 누구도 장착하지 않음
  *  · 그 영웅이 같은 부위에 끼고 있는 장비보다 점수가 높지 않음(끼고 있는 장비가 없으면 그 부위는 정리하지 않는다)
+ *  · 에픽(E)은 더 엄격하다: 끼고 있는 장비보다 점수가 엄격히 낮고, 룬이 박혀 있지 않아야 한다(후반 가방에 쌓이는 E 정리용). 자동 분해는 N만 넘긴다.
  * 금고 장비·다른 영웅 소유 장비는 후보가 아니다.
  * @returns {Array<{ uid: number, id: string, rarity: string, slot: string, score: number }>}
  */
-export function junkItems(eco, { rarities = ['N', 'S'], heroId = eco.s.selected } = {}) {
+export function junkItems(eco, { rarities = ['N', 'S', 'E'], heroId = eco.s.selected } = {}) {
   return cached(eco, 'junk', heroId + ':' + rarities.join(','), () => junkItemsNow(eco, rarities, heroId)).slice();
 }
 function junkItemsNow(eco, rarities, heroId) {
@@ -148,6 +149,7 @@ function junkItemsNow(eco, rarities, heroId) {
       const rarity = ITEM_BY_ID[inst.id].rarity, score = gearScore(inst);
       // 단독 점수가 낮아도 세트를 완성해 실제 빌드가 오르는 장비는 정리(특히 자동 분해)에서 뺀다.
       if (!allowed.has(rarity) || score > floor || eco.isUpgrade?.(heroId, inst)) continue;
+      if (rarity === 'E' && (score >= floor || inst.sockets?.some?.(Boolean))) continue;
       junk.push({ uid: inst.uid, id: inst.id, rarity, slot, score: Math.round(score) });
     }
   }
