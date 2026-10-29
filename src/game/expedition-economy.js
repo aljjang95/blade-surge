@@ -286,6 +286,7 @@ export class ExpeditionEconomy {
     return this.transact(() => {
       this.eco.s.gold -= r.gold; for (const [k, v] of Object.entries(r.materials)) this.s.materials[k] -= v;
       let item = null;
+      // 제작 장비는 il 을 생략해 가챠·보상처럼 지금까지 깬 관문의 장비 레벨을 받는다(economy.pushItem).
       if (r.itemId) { const def = ITEM_BY_ID[r.itemId]; item = this.eco.addItem(def.rarity, def.slot, undefined, 0, this.eco.s.selected); item.id = def.id; }
       if (r.consumables) this.reward({ consumables: r.consumables });
       this.s.stats.crafts++; return { ok: true, item, consumables: r.consumables || {} };
