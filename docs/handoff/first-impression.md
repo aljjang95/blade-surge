@@ -5,16 +5,12 @@
 - Codex 리뷰 4회(P1 3건 모두 인스턴스 층으로 수정), 보안 리뷰 문제 없음, test 6152 pass.
 - 증거: R2 `blade-surge-handoff/first-impression/`(전환 영상 844x390, 전후 캡처, 레벨업 캡처).
 
-## 진행 중
-- PC 배포: `C:\Work\tasks\blade-firstimp-deploy.ps1`(깨끗한 detached worktree `C:\Work\tasks\blade-firstimp-deploy-35e22a2`, `node tools/deploy.mjs --auth=wrangler`, 로그 `C:\Work\tasks\blade-firstimp-deploy.log`). 끝나면 `https://blade.tllhouse.com/version.json` sha 확인.
-- 셰이더 회귀 bisect: "Shader program did not link" — d047c7d 0건, 최신 main 재현 → #397~#400 사이. 판정 = 헤드리스 Playwright 1-1 진입 후 콘솔 오류 수.
-
-## 결정과 이유
-- C안 기본 + A안 연출(지휘 결정): 직업색 무대 전환이 고르는 맛이 가장 크고 왼쪽 세로 탭이 엄지에 맞음.
-- 인게임 3D 대신 전신 일러스트(rembg isnet 배경 제거): KayKit 저폴리가 시안 품질에 못 미침.
-- 무대 배경: R2 `blade-surge-handoff/tripo-image/starter-select/stage-bg.png` → `public/img/tll/stage/stage-bg-v1.webp`(50KB), 같은 요소 안 background-blend-mode 로 직업색 착색(요소 간 mix-blend 는 크롬 합성 층 얼룩).
-- 화살 몸통 발광 메시는 인스턴싱 규칙 때문에 제외 → 전투 가독성 레인(session_01H8mx3T8m3fjgvtaxE3nZSR)이 인스턴스 방식으로.
+## 이어받은 세션 확인 (2026-10-29, theluxurylord 계정)
+- 셰이더 회귀: 원인은 #394 조준선 셰이더(src/engine/readability-view.js), #411 핫픽스로 해결·#412가 출격 스모크를 `bun run check`에 넣음. 운영 1-1 15초 셰이더 오류 0건(KHR_parallel_shader_compile 경고만).
+- 운영 f08e3f6(#395 포함) 선택 화면 360·390·844·1280: 가로 스크롤·버튼 잘림·콘솔 오류 0.
+- 다듬기: 세로 하단 영웅 탭 라벨이 360에서 9px·두 줄 → 이름만 12px 이상(직업명은 상세 패널).
+- FlowMusic 권리: AUDIO_CREDITS.md 신설. Google 약관상 소유권 주장 없음, 상업 이용 명시 조항 없음 → 출시 게이트 유지.
 
 ## 남은 일
-- 배포 readback, 셰이더 회귀 원인 커밋 확정·해당 레인 통보·작은 수정이면 핫픽스 PR, 390·1280 화면 깨짐 확인.
-- FlowMusic 상업적 사용 문구 확인(출시 게이트). 실기기 터치·소리 확인은 대표님 플레이.
+- FlowMusic 앱 안 요금제·도움말의 상업 이용 문구 확인(로그인 화면), 실기기 터치·소리는 대표님 플레이.
+- 운영 콘솔 401 리소스 1건 출처 미확인(게스트 상태 계정 API로 추정, 계정 레인 범위).
