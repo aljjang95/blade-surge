@@ -94,8 +94,8 @@ export class JourneyView {
     const snap=this.app.journey.snapshot(),next=snap.steps.find(s=>!s.claimed);
     this.strip.textContent=next?`${next.ready?'보상 받기':'다음 목표'} · ${next.name}`:'성장 여정 완주 · 오늘의 의뢰 확인';
     this.nextTab=next?'journey':'contracts';
-    const chest=towerChestReady(this.app.eco.towerSummary?.());this.lobbyDot.classList.toggle('on',journeyClaimable(snap)+(chest?1:0)>0);
-    const tower=document.getElementById('menu-tower');if(tower){let dot=tower.querySelector('.dot');if(!dot){dot=node('em','dot');dot.id='dot-tower';dot.setAttribute('aria-hidden','true');tower.append(dot);}dot.classList.toggle('on',chest);}
+    const chest=towerChestReady(this.app.eco.towerSummary?.());this.lobbyDot?.classList.toggle('on',journeyClaimable(snap)+(chest?1:0)>0);
+    const tower=typeof document==='object'?document.getElementById('menu-tower'):null;if(tower){let dot=tower.querySelector('.dot');if(!dot){dot=node('em','dot');dot.id='dot-tower';dot.setAttribute('aria-hidden','true');tower.append(dot);}dot.classList.toggle('on',chest);}
     this.app.meta?.refreshMenuBadge?.();
     const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(this.frontier())]);
     if(this.dialog.open&&(force||signature!==this.signature))this.render(snap);

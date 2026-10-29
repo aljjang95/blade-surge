@@ -33,6 +33,7 @@ import { RUNE_SOURCES, RUNE_MERGE_COST, RUNE_DUPLICATE_CAP } from '../src/data/r
 import { socketCount, runeEffects } from '../src/game/rune-core.js';
 import { rollRuneDrops, giftBag, craftRuneExact } from '../src/game/rune-economy.js';
 import { applyBuildStats } from '../src/game/masterworks-combat.js';
+import { idleQuote } from '../src/game/idle-rewards.js';
 
 const DAY_MS = 86400000;
 export const PERSONAS = Object.freeze({
@@ -323,6 +324,10 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     const daily = { towerFloors: dayTower, hardClears: dayHard, bossAttempts: dayBoss, upgrades: st.dailyUpgrades };
     st.weekly.hard += dayHard; st.weekly.tower += dayTower; st.weekly.boss += dayBoss; st.weekly.upgrades += st.dailyUpgrades;
     for (const c of DAILY_CONTRACTS) if (c.stat in daily && daily[c.stat] >= c.target) { earn('gold', c.rewards.gold || 0); earn('stones', c.rewards.stones || 0); }
+    // 방치 보급(docs/RPG_ESSENTIALS.md E2): 세션마다 직전 공백(상한 12시간)만큼. 마라톤은 세션 사이 energyGapH.
+    { const gapH = Math.min(12, P.energyGapH ?? Math.max(0, (24 - P.minutes / 60) / P.sessions));
+      const idle = idleQuote({ since: 0, comebackAt: 0 }, { unlocked: st.storyUnlocked }, Math.round(gapH * 3600000)).rewards;
+      for (let i = 0; i < P.sessions; i++) { earn('gold', idle.gold || 0); earn('stones', idle.stones || 0); totals.idleGold = (totals.idleGold || 0) + (idle.gold || 0); } }
     if (season.day === 6) { // 주의 마지막 날 주간 임무·탑 보급 정산
       const weekly = { towerFloors: st.weekly.tower, hardClears: st.weekly.hard, bossAttempts: st.weekly.boss, upgrades: st.weekly.upgrades };
       for (const c of WEEKLY_CONTRACTS) if (c.stat in weekly && weekly[c.stat] >= c.target) { earn('gold', c.rewards.gold || 0); earn('stones', c.rewards.stones || 0); }

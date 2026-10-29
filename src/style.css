@@ -1164,3 +1164,11 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .gacha-wrap[data-banner="gear"] .banner-art img { width: 100%; height: auto; top: 38%; transform: translate(-50%, -50%); }
   .banner-art[data-fit="square"] img { width: 100%; height: auto; -webkit-mask-image: none; mask-image: none; }
 }
+/* 방치 보급(docs/RPG_ESSENTIALS.md E2) */
+.idle-rewards { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; justify-content: center; }
+.idle-reward { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 76px; padding: 8px 6px; border-radius: 8px; background: #ffffff10; border: 1px solid #ffd35a40; }
+.idle-reward img { width: 34px; height: 34px; object-fit: contain; }
+.idle-reward b { font-size: 12px; color: #e5e5ce; }
+.idle-reward span { font-size: 15px; font-weight: 800; color: #ffd35a; }
+.idle-cb { margin: 12px 0 0; text-align: center; color: #ffd35a; font-size: 15px; }
+.idle-empty { opacity: .7; }

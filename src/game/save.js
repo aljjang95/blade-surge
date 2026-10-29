@@ -6,6 +6,7 @@ import { normalizeJourney } from './journey-core.js';
 import { normalizeArsenal } from './arsenal-core.js';
 import { normalizeEndgame, migrateEndgame } from './endgame-core.js';
 import { normalizeLegend } from './legend-rank.js';
+import { normalizeIdle } from './idle-rewards.js';
 import { normalizeRunes, normalizeBlessing, restoreSockets } from './rune-economy.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
@@ -19,6 +20,8 @@ export function normalizeSave(raw, fresh) {
   save.endgame = raw.endgame && typeof raw.endgame === 'object' ? normalizeEndgame(raw.endgame) : migrateEndgame(save);
   // 전설 수련(Lv.80 이후 EXP 축, docs/SPEC_720H.md 3.1). 계정 공통, 없는 저장은 기본값에서 시작한다.
   save.legend = normalizeLegend(raw.legend);
+  // 방치 보급(2026-10-29). 도입 전 저장은 지금(fresh)부터 쌓는다 — 과거 시간을 소급하지 않는다.
+  save.idle = normalizeIdle(raw.idle, fresh.idle);
   // 룬·전운(2026-10-24). 룬 도입 전 세이브는 네 가문 I 룬 1개씩을 한 번 받는다(giftClaimed).
   save.runes = normalizeRunes(raw.runes);
   save.blessing = normalizeBlessing(raw.blessing);

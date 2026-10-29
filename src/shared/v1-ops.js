@@ -53,6 +53,7 @@ export const OPS = {
   claimPass: { args: [(v) => int(v, 1, 1000), bool], run: (e, lv, prem) => e.claimPass(lv, prem), ok: okValue },
   claimMail: { args: [(v) => int(v, 0)], run: (e, id) => e.claimMail(id), ok: okValue },
   claimQuest: { args: [str], run: (e, id) => e.claimQuest(id), ok: okValue },
+  claimIdle: { args: [], run: (e) => e.claimIdle(), ok: okValue },
   // 외형·설정
   buyAvatar: { args: [str], run: (e, id) => e.buyAvatar(id), ok: okResult },
   equipAvatar: { args: [str, (v) => v === null || str(v)], run: (e, h, id) => e.equipAvatar(h, id), ok: okResult, offline: true },

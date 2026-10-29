@@ -108,6 +108,7 @@ export class Meta {
     $('btn-campaign-journal').addEventListener('click', () => this.openJournal());
     $('btn-daily').addEventListener('click', () => this.showDaily());
     $('btn-mail').addEventListener('click', () => this.showMail());
+    $('btn-idle').addEventListener('click', () => this.showIdle());
     $('btn-quest').addEventListener('click', () => this.showQuests());
     $('btn-settings').addEventListener('click', () => this.showSettings());
     $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
@@ -180,7 +181,7 @@ export class Meta {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
     // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
       + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
@@ -197,7 +198,7 @@ export class Meta {
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
     $('top-vip-wrap').hidden = !this.vipShown(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
-    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
+    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     // 장비 도감 마일스톤(영웅 → 가방 → 금고 → 도감)을 놓치지 않게 영웅 탭에 점(docs/RPG_ESSENTIALS.md E1).
     $('dot-heroes')?.classList.toggle('on', gearDexClaimable(s, this.eco.ownedHeroIds()) > 0);
@@ -840,6 +841,18 @@ export class Meta {
     const d = this.eco.s.daily; const avail = this.eco.dailyAvailable(); const idx = d.day % DAILY_REWARDS.length;
     this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('calendar')}" alt="">출석 보상</h2><p>매일 접속하고 보상을 받으세요! 7일차 SSR 확정권</p><div class="daily-grid">${DAILY_REWARDS.map((r, i) => { const k = Object.keys(r)[0]; const [nm, ic] = REWARD_LABEL[k]; const got = i < idx || (!avail && i === idx - 1 && false); return `<div class="daily-cell ${i < idx ? 'got' : ''} ${avail && i === idx ? 'today' : ''} ${i === 6 ? 'big' : ''}"><img src="${RESOURCE_ART[k]?resourceArt(k):ic}" onerror="this.remove()"><span>${i + 1}일차</span><b>${nm} ${r[k]}</b></div>`; }).join('')}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${avail ? '' : 'disabled'}>${avail ? '보상 받기' : '내일 다시'}</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { const r = this.eco.claimDaily(); if (r) { this.trackFunnel('reward_claim', { source: 'daily', day: idx + 1 }); audio.play('jingle_win0', { vol: 0.6 }); this.ui.rewardToast(r.got); } this.ui.closeModal(); }; } });
   }
+  /** 방치 보급·복귀 보상(docs/RPG_ESSENTIALS.md E2). 로비 진입 때 30분 이상 쌓였으면 자동으로, 메뉴 '보급'에서 언제든 연다. */
+  showIdle() {
+    const q = this.eco.idleQuote(); const h = Math.floor(q.minutes / 60), m = q.minutes % 60;
+    const row = (r) => Object.entries(r || {}).map(([k, n]) => { const [nm, ic] = REWARD_LABEL[k] || [k, '']; return `<div class="idle-reward"><img src="${RESOURCE_ART[k] ? resourceArt(k) : ic}" alt="" onerror="this.remove()"><b>${nm}</b><span>${fmt(n)}</span></div>`; }).join('');
+    const body = q.cleared === 0 ? '<p>첫 관문을 깨면 자리를 비운 동안 보급이 쌓입니다.</p>'
+      : `<p>자리를 비운 <b>${h ? h + '시간 ' : ''}${m}분</b> 동안 쌓인 보급입니다${q.capped ? ' (최대 12시간분)' : ''}. 최고 관문이 높을수록 많이 쌓입니다.</p><div class="idle-rewards">${row(q.rewards) || '<p class="idle-empty">아직 쌓인 보급이 없습니다.</p>'}</div>`
+      + (q.comeback ? `<h3 class="idle-cb">돌아오신 것을 환영합니다 · ${q.awayDays}일 만</h3><div class="idle-rewards">${row(q.comebackRewards)}</div>` : '');
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('treasure-chest')}" alt="">방치 보급</h2>${body}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${q.ready ? '' : 'disabled'}>${q.ready ? '받기' : '쌓이는 중'}</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelector('#m-ok').onclick = () => { const r = this.eco.claimIdle(); if (r) { this.trackFunnel('reward_claim', { source: 'offline' }); audio.play('jingle_win0', { vol: 0.6 }); this.ui.rewardToast(r.got); } this.ui.closeModal(); };
+    } });
+  }
   showMail() {
     const mails = this.eco.s.mail;
     this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('mail')}" alt="">우편함</h2>${mails.map((m) => `<div class="mail-item"><div class="mi-body"><div class="mi-t">${m.title}</div><div class="mi-d">${m.body}</div></div><button class="btn btn-gold btn-sm" data-mail="${m.id}" ${m.read ? 'disabled' : ''}>${m.read ? '수령' : '받기'}</button></div>`).join('') || '<p>우편이 없습니다</p>'}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelectorAll('[data-mail]').forEach((x) => x.onclick = () => { const got = this.eco.claimMail(+x.dataset.mail); if (got) { this.trackFunnel('reward_claim', { source: 'mail' }); audio.pick('coin', 2); this.ui.rewardToast(got); x.disabled = true; x.textContent = '수령'; } }); } });
@@ -1016,7 +1029,7 @@ export class Meta {
   /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
-    if (!this.eco.dailyAvailable()) return;
+    if (!this.eco.dailyAvailable()) { if (!this.dailyDeferrable() && this.eco.idleQuote().notable) this.showIdle(); return; }
     // 신규 계정은 첫 전투 결과를 보기 전에는 출석 보상 팝업으로 흐름을 끊지 않는다. 보상은 그대로 남아 있고 첫 전투 뒤 로비·메뉴에서 받는다.
     if (this.dailyDeferrable()) { this.dailyDeferred = true; return; }
     this.dailyDeferred = false;
