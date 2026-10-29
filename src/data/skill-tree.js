@@ -11,9 +11,11 @@ export const FREE_RESET_BELOW_LEVEL = 20;
 /** 처음부터 배운 상태(기본 스킬·궁극기 1레벨)인지, 레벨 해금 뒤 SP로 배워야 하는 각성 스킬(0레벨)인지. */
 export function skillBaseLevel(skill) { return skill?.unlock ? 0 : 1; }
 export function skillRequiredLevel(skill) { return skill?.unlock || 1; }
-// 기본 스킬 단계 해금(2026-10-27 대표님 피드백 '처음부터 먼치킨'): Lv1 은 평타 + 첫 스킬, Lv3 둘째, Lv5 셋째, Lv8 궁극기, Lv10 부터 각성.
-// SP 비용·저장 스킬 레벨은 그대로이고, 레벨이 오를 때 쓸 수 있는 시점만 늦춘다(1-1 한 판에 Lv3~5 까지 올라 둘째·셋째가 열린다).
-export const BASIC_SKILL_GATES = Object.freeze([1, 3, 5]);
+// 기본 스킬 단계 해금(2026-10-27 대표님 피드백 '처음부터 먼치킨'): Lv1 은 평타 + 첫 스킬, Lv2 둘째, Lv5 셋째, Lv8 궁극기, Lv10 부터 각성.
+// SP 비용·저장 스킬 레벨은 그대로이고, 레벨이 오를 때 쓸 수 있는 시점만 늦춘다.
+// 2026-10-29 입문 레벨 곡선(heroes.js EARLY_LEVEL_EXP)에 맞춘 시점: 1-1 한 판은 Lv3 으로 끝나 첫 판에 쓰는 스킬은 둘(Lv2 는 판 중간),
+// 셋째(Lv5)는 약 15~20분, 궁극기(Lv8)는 약 40분, 첫 각성(Lv10)은 약 1시간이다.
+export const BASIC_SKILL_GATES = Object.freeze([1, 2, 5]);
 export const ULT_GATE_LEVEL = 8;
 /** i번 스킬을 쓸 수 있는 최소 영웅 레벨(각성은 unlock, 기본은 단계 해금, 궁극기는 Lv8). */
 export function skillGateLevel(def, i) {
@@ -53,7 +55,7 @@ export function canLearnSkill(def, state, i) {
   const skill = def?.skills?.[i]; if (!skill) return { ok: false, reason: 'skill' };
   const current = Math.floor(Number(state?.skills?.[i]) || 0);
   if (current >= SKILL_MAX_LV) return { ok: false, reason: 'max' };
-  // 단계 해금(기본 Lv3·5, 궁극기 Lv8) 전에는 SP를 쓰지 못한다: 전투에서 못 쓰는 스킬에 SP가 묶이지 않게.
+  // 단계 해금(기본 Lv2·5, 궁극기 Lv8) 전에는 SP를 쓰지 못한다: 전투에서 못 쓰는 스킬에 SP가 묶이지 않게.
   const need = skillGateLevel(def, i);
   if ((state?.level || 1) < need) return { ok: false, reason: 'level', need };
   const cost = spCostForLevel(skill, current + 1);

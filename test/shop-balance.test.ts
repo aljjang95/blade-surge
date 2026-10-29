@@ -51,7 +51,8 @@ test('보석 상품 게이트는 쓰임새 순서(강화석 단계·골드 금�
   }
   const gate = levelGate(30, { heroes: { knight: { level: 7 } } });
   expect(gate).toMatchObject({ ok: false, label: 'Lv.30 해금' }); expect(gate.text).toContain(stageForLevel(30)); expect(gate.text).toContain('현재 Lv.7');
-  expect(stageForLevel(20)).toBe('2-1'); expect(stageForLevel(30)).toBe('3-1');
+  // 2026-10-29 입문 레벨 곡선에 맞춰 2·3장 권장 레벨이 9→21·22→34 로 내려가 Lv.20·30 이 처음 권장되는 관문도 뒤로 갔다(loot-tables.js CHAPTER_START_LEVEL).
+  expect(stageForLevel(20)).toBe('2-10'); expect(stageForLevel(30)).toBe('3-8');
 });
 
 test('마을 상인 장비 가격 곡선: 등급 순으로 단조 증가, 모두 판매가보다 비싸 차익이 없다', () => {
