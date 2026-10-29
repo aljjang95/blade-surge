@@ -109,6 +109,7 @@ export class Meta {
     $('btn-daily').addEventListener('click', () => this.showDaily());
     $('btn-mail').addEventListener('click', () => this.showMail());
     $('btn-idle').addEventListener('click', () => this.showIdle());
+    $('btn-newbie').addEventListener('click', () => this.showNewbie());
     $('btn-quest').addEventListener('click', () => this.showQuests());
     $('btn-settings').addEventListener('click', () => this.showSettings());
     $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
@@ -181,7 +182,7 @@ export class Meta {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
     // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-mail', 'dot-quest', 'dot-journey', 'dot-heroes'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
       + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
@@ -198,7 +199,7 @@ export class Meta {
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
     $('top-vip-wrap').hidden = !this.vipShown(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
-    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
+    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); { const nb = this.eco.newbieView(); $('btn-newbie').hidden = !nb.open; $('dot-newbie').classList.toggle('on', nb.open && nb.claimable > 0); } $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     // 장비 도감 마일스톤(영웅 → 가방 → 금고 → 도감)을 놓치지 않게 영웅 탭에 점(docs/RPG_ESSENTIALS.md E1).
     $('dot-heroes')?.classList.toggle('on', gearDexClaimable(s, this.eco.ownedHeroIds()) > 0);
@@ -851,6 +852,21 @@ export class Meta {
     this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('treasure-chest')}" alt="">방치 보급</h2>${body}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${q.ready ? '' : 'disabled'}>${q.ready ? '받기' : '쌓이는 중'}</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('#m-ok').onclick = () => { const r = this.eco.claimIdle(); if (r) { this.trackFunnel('reward_claim', { source: 'offline' }); audio.play('jingle_win0', { vol: 0.6 }); this.ui.rewardToast(r.got); } this.ui.closeModal(); };
+    } });
+  }
+  /** 신규 7일 여정(docs/RPG_ESSENTIALS.md E3). 하루 3개 미션이 차례로 열리고 21개를 모두 받으면 마지막 상자. */
+  showNewbie(day = null) {
+    const v = this.eco.newbieView(); if (!v.open) { this.ui.toast('7일 여정이 끝났습니다.', 'red'); return; }
+    const sel = Math.min(7, Math.max(1, day || v.rows.find((x) => x.ready)?.day || v.dayNo));
+    const label = (r) => Object.entries(r).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const tabs = Array.from({ length: 7 }, (_, i) => { const d = i + 1, rows = v.rows.filter((x) => x.day === d), dot = rows.some((x) => x.ready);
+      return `<button type="button" class="nb-day${d === sel ? ' on' : ''}${rows.every((x) => x.claimed) ? ' done' : ''}" data-nb-day="${d}" ${d > v.dayNo ? 'aria-disabled="true"' : ''}>${d}일차${dot ? '<em class="dot on" aria-hidden="true"></em>' : ''}</button>`; }).join('');
+    const list = v.rows.filter((x) => x.day === sel).map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name}</div><div class="q-r">${label(x.rewards)}</div><div class="bar"><div style="width:${Math.round(x.cur / x.target * 100)}%"></div></div><small>${fmt(x.cur)} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-nb="${x.id}" ${x.ready ? '' : 'disabled'}>${x.claimed ? '완료' : !x.unlocked ? `${x.day}일차에 열림` : x.complete ? '받기' : '진행 중'}</button></div>`).join('');
+    const final = `<div class="nb-final"><b>21개 모두 달성 보상</b> · ${label({ ssrTicket: 1, gems: 300 })} <button class="btn btn-sm ${v.finalReady ? 'btn-gold' : 'btn-ghost'}" data-nb="final" ${v.finalReady ? '' : 'disabled'}>${v.final ? '완료' : `${v.done}/21`}</button></div>`;
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('calendar')}" alt="">7일 여정</h2><p>첫 주 동안 하루에 세 가지 목표가 열립니다. 남은 기간 ${v.daysLeft}일 (지난 날 목표도 기간 안에는 받을 수 있습니다)</p><div class="nb-days" role="tablist">${tabs}</div>${list}${final}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelectorAll('[data-nb-day]').forEach((el) => el.onclick = () => { if (+el.dataset.nbDay <= v.dayNo) this.showNewbie(+el.dataset.nbDay); });
+      b.querySelectorAll('[data-nb]').forEach((el) => el.onclick = () => { const got = this.eco.claimNewbie(el.dataset.nb); if (got) { this.trackFunnel('reward_claim', { source: 'quest' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showNewbie(sel); });
     } });
   }
   showMail() {

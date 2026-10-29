@@ -1172,3 +1172,11 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .idle-reward span { font-size: 15px; font-weight: 800; color: #ffd35a; }
 .idle-cb { margin: 12px 0 0; text-align: center; color: #ffd35a; font-size: 15px; }
 .idle-empty { opacity: .7; }
+/* 신규 7일 여정(docs/RPG_ESSENTIALS.md E3) */
+.nb-days { display: flex; gap: 4px; overflow-x: auto; margin: 8px 0; }
+.nb-day { position: relative; flex: 1 0 auto; min-width: 54px; min-height: 36px; padding: 6px 4px; border-radius: 8px; border: 1px solid #ffd35a40; background: #ffffff0d; color: #e5e5ce; font: inherit; font-size: 12px; font-weight: 700; }
+.nb-day.on { background: #5b3b16; border-color: #ffd35a; color: #fff0b3; }
+.nb-day.done { opacity: .6; }
+.nb-day[aria-disabled="true"] { opacity: .35; }
+.nb-day .dot { top: -2px; right: -2px; }
+.nb-final { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 10px; background: #ffd35a18; font-size: 12px; }
