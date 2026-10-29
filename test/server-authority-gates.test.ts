@@ -407,15 +407,23 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     expect(sanitize(big, { createdAt: NOW - DAY, serverKills: 90_000_000 }).state.quests.kills).toBeGreaterThanOrEqual(90_000_000);
   });
 
-  test('serverSlain.seeded=true 면 스냅샷·가져오기 모두 서버 값 그대로(기기 값 무시)', () => {
+  test('serverSlain.seeded=true 면 스냅샷은 서버 값 그대로(기기 값 무시)', () => {
     const server = { seeded: true, kills: { skel_minion: 7 } };
-    for (const snapshot of [false, true]) {
-      const raw = base();
-      raw.quests.kills = 5000;
-      raw.slain = { seeded: true, kills: { ghost: 999, skel_minion: 999 } };
-      raw.rpg = { bestiary: { skel_minion: { kills: 900 }, ghost_skull: { kills: 900 } } };
-      expect(sanitize(raw, { snapshot, serverSlain: server }).state.slain).toEqual(server);
-    }
+    const raw = base();
+    raw.quests.kills = 5000;
+    raw.slain = { seeded: true, kills: { ghost: 999, skel_minion: 999 } };
+    raw.rpg = { bestiary: { skel_minion: { kills: 900 }, ghost_skull: { kills: 900 } } };
+    expect(sanitize(raw, { snapshot: true, serverSlain: server }).state.slain).toEqual(server);
+  });
+
+  test('외부 가져오기(계정당 1회)는 서버가 seeded=true 여도 한 번 병합한다(서버 값은 바닥)', () => {
+    const raw = base();
+    raw.quests.kills = 5000;
+    raw.rpg = { bestiary: { skel_minion: { kills: 3 } } };
+    const r = sanitize(raw, { serverSlain: { seeded: true, kills: { skel_minion: 7, ghost: 1 } } });
+    expect(r.state.slain).toEqual({ seeded: true, kills: { ghost: 1, skel_minion: 7 } });
+    raw.rpg.bestiary.skel_minion.kills = 40;
+    expect(sanitize(raw, { serverSlain: { seeded: true, kills: { skel_minion: 7 } } }).state.slain.kills.skel_minion).toBe(40);
   });
 
   test('서버가 seeded=false 면 서버 값은 바닥값으로 합쳐지고 seeded=true', () => {
@@ -426,7 +434,7 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     expect(r.state.slain).toEqual({ seeded: true, kills: { ghost: 2, skel_minion: 50 } });
   });
 
-  test('HTTP 가져오기: 새 계정 문서는 seeded=true 라 기기 도감을 옮기지 않는다(서버 값 그대로)', async () => {
+  test('HTTP 가져오기: 새 계정(문서 seeded=true)도 기기 도감을 상한 검사 후 한 번 옮긴다', async () => {
     const h = await v1Harness();
     h.setNow(NOW - 30 * DAY);
     const first = await h.session();
@@ -437,7 +445,7 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     raw.rpg = { bestiary: { skel_minion: { kills: 500 } } };
     const r1 = await h.send('POST', '/import', { installId: crypto.randomUUID(), save: raw }, a.token);
     expect(r1.status).toBe(200);
-    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: {} });
+    expect(r1.body.doc.slain).toEqual({ seeded: true, kills: { skel_minion: 500 } });
   });
 
   test('HTTP 가져오기: 서버 문서가 seeded=false 면 한 번만 병합하고 이후 재주입은 무시', async () => {

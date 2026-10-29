@@ -33,7 +33,7 @@
 - 새 저장은 `seeded: true`(옮길 기록 없음). 도입 전 저장은 `seeded: false`.
 - **병합 규칙(기기 기록 → 원장, 1회)**
   - 로컬 전용(서버 미연결): 클라이언트 전투 코드가 처음 한 번 `rpg.bestiary[id].kills`를 그대로 옮기고 `seeded: true`. 로컬은 신뢰 경계 밖이라 상한 없음(기존 규칙과 같다).
-  - 서버 가져오기(계정당 1회) / 그림자 스냅샷 중 서버 문서가 `seeded: false`일 때: `trustedSlain`이 기기 값(`slain.kills`와 `rpg.bestiary` 중 큰 값)을 ① 정화된 진행도까지의 관문 종 풀 안의 id만 ② 정화된 `quests.kills` 합 이하로(id 순 절삭) ③ 서버가 이미 가진 값은 바닥값으로 합친 뒤 `seeded: true`.
+  - 서버 가져오기(계정당 1회, 새 계정 문서가 `seeded: true`여도 항상) / 그림자 스냅샷은 서버 문서가 `seeded: false`일 때만: `trustedSlain`이 기기 값(`slain.kills`와 `rpg.bestiary` 중 큰 값)을 ① 정화된 진행도까지의 관문 종 풀 안의 id만 ② 정화된 `quests.kills` 합 이하로(id 순 절삭) ③ 서버가 이미 가진 값은 바닥값으로 합친 뒤 `seeded: true`.
   - 그 뒤 스냅샷은 서버 값만 쓴다(편집 저장으로 재주입 불가).
 - `quests.kills` 가져오기 상한: `ONE_TIME.kills(3000) + DAILY_MAX.kills(20000) × 경과일`, 서버 값이 바닥.
 

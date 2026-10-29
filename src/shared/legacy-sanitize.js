@@ -254,7 +254,8 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 종 원장은 서버 문서가 이미 병합했으면(seeded) 서버 값만, 아니면 기기 기록을 정화된 진행 범위 종 풀·처치 수 상한으로 한 번 옮긴다.
   const killsFloor = Number.isSafeInteger(serverKills) && serverKills > 0 ? serverKills : 0;
   s.quests.kills = Math.max(killsFloor, clamp('quests.kills', Number(s.quests?.kills) || 0, ONE_TIME.kills + DAILY_MAX.kills * days));
-  s.slain = trustedSlain(raw, { server: serverSlain, floor: Math.max(1, Number(s.progress?.unlocked) || 1), killsCap: s.quests.kills });
+  // 외부 가져오기는 계정당 1회라 서버 문서의 seeded 와 무관하게 한 번 병합한다(새 계정 문서는 seeded:true 로 만들어진다). 스냅샷은 서버가 아직 병합 전일 때만.
+  s.slain = trustedSlain(raw, { server: snapshot ? serverSlain : { ...(serverSlain && typeof serverSlain === 'object' ? serverSlain : {}), seeded: false }, floor: Math.max(1, Number(s.progress?.unlocked) || 1), killsCap: s.quests.kills });
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).
   const droppedPaid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };
