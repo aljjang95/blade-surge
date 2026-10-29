@@ -10,6 +10,7 @@ import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
 import { dropUnownedJob } from './expedition-economy.js';
 import { HERO_CAMPAIGN_JOIN, HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_DIRECT_PURCHASE } from '../data/hero-direct-purchase.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
@@ -205,7 +206,7 @@ export class Economy {
         // 계승 의식·도감 안내(docs/GEAR_VAULT_INHERIT.md 4.6). 안내만 있고 보상은 없다. 문장은 의뢰·고통 단계·도감 보상으로만 얻고 상점에서 팔지 않는다.
         { id: 3, title: '레전드리는 계승 의식으로 물려줘요', body: '레전드리 장비는 얻은 영웅의 것입니다. 되돌리기와 같은 무기 계열 이동은 그대로 무료이고, 다른 계열에게 주려면 금고의 [계승 의식]을 치르세요. 골드와 계승 문장이 들고 하루 2회까지이며, 확률 없이 반드시 성공하고 강화·룬은 그대로 이어집니다. 계승 문장은 일일·주간 의뢰(계승 장비로 캠페인 승리), 고통 단계 5단계마다 새 기록, 도감 보상으로 얻습니다.', rewards: {}, read: false },
         { id: 4, title: '장비 도감 마일스톤', body: '금고의 [도감]에서 영웅별 드랍 도감(직접 얻은 장비)과 계승 도감(의식으로 받은 장비)을 확인하세요. 25·50·75·100%와 계승 5·15·30종마다 영웅당 한 번씩 강화석·세트 조각·계승 문장 보상을 받고, 칭호도 얻습니다. 능력치는 오르지 않습니다.', rewards: {}, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
     };
   }
   load() {
@@ -386,6 +387,46 @@ export class Economy {
     return { ok: true, id, gems: q.gems };
   }
   /**
+   * 보석 직접 영입 견적(UI·서버 공통). HERO_DIRECT_PURCHASE.enabled 가 꺼져 있으면 항상 reason 'disabled'.
+   * reason: disabled | unknown | owned | policy | starter-pending | unreleased | no-price | campaign-pending | paid-gems | null(영입 가능).
+   * 유료 보석 전용(대표님 결정 2026-10-29): 무료 보석은 영입에 쓰지 않으므로 have 는 유료 보석 잔액(paidGems, 총 잔액 이하)이다.
+   * campaign-pending = 진행이 이미 합류 관문을 지나 다음 클리어에 무료로 합류할 영웅(보석을 쓰지 않게 막는다, heroUnlockQuote 와 같은 규칙).
+   */
+  heroBuyQuote(id) {
+    const s = this.s, r = s.roster, have = Math.max(0, Math.min(Math.floor(Number(s.paidGems) || 0), Math.floor(Number(s.gems) || 0))), base = { id, ok: false, price: 0, have, reason: null };
+    if (!HERO_DIRECT_PURCHASE.enabled) return { ...base, reason: 'disabled' };
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !s.heroes[id]) return { ...base, reason: 'unknown' };
+    if (this.ownHero(id)) return { ...base, reason: 'owned' };
+    // grantHero 와 같은 조건: 정책 1 이거나 시작 영웅을 고른 정책 2 만 소유를 늘릴 수 있다.
+    if (!r || !Array.isArray(r.owned)) return { ...base, reason: 'policy' };
+    if (r.policy === HERO_POLICY.STARTER && !r.starterChosen) return { ...base, reason: 'starter-pending' };
+    if (r.policy !== HERO_POLICY.LEGACY && r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
+    if (!heroReleased(id, nowOf(this))) return { ...base, reason: 'unreleased' };
+    const price = HERO_DIRECT_PURCHASE.prices[HEROES[id].rarity];
+    if (!Number.isSafeInteger(price) || price <= 0) return { ...base, reason: 'no-price' };
+    const join = HERO_CAMPAIGN_JOIN[id];
+    if (join && (s.progress?.unlocked || 1) >= join) return { ...base, price, reason: 'campaign-pending' };
+    if (have < price) return { ...base, price, reason: 'paid-gems' };
+    return { ...base, price, ok: true };
+  }
+  /**
+   * 보석 직접 영입: 아직 소유하지 않은 영웅을 보석으로 바로 연다. 보석 차감·소유 추가·시작 레벨/장비는 저장이 성공해야 확정(실패하면 전부 되돌린다).
+   * 시작 레벨·장비는 캠페인 합류와 같은 규칙(_startCompanion). 나중에 캠페인 합류 관문에 닿아도 이미 소유라 grantCampaignHeroes 가 건너뛰므로
+   * 중복 지급·레벨/경험치 덮어쓰기가 없다. 소비는 유료 보석만(gems 와 paidGems 를 같이 줄여 무료 몫은 그대로).
+   * 최초 1회 기본 해금만 준다: 중복 조각·각성·별 재료는 주지 않는다(그것들은 소환에서만 나온다).
+   * @param {string} id @returns {{ ok: boolean, reason?: string, id?: string, gems?: number }}
+   */
+  buyHero(id) {
+    const q = this.heroBuyQuote(id);
+    if (!q.ok) return { ok: false, reason: q.reason };
+    const before = structuredClone(this.s), r = this.s.roster;
+    this.s.gems -= q.price; this.s.paidGems -= q.price;   // 유료 몫만 차감(save 의 clampPaidGems 와 일관)
+    r.owned = [...r.owned, id];
+    this._startCompanion(id, Math.max(1, this.s.progress?.unlocked || 1));
+    if (!this._commit(before)) return { ok: false, reason: 'storage' };
+    return { ok: true, id, gems: q.price };
+  }
+  /**
    * 성장형 합류: 방금 클리어한 관문(clearedIdx)이 합류 관문 이상이면 그 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만).
    * 저장된 progress 가 아니라 이번에 실제로 깬 관문으로 판정한다: 가져오기·그림자 스냅샷이 부풀린 progress 만으로 영웅을
    * 받지 못하게 한다(독립 리뷰 P1). 진행이 이미 지난 이용자는 그 관문 이상을 다시 깰 때 한꺼번에 합류한다. 저장은 호출자가 한다.
@@ -397,14 +438,22 @@ export class Economy {
     for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
       if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
       r.owned = [...r.owned, id]; joined.push(id);
-      // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
-      // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
-      const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
-      const nextIdx = Math.max(1, progress), joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
-      if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
-      this.grantCompanionKit(id, nextIdx);
+      this._startCompanion(id, Math.max(1, progress));
     }
     return joined;
+  }
+  /**
+   * 합류·직접 영입 동료의 시작 상태(레벨·장비). 합류와 영입이 같은 규칙을 쓰므로 한곳에 둔다.
+   * 레벨은 낮추지 않는다(미소유 상태로 보존된 레벨이 더 높으면 그대로). 이미 낀 장비 부위는 건드리지 않는다. 난수 없음. 저장은 호출자가 한다.
+   * @param {string} id @param {number} nextIdx 다음에 도전할 관문 번호(진행 progress.unlocked)
+   */
+  _startCompanion(id, nextIdx) {
+    // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
+    // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
+    const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
+    const joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
+    if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
+    this.grantCompanionKit(id, nextIdx);
   }
   /**
    * 합류 동료 시작 장비: 부위마다 에픽(E)·강화 0·il = 다음 관문의 드랍 장비 레벨 한 점씩, 그 영웅 소유로 만들어 바로 착용시킨다.

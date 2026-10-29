@@ -109,6 +109,10 @@
     {
       "path": "img/tll/rogue-casual-v2.png",
       "reason": "위와 같음."
+    },
+    {
+      "path": "models/heroes-next/ranger-fox-body-fit-v1.glb",
+      "reason": "여우 아바타 몸 v1 은 다리 가중치를 가른 v2(fox-body-revision-v2, FOX_BODY_REVISION_ID)가 대신한다. 기록 JSON 과 v2 저작 원본으로만 남는다."
     }
   ],
   "channelExcludes": {

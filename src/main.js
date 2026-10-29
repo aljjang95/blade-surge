@@ -47,6 +47,7 @@ import { JourneyView } from './ui/journey.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
+import { EndgameHubView } from './ui/endgame-hub.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
 import { NewsView } from './ui/news.js';
@@ -233,6 +234,7 @@ class App {
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
     this.arsenalView = new ArsenalView(this);
+    this.endgameHub = new EndgameHubView(this);
     await this.showcaseHero(this.eco.s.selected, true);
     startup.stage = 'shaders';
     setP(0.95, '게임 화면 준비 중…');

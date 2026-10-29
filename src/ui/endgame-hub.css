@@ -1,0 +1,23 @@
+.endgame-dialog{box-sizing:border-box;width:min(560px,calc(100vw - 24px));max-height:92dvh;margin:auto;padding:0;border:1px solid #bd986359;border-radius:18px;background:linear-gradient(145deg,#182824,#0b141d);color:#edf0e6;font:14px/1.5 var(--font-ui);box-shadow:0 24px 90px #000c}
+.endgame-dialog[open]{display:flex;flex-direction:column;overflow:hidden}
+.endgame-dialog::backdrop{background:#04080bbc}
+.endgame-dialog *{box-sizing:border-box}
+.endgame-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #ffffff16;flex-shrink:0}
+.endgame-header small{color:#d5bc84;font-size:11px}
+.endgame-header h2{margin:2px 0 0;font-size:22px}
+.endgame-close,.endgame-go{min-height:44px;border-radius:8px;border:1px solid #fff3;background:#ffffff09;color:inherit;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer}
+.endgame-go{background:#d5bc84;color:#172421;font-weight:800;width:100%;margin-top:6px}
+.endgame-dialog :is(button):focus-visible{outline:2px solid #ffe2a3;outline-offset:2px}
+.endgame-season{margin:0;padding:8px 18px;font-size:12px;color:#e2cba0;background:#d5bc8412;flex-shrink:0}
+.endgame-goals{list-style:none;margin:0;padding:12px 18px 18px;display:grid;gap:10px;overflow:auto;overscroll-behavior:contain;min-height:0}
+.endgame-goal{border:1px solid #bdc9a82b;border-radius:12px;background:#ffffff05;padding:12px}
+.endgame-goal-head{display:flex;gap:10px;align-items:center}
+.endgame-goal h3{margin:0;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.endgame-rank{flex:0 0 26px;height:26px;border-radius:50%;background:#d5bc84;color:#172421;font-weight:800;display:grid;place-items:center;font-size:13px}
+.endgame-why{margin:8px 0;font-size:12px;color:#aebfb6;line-height:1.55}
+.endgame-goal progress{width:100%;height:10px;accent-color:#d5bc84}
+.endgame-progress{margin:4px 0 0;font-size:12px;color:#e0c794}
+.endgame-notice{margin:0;padding:0 18px 10px;font-size:12px;color:#e2cba0}.endgame-notice:empty{display:none}
+.endgame-empty{font-size:13px;color:#aebfb6;padding:8px}
+.endgame-open[hidden]{display:none!important}
+@media(max-height:520px) and (orientation:landscape){.endgame-dialog{max-height:96dvh;width:min(720px,calc(100vw - 24px))}.endgame-header{padding:8px 14px}.endgame-header h2{font-size:18px}.endgame-goals{padding:8px 14px 12px;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.endgame-goal{padding:8px}.endgame-goal h3{font-size:13px}.endgame-why{font-size:11px;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.endgame-go{font-size:12px}}
