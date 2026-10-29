@@ -91,11 +91,11 @@ export function runStarterSelect(app, { root = document } = {}) {
   return new Promise((resolve) => {
     const choices = starterChoices();
     // 다른 영웅으로 넘길 때 첫 프레임이 비지 않게 전신 그림을 미리 받는다.
-    for (const c of choices) { const img = new Image(); img.decoding = 'async'; img.src = c.stage; }
+    for (const src of ['/img/tll/stage/stage-bg-v1.webp', ...choices.map((c) => c.stage)]) { const img = new Image(); img.decoding = 'async'; img.src = src; }
     const el = root.createElement('div');
     el.id = 'starter-select'; el.className = 'starter-select'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ss-title');
     const tab = (c) => `<button type="button" class="ss-card" role="radio" aria-checked="false" data-hero="${esc(c.id)}" style="--hc:${esc(c.color)}"><span class="ss-art"><img src="${esc(c.portrait)}" alt="" onerror="this.style.visibility='hidden'"></span><span class="ss-info"><b>${esc(c.name)}</b><small>${esc(c.role)}</small></span></button>`;
-    el.innerHTML = `<div class="ss-stage" aria-hidden="true"><div class="ss-light"></div><div class="ss-fog ss-fog-a"></div><div class="ss-fog ss-fog-b"></div><div class="ss-floor"></div><canvas class="ss-embers"></canvas><div class="ss-vignette"></div></div>
+    el.innerHTML = `<div class="ss-stage" aria-hidden="true"><div class="ss-bg"></div><div class="ss-tint"></div><div class="ss-light"></div><div class="ss-fog ss-fog-a"></div><div class="ss-fog ss-fog-b"></div><div class="ss-floor"></div><canvas class="ss-embers"></canvas><div class="ss-vignette"></div></div>
       <h2 id="ss-title" class="ss-title">시작 영웅 선택<small>${HERO_UNLOCK_VIA_GACHA ? '한 명은 무료 · 나머지는 영웅 소환에서(첫 소환권 지급)' : '한 명은 무료 · 나머지는 나중에 해금'}</small></h2>
       <div class="ss-list" role="radiogroup" aria-labelledby="ss-title">${choices.map(tab).join('')}</div>
       <div class="ss-show" aria-live="polite"><div class="ss-rune">${RUNE}</div><div class="ss-pillar"></div><img class="ss-hero" src="" alt=""><img class="ss-hero ss-hero-out" src="" alt="" aria-hidden="true"></div>
@@ -149,7 +149,7 @@ export function runStarterSelect(app, { root = document } = {}) {
       setTimeout(() => { embers.stop(); el.remove(); }, 900);
       resolve(picked);
     });
-    audio.playMusic?.(STARTER_SELECT_MUSIC, MUSIC_MIX);
+    audio.playMusic?.(STARTER_SELECT_MUSIC, { ...MUSIC_MIX, volume: .48 });
     requestAnimationFrame?.(() => el.classList.add('show'));
     select(choices[0].id, { quiet: true }); cards[0].focus({ preventScroll: true });
   });

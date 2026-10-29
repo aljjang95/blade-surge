@@ -169,6 +169,7 @@ export const MUSIC_TRACKS = Object.freeze([...new Set([
   ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack), ...REGION_CUE_PLAN.map(cueTrack),
 ])].sort());
 
-/** 첫 실행 시작 영웅 선택 화면 곡(2026-10-29). 전용 곡(FlowMusic)이 배송되기 전에는 왕관 지역곡(장엄한 행진풍)을 쓴다. */
-export const STARTER_SELECT_CUE = Object.freeze({ id: 'hero-select-20261029', scene: 'starter-select', fallback: 'regions/crown', status: 'external-gui-pending' });
+/** 첫 실행 시작 영웅 선택 화면 곡(2026-10-29, FlowMusic 후보 4곡 중 c — 92BPM E단조, 첼로 오스티나토·호른 영웅 동기·합창 고조).
+ *  원본 flowmusic.app/song/8bc17eff-d474-4301-b6c5-f722f9cf4b32, 끝 무음 앞 88초로 자르고 -16 LUFS·128kbps. 파일이 없으면 왕관 지역곡으로 대신한다. */
+export const STARTER_SELECT_CUE = Object.freeze({ id: 'hero-select-20261029', scene: 'starter-select', file: 'hero-select', fallback: 'regions/crown', status: 'shipped' });
 export const STARTER_SELECT_MUSIC = STARTER_SELECT_CUE.status === 'shipped' && STARTER_SELECT_CUE.file ? STARTER_SELECT_CUE.file : STARTER_SELECT_CUE.fallback;
