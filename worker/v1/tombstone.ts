@@ -23,7 +23,7 @@ export async function hasRecentTombstone(db: D1Database, provider: string, subje
 
 /**
  * 정지 계정의 연동을 1년 묘비로 올린다(정지 경로가 어디든 크론이 맞춘다). 시작 시각은 가장 최근 ban 제재 시각, 없으면 last_seen.
- * 이미 지난 정지(1년 경과)는 올리지 않아 만료된 묘비가 되살아나지 않는다. 한 번에 최대 limit개.
+ * 이미 지난 정지(1년 경과)는 올리지 않아 만료된 묘비가 되살아나지 않는다. 기존 banned 묘비가 있어도 새 만료일이 더 늦으면(재제재) 갱신 대상이다(UPSERT가 max를 유지). 한 번에 최대 limit개.
  */
 export async function syncBannedTombstones(db: D1Database, now: number, limit = 100): Promise<number> {
   const out = await db.prepare(`INSERT INTO abuse_tombstones(provider, subject_hash, reason, created_at, expires_at)
@@ -31,10 +31,10 @@ export async function syncBannedTombstones(db: D1Database, now: number, limit = 
       JOIN (SELECT a.account_id, COALESCE((SELECT MAX(s.at) FROM sanctions s WHERE s.account_id = a.account_id AND s.kind = 'ban'), a.last_seen) AS since
             FROM accounts a WHERE a.status = 'banned') b ON b.account_id = l.account_id
     WHERE b.since + ? > ?
-      AND NOT EXISTS (SELECT 1 FROM abuse_tombstones t WHERE t.provider = l.provider AND t.subject_hash = l.subject_hash AND t.reason = 'banned')
+      AND NOT EXISTS (SELECT 1 FROM abuse_tombstones t WHERE t.provider = l.provider AND t.subject_hash = l.subject_hash AND t.reason = 'banned' AND t.expires_at >= b.since + ?)
     LIMIT ?
     ON CONFLICT(provider, subject_hash) DO UPDATE SET reason = 'banned', expires_at = max(expires_at, excluded.expires_at)`)
-    .bind(now, BANNED_TOMBSTONE_MS, BANNED_TOMBSTONE_MS, now, limit).run();
+    .bind(now, BANNED_TOMBSTONE_MS, BANNED_TOMBSTONE_MS, now, BANNED_TOMBSTONE_MS, limit).run();
   return out.meta?.changes ?? 0;
 }
 
