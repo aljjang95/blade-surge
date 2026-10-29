@@ -73,6 +73,18 @@
       }
     },
     {
+      "id": "w_gravity",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_gravity.glb",
+      "sha256": "a55dd7a138990907f0beca552471e7f600f5d1232c5830eb34189c2cc4bf3ddc",
+      "bytes": 637916,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "459b04c7-7bd7-4e58-8dfe-09f627f81167",
+        "concept": "singularity greatsword: broad dark grey-silver frame blade with a starry purple-black cosmic inlay and a swirling purple black-hole spiral in the middle, ornate silver cross guard with a purple black-hole disc, thin purple rings with small dark orbs fused solidly to the blade, dark purple grip, purple crystal pommel"
+      }
+    },
+    {
       "id": "w_guard",
       "form": "sword",
       "file": "/models/item-weapons/w_guard.glb",
