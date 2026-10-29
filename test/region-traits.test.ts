@@ -306,3 +306,12 @@ test('다른 장 Tripo 몸 갈래는 원본 종이 해골일 때만 망각의 �
   }
   expect(isSkeletalSpecies('Ch6_Witness', 'homecoming_midboss')).toBe(false);
 });
+
+test('망각의 잔향: 7장 해골 시민·굽쇠 주술사는 원본 종이 해골일 때만 되살아난다', async () => {
+  const { ENEMIES, CHAPTER_SPECIES } = await import('../src/data/stages.js');
+  const E = ENEMIES as Record<string, any>;
+  const sw = CHAPTER_SPECIES[7] as Record<string, string>;
+  for (const src of ['skel_minion', 'skel_rogue', 'skel_shield', 'bone_orc', 'skel_mage', 'skel_priest', 'ghost_skull']) expect(isSkeletalSpecies(E[sw[src]].model, sw[src]), src).toBe(true);
+  // 원령·폭탄 슬라임 자리는 몸이 해골이어도 교체 전처럼 되살아나지 않는다(난이도 체감 유지).
+  for (const src of ['ghost', 'bomb_slime']) expect(isSkeletalSpecies(E[sw[src]].model, sw[src]), src).toBe(false);
+});

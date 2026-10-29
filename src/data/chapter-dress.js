@@ -403,8 +403,24 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_skel_captain: { ...BRASS_BONE, props: ['doorShield', 'clapperBack'] },
       elite_wraith: { ...BRASS_SPIRIT, props: ['spiritBell', 'spiritHalo'] },
       elite_bone_lord: { ...BRASS_BONE, props: ['brokenBellLarge'] },
+      // 7장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[7]): 몸이 이미 바랜 황동·석회 팔레트라 BRASS_* 재배치를 걸지 않고 발광·몸빛만 준다.
+      // 시민은 손에 타종 명부(로스터 offhand), 주술사는 굽쇠 지팡이(weapon)와 몸의 작은 종이 있어 bellLedger·tuningFork·spiritBell 소품은 뺀다.
+      ch7_citizen: { emissive: '#140f04' },
+      // 해골 자객 자리: 종소리에 늦어 뛰는 시민 — 맨손, 먼지 낀 석회 몸빛.
+      ch7_citizen_late: { color: '#b8b2a2', amount: 0.3, emissive: '#140f04' },
+      ch7_citizen_ledger: { emissive: '#140f04' },
+      // 뼈 오크 자리(분쇄): 종루 짐꾼 — 그을린 청동 몸빛, 등에 종추.
+      ch7_citizen_hauler: { color: '#9a7c52', amount: 0.4, emissive: '#140f04', props: ['clapperBack'] },
+      // 폭탄 슬라임 자리: 자폭 경고 — 붉은 금 발광(색조는 원본 금빛 그대로).
+      ch7_citizen_fuse: { emissive: '#4a2408' },
+      ch7_tuner: { emissive: '#140f04' },
+      // 해골 사제 자리(지원 소환): 명부를 낭송하는 주술사 — 따뜻한 황동 발광.
+      ch7_tuner_cantor: { color: '#e0c68c', amount: 0.25, emissive: '#2a1e08' },
+      // 해골 망령·원령 자리: 불투명 몸에 옅은 석회빛, 발광을 조금 올린 울림 잔향.
+      ch7_tuner_echo: { color: '#d8d6c8', amount: 0.3, emissive: '#2a2210' },
+      ch7_tuner_drift: { color: '#c4cfc8', amount: 0.3, emissive: '#2a2210' },
     },
-    // 종지기·오르벤·카델은 7장 전용 Tripo 몸이라 의상을 입히지 않는다.
+    // 종지기·오르벤·카델과 해골 시민·굽쇠 주술사 갈래는 7장 전용 Tripo 몸이라 BRASS 재배치를 입히지 않는다.
     assets: {
       bone_knight: { ...BRASS_BONE, props: ['bellLedger'] },
       void_wisp: { ...BRASS_SPIRIT, props: ['spiritBell'] },
