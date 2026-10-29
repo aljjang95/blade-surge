@@ -8,7 +8,8 @@
 - 운영 D1 0006 적용(2026-10-29 21:53 KST, PC worktree `C:\Work\tasks\blade-deploy-3811240`). 적용 전 Time Travel 북마크 `000000f6-00000000-00005113-394bcdef2907875e0aa99d496b3ab822`. 적용 뒤 `v1_schema.version = 6`.
 - 배포: 이 레인의 deploy.mjs는 가드가 "HEAD가 라이브의 후속이 아님"으로 막음(다른 레인이 더 새 main을 먼저 배포). 라이브 `version.json` sha `2dbc711`(dirty=false)이 3811240을 포함한다.
 - 테스트 계정 3행 `account_flags.flag='test'` 확인(p_379df1e8…·p_4f795d4a…·p_60a168b7…, 다른 세션이 먼저 표시, 이 레인의 INSERT OR IGNORE는 0행 기록). 삭제 없음.
-- 보관본·탈퇴 문서 파기 크론은 #426(0007, 다른 레인)으로 들어감.
+- 보관본·탈퇴 문서 파기 크론은 #426(0007, 다른 레인)으로 들어감(privacy 문구도 그 PR이 "자동 정기 작업(매시간)으로 파기"로 맞춤).
+- 라이브 실브라우저(Playwright, 2dbc711, 2026-10-30 01:3x KST): 844×390·390×844 모두 "전체화면 · 가로로 시작" 뒤 계정 시트(Google로 계속·게스트로 시작) 표시, 콘솔 오류 0, 실패 요청 0, 가로 스크롤 없음. `/api/v1/me` 토큰 없이 401. privacy(180일 보관·1년 파기, 회원 탈퇴)·support(회원 탈퇴 경로) 문구 확인. 실기기·실제 Google 로그인은 미확인.
 
 ## 남은 일
 - **복구한 기기의 옛 게스트 허브 신원 잔존**(교차 리뷰 P2, 구조적 한계): 게스트 A로 시작한 기기가 연동 계정 B로 recover한 뒤 B를 탈퇴하면 허브의 그 기기 키→A 매핑과 A의 이름·친구가 남는다. 수정안: 탈퇴 직전 계정의 `account_keys.key_hash`로 허브 `player_keys`를 찾아 함께 삭제·익명화(`/internal/delete` 본문에 `keyHashes`), 테스트 `test/account-followups.test.ts`. 로그인·삭제 변경이라 교차 리뷰 1회. 기록: `docs/ACCOUNT_POLICY.md` 5장.
