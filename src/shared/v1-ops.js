@@ -26,6 +26,8 @@ export const OPS = {
   // 소유 정책(수익화 1단계): 시작 영웅 선택과 무료 해금. 서버 규칙 엔진이 같은 Economy 메서드를 부른다(유료 권한은 결제 검증만 연다).
   chooseStarter: { args: [str], run: (e, h) => e.chooseStarter(h), ok: okResult },
   unlockHeroFree: { args: [str], run: (e, h) => e.unlockHeroFree(h), ok: okResult },
+  // 보석 직접 영입(HERO_DIRECT_PURCHASE.enabled=false 가 기본이라 꺼져 있으면 서버도 rejected/disabled). 난수 없음.
+  buyHero: { args: [str], run: (e, h) => e.buyHero(h), ok: okResult },
   selectHero: { args: [str], run: (e, h) => { if (!e.ownHero(h) || e.s.selected === h) return false; e.s.selected = h; e.emit(); return true; }, ok: okBool, offline: true },
   // 장비 (난수 없음)
   equip: { args: [str, (v) => int(v, 1)], run: (e, h, uid) => { if (!e.ownHero(h) || !e.s.inventory.some((x) => x.uid === uid)) return false; return e.equip(h, uid) !== false; }, ok: okBool, offline: true },

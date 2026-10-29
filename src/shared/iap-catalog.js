@@ -29,8 +29,8 @@ export const CURRENT_SEASON = 's1';
  *     entitlement?: { key: string }, entitlements?: readonly { key: string }[] } }} IapProduct
  */
 /** 영웅 해금 상품 가격 후보(원). 공개 전 대표님 확인(docs/BM_DESIGN.md '영웅 해금'). 웹·Play 동일가. */
-export const HERO_PRICE_KRW = 5900;
-export const HERO_ALL_PRICE_KRW = 17900;
+export const HERO_PRICE_KRW = 30000;
+export const HERO_ALL_PRICE_KRW = 89000;
 /** hero_<id>_v1 상품 id ↔ 영웅 id. */
 export const heroProductId = (heroId) => `hero_${heroId}_v1`;
 export const HERO_ALL_PRODUCT_ID = 'hero_all_v1';
@@ -87,7 +87,7 @@ export const IAP_PRODUCTS = Object.freeze([
   ...AVATAR_PRODUCTS,
   ...HERO_PRODUCTS,
   { id: HERO_ALL_PRODUCT_ID, type: 'non_consumable', enabled: false, gate: 'gacha-only', priceKRW: HERO_ALL_PRICE_KRW, shopSku: 'hero_all', channels: CHANNELS_ALL,
-    title: '영웅 전원 해금', description: '다섯 영웅을 모두 계정에 영구 해금합니다(개별 구매 대비 약 24% 할인).',
+    title: '영웅 전원 해금', description: '다섯 영웅을 모두 계정에 영구 해금합니다(4명 개별 구매 합계 120,000원 대비 약 26% 할인).',
     grant: { entitlements: HERO_LEGACY_IDS.map((id) => ({ key: heroEntitlementKey(id) })) } },
   // 보석 팩: 유료/무료 분리(paidGems, 무료부터 소비, 환불 역분개)는 BM 12.4로 준비됐다. 판매 시작·가격 공개는 대표님 확인 뒤(gate 유지).
   // Play 단독(channels 없음): 저장형 재화 충전은 웹(KG이니시스)에서 팔지 않는다(PAYMENT_COMPLIANCE 4.1-2).

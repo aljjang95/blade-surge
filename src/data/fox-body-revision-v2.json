@@ -1,0 +1,66 @@
+{
+  "id": "fox-body-fit-v2",
+  "supersedes": "fox-body-fit-v1",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "avatar_ranger_fox",
+  "source": {
+    "path": "asset-library/normalized/avatar_ranger_fox.glb",
+    "sha256": "ec4858d8ad8ae69ef8bb0729b613891120eee33b1d95bb6fef824ece0eb47903"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-fox-body-fit-v2.glb",
+    "sha256": "181ab3b1bb48cea0aeaac84ab16a28154d87b64c57a64e88d5086bf6d48664f6"
+  },
+  "reason": "2026-10-29 대표님 지적 \"궁수 아바타가 토끼 옷 같고 일그러져 있다\". v1 은 Tripo 자동 리그가 붙어 선 두 다리에 반대쪽 다리 뼈 가중치를 섞어 둔 그대로였다(다리 정점 6,135개 중 4,112개, 평균 27%). 달리기·피격·사망에서 다리를 벌리면 허벅지·부츠가 반대쪽으로 끌려 찢겼다. v2 는 v1 의 JOINTS_0·WEIGHTS_0 만 고쳐(사타구니 아래 반대쪽 다리 사슬 가중치를 같은 쪽 같은 마디로 이전) 두 다리를 가른다.",
+  "authoring": {
+    "base": {
+      "path": "/models/heroes-next/ranger-fox-body-fit-v1.glb",
+      "sha256": "d681fb91eb32622e5f106e2a02f055ba1fb7cbbd7385b22eaa4d703f66e6c7e9",
+      "revision": "fox-body-fit-v1"
+    },
+    "tool": "tools/art/split-leg-weights.mjs",
+    "args": "--fade=0.14 --deadband=0.012 --floor=0.06",
+    "report": "art-src/avatar-fox/fox-body-fit-v2.split-legs.json",
+    "v1Authoring": {
+      "blender": "5.2.2 LTS",
+      "host": "TheLuxuryLord Desktop",
+      "script": "art-src/avatar-fox/author_body_contact_v3.py",
+      "scriptSha256": "78ec15dfeb5e5908237586bc77f8b3e8a8e291efcc24fd35f35627088c5eaab1",
+      "packer": "art-src/avatar-fox/pack-body-contact-v3.mjs",
+      "packerSha256": "f3b853430a737fde6cf66728fedaf2099c9d4bc6a4e0e8b37bb1d6ff6ded1b05",
+      "patch": "art-src/avatar-fox/fox-body-fit-v1.patch.json",
+      "patchSha256": "a8e14eee0ea2fffe9a3d6a197230783bebd6ab88293dd132a4d56a4d78b7e9e6",
+      "blend": "art-src/avatar-fox/fox-body-fit-v1.blend",
+      "blendSha256": "96808d28195937924b029374f146952abf3af27dd6d07b02c0baedba536d8c38"
+    }
+  },
+  "motion": {
+    "path": "src/data/fox-body-motion-v2.json",
+    "sha256": "d89e73c1a96c34cfc57e1a3380242e55615d41dba77af6d1e3359b185ced95ce",
+    "author": "tools/art/author-fox-body-motion-v2.mjs",
+    "report": "art-src/avatar-fox/fox-body-motion-v2.report.json",
+    "previous": {
+      "path": "src/data/fox-body-motion-v1.json",
+      "sha256": "08b243941fdd209e6f93e4c1f1402d142a2d959db13151e8fd4421d95f9d0e9b",
+      "author": "art-src/avatar-fox/author_fox_body_motion_v3.py",
+      "authorSha256": "8f9e9f080162cc27a2f3202f914d83388bbcf18296c7a8c814ae8f318920ba36",
+      "blend": "art-src/avatar-fox/fox-body-motion-v2.blend",
+      "blendSha256": "c496c277f31f651863ed76f50c6b7122aa343a03af3cfad5725ce08c73f71ea4",
+      "scope": "여우 전용 dodge/death Hips 위치의 고정 Blender 저작곡선; 기본궁수v4와 다른9클립 불변"
+    },
+    "scope": "v1 곡선 위에 몸 v2 실제 외피 최저점이 목표(+2mm) 아래인 구간만 골반 Y 를 더 올림. 계약 고정점(회피 시작 +6mm·회피 끝 0·사망 끝 +5cm)·수평·다른 트랙 불변"
+  },
+  "preserved": [
+    "v1 의 정점·법선·UV·재질·텍스처·노드·역바인드·클립 원본(JOINTS_0·WEIGHTS_0 밖 바이트 불변, 도구가 검사)",
+    "사타구니 위(치마·골반·상체·머리)와 밑창(0.06m 아래) 가중치"
+  ],
+  "validation": {
+    "status": "NUMERIC_VERIFIED",
+    "deform": "tools/art/measure-body-deform.mjs avatar_ranger_fox, 상한은 test/avatar-body-deform.test.ts",
+    "contact": "test/fox-body-contact.test.ts",
+    "releaseGate": "actual visual/strict media/gameplay verification is recorded separately for the exact release HEAD; numeric checks alone do not grant visual approval",
+    "boundary": "실제 Android·발열 및 다른 미교정 몸체의 출시 DOD 완료가 아님"
+  },
+  "license": "owner-generated source preserved; existing project canonical animation source reused; no paid generation"
+}
