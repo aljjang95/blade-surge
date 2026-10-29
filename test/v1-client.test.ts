@@ -109,3 +109,19 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     expect(me.doc.roster.owned).toEqual(['mage']);
   });
 });
+
+describe('RPG 필수: 접속 표시 명령 수', () => {
+  test('markSeen 은 실제로 표시를 남긴 때만 보낸다(로비 1초 틱마다 쌓이지 않음)', async () => {
+    let clock = Date.UTC(2026, 9, 29, 3);
+    const eco: any = EconomyCore.fromState(null, { now: () => clock });
+    const sent: string[] = [];
+    const client: any = { cmd: async (b: any) => { sent.push(b.op); return { match: true }; }, shadowSnapshot: async () => ({ match: true }) };
+    const q = new CommandQueue(eco, client, { authority: () => 'shadow', adopt: () => {} });
+    for (let i = 0; i < 5; i++) { clock += 1000; eco.markSeen(); }
+    await settle(q);
+    expect(sent.filter((op) => op === 'markSeen').length).toBe(0);
+    clock += 31 * 60000; expect(eco.markSeen()).toBe(true);
+    await settle(q);
+    expect(sent.filter((op) => op === 'markSeen').length).toBe(1);
+  });
+});
