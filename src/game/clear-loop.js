@@ -76,6 +76,13 @@ function makeCard(kind, tier, { base, ch, il, rng }) {
   return { kind, tier, id: def.id, slot, rarity: def.rarity, ...(il > 1 ? { il } : {}) };
 }
 
+/** 고통 단계 하루 풀 보상 판 이후의 감쇠(정산 decay)를 카드에도 적용한다. 골드·강화석·조각만 줄고(최소 1) 장비·주문서·수리는 그대로(교차 리뷰 P2). */
+export function decayCard(card, mul) {
+  if (!(mul > 0 && mul < 1)) return card;
+  if (card.kind === 'gold' || card.kind === 'repair') return { ...card, gold: Math.max(10, Math.floor(card.gold * mul / 10) * 10) };
+  if (card.kind === 'stones' || card.kind === 'fragments') return { ...card, n: Math.max(1, Math.floor(card.n * mul)) };
+  return card;
+}
 const CARD_GOLD_MAX = 10000000;
 const posInt = (v, max) => Number.isSafeInteger(v) && v > 0 && v <= max;
 /** 카드 한 장을 종류별 허용 필드·범위로만 다시 만든다. 형태가 틀리면 null(저장·가져오기로 보상 주입 방지). */

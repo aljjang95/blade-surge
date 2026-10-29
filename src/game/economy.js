@@ -36,7 +36,7 @@ import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
 import { recordGearDex, milestoneOf, milestoneReached, milestoneClaimed } from './gear-dex.js';
 import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, relayToday, VAULT_INHERIT } from './gear-vault.js';
-import { rollClearCards, repairCost, durOf, wornDur, DUR_MAX } from './clear-loop.js';
+import { rollClearCards, decayCard, repairCost, durOf, wornDur, DUR_MAX } from './clear-loop.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -1008,7 +1008,7 @@ export class Economy {
     // 클리어 루프(docs/CLEAR_LOOP.md): 착용 무기 마모 → 지난 판의 고르지 않은 카드는 첫 장으로 정산 → 이번 판 카드 3장. 난수를 쓰지 않는다(서버와 같은 카드).
     const wear = this.wearWeapon(heroId, !!stage.boss);
     const autoCard = clearCards ? this.settlePendingCard() : null;
-    if (clearCards) this.dealClearCards(stage, heroId, first, key);
+    if (clearCards) this.dealClearCards(stage, heroId, first, key, decay);
     s.quests.stages++; const saved = this.emit();
     const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock, heroJoin,
       wear, autoCard, clearCard: clearCards ? s.clearCard : null,
@@ -1027,11 +1027,11 @@ export class Economy {
     return { uid, before, dur: after };
   }
   /** 이번 판 카드 3장을 저장 상태의 해시로 만든다(같은 상태 = 같은 카드, 클라이언트·서버 공통). */
-  dealClearCards(stage, heroId, first, key = this.stageKey(stage.ch, stage.st)) {
+  dealClearCards(stage, heroId, first, key = this.stageKey(stage.ch, stage.st), decay = 1) {
     const s = this.s, wid = this.hero(heroId)?.equip?.weapon, weapon = wid && s.inventory.find((x) => x.uid === wid);
     const seed = `${key}|${stage.difficultyId || 'story'}|${s.quests.stages}|${heroId}|${s.invSeq}`;
     const cards = rollClearCards({ seed, gold: stage.rewards?.gold || 0, ch: stage.ch, first, boss: !!stage.boss, il: dropItemLevel(stage), weaponWorn: !!weapon && durOf(weapon) < DUR_MAX });
-    s.clearCard = { id: `${key}:${s.quests.stages}`, heroId, cards, picked: null };
+    s.clearCard = { id: `${key}:${s.quests.stages}`, heroId, cards: decay < 1 ? cards.map((c) => decayCard(c, decay)) : cards, picked: null };
     return s.clearCard;
   }
   /** 고르지 않고 지나간 카드는 첫 장으로 정산한다(보상을 잃지 않게). 없으면 null. */

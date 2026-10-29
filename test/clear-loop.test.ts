@@ -154,3 +154,14 @@ describe('카드 보상 주입 방지(보안 리뷰 P2)', () => {
     expect(out.ok).toBe(true); expect(out.state.clearCard).toBeUndefined();
   });
 });
+
+test('고통 단계 감쇠가 카드 골드·재료에도 적용된다(교차 리뷰 P2)', async () => {
+  const { decayCard } = await import('../src/game/clear-loop.js');
+  expect(decayCard({ kind: 'gold', tier: 'rare', gold: 1000 }, 0.35)).toEqual({ kind: 'gold', tier: 'rare', gold: 350 });
+  expect(decayCard({ kind: 'stones', tier: 'common', key: 'stones', n: 2 }, 0.35)).toEqual({ kind: 'stones', tier: 'common', key: 'stones', n: 1 });
+  expect(decayCard({ kind: 'scroll', tier: 'epic', key: 'bless', n: 1 }, 0.35).n).toBe(1);
+  expect(decayCard({ kind: 'gold', tier: 'rare', gold: 1000 }, 1).gold).toBe(1000);
+  const a = fresh(), b = fresh(), stage: any = stageDef(1, 3);
+  a.dealClearCards(stage, 'knight', false, 'k', 0.35); b.dealClearCards(stage, 'knight', false, 'k', 1);
+  expect(a.s.clearCard.cards).toEqual(b.s.clearCard.cards.map((c: any) => decayCard(c, 0.35)));
+});

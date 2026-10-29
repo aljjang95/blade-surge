@@ -29,6 +29,7 @@ export class ClearLoop {
     this.timers.length = 0; this.state = null;
     const root = $('result'); root?.classList.remove('has-clear');
     for (const id of ['result-cards', 'result-chips', 'result-shop']) { const el = $(id); if (el) { el.hidden = true; el.replaceChildren(); } }
+    $('result-cards')?.classList.remove('picked', 'burst');   // 지난 판 선택 상태가 남으면 새 카드가 눌리지 않는다(교차 리뷰 P1)
   }
   /** 결과 화면이 아직 이 판의 것인가. */
   live() { const s = this.state; return !!s && this.ui.resultData === s.result; }
