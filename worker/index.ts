@@ -7,6 +7,7 @@ import { SOCIAL_CONFIG } from '../src/social/config.js';
 import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router';
 import { reconcileVoided } from './v1/iap';
 import { reconcileWebPayments } from './v1/portone';
+import { archiveIdleGuests } from './v1/archive';
 import { schemaReady, type D1Database } from './v1/db';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
@@ -182,9 +183,19 @@ export async function reconcileWeb(env: Env, now = Date.now()): Promise<void> {
   if (r.failed) console.warn('web payment reconcile partial', r.failed);
 }
 
+/** 시간당 미접속 게스트 보관(영구 삭제 아님, worker/v1/archive.ts). V1이 닫혀 있거나 스키마가 낮으면 하지 않는다. */
+export async function archiveIdle(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const n = await archiveIdleGuests(db, now);
+  if (n) console.log('idle guests archived', n);
+}
+
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
   // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
   await cleanupStoreMetadata(env);
   try { await reconcileIap(env); } catch (error) { console.warn('iap reconcile failed', error instanceof Error ? error.name : 'unknown'); }
   try { await reconcileWeb(env); } catch (error) { console.warn('web payment reconcile failed', error instanceof Error ? error.name : 'unknown'); }
+  try { await archiveIdle(env); } catch (error) { console.warn('idle archive failed', error instanceof Error ? error.name : 'unknown'); }
 } };

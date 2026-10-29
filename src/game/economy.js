@@ -40,6 +40,7 @@ import { normalizeIdle, idleQuote, claimIdle as claimIdleCore, markSeen as markS
 import { normalizeAchievements, achievementStats, achievementRows, claimAchievement as claimAchievementCore } from './achievements.js';
 import { normalizeNewbie, newbieView, claimNewbie as claimNewbieCore } from './newbie-event.js';
 import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, relayToday, VAULT_INHERIT } from './gear-vault.js';
+import { rollClearCards, decayCard, repairCost, durOf, wornDur, DUR_MAX } from './clear-loop.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -980,7 +981,7 @@ export class Economy {
   }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
-  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false } = {}) {
+  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false, clearCards = true } = {}) {
     const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || this.s.selected;
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];
     const townBefore = this.campaignTownState();
@@ -1030,12 +1031,80 @@ export class Economy {
     // 이번 판에 넘긴 각성 구간
     const awakened = (HEROES[heroId].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
+    // 클리어 루프(docs/CLEAR_LOOP.md): 착용 무기 마모 → 지난 판의 고르지 않은 카드는 첫 장으로 정산 → 이번 판 카드 3장. 난수를 쓰지 않는다(서버와 같은 카드).
+    const wear = this.wearWeapon(heroId, !!stage.boss);
+    const autoCard = clearCards ? this.settlePendingCard() : null;
+    if (clearCards) this.dealClearCards(stage, heroId, first, key, decay);
     s.quests.stages++; const saved = this.emit();
     const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock, heroJoin,
+      wear, autoCard, clearCard: clearCards ? s.clearCard : null,
       torment: tormentRun ? { tier: tormentTier, full: tormentRun.full, runs: tormentRun.runs, best: tormentRun.best, newBest: tormentRun.newBest, fullLeft: Math.max(0, TORMENT.fullRuns - tormentRun.runs) } : null,
       legend: this.takeLegendGrant(), ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;
+  }
+  // ---------- 클리어 루프: 카드 보상 · 무기 내구도 (docs/CLEAR_LOOP.md) ----------
+  /** 출전 영웅의 착용 무기를 한 판만큼 닳게 한다. 무기가 없으면 null. */
+  wearWeapon(heroId, boss) {
+    const uid = this.hero(heroId)?.equip?.weapon, inst = uid && this.s.inventory.find((x) => x.uid === uid);
+    if (!inst) return null;
+    const before = durOf(inst), after = wornDur(inst, boss);
+    if (after < DUR_MAX) inst.dur = after; else delete inst.dur;
+    return { uid, before, dur: after };
+  }
+  /** 이번 판 카드 3장을 저장 상태의 해시로 만든다(같은 상태 = 같은 카드, 클라이언트·서버 공통). */
+  dealClearCards(stage, heroId, first, key = this.stageKey(stage.ch, stage.st), decay = 1) {
+    const s = this.s, wid = this.hero(heroId)?.equip?.weapon, weapon = wid && s.inventory.find((x) => x.uid === wid);
+    const seed = `${key}|${stage.difficultyId || 'story'}|${s.quests.stages}|${heroId}|${s.invSeq}`;
+    const cards = rollClearCards({ seed, gold: stage.rewards?.gold || 0, ch: stage.ch, first, boss: !!stage.boss, il: dropItemLevel(stage), weaponWorn: !!weapon && durOf(weapon) < DUR_MAX });
+    s.clearCard = { id: `${key}:${s.quests.stages}`, heroId, cards: decay < 1 ? cards.map((c) => decayCard(c, decay)) : cards, picked: null };
+    return s.clearCard;
+  }
+  /** 고르지 않고 지나간 카드는 첫 장으로 정산한다(보상을 잃지 않게). 없으면 null. */
+  settlePendingCard() {
+    const cc = this.s.clearCard;
+    if (!cc || cc.picked !== null) return null;
+    const got = this.applyClearCard(cc.cards[0], cc.heroId);
+    cc.picked = 0;
+    return { card: cc.cards[0], got };
+  }
+  /** 카드 한 장의 보상을 준다(저장·알림은 호출자). */
+  applyClearCard(card, heroId) {
+    const owner = this.s.heroes[heroId] ? heroId : this.s.selected;
+    if (card.kind === 'gold') return this.addRewards({ gold: card.gold }, { silent: true, applyVip: false });
+    if (card.kind === 'stones' || card.kind === 'fragments' || card.kind === 'scroll') return this.addRewards({ [card.kind === 'fragments' ? 'fragments' : card.key]: card.n }, { silent: true, applyVip: false });
+    if (card.kind === 'gear') { const item = this.pushItem(card.id, { owner, il: card.il || 0 }); return [{ k: 'item', item }]; }
+    // repair: 착용 무기 무료 완전 수리 + 골드
+    const wid = this.hero(owner)?.equip?.weapon, weapon = wid && this.s.inventory.find((x) => x.uid === wid);
+    if (weapon) delete weapon.dur;
+    return [...(weapon ? [{ k: 'repair', uid: weapon.uid }] : []), ...this.addRewards({ gold: card.gold }, { silent: true, applyVip: false })];
+  }
+  /** 결과 화면에서 카드 한 장 고르기(서버 /cmd pickClearCard 가 같은 메서드를 부른다). */
+  pickClearCard(index) {
+    const cc = this.s.clearCard;
+    if (!cc || cc.picked !== null) return { ok: false, reason: 'none' };
+    if (!Number.isInteger(index) || index < 0 || index >= cc.cards.length) return { ok: false, reason: 'index' };
+    const card = cc.cards[index], got = this.applyClearCard(card, cc.heroId);
+    cc.picked = index;
+    const saved = this.emit();
+    return { ok: saved, card, got, index, saveError: !saved };
+  }
+  /** 수리 견적(읽기 전용). 무기가 아니거나 없으면 null. */
+  repairQuote(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid), def = inst && ITEM_BY_ID[inst.id];
+    if (!def || def.slot !== 'weapon') return null;
+    return { uid, dur: durOf(inst), cost: repairCost(inst, def.rarity) };
+  }
+  /** 무기 수리: 닳은 만큼 골드를 내고 100으로. 서버 /cmd repairItem 이 같은 메서드를 부른다. */
+  repairItem(uid) {
+    const q = this.repairQuote(uid);
+    if (!q) return { ok: false, reason: 'item' };
+    if (q.cost <= 0) return { ok: false, reason: 'full' };
+    if (this.s.gold < q.cost) return { ok: false, reason: 'gold', cost: q.cost };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    this.s.gold -= q.cost; delete inst.dur;
+    const saved = this.emit();
+    return { ok: saved, cost: q.cost, before: q.dur, saveError: !saved };
   }
   /** 결과에 표시된 골드·재료의 실지급량만 한 번 더 준다. 첫 클리어 보석/경험치는 제외. */
   doubleStageRewards(receipt) {
@@ -1082,7 +1151,7 @@ export class Economy {
     const got = this.addRewards(claim.rewards, { silent: true });
     return { ok: true, got, saveError: !this.emit() };
   }
-  sweep(stage) { const s = this.s; if (tormentTierOf(stage?.difficultyId) || s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
+  sweep(stage) { const s = this.s; if (tormentTierOf(stage?.difficultyId) || s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3, { clearCards: false }); }
   // ---------- 가챠 ----------
   /** 배너 상태(천장·픽업 확정·초보자 사용 횟수). 저장 정화(save-base)와 같은 모양. */
   gachaState() {

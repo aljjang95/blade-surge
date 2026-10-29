@@ -10,6 +10,7 @@ import { normalizeIdle } from './idle-rewards.js';
 import { normalizeNewbie } from './newbie-event.js';
 import { normalizeAchievements } from './achievements.js';
 import { normalizeRunes, normalizeBlessing, restoreSockets } from './rune-economy.js';
+import { normalizeClearCard } from './clear-loop.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
 export function normalizeSave(raw, fresh) {
@@ -31,5 +32,9 @@ export function normalizeSave(raw, fresh) {
   save.blessing = normalizeBlessing(raw.blessing);
   // save-base 는 인벤토리 인스턴스를 { uid, id, enh } 로 다시 만들어 sockets 를 버린다. 원본에서 다시 붙인다.
   restoreSockets(save, raw.inventory);
+  // 클리어 카드(docs/CLEAR_LOOP.md): 마지막 승리의 카드 3장과 고른 칸. 없으면 필드를 두지 않는다(이전 저장은 그대로).
+  delete save.clearCard;
+  const clearCard = normalizeClearCard(raw.clearCard);
+  if (clearCard) save.clearCard = clearCard;
   return save;
 }
