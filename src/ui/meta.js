@@ -702,7 +702,7 @@ export class Meta {
     const result = this.eco.equipAvatar(avatar.heroId, equipped ? null : id);
     if (!result.ok) { this.ui.toast('아바타 착용 상태를 바꾸지 못했습니다.', 'red'); return; }
     this.ui.toast(equipped ? `${avatar.name} 해제` : `${avatar.name} 착용`, 'gold');
-    if (this.eco.s.selected === avatar.heroId) this.app.showcaseHero(avatar.heroId);
+    if (this.eco.s.selected === avatar.heroId) (this.app.refreshShowcaseAvatar || this.app.showcaseHero).call(this.app, avatar.heroId);
     this.renderShop(); this.refreshTop();
   }
   renderShop() {
