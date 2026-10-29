@@ -124,7 +124,7 @@ export class ClearLoop {
     if (r.card.kind === 'gear') audio.play(r.card.tier === 'legend' || r.card.rarity === 'U' ? 'jingle_legend' : 'ui_drop', { vol: 0.55 });
     audio.vibe?.(25);
     this.renderChips();
-    this.renderShop();
+    this.afterChange();
   }
   markPicked(i, animate) {
     const root = $('result-cards'), buttons = [...root.querySelectorAll('.cl-card')];
@@ -150,6 +150,10 @@ export class ClearLoop {
     const s = this.state, h = this.eco.hero(s.heroId), uid = h?.equip?.weapon;
     const inst = uid != null ? this.eco.s.inventory.find((x) => x.uid === uid) : null;
     return inst ? { inst, def: ITEM_BY_ID[inst.id] } : null;
+  }
+  /** 카드·정비소 변경 뒤: 저장이 실패했으면 결과 화면의 저장 재시도·이동 버튼까지 다시 그린다(refreshResultGrowth → refresh → renderShop). */
+  afterChange() {
+    if (this.live()) this.ui.refreshResultGrowth(this.state.result); else this.renderShop();
   }
   renderShop() {
     const s = this.state, root = $('result-shop'), eco = this.eco;
@@ -209,7 +213,7 @@ export class ClearLoop {
   dropRow(uid) {
     const s = this.state; s.uids = s.uids.filter((u) => u !== uid);
     const li = $('result-shop').querySelector(`[data-uid="${uid}"]`);
-    if (li && !reducedMotion()) { li.classList.add('gone'); this.after(() => this.renderShop(), 220); } else this.renderShop();
+    if (li && !reducedMotion()) { li.classList.add('gone'); this.after(() => this.afterChange(), 220); } else this.afterChange();
   }
 
   async sell(uid) {
@@ -238,7 +242,7 @@ export class ClearLoop {
     for (const uid of plan.uids) { const g = this.eco.sellItem(uid); if (typeof g === 'number') { gold += g; n++; } }
     this.state.uids = this.state.uids.filter((u) => !plan.uids.includes(u));
     this.ui.toast(`장비 ${n}개 판매 · 골드 +${fmt(gold)}`, 'gold'); audio.pick('coin', 2, { vol: 0.7 });
-    this.renderShop();
+    this.afterChange();
   }
   detail(uid) {
     const s = this.state, app = this.ui.app, eco = this.eco; if (!this.ready()) return;
@@ -271,7 +275,7 @@ export class ClearLoop {
     }
     this.ui.toast(r.saveError ? '수리했지만 저장하지 못했어요.' : `무기 정비 완료 · 골드 −${fmt(r.cost)}`, r.saveError ? 'red' : 'gold');
     audio.pick('hit_metal', 3, { vol: 0.6, rate: 0.9 }); audio.play('ui_glass', { vol: 0.5, rate: 1.2, delay: 0.12 }); audio.vibe?.(20);
-    this.renderShop();
+    this.afterChange();
     const ico = $('result-shop').querySelector('.cl-wico');
     if (ico && !reducedMotion()) { ico.classList.remove('sheen'); void ico.offsetWidth; ico.classList.add('sheen'); }
   }
@@ -319,7 +323,7 @@ export class ClearLoop {
         if (r.destroyed) { ui.toast('장비가 파괴되었습니다…', 'red'); audio.play('ui_error', { vol: 0.6, rate: 0.7 }); this.dropRow(uid); return; }
         if (r.success) { ui.toast(`강화 성공! +${r.enh}`, 'gold'); audio.play('jingle_win1', { vol: 0.5 }); audio.vibe?.(30); }
         else ui.toast(r.down ? `강화 실패… +${r.enh}로 하락` : '강화 실패…', 'red');
-        this.renderShop();
+        this.afterChange();
         const li = $('result-shop').querySelector(`[data-uid="${uid}"]`); if (li && r.success && !reducedMotion()) li.classList.add('flash');
       };
       b.querySelector('#cl-e-go').focus({ preventScroll: true });

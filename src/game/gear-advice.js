@@ -20,7 +20,7 @@ function wornMap(eco) {
 const byUid = (eco) => new Map((eco.s.inventory || []).map((x) => [x.uid, x]));
 
 /** 같은 장비·강화·장비 레벨·룬 구성의 중복은 하나만 남긴다(후보 상한을 변화 없는 중복이 다 차지하지 않게). */
-const dupKey = (x) => x.id + '|' + (x.enh || 0) + '|' + (x.il || 0) + '|' + (x.tp || '') + '|' + JSON.stringify(x.sockets || null);
+const dupKey = (x) => x.id + '|' + (x.enh || 0) + '|' + (x.il || 0) + '|' + (x.tp || '') + '|' + (x.dur ?? '') + '|' + JSON.stringify(x.sockets || null);   // dur: 닳은 무기는 같은 장비라도 능력치가 다르다
 /** 단독 점수(gearScore)가 모르는 가치 — 착용 세트 동료·박힌 룬 — 가 있으면 점수와 무관하게 실제 빌드 비교로 보낸다. */
 const hasRunes = (x) => Array.isArray(x.sockets) && x.sockets.some(Boolean);
 const worthComparing = (x, minScore, sets) => gearScore(x) > minScore || sets.has(ITEM_BY_ID[x.id]?.set) || hasRunes(x);

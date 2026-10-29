@@ -50,6 +50,21 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     void authority;
   });
 
+  test('그림자 모드: 클리어 카드 선택은 /cmd 대신 스냅샷으로 맞춘다(서버 그림자 문서에는 카드가 없다)', async () => {
+    const { h, client } = await clientHarness();
+    await client.session();
+    const eco: any = EconomyCore.fromState(null, { now: () => h.now() });
+    expect(eco.chooseStarter('knight').ok).toBe(true);
+    expect((await importLocalSave(client, crypto.randomUUID(), eco)).status).toBe('shadow');
+    const q = new CommandQueue(eco, client, { authority: () => 'shadow', adopt: () => { throw new Error('shadow never adopts'); } });
+    const { stageDef } = await import('../src/data/stages.js');
+    eco.completeStage(stageDef(1, 1), 3); q.snapshot(); await settle(q);
+    expect(eco.pickClearCard(0).ok).toBe(true);
+    await settle(q);
+    expect(q.stats.rejected).toBe(0);
+    expect((await client.me()).stateHash).toBe(parityHash(eco.s));
+  });
+
   test('서버 권위: 로컬이 어긋나면 서버 문서로 덮어쓴다', async () => {
     const { h, client } = await clientHarness({ V1_SERVER_AUTHORITY_PERCENT: '100' });
     expect((await client.session()).authority).toBe('server');
