@@ -49,6 +49,8 @@ import { chapterVisual } from './chapter-scenery.js';
 import { prewarmChapterDress } from './chapter-dress.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { CombatReadability } from './combat-readability.js';
+/** 숲의 속박 화살 명중 색(어두운 덩굴빛): 접촉 섬광·몸 번쩍임이 흰빛으로 적 실루엣을 덮지 않게. */
+const BIND_HIT_TINT = 0x2f9a52;
 
 const _v = new THREE.Vector3();
 const _ultColor = new THREE.Color();
@@ -874,14 +876,15 @@ export class Battle {
       heavy: contactProfile(opts, crit, e.isBoss, true)?.heavy,
     });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
-    const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
+    // tint(숲의 속박 화살): 다섯 발 관통이 같은 적을 겹쳐 맞히면 크림 접촉 섬광이 쌓여 적 실루엣이 흰빛에 묻혔다 — 색·크기만 바꾼다(호출 수·난수 그대로).
+    const color = opts.tint && !crit ? opts.tint : opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches, p.def?.weapon);
     if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
     // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
-      if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
+      if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size * (opts.tint ? .6 : 1), life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss, weapon: p.def?.weapon });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
@@ -924,7 +927,7 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen, tint: p.streak === 'bind' ? BIND_HIT_TINT : undefined });
             if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
