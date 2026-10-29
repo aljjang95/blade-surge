@@ -110,7 +110,7 @@ export function renderOwnedHero(meta, id, det) {
       const bought = eco.buyAvatar(avatar.id); if (!bought.ok) { meta.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
     }
     if (!eco.equipAvatar(id, equippedNow ? null : avatar.id).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const tryButton = det.querySelector('[data-avatar-try]');
@@ -135,7 +135,7 @@ export function renderOwnedHero(meta, id, det) {
   const gearButton = det.querySelector('[data-avatar-gear]');
   if (gearButton) gearButton.onclick = () => {
     if (!eco.setShowGear(id, !eco.s.avatars.showGear?.[id]).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const sortieButton = $('h-next'); if (sortieButton) sortieButton.onclick = () => meta.app.commandUI?.openPreparation();

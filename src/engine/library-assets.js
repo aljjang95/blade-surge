@@ -338,6 +338,10 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
       cache.set(asset.id, promise);
       return promise;
     },
+    /** 캐시에 이미 받은(또는 받는 중인) 자산인지. */
+    has(assetId) { return cache.has(assetId); },
+    /** 캐시에서 뺀다. 다음 load 가 새로 받는다(호출부가 GPU 자원을 먼저 해제한다). */
+    forget(assetId) { return cache.delete(assetId); },
   };
 }
 
