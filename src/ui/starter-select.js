@@ -149,7 +149,7 @@ export function runStarterSelect(app, { root = document } = {}) {
       setTimeout(() => { embers.stop(); el.remove(); }, 900);
       resolve(picked);
     });
-    audio.playMusic?.(STARTER_SELECT_MUSIC, { ...MUSIC_MIX, volume: .48 });
+    audio.playMusic?.(STARTER_SELECT_MUSIC, MUSIC_MIX);
     requestAnimationFrame?.(() => el.classList.add('show'));
     select(choices[0].id, { quiet: true }); cards[0].focus({ preventScroll: true });
   });

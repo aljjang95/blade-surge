@@ -123,6 +123,8 @@ export const bossIntroKind = (stage) => (!stage?.expedition && BOSS_RANKS[stage?
 // 엔진은 loopEnd 전 crossfade 초 동안 loopStart 부터 새로 재생해 겹친다. loopEnd 는 추정 템포의 마디 정수배다.
 // trimDb 는 통합 라우드니스를 지역곡 마스터 기준(-18 LUFS)에 맞춘다(가챠 -15.5, 중간 보스곡 -13.9 LUFS 측정).
 export const BGM_LOOPS = Object.freeze({
+  // 시작 영웅 선택 곡(-16 LUFS → 지역곡 -18 에 맞춤). 끝 1.2초 페이드 앞에서 되돌린다.
+  'hero-select': Object.freeze({ loopStart: 0, loopEnd: 86.8, trimDb: -2 }),
   'regions/arena': Object.freeze({ loopStart: 0, loopEnd: 172.138, trimDb: 0 }),
   'regions/boss': Object.freeze({ loopStart: 0, loopEnd: 161.143, trimDb: 0 }),
   'regions/crown': Object.freeze({ loopStart: 0, loopEnd: 170.323, trimDb: 0 }),
@@ -163,13 +165,13 @@ export function campaignMusicMap(chapter, { stageDef, perChapter = 10 }) {
 }
 
 /** musicForScene 이 돌려줄 수 있는 모든 곡(배송 검사·채널 산출물 검사용). */
-export const MUSIC_TRACKS = Object.freeze([...new Set([
-  'bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', MIDBOSS_TRACK,
-  ...REGION_IDS.map(regionTrack),
-  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack), ...REGION_CUE_PLAN.map(cueTrack),
-])].sort());
-
 /** 첫 실행 시작 영웅 선택 화면 곡(2026-10-29, FlowMusic 후보 4곡 중 c — 92BPM E단조, 첼로 오스티나토·호른 영웅 동기·합창 고조).
  *  원본 flowmusic.app/song/8bc17eff-d474-4301-b6c5-f722f9cf4b32, 끝 무음 앞 88초로 자르고 -16 LUFS·128kbps. 파일이 없으면 왕관 지역곡으로 대신한다. */
 export const STARTER_SELECT_CUE = Object.freeze({ id: 'hero-select-20261029', scene: 'starter-select', file: 'hero-select', fallback: 'regions/crown', status: 'shipped' });
 export const STARTER_SELECT_MUSIC = STARTER_SELECT_CUE.status === 'shipped' && STARTER_SELECT_CUE.file ? STARTER_SELECT_CUE.file : STARTER_SELECT_CUE.fallback;
+
+export const MUSIC_TRACKS = Object.freeze([...new Set([
+  'bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', MIDBOSS_TRACK,
+  ...REGION_IDS.map(regionTrack),
+  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack), ...REGION_CUE_PLAN.map(cueTrack), STARTER_SELECT_MUSIC,
+])].sort());
