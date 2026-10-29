@@ -485,13 +485,14 @@ export function speciesSourceId(id) { return SPECIES_SOURCE[id] || id; }
 // 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
 // 4장 수부·아귀도 원령·해골 망령 자리(ch4_drowned_drift·ch4_lurer_glim)를 맡지만 불투명한 Tripo 몸이다.
 const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim']);
-// 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래. 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을 보라로 물들여
-// 자폭 경고(붉은 발광)와 어긋났다 — 경고등 아귀는 붉게, 빛주머니 아귀는 청록으로. 수치·행동은 그대로다.
-const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: '#ff6450', ch4_lurer_seer: '#a8f0e4' });
+// 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래(null = 색조 없음). 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을
+// 보라로 물들였다 — 붉은 색조도 남색과 섞이면 보라가 되어, 경고등 아귀는 색조를 빼고 의상의 붉은 발광으로 경고한다. 빛주머니 아귀는 청록.
+// 수치·행동은 그대로다.
+const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4' });
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
   ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
   if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
-  if (BODY_TINTS[id]) ENEMIES[id].tint = BODY_TINTS[id];
+  if (id in BODY_TINTS) { if (BODY_TINTS[id]) ENEMIES[id].tint = BODY_TINTS[id]; else delete ENEMIES[id].tint; }
 }
 // 1~4장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
 for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {

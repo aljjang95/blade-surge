@@ -261,8 +261,8 @@ export const CHAPTER_DRESS = Object.freeze({
       // 합류 경로의 원령 자리: 물에 불어 창백한 수부, 청록 발광을 조금 세게.
       ch4_drowned_drift: { color: '#bfd8e0', amount: 0.25, emissive: '#06302e' },
       ch4_lurer: { emissive: '#021a1c' },
-      // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광.
-      ch4_lurer_bomb: { emissive: '#3a0808' },
+      // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
+      ch4_lurer_bomb: { emissive: '#5a1206' },
       // 심연 주시자 자리(지원 소환): 몸에 빛 주머니.
       ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouches'] },
       // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
