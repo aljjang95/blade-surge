@@ -160,7 +160,8 @@ export function heroBodyUserCount(assetId) { return heroBodyUsers.get(assetId) |
 export function releaseAvatarBody(avatarId) {
   const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
   if (!asset || heroBodyUsers.get(asset.id)) return false;
-  if (HEROES[asset.heroId]?.bodyAvatar === avatarId || heroClipCache.get(asset.heroId)?.asset?.id === asset.id) return false;
+  // 기본 몸 영웅(늑대인간 족장 등)은 kit 영웅 id 로 몸 자산을 가지므로 모든 영웅의 bodyAvatar 를 본다.
+  if (Object.values(HEROES).some((hero) => hero.bodyAvatar === avatarId) || heroClipCache.get(asset.heroId)?.asset?.id === asset.id) return false;
   const gltf = heroBodies.get(asset.id);
   if (!gltf) return false;   // 받는 중이면 끝난 뒤 다음 해제 요청에서 정리한다
   heroBodies.delete(asset.id); libraryLoader.forget(asset.id);

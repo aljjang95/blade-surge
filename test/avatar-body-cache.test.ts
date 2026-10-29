@@ -50,3 +50,12 @@ test('전투 입장 경로(preloadHeroBody → 새 인스턴스 applyLook)는 �
     expect(swapped).toBe(true);   // 같은 호출 안의 동기 교체 알림(비동기 대기 없음)
   } finally { disposeCharacter(player.root, player.mixer); }
 });
+
+test('영웅 기본 몸(bodyAvatar)은 받아져 있어도 해제하지 않는다(kit 영웅 id 로 등록된 몸)', async () => {
+  const hero: any = Object.values(HEROES).find((entry: any) => entry.bodyAvatar === 'avatar_ranger_blackcat');
+  expect(hero).toBeTruthy();
+  expect(await preloadAvatarBody('avatar_ranger_blackcat')).toBe(true);
+  expect(heroBodyUserCount('avatar_ranger_blackcat')).toBe(0);
+  expect(releaseAvatarBody('avatar_ranger_blackcat')).toBe(false);
+  expect(avatarBodyReady('avatar_ranger_blackcat')).toBe(true);
+});
