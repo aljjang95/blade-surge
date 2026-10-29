@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import FOX_BODY_MOTION from '../data/fox-body-motion-v1.json';
+import FOX_BODY_MOTION from '../data/fox-body-motion-v2.json';
 import RANGER_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_REVISION from '../data/rogue-library-revision-v2.json';
 import HIGHER_BODY_MOTION from '../data/higher-body-motion-v1.json';

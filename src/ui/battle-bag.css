@@ -1,0 +1,47 @@
+/* 전투 중 가방(보기 전용). 버튼은 지도 아래 오른쪽 가장자리, 시트는 조작 버튼 왼쪽 열이며 위치 값은 battle-bag.js 가 정한다.
+   터치 44px 이상, 글자 11px 이상(docs/UIUX_AUDIT.md 공통 규칙). 플레이 영역 중앙은 가리지 않는다. */
+#hud .bag-btn {
+  position: absolute; z-index: 14; right: var(--bag-btn-right, 14px); top: var(--bag-btn-top, 162px);
+  min-width: 56px; min-height: 44px; height: 44px; padding: 0 8px; display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 13px; line-height: 1; white-space: nowrap; overflow: visible;
+  background: rgba(20, 38, 32, .86); border: 1px solid rgba(214, 189, 118, .55); border-radius: 10px; color: #f3eedf;
+}
+#hud .bag-btn[hidden] { display: none; }
+#hud .bag-btn.on { background: #e5c789; color: #2a1c06; }
+#hud .bag-btn .bag-badge {
+  position: absolute; right: -6px; top: -7px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 10px;
+  background: #e2574c; color: #fff; font: 800 12px/20px var(--font-ui, system-ui, sans-serif); text-align: center; box-shadow: 0 0 0 1px #0008;
+}
+#hud .bag-btn .bag-foreign { position: absolute; left: -5px; top: -7px; width: 20px; height: 20px; border-radius: 10px; background: #1b2a3a; border: 1px solid #7fc8ff; color: #7fc8ff; font: 700 11px/18px var(--font-ui, system-ui, sans-serif); text-align: center; font-style: normal; }
+#hud .bag-btn .bag-badge[hidden], #hud .bag-btn .bag-foreign[hidden] { display: none; }
+
+#hud #battle-bag {
+  position: absolute; z-index: 13; right: var(--bag-right, 120px); top: var(--bag-top, 60px); width: var(--bag-w, 156px); height: var(--bag-h, 300px);
+  box-sizing: border-box; display: flex; flex-direction: column; padding: 4px; gap: 4px;
+  background: rgba(10, 18, 20, .78); border: 1px solid rgba(214, 189, 118, .45); border-radius: 10px; color: #f3eedf; font-size: 11px;
+  backdrop-filter: blur(2px);
+}
+#hud #battle-bag[hidden] { display: none; }
+#battle-bag .bag-tabs { display: flex; gap: 3px; flex: 0 0 auto; }
+#battle-bag .bag-tabs button {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 2px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .08);
+  color: #e8e2cf; font: 700 11px/1.15 var(--font-ui, system-ui, sans-serif); white-space: normal;
+}
+#battle-bag .bag-tabs button.on { background: #e5c789; border-color: #e5c789; color: #2a1c06; }
+#battle-bag .bag-tabs .bag-close { flex: 0 0 44px; font-size: 15px; }
+#battle-bag .bag-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 3px; touch-action: pan-y; }
+#battle-bag .bag-row { display: flex; align-items: center; gap: 5px; min-height: 44px; padding: 3px 4px; border-radius: 7px; background: rgba(255, 255, 255, .07); border-left: 3px solid var(--rar, #aaa); }
+#battle-bag .bag-row.is-new { background: rgba(229, 199, 137, .16); }
+#battle-bag .bag-art { position: relative; flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; }
+#battle-bag .bag-art img { width: 34px; height: 34px; object-fit: contain; }
+#battle-bag .bag-text { min-width: 0; display: grid; gap: 1px; }
+#battle-bag .bag-name { display: block; min-width: 0; font-size: 11px; line-height: 1.2; }
+#battle-bag .bag-name b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--rar, #fff); font-weight: 800; }
+#battle-bag .bag-name em { font-style: normal; color: #f3eedf; font-weight: 700; }
+#battle-bag .bag-new { position: absolute; left: -3px; top: -3px; font-style: normal; font-size: 11px; line-height: 13px; font-weight: 800; padding: 0 3px; border-radius: 4px; background: #e2574c; color: #fff; }
+#battle-bag .bag-owner { color: #7fc8ff; font-size: 11px; font-weight: 700; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#battle-bag .bag-cmp { font-size: 11px; line-height: 1.2; color: #c9c3b0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#battle-bag .bag-cmp.better { color: #7fe39a; font-weight: 700; }
+#battle-bag .bag-cmp.worse { color: #ff9a8f; }
+#battle-bag .bag-empty, #battle-bag .bag-more { margin: 8px 4px; font-size: 11px; line-height: 1.35; color: #c9c3b0; text-align: center; }
+#battle-bag .bag-note { flex: 0 0 auto; margin: 0; padding: 2px 2px 0; font-size: 11px; line-height: 1.25; color: #b9b39f; text-align: center; }

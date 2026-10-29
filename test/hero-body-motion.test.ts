@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.mjs';
 import { loadHeroModel, loadHeroAsset, preloadHeroBody, spawnCharacter, applyLibraryHeroBody, disposeCharacter } from '../src/engine/assets.js';
 import { createBodyMotionClip, registerHeroBodyMotion, refreshHeroBodyMotion, disposeHeroBodyMotion } from '../src/engine/hero-body-motion.js';
-import MOTION from '../src/data/fox-body-motion-v1.json';
+import MOTION from '../src/data/fox-body-motion-v2.json';
 import manifest from '../asset-library/manifest.json';
 
 let restore = () => {};
