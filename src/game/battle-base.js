@@ -48,6 +48,7 @@ import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { chapterVisual } from './chapter-scenery.js';
 import { prewarmChapterDress } from './chapter-dress.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
+import { CombatReadability } from './combat-readability.js';
 
 const _v = new THREE.Vector3();
 const _ultColor = new THREE.Color();
@@ -92,6 +93,7 @@ export class Battle {
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
     this.killChain = new KillChain(); this.lastSlowAt = -1e9;
+    this.readability = new CombatReadability(this);
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
@@ -155,6 +157,7 @@ export class Battle {
     await preloadHeroBody(heroId, heroBodyAppearance(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
+    this.readability?.reset(def);
     this.player.magnetMul = 1 + (!stage.party && equipBonus.avatar?.pickupPct || 0);   // 아바타 풀셋: 줍기 범위
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
@@ -588,7 +591,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.readability?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     type = chapterSpeciesId(this.stage, type);
@@ -819,6 +822,8 @@ export class Battle {
     }
     // 흑사막 가짜 왕좌처럼 적이 아닌 공격 대상. 한 판정에 왕좌 하나 최대 1타.
     if (this.routeObjectives?.strike?.(this, pos.x, pos.z, range)) n++;
+    // 헛스윙(평타): 칼끝 자리에 회색 먼지 — 맞았을 때의 영웅색 불꽃·숫자와 구분된다.
+    if (!n && opts.basic && src === this.player) { _v.set(pos.x + Math.sin(yaw) * range * .8, .9, pos.z + Math.cos(yaw) * range * .8); this.readability?.whiff(_v, src, .8); }
     return n;
   }
   hitRadius(center, radius, dmg, opts = {}) {
@@ -853,6 +858,7 @@ export class Battle {
     if (dealt <= 0 && !(e.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (opts.omen && e.alive) { e.omenBy = p; e.omenUntil = this.elapsed + BLACKCAT_OMEN.time; }
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
+    this.readability?.hit(e, dealt, crit, p);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });
@@ -900,6 +906,7 @@ export class Battle {
     // 아군 화살은 같은 속도로 그어지는 비취 궤적을 남긴다(스킬마다 모양이 다르다). 판정·난수와 무관한 표시 층이다.
     const streakStyle = !hostile && visual === 'arrow' ? (streak || (basic ? (finisher ? 'finisher' : 'basic') : 'volley')) : null;
     const beam = streakStyle ? this.fx.arrowStreak?.(pos, dir, speed, life, streakStyle) ?? null : null;
+    if (!hostile && basic) this.readability?.shot(owner);
     this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle, omen });
   }
   updateProjectiles(dt) {
@@ -924,7 +931,8 @@ export class Battle {
         }
         if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
-      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
+      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p);
+        else if (!p.hostile && !p.hit.size && p.t >= p.life) this.readability?.whiff(p.pos, p.owner, p.basic ? .9 : 1.1); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {
@@ -1013,6 +1021,7 @@ export class Battle {
     if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
+    this.readability?.update(dt);
     this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
