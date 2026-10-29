@@ -1147,6 +1147,27 @@ export class FX {
   /** 얼음 결정 폭발 */
   // 얼음 결정 원화는 중심이 거의 흰색이라 진한 하늘색으로 칠한다(옅은 0xc0f0ff 는 가산으로 흰 덩어리가 됐다).
   iceBurst(pos, { size = 3, life = 0.5, color = 0x6cc8ff } = {}) { this.texFlash(pos, 'ice', color, { size, life, spin: 0.5, grow: 1.0, y: 0.6, gain: .8 }); }
+  /**
+   * 전투 중 레벨업 연출(대표님 2026-10-29 "오로라나 충격파가 터지면서"). 총 0.9초, 화면 흔들림 없음.
+   * 발밑 충격파 2겹 → 금빛 오로라 기둥 + 영웅색 안쪽 기둥 → 솟는 불씨. 레벨업은 드문 사건이라 메시 생성을 허용하고,
+   * 입자는 빈 칸에만 넣어 전투 난수 순서를 건드리지 않는다.
+   * @param {THREE.Vector3} pos @param {THREE.ColorRepresentation} [accent]
+   */
+  levelUpBurst(pos, accent = 0x7feac0) {
+    const gold = 0xffd36a;
+    this.shockTex(pos, gold, { r1: 5.2, life: 0.7 });
+    this.ring(pos, 0xfff4cf, { r0: 0.4, r1: 3.4, life: 0.5, width: 0.4 });
+    this.ring(pos, accent, { r0: 0.2, r1: 2.2, life: 0.62, width: 0.3, y: 0.12 });
+    this.castCircle(pos, gold, { radius: 1.6, life: 0.9 });
+    this.pillar(pos, gold, { radius: 0.95, height: 8.5, life: 0.85 });
+    this.pillar(pos, accent, { radius: 0.5, height: 10, life: 0.7, delay: 0.08 });
+    const c = new THREE.Color(gold), a = new THREE.Color(accent), n = this.lite ? 12 : 26;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2, r = 0.5 + (i % 3) * 0.3;
+      this.glow.emitIfFree(pos.x + Math.cos(ang) * r, pos.y + 0.2, pos.z + Math.sin(ang) * r, Math.cos(ang) * 0.6, 4.2 + (i % 5) * 0.55, Math.sin(ang) * 0.6, i % 3 ? c : a, 0.26 + (i % 4) * 0.05, 0.75 + (i % 4) * 0.08, { grav: -0.6, drag: 0.96, shrink: 0.3 });
+    }
+    this.light(pos, gold, 7, 10, 0.6);
+  }
   holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
   /** @param {THREE.Vector3} pos
    * @param {THREE.ColorRepresentation} [color]

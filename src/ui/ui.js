@@ -775,6 +775,7 @@ export class UI {
       || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
     this.prepareResultLayout();
+    const levelUpEl = $('result-levelup'); if (levelUpEl) { levelUpEl.hidden = true; levelUpEl.classList.remove('in'); }
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
@@ -875,7 +876,13 @@ export class UI {
         $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`;
         const pl = eco.passLevel; $('result-bp').style.width = (eco.s.pass.xp % 100) + '%';
         $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`;
-        if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); }
+        if (rw.ups) {
+          // 전투 중 연출과 같은 톤의 금빛 오로라 배지. 전투 중 이미 연출했으면 소리는 짧은 징글로만 낮춘다.
+          const el = $('result-levelup');
+          if (el) { el.innerHTML = `<b>LEVEL UP</b><span>Lv.${h.level}${rw.ups > 1 ? ` <small>+${rw.ups}</small>` : ''}</span>`; el.hidden = false; void el.offsetWidth; el.classList.add('in'); }
+          else this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold');
+          if (b.levelUpsInBattle) audio.play('jingle_win1', { vol: 0.6 }); else audio.levelUp({ vol: 0.55 });
+        }
         if (rw.awakened?.length) later(() => { if (canPrepareGrowth(this.app, r)) this.awakenBanner(rw.awakened); }, 700);
         if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold');
       }, 1500);

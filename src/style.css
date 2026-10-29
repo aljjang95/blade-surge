@@ -610,6 +610,16 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @keyframes boxIn { from { transform: scale(.6) translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
 .result-title { font-family: var(--disp); font-size: 48px; color: var(--gold); text-shadow: 0 0 24px rgba(255,170,40,.7), 0 4px 0 #7a3a00; letter-spacing: .1em; }
 .result-title.lose { color: #ff5a7a; text-shadow: 0 0 24px rgba(255,60,90,.6), 0 4px 0 #500; }
+.result-levelup { position: relative; display: inline-flex; align-items: baseline; gap: 10px; margin: 2px 0 0; padding: 4px 18px; font-family: var(--disp); isolation: isolate; }
+.result-levelup::before { content: ''; position: absolute; inset: -6px -10px; z-index: -1; border-radius: 999px; background: radial-gradient(ellipse at 50% 100%, rgba(255,211,106,.42), rgba(127,234,192,.16) 46%, transparent 72%); filter: blur(2px); }
+.result-levelup b { font-size: 15px; letter-spacing: .18em; background: linear-gradient(180deg,#fff7d6,#ffd36a 55%,#e8a63a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.result-levelup span { font-size: 24px; font-weight: 900; color: #fff1b8; text-shadow: 0 0 12px #ffb63a, 0 2px 0 #6b3d00; }
+.result-levelup small { font-size: .6em; color: #7feac0; }
+.result-levelup.in { animation: resultLevelUp .9s cubic-bezier(.16,.9,.28,1) both; }
+.result-levelup.in::before { animation: resultAurora 1.6s ease-out both; }
+@keyframes resultLevelUp { 0% { opacity: 0; transform: translateY(10px) scale(.6) } 30% { opacity: 1; transform: translateY(-3px) scale(1.12) } 55% { transform: none } 100% { opacity: 1; transform: none } }
+@keyframes resultAurora { 0% { opacity: 0; transform: scaleX(.3) } 30% { opacity: 1; transform: scaleX(1.15) } 100% { opacity: .65; transform: none } }
+@media (prefers-reduced-motion: reduce) { .result-levelup.in, .result-levelup.in::before { animation: none; } }
 .stars { display: flex; gap: 8px; }
 .stars i { width: 44px; height: 44px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23444' d='M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17.5 6.5 21 8 13.5 3 9l6.5-.5z'/%3E%3C/svg%3E") center/contain no-repeat; transform: scale(0); }
 .stars i.on { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffcf5a' stroke='%23c77a12' stroke-width='1' d='M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17.5 6.5 21 8 13.5 3 9l6.5-.5z'/%3E%3C/svg%3E"); filter: drop-shadow(0 0 8px var(--gold)); }
