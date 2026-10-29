@@ -20,7 +20,7 @@ export class CommandQueue {
   /** @param {any} eco @param {import('./account-client.js').AccountClient} client @param {{ authority: () => string, adopt: (doc: any, rev: number) => void, onResult?: (entry: any, response: any) => void, onError?: (error: unknown) => void }} hooks */
   constructor(eco, client, hooks) {
     this.eco = eco; this.client = client; this.hooks = hooks;
-    this.pending = []; this.busy = false; this.depth = 0; this.suspended = 0;
+    this.pending = []; this.busy = false; this.depth = 0; this.suspended = 0; this.epoch = 0;
     this.lastCid = null; this.results = new Map(); this.waiters = new Map();   // 명령별 서버 결과(UI가 성공 뒤에만 연출하도록 settled 로 구독)
     this.stats = { sent: 0, matched: 0, mismatched: 0, rejected: 0 };
     this.lastSelected = eco.s.selected;
@@ -77,6 +77,15 @@ export class CommandQueue {
     this.pending.push({ cid: newCid(), op: '__snapshot', save: JSON.parse(JSON.stringify(this.eco.s)), clientHash: parityHash(this.eco.s) });
     void this.flush();
   }
+  /**
+   * 계정 전환(복구로 이 기기 키가 다른 계정으로 옮겨짐) 전: 이전 계정의 대기 명령·그림자 스냅샷을 버린다.
+   * 진행 중인 전송은 끝나도 결과를 반영하지 않고, 남은 항목을 새 계정 토큰으로 다시 보내지 않는다.
+   */
+  reset() {
+    this.epoch++;
+    for (const e of this.pending) this.finish(e.cid, { ok: false, dropped: true });
+    this.pending = [];
+  }
   /** 서버 문서를 적용하는 동안에는 감싼 메서드·선택 변화가 명령을 만들지 않는다. */
   quiet(fn) { this.suspended++; try { return fn(); } finally { this.suspended--; this.lastSelected = this.eco.s.selected; } }
   async flush() {
@@ -84,7 +93,7 @@ export class CommandQueue {
     this.busy = true;
     try {
       while (this.pending.length) {
-        const entry = this.pending[0];
+        const entry = this.pending[0], epoch = this.epoch;
         let response = null;
         try {
           response = entry.op === '__snapshot' ? await this.client.shadowSnapshot(entry.cid, entry.save, entry.clientHash)
@@ -92,6 +101,7 @@ export class CommandQueue {
           this.stats.sent++;
         }
         catch (error) {
+          if (epoch !== this.epoch) break; // 전송 중 계정이 바뀌었다: 이전 계정 결과는 버린다
           const status = /** @type {any} */ (error)?.status;
           // 네트워크 오류: 큐를 보존하고 다음 기회에 다시 보낸다.
           if (!status) { this.hooks.onError?.(error); break; }
@@ -102,6 +112,7 @@ export class CommandQueue {
           if (this.hooks.authority() === 'server') await this.resync();
           continue;
         }
+        if (epoch !== this.epoch) break;
         this.pending.shift();
         if (response.match === false) this.stats.mismatched++; else if (response.match) this.stats.matched++;
         this.hooks.onResult?.(entry, response);
