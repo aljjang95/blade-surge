@@ -16,13 +16,14 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
-import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems } from '../game/gear-advice.js';
+import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems, transferUpgrades } from '../game/gear-advice.js';
 import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
 import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
 import { openVault } from './vault-panel.js';
 import { durabilityLineHtml } from './clear-loop.js';
+import { canTransfer } from './enhance-transfer-panel.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -315,10 +316,18 @@ function setChangesHtml(p) {
   return rows ? '<ul class="is-sets">' + rows + '</ul>' : '';
 }
 
+/** 강화 전승 버튼: 이 장비가 원본이나 대상으로 짝이 하나라도 있을 때만(enhance-transfer-panel canTransfer). */
+// 착용 고강 장비의 강화를 옮기면 전투력이 오르는 조합(gear-advice transferUpgrades)이면 추천 표시를 붙인다.
+const transferHtml = (meta, inst) => {
+  if (!canTransfer(meta.eco, inst.uid)) return '';
+  const tip = transferUpgrades(meta.eco, inst.owner ?? meta.eco.s.selected).find((x) => x.srcUid === inst.uid || x.dstUid === inst.uid);
+  return '<button type="button" class="btn btn-ghost btn-sm is-transfer" id="e-transfer" title="강화 단계를 같은 부위의 다른 장비로 옮깁니다">강화 전승' + (tip ? ' <b class="stat-up">추천 ▲' + fmt(tip.delta) + '</b>' : '') + '</button>';
+};
+
 /** 강화 영역: 같은 시트 안에서 확률 · 비용을 보고 바로 강화한다. */
 function enhanceHtml(meta, inst) {
   const s = meta.eco.s, it = ITEM_BY_ID[inst.id], lv = inst.enh, maxed = lv >= ENH_MAX;
-  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p></section>';
+  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p>' + transferHtml(meta, inst) + '</section>';
   const cur = itemStats(inst), nxt = itemStats({ ...inst, enh: Math.min(ENH_MAX, lv + 1) });
   const cost = enhanceCost(lv), stones = enhanceStones(lv), tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
   const chance = enhanceChance(lv), destroy = destroyChance(lv), sureGold = enhanceSureCost(lv);
@@ -331,7 +340,7 @@ function enhanceHtml(meta, inst) {
     // 확정 강화(골드 웃돈): +3 → +11 구간. 축복과 함께 쓰지 않는다(규칙은 enhance.js enhanceSureCost).
     (sureGold ? '<button type="button" class="enh-opt" data-opt="sure" data-sure-gold="' + sureGold + '" aria-pressed="false" aria-label="확정 강화, 골드 ' + fmt(sureGold) + ' 추가"><i class="ic ic-gold"></i><span>확정 강화</span><span class="cnt">+' + fmt(sureGold) + '</span></button>' : '') + '</div>' +
     '<div class="enh-cost"><span id="e-gold" class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
-    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' +
+    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' + transferHtml(meta, inst) +
     '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험' + (sureGold ? ' · +11까지는 골드를 더 내고 확정 강화할 수 있습니다' : '') + '</p></section>';
 }
 
@@ -464,6 +473,8 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : '파괴 ' + Math.round(destroyChance(inst.enh) * 100) + '%';
         audio.play('ui_click', { vol: 0.4 });
       });
+      const transfer = b.querySelector('#e-transfer');
+      if (transfer) transfer.onclick = () => { audio.play('ui_click', { vol: 0.4 }); meta.openTransfer(uid, heroId); };
       const go = b.querySelector('#e-go');
       let staging = false;
       if (go) go.onclick = async () => {

@@ -10,7 +10,7 @@ import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
-import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
+import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
@@ -79,7 +79,7 @@ function blackcatArrow(game, p, e, dmg, options = {}) {
   dir.normalize();
   const dist = Math.hypot(e.pos.x - from.x, e.pos.z - from.z);
   game.spawnProjectile({ pos: from, dir, speed: BLACKCAT_OMEN.speed, radius: BLACKCAT_OMEN.radius, dmg, color: 0xb070ff, size: .45, owner: p, kb: 2, kind: 'slash',
-    pierce: false, life: Math.min(1.2, Math.max(BLACKCAT_OMEN.life, (dist + 2) / BLACKCAT_OMEN.speed)), visual: 'arrow', streak: 'quick', ...options });
+    pierce: false, life: Math.min(1.2, Math.max(BLACKCAT_OMEN.life, (dist + 2) / BLACKCAT_OMEN.speed)), visual: 'arrow', streak: 'omen', ...options });
 }
 /** fn 실행 동안 center에서 limit m 밖 적을 판정 대상에서 뺀다(hitArea·hitRadius가 spawning 적을 건너뛰는 규칙을 이용, 끝나면 원복). */
 function onlyWithin(game, center, limit, fn) {
@@ -89,6 +89,11 @@ function onlyWithin(game, center, limit, fn) {
 }
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
 const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
+/** 시위를 놓는 순간의 바람 섬광(궁수 VFX 2026-10-29): 활 끝 짧은 빛(조명 풀) + 바람 고리(인스턴스 임팩트 층). 메시를 새로 만들지 않고 판정·난수와 무관하다. */
+function rangerRelease(game, pos, color = 0x7feac0, power = 1) {
+  game.fx?.light?.(pos, color, 2.5 + power * 2, 5 + power * 2, .16);
+  game.fx?.impact?._emit?.(IMPACT_KIND.ring, pos.x, pos.y, pos.z, .9 + power * .5, color, .2, { grow: 1 });
+}
 function rangerArrows(game, p, dmg, count = 1, options = {}) {
   const f = p.forward(new THREE.Vector3());
   for (let i = 0; i < count; i++) {
@@ -96,6 +101,7 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
     game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: SKILL_PROJECTILES.ranger.speed, radius: SKILL_PROJECTILES.ranger.radius, dmg, color: 0x7feac0,
       size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.ranger.life, visual: 'arrow', ...options });
   }
+  rangerRelease(game, rangerOrigin(p, f), options.color || 0x7feac0, count > 3 ? 1.6 : 1);
   audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
 }
 /** 궁극기 예비 표식: 시전 연출 동안 판정이 늦게 오므로 start 에서 바로 인스턴스 층 표식을 깐다(판정·난수 무관, 동작 줄이기 생략). */
@@ -205,6 +211,8 @@ export const SKILLS = {
       // 별빛 관통(교관): 판정 반경 1.4배, 밀치기 4 → 7.
       const star = hasTownSkillVariant(p, 'ranger_pierce', 'star');
       game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined, streak: 'pierce' });
+      rangerRelease(game, pos, 0x22e6c4, empowered ? 2.2 : 1.4);
+      if (empowered) game.fx?.impact?.mark?.(p.pos, 0x22e6c4, { radius: 1.9, life: .5, style: MARK_STYLE.compass });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -218,6 +226,7 @@ export const SKILLS = {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0,1,0), offset * .24);
         game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: SKILL_PROJECTILES.volley.speed, radius: SKILL_PROJECTILES.volley.radius, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: SKILL_PROJECTILES.volley.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
       }
+      rangerRelease(game, rangerOrigin(p, f), 0x3fe0a0, 1.2);
       audio.whoosh({ vol: .4, pitch: 1.7, dur: .3 });
     },
   },
@@ -236,6 +245,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
+      game.fx?.impact?.mark?.(p.pos, 0x3fe0a0, { radius: 4.2, life: .7, style: MARK_STYLE.compass });
       rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58, streak: 'storm' });
     },
   },
@@ -787,7 +797,7 @@ export const SKILLS = {
     dur: .6,
     cast(game, p, c) {
       const list = blackcatTargets(game, p, p.pos, BLACKCAT_OMEN.reach, BLACKCAT_OMEN.arrows);
-      if (!list.length) { rangerArrows(game, p, c.dmg, 1, { omen: true, color: 0xb070ff, streak: 'quick' }); p.gainJobResource(1); return; }
+      if (!list.length) { rangerArrows(game, p, c.dmg, 1, { omen: true, color: 0xb070ff, streak: 'omen' }); p.gainJobResource(1); return; }
       list.forEach((e, i) => game.after(i * .07, () => { if (game.active !== false && p.alive && e.alive) blackcatArrow(game, p, e, c.dmg, { omen: true }); }));
       for (const e of new Set(list)) game.fx.impact?.mark(e.pos, 0xb070ff, { radius: 1.2, life: 1, style: 2 });
       p.gainJobResource(1);
@@ -1168,7 +1178,7 @@ export const SKILLS = {
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
   gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
+  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});game.fx.light?.(hit,0x9fffd8,5,7,.22);game.fx.impact?._streaks?.(hit,null,4,9,.3,i%2?0xeaff9a:0x52f0b4,{up:4,spread:3.1,size:.26});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,
