@@ -92,7 +92,7 @@ const cleanups: Array<() => void> = [];
 afterEach(() => { for (const cleanup of cleanups.splice(0).reverse()) cleanup(); });
 
 function controlsFixture() {
-  const host = new EventTarget(), document = Object.assign(new EventTarget(), { hidden: false });
+  const host = Object.assign(new EventTarget(), { innerWidth: 390, innerHeight: 700 }), document = Object.assign(new EventTarget(), { hidden: false });
   const joystick = new Surface(), knob = new Surface();
   let active = true;
   const controls = new HubControls({ isActive: () => active, joystick, knob, host, document });
@@ -131,6 +131,32 @@ describe('citadel input boundary', () => {
     setActive(true); controls.destroy();
     pointer(joystick, 'pointerdown', 7, 80, 260);
     expect(touch(joystick).defaultPrevented).toBe(false);
+  });
+
+  test('height-only resize keeps the held joystick pointer and stick; a width change clears it', () => {
+    const { controls, host, joystick } = controlsFixture();
+    pointer(joystick, 'pointerdown', 7, 80, 260); pointer(joystick, 'pointermove', 7, 140, 260);
+    const held = controls.update();
+    expect(held.x).toBeGreaterThan(0.5);
+    host.innerHeight = 560; host.dispatchEvent(new Event('resize'));
+    expect(controls.update()).toEqual(held);
+    expect(joystick.captures.has(7)).toBe(true);
+    host.innerWidth = 844; host.dispatchEvent(new Event('resize'));
+    expect(controls.update()).toEqual({ x: 0, y: 0 });
+    expect(joystick.captures.has(7)).toBe(false);
+  });
+
+  test('joystick touchmove is prevented only while a pointer is held and cancelable', () => {
+    const { host, joystick } = controlsFixture();
+    const move = (cancelable = true) => { const e = new Event('touchmove', { cancelable }); joystick.dispatchEvent(e); return e; };
+    expect(move().defaultPrevented).toBe(false);
+    pointer(joystick, 'pointerdown', 7, 80, 260);
+    expect(move().defaultPrevented).toBe(true);
+    expect(move(false).defaultPrevented).toBe(false);
+    const other = new Event('touchmove', { cancelable: true }); host.dispatchEvent(other);
+    expect(other.defaultPrevented).toBe(false);
+    pointer(joystick, 'pointercancel', 7, 80, 260);
+    expect(move().defaultPrevented).toBe(false);
   });
 
   test('keyboard interaction fires once per press and ignores focused UI, shortcuts and repeats', () => {
