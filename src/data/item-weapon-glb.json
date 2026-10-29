@@ -25,6 +25,18 @@
       }
     },
     {
+      "id": "w_dragon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_dragon.glb",
+      "sha256": "e3043f7fa61b62b96bdb2583d87ca57fd114251b72586c6df3b108150d007590",
+      "bytes": 599136,
+      "triangles": 2998,
+      "source": {
+        "tripoTaskId": "4d1b2e05-829e-4af6-930c-512fed4931d7",
+        "concept": "dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
       "id": "w_flame",
       "form": "sword",
       "file": "/models/item-weapons/w_flame.glb",
