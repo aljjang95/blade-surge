@@ -14,7 +14,7 @@ function fixture(art='flow') {
     masterworks:{s:normalizeMasterworks(null)},rpgDirty:false,flushRpg:()=>true,
     player:{alive:true,maxHp:1000,hp:1000,atk:100,stats:{crit:0},def:{skills:[{},{},{ult:true},{awaken:1}]},cds:[5,7,99,99],addUlt:noop,dispose:noop},
     fx:{dmgLayer:{children:[]},damage:noop,flash:noop,directional:noop,shockTex:noop,clearAll:noop},
-    ui:{setCombo:noop,toast:noop,showHud:noop},timeCtl:{hitstop:noop},counterUntil:0,chainUntil:0,dmgDealt:0,combo:0,maxCombo:0,feedbackSound:true,
+    ui:{setCombo:noop,toast:noop,showHud:noop,waveBanner:noop},timeCtl:{hitstop:noop},counterUntil:0,chainUntil:0,dmgDealt:0,combo:0,maxCombo:0,feedbackSound:true,
     input:{clear:noop},renderer:{},drops:{clear:noop},clearPortal:noop,rpgView:{close:noop,refresh:noop},chronicle:{close:noop,refresh:noop,tick:noop}});
   game.bindCombatArt();
   const enemy=(x=0,extra:any={})=>({alive:true,spawning:false,hp:10000,pos:new THREE.Vector3(x,0,0),def:{scale:1,name:'정예'},posture:0,breakT:0,stun:0,

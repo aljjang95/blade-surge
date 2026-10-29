@@ -22,7 +22,7 @@ function fixture() {
     app:{eco:{s:{quests:{kills:0}},hero:()=>hero,heroEquipBonus:()=>({})}},
     masterworks:{s:state,transact:(fn:any)=>fn(state)},ensureRpg:()=>rpg,flushRpg:()=>true,
     chronicle:{refresh:noop,close:noop,tick:noop,open:()=>{throw Error('전투 중 각인 창이 자동으로 열렸습니다');}},rpgView:{levelUp:noop,refresh:noop},
-    ui:{toast:noop,awakenBanner:noop,setObjective:noop,setFloorLabel:noop},fx:{burst:noop,dustPuff:noop,groundTex:noop},
+    ui:{toast:noop,awakenBanner:noop,waveBanner:noop,setObjective:noop,setFloorLabel:noop},fx:{burst:noop,dustPuff:noop,groundTex:noop},
     drops:{onKill:noop,spawn:noop},after:noop,rollDrop:()=>null,input:{enabled:true,clear:noop},
   });
   game.appliedStats=game.player.stats;
