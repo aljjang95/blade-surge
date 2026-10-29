@@ -97,6 +97,18 @@
       }
     },
     {
+      "id": "w_rune",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rune.glb",
+      "sha256": "0a884de8a4913d35b2dfebd345265d8561b796d21a33b1f4415dd99eb949f869",
+      "bytes": 586656,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "505d9ec1-3f11-42fd-bd07-db521bf0823d",
+        "concept": "rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
       "id": "w_rusty",
       "form": "sword",
       "file": "/models/item-weapons/w_rusty.glb",
