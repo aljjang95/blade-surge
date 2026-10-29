@@ -12,11 +12,13 @@ import { seededStream } from './rng.js';
 import { rollKillLoot, sumLoot } from './loot-roll.js';
 import PLAUSIBILITY from '../data/plausibility-table.json';
 import { ecoClock, isChapterOpen } from '../data/chapter-open.js';
+import { applyKillLedger, SPECIES_PER_RUN } from '../game/kill-ledger.js';
 
-export const RULES_VERSION = 'p1-1';
+// p1-2: 정산 사실에 species(처치 종) 추가, 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md).
+export const RULES_VERSION = 'p1-2';
 export const KILL_RANKS = Object.freeze(['normal', 'elite', 'boss']);
 export const SETTLE_FIELDS = Object.freeze(['win', 'elapsedMs', 'kills', 'summonedKills', 'roomsCleared', 'hpLost', 'revives',
-  'consumables', 'damageDealt', 'inputDigest', 'stars', 'fullClear']);
+  'consumables', 'damageDealt', 'inputDigest', 'stars', 'fullClear', 'species']);
 export const PLAUSIBILITY_TABLE = PLAUSIBILITY;
 
 /** '1-1' → { ch, st }. 범위 밖이면 null. */
@@ -117,6 +119,12 @@ export function validateFacts(facts) {
   if (facts.inputDigest !== undefined && (typeof facts.inputDigest !== 'string' || !/^[A-Za-z0-9_-]{0,128}$/.test(facts.inputDigest))) return 'digest';
   if (facts.stars !== undefined && !(Number.isInteger(facts.stars) && facts.stars >= 1 && facts.stars <= 3)) return 'stars';
   if (facts.fullClear !== undefined && typeof facts.fullClear !== 'boolean') return 'fullClear';
+  if (facts.species !== undefined) {
+    // 종 id 형식·개수만 본다. 어떤 종이 그 관문에 나올 수 있는지는 정산 때 관문 풀로 자른다(판정에는 영향 없음).
+    if (!facts.species || typeof facts.species !== 'object' || Array.isArray(facts.species)) return 'species';
+    const ids = Object.keys(facts.species);
+    if (ids.length > SPECIES_PER_RUN || ids.some((id) => !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id) || !finiteInt(facts.species[id], 100000))) return 'species';
+  }
   return null;
 }
 
@@ -188,10 +196,15 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
   const heroId = ticket.heroId;
   const loot = rollRunLoot(stage, ticket.lootSeed, facts);
   const half = (n) => verdict === 'soft' ? Math.floor(n / 2) : n;
+  // 서버 처치 원장: 개연성 검사를 통과한 처치 수·종만 quests.kills·slain 에 더한다(승패 무관, 티켓당 1회는 호출자가 보장).
+  const lim = plausibilityFor(stage);
+  // ticket.killLedger === false(그림자 계정 정산)면 원장에 쓰지 않는다. 생략은 기존 호출자 호환(적용).
+  const killLedger = ticket.killLedger === false ? { kills: 0, species: 0, dropped: 0 } : applyKillLedger(eco.s, stage, facts, { wallMs: ticket.wallMs, minClearMs: lim.minClearMs,
+    killCap: lim.kills.normal + lim.kills.elite + lim.kills.boss + lim.summonedKills });
   if (!facts.win) {
     // 패배: 기존처럼 전투 중 처치 경험치만 남는다(필드 재화는 정산되지 않는다).
     const ups = eco.addHeroExp(heroId, loot.combatExp, { silent: true });
-    return { got: [], loot: [], ups, first: false, exp: 0, combatExp: loot.combatExp, win: false };
+    return { got: [], loot: [], ups, first: false, exp: 0, combatExp: loot.combatExp, win: false, killLedger };
   }
   // 정산 난수(풀클리어 장비·더블·보스 소환권)도 lootSeed 고정 stream을 쓴다.
   const previousRng = eco.rng;
@@ -213,6 +226,6 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
       // 서버 권위 출시는 현재 0%이고, 클라이언트 정본(로컬·그림자) 판은 그대로 카드를 받는다.
       clearCards: SERVER_CLEAR_CARDS && verdict === 'ok' && (facts.roomsCleared | 0) > 0,
     });
-    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear };
+    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear, killLedger };
   } finally { eco.rng = previousRng; }
 }

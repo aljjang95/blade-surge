@@ -893,7 +893,7 @@ export class Meta {
     const rows = this.eco.achievementRows();
     const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
     const list = rows.map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name} <small>${x.tier}/${x.tiers}단계</small></div><div class="q-r">${x.done ? '모든 단계 달성' : label(x.rewards)}</div><div class="bar"><div style="width:${Math.min(100, Math.round(x.cur / x.target * 100))}%"></div></div><small>${fmt(Math.min(x.cur, x.target))} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-ach="${x.id}" ${x.ready ? '' : 'disabled'}>${x.done ? '완료' : x.ready ? '받기' : '진행 중'}</button></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집·몬스터 도감의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelectorAll('[data-ach]').forEach((el) => el.onclick = () => { const got = this.eco.claimAchievement(el.dataset.ach); if (got) { this.trackFunnel('reward_claim', { source: 'achievement' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showAchievements(); });
     } });

@@ -65,6 +65,8 @@ export const OPS = {
   markSeen: { args: [], run: (e) => e.markSeen(), ok: () => true, send: (r) => r === true },
   claimNewbie: { args: [str], run: (e, id) => e.claimNewbie(id), ok: okValue },
   claimAchievement: { args: [str], run: (e, id) => e.claimAchievement(id), ok: okValue },
+  // 성장 여정 단계(docs/SERVER_AUTHORITY_GATES.md 4절). 서버만 attest 로 판정한다(기기 전용 단계는 순서 + 서버 진행 바닥값).
+  claimJourneyStep: { args: [str], run: (e, id) => e.claimJourneyStep(id, { attest: true }), ok: okResult },
   // 외형·설정
   buyAvatar: { args: [str], run: (e, id) => e.buyAvatar(id), ok: okResult },
   equipAvatar: { args: [str, (v) => v === null || str(v)], run: (e, h, id) => e.equipAvatar(h, id), ok: okResult, offline: true },
