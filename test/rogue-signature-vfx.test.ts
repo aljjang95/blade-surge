@@ -83,7 +83,8 @@ test('암살자 레시피는 원화를 나눠 쓴다(전부 같은 그림자 참
 
 test('궁극기 예비 표식(시전 연출 중): 폭풍·천 개의 칼날 둘 다 있고, Math.random 미사용·칸 상한·lite 는 더 적게', async () => {
   const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
-  expect(Object.keys(SKILL_PRELUDES).sort()).toEqual(['hell_axe', 'meteor', 'moonlit_hunt', 'nine_lives', 'ranger_tempest', 'thousand']);
+  // 검성 기본 3 + 궁극기 예비 표식(sig-knight PRELUDES)도 같은 합본에 든다.
+  expect(Object.keys(SKILL_PRELUDES).sort()).toEqual(['dragon_slash', 'hell_axe', 'holy_slash', 'judgment', 'meteor', 'moonlit_hunt', 'nine_lives', 'ranger_tempest', 'shield_bash', 'thousand']);
   for (const id of Object.keys(SKILL_PRELUDES)) {
     const v = make(); const nativeRandom = Math.random; let calls = 0;
     Math.random = () => { calls++; return nativeRandom(); };

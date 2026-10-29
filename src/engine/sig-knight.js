@@ -81,11 +81,24 @@ function arcFront(impact, c, f, R, half, n, color, { delay = 0, life = .26, widt
 }
 
 /**
+ * skills.js 에서 뺀 텍스처 연출(원형 룬·시전진·기둥·성광·충격 원화)이 쓰던 Math.random 횟수(재질·메시 UUID, 캐시 뒤 기준)를
+ * 그대로 소비해 이후 전투·드랍 난수 진행을 바꾸지 않는다(fx.js contact 의 retiredRandomDraws 와 같은 방식).
+ * 실제 FX(flipbook 보유)일 때만 소비한다: 모의 전투의 가짜 fx 에서는 원래도 난수를 쓰지 않았다.
+ */
+export const KNIGHT_RETIRED_DRAWS = Object.freeze({ rune: 8, castCircle: 8, firePillar: 12, holyBurst: 9, shockTex: 8 });
+export function knightRetiredDraws(fx, n) {
+  if (typeof fx?.flipbook !== 'function') return 0;
+  for (let i = 0; i < n; i++) Math.random();
+  return n;
+}
+
+/**
  * 심판 표적 한 점의 박자 장식(skills.js judgment 가 표적마다 부른다): 낙하 직전 하늘 높이의 금빛 별(어디서 떨어지나),
  * 판정 순간 바닥 균열 세 갈래. 판정 시각 delay 는 skills.js 가 넘긴다. 쓴 칸 수를 돌려준다.
  */
 export function knightJudgmentStrike(impact, pt, delay, i, lite = false) {
-  if (!impact || !pt) return 0;
+  // 시각 장식이 판정 콜백을 끊지 않게: 모의 전투의 가짜 fx(인스턴스 층 없음)에서는 아무것도 하지 않는다.
+  if (!pt || typeof impact?._emit !== 'function' || typeof impact.beam !== 'function') return 0;
   let n = 0;
   if (impact._emit(IMPACT_KIND.star, pt.x, 7.5, pt.z, 1.1, HOT, .14, { angle: .3 + i * .5, grow: .4, delay: Math.max(0, delay - .1) })) n++;
   if (impact._emit(IMPACT_KIND.star, pt.x, .5, pt.z, 1.5, GOLD, .16, { angle: .2 + i * .4, grow: .4, delay })) n++;

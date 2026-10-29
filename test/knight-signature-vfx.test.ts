@@ -113,6 +113,33 @@ test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 모두 있고, 결정
   }
 });
 
+test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX 호출의 캐시 뒤 횟수와 같고, 가짜 fx 에서는 소비하지 않는다', async () => {
+  const { FX } = await import('../src/engine/fx.js');
+  const { KNIGHT_RETIRED_DRAWS, knightRetiredDraws } = await import('../src/engine/sig-knight.js');
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const gradient = { addColorStop() {} };
+  const context = { createRadialGradient: () => gradient, createLinearGradient: () => gradient, fillRect() {}, clearRect() {} };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({ getContext: () => context }), getElementById: () => ({ firstChild: null }) } });
+  const fx: any = new FX(new THREE.Scene(), new THREE.PerspectiveCamera());
+  try {
+    const p = new THREE.Vector3();
+    const calls: Record<string, () => void> = {
+      rune: () => fx.groundTex(p, 'circle_gold', 0xffa018, { r0: 1, r1: 2.4, life: 1, spin: 1.6, y: .07, fadeIn: .2, hold: .35, gain: .45 }),
+      castCircle: () => fx.castCircle(p, 0xff9a18, { radius: 5, life: .25 }),
+      firePillar: () => fx.firePillar(p, { height: 10, width: 1.6, life: 1, color: 0xff9a18 }),
+      holyBurst: () => fx.holyBurst(p, { size: 1.6, life: .24, color: 0xff9a18 }),
+      shockTex: () => fx.shockTex(p, 0xff9a20, { r1: 6, life: .5 }),
+    };
+    const count = (run: () => void) => { const real = Math.random; let n = 0; Math.random = () => { n++; return real(); }; try { run(); } finally { Math.random = real; } return n; };
+    for (const [k, run] of Object.entries(calls)) { run(); expect(count(run)).toBe((KNIGHT_RETIRED_DRAWS as any)[k]); }
+    expect(count(() => knightRetiredDraws(fx, 8))).toBe(8);
+    expect(count(() => knightRetiredDraws({ castCircle() {} }, 8))).toBe(0);
+  } finally {
+    fx.dispose();
+    if (descriptor) Object.defineProperty(globalThis, 'document', descriptor); else delete (globalThis as any).document;
+  }
+});
+
 test('심판 표적 박자(knightJudgmentStrike): 하늘 별빛은 판정 .1초 전, 바닥 별빛·균열은 판정 순간에 켜진다', async () => {
   const { knightJudgmentStrike } = await import('../src/engine/sig-knight.js');
   const v = make(); const n = knightJudgmentStrike(v, new THREE.Vector3(2, 0, 3), .21, 3);

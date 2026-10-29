@@ -8,7 +8,7 @@ import { WEREWOLF_HOWL, WEREWOLF_HUNT } from './werewolf-kit.js';
 import { BLACKCAT_OMEN, BLACKCAT_NIGHT } from './blackcat-kit.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
-import { knightJudgmentStrike } from '../engine/sig-knight.js';
+import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
@@ -263,7 +263,7 @@ export const SKILLS = {
   holy_slash: {
     dur: 0.6,
     // 예비: 발밑 원형 룬 대신 칼 쥔 손으로 빛이 모이는 줄기(sig-knight PRELUDES).
-    start(game, p) { skillPrelude(game, p, 'holy_slash'); },
+    start(game, p) { knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.rune); skillPrelude(game, p, 'holy_slash'); },
     cast(game, p, c) {
       const variant = knightSlashVariantForBattle(game, p);
       if (variant === 'pierce') return applyKnightSlashVariant(game, p, c, variant);
@@ -286,7 +286,7 @@ export const SKILLS = {
       c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.shield_bash.range);
       gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
       // 예비: 5m 원형 시전진 대신 방패 앞으로 끌려 오는 줄기(몰이)와 방패 별빛(sig-knight PRELUDES).
-      skillPrelude(game, p, 'shield_bash');
+      knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.castCircle); skillPrelude(game, p, 'shield_bash');
     },
     update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 7, 22); },
     cast(game, p, c) {
@@ -297,7 +297,7 @@ export const SKILLS = {
       // 방패 강타: 크림 폭발 원화(4.5m, 적 키 높이) 대신 바닥을 두 번 때리는 금빛 충격 고리 + 낮은 금빛 임팩트 + 사방 불똥.
       // 바닥 전체를 덮던 금빛 충격 원화 두 겹(6.5m) → 진한 주황 금 한 겹(3.6m). 방패 충격 고리·지면 균열은 sig-knight 서명.
       // 둥근 주황 충격 원화(3.6m)는 영웅 둘레 원으로 읽혀 부채 파동을 가렸다 → 생략. 흰 먼지도 작게(3.5 → 2m).
-      game.fx.dustPuff(center, { size: 2 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
+      knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.shockTex); game.fx.dustPuff(center, { size: 2 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
       game.fx.light(center, 0xffd080, 10, 14, 0.4);
       game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
@@ -306,7 +306,7 @@ export const SKILLS = {
   judgment: {
     dur: 1.0, total: 1.5,
     // 예비: 원형 룬 대신 검을 타고 하늘로 솟는 금빛 입자 + 신호 광선(sig-knight PRELUDES).
-    start(game, p) { skillPrelude(game, p, 'judgment'); },
+    start(game, p) { knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.rune); skillPrelude(game, p, 'judgment'); },
     cast(game, p, c) {
       // 인력의 심판(교관): 표적을 고르기 전에 주변 적을 시전자 쪽으로 끌어온다.
       if (hasTownSkillVariant(p, 'judgment', 'pull')) game.vacuum(p.pos, 12, 18);
@@ -326,7 +326,8 @@ export const SKILLS = {
           // 심판의 빛기둥: 크림(0xfff0c0) 대신 금빛 결, 폭 1.4m. 착지점에는 하늘에서 내리꽂는 얇은 광선과 금빛 고리.
           if (i < 4) game.fx.firePillar(pt, { height: 11, width: 1.4, life: 0.5, color: 0xffc040 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          // 성광 원화(holyBurst)는 표적마다 크림 고리를 남겼다 → 생략. 착지 섬광·균열은 knightJudgmentStrike(인스턴스 층).
+          // 성광 원화(holyBurst)는 표적마다 크림 고리를 남겼다 → 생략(난수 소비만 유지). 착지 섬광·균열은 knightJudgmentStrike(인스턴스 층).
+          if (i < 5) knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.holyBurst);
           game.fx.impact?.mark?.(pt, 0xff9a18, { radius: 1.3, life: .4, style: MARK_STYLE.thorn });
           game.fx.burst(pt.clone().setY(0.6), 0xffb040, { n: 12, speed: 7, size: 0.32, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xffb040, 8, 8, 0.4); // 크림(0xfff0c0) 조명은 바닥을 하얗게 띄웠다 → 금빛
@@ -341,7 +342,7 @@ export const SKILLS = {
     start(game, p, c) {
       // 기 모으기: 큰 금빛 마법진(6m) 대신 작은 진 + 진한 주황 금 기둥(폭 1.6m).
       // 영웅을 덮던 주황 기둥(폭 1.6m)·원형 룬 대신 검에 모이는 빛 두 물결 + 검을 따라 서는 가는 금 기둥 + 벨 부채꼴 예고선(sig-knight PRELUDES).
-      skillPrelude(game, p, 'dragon_slash');
+      knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.rune + KNIGHT_RETIRED_DRAWS.firePillar); skillPrelude(game, p, 'dragon_slash');
       game.fx.embers(p.pos, 0xffcf5a, { n: 30, radius: 1.5, life: 1.2, rise: 5 });
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;
@@ -375,7 +376,7 @@ export const SKILLS = {
       // 용참 착탄: 크림 폭발(11m)·성광(12m)·화면 섬광 .45 는 화면을 하얗게 덮었다. 진한 금 폭발(6m) + 바닥 충격 2겹 + 금빛 임팩트 + 부채꼴 불똥으로 '앞으로 베어 낸' 방향을 남긴다.
       // 14m 금빛 충격 원화·성광 원화는 바닥을 한 색으로 덮었다. 진한 폭발(5m) + 주황 충격 한 겹(8m). 수직 참격·부채 균열은 sig-knight 서명.
       // 둥근 폭발·충격 원화가 달려 나가는 균열을 덮었다: 폭발 5 → 3.4m, 6m 충격 원화 생략(부채 균열은 서명).
-      game.fx.explosion(hitC, { size: 3.4, color: 0xff8a10, life: 0.5 });
+      game.fx.explosion(hitC, { size: 3.4, color: 0xff8a10, life: 0.5 }); knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.shockTex);
       game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
       game.fx.dustPuff(hitC, { size: 4 }); game.fx.burst(hitC.setY(1), 0xffa830, { n: 24, speed: 14, size: 0.42, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffa030, 16, 18, 0.6); // 크림빛 조명 → 진한 금(수직 참격이 크림 기둥으로 번지지 않게)
