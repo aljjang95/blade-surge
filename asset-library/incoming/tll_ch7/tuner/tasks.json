@@ -1,0 +1,49 @@
+{
+ "id": "tll_ch7_tuner",
+ "workspace_task_id": "558a9835-78a4-4062-a6f9-71f25e7f585b",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, stylized chunky chibi, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: faded brass #e0c68c and limestone chalk gray tones, with soft gold glow accent points. No religious symbols, no crosses. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: a tuning-fork sorcerer: a gaunt thin skeleton sorcerer in a limestone-gray tattered robe with a hood, several small cracked golden bells hanging on the shoulders and belt, faded brass trim, glowing brass-gold eye sockets, bony long fingers, hands empty.",
+ "image_refs": [
+  "skeleton_mage.gpt-image-2.5.png (asset-library/concepts, origin/main)",
+  "goblin_0.png (asset-library/concepts, origin/main)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), Ultra Mesh Quality on, generation texture 2K, PBR off (price 40); export texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0, target 11000",
+ "retopo_tris": 10770,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "bones_note": "rigged.fbx = 65 Mixamo joints (verified by Blender FBX import); rigged.glb export from Tripo now omits end/leaf joints (glb bones: 52)",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch7/tll_ch7_tuner/raw.glb",
+ "props": {
+  "tuningfork": {
+   "file": "tll_ch7_tuningfork.glb",
+   "workspace_task_id": "36892984-dbc7-4976-b939-2cecaf982847",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: a long brass tuning-fork staff: a long thick straight pole with a large tuning-fork head (two prongs) made of faded brass at the top, a few small glowing gold cracks, a leather wrapped grip and a bell-shaped pommel, chunky sturdy shape. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch7_tuner tpose.png (this folder)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), Ultra Mesh Quality on, generation texture 2K, PBR off (price 40); export texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700; no decimation",
+   "tris": 3486,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch7/tll_ch7_tuningfork/raw.glb"
+  }
+ },
+ "credits_props": 75
+}
