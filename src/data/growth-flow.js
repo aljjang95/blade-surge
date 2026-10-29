@@ -35,7 +35,7 @@ export function skuFlowRole(sku) {
   if (r.ssrTicket) return { role: 'summon', label: 'SSR 확정 소환 · 중복이면 조각' };
   if (r.skillResets) return { role: 'reset', label: '스킬 트리 초기화 · 투자 SP 전액 반환' };
   // 강화 묶음에 소환권이 섞여 있어도 주 용도는 장비 강화다.
-  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless) return { role: 'gear', label: '장비 강화' };
+  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless || r.transferScroll) return { role: 'gear', label: '장비 강화' };
   const gems = sku.gems || r.gems || 0;
   if (r.tickets || gems) {
     const pulls = (r.tickets || 0) + Math.floor(gems / GACHA.single);

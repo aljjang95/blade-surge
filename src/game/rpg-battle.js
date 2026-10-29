@@ -60,7 +60,7 @@ export class Battle extends BaseBattle {
     if (generation !== this._startGeneration) return;
     this.growthStart = growthStart;
     this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger(); this.hitCrowd = new HitCrowd();
-    this.combatXp = 0; this.legendXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
+    this.combatXp = 0; this.legendXp = 0; this.levelUpsInBattle = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
     this.ensureRpg(); this.rpgView?.refresh();
   }
   stop() {
@@ -120,6 +120,14 @@ export class Battle extends BaseBattle {
         if (opened.length) { this.ui.waveBanner(`새 스킬 — ${opened[0].name}`); this.ui.toast(`Lv.${hero.level} · <b>${opened.map((sk) => sk.name).join(', ')}</b> 사용 가능`, 'gold'); }
         // Preserve missing health, never revive a dead hero or reset skill cooldowns.
         if (p.alive) p.hp = Math.min(p.maxHp, p.hp + Math.max(0, p.maxHp - oldMax));
+        // 레벨업 순간을 영웅 발밑에서 보여 준다: 충격파·오로라 기둥·불씨 + 상승 SFX + 머리 위 레벨 숫자(0.9초, 흔들림 없음).
+        if (p.alive && p.pos) {
+          this.fx?.levelUpBurst?.(p.pos, (p.def || HEROES[this.heroId])?.color || 0x7feac0);
+          this.fx?.damage?.(p.pos, 0, { text: `Lv.${hero.level}`, kind: 'levelup' });
+          audio.levelUp({ vol: 0.55 });
+          // 실제로 연출을 보여 준 레벨업만 센다(결과 화면이 소리를 낮출지 정한다).
+          this.levelUpsInBattle = (this.levelUpsInBattle || 0) + award.levels;
+        }
         this.rpgView.levelUp(award.level, award.levels);
         this.flushRpg();
       }
@@ -147,6 +155,7 @@ export class Battle extends BaseBattle {
     const dealt = enemy.hurt(amount, { ...opts, crit, attacker: p });
     if (!(dealt > 0) && !(enemy.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
+    this.readability?.hit(enemy, dealt, crit, p);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });

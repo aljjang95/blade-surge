@@ -30,7 +30,7 @@ export function hashValue(value) { return hashText(canonicalJson(value)); }
  * 배포 전 해시와는 값이 달라질 뿐 정합성은 다음 /me·/cmd 응답의 stateHash로 즉시 다시 맞춰진다(정보용 비교).
  */
 export const PARITY_KEYS = Object.freeze([
-  'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless',
+  'gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transferScroll',
   'transcendStones', 'skillResets', 'heroes', 'selected', 'inventory', 'invSeq', 'vault', 'avatars', 'progress', 'pass',
   'daily', 'mail', 'quests', 'gacha', 'pity', 'totalPulls', 'monthlyClaimed', 'roster', 'paidGems', 'lineageSigil', 'gearDex', 'sigilClaims',
 ]);
