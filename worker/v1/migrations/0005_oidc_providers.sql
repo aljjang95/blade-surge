@@ -15,6 +15,8 @@ ALTER TABLE account_links_v5 RENAME TO account_links;
 
 -- 리다이렉트(인가 코드) 로그인의 1회용 상태. state는 해시만 저장하고, 쓰면 바로 지운다(10분 만료).
 -- mode=link는 시작한 세션의 account_id, mode=recover는 이 기기의 key_hash를 묶는다.
+-- 콜백이 검증을 마치면 같은 표에 1회용 티켓 행(state_hash = 티켓 해시, subject_hash 채움, 5분 만료)을 남긴다.
+-- 연동·복구는 시작한 앱이 자기 세션/기기 키로 티켓을 낼 때만 적용된다(연동 CSRF 차단).
 CREATE TABLE IF NOT EXISTS oauth_states (
   state_hash TEXT PRIMARY KEY CHECK (length(state_hash) = 64),
   provider TEXT NOT NULL,
@@ -24,6 +26,7 @@ CREATE TABLE IF NOT EXISTS oauth_states (
   channel TEXT NOT NULL,
   nonce TEXT NOT NULL,
   verifier TEXT NOT NULL,
+  subject_hash TEXT,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );

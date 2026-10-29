@@ -1,10 +1,13 @@
 // 리다이렉트(인가 코드) 로그인: 카카오 로그인 OIDC, Sign in with ChatGPT(OpenAI OIDC). docs/ACCOUNT_POLICY.md.
 // 흐름: 앱 → POST /auth/oauth/start(1회용 state·nonce·PKCE를 D1에 저장) → 제공자 로그인 → GET /auth/oauth/callback/<provider>
-//   → 서버가 코드를 id_token으로 바꿔 서명·iss·aud·nonce를 검증 → link(세션 계정) 또는 recover(이 기기 키 이동) → 앱으로 302.
-// 앱에는 결과 코드만 돌려준다(토큰·코드·제공자 식별자는 URL에 싣지 않는다). recover 뒤 앱은 같은 기기 키로 /auth/session을 다시 받는다.
+//   → 서버가 코드를 id_token으로 바꿔 서명·iss·aud·nonce를 검증 → 1회용 티켓(5분)과 함께 앱으로 302
+//   → 앱이 POST /auth/oauth/finish {ticket}(link는 자기 세션, recover는 자기 기기 키)로 낼 때만 연동·복구를 적용한다.
+// 콜백이 바로 적용하지 않는 이유: 공격자가 자기 세션으로 시작한 인가 URL을 피해자에게 열게 하면 피해자의 제공자 계정이
+// 공격자 계정에 묶인다(연동 CSRF). 티켓은 시작한 계정·기기에만 묶여 있어 다른 앱이 내면 거부된다.
+// URL에는 결과 코드와 티켓만 싣는다(코드·토큰·제공자 식별자 없음).
 // 클라이언트 ID가 비어 있는 제공자는 꺼진다(ChatGPT는 OpenAI 상업 파트너 승인 전까지 비어 있다).
 import { fail, onlyKeys } from './http';
-import { type AuthDeps, type AuthEnv, type Authed, type Ctx, type Provider, accountById, deviceKeyHash, linkSubject, providerSubject, recoverSubject } from './auth';
+import { type AuthDeps, type AuthEnv, type Authed, type Ctx, deviceKeyHash, issueSession, linkSubject, providerSubject, recoverSubject } from './auth';
 import { b64url, randomHex, sha256Hex, CHANNELS, type Channel, type SecretSource } from './token';
 import { V1Error } from './db';
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
@@ -117,7 +120,7 @@ export async function oauthStart(c: Ctx, auth: Authed | null, body: Record<strin
   return { url: url.toString() };
 }
 
-interface StateRow { provider: string; mode: 'link' | 'recover'; account_id: string | null; key_hash: string | null; channel: string; nonce: string; verifier: string; expires_at: number }
+interface StateRow { provider: string; mode: 'link' | 'recover'; account_id: string | null; key_hash: string | null; channel: string; nonce: string; verifier: string; subject_hash: string | null; expires_at: number }
 
 /** 인가 코드를 id_token으로 바꾼다. 실패는 제공자 장애(503)와 거부(401)로 나눈다. */
 async function exchange(c: Ctx, provider: RedirectProvider, code: string, verifier: string): Promise<string> {
@@ -141,17 +144,19 @@ async function exchange(c: Ctx, provider: RedirectProvider, code: string, verifi
   return data!.id_token as string;
 }
 
-export type CallbackResult = 'ok' | 'no-link' | 'linked-elsewhere' | 'already-linked' | 'cancel' | 'expired' | 'error' | 'unavailable' | 'rate' | 'blocked';
+export type CallbackResult = 'ok' | 'cancel' | 'expired' | 'error' | 'unavailable' | 'rate';
+export interface CallbackOutcome { result: CallbackResult; mode: string; provider: string; ticket?: string }
+const TICKET_TTL_MS = 5 * 60 * 1000;
 
-/** 콜백 처리. 항상 앱으로 돌려보낼 결과 코드를 낸다(예외를 밖으로 던지지 않는다). */
-export async function oauthCallback(c: Ctx, providerParam: string, params: URLSearchParams): Promise<{ result: CallbackResult; mode: string; provider: string }> {
+/** 콜백 처리: 검증만 하고 1회용 티켓을 만든다. 항상 앱으로 돌려보낼 결과를 낸다(예외를 밖으로 던지지 않는다). */
+export async function oauthCallback(c: Ctx, providerParam: string, params: URLSearchParams): Promise<CallbackOutcome> {
   const provider = isRedirect(providerParam) ? providerParam : null;
-  const out = (result: CallbackResult, mode = '') => ({ result, mode, provider: provider ?? 'unknown' });
+  const out = (result: CallbackResult, mode = '', ticket?: string): CallbackOutcome => ({ result, mode, provider: provider ?? 'unknown', ...(ticket ? { ticket } : {}) });
   if (!provider) return out('error');
   const state = params.get('state') ?? '';
   if (!/^[A-Za-z0-9_-]{43}$/.test(state)) return out('error');
-  // 1회용: 읽는 순간 지운다(같은 state 재사용·동시 콜백 차단).
-  const row = await c.db.prepare('DELETE FROM oauth_states WHERE state_hash = ? RETURNING provider, mode, account_id, key_hash, channel, nonce, verifier, expires_at')
+  // 1회용: 읽는 순간 지운다(같은 state 재사용·동시 콜백 차단). 티켓 행(subject_hash 있음)은 state로 꺼낼 수 없다.
+  const row = await c.db.prepare('DELETE FROM oauth_states WHERE state_hash = ? AND subject_hash IS NULL RETURNING provider, mode, account_id, key_hash, channel, nonce, verifier, subject_hash, expires_at')
     .bind(await sha256Hex(state)).first<StateRow>();
   if (!row || row.provider !== provider) return out('expired');
   if (row.expires_at < c.now) return out('expired', row.mode);
@@ -161,40 +166,49 @@ export async function oauthCallback(c: Ctx, providerParam: string, params: URLSe
   if (!code || code.length > 2048) return out('error', row.mode);
   try {
     const clientId = OIDC[provider].clientId(c.env as OidcEnv);
-    if (!clientId) return out('unavailable', row.mode);
-    const idToken = await exchange(c, provider, code, row.verifier);
     const verify = (c.deps as AuthDeps).verifyIdToken;
-    if (!verify) return out('unavailable', row.mode);
+    if (!clientId || !verify) return out('unavailable', row.mode);
+    const idToken = await exchange(c, provider, code, row.verifier);
     const claims = await verify(provider, idToken, [clientId]);
     if (claims.nonce !== row.nonce || typeof claims.sub !== 'string' || !claims.sub) return out('error', row.mode);
-    const hash = await providerSubject(provider as Provider, claims.sub);
-    if (row.mode === 'link') {
-      const account = row.account_id ? await accountById(c.db, row.account_id) : null;
-      if (!account || (account.status !== 'active' && account.status !== 'muted')) return out('blocked', row.mode);
-      await linkSubject(c, account, provider, hash);
-    } else {
-      if (!row.key_hash) return out('error', row.mode);
-      await recoverSubject(c, provider, hash, row.key_hash);
-    }
-    return out('ok', row.mode);
+    const ticket = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    await c.db.prepare('INSERT INTO oauth_states(state_hash, provider, mode, account_id, key_hash, channel, nonce, verifier, subject_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(await sha256Hex(ticket), provider, row.mode, row.account_id, row.key_hash, row.channel, '', '', await providerSubject(provider, claims.sub), c.now, c.now + TICKET_TTL_MS).run();
+    return out('ok', row.mode, ticket);
   } catch (error) {
-    if (error instanceof V1Error) {
-      if (error.code === 'no-link') return out('no-link', row.mode);
-      if (error.code === 'linked-elsewhere' || error.code === 'already-linked') return out(error.code, row.mode);
-      if (error.code === 'banned' || error.code === 'deleted' || error.code === 'key-in-use') return out('blocked', row.mode);
-      if (error.status === 503) return out('unavailable', row.mode);
-      return out('error', row.mode);
-    }
-    const status = (error as { status?: number })?.status;
+    const status = error instanceof V1Error ? error.status : (error as { status?: number })?.status;
     return out(status === 503 ? 'unavailable' : 'error', row.mode);
   }
 }
 
-/** 콜백 결과를 앱 주소로 돌려보내는 302. 쿼리에는 결과 코드만 싣는다. */
-export function callbackRedirect(env: OidcEnv, r: { result: string; mode: string; provider: string }): Response {
+/**
+ * 티켓 적용. link는 시작한 세션 계정과 같은 계정의 세션으로만, recover는 시작한 기기 키로만 낸다.
+ * recover 성공이면 새 세션 토큰을 바로 준다(기기 키가 대상 계정으로 옮겨졌다).
+ */
+export async function oauthFinish(c: Ctx, auth: Authed | null, body: Record<string, unknown>) {
+  onlyKeys(body, ['ticket', 'deviceKey'], ['ticket']);
+  if (typeof body.ticket !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(body.ticket)) fail(400, 'ticket');
+  const keyHash = body.deviceKey === undefined ? null : await deviceKeyHash(body.deviceKey);
+  const row = await c.db.prepare('DELETE FROM oauth_states WHERE state_hash = ? AND subject_hash IS NOT NULL RETURNING provider, mode, account_id, key_hash, channel, nonce, verifier, subject_hash, expires_at')
+    .bind(await sha256Hex(body.ticket)).first<StateRow>();
+  if (!row || row.expires_at < c.now || !row.subject_hash) fail(410, 'ticket-expired');
+  if (row.mode === 'link') {
+    // 시작한 계정과 다른 세션이 내면 거부(피해자가 공격자의 인가 URL을 연 경우).
+    if (!auth || auth.account.account_id !== row.account_id) fail(403, 'ticket-mismatch');
+    return { mode: 'link', provider: row.provider, ...await linkSubject(c, auth.account, row.provider, row.subject_hash) };
+  }
+  if (!keyHash || keyHash !== row.key_hash) fail(403, 'ticket-mismatch');
+  const { target, switchedFrom } = await recoverSubject(c, row.provider, row.subject_hash, keyHash);
+  const channel = ((CHANNELS as readonly string[]).includes(row.channel) ? row.channel : 'web') as Channel;
+  return { mode: 'recover', provider: row.provider, ...await issueSession(c.env, target, channel, c.now), switchedFrom };
+}
+
+/** 콜백 결과를 앱 주소로 돌려보내는 302. 쿼리에는 결과 코드와 1회용 티켓만 싣는다. */
+export function callbackRedirect(env: OidcEnv, r: { result: string; mode: string; provider: string; ticket?: string }): Response {
   const url = new URL(env.APP_ORIGIN + '/');
   url.searchParams.set('login', r.provider);
   url.searchParams.set('result', r.result);
   if (r.mode) url.searchParams.set('mode', r.mode);
+  if (r.ticket) url.searchParams.set('ticket', r.ticket);
   return new Response(null, { status: 302, headers: { location: url.toString(), 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }

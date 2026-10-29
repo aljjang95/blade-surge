@@ -22,7 +22,7 @@ async function oidcHarness(env: Record<string, string> = { KAKAO_REST_KEY: 'kaka
     return hit;
   };
   /** start → 제공자 로그인(가짜) → 콜백. 반환: 앱으로 돌아간 쿼리. */
-  const login = async (provider: string, mode: 'link' | 'recover', who: string, opts: { token?: string; deviceKey?: string; tamperNonce?: boolean; error?: string } = {}) => {
+  const login = async (provider: string, mode: 'link' | 'recover', who: string, opts: { token?: string; deviceKey?: string; tamperNonce?: boolean; error?: string; skipFinish?: boolean } = {}) => {
     const start = await h.send('POST', '/auth/oauth/start', { provider, mode, ...(opts.deviceKey ? { deviceKey: opts.deviceKey } : {}) }, opts.token);
     if (start.status !== 200) return { start };
     const auth = new URL(start.body.url);
@@ -30,14 +30,18 @@ async function oidcHarness(env: Record<string, string> = { KAKAO_REST_KEY: 'kaka
     issued.set(code, { sub: who, nonce: opts.tamperNonce ? 'other' : auth.searchParams.get('nonce')! });
     const q = opts.error ? `error=${opts.error}` : `code=${code}`;
     const res = await callback(provider, `${q}&state=${auth.searchParams.get('state')}`);
-    return { start, auth, res, result: res.result, mode: res.mode, state: auth.searchParams.get('state')! };
+    let fin: { status: number; body: any } | null = null;
+    // 앱이 돌아와서 자기 세션(link) 또는 자기 기기 키(recover)로 티켓을 낸다.
+    if (res.ticket && !opts.skipFinish) fin = await h.send('POST', '/auth/oauth/finish', mode === 'link' ? { ticket: res.ticket } : { ticket: res.ticket, deviceKey: opts.deviceKey }, mode === 'link' ? opts.token : undefined);
+    const result = fin ? (fin.status === 200 ? 'ok' : fin.body.error) : res.result;
+    return { start, auth, res, fin, result, mode: res.mode, ticket: res.ticket, state: auth.searchParams.get('state')! };
   };
   const { handleV1Request } = await import('../worker/v1/router');
   // 콜백은 제공자 페이지에서 오는 최상위 이동이다(Origin 없음, cross-site).
   const callback = async (provider: string, query: string) => {
     const res = await handleV1Request(new Request(`${ORIGIN}/api/v1/auth/oauth/callback/${provider}?${query}`, { headers: { 'sec-fetch-site': 'cross-site' } }), h.env, h.deps);
     const loc = new URL(res.headers.get('location') ?? ORIGIN);
-    return { status: res.status, location: loc, result: loc.searchParams.get('result'), mode: loc.searchParams.get('mode'), login: loc.searchParams.get('login') };
+    return { status: res.status, location: loc, result: loc.searchParams.get('result'), mode: loc.searchParams.get('mode'), login: loc.searchParams.get('login'), ticket: loc.searchParams.get('ticket') };
   };
   return { ...h, issued, exchanges, login, callback };
 }
@@ -95,6 +99,8 @@ describe('리다이렉트 로그인(카카오·ChatGPT OIDC)', () => {
     const phone = newDeviceKey();
     const rec = await h.login('kakao', 'recover', 'kakao-user-1', { deviceKey: phone });
     expect(rec.result).toBe('ok');
+    expect(rec.fin!.body.accountId).toBe(a.accountId);
+    expect((await h.send('GET', '/me', undefined, rec.fin!.body.token)).body.accountId).toBe(a.accountId);
     const s = await h.session(phone);
     expect(s.accountId).toBe(a.accountId);
     expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM accounts').get()).toEqual({ n: 1 });
@@ -120,8 +126,14 @@ describe('리다이렉트 로그인(카카오·ChatGPT OIDC)', () => {
     const ok = await h.login('chatgpt', 'link', 'oa-1', { token: a.token });
     expect(ok.result).toBe('ok');
     expect(new URLSearchParams(h.exchanges.at(-1)!.body).get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    // 같은 state 재사용
+    // 같은 state 재사용, 같은 티켓 재사용
     expect((await h.callback('chatgpt', `code=x&state=${ok.state}`)).result).toBe('expired');
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: ok.ticket }, a.token)).status).toBe(410);
+    // 티켓을 state 자리에 넣어도 콜백으로 꺼낼 수 없다.
+    const t2 = await h.login('chatgpt', 'link', 'oa-9', { token: (await h.session()).token, skipFinish: true });
+    expect((await h.callback('chatgpt', `code=x&state=${t2.ticket}`)).result).toBe('expired');
+    h.advance(5 * 60 * 1000 + 1);
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: t2.ticket }, (await h.session()).token)).status).toBe(410);
     expect((await h.login('chatgpt', 'link', 'oa-2', { token: (await h.session()).token, tamperNonce: true })).result).toBe('error');
     expect((await h.login('kakao', 'link', 'k', { token: a.token, error: 'access_denied' })).result).toBe('cancel');
     // 다른 제공자 콜백 경로로 state를 돌려도 거부
@@ -150,7 +162,7 @@ describe('리다이렉트 로그인(카카오·ChatGPT OIDC)', () => {
   test('콜백 응답은 결과 코드만 싣는다(코드·토큰·주체 없음)', async () => {
     const h = await oidcHarness();
     const r = await h.login('kakao', 'link', 'secret-sub', { token: (await h.session()).token });
-    expect([...r.res!.location.searchParams.keys()].sort()).toEqual(['login', 'mode', 'result']);
+    expect([...r.res!.location.searchParams.keys()].sort()).toEqual(['login', 'mode', 'result', 'ticket']);
     expect(r.res!.location.toString()).not.toContain('secret-sub');
     // 원문 sub는 D1에 저장하지 않는다.
     expect(JSON.stringify(h.db.sqlite.query('SELECT * FROM account_links').all())).not.toContain('secret-sub');
@@ -161,7 +173,35 @@ describe('리다이렉트 로그인(카카오·ChatGPT OIDC)', () => {
     const a = await h.session(), b = await h.session();
     expect((await h.login('kakao', 'link', 'k-a', { token: a.token })).result).toBe('ok');
     h.db.sqlite.exec(`UPDATE accounts SET status = 'banned' WHERE account_id = '${b.accountId}'`);
-    expect((await h.login('kakao', 'recover', 'k-a', { deviceKey: b.deviceKey })).result).toBe('blocked');
+    expect((await h.login('kakao', 'recover', 'k-a', { deviceKey: b.deviceKey })).result).toBe('banned');
+  });
+});
+
+describe('연동 CSRF 차단(티켓은 시작한 계정·기기에만)', () => {
+  test('공격자가 자기 세션으로 시작한 인가 URL을 피해자가 열어도 피해자 앱은 티켓을 쓸 수 없다', async () => {
+    const h = await oidcHarness();
+    const attacker = await h.session(), victim = await h.session();
+    // 피해자가 공격자의 URL로 카카오 로그인 → 콜백은 티켓만 만든다(아직 아무 연동 없음).
+    const r = await h.login('kakao', 'link', 'victim-kakao', { token: attacker.token, skipFinish: true });
+    expect(r.res!.result).toBe('ok');
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM account_links').get()).toEqual({ n: 0 });
+    // 피해자 앱이 자기 세션으로 내면 거부된다(그리고 티켓은 소모된다).
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: r.ticket }, victim.token)).body.error).toBe('ticket-mismatch');
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: r.ticket }, attacker.token)).status).toBe(410);
+    expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM account_links').get()).toEqual({ n: 0 });
+  });
+
+  test('recover 티켓은 시작한 기기 키로만, 세션 없이 낸 link 티켓은 거부', async () => {
+    const h = await oidcHarness();
+    const a = await h.session();
+    await h.login('kakao', 'link', 'k-owner', { token: a.token });
+    const mine = newDeviceKey();
+    const r = await h.login('kakao', 'recover', 'k-owner', { deviceKey: mine, skipFinish: true });
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: r.ticket, deviceKey: newDeviceKey() })).body.error).toBe('ticket-mismatch');
+    const r2 = await h.login('kakao', 'recover', 'k-owner', { deviceKey: mine, skipFinish: true });
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: r2.ticket })).body.error).toBe('ticket-mismatch');
+    const l = await h.login('kakao', 'link', 'k-x', { token: (await h.session()).token, skipFinish: true });
+    expect((await h.send('POST', '/auth/oauth/finish', { ticket: l.ticket })).body.error).toBe('ticket-mismatch');
   });
 });
 

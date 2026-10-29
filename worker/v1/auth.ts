@@ -88,7 +88,7 @@ function assertActive(account: AccountRow): void {
   if (account.status === 'deleting' || account.status === 'deleted') fail(403, 'deleted');
 }
 
-async function issue(env: AuthEnv, account: AccountRow, channel: Channel, now: number) {
+export async function issueSession(env: AuthEnv, account: AccountRow, channel: Channel, now: number) {
   const claims: SessionClaims = { aid: account.account_id, ch: channel, ver: account.token_ver, iat: now, exp: now + TOKEN_TTL_MS, att: 0 };
   return { token: await signToken(await secret(env), claims), accountId: account.account_id, expiresAt: claims.exp, serverTime: now, authority: account.authority };
 }
@@ -131,7 +131,7 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
   }
   assertActive(account);
   account = await maybeCutover(c, account);
-  return { ...await issue(c.env, account, channel, c.now), created };
+  return { ...await issueSession(c.env, account, channel, c.now), created };
 }
 
 /**
@@ -227,7 +227,7 @@ export async function recover(c: Ctx, body: Record<string, unknown>) {
   const keyHash = await deviceKeyHash(body.deviceKey);
   const hash = await subjectHash(c, body.provider, body.idToken);
   const { target, switchedFrom } = await recoverSubject(c, body.provider as string, hash, keyHash);
-  return { ...await issue(c.env, target, channel, c.now), switchedFrom };
+  return { ...await issueSession(c.env, target, channel, c.now), switchedFrom };
 }
 
 /** 이미 확인한 제공자 주체(해시)의 계정으로 이 기기 키를 옮긴다. */

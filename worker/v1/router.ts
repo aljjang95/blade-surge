@@ -4,7 +4,7 @@ import { rateLimit, ipKey } from './limit';
 import { schemaReady, V1Error, type D1Database } from './db';
 import { IMPORT_LIMIT, json, readJson } from './http';
 import { createSession, deleteAccount, link, logoutAll, recover, requireSession, unlink, type AuthDeps, type AuthEnv, type Ctx } from './auth';
-import { callbackRedirect, oauthCallback, oauthStart, providerAvailability, verifyRedirectIdToken, type OidcEnv } from './oidc';
+import { callbackRedirect, oauthCallback, oauthFinish, oauthStart, providerAvailability, verifyRedirectIdToken, type OidcEnv } from './oidc';
 import { getMe, runCommand } from './cmd';
 import { settleRun, startRun } from './runs';
 import { importLegacy, settleLegacyCompensation, shadowSnapshot } from './import';
@@ -89,6 +89,11 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       // link는 세션이 필요하고 recover는 기기 키만 받는다(세션 헤더가 있으면 link로 쓰려는 것).
       const auth = request.headers.has('authorization') ? await requireSession(c) : null;
       return json(await oauthStart(c, auth, await readJson(request)));
+    }
+    if (method === 'POST' && path === '/auth/oauth/finish') {
+      await rateLimit(c, 'oauthStart', await ipKey(request));
+      const auth = request.headers.has('authorization') ? await requireSession(c) : null;
+      return json(await oauthFinish(c, auth, await readJson(request)));
     }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
     if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
