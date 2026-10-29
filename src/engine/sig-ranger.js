@@ -96,7 +96,7 @@ export const SIGNATURES = {
       if (!lite) impact.mark(_e, DEEP, { radius: 1.5, life: .95, style: MARK_STYLE.thorn, angle: d0 * .4, delay: t });
       // 서 있는 빛(참격·별빛·고리)은 적 몸통(약 1m) 아래 발목 높이에 작게: 활 높이에서는 관통점에 선 적 몸을 흰 덩어리로 덮었다.
       _e.copy(_b).addScaledVector(f, d).setY(.45);
-      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 1.9, LIME, .34, { angle: ang, stretch: 1.6, grow: .9, delay: t });
+      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 1.5, LIME, .3, { angle: ang, stretch: 1.6, grow: .9, delay: t });
       impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1, GOLD, .2, { angle: .785, grow: .4, delay: t });
       impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.4, DEEP, .32, { grow: 1, delay: t });
       // 금연두 폭발 파편: 관통점에서 길 양옆(화면 가로)으로 튄다. 결정적 수식(관통점·순번)만 쓴다.
@@ -176,7 +176,8 @@ export const SIGNATURES = {
   ranger_tempest(ctx) {
     const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 28;
     const END = screenReach(ctx.fx?.camera, player.pos, f, 12, 2);
-    impact.mark(player.pos, GOLD, { radius: 3.4, life: .8, style: MARK_STYLE.compass, angle: yawOf(f) });
+    // 발밑은 진한 비취 작은 나침만: 금 3.4m 나침은 시전 마법진과 겹쳐 영웅 둘레를 노란 큰 원판으로 덮었다(iter2).
+    impact.mark(player.pos, DEEP, { radius: 2.4, life: .6, style: MARK_STYLE.compass, angle: yawOf(f) });
     impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 2.2, GOLD, .1, { angle: .3, grow: .4 });
     impact._emit(IMPACT_KIND.ring, o.x, o.y, o.z, 2.6, LIME, .3, { grow: 1 });
     // ① 소용돌이: 활 둘레에서 접선으로 감겨 들며 솟는 불똥(안쪽 금연두, 바깥 비취).
