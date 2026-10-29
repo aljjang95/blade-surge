@@ -381,7 +381,7 @@ export const SKILLS = {
   // ================= 광전사 (불 · 회전 몹몰이) =================
   whirlwind: {
     dur: 1.6, total: 1.6,
-    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff4a1a, { radius: 3.8, life: 1.5, demon: true }); },
+    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); }, // 붉은 바닥 마법진 대신 회전 궤적 고리(sig-barbarian whirlwind·barbWhirlTick)
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.6; p.vel.set(m.x * spd, 0, m.y * spd);
       gatherEnemies(game, p.pos, 5.5, 12); // 첫 접촉 전에 모으고 연타 중 군집을 유지한다.
@@ -406,12 +406,13 @@ export const SKILLS = {
       const center = c.data.gatherCenter || fwd(p, 1.5);
       game.hitRadius(center, SKILL_AIM_SHAPES.quake.radius, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
-      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffc060 : 0xff7a2a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
-      game.fx.explosion(center, { size: 8, color: 0xff9a50, life: 0.6 });
-      game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
-      game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 40, speed: 12, size: 0.5, up: 1.5, grav: 20 });
+      // 시각: 13m 까지 퍼지던 충격파 세 겹·크기 8 폭발은 0.5초 뒤 화면 전체를 주황 덩어리로 덮었다(강화 레인). 충격 한 겹·작은 폭발로 줄이고 모양은 전방 균열 서명이 맡는다.
+      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { if (i === 0) game.fx.shockTex(center, 0xff7a2a, { r1: 4.5, life: 0.4 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
+      game.fx.explosion(center, { size: 3.5, color: 0xff9a50, life: 0.45 });
+      game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 4, life: 0.9 });
+      game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 20, speed: 12, size: 0.4, up: 1.5, grav: 20 });
       game.fx.light(center, 0xff8040, 14, 16, 0.5);
-      game.renderer.shake(1); game.renderer.punch(1.2); game.renderer.flashScreen(0.3, 0xffa060);
+      game.renderer.shake(1); game.renderer.punch(1.2); game.renderer.flashScreen(0.12, 0xffa060);
       audio.boom({ vol: 1, dur: 0.8, low: 45 }); audio.play('hit_mining', { vol: 1, rate: 0.7 }); audio.vibe([60, 30, 90]);
     },
   },
@@ -419,38 +420,36 @@ export const SKILLS = {
     dur: 0.8,
     cast(game, p, c) {
       p.buffs.atk = 1.6; p.buffs.atkSpd = 1.3; p.buffs.spd = 1.2; p.buffs.t = 8; p.tintEmissive = new THREE.Color(0.35, 0.02, 0.02);
-      game.fx.castCircle(p.pos, 0xff3030, { radius: 4.5, life: 1.0, demon: true });
-      game.fx.firePillar(p.pos, { height: 8, width: 2.6, life: 0.9, color: 0xff3030 });
-      game.fx.shockTex(p.pos, 0xff4040, { r1: 7, life: 0.5 });
+      // 시각: 바닥 붉은 마법진·7m 충격파 대신 몸에서 솟는 기둥(불기둥 + 서명의 나선·불꽃 혀)으로 읽힌다(강화 레인).
+      game.fx.firePillar(p.pos, { height: 7, width: 1.8, life: 0.9, color: 0xff4a20 });
       game.fx.embers(p.pos, 0xff4040, { n: 40, radius: 1.5, life: 1.5, rise: 4 });
       game.fx.light(p.pos, 0xff2020, 12, 12, 0.8);
-      game.renderer.flashScreen(0.4, 0xff2020); game.renderer.shake(0.5); game.renderer.aberr = 0.8;
+      game.renderer.flashScreen(0.2, 0xff2020); game.renderer.shake(0.5); game.renderer.aberr = 0.8;
       audio.boom({ vol: 0.6, dur: 0.6, low: 80 }); audio.dark({ vol: 0.55, base: 160, dur: 0.9 }); audio.vibe([50, 50, 50, 50, 100]);
       game.ui.toast('광폭화! 공격력 +60%', 'red');
     },
   },
   hell_axe: {
     dur: 1.0, total: 2.4,
-    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.embers(p.pos, 0xff5020, { n: 20, radius: 2, life: 1.2, rise: 6 }); }, // 예비 모으기는 서명 서곡(PRELUDES.hell_axe)
     cast(game, p, c) {
       const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
       const orb = game.fx.orb(0xff5a20, 1.8); orb.position.copy(target).setY(16); game.scene.add(orb);
-      game.fx.castCircle(target, 0xff5a20, { radius: 8, life: 0.8, demon: true });
-      const fall = 0.5;
+      const fall = 0.5; // 착탄 조준은 서명의 금빛 나침 표식(8m 붉은 마법진 대신)
       game.fx.add(orb, fall, (k) => { orb.position.y = 16 * (1 - k * k); orb.children[1].scale.setScalar(7 * (1 + k)); game.fx.embers(orb.position, 0xff7a30, { n: 3, radius: 0.5, life: 0.5, rise: -2 }); });
       // 낙하 중 진공
       let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
         game.hitRadius(target, SKILL_AIM_SHAPES.hell_axe.radius, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
-        game.fx.explosion(target, { size: 14, color: 0xff7a30, life: 0.8 });
+        game.fx.explosion(target, { size: 6, color: 0xff7a30, life: 0.6 }); // 시각: 크기 14 폭발은 화면을 크림 덩어리로 덮었다
         game.fx.firePillar(target, { height: 12, width: 3.4, life: 0.7, color: 0xff4a1a }); // 광전사: 착탄 불기둥
         game.fx.scorch(target, { radius: 6, life: 8 });
-        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffb050 : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
-        game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 70, speed: 16, size: 0.6, up: 1.4, grav: 18 });
-        game.fx.dustPuff(target, { size: 10, life: 1.4 }); game.fx.embers(target, 0xff6020, { n: 60, radius: 5, life: 2.2, rise: 4 });
+        game.fx.shockTex(target, 0xff6a20, { r1: 7, life: 0.5 }); // 3박 사방 균열은 서명이 그린다
+        game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 30, speed: 16, size: 0.5, up: 1.4, grav: 18 });
+        game.fx.dustPuff(target, { size: 6, life: 1.2 }); game.fx.embers(target, 0xff6020, { n: 30, radius: 5, life: 1.8, rise: 4 });
         game.fx.light(target, 0xff6020, 20, 22, 1);
-        game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.5, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.3, 0.6);
+        game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.22, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.3, 0.6);
         audio.boom({ vol: 1, dur: 1.2, low: 40 }); audio.play('hit_mining', { vol: 1, rate: 0.5 }); audio.fire({ vol: 0.5, dur: 1.5 }); audio.vibe([100, 50, 150]);
       });
     },

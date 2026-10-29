@@ -35,11 +35,13 @@ export const SKILL_VFX = Object.freeze({
   sanctuary: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .5 }),
   sunbreaker: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 4, { noRune: true, sig: true, gain: .15 }),
   heavenfall: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 5, { dist: 0, seek: [15, 5], sig: true, gain: .15 }),
-  // 광전사
-  whirlwind: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff4a1a, 5),
-  quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),
-  berserk: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff3030, 6, { noRune: true, sig: true }),
-  hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 4, seek: [13, 4], noRune: true, sig: true }),
+  // 광전사: 영웅 둘레 붉은 원형 지면 원화(용암 균열·룬)가 네 스킬을 같은 모양으로 만들었다(강화 레인 2026-10-29).
+  // 기본 4종은 원화·공용 룬을 끄고 모양을 sig-barbarian.js 서명(회전 궤적 고리·전방 균열·나선 기둥·3박 낙하)이 맡는다.
+  // 지진·지옥의 도끼는 착탄 중심 코어(크림 덩어리)도 끈다(noBurst) — 지옥의 도끼는 시전 순간이 아니라 .5초 뒤 낙하에 터진다.
+  whirlwind: R(VIOLET, 'lava-crack', 'self', 'none', 0xff4a1a, 5, { noRune: true, sig: true }),
+  quake: R(GOLD, 'lava-crack', 'aim', 'none', 0xff9a4a, 8, { dist: 1.5, noRune: true, sig: true, noBurst: true }),
+  berserk: R(VIOLET, 'lava-crack', 'self', 'none', 0xff3030, 6, { noRune: true, sig: true }),
+  hell_axe: R(GOLD, 'meteor', 'aim', 'none', 0xff7a30, 10, { dist: 4, seek: [13, 4], noRune: true, sig: true, noBurst: true }),
   // 늑대인간 족장 고유 스킬: 핏빛 진홍·분홍(포효), 월광 은백 + 진홍(사냥). 모양은 sig-barbarian.js 서명이 맡는다.
   blood_howl: R(VIOLET, 'lava-crack', 'self', 'ground', 0xc81830, 6, { noRune: true, sig: true }),
   moonlit_hunt: R(VIOLET, 'meteor', 'self', 'flash', 0xd8e4ff, 8, { noRune: true, sig: true }),
