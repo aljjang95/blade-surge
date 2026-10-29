@@ -170,6 +170,48 @@ def order_groups(groups, cols, rows):
     return ordered
 
 
+def best_cuts(profile, n, search=0.18):
+    """1차원 물건 화소 분포에서 n칸 경계(n-1개)를 명목 위치 ±search 칸 안의 최소값으로 고른다."""
+    size = len(profile)
+    step = size / n
+    cuts = [0]
+    for k in range(1, n):
+        lo, hi = int(k * step - search * step), int(k * step + search * step)
+        window = profile[lo:hi]
+        # 최소값이 넓게 이어지면 가운데를 고른다(빈 띠 한가운데)
+        mins = np.where(window == window.min())[0]
+        cuts.append(lo + int(mins[len(mins) // 2]))
+    cuts.append(size)
+    return cuts
+
+
+def grid_masks(fg, cols, rows, count, noise_frac):
+    """격자 칸마다 한 물건 마스크. 칸 안 연결 성분 중 가장 큰 것 기준 2% 이상인 조각만 남긴다.
+    칸 수보다 물건이 적으면 읽기 순서(왼→오, 위→아래)로 앞 칸부터 채운 배치로 본다."""
+    h, w = fg.shape
+    ys = best_cuts(fg.sum(axis=1), rows)
+    masks = []
+    for r in range(rows):
+        band = fg[ys[r]:ys[r + 1]]
+        in_row = min(cols, count - r * cols)
+        if in_row <= 0:
+            break
+        xs = best_cuts(band.sum(axis=0), cols)
+        for c in range(in_row):
+            m = np.zeros_like(fg)
+            m[ys[r]:ys[r + 1], xs[c]:xs[c + 1]] = fg[ys[r]:ys[r + 1], xs[c]:xs[c + 1]]
+            lab, n = label(m)
+            if n == 0:
+                raise SplitError(f"칸 {r},{c}에 물건이 없음")
+            cnt = np.bincount(lab.ravel(), minlength=n + 1)
+            cnt[0] = 0
+            keep = np.where(cnt >= max(cnt.max() * 0.02, noise_frac * (w / cols) * (h / rows)))[0]
+            masks.append(np.isin(lab, keep))
+    if len(masks) != count:
+        raise SplitError(f"격자 분할 칸 수 {len(masks)} != cells {count}")
+    return masks
+
+
 def make_icon(rgb, fgmask):
     """fgmask(bool HxW, 한 물건) -> (RGBA 정사각 아이콘, 시트 기준 알파 bbox)."""
     m = erode(fgmask)
@@ -221,8 +263,8 @@ def split(image_path, brief_path, sheet_id, out_dir, tol=28, merge=0.06, noise=0
         raise SystemExit(f"brief에 시트 id 없음: {sheet_id}")
     cols, rows = sheet["grid"]
     ids = [c["id"] for c in sheet["cells"]]
-    if len(ids) != cols * rows:
-        raise SystemExit(f"brief 불일치: cells {len(ids)} != grid {cols}x{rows}")
+    if not 0 < len(ids) <= cols * rows:
+        raise SystemExit(f"brief 불일치: cells {len(ids)} > grid {cols}x{rows}")
     img = Image.open(image_path)
     if img.mode in ("RGBA", "LA", "P"):
         rgba = img.convert("RGBA")
@@ -233,15 +275,16 @@ def split(image_path, brief_path, sheet_id, out_dir, tol=28, merge=0.06, noise=0
     h, w, _ = rgb.shape
     flab, fn = find_foreground(rgb, tol, hole_tol, int(hole * w * h / (cols * rows)))
     groups = group_pieces(flab, fn, w / cols, h / rows, merge, noise)
-    if len(groups) != len(ids):
-        raise SplitError(f"덩어리 수 불일치: 찾음 {len(groups)} != cells {len(ids)} "
-                         f"(bbox: {[g['bbox'] for g in groups]})")
-    groups = order_groups(groups, cols, rows)
+    if len(groups) == len(ids) and len(ids) == cols * rows:
+        masks = [np.isin(flab, g["ids"]) for g in order_groups(groups, cols, rows)]
+    else:
+        # 오라·장식이 이웃 칸에 닿아 덩어리가 합쳐진 시트: 격자 경계 근처에서 물건 화소가 가장 적은 선으로 자른다.
+        masks = grid_masks(flab > 0, cols, rows, len(ids), noise)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     report, items = [], []
-    for cid, g in zip(ids, groups):
-        icon, bbox = make_icon(rgb, np.isin(flab, g["ids"]))
+    for cid, mask in zip(ids, masks):
+        icon, bbox = make_icon(rgb, mask)
         p = out / f"{cid}.png"
         icon.save(p, optimize=True)
         a = np.asarray(icon)[:, :, 3]
