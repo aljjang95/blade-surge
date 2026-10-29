@@ -10,7 +10,7 @@ import { SKILL_VFX, castSkillVfx, impactReady } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
-import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
+import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail, mageChronoRelease } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { rogueXCut } from '../engine/sig-rogue.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
@@ -1083,6 +1083,7 @@ export const SKILLS = {
           const at = s.e.pos.clone();
           game.fx.explosion(at, { size: 4.2, color: 0x8a7cff, life: 0.5 });
           game.fx.impact?.burst?.(at.clone().setY(1), 0xa898ff, { size: 1.6 });
+          mageChronoRelease(game, at, i); // 시계 파편(인스턴스 층, Math.random 미사용)
           game.fx.burst(at.clone().setY(0.8), 0xa898ff, { n: 22, speed: 11, size: 0.4 });
           game.hitRadius(at, 3.8, c.dmg + taken * 0.75, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: at, quietStop: i > 1 });
           if (i < 3) game.fx.light(at, 0x9a8cff, 12, 12, 0.4);

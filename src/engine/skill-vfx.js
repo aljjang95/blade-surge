@@ -58,10 +58,10 @@ export const SKILL_VFX = Object.freeze({
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'none', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true, noBurst: true }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a7cff, 9, { noRune: true, sig: true }),
-  // 별감옥·절대영도(각성 강화 2026-10-30): 착탄 중심 흰 코어·섬광(noBurst)과 보라 룬을 끄고, 절대영도 얼음 원화는 판정 반경(9m)까지만 깐다
+  // 별감옥·절대영도(각성 강화 2026-10-30): 착탄 중심 흰 코어·섬광(noBurst)과 보라 룬을 끄고, 절대영도 얼음 원화는 7m 로 줄여 눈결정 팔(8m)이 원화 밖 바닥에서 읽히게 한다
   // (12m 원화 + 중심 코어가 적 무리를 흰 원판으로 덮었다). 위치 예고는 skills.js castCircle 이 그대로 맡는다(파티 손님 화면).
   star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5], noRune: true, sig: true, noBurst: true }),
-  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 9, { dist: 6, seek: [17, 6], noRune: true, sig: true, noBurst: true }),
+  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 7, { dist: 6, seek: [17, 6], noRune: true, sig: true, noBurst: true }),
   // 암살자: 질주·야행·궁극기만 그림자 참격 원화를 쓰고, 나머지는 모양을 나눈다(독무 = 원화 없이 조준 룬, 표식 = 보라 룬 지면,
   // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
   // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다. 질주는 전방 3m 참격 원화(시전 순간 영웅을 덮는 보라 덩어리)를 끄고 잔상 기둥·X 자로,

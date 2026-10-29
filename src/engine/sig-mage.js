@@ -226,6 +226,26 @@ export function magePrismTrail(game, from, to) {
   return used;
 }
 
+/** 시간 봉인 해제 한 점(skills.js chrono_seal 이 봉인된 적마다 .05초 간격으로 부른다): 멈췄던 시간이 깨지는 '시계 파편'.
+ *  바닥 나침 표식 + 바깥으로 튀는 보라·남색 결정 파편 + 몸 위로 솟는 짧은 금빛 균열 두 획. 앞 여덟 적까지만(프레임 예산 보호). 쓴 칸 수. */
+export function mageChronoRelease(game, pos, i = 0) {
+  const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game) || i >= 8) return 0;
+  const before = impact.spawned, lite = !!game.fx.lite;
+  _q.set(pos.x, 0, pos.z);
+  impact.mark(_q, C.arcane, { radius: 1.6, life: .45, style: MARK_STYLE.compass, angle: i * .9 });
+  const n = lite ? 3 : 6;
+  for (let k = 0; k < n; k++) {
+    const a = i * .8 + (k / n) * TAU, sp = 7 + (k % 3) * 2;
+    impact._emit(IMPACT_KIND.shard, pos.x + Math.cos(a) * .7, 1, pos.z + Math.sin(a) * .7, .42, k % 2 ? C.arcane : C.star, .45,
+      { vx: Math.cos(a) * sp, vy: 4, vz: Math.sin(a) * sp, angle: a, stretch: 1.6, grow: .5, gravity: 14 });
+  }
+  if (!lite) for (let s = -1; s <= 1; s += 2) {
+    _a.set(pos.x + s * .5, .2, pos.z); _d.set(s * .35, 1, 0);
+    impact.beam(_a, _d, 1.8, C.starGold, { speed: 18, width: .12, fade: .25, delay: .02 });
+  }
+  return impact.spawned - before;
+}
+
 /**
  * 궁극기 예비 표식(시전 연출 중 바로 보인다). skill-signatures.js 의 SKILL_PRELUDES 가 합친다.
  * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
@@ -379,7 +399,7 @@ export const SIGNATURES = {
     const sweep = lite ? 3 : 7;
     for (let k = 0; k < sweep; k++) {
       const t = sweep > 1 ? k / (sweep - 1) : .5, a = base - .5 + t; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(_p1, _d, 7 - Math.abs(t - .5) * 3, PRISM_SPECTRUM[k % PRISM_SPECTRUM.length], { speed: 42, tail: 2.4, width: .12, delay: .1 + k * .022, style: BEAM_STYLE.prism });
+      impact.beam(_p1, _d, 7.5 - Math.abs(t - .5) * 3, PRISM_SPECTRUM[k % PRISM_SPECTRUM.length], { speed: 40, tail: 4, width: .2, delay: .04 + k * .022, style: BEAM_STYLE.prism });
     }
     if (!lite) {
       for (let k = 0; k < 6; k++) {
@@ -508,17 +528,17 @@ export const SIGNATURES = {
       _a.set(at.x + Math.cos(a) * 8.6, .07, at.z + Math.sin(a) * 8.6);
       if (!lite || k % 2 === 0) impact.beam(_a, _d, 8.2, k % 2 ? C.frostDeep : C.frostMid, { speed: 8.2 / T, tail: 3, width: .3, style: BEAM_STYLE.ice });
     }
-    // ② 눈결정: 여섯 팔(판정 순간 동시에 바깥으로 45m/s) + 팔마다 4.2m 지점 곁가지 두 획(±60°).
+    // ② 눈결정: 여섯 팔(판정 순간 동시에 바깥으로 60m/s) + 팔마다 4.2m 지점 곁가지 두 획(±60°).
     for (let k = 0; k < arms; k++) {
       const a = (k / arms) * TAU + .52; _d.set(Math.cos(a), 0, Math.sin(a)); _a.set(at.x + _d.x * .6, .08, at.z + _d.z * .6);
-      impact.beam(_a, _d, R, k % 2 ? C.frost : C.frostMid, { speed: 45, width: .36, delay: T, fade: .6, style: BEAM_STYLE.ice });
+      impact.beam(_a, _d, R, k % 2 ? C.frost : C.frostMid, { speed: 60, width: .44, delay: T, fade: .7, style: BEAM_STYLE.ice });
       if (lite) continue;
       _p0.set(at.x + _d.x * 4.2, .08, at.z + _d.z * 4.2);
       for (let s = -1; s <= 1; s += 2) {
         const b = a + s * 1.05; _b.set(Math.cos(b), 0, Math.sin(b));
-        impact.beam(_p0, _b, 1.9, C.frostDeep, { speed: 30, width: .22, delay: T + 4.2 / 45, fade: .5, style: BEAM_STYLE.ice });
+        impact.beam(_p0, _b, 1.9, C.frostDeep, { speed: 30, width: .26, delay: T + 4.2 / 60, fade: .6, style: BEAM_STYLE.ice });
       }
-      impact._emit(IMPACT_KIND.star, at.x + _d.x * R, .5, at.z + _d.z * R, .8, C.frost, .3, { angle: a, grow: .5, delay: T + R / 45 });
+      impact._emit(IMPACT_KIND.star, at.x + _d.x * R, .5, at.z + _d.z * R, .8, C.frost, .3, { angle: a, grow: .5, delay: T + R / 60 });
     }
     // 얼음 가시 물결: 반지름이 클수록 늦게(안 → 밖) 솟는다. 판정 뒤 .2초 안에 모두 시작.
     const spikes = lite ? 6 : 12;
