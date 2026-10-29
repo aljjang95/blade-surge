@@ -3,7 +3,7 @@
 import './login-sheet.css';
 import { isNativeBuild } from '../platform/api-base.js';
 import { googleSignIn } from '../social/google-signin.js';
-import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, consumeLoginReturn, takeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
+import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, linkBonusText, consumeLoginReturn, takeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
 
 // 모듈이 불러와지는 즉시(부팅 코드보다 먼저) 콜백 쿼리를 읽고 주소에서 지운다. ticket 이 주소창에 남지 않게 한다.
 const loginReturn = takeLoginReturn();
@@ -62,7 +62,7 @@ export async function maybeShowLoginSheet(app, { native = isNativeBuild() } = {}
     busy(true);
     const out = await task().catch(() => ({ ok: false, reason: 'error' }));
     busy(false);
-    if (out.ok) { if (out.action) toast(out.action === 'recovered' ? '진행을 불러왔어요.' : '계정을 연동했어요.'); d.close(); }
+    if (out.ok) { if (out.action) toast(out.action === 'recovered' ? '진행을 불러왔어요.' : '계정을 연동했어요.'); if (out.bonus) toast(linkBonusText(out.bonus)); d.close(); }
     else if (out.reason !== 'cancel' && out.reason !== 'linked-elsewhere-declined') toast(failText(out.reason));
   };
   if (found.google) d.body.append(button('Google로 계속', 'ls-google', () => run(() => googleLogin(app, { signIn: googleSignIn, confirm: askConfirm }))));
@@ -90,7 +90,7 @@ export async function openAccountMenu(app, { native = isNativeBuild() } = {}) {
       if (!found?.[p] || linked.includes(p)) continue;
       d.body.append(button(`${PROVIDER_LABEL[p]} 계정 연동`, 'ls-primary', async () => {
         const out = await linkProvider(app, p, { signIn: googleSignIn, confirm: askConfirm });
-        if (out.ok && out.action) { toast('계정을 연동했어요.'); render(); }
+        if (out.ok && out.action) { toast('계정을 연동했어요.'); if (out.bonus) toast(linkBonusText(out.bonus)); render(); }
         else if (!out.ok && out.reason !== 'cancel' && out.reason !== 'linked-elsewhere-declined') toast(failText(out.reason));
         else if (out.action === 'recovered') render();
       }));
