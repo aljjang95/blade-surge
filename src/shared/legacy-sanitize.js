@@ -32,6 +32,11 @@ export const ONE_TIME = Object.freeze({
   gold: 2000000, gems: 40000, tickets: 200, ssrTickets: 10, sweep: 30, stones: 2000, stones2: 500, stones3: 200,
   fragments: 2000, protect: 20, bless: 20, transferScroll: 5, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
 });
+/**
+ * 나중에 생긴 재화는 계정 나이가 아니라 출시 뒤 경과일로만 일일 상한을 쌓는다(출시 전 잔액은 정당하게 생길 수 없다).
+ * 전승 보호 주문서(transferScroll)는 2026-10-29 출시: 오래된 계정이 '5 + 5 × 계정 나이'만큼 가져오던 것을 막는다(Codex 보안 리뷰).
+ */
+export const CURRENCY_SINCE = Object.freeze({ transferScroll: Date.UTC(2026, 9, 29) });
 const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transferScroll', 'transcendStones', 'skillResets'];
 
 const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -178,7 +183,8 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     return cap;
   };
   const paid = (key) => (Number.isSafeInteger(allowance[key]) && allowance[key] > 0 ? allowance[key] : 0);
-  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * days + paid(key));
+  const daysFor = (key) => CURRENCY_SINCE[key] === undefined ? days : Math.min(days, Math.max(0, Math.floor((now - CURRENCY_SINCE[key]) / DAY)));
+  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * daysFor(key) + paid(key));
   for (const id of Object.keys(HEROES)) {
     const h = s.heroes[id];
     if (h) h.shards = clamp(`heroes.${id}.shards`, Number(h.shards) || 0, ONE_TIME.heroShards + DAILY_MAX.heroShards * days);
