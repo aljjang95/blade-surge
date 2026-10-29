@@ -4,7 +4,9 @@
 //   같은 카드를 만들고, 기존 정산의 난수 순서(필드 장비·강화)를 바꾸지 않는다.
 // - 내구도는 무기만. 깨지지 않고 공격력만 조금 내려간다(초보 불이익 최소). 수리 골드는 강화 단계에 따라 커져 후반 골드 소모처가 된다.
 import { createSeededRng, hashSeed } from '../shared/rng.js';
-import { ITEM_POOL, RARITY_INFO, SLOTS } from '../data/items.js';
+import { ITEM_POOL, ITEM_BY_ID, RARITY_INFO, SLOTS } from '../data/items.js';
+// 장비 레벨 상한(item-tier.js ITEM_LEVEL_MAX). item-tier 가 이 파일을 불러 순환을 피하려고 값을 둔다(테스트가 같은지 확인).
+export const ITEM_LEVEL_CAP = 80;
 import { enhanceCost } from '../data/enhance.js';
 
 // ---------- 카드 보상 ----------
@@ -74,10 +76,25 @@ function makeCard(kind, tier, { base, ch, il, rng }) {
   return { kind, tier, id: def.id, slot, rarity: def.rarity, ...(il > 1 ? { il } : {}) };
 }
 
+const CARD_GOLD_MAX = 10000000;
+const posInt = (v, max) => Number.isSafeInteger(v) && v > 0 && v <= max;
+/** 카드 한 장을 종류별 허용 필드·범위로만 다시 만든다. 형태가 틀리면 null(저장·가져오기로 보상 주입 방지). */
+function cleanCard(c) {
+  if (!c || typeof c !== 'object' || !CARD_KINDS.includes(c.kind) || !Object.hasOwn(CARD_TIERS, c.tier)) return null;
+  const { kind, tier } = c;
+  if (kind === 'gold' || kind === 'repair') return posInt(c.gold, CARD_GOLD_MAX) ? { kind, tier, gold: c.gold } : null;
+  if (kind === 'stones') return (c.key === 'stones' || c.key === 'stones2') && posInt(c.n, STONE_N.legend) ? { kind, tier, key: c.key, n: c.n } : null;
+  if (kind === 'fragments') return posInt(c.n, FRAGMENT_N.legend) ? { kind, tier, n: c.n } : null;
+  if (kind === 'scroll') return (c.key === 'bless' || c.key === 'protect') && c.n === 1 ? { kind, tier, key: c.key, n: 1 } : null;
+  const def = typeof c.id === 'string' && Object.hasOwn(ITEM_BY_ID, c.id) ? ITEM_BY_ID[c.id] : null;
+  if (!def || !Object.values(GEAR_RARITY).includes(def.rarity) || c.slot !== def.slot) return null;
+  return { kind, tier, id: def.id, slot: def.slot, rarity: def.rarity, ...(posInt(c.il, ITEM_LEVEL_CAP) && c.il > 1 ? { il: c.il } : {}) };
+}
+
 /** 저장된 카드 상태 정규화. 형태가 틀리면 null(카드 없음). */
 export function normalizeClearCard(raw) {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || raw.id.length > 80 || !Array.isArray(raw.cards) || raw.cards.length !== CARD_COUNT) return null;
-  const cards = raw.cards.map((c) => (c && typeof c === 'object' && CARD_KINDS.includes(c.kind) && CARD_TIERS[c.tier] ? { ...c } : null));
+  const cards = raw.cards.map(cleanCard);
   if (cards.some((c) => !c)) return null;
   const picked = Number.isInteger(raw.picked) && raw.picked >= 0 && raw.picked < CARD_COUNT ? raw.picked : null;
   return { id: raw.id, heroId: typeof raw.heroId === 'string' ? raw.heroId : '', cards, picked };

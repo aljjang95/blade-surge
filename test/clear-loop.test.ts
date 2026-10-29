@@ -7,7 +7,7 @@ import { itemStats } from '../src/data/item-tier.js';
 import { createSeededRng } from '../src/shared/rng.js';
 import { validateOp } from '../src/shared/v1-ops.js';
 import { PARITY_KEYS, mergeServerOwned } from '../src/shared/state-hash.js';
-import { rollClearCards, repairCost, repairFullCost, durMul, DUR_WEAR, CARD_COUNT, normalizeClearCard } from '../src/game/clear-loop.js';
+import { rollClearCards, repairCost, repairFullCost, durMul, DUR_WEAR, CARD_COUNT, normalizeClearCard, ITEM_LEVEL_CAP } from '../src/game/clear-loop.js';
 import { normalizeSave } from '../src/game/save.js';
 
 const T0 = 1_700_000_000_000;
@@ -123,5 +123,34 @@ describe('무기 내구도·수리', () => {
     const s = normalizeSave(raw, eco.fresh());
     expect(s.inventory.find((x: any) => x.uid === weaponOf(eco).uid).dur).toBe(42);
     expect(s.inventory.find((x: any) => x.uid === 9999).dur).toBeUndefined();
+  });
+});
+
+describe('카드 보상 주입 방지(보안 리뷰 P2)', () => {
+  const three = (c: any) => ({ id: 'x', heroId: 'knight', picked: null, cards: [c, { kind: 'gold', tier: 'common', gold: 100 }, { kind: 'fragments', tier: 'rare', n: 10 }] });
+  test('종류별 허용 필드·범위 밖 카드는 버린다', () => {
+    expect(normalizeClearCard(three({ kind: 'scroll', tier: 'epic', key: 'gems', n: 100000000 }))).toBeNull();
+    expect(normalizeClearCard(three({ kind: 'scroll', tier: 'epic', key: 'bless', n: 5 }))).toBeNull();
+    expect(normalizeClearCard(three({ kind: 'gold', tier: 'rare', gold: 1e12 }))).toBeNull();
+    expect(normalizeClearCard(three({ kind: 'stones', tier: 'rare', key: 'stones3', n: 2 }))).toBeNull();
+    expect(normalizeClearCard(three({ kind: 'gear', tier: 'legend', id: 'nope', slot: 'weapon' }))).toBeNull();
+    const ok: any = normalizeClearCard(three({ kind: 'scroll', tier: 'epic', key: 'bless', n: 1, gems: 999 }));
+    expect(ok.cards[0]).toEqual({ kind: 'scroll', tier: 'epic', key: 'bless', n: 1 });
+  });
+  test('정산이 만든 카드는 모두 통과한다', () => {
+    for (let i = 0; i < 300; i++) {
+      const cards = rollClearCards({ seed: `n${i}`, gold: 400 + i * 50, ch: 1 + (i % 7), first: i % 3 === 0, il: i % 40, weaponWorn: i % 2 === 0 });
+      expect(normalizeClearCard({ id: 'a', heroId: 'knight', cards, picked: null })?.cards).toEqual(cards);
+    }
+  });
+  test('외부 저장 가져오기는 카드를 버리고, 장비 레벨 상한이 item-tier 와 같다', async () => {
+    const { sanitizeLegacySave } = await import('../src/shared/legacy-sanitize.js');
+    const { ITEM_LEVEL_MAX } = await import('../src/data/item-tier.js');
+    expect(ITEM_LEVEL_CAP).toBe(ITEM_LEVEL_MAX);
+    const eco = fresh(); eco.completeStage(stageDef(1, 1), 3);
+    const raw = JSON.parse(JSON.stringify(eco.s));
+    raw.clearCard = three({ kind: 'gold', tier: 'rare', gold: 500 });
+    const out: any = sanitizeLegacySave(raw, { now: T0, createdAt: T0 - 1000 });
+    expect(out.ok).toBe(true); expect(out.state.clearCard).toBeUndefined();
   });
 });
