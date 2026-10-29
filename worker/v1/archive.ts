@@ -48,10 +48,15 @@ export async function restoreIdle(db: D1Database, accountId: string, now: number
     .bind(accountId).first<{ archive_id: string; doc: string }>();
   if (!arc) return false;
   const rev = Number(arc.archive_id.split(':').pop()) || 1;
+  // 복원 INSERT는 파기(retention.ts)와 같은 조건으로 가드한다: 계정이 아직 active이고, 그 보관본 행이 남아 있고, idle-archived 표시가 있을 때만.
+  // 보관본을 읽은 직후 파기 배치가 끼어들면 세 조건이 깨져 INSERT는 0행이 되고 파기된 진행이 되살아나지 않는다(파기도 돌아온 계정은 건드리지 않는다).
   // 표시는 보관본이 실제로 문서 자리에 돌아왔을 때만 지운다. 다른 문서가 이미 있으면 보관본·표시를 그대로 두어 진행을 잃지 않는다.
   const out = await db.batch([
-    db.prepare("INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) VALUES (?, 'core', ?, ?, ?, ?)")
-      .bind(accountId, rev, arc.doc, new TextEncoder().encode(arc.doc).length, now),
+    db.prepare(`INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) SELECT ?, 'core', ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'active')
+      AND EXISTS (SELECT 1 FROM account_archive WHERE archive_id = ? AND account_id = ? AND reason = 'idle')
+      AND EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'idle-archived')`)
+      .bind(accountId, rev, arc.doc, new TextEncoder().encode(arc.doc).length, now, accountId, arc.archive_id, accountId, accountId),
     db.prepare("DELETE FROM account_flags WHERE account_id = ? AND flag = 'idle-archived' AND EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ? AND doc = ?)")
       .bind(accountId, accountId, rev, arc.doc),
     // 복원이 끝났으면 쓴 보관본은 지운다. 남기면 다시 보관될 때 INSERT OR IGNORE가 옛 purge_at을 유지해 파기 기한이 앞당겨진다(retention.ts).
