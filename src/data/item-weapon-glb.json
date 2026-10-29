@@ -25,6 +25,18 @@
       }
     },
     {
+      "id": "w_iron",
+      "form": "sword",
+      "file": "/models/item-weapons/w_iron.glb",
+      "sha256": "0b5351e1c2c8ea5df5abd11c7cd604b7dab12231c9ac389370e3f2f103cd3f16",
+      "bytes": 467524,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "30576d06-3f9b-48a3-840c-4cf5e2ef33a1",
+        "concept": "plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
       "id": "w_king",
       "form": "greatsword",
       "file": "/models/item-weapons/w_king.glb",
