@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, SKELETAL, regionSpeciesVerb, regionTheme } from '../src/game/region-traits.js';
+import { REGION_SPECIES_VERBS, REGION_TRAITS, RegionTraits, SKELETAL, isSkeletalSpecies, regionSpeciesVerb, regionTheme } from '../src/game/region-traits.js';
 
 const noop: any = new Proxy(() => {}, { get: () => noop, apply: () => undefined });
 const fxProxy: any = new Proxy({}, { get: () => () => {} });
@@ -281,4 +281,28 @@ test('종 동사: 4장 전용 몸(부유 촉수 → 따개비 수부)도 촉수 
   const summoned = makeEnemy(tide.game, 0, 0, { runtimeSpeciesId: id, summoned: true });
   tide.rt.attach(summoned, 'line');
   expect(summoned.affixes).toBeUndefined();
+});
+
+test('종 동사: 5장 전용 몸(그림자 닌자 → 새벽 가면 닌자)도 그림자 걸음을 이어받는다', async () => {
+  const { CHAPTER_SPECIES } = await import('../src/data/stages.js');
+  const id = CHAPTER_SPECIES[5].ninja;
+  expect(id).toBe('ch5_dawnninja');
+  expect(regionSpeciesVerb('crown', id)?.key).toBe('blink');
+  // 같은 닌자 몸이지만 원본이 임프·심연 폭탄인 갈래는 동사가 없다.
+  expect(regionSpeciesVerb('crown', CHAPTER_SPECIES[5].imp)).toBeNull();
+  expect(regionSpeciesVerb('crown', CHAPTER_SPECIES[5].bomb_abyss)).toBeNull();
+  const crown = setup('crown');
+  const nj = makeEnemy(crown.game, 0, 0, { runtimeSpeciesId: id });
+  crown.rt.attach(nj, 'flank');
+  expect(nj.affixes.has.blink).toBe(true);
+  expect(nj.regionVerb).toBe('그림자 걸음');
+});
+
+test('다른 장 Tripo 몸 갈래는 원본 종이 해골일 때만 망각의 잔향으로 되살아난다', async () => {
+  const { CHAPTER_SPECIES, ENEMIES, speciesSourceId } = await import('../src/data/stages.js');
+  for (const ch of [3, 5, 6, 7]) for (const id of Object.values((CHAPTER_SPECIES as any)[ch] || {}) as string[]) {
+    const src = speciesSourceId(id);
+    expect(isSkeletalSpecies((ENEMIES as any)[id].model, id), id).toBe(SKELETAL.test((ENEMIES as any)[src].model));
+  }
+  expect(isSkeletalSpecies('Ch6_Witness', 'homecoming_midboss')).toBe(false);
 });

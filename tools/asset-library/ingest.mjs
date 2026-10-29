@@ -69,7 +69,7 @@ await rm(staged, { force: true });
 try {
   if (prenormalized) await writeFile(staged, rawBytes);
   else await run(blender, ['--background', '--python-exit-code', '1', '--python', resolve(root, 'tools/asset-library/blender_normalize.py'), '--', '--source', input, '--output', staged,
-    '--height', String(heightM), '--kind', kind, '--map', map, ...(boss ? ['--boss'] : []), ...(args.yaw ? ['--yaw', String(args.yaw)] : [])]);
+    '--height', String(heightM), '--kind', kind, '--map', map, ...(boss ? ['--boss'] : []), ...(args.yaw ? ['--yaw', String(args.yaw)] : []), ...(args.texLimit ? ['--texLimit', String(Number(args.texLimit))] : [])]);
   const bytes = await readFile(staged);
   const gltfJson = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString('utf8'));
   const triangles = Math.floor(countTriangles(gltfJson));

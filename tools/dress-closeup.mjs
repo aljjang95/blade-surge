@@ -62,11 +62,20 @@ const LINEUPS = {
     ['imp', 'bomb_abyss', 'abyss_seer', 'tribal_shaman'],
     ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain', 'skel_priest'],
     ['crown_midboss', 'crown_finalboss', 'ghost'],
+    // 5장 전용 Tripo 몸(새벽 가면 닌자·왕관 병사·왕관 고리 주술사)·아스텔(tll_ch5_astel).
+    ['ch5_dawnninja', 'ch5_dawnninja_squire', 'ch5_dawnninja_flare', 'crown_midboss'],
+    ['ch5_crownsoldier', 'ch5_crownsoldier_chain', 'ch5_swordwall'],
+    ['ch5_seer', 'ch5_seer_ember', 'ch5_seer_herald'],
   ],
   6: [
     ['skel_minion', 'orc', 'ghost', 'ninja'],
     ['squidle', 'golem_guard', 'skel_mage', 'imp'],
     ['homecoming_midboss', 'homecoming_finalboss'],
+    // 6장 전용 Tripo 몸(귀환 열차 승객 잔향)·증인(tll_ch6_witness), 고향 장 몸의 잔향.
+    ['ch6_passenger', 'ch6_passenger_drift', 'ch6_passenger_hurry', 'ch6_passenger_child'],
+    ['ch6_passenger_porter', 'ch6_passenger_trunk', 'ch6_passenger_gate', 'homecoming_midboss'],
+    ['ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger_lost', 'ch1_mourner_wail'],
+    ['ch4_lurer_bomb', 'ch2_ashimp', 'ch3_moldkeeper', 'ch1_tombguard'],
   ],
   7: [
     ['skel_minion', 'skel_shield', 'skel_rogue', 'bone_orc'],

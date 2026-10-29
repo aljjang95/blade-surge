@@ -88,6 +88,8 @@ def main():
   parser.add_argument('--height', type=float, required=True)
   parser.add_argument('--kind', choices=('character', 'prop'), default='character')
   parser.add_argument('--boss', action='store_true')
+  # 텍스처 한 변 상한(기본: 보스 2048, 그 밖 1024). Tripo 가 2K 로 내보낸 보스도 이전 장과 같은 1K 예산으로 줄일 때 --texLimit 1024.
+  parser.add_argument('--texLimit', type=int, default=0)
   parser.add_argument('--yaw', type=float, default=0)
   parser.add_argument('--map', default='{}')
   args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
@@ -115,7 +117,7 @@ def main():
   materials = {material for obj in meshes for material in obj.data.materials if material}
   if len(materials) > 2:
     raise RuntimeError('material budget exceeded; atlas authoring required')
-  texture_limit = 2048 if args.boss else 1024
+  texture_limit = args.texLimit or (2048 if args.boss else 1024)
   for image in bpy.data.images:
     width, height = image.size
     if max(width, height) > texture_limit:

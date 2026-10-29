@@ -115,6 +115,33 @@ export const MONSTER_ROSTER = Object.freeze({
   // 등대지기 마렌: 오른손에 긴 장대 등롱.
   Ch4_Maren: { asset: 'tll_ch4_maren', fallback: 'mushroom_shaman', scale: 0.8, fallbackScale: 0.99,
     weapon: { asset: 'tll_ch4_lantern', hand: 'right', grip: [0, 0.45, 0], at: [0, 0.08, 0.02], rot: [160, 0, 0] } },
+  // ---- 5장 전용 Tripo 몸(2026-10-29, docs/asset-library/ch5-tripo.md) ----
+  // 새벽 가면 닌자 1.6m(금빛 해 가면·보라 목도리)·왕관 병사 1.7m(투구 위 작은 금관)·왕관 고리 주술사 1.6m(머리 위 떠 있는 금빛 고리,
+  // 두 다리로 서서 hover 없음)·첫 기사 아스텔 2.4m(crown_midboss). scale 은 heightM × scale × def.scale 이 영웅(1.8m)의 0.9~1.0배가 되게 맞췄다.
+  Ch5_DawnNinja: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 1.05, fallbackScale: 0.76,
+    weapon: { asset: 'tll_ch5_dawnblade', hand: 'right', grip: [0, 0.12, 0], at: [0, 0.07, 0.02], rot: [90, 0, 0] } },
+  // 맨손 닌자(견습·봉화 닌자 자리): 단검 없이.
+  Ch5_DawnNinjaBare: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 1.05, fallbackScale: 0.76 },
+  Ch5_CrownSoldier: { asset: 'tll_ch5_crownsoldier', fallback: 'shadow_soldier', scale: 1.0, fallbackScale: 0.79 },
+  // 성벽 검 방패병: 왼손에 검을 엮은 큰 방패(해골 방패병 shield 행동 자리).
+  Ch5_SwordWall: { asset: 'tll_ch5_crownsoldier', fallback: 'bone_knight', scale: 0.97, fallbackScale: 1.03,
+    offhand: { asset: 'tll_ch5_swordwall', hand: 'left', grip: [0, 0.45, 0.05], at: [0, 0.05, 0.08], rot: [0, 0, 0] } },
+  Ch5_Seer: { asset: 'tll_ch5_seer', fallback: 'skeleton_mage', scale: 1.0, fallbackScale: 1.05 },
+  // 첫 기사 아스텔: 오른손에 넓은 맹세 대검.
+  Ch5_Astel: { asset: 'tll_ch5_astel', fallback: 'bone_knight', scale: 0.73, fallbackScale: 1.03,
+    weapon: { asset: 'tll_ch5_oathsword', hand: 'right', grip: [0, 0.3, 0], at: [0, 0.08, 0.02], rot: [0, 0, 90] } },
+  // ---- 6장 전용 Tripo 몸(2026-10-29, docs/asset-library/ch6-tripo.md) ----
+  // 귀환 열차 승객 잔향 1.6m(얼굴 없는 잿빛 코트·빈 이름표 다발)·빈 의자의 증인 2.2m(homecoming_midboss, 등에 빈 의자).
+  // 원령 자리(def.scale 1.25)는 항목을 나눴다.
+  Ch6_Passenger: { asset: 'tll_ch6_passenger', fallback: 'bone_knight', scale: 1.1, fallbackScale: 0.86,
+    offhand: { asset: 'tll_ch6_suitcase', hand: 'left', grip: [0, 0.45, 0], at: [0, 0.05, 0.02], rot: [0, 0, 180] } },
+  Ch6_PassengerBare: { asset: 'tll_ch6_passenger', fallback: 'bone_knight', scale: 1.1, fallbackScale: 0.86 },
+  Ch6_PassengerSmall: { asset: 'tll_ch6_passenger', fallback: 'shadow_soldier', scale: 0.97, fallbackScale: 0.76 },
+  Ch6_PassengerDrift: { asset: 'tll_ch6_passenger', fallback: 'void_wisp', scale: 0.85, fallbackScale: 1.17 },
+  // 가방 방패 승객: 여행 가방을 왼손에 방패처럼 앞으로 든다(가시 방벽·골렘 수호자 shield 행동 자리).
+  Ch6_PassengerTrunk: { asset: 'tll_ch6_passenger', fallback: 'bone_knight', scale: 0.97, fallbackScale: 1.03,
+    offhand: { asset: 'tll_ch6_suitcase', hand: 'left', grip: [0, 0.08, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
+  Ch6_Witness: { asset: 'tll_ch6_witness', fallback: 'goblin_chief', scale: 0.8, fallbackScale: 1.03 },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
   Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
