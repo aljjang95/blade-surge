@@ -45,10 +45,13 @@ export const SKILL_VFX = Object.freeze({
   // 늑대인간 족장 고유 스킬: 핏빛 진홍·분홍(포효), 월광 은백 + 진홍(사냥). 모양은 sig-barbarian.js 서명이 맡는다.
   blood_howl: R(VIOLET, 'lava-crack', 'self', 'ground', 0xc81830, 6, { noRune: true, sig: true }),
   moonlit_hunt: R(VIOLET, 'meteor', 'self', 'flash', 0xd8e4ff, 8, { noRune: true, sig: true }),
+  // 각성 4종(강화 레인 2026-10-30): 영웅 둘레 원형 원화(용암 균열 8~9m·금빛 룬·종말의 12m 운석 섬광)를 끄고 모양을 서명이 맡는다.
+  // 돌진은 길 앞 균열 원화(위치 신호)를 남긴다. 종말은 시전 순간이 아니라 .3초 뒤 분화에 터지므로 착탄 코어도 끈다(noBurst).
+  // 위치 신호는 skills.js 의 castCircle·groundTex·shockTex(파티 손님도 보는 바깥 fx)가 그대로 맡는다.
   bull_rush: R(GOLD, 'lava-crack', 'front', 'ground', 0xff6a30, 6, { dist: 5, noRune: true, sig: true }),
-  magma_zone: R(GOLD, 'lava-crack', 'self', 'ground', 0xff5a20, 8),
-  bloodquake: R(VIOLET, 'lava-crack', 'self', 'ground', 0xd02020, 9, { noRune: true, sig: true }),
-  cataclysm: R(GOLD, 'meteor', 'aim', 'flash', 0xff5a3c, 12, { dist: 2 }),
+  magma_zone: R(GOLD, 'lava-crack', 'self', 'none', 0xff5a20, 8, { noRune: true, sig: true }),
+  bloodquake: R(VIOLET, 'lava-crack', 'self', 'none', 0xd02020, 9, { noRune: true, sig: true }),
+  cataclysm: R(GOLD, 'meteor', 'aim', 'none', 0xff5a3c, 12, { dist: 2, noRune: true, sig: true, noBurst: true }),
   // 대마도사
   // 화염구·프리즘: 시전 순간 전방 3~4m 허공에 운석 원화·임팩트 코어(옅은 하늘색·주황 덩어리)가 먼저 터져 '덩어리'로 읽혔다(h1c).
   // 착탄 중심은 투사체 폭발(_fireImpact)·서명이 맡고, 레시피는 원화·섬광·코어를 생략한다(noBurst).
@@ -58,8 +61,10 @@ export const SKILL_VFX = Object.freeze({
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'none', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true, noBurst: true }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a7cff, 9, { noRune: true, sig: true }),
-  star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5], noRune: true, sig: true }),
-  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
+  // 별감옥·절대영도(각성 강화 2026-10-30): 착탄 중심 흰 코어·섬광(noBurst)과 보라 룬을 끄고, 절대영도 얼음 원화는 7m 로 줄여 눈결정 팔(8m)이 원화 밖 바닥에서 읽히게 한다
+  // (12m 원화 + 중심 코어가 적 무리를 흰 원판으로 덮었다). 위치 예고는 skills.js castCircle 이 그대로 맡는다(파티 손님 화면).
+  star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5], noRune: true, sig: true, noBurst: true }),
+  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 7, { dist: 6, seek: [17, 6], noRune: true, sig: true, noBurst: true }),
   // 암살자: 질주·야행·궁극기만 그림자 참격 원화를 쓰고, 나머지는 모양을 나눈다(독무 = 원화 없이 조준 룬, 표식 = 보라 룬 지면,
   // 공허 보법 = 보라 번개 균열, 일식 = 보라 룬 큰 지면). 독무·야행은 공용 발밑 룬을 생략(noRune)해 큰 바닥 원이 겹쳐 보이지 않게 한다.
   // 칼날·고리·표식 모양은 sig-rogue.js 서명이 맡는다. 질주는 전방 3m 참격 원화(시전 순간 영웅을 덮는 보라 덩어리)를 끄고 잔상 기둥·X 자로,
@@ -68,10 +73,11 @@ export const SKILL_VFX = Object.freeze({
   poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'none', 0x70e060, 6, { dist: 5, seek: [13, 3.5], noRune: true, noBurst: true }),
   flurry: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb070ff, 4, { dist: 2, ghost: true }),
   thousand: R(VIOLET, 'shadow-slash', 'self', 'ground', 0xa060ff, 11, { ghost: true }),
-  shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a4aff, 7, { gain: .8 }),
+  // 각성: 표식은 바닥 룬·원화 없이 서명(거미줄 실·분신 낙하)만, 일식은 룬·원화를 옅게(gain .55) 깔아 서명의 사슬·코로나가 읽히게 한다.
+  shadow_mark: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a4aff, 7, { noRune: true, sig: true }),
   void_step: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x7a3cff, 6, { ghost: true }),
-  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true }),
-  eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, gain: .8 }),
+  night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x9a4cff, 8, { dist: 3, seek: [13, 4], ghost: true, noRune: true, noBurst: true, sig: true }),
+  eclipse_edge: R(VIOLET, 'rune-circle-violet', 'aim', 'ground', 0x7a3cff, 10, { dist: 5, seek: [16, 5], ghost: true, sig: true, gain: .55 }),
   // 레인저: 큰 바람 텍스처 섬광(전방 4m 흰 덩어리) 대신 발밑 비취 룬만 두고, 모양은 skill-signatures.js 의 광선·표식이 맡는다.
   // 궁수: 공용 금빛 룬(영웅 둘레 원형 문양)을 끄고 실루엣은 sig-ranger.js 서명(터널·휘는 갈래·뒤로 튀는 V·일곱 빛줄기)이 맡는다.
   // 기본 4종 레시피 색(발목 섬광·먼지)은 청록 바닥과 갈리는 금연두.
