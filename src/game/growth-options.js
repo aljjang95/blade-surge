@@ -3,16 +3,18 @@ import { canLearnSkill } from '../data/skill-tree.js';
 import * as Items from '../data/items.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX, ENH_SAFE_MAX, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
-import { enhanceSureCost } from '../data/enhance.js';
+import { enhanceSureCost, ENH_SURE_MAX } from '../data/enhance.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 import { planBestEquip, junkItems, salvagePreview } from './gear-advice.js';
 
 // 강화 규칙은 다른 작업이 바꿀 수 있어 값을 박지 않고 items.js 의 함수를 호출 시점에 읽는다(없으면 0 = 위험 없음).
 const rule = (name, level) => { const fn = Items[name]; const value = typeof fn === 'function' ? Number(fn(level)) : 0; return Number.isFinite(value) ? value : 0; };
+export const SCROLL_STOCK_GOAL = 3;   // 쓸모 있는 단계에서 보호·축복 주문서가 이 수보다 적으면 보석 구매를 안내
 export const JUNK_MIN = 5;   // 가방 정리 안내를 띄우는 최소 개수
 
-/** Read-only next steps, each affordable on its own. Never a bulk purchase quote. */
-export function growthOptions(save, eco = null) {
+/** Read-only next steps, each affordable on its own. Never a bulk purchase quote.
+ * @param {any} save @param {any} [eco] */
+export function growthOptions(save, eco = undefined) {
   const heroId = save?.selected, hero = save?.heroes?.[heroId], def = HEROES[heroId];
   if (!hero || !def) return [];
   const options = [];
@@ -86,7 +88,29 @@ function gearAndSinkOptions(eco, save, heroId) {
   if (transcend?.ok && transcend.next) out.push({ kind: 'transcend', heroId, from: transcend.grade, to: transcend.next });
   for (const banner of ['beginner', 'hero', 'gear']) {
     const quote = eco.pullQuote?.(10, banner) ?? { ok: false };
-    if (quote.ok) { out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets }); break; }
+    if (quote.ok) {
+      const g = save.gacha || {}, used = banner === 'gear' ? g.gearPity : banner === 'hero' ? g.pity : null;
+      // 천장까지 남은 횟수(읽기 전용: 저장 상태를 만들지 않는다). 초보자 배너는 천장 개념이 없다.
+      const pityLeft = used === null ? null : Math.max(0, quote.banner.pity - (Number.isFinite(used) ? Math.max(0, Math.floor(used)) : 0));
+      let pulls = quote.currency === 'gems' && quote.cost > 0 ? Math.floor((save.gems || 0) / quote.cost) : 0;
+      // 횟수 한도가 있는 배너(초보자 20회)는 남은 10연 수를 넘겨 안내하지 않는다.
+      if (Number.isFinite(quote.banner?.limit)) pulls = Math.min(pulls, Math.floor(Math.max(0, quote.banner.limit - (Number(g[banner]) || 0)) / 10));
+      out.push({ kind: 'summon', heroId, banner, n: 10, currency: quote.currency, cost: quote.cost, tickets: quote.tickets, pityLeft, pulls });
+      break;
+    }
+  }
+  // 주문서 안내(기존 상점 상품 가격 그대로, 구매는 상점 화면에서 사람이 한다). 실제로 쓸모 있는 단계에서만:
+  //  · 보호 주문서 = 파괴 방지 → 착용 장비 중 실패 시 파괴될 수 있는 단계(destroyChance > 0, 현재 +12↑)가 있을 때
+  //  · 축복 주문서 = 성공률 +20% → 확정 강화가 끝난 확률 단계(+ENH_SURE_MAX 초과, 파괴 전)가 있을 때
+  if (eco.sku) {
+    const worn = Object.values(save.heroes?.[heroId]?.equip || {}).map((uid) => save.inventory?.find((x) => x.uid === uid)).filter((it) => it && Number.isInteger(it.enh) && it.enh < ENH_MAX);
+    const scroll = (item, key, need) => {
+      if (!need || (save[key] || 0) >= SCROLL_STOCK_GOAL) return;
+      const sku = eco.sku(item);
+      if (sku?.kind === 'gem' && Number.isFinite(sku.price) && (save.gems || 0) >= sku.price) out.push({ kind: 'scroll', heroId, item: key, have: save[key] || 0, gems: sku.price });
+    };
+    scroll('protect1', 'protect', worn.some((it) => rule('destroyChance', it.enh) > 0));
+    scroll('bless1', 'bless', worn.some((it) => it.enh > ENH_SURE_MAX && rule('destroyChance', it.enh) === 0 && enhanceChance(it.enh) < 1));
   }
   return out;
 }

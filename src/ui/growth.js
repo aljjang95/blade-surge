@@ -101,7 +101,7 @@ export function renderGrowthPreparation(container, app, result) {
     const label = gear ? (option.mode === 'equipBest' ? '더 좋은 장비 장착' : '가방 정리')
       : option.kind === 'equipment' ? equip ? '첫 장비 비교' : risk ? '장비 강화(확률)' : '장비 강화'
       : option.kind === 'skill' ? (option.from === 0 ? '스킬 습득' : '스킬 강화') : option.kind === 'training' ? '훈련으로 레벨업'
-      : option.kind === 'transcend' ? '영웅 초월' : option.kind === 'summon' ? '소환 10연' : '숙련 배우기';
+      : option.kind === 'transcend' ? '영웅 초월' : option.kind === 'summon' ? '소환 10연' : option.kind === 'scroll' ? (option.item === 'protect' ? '보호 주문서 구매' : '축복 주문서 구매') : '숙련 배우기';
     let detail;
     if (gear) detail = option.mode === 'equipBest' ? '교체 ' + option.count + '곳 · 전투력 +' + number(option.delta) : '착용 중보다 약한 노말·스페셜 ' + number(option.count) + '개';
     else if (equip) detail = option.name + ' · 비어 있는 ' + SLOT_NAME[option.slot] + ' 슬롯';
@@ -112,14 +112,16 @@ export function renderGrowthPreparation(container, app, result) {
     else if (option.kind === 'skill') detail = option.name + ' Lv.' + option.from + ' → Lv.' + option.to;
     else if (option.kind === 'training') detail = '영웅 Lv.' + option.from + ' → Lv.' + option.to;
     else if (option.kind === 'transcend') detail = option.from + ' → ' + option.to + ' 등급';
-    else if (option.kind === 'summon') detail = '남은 재화를 영웅·장비 소환에 쓸 수 있습니다';
+    else if (option.kind === 'summon') detail = (option.pulls > 1 ? '보석으로 ' + option.pulls + '번 더 가능' : '남은 재화를 영웅·장비 소환에 쓸 수 있습니다') + (option.pityLeft !== null && option.pityLeft !== undefined ? ' · 천장까지 ' + option.pityLeft + '회' : '');
+    else if (option.kind === 'scroll') detail = (option.item === 'protect' ? '강화 실패 시 파괴 방지' : '강화 성공률 +20%') + ' · 보유 ' + option.have + '장';
     else detail = option.name + ' · ' + option.description;
     const cost = gear ? (option.mode === 'equipBest' ? '무료 · 한 번 눌러 바로 장착' : '분해 시 골드 +' + number(option.gold) + ' · 강화석 +' + number(option.stones) + ' · 확인 후 진행')
       : equip ? '비교 후 무료 장착' : option.kind === 'mastery' ? '명성 ' + number(option.renown) : option.kind === 'skill' ? '스킬 포인트 ' + number(option.sp)
       : option.kind === 'training' ? '골드 ' + number(option.gold) : option.kind === 'transcend' ? '조각·초월석·골드 사용'
+      : option.kind === 'scroll' ? '보석 ' + number(option.gems) + ' · 상점에서 구매'
       : option.kind === 'summon' ? (option.currency === 'tickets' ? '소환권 ' + option.tickets + '장' : '보석 ' + number(option.cost))
       : '골드 ' + number(option.gold) + (option.stones ? ' · 강화석 ' + number(option.stones) : '');
-    const icon = element('img', ''); icon.src = uiArt(option.kind === 'equipment' || gear ? 'loadout' : option.kind === 'skill' || option.kind === 'training' || option.kind === 'transcend' ? 'hero-xp' : option.kind === 'summon' ? 'gems' : 'renown'); icon.alt = '';
+    const icon = element('img', ''); icon.src = uiArt(option.kind === 'equipment' || gear ? 'loadout' : option.kind === 'skill' || option.kind === 'training' || option.kind === 'transcend' ? 'hero-xp' : option.kind === 'summon' || option.kind === 'scroll' ? 'gems' : 'renown'); icon.alt = '';
     const copy = element('span', '', 'growth-action-copy');
     copy.append(element('strong', label + ' ›'), element('span', detail), element('small', cost));
     button.append(icon, copy);
@@ -151,6 +153,8 @@ export function renderGrowthPreparation(container, app, result) {
         if (current.kind === 'transcend') app.meta.openTranscend?.(current.heroId);   // 초월은 성장 칸 아래 별도 창
       } else if (current.kind === 'summon') {
         app.meta.openTab('gacha', current.banner || 'hero');   // 초심자 배너 견적(1,350)을 낸 제안은 초심자 배너로
+      } else if (current.kind === 'scroll') {
+        app.meta.openTab('shop', 'enh');
       } else if (current.kind === 'mastery') {
         app.meta.openTab('home'); app.battle.chronicle.open('mastery');
         app.battle.chronicle.dialog.querySelector('button')?.focus();
