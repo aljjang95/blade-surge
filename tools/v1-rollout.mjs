@@ -15,7 +15,7 @@ export const PC_DIR = 'C:\\Work\\tasks\\blade-art-deploy';
 export const PERCENT_STEPS = [0, 5, 25, 100];
 /** 0001~0005 적용 뒤 D1에 있어야 하는 표(sqlite_master 기준). 마이그레이션 파일과의 일치는 test/v1-rollout.test.ts가 고정한다. */
 export const EXPECTED_TABLES = Object.freeze([
-  'account_archive', 'account_docs', 'account_flags', 'account_keys', 'account_links', 'accounts', 'audit_flags',
+  'abuse_tombstones', 'account_archive', 'account_docs', 'account_flags', 'account_keys', 'account_links', 'accounts', 'audit_flags',
   'funnel_active', 'funnel_milestones', 'iap_debt', 'iap_entitlements', 'iap_grants', 'iap_meta', 'iap_obf', 'iap_purchases',
   'iap_refund_guard', 'iap_rtdn', 'iap_web_payments', 'legacy_saves', 'mail', 'oauth_states', 'parity_log', 'run_tickets', 'sanctions',
   'v1_rate', 'v1_schema', 'wallet_ledger',
