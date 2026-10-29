@@ -6,6 +6,9 @@ import { purgeExpiredTombstones, syncBannedTombstones } from './tombstone';
 /** 탈퇴 파기에서 계정 id로 통째로 지우는 진행·개인 데이터 표. 감사 기록(audit_flags)·제재(sanctions)·결제 표는 남긴다. */
 const PROGRESS_TABLES = ['account_docs', 'legacy_saves', 'mail', 'run_tickets', 'parity_log', 'account_flags', 'oauth_states', 'account_keys', 'account_links'];
 
+/** idle 파기에서 지우는 진행·임포트 멱등 표(결제 표 제외). */
+const IDLE_PROGRESS_TABLES = ['legacy_saves', 'mail', 'run_tickets', 'parity_log', 'oauth_states'];
+
 export interface PurgeResult { withdrawn: number; archives: number; idleAccounts: number; tombstones: number; banned: number }
 
 /**
@@ -40,24 +43,30 @@ export async function purgeWithdrawnAccounts(db: D1Database, now: number, limit 
  * 연동·결제 이력이 없고 계정 행만 남는다. 같은 기기가 돌아오면 ensureAccount가 새 계정으로 되살린다(auth.ts).
  */
 export async function purgeExpiredArchives(db: D1Database, now: number, limit = 100): Promise<{ archives: number; idleAccounts: number }> {
-  const idle = await db.prepare(`SELECT DISTINCT account_id FROM account_archive WHERE reason = 'idle' AND purge_at <= ? ORDER BY account_id LIMIT ?`)
-    .bind(now, limit).all<{ account_id: string }>();
+  // 후보 조회에도 파기 가드와 같은 제외 조건을 넣는다(LIMIT이 보호 대상에 먼저 걸려 뒤의 정상 대상이 영구 미처리되는 것을 막는다).
+  const idleDue = (col: string, expire: string) => `EXISTS (SELECT 1 FROM account_archive r WHERE r.account_id = ${col} AND r.reason = 'idle' AND r.purge_at <= ${expire}
+      AND EXISTS (SELECT 1 FROM account_flags WHERE account_id = ${col} AND flag = 'idle-archived')
+      AND NOT EXISTS (SELECT 1 FROM account_flags WHERE account_id = ${col} AND flag = 'test')
+      AND NOT EXISTS (SELECT 1 FROM account_archive WHERE account_id = ${col} AND reason = 'idle' AND purge_at > ${expire})
+      AND NOT EXISTS (SELECT 1 FROM account_links WHERE account_id = ${col})
+      AND NOT EXISTS (SELECT 1 FROM iap_purchases WHERE account_id = ${col}) AND NOT EXISTS (SELECT 1 FROM iap_web_payments WHERE account_id = ${col})
+      AND EXISTS (SELECT 1 FROM accounts x WHERE x.account_id = ${col} AND x.status = 'active' AND x.gems_paid = 0 AND x.last_seen <= r.archived_at))`;
+  const nowSql = String(Math.trunc(now)); // 숫자 리터럴(바인딩 없는 공통 가드)
+  const idle = await db.prepare(`SELECT account_id FROM accounts a WHERE ${idleDue('a.account_id', nowSql)} ORDER BY account_id LIMIT ?`)
+    .bind(limit).all<{ account_id: string }>();
   let idleAccounts = 0;
   for (const { account_id: id } of idle.results ?? []) {
-    // 지금도 idle-archived 표시가 있고, 테스트 표시·연동·결제 이력이 없고, 더 늦게 만료되는 idle 보관본이 없는 활성 무결제 계정만.
-    const idleGuard = `EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'idle-archived')
-      AND NOT EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'test')
-      AND NOT EXISTS (SELECT 1 FROM account_archive WHERE account_id = ? AND reason = 'idle' AND purge_at > ?)
-      AND NOT EXISTS (SELECT 1 FROM account_links WHERE account_id = ?)
-      AND NOT EXISTS (SELECT 1 FROM iap_purchases WHERE account_id = ?) AND NOT EXISTS (SELECT 1 FROM iap_web_payments WHERE account_id = ?)
-      AND EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'active' AND gems_paid = 0)`;
-    const deleted = `EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'deleted')`;
+    // 보관 이후 돌아온 계정(last_seen이 보관 시각보다 늦음)은 가드가 걸러낸다. 같은 조건이 복원(archive.ts restoreIdle)과 상호 배제된다.
+    const deleted = `EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'deleted') AND EXISTS (SELECT 1 FROM account_archive WHERE account_id = ? AND reason = 'idle')`;
+    // 결제 보존 대상이 아닌 진행·임포트 멱등 기록(legacy_saves·우편·티켓·parity·원장의 임포트/명령/정산 행)은 함께 지운다.
+    // 같은 id로 되살아난 계정이 옛 임포트 상태(409 already-imported)나 옛 명령 응답을 물려받지 않게 한다. 결제 원장(kind 'iap%')은 남긴다.
+    const cleanups = [...IDLE_PROGRESS_TABLES.map(t => `DELETE FROM ${t} WHERE account_id = ?`),
+      `DELETE FROM wallet_ledger WHERE account_id = ? AND kind NOT LIKE 'iap%'`, 'DELETE FROM account_keys WHERE account_id = ?', 'DELETE FROM account_flags WHERE account_id = ?'];
     const out = await db.batch([
       db.prepare(`UPDATE accounts SET status = 'deleted', guild_id = NULL, level = 1, power = 0, stage_idx = 1, gold = 0, gems_free = 0
-        WHERE account_id = ? AND ${idleGuard}`).bind(id, id, id, id, now, id, id, id, id),
-      db.prepare(`DELETE FROM account_keys WHERE account_id = ? AND ${deleted}`).bind(id, id),
-      db.prepare(`DELETE FROM account_flags WHERE account_id = ? AND ${deleted}`).bind(id, id),
-      db.prepare(`DELETE FROM account_archive WHERE account_id = ? AND reason = 'idle' AND ${deleted}`).bind(id, id),
+        WHERE account_id = ? AND ${idleDue('accounts.account_id', nowSql)}`).bind(id),
+      ...cleanups.map(sql => db.prepare(`${sql} AND ${deleted}`).bind(id, id, id)),
+      db.prepare(`DELETE FROM account_archive WHERE account_id = ? AND reason = 'idle' AND EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status = 'deleted')`).bind(id, id),
     ]);
     if (out[0]?.meta?.changes) idleAccounts++;
   }
