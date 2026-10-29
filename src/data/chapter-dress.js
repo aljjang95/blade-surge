@@ -263,8 +263,8 @@ export const CHAPTER_DRESS = Object.freeze({
       ch4_lurer: { emissive: '#021a1c' },
       // 심연 폭탄 자리: 자폭 경고 — 몸에 붉은 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
       ch4_lurer_bomb: { emissive: '#5a1206' },
-      // 심연 주시자 자리(지원 소환): 몸에 빛 주머니.
-      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouches'] },
+      // 심연 주시자 자리(지원 소환): 몸에 큰 빛 주머니(일반 아귀와 실루엣으로 갈리게 키웠다).
+      ch4_lurer_seer: { emissive: '#021a1c', props: ['glowPouchesLarge'] },
       // 합류 경로의 해골 망령 자리: 청록 발광을 조금 세게.
       ch4_lurer_glim: { emissive: '#06302e' },
       tide_finalboss: { ...DEEP_DRAKE, emissive: '#04282a', props: ['tideCrown', 'glowPouches'] },
@@ -314,7 +314,26 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_bone_lord: { ...CROWN_SKIN, props: ['goldChains'] },
       elite_wraith: { ...CROWN_SKIN, props: ['crownRing'] },
       // 첫 기사 아스텔(중간 보스)·빈 왕관(최종 보스: 몸 위에 떠 있는 빈 금관).
-      crown_midboss: { ...CROWN_SKIN, props: ['hornCrown', 'swordWallShield', 'oathBanner'] },
+      // 아스텔은 Tripo 몸(tll_ch5_astel)의 큰 투구에 왕관이 붙어 있고 찢긴 왕실 깃발을 망토로 두르며 손에 맹세 대검을 들어(로스터 weapon)
+      // 뿔 왕관·성벽 검 방패·맹세 깃발 소품을 뺀다.
+      crown_midboss: { emissive: '#120a1c' },
+      // 5장 전용 Tripo 몸(stages.js CHAPTER_SPECIES): 몸이 이미 새벽 보라·금이라 색을 장 팔레트 그대로 두고 발광만 준다.
+      // 닌자의 해 가면, 병사의 금관 투구, 주술사의 떠 있는 금빛 고리와 겹치는 소품(dawnMask·soldierCirclet·crownRing)은 뺀다.
+      ch5_dawnninja: { emissive: '#120a1c' },
+      // 임프 자리: 단검 없는 견습 — 몸빛을 한 톤 바랜 보라로, 키는 작게(로스터 Ch5_DawnNinjaSquire), 등에 연습용 목검.
+      ch5_dawnninja_squire: { color: '#a89cc0', amount: 0.42, emissive: '#120a1c', props: ['squireBokken'] },
+      // 심연 폭탄 자리: 자폭 경고 — 붉은 금 발광(원본 분홍 색조는 stages.js BODY_TINTS 에서 뺐다).
+      ch5_dawnninja_flare: { emissive: '#5a2206' },
+      ch5_crownsoldier: { emissive: '#120a1c' },
+      // 뼈 오크 자리(분쇄): 어두운 강철 몸빛(금 사슬 소품은 병사 몸에서 머리 위로 떠 보여 뺐다).
+      ch5_crownsoldier_chain: { color: '#5e5470', amount: 0.45, emissive: '#120a1c' },
+      // 성벽 검 방패는 로스터 offhand(tll_ch5_swordwall)로 왼손에 든다.
+      ch5_swordwall: { emissive: '#120a1c' },
+      ch5_seer: { emissive: '#120a1c' },
+      // 화염 정령 자리: 새벽불 — 따뜻한 금빛 발광과 머리 위로 솟은 화로 장대.
+      ch5_seer_ember: { color: '#f0b49a', amount: 0.25, emissive: '#4a1e06', props: ['dawnBrazier'] },
+      // 부족 주술사 자리(지원 소환): 칙령을 낭독하는 주술사 — 등에 맹세 깃발.
+      ch5_seer_herald: { emissive: '#120a1c', props: ['oathBanner'] },
       crown_finalboss: { ...CROWN_HOLLOW, emissive: '#1a0a2a', props: ['emptyCrown', 'goldChains'] },
     },
     assets: {
@@ -334,14 +353,34 @@ export const CHAPTER_DRESS = Object.freeze({
       frost_golem: { ...CROWN_SKIN, props: ['goldChains'] },
     },
   },
-  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 따로 의상 표를 두지 않고, 그 경로의 고향 장 의상을
-  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스만 직접 정한다.
+  // 6장 함께 잇는 귀환로: 적은 다섯 명령의 잔향이라 그 경로의 고향 장 의상(고향 장 전용 몸 포함)을
+  // 잔향 청록 발광으로 덧입는다(chapterDressFor 의 echo 분기). 보스와 6장 전용 승객 갈래(ch6_*)만 직접 정한다.
   6: {
     name: '다섯 명령의 잔향',
     echo: true,
     species: {
       // 빈 의자의 증인: 상복 베일과 맹세 깃발. 고립의 잔향: 금 간 큰 종과 후광.
-      homecoming_midboss: { ...ECHO_SKIN, props: ['mourningVeil', 'oathBanner'] },
+      // 증인은 Tripo 몸(tll_ch6_witness)이 깊은 두건을 쓰고 등에 빈 의자를 져 상복 베일·맹세 깃발 소품을 뺀다.
+      homecoming_midboss: { emissive: ECHO_SKIN.emissive },
+      // 6장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[6]): 귀환 열차 승객 잔향. 밝은 잿빛 몸이 6장 청록 조명에서 하얗게 날아가
+      // 몸빛을 한 톤 눌러 주고 발광은 약하게(#0a2420) 둔다.
+      // 갈래는 몸빛(고향 지역의 흔적)과 손의 여행 가방(로스터 offhand)으로 나눈다. 나머지 자리는 고향 장 의상의 잔향(아래 echo 분기)이다.
+      ch6_passenger: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      // 원령 자리: 더 바래고 청록 발광이 조금 센 승객.
+      ch6_passenger_drift: { color: '#c8e4dc', amount: 0.2, emissive: '#16443c' },
+      ch6_passenger_hurry: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      ch6_passenger_child: { color: '#b0c2bc', amount: 0.3, emissive: '#0a2420' },
+      // 부족 전사 자리: 그을린 용광로의 짐꾼 — 몸빛을 그을음 갈색으로, 등에 묶은 가방 두 개.
+      ch6_passenger_porter: { color: '#8c6a50', amount: 0.5, emissive: '#0a2420', props: ['luggagePack'] },
+      ch6_passenger_trunk: { color: '#8a9896', amount: 0.35, emissive: '#0a2420' },
+      // 골렘 수호자 자리: 개찰구를 지키던 승객 — 푸른 철빛.
+      ch6_passenger_gate: { color: '#6a84a0', amount: 0.5, emissive: '#0a2420' },
+      // 4장 바닷길에서 돌아온 승객: 바닷물빛 몸에 어깨 따개비.
+      ch6_passenger_tide: { color: '#4f8fa0', amount: 0.5, emissive: '#0a2420', props: ['barnacles'] },
+      // 포자 괴물 자리: 이끼 낀 승객.
+      ch6_passenger_moss: { color: '#6a8c5a', amount: 0.5, emissive: '#0a2420' },
+      // 서리굴 잠행꾼 자리: 3장 서고에서 길을 잃은 승객 — 서리 하늘빛, 앞으로 내민 서리빛 장대 등.
+      ch6_passenger_lost: { color: '#a8c4ec', amount: 0.45, emissive: '#0a2420', props: ['lostLantern'] },
       homecoming_finalboss: { ...ECHO_SKIN, props: ['brokenBellLarge', 'spiritHalo'] },
     },
     assets: {},
@@ -364,8 +403,24 @@ export const CHAPTER_DRESS = Object.freeze({
       elite_skel_captain: { ...BRASS_BONE, props: ['doorShield', 'clapperBack'] },
       elite_wraith: { ...BRASS_SPIRIT, props: ['spiritBell', 'spiritHalo'] },
       elite_bone_lord: { ...BRASS_BONE, props: ['brokenBellLarge'] },
+      // 7장 전용 Tripo 몸(stages.js CHAPTER_SPECIES[7]): 몸이 이미 바랜 황동·석회 팔레트라 BRASS_* 재배치를 걸지 않고 발광·몸빛만 준다.
+      // 시민은 손에 타종 명부(로스터 offhand), 주술사는 굽쇠 지팡이(weapon)와 몸의 작은 종이 있어 bellLedger·tuningFork·spiritBell 소품은 뺀다.
+      ch7_citizen: { emissive: '#140f04' },
+      // 해골 자객 자리: 종소리에 늦어 뛰는 시민 — 맨손, 먼지 낀 석회 몸빛.
+      ch7_citizen_late: { color: '#b8b2a2', amount: 0.3, emissive: '#140f04' },
+      ch7_citizen_ledger: { emissive: '#140f04' },
+      // 뼈 오크 자리(분쇄): 종루 짐꾼 — 그을린 청동 몸빛, 등에 종추.
+      ch7_citizen_hauler: { color: '#9a7c52', amount: 0.4, emissive: '#140f04', props: ['clapperBack'] },
+      // 폭탄 슬라임 자리: 자폭 경고 — 그을린 황동 몸빛과 붉은 금 발광(첫 근접 캡처에서 맨손 시민과 구분이 약해 올렸다).
+      ch7_citizen_fuse: { color: '#c89a5a', amount: 0.35, emissive: '#6a2a06' },
+      ch7_tuner: { emissive: '#140f04' },
+      // 해골 사제 자리(지원 소환): 명부를 낭송하는 주술사 — 따뜻한 황동 발광.
+      ch7_tuner_cantor: { color: '#e0c68c', amount: 0.25, emissive: '#2a1e08' },
+      // 해골 망령·원령 자리: 불투명 몸에 옅은 석회빛, 발광을 조금 올린 울림 잔향.
+      ch7_tuner_echo: { color: '#d8d6c8', amount: 0.3, emissive: '#2a2210' },
+      ch7_tuner_drift: { color: '#c4cfc8', amount: 0.3, emissive: '#2a2210' },
     },
-    // 종지기·오르벤·카델은 7장 전용 Tripo 몸이라 의상을 입히지 않는다.
+    // 종지기·오르벤·카델과 해골 시민·굽쇠 주술사 갈래는 7장 전용 Tripo 몸이라 BRASS 재배치를 입히지 않는다.
     assets: {
       bone_knight: { ...BRASS_BONE, props: ['bellLedger'] },
       void_wisp: { ...BRASS_SPIRIT, props: ['spiritBell'] },
