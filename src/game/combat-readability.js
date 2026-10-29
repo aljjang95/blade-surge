@@ -37,7 +37,7 @@ export class CombatReadability {
     this.view?.setHeroColor(READ_COLOR[this.heroId] ?? READ_COLOR[heroDef?.jobId] ?? READ_COLOR.default);
     this.view?.clear();
   }
-  get enabled() { return !!this.view && !this.battle.app?.settings?.hideCombatMarkers; }
+  get enabled() { return !!this.view; }
 
   /** 영웅(또는 파티 동료)의 명중. damageEnemy 의 실제 피해 뒤에 부른다. */
   hit(enemy, dealt, crit, source) {

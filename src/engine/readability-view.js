@@ -118,7 +118,7 @@ export class ReadabilityView {
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
       fragmentShader: /* glsl */`
         uniform vec3 uColor; uniform float uTime, uShow, uLen; varying vec2 vUv;
-        void main(){ float along = vUv.y * uLen; float dash = step(.45, fract(along * 1.6 - uTime * 3.));
+        void main(){ float along = (1. - vUv.y) * uLen; // flat 의 vUv.y=0 쪽이 대상(+z)이라 뒤집어야 대상 쪽으로 흐른다 float dash = step(.45, fract(along * 1.6 - uTime * 3.));
           float side = 1. - smoothstep(.25, .5, abs(vUv.x - .5));
           float ends = smoothstep(.0, .12, vUv.y) * (1. - smoothstep(.9, 1., vUv.y));
           float alpha = dash * side * ends * uShow * .75; if (alpha < .01) discard;
