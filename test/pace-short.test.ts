@@ -18,7 +18,8 @@ describe('상점·소환 단축 일수 짧은 문구', () => {
   });
   test('단축 일수가 있는 상품은 무료 일수보다 짧다', () => {
     const shown = SKUS.map((sku) => paceShort(sku.id)).filter(Boolean);
-    expect(shown.length).toBeGreaterThan(5);
+    // 보석 300·980 팩은 첫 결제 보너스가 없어진 뒤(docs/PRICING.md) 단축 일수가 0이라 표시하지 않는다.
+    expect(shown.length).toBeGreaterThanOrEqual(4);
     for (const sku of SKUS) { const s = (ECONOMY_PACE.savings as any)[sku.id]; if (paceShort(sku.id)) expect(s.withDays).toBeLessThan(s.freeDays); }
   });
 });
