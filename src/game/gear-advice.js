@@ -124,8 +124,11 @@ function transferUpgradesNow(eco, heroId, perSlot) {
   for (const slot of SLOTS) {
     const cur = inv.get(hero.equip?.[slot]); if (!cur || (cur.enh || 0) < TRANSFER_MIN_ENH) continue;
     const to = cur.enh - TRANSFER_LOSS, curRank = rarityRank(ITEM_BY_ID[cur.id].rarity), curScore = gearScore(cur);
+    // 세트 동료·박힌 룬처럼 단독 점수가 모르는 가치가 있으면 점수와 무관하게 실제 빌드 비교로 보낸다(betterItemsNow 의 worthComparing 과 같은 규칙).
+    const sets = new Set(SLOTS.filter((s) => s !== slot).map((s) => ITEM_BY_ID[inv.get(hero.equip?.[s])?.id]?.set).filter(Boolean));
     const cands = slotCandidates(bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && (x.enh || 0) < to && rarityRank(ITEM_BY_ID[x.id].rarity) >= curRank), () => true)
-      .map((x) => ({ x, score: gearScore({ ...x, enh: to }) })).filter((c) => c.score > curScore).sort((a, b) => b.score - a.score).slice(0, perSlot);
+      .map((x) => ({ x, score: gearScore({ ...x, enh: to }) })).filter((c) => worthComparing({ ...c.x, enh: to }, curScore, sets))
+      .sort((a, b) => Number(hasRunes(b.x)) - Number(hasRunes(a.x)) || b.score - a.score).slice(0, perSlot);
     let best = null;
     for (const { x } of cands) {
       const inventory = eco.s.inventory.map((i) => i.uid === x.uid ? { ...i, enh: to } : i.uid === cur.uid ? { ...i, enh: 0 } : i);

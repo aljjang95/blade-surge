@@ -66,3 +66,47 @@ describe('강화 전승 모델', () => {
     for (const s of ['강화 전승', 'data-src="' + x.src.uid + '"', 'data-dst="' + x.l.uid + '"', '+11 → <b>+0</b>', '전승 보호 주문서 사용', 'id="et-go"']) expect(html).toContain(s);
   });
 });
+
+describe('Codex 리뷰 재현', () => {
+  test('추천: 단독 점수가 같아도 좋은 룬이 박힌 대상은 실제 빌드 비교까지 간다(w_dragon +11 → 룬 III 두 개 w_dragon)', () => {
+    const eco = EconomyCore.fromState(null, { rng: () => 0.5, now: () => 1_800_000_000_000 }) as any;
+    const src = eco.pushItem('w_dragon', { owner: 'knight' }); src.enh = 11; eco.equip('knight', src.uid);
+    const dst = eco.pushItem('w_dragon', { owner: 'knight' });
+    eco.runeState().bag.ember_edge = [0, 0, 2];
+    expect(eco.runeInsert(dst.uid, 0, { id: 'ember_edge', grade: 3 }).ok).toBe(true);
+    expect(eco.runeInsert(dst.uid, 1, { id: 'ember_edge', grade: 3 }).ok).toBe(true);
+    const tips = transferUpgrades(eco, 'knight');
+    expect(tips).toEqual([{ slot: 'weapon', srcUid: src.uid, dstUid: dst.uid, to: 10, delta: expect.any(Number) }]);
+    expect(eco.heroBuildStats('knight').power + tips[0].delta).toBeGreaterThan(eco.heroBuildStats('knight').power);
+  });
+
+  test('서버 대기 시간 초과 뒤 다시 그리기: 원본이 이미 +0 이면 남은 역할을 다시 판정하고 빈 목록을 색인하지 않는다', () => {
+    const x = setup();
+    const m0: any = transferModel(x.eco, x.src.uid);
+    expect(x.eco.enhanceTransfer(m0.srcUid, m0.dstUid).ok).toBe(true);   // 낙관 반영(서버 결과는 아직)
+    let m: any;
+    expect(() => { m = transferModel(x.eco, x.src.uid, { srcUid: m0.srcUid, dstUid: m0.dstUid }); }).not.toThrow();
+    // 원본(E)은 +0 이 됐고 +10 을 받은 장비는 더 높은 등급이라 원본 쪽으로 되돌릴 수 없다: 짝 없음으로 다시 판정한다.
+    expect(m.role).toBeNull(); expect(m.sources).toEqual([]); expect(m.targets).toEqual([]);
+    // 짝이 전혀 없게 되면 role null, 목록 비어 있음
+    for (const it of x.eco.s.inventory) it.enh = 0;
+    expect(() => { m = transferModel(x.eco, x.src.uid, { srcUid: x.src.uid }); }).not.toThrow();
+    expect(m.role).toBeNull(); expect(m.sources).toEqual([]); expect(m.targets).toEqual([]);
+  });
+
+  test('시트: 서버 응답 대기 중이면 깨지지 않고 대기 문구를 보여 준다', async () => {
+    const x = setup(); let html = '', open: any = null;
+    const yes = { disabled: false, onclick: null as any, focus: () => {} };
+    const queue: any = { lastCid: 'a', settled: async () => ({ ok: false, timeout: true }) };
+    const origin = x.eco.enhanceTransfer.bind(x.eco);
+    x.eco.enhanceTransfer = (...a: any[]) => { const r = origin(...a); queue.lastCid = 'b'; return r; };
+    const meta: any = { eco: x.eco, app: { account: { authority: 'server', queue } }, ui: { modal: (h: string, o: any) => { html = h; open = o; }, toast: () => {}, closeModal: () => {} } };
+    openTransferSheet(meta, x.src.uid, 'knight');
+    const fakeBox = (map: Record<string, any>) => ({ querySelector: (s: string) => map[s] || null, querySelectorAll: () => [], set onkeydown(_v: any) {} });
+    const go = { onclick: null as any, focus: () => {} };
+    open.onOpen(fakeBox({ '#et-close': { focus: () => {} }, '#et-go': go })); go.onclick();
+    open.onOpen(fakeBox({ '#et-close': { focus: () => {} }, '#et-yes': yes }));
+    await yes.onclick();
+    expect(html).toContain('id="et-notice"'); expect(html).toContain(TRANSFER_FAIL_TEXT.pending);
+  });
+});

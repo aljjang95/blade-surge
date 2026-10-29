@@ -36,7 +36,9 @@ export function transferModel(eco, uid, pick = {}) {
   const can = (a, b) => pairable(eco.enhanceTransferQuote(a, b)) || pairable(eco.enhanceTransferQuote(a, b, { scroll: true }));
   const asSourceTargets = peers.filter((x) => can(uid, x.uid)).sort(byBest);
   const asTargetSources = peers.filter((x) => can(x.uid, uid)).sort(byBest);
-  const role = pick.srcUid === uid ? 'source' : pick.dstUid === uid ? 'target' : asSourceTargets.length ? 'source' : asTargetSources.length ? 'target' : null;
+  // 이전에 고른 역할은 지금도 짝이 있을 때만 유지한다(서버 대기 시간 초과 등으로 원본이 이미 +0 이 됐으면 다시 판정). 빈 목록은 색인하지 않는다.
+  const role = pick.srcUid === uid && asSourceTargets.length ? 'source' : pick.dstUid === uid && asTargetSources.length ? 'target'
+    : asSourceTargets.length ? 'source' : asTargetSources.length ? 'target' : null;
   if (!role) return { uid, role: null, slot: def.slot, sources: [], targets: [], srcUid: null, dstUid: null, quote: null, scroll, scrolls: s.transferScroll || 0 };
   const sources = role === 'source' ? [inst] : asTargetSources, targets = role === 'source' ? asSourceTargets : [inst];
   const srcUid = role === 'source' ? uid : (sources.find((x) => x.uid === pick.srcUid) || sources[0]).uid;
@@ -75,7 +77,7 @@ const itemButton = (inst, kind, on) => {
 /** 전승 시트. heroId 는 닫은 뒤 돌아갈 영웅 시트. */
 export function openTransferSheet(meta, uid, heroId = meta.eco.s.selected, pick = {}) {
   const { eco, ui } = meta;
-  let state = { srcUid: pick.srcUid, dstUid: pick.dstUid, scroll: !!pick.scroll }, confirming = false, busy = false;
+  let state = { srcUid: pick.srcUid, dstUid: pick.dstUid, scroll: !!pick.scroll }, confirming = false, busy = false, notice = '';
   const render = () => {
     const m = transferModel(eco, uid, state);
     if (!m) { ui.toast(TRANSFER_FAIL_TEXT.item, 'red'); return; }
@@ -93,7 +95,8 @@ export function openTransferSheet(meta, uid, heroId = meta.eco.s.selected, pick 
         (m.ok ? '' : '<p class="et-reason stat-down">' + esc(m.reasonText) + '</p>') +
         (confirming ? '<div class="et-confirm" role="alert"><p>' + (p?.targetEnh ? '대상의 기존 +' + p.targetEnh + ' 강화는 사라집니다. ' : '') + '원본은 +0 이 됩니다. 진행할까요?</p><div class="modal-btns"><button type="button" class="btn btn-ghost" id="et-no">취소</button><button type="button" class="btn btn-gold" id="et-yes">확인</button></div></div>'
           : '<button type="button" class="btn btn-blue" id="et-go"' + (m.ok ? '' : ' disabled') + '>전승</button>');
-    ui.modal('<div class="enh-transfer"><header class="vault-head"><div><h2>강화 전승</h2><p>' + esc(SLOT_NAME[m.slot]) + ' · 같은 영웅 · 같거나 높은 등급으로 강화 단계를 옮깁니다 (원본은 파괴되지 않고 +0, 룬·내구도는 각 장비에 남음)</p></div><button type="button" class="btn btn-ghost btn-sm" id="et-close" aria-label="닫기">✕</button></header>' + body + '</div>', {
+    ui.modal('<div class="enh-transfer"><header class="vault-head"><div><h2>강화 전승</h2><p>' + esc(SLOT_NAME[m.slot]) + ' · 같은 영웅 · 같거나 높은 등급으로 강화 단계를 옮깁니다 (원본은 파괴되지 않고 +0, 룬·내구도는 각 장비에 남음)</p></div><button type="button" class="btn btn-ghost btn-sm" id="et-close" aria-label="닫기">✕</button></header>' +
+      (notice ? '<p class="et-reason stat-down" role="status" id="et-notice">' + esc(notice) + '</p>' : '') + body + '</div>', {
       onOpen: (b) => {
         const back = () => { ui.closeModal(); meta.showItem?.(uid, heroId); };
         b.querySelector('#et-close').onclick = back;
@@ -116,7 +119,8 @@ export function openTransferSheet(meta, uid, heroId = meta.eco.s.selected, pick 
           const { srcUid, dstUid, scroll } = state;
           const r = await performTransfer(meta, srcUid, dstUid, scroll);
           busy = false; confirming = false;
-          if (!r.ok) { ui.toast(TRANSFER_FAIL_TEXT[r.reason] || '전승할 수 없습니다', 'red'); audio.play('ui_error'); render(); return; }
+          // 서버 대기(pending)·거절(server)은 로컬에 이미 반영됐을 수 있어 고른 짝을 버리고 다시 판정한 화면에 상태 문구를 남긴다.
+          if (!r.ok) { const text = TRANSFER_FAIL_TEXT[r.reason] || '전승할 수 없습니다'; ui.toast(text, 'red'); audio.play('ui_error'); if (r.reason === 'pending' || r.reason === 'server') { notice = text; state = { srcUid: undefined, dstUid: undefined, scroll: false }; } render(); return; }
           audio.play('ui_confirm', { vol: 0.6 });
           ui.toast('강화 전승 완료! +' + r.to, 'gold');
           meta.trackFunnel?.('upgrade', { kind: 'item_transfer', level: r.to, success: true });
