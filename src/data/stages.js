@@ -78,7 +78,12 @@ export const CHAPTER_SPECIES = Object.freeze({
   3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
   // 5장(2026-10-29 Tripo): 새벽 가면 닌자(닌자·임프·심연 폭탄 자리)·왕관 병사(방패병·뼈 오크·이계 침입자 자리)·
   // 왕관 고리 주술사(심연 주시자·화염 정령·부족 주술사 자리). 왕관 일반 방의 9종을 모두 바꾸고 정예만 옛 몸으로 남긴다.
-  5: Object.freeze({ ninja: 'ch5_dawnninja', imp: 'ch5_dawnninja_squire', bomb_abyss: 'ch5_dawnninja_flare', skel_shield: 'ch5_swordwall', bone_orc: 'ch5_crownsoldier_chain', alien: 'ch5_crownsoldier', abyss_seer: 'ch5_seer', hywirl: 'ch5_seer_ember', tribal_shaman: 'ch5_seer_herald' }),
+  // 소환으로만 나오는 자리도 5장 몸으로 바꾼다(2026-10-29): 법정·빈 왕좌 경로 던전 대장의 환영 사냥개(옛 Big_Ninja 몸),
+  // 행렬·등대·합류 경로 던전 대장의 종의 잔영·해골 병사·혜성 불씨, 왕관 고리 주술사의 부유 촉수·칙령 낭독 주술사의 꼬마 오크가
+  // 5장 방에 옛 몸으로 섞이던 문제.
+  5: Object.freeze({ ninja: 'ch5_dawnninja', imp: 'ch5_dawnninja_squire', bomb_abyss: 'ch5_dawnninja_flare', skel_shield: 'ch5_swordwall', bone_orc: 'ch5_crownsoldier_chain', alien: 'ch5_crownsoldier', abyss_seer: 'ch5_seer', hywirl: 'ch5_seer_ember', tribal_shaman: 'ch5_seer_herald',
+    mirage_hound: 'ch5_dawnninja_mirage', squidle: 'ch5_dawnninja_called', orc_blob: 'ch5_crownsoldier_levy',
+    bell_wisp: 'ch5_dawnninja_wisp', comet_spark: 'ch5_dawnninja_spark', skel_minion: 'ch5_crownsoldier_watch' }),
   // 6장(2026-10-29 Tripo, 잔향 장): 경로마다 가장 흔한 근접 졸병 자리를 귀환 열차 승객 잔향 갈래로 바꾼다(일반 방의 약 40~60%).
   // 나머지 자리는 그 경로의 고향 장(DUNGEON_HOME) 전용 몸으로 나온다 — 1~5장 적의 잔향이다(chapterSpeciesSwap).
   6: Object.freeze({ skel_minion: 'ch6_passenger', ghost: 'ch6_passenger_drift', skel_rogue: 'ch6_passenger_hurry', imp: 'ch6_passenger_child', tribal: 'ch6_passenger_porter', cacto_wall: 'ch6_passenger_trunk', golem_guard: 'ch6_passenger_gate', squidle: 'ch6_passenger_tide', mushnub: 'ch6_passenger_moss', frost_burrower: 'ch6_passenger_lost' }),
@@ -101,10 +106,25 @@ export function chapterSpeciesSwap(chapterId, dungeonId) {
   if (!echoSwaps.has(key)) echoSwaps.set(key, Object.freeze({ ...(home && home !== chapterId ? CHAPTER_SPECIES[home] : {}), ...own }));
   return echoSwaps.get(key);
 }
-/** 캠페인 1~6장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
+/**
+ * 장 전용 몸을 고르는 기준(장 번호·경로 던전 id). 캠페인 관문은 그 관문의 장·던전이다.
+ * 원정은 전용 로스터·아트라 제외하되, 잔향 장(6장) 심층 원정은 6장 관문(stageDef)을 펼친 전투라 6장 몸을 입는다 —
+ * 심층은 dungeon 을 null 로 비우므로 고향 장은 그 관문의 경로 던전(심층 보상 명단 rosterFor 의 출처)에서 찾는다.
+ * @param {any} stage
+ * @returns {{ chapterId: number, dungeonId: string | undefined } | null}
+ */
+export function speciesStageOf(stage) {
+  if (!stage) return null;
+  const chapterId = stage.chapter?.id ?? stage.ch;
+  const homecoming = !!CHAPTER_FLAGS[chapterId]?.homecoming;
+  if (stage.expedition && !(homecoming && stage.expedition.depth === 'deep')) return null;
+  const dungeonId = stage.dungeon?.id ?? (homecoming && stage.st ? dungeonForStage(chapterId, stage.st)?.id : undefined);
+  return { chapterId, dungeonId };
+}
+/** 캠페인 1~7장(과 6장 심층 원정)에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
-  if (!stage || stage.expedition) return id;
-  return chapterSpeciesSwap(stage.chapter?.id, stage.dungeon?.id)?.[id] || id;
+  const key = speciesStageOf(stage);
+  return key ? chapterSpeciesSwap(key.chapterId, key.dungeonId)?.[id] || id : id;
 }
 const swappedRosters = new Map();
 function chapterSpecies(swap, roster) {
@@ -515,6 +535,13 @@ const CHAPTER_SPECIES_DEFS = {
   ch5_seer: ['abyss_seer', '왕관 고리 주술사', 'Ch5_Seer'],
   ch5_seer_ember: ['hywirl', '새벽불 주술사', 'Ch5_Seer'],
   ch5_seer_herald: ['tribal_shaman', '칙령 낭독 주술사', 'Ch5_Seer'],
+  // 5장 소환 전용 갈래(전투 편성에는 없어 도감에 싣지 않는다): 던전 대장의 환영 사냥개·주술사들이 부르는 졸병.
+  ch5_dawnninja_mirage: ['mirage_hound', '신기루 새벽 닌자', 'Ch5_DawnNinja'],
+  ch5_dawnninja_called: ['squidle', '고리에 불려 온 견습', 'Ch5_DawnNinjaSquire'],
+  ch5_crownsoldier_levy: ['orc_blob', '칙령 징집병', 'Ch5_CrownLevy'],
+  ch5_crownsoldier_watch: ['skel_minion', '왕관 파수병', 'Ch5_CrownSoldier'],
+  ch5_dawnninja_wisp: ['bell_wisp', '종소리에 홀린 닌자', 'Ch5_DawnNinjaSpirit'],
+  ch5_dawnninja_spark: ['comet_spark', '혜성불 닌자', 'Ch5_DawnNinjaSpirit'],
   // 6장: 귀환 열차 승객 잔향(tll_ch6_passenger) 갈래 10종. 원본 종 크기가 다른 자리(원령 1.25)는 로스터 항목을 나눴다.
   ch6_passenger: ['skel_minion', '귀환 열차 승객', 'Ch6_Passenger'],
   ch6_passenger_drift: ['ghost', '떠도는 승객 잔향', 'Ch6_PassengerDrift'],
@@ -528,7 +555,7 @@ const CHAPTER_SPECIES_DEFS = {
   ch6_passenger_lost: ['frost_burrower', '길 잃은 승객', 'Ch6_PassengerBare'],
   // 7장: 해골 시민(tll_ch7_citizen) 갈래 5종·굽쇠 주술사(tll_ch7_tuner) 갈래 4종. 원본 종 크기가 다른 자리(폭탄 슬라임 0.33·해골 망령 1.2·원령 1.25)는 로스터 항목을 나눴다.
   ch7_citizen: ['skel_minion', '해골 시민', 'Ch7_Citizen'],
-  ch7_citizen_late: ['skel_rogue', '늦은 해골 시민', 'Ch7_CitizenBare'],
+  ch7_citizen_late: ['skel_rogue', '늦은 해골 시민', 'Ch7_CitizenLate'],
   ch7_citizen_ledger: ['skel_shield', '명부 방패 시민', 'Ch7_CitizenLedger'],
   ch7_citizen_hauler: ['bone_orc', '종루 짐꾼 시민', 'Ch7_CitizenHauler'],
   ch7_citizen_fuse: ['bomb_slime', '폭음 시민', 'Ch7_CitizenFuse'],
@@ -543,14 +570,14 @@ export function speciesSourceId(id) { return SPECIES_SOURCE[id] || id; }
 // 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
 // 4장 수부·아귀도 원령·해골 망령 자리(ch4_drowned_drift·ch4_lurer_glim)를 맡지만 불투명한 Tripo 몸이다.
 // 6장 떠도는 승객 잔향(원령 자리)도 불투명한 Tripo 몸이다(얼굴의 청록 발광은 텍스처에 있다). 7장 굽쇠 주술사의 해골 망령·원령 자리도 같다.
-const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim', 'Ch6_PassengerDrift', 'Ch7_TunerEcho', 'Ch7_TunerDrift']);
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim', 'Ch5_DawnNinjaSpirit', 'Ch6_PassengerDrift', 'Ch7_TunerEcho', 'Ch7_TunerDrift']);
 // 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래(null = 색조 없음). 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을
 // 보라로 물들였다 — 붉은 색조도 남색과 섞이면 보라가 되어, 경고등 아귀는 색조를 빼고 의상의 붉은 발광으로 경고한다. 빛주머니 아귀는 청록.
 // 수치·행동은 그대로다.
 // 5장 봉화 닌자(심연 폭탄 분홍)·주술사 갈래(주시자 연보라·부족 주술사 살구)·6장 길 잃은 승객(서리 하늘색)은 원본 색조가 보라·금, 회색·청록
 // 몸을 탁하게 물들여 색조를 뺀다(봉화 닌자는 의상의 붉은 금 발광으로 자폭을 경고한다). 7장 명부 낭송 주술사도 해골 사제의 연두 색조가
 // 바랜 황동·석회 몸을 초록으로 물들여 뺀다(폭음 시민은 폭탄 슬라임의 금빛 색조가 황동과 맞아 그대로 둔다).
-const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });
+const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch5_dawnninja_mirage: null, ch5_dawnninja_wisp: null, ch5_dawnninja_spark: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
   ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
   if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;

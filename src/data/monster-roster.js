@@ -122,9 +122,13 @@ export const MONSTER_ROSTER = Object.freeze({
     weapon: { asset: 'tll_ch5_dawnblade', hand: 'right', grip: [0, 0.12, 0], at: [0, 0.07, 0.02], rot: [90, 0, 0] } },
   // 맨손 닌자(견습·봉화 닌자 자리): 단검 없이.
   Ch5_DawnNinjaBare: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 1.05, fallbackScale: 0.76 },
+  // 혼령 자리 닌자(던전 대장이 부르는 종의 잔영·혜성 불씨, 원본 def.scale 1.25~1.3): 불투명 맨손 닌자를 영웅 키로 맞춘다.
+  Ch5_DawnNinjaSpirit: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 0.82, fallbackScale: 0.6 },
   // 새벽 견습 닌자(임프 자리): 한 뼘 작은 맨손 닌자, 등에 연습용 목검(의상 squireBokken).
   Ch5_DawnNinjaSquire: { asset: 'tll_ch5_dawnninja', fallback: 'shadow_soldier', scale: 0.9, fallbackScale: 0.66 },
   Ch5_CrownSoldier: { asset: 'tll_ch5_crownsoldier', fallback: 'shadow_soldier', scale: 1.0, fallbackScale: 0.79 },
+  // 칙령 징집병(낭독 주술사가 부르는 꼬마 오크 자리): 한 뼘 작은 왕관 병사.
+  Ch5_CrownLevy: { asset: 'tll_ch5_crownsoldier', fallback: 'shadow_soldier', scale: 0.86, fallbackScale: 0.68 },
   // 성벽 검 방패병: 왼손에 검을 엮은 큰 방패(해골 방패병 shield 행동 자리).
   Ch5_SwordWall: { asset: 'tll_ch5_crownsoldier', fallback: 'bone_knight', scale: 0.97, fallbackScale: 1.03,
     offhand: { asset: 'tll_ch5_swordwall', hand: 'left', grip: [0, 0.45, 0.05], at: [0, 0.05, 0.08], rot: [0, 0, 0] } },
@@ -152,6 +156,9 @@ export const MONSTER_ROSTER = Object.freeze({
   Ch7_Citizen: { asset: 'tll_ch7_citizen', fallback: 'bone_knight', scale: 1.1, fallbackScale: 0.86,
     offhand: { asset: 'tll_ch7_ledger', hand: 'left', grip: [0, 0.2, 0], at: [0, 0.05, 0.04], rot: [0, 0, 180] } },
   Ch7_CitizenBare: { asset: 'tll_ch7_citizen', fallback: 'bone_knight', scale: 1.1, fallbackScale: 0.86 },
+  // 늦은 시민(해골 자객 자리): 오른손에 1장 손종(tll_ch1_handbell)을 쥐고 뛴다 — 맨손 시민들과 손 윤곽으로 갈린다(의상 lateScarf).
+  Ch7_CitizenLate: { asset: 'tll_ch7_citizen', fallback: 'bone_knight', scale: 1.1, fallbackScale: 0.86,
+    weapon: { asset: 'tll_ch1_handbell', hand: 'right', grip: [0, 0.33, 0], at: [0, 0.07, 0.02], rot: [0, 0, 180] } },
   // 명부 방패 시민: 타종 명부를 왼손에 방패처럼 앞으로 든다(해골 방패병 shield 행동 자리).
   Ch7_CitizenLedger: { asset: 'tll_ch7_citizen', fallback: 'bone_knight', scale: 1.0, fallbackScale: 1.03,
     offhand: { asset: 'tll_ch7_ledger', hand: 'left', grip: [0, 0.1, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },

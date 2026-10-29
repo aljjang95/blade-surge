@@ -2,6 +2,7 @@
  * 장 의상 근접 확인 — 한 장의 1관문에 들어가 그 장 종(species)을 영웅 앞에 한 줄로 세우고 대기 자세로 찍는다.
  * 소품이 뼈에 맞게 붙었는지(위치·방향·크기)를 보는 도구다. 시계는 app.step 고정 dt.
  *   node tools/dress-closeup.mjs [장=1] [출력폴더=work/qa/dress] [접두어=after]
+ *   DEEP=star_archive node tools/dress-closeup.mjs 6 … — 6장 심층 원정(dungeon 없음, 6-10 관문)처럼 전투 무대를 바꿔 원래 종 id로 소환한다(장 전용 몸 교체 확인).
  * 전제: bun run build 산출물(dist). swiftshader 소프트웨어 렌더라 GPU 프레임·실기기 검증이 아니다.
  */
 import { chromium } from 'playwright';
@@ -66,6 +67,9 @@ const LINEUPS = {
     ['ch5_dawnninja', 'ch5_dawnninja_squire', 'ch5_dawnninja_flare', 'crown_midboss'],
     ['ch5_crownsoldier', 'ch5_crownsoldier_chain', 'ch5_swordwall'],
     ['ch5_seer', 'ch5_seer_ember', 'ch5_seer_herald'],
+    // 소환 전용 5장 갈래(던전 대장·주술사의 졸병).
+    ['ch5_dawnninja_mirage', 'ch5_dawnninja_called', 'ch5_crownsoldier_levy', 'ch5_crownsoldier_watch'],
+    ['ch5_dawnninja_wisp', 'ch5_dawnninja_spark', 'ch5_dawnninja'],
   ],
   6: [
     ['skel_minion', 'orc', 'ghost', 'ninja'],
@@ -75,6 +79,8 @@ const LINEUPS = {
     ['ch6_passenger', 'ch6_passenger_drift', 'ch6_passenger_hurry', 'ch6_passenger_child'],
     ['ch6_passenger_porter', 'ch6_passenger_trunk', 'ch6_passenger_gate', 'homecoming_midboss'],
     ['ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger_lost', 'ch1_mourner_wail'],
+    // 가독성 2차: 같은 맨손 몸의 승객 갈래 비교.
+    ['ch6_passenger_hurry', 'ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger'],
     ['ch4_lurer_bomb', 'ch2_ashimp', 'ch3_moldkeeper', 'ch1_tombguard'],
   ],
   7: [
@@ -85,8 +91,14 @@ const LINEUPS = {
     ['ch7_citizen', 'ch7_citizen_late', 'ch7_citizen_ledger', 'bell_ringer'],
     ['ch7_citizen_hauler', 'ch7_citizen_fuse', 'blob_green'],
     ['ch7_tuner', 'ch7_tuner_cantor', 'ch7_tuner_echo', 'ch7_tuner_drift'],
+    // 가독성 2차: 같은 맨손 몸의 시민 갈래 비교.
+    ['ch7_citizen_late', 'ch7_citizen_hauler', 'ch7_citizen_fuse', 'ch7_citizen'],
   ],
 };
+// 심층 원정 확인: 원래 종 id를 소환하면 spawnEnemy 가 장 전용 몸으로 바꾼다.
+const DEEP = process.env.DEEP || '';
+const DEEP_STAGE = { star_archive: 10, comet_bastion: 7 };
+if (DEEP) LINEUPS[CH] = [['squidle', 'glub', 'abyss_seer', 'ghost'], ['alien', 'mushnub', 'bomb_abyss', 'ghost_skull']];
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
 let up = false;
 for (let i = 0; i < 80 && !up; i++) { try { up = (await fetch(`http://localhost:${PORT}/`)).ok; } catch {} if (!up) await new Promise((r) => setTimeout(r, 500)); }
@@ -105,11 +117,12 @@ try {
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
   await page.evaluate(() => window.app.ui.closeModal?.());
   for (const [row, species] of (LINEUPS[CH] || []).entries()) {
-    const info = await page.evaluate(async ([ch, species]) => {
+    const info = await page.evaluate(async ([ch, species, deep, deepSt]) => {
       const a = window.app, e = a.eco; a.testPause = false; e.s.energy = 9999; e.s.progress.unlocked = (ch - 1) * 10 + 1; e.save();
       a.battle?.stop?.();
       await a.startStage(e.nextStage()); a.testPause = true;
-      const b = a.battle, p = b.player; p.auto = false; p.hp = p.maxHp; p.invuln = 999;
+      const b = a.battle, p = b.player;
+      if (deep) b.stage = { ...b.stage, st: deepSt, dungeon: null, expedition: { kind: 'dungeon', id: deep, depth: 'deep' } }; p.auto = false; p.hp = p.maxHp; p.invuln = 999;
       for (const en of b.enemies) { en.hp = 0; en.alive = false; en.root.visible = false; }
       const spawned = species.map((id, i) => {
         const at = p.pos.clone().add(new p.pos.constructor(4.2, 0, (i - (species.length - 1) / 2) * 2.3));
@@ -119,7 +132,7 @@ try {
       for (let k = 0; k < 240; k++) { for (const s of spawned) { s.en.pos.copy(s.at); s.en.vel.set(0, 0, 0); s.en.atkCd = 999; s.en.face?.(p.pos.x, p.pos.z); } a.step(1 / 60, k === 239); }
       const st = b.stage;
       return { stage: { code: st.code, chapter: st.chapter?.id ?? null, ch: st.ch, expedition: !!st.expedition, keys: Object.keys(st).slice(0, 12) }, enemies: spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null })) };
-    }, [CH, species]);
+    }, [CH, species, DEEP, DEEP_STAGE[DEEP] || 10]);
     await page.waitForTimeout(300);
     // 근접 초상: 각 적을 앞 3/4·뒤 3/4 두 방향에서 게임 카메라를 잠시 옮겨 렌더하고 캔버스만 받는다(HUD 제외).
     const portraits = await page.evaluate(() => {
