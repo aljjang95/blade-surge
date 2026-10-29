@@ -603,7 +603,7 @@ export const SKILLS = {
         c.data.tick = 0.115; const i = c.data.n++;
         const anims = ['Dualwield_Melee_Attack_Stab', 'Dualwield_Melee_Attack_Slice', 'Dualwield_Melee_Attack_Chop']; p.playTimed(anims[i % 3], 0.24, { fade: 0.03 });
         game.hitArea(p, p.pos, p.yaw, 3.4, 150, c.dmg, { kb: 0.6, kind: 'slash', source: p, quietStop: true });
-        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
+        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x5a20d0, { size: 2.5, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
         if (i % 2 === 0) game.fx.ghost(p.model, i % 4 ? 0x6a2cff : 0xb26bff, { life: 0.25, opacity: 0.5 });
         audio.whoosh({ vol: 0.32, pitch: 1.3 + i * 0.07, dur: 0.12 });
         if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0x8a3cff, life: 0.4, opacity: .55 }); shadowWave(game, p.pos, 5, 0.4); game.renderer.shake(0.5); }
