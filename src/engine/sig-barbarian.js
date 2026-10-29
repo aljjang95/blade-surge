@@ -364,6 +364,8 @@ export const SIGNATURES = {
         t += L / SP;
       }
     }
+    // 1차 판정 테(가시 상한 4.5m): skills.js 의 영웅 둘레 충격 원화(shockTex, 크림 고리)를 뺀 자리의 위치 신호(2차 2026-10-30, 가는 진홍 가시 테).
+    impact.mark(c, CRIMSON, { radius: THORN_MAX, life: .3, style: MARK_STYLE.thorn, angle: .9 });
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 4, CRIMSON, .24, { angle: -Math.PI / 2 + .3, grow: .7 });
     lavaFissures(impact, c, lite ? 3 : 6, .6, 5, BLOOD, { speed: 50, width: .16 });
     impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 5, EMBER, .26, { angle: -Math.PI / 2 - .3, grow: .7, delay: .2 });
