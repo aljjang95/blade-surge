@@ -160,6 +160,15 @@ export const ECONOMY_PACE = {
       "withDays": 26,
       "days": 0
     },
+    "transfer1": {
+      "key": "transfer1",
+      "target": "마법사 SR→SSR",
+      "hero": "mage",
+      "grade": "SSR",
+      "freeDays": 26,
+      "withDays": 26,
+      "days": 0
+    },
     "bless1": {
       "key": "bless1",
       "target": "마법사 SR→SSR",

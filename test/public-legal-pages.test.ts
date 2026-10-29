@@ -53,3 +53,11 @@ test('환불 정책에 가격 숫자가 없고 7일 이후 공제 상한이 적�
 test('odds.html은 생성기 출력과 같다(node tools/gen-odds-page.mjs 로 재생성)', () => {
   expect(read('odds')).toBe(renderOddsPage());
 });
+
+test('개인정보·고객센터 페이지에도 사업자 정보 푸터가 있다(KG 심사: 사이트 전 페이지 사업자 표기)', () => {
+  for (const name of ['privacy', 'support']) {
+    const html = readFileSync(new URL(`../public/${name}.html`, import.meta.url), 'utf8');
+    expect(html).toContain('849-09-03410');
+    expect(html).toContain('제2026-충남서산-0101호');
+  }
+});

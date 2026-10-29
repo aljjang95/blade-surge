@@ -23,6 +23,8 @@ const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname)
 const TO = arg('to', '3-10'), FROM = arg('from', '1-1'), SEED = Number(arg('seed', 1)), BUDGET_MS = Number(arg('budget-min', 150)) * 60000;
 // --enhance-min: 성공 확률이 이 값 이상인 단계까지만 강화한다(기본 0.8 = +5까지). 예전 규칙은 '+8까지(당시 100%)'였다.
 const ENH_MIN = Number(arg('enhance-min', 0.8));
+// --no-sure: 확정 강화(골드 웃돈)를 쓰지 않는다(기준선 재현용). --sure-reserve: 정비를 시작할 때 골드의 이 비율은 남긴다(기본 0.25, 최소 5만).
+const SURE = !process.argv.includes('--no-sure'), SURE_RESERVE = Number(arg('sure-reserve', 0.25));
 const PULL = process.argv.includes('--pull'), MAX_SEC = Number(arg('max-sec', 600)), RETRIES = Number(arg('retries', 2)), VIDEO_EVERY = Number(arg('video-every', 5));
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
 const OUT = resolve(PROJ, arg('out', `work/qa/campaign/${stamp}`));
@@ -52,7 +54,7 @@ const stages = [], friction = [], metaLog = [], joins = [], newHeroTrials = [];
 let aborted = null;
 
 /** 브라우저 안 하네스. 한 번 설치하고 스테이지마다 enter/tick/settle 을 부른다. */
-function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled, itemRarity, enhChance, enhMin }) {
+function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst, maxSec, pullEnabled, itemRarity, enhChance, enhMin, sureOn, sureReserve }) {
   const a = window.app, e = a.eco;
   let st = seed >>> 0;
   Math.random = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -225,8 +227,19 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
           const ddx = gx - p.pos.x, ddz = gz - p.pos.z, dl = Math.hypot(ddx, ddz) || 1;
           let dir = null;
           if (W.buildFlow && W.walkable) {
-            let clr = true; for (let s = 1; s <= 8; s++) if (!W.walkable(p.pos.x + ddx * s / 8, p.pos.z + ddz * s / 8)) { clr = false; break; }
-            if (!clr) { if (!m.flow || m.flowKey !== gx + ',' + gz) { m.flow = W.buildFlow(gx, gz); m.flowKey = gx + ',' + gz; } dir = W.flowDir(m.flow, p.pos.x, p.pos.z); }
+            // 직선은 몸 반경(0.7)만큼 좌우도 바닥일 때만 쓴다. 중심선만 보면 복도 벽 가장자리(5-8 x=11,z=-3)를 따라 밀다 벽에 낀다.
+            const nx = -ddz / dl * 0.7, nz = ddx / dl * 0.7;
+            let clr = true; for (let s = 1; s <= 8 && clr; s++) { const qx = p.pos.x + ddx * s / 8, qz = p.pos.z + ddz * s / 8; if (!W.walkable(qx, qz) || !W.walkable(qx + nx, qz + nz) || !W.walkable(qx - nx, qz - nz)) clr = false; }
+            if (!clr) {
+              if (!m.flow || m.flowKey !== gx + ',' + gz) { m.flow = W.buildFlow(gx, gz); m.flowKey = gx + ',' + gz; }
+              dir = W.flowDir(m.flow, p.pos.x, p.pos.z);
+              // 벽 가장자리 칸(침식 마스크 밖)이라 거리장이 방향을 못 주면 가장 가까운 안쪽 칸으로 먼저 빠져나온다.
+              if (!dir && W.inner) {
+                let best = null, bd = 1e9; const cx = Math.floor(p.pos.x - W.minX), cz = Math.floor(p.pos.z - W.minZ);
+                for (let oz = -3; oz <= 3; oz++) for (let ox = -3; ox <= 3; ox++) { const x = cx + ox, z = cz + oz; if (x < 0 || z < 0 || x >= W.cols || z >= W.rows || !W.inner[z * W.cols + x]) continue; const d = ox * ox + oz * oz; if (d < bd) { bd = d; best = [ox, oz]; } }
+                if (best) { const bl = Math.hypot(best[0] + 0.5, best[1] + 0.5) || 1; dir = [(best[0] + 0.5) / bl, (best[1] + 0.5) / bl]; }
+              }
+            }
           }
           if (dir) { wx = dir[0]; wz = dir[1]; } else { wx = ddx / dl; wz = ddz / dl; }
         }
@@ -289,7 +302,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
     if (a.mode !== 'lobby') a.toLobby?.();
     a.ui.closeModal?.();
     const id = e.s.selected;
-    const gold0 = e.s.gold;
+    const gold0 = e.s.gold, gems0 = e.s.gems;
     try {
       // 1) 보상 수령: 출석·우편·임무·여정·패스
       if (e.dailyAvailable?.()) { const r = e.claimDaily(); did('claimDaily', { r: r && JSON.stringify(r).slice(0, 80) }); }
@@ -299,12 +312,14 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (let lv = 1; lv <= e.passLevel; lv++) if (!e.s.pass.claimedFree.includes(lv)) { const r = e.claimPass(lv, false); if (r) did('claimPass', { lv }); }
       // 2) 소환: 게임 견적이 가능한 배너(초보자 → 영웅)를 10연으로
       for (let g = 0; g < 4 && pullEnabled; g++) {
-        const banner = ['beginner', 'hero'].find((bid) => e.pullQuote(10, bid).ok);
+        const banner = ['beginner', 'hero', 'gear'].find((bid) => e.pullQuote(10, bid).ok);
         if (!banner) break;
         const q = e.pullQuote(10, banner), res = e.pull(10, banner);
         if (!res) break;
         did('pull10', { banner, currency: q.currency, results: res.map((x) => (x.id || x.item?.id || x.hero || '?') + (x.rar ? '/' + x.rar : '')) });
       }
+      // 2b) 초월: 성장 가이드가 제안할 때(견적 ok) 같은 함수로 실행
+      for (let g = 0; g < 3; g++) { const tq = e.transcendQuote?.(id); if (!tq?.ok || !tq.next) break; const tr = e.transcend(id); if (!tr?.ok) { did('transcendBlocked', { reason: tr?.reason }); break; } did('transcend', { to: tq.next, cost: JSON.stringify(tq.cost) }); }
       // 3a) 장비(새 UI 그대로): 영웅 탭 가방의 "더 좋은 장비 장착" → "가방 정리"(확인 단계 포함)를 사람이 누르듯 눌러 본다.
       {
         a.meta.heroSel = id; a.meta.heroPane = 'gear'; a.meta.bagClean = null; a.meta.openTab('heroes');
@@ -337,7 +352,7 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
         did('equip', { slot: best.slot, item: best.inst.id, enh: best.inst.enh, power: `${base}->${e.heroPower(id)}`, replaced: old || null });
       }
       // 4) 훈련(골드로 레벨 마무리): 게임이 허용할 때 반복
-      for (let g = 0; g < 10; g++) { const q = e.trainingQuote(id); if (!q.ok) { if (g === 0 && q.reason) did('trainBlocked', { reason: q.reason, need: q.cost, exp: `${q.exp}/${q.need}` }); break; } if (!e.levelUpHero(id)) break; did('trainLevelUp', { to: e.hero(id).level, cost: q.cost }); }
+      for (let g = 0; g < 10; g++) { const q = e.trainingQuote(id); if (!q.ok) { if (g === 0 && q.reason) did('trainBlocked', { reason: q.reason, need: q.cost, exp: `${q.exp}/${q.need}` }); break; } if (!e.levelUpHero(id)) break; did('trainLevelUp', { to: e.hero(id).level, cost: q.cost, gold: q.cost }); }
       // 5) 스킬 포인트: 낮은 레벨부터
       const skills = heroSkills[id];
       if (skills) for (let g = 0; g < 30; g++) {
@@ -358,9 +373,24 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (let g = 0; g < 60; g++) {
         const h = e.hero(id), worn = Object.values(h.equip || {}).map((uid) => e.s.inventory.find((x) => x.uid === uid)).filter(Boolean).filter((x) => (enhChance[x.enh] ?? 0) >= enhMin).sort((x, y) => x.enh - y.enh);
         if (!worn.length) break;
-        const t = worn[0], from = t.enh, r = e.enhance(t.uid);
+        const t = worn[0], from = t.enh, g0 = e.s.gold, r = e.enhance(t.uid);
         if (!r.ok) { did('enhanceBlocked', { reason: r.reason, item: t.id, enh: from }); break; }
-        did('enhance', { item: t.id, from, to: r.enh, success: r.success, chance: r.chance, ...(r.destroyed ? { destroyed: true } : {}), ...(r.down ? { down: r.down } : {}) });
+        did('enhance', { item: t.id, from, to: r.enh, success: r.success, chance: r.chance, gold: g0 - e.s.gold, ...(r.destroyed ? { destroyed: true } : {}), ...(r.down ? { down: r.down } : {}) });
+      }
+      // 7b) 확정 강화(골드 웃돈): 위에서 멈춘(성공 확률 enhMin 미만) 착용 장비를, 정비 시작 골드의 sureReserve(최소 5만)를 남기는 한도에서
+      //     강화 화면의 '확정 강화'와 같은 호출 eco.enhance(uid, { sure: true })로 올린다. 가장 낮은 강화부터, 실패가 없으므로 기록은 성공만.
+      if (sureOn) {
+        const reserve = Math.max(50000, Math.floor(gold0 * sureReserve));
+        for (let g = 0; g < 40; g++) {
+          const h = e.hero(id), worn = Object.values(h.equip || {}).map((uid) => e.s.inventory.find((x) => x.uid === uid)).filter(Boolean)
+            .map((x) => ({ x, q: e.enhanceQuote(x.uid) })).filter(({ q }) => q && q.sureGold && q.chance < enhMin).sort((p, q) => p.x.enh - q.x.enh);
+          if (!worn.length) break;
+          const { x: t, q } = worn[0];
+          if (e.s.gold - (q.gold + q.sureGold) < reserve) { did('sureSkip', { item: t.id, enh: t.enh, need: q.gold + q.sureGold, reserve }); break; }
+          const g0 = e.s.gold, from = t.enh, r = e.enhance(t.uid, { sure: true });
+          if (!r.ok) { did('sureBlocked', { reason: r.reason, item: t.id, enh: from }); break; }
+          did('enhanceSure', { item: t.id, from, to: r.enh, gold: g0 - e.s.gold, sureGold: r.sureGold });
+        }
       }
     } catch (err) { did('metaError', { err: String(err && err.stack || err).slice(0, 300) }); }
     // 인벤토리 진단: 가방 등급 분포, 착용 장비, 안 낀 장비 중 슬롯별 최대 전투력 변화
@@ -371,7 +401,10 @@ function installCampaign({ seed, masteryNodes, heroSkills, itemSlot, storyFirst,
       for (const x of e.s.inventory) { const slot = itemSlot[x.id]; if (!slot || h.equip[slot] === x.uid) continue; const d = e.heroBuildStats(id, { ...h.equip, [slot]: x.uid }, e.s.inventory).power - base; if (bestDelta[slot] === undefined || d > bestDelta[slot]) bestDelta[slot] = d; }
       inv = { total: e.s.inventory.length, byRarity, worn: Object.entries(h.equip || {}).map(([slot, uid]) => { const x = e.s.inventory.find((y) => y.uid === uid); return x ? `${slot}:${x.id}(${itemRarity[x.id]}+${x.enh})` : `${slot}:-`; }), bestUnwornPowerDelta: bestDelta, stones: [e.s.stones, e.s.stones2, e.s.stones3], fragments: e.s.fragments };
     } catch (err) { inv = { err: String(err).slice(0, 80) }; }
-    return { acts, inv, gold: [gold0, e.s.gold], gems: e.s.gems, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
+    // 골드 소비처별 합계(이번 정비): 훈련·일반 강화·확정 강화 웃돈. 나머지(소환 등 보석·소환권)는 골드를 쓰지 않는다.
+    const spend = { training: 0, enhance: 0, sure: 0 };
+    for (const x of acts) { if (x.kind === 'trainLevelUp') spend.training += x.gold || 0; else if (x.kind === 'enhance') spend.enhance += x.gold || 0; else if (x.kind === 'enhanceSure') { spend.enhance += (x.gold || 0) - (x.sureGold || 0); spend.sure += x.sureGold || 0; } }
+    return { acts, inv, spend, gold: [gold0, e.s.gold], gems: e.s.gems, gems0, bag: e.s.inventory.length, res: { stones: e.s.stones, stones2: e.s.stones2, stones3: e.s.stones3, fragments: e.s.fragments, tickets: e.s.tickets, transcendStones: e.s.transcendStones }, energy: e.s.energy, power: e.heroPower(id), level: e.hero(id).level, tickets: e.s.tickets };
   };
 
   C.state = () => { const hid = e.s.selected; return { mode: a.mode, hero: hid, level: e.hero().level, exp: e.hero().exp, power: e.heroPower(hid), unlocked: e.s.progress.unlocked, gold: e.s.gold, gems: e.s.gems, energy: e.s.energy, energyMax: e.energyMax, owned: [...(e.s.roster?.owned || [])], inventory: e.s.inventory.length, equip: e.hero().equip, levels: Object.fromEntries(Object.entries(e.s.heroes).map(([k, v]) => [k, v.level])) }; };
@@ -432,7 +465,7 @@ async function playStage(code, attempt, { tag = '' } = {}) {
 
 async function doMeta(label) {
   const r = await page.evaluate(() => window.__C.meta());
-  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, gems: r.gems, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
+  const row = { evt: 'meta', label, ...r }; metaLog.push(row); log({ evt: 'meta', label, inv: r.inv, n: r.acts.length, gold: r.gold, spend: r.spend, gems: r.gems, gems0: r.gems0, bag: r.bag, res: r.res, power: r.power, level: r.level, acts: r.acts.map((x) => x.kind + (x.item ? ':' + x.item : '') + (x.name ? ':' + x.name : '') + (x.to ? '>' + x.to : '')).slice(0, 40) });
   return r;
 }
 
@@ -453,6 +486,12 @@ function writeReport(final = false) {
   L.push('## 장비·재화', `- UI 장비 교체(uiEquipBest) ${gearActs.filter((x) => x.kind === 'uiEquipBest').length}회 · 가방 정리(uiBagClean) ${gearActs.filter((x) => x.kind === 'uiBagClean').length}회 · UI가 놓친 추가 교체(equip) ${gearActs.filter((x) => x.kind === 'equip').length}회`,
     ...gearActs.filter((x) => ['uiEquipBest', 'uiBagClean', 'equip'].includes(x.kind)).map((x) => `  - ${x.label}: ${x.kind} ${x.power || x.bag || ''}${x.swaps ? ' (' + x.swaps + '곳)' : ''}`),
     lastInv ? `- 마지막 정비 시점: 골드 ${lastInv.gold?.[1]} · 보석 ${lastInv.gems} · 가방 ${lastInv.inv?.total}개 ${JSON.stringify(lastInv.inv?.byRarity)} · 안 낀 최선 장비 전투력 변화 ${JSON.stringify(lastInv.inv?.bestUnwornPowerDelta)}` : '', '');
+  {
+    // 골드 소비처: 장(章) 끝마다 보유 골드와 그때까지의 누적 소비
+    const acc = { training: 0, enhance: 0, sure: 0 }, rows = [];
+    for (const m of metaLog) { for (const k of Object.keys(acc)) acc[k] += m.spend?.[k] || 0; if (/-10$/.test(m.label) || m === metaLog.at(-1)) rows.push(`| ${m.label} | ${m.gold?.[1] ?? ''} | ${acc.training} | ${acc.enhance} | ${acc.sure} | ${m.inv?.worn?.join(' ') ?? ''} |`); }
+    L.push('## 골드 소비처', '| 시점 | 보유 골드 | 누적 훈련 | 누적 일반 강화 | 누적 확정 강화 웃돈 | 착용 |', '|---|---|---|---|---|---|', ...rows, '');
+  }
   L.push('## 마찰', ...friction.map((f) => `- ${JSON.stringify(f)}`), '', '## 합류', ...joins.map((j) => `- ${JSON.stringify(j)}`), ...newHeroTrials.map((j) => `- 첫 사용: ${JSON.stringify(j)}`), '', `## 콘솔 오류 ${errors.length}건`, ...errors.slice(0, 20).map((x) => `- ${x.t}`));
   writeFileSync(resolve(OUT, 'summary.md'), L.join('\n'));
   return rep;
@@ -472,7 +511,7 @@ try {
   const itemSlot = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.slot]));
   const itemRarity = Object.fromEntries(Object.entries(ITEM_BY_ID).map(([k, v]) => [k, v.rarity]));
   const storyFirst = Object.fromEntries(STORY_EVENTS.map((ev) => [ev.id, ev.choices?.[0]?.id]));
-  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL, itemRarity, enhChance: Array.from({ length: ENH_MAX + 1 }, (_, lv) => lv >= ENH_MAX ? 0 : enhanceChance(lv)), enhMin: ENH_MIN });
+  await page.evaluate(installCampaign, { seed: SEED, masteryNodes: MASTERY_NODES.map((n) => ({ id: n.id, name: n.name, cost: n.cost, tier: n.tier, path: n.path })), heroSkills, itemSlot, storyFirst, maxSec: MAX_SEC, pullEnabled: PULL, itemRarity, enhChance: Array.from({ length: ENH_MAX + 1 }, (_, lv) => lv >= ENH_MAX ? 0 : enhanceChance(lv)), enhMin: ENH_MIN, sureOn: SURE, sureReserve: SURE_RESERVE });
   const s0 = await page.evaluate(() => window.__C.state());
   log({ evt: 'fresh-state', ...s0 });
   const known = new Set(s0.owned);

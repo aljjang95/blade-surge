@@ -22,7 +22,7 @@ const RECORD_ONLY: Record<string, string[]> = {
   'models/heroes-next/ranger-library-t1-v3.glb': ['src/data/ranger-library-revision-v3.json'],
   // v4 는 v6(와 철회된 v5)의 클립 원본 기록(clipSource)과 그 클립에 묶인 2·3단계·여우 저작 동작의 base 기록에만 나온다(hero-body-motion.js 는 v4 기록을 import 해 base 경로·SHA 를 비교만 하고 GLB 를 fetch 하지 않음).
   'models/heroes-next/ranger-library-t1-v4.glb': ['src/data/ranger-library-revision-v4.json', 'src/data/ranger-library-revision-v5.json', 'src/data/ranger-library-revision-v6.json',
-    'src/data/higher-body-motion-v1.json', 'src/data/fox-body-motion-v1.json', 'src/data/ranger-t1-body-motion-v1.json', 'src/data/ranger-t1-body-motion-v2.json',
+    'src/data/higher-body-motion-v1.json', 'src/data/fox-body-motion-v1.json', 'src/data/fox-body-motion-v2.json', 'src/data/ranger-t1-body-motion-v1.json', 'src/data/ranger-t1-body-motion-v2.json',
     // 2·3단계 v2 몸은 v4 골격에 재결합한 몸이라 개정 기록(authoring.base)과 띠 곡선 기록(base)에 v4 가 나온다.
     'src/data/ranger-t2-body-revision-v2.json', 'src/data/ranger-t2-body-motion-v2.json', 'src/data/ranger-t3-body-revision-v2.json', 'src/data/ranger-t3-body-motion-v2.json',
     // 등급 몸(S·U)도 v4 골격에 재결합한다(t4-body-revisions 의 authoring.base, 띠 곡선 기록의 base).
@@ -34,6 +34,10 @@ const RECORD_ONLY: Record<string, string[]> = {
   // 2·3단계 궁수 v1 몸은 v2 가 대신한다. 이력 기록 두 개와 v2 개정 기록(재질 마감 비교 사유)에만 나온다.
   'models/heroes-next/ranger-t2-body-fit-v1.glb': ['src/data/higher-body-revisions-v1.json', 'src/data/higher-body-motion-v1.json', 'src/data/ranger-t2-body-revision-v2.json'],
   'models/heroes-next/ranger-t3-body-fit-v1.glb': ['src/data/higher-body-revisions-v1.json', 'src/data/higher-body-motion-v1.json', 'src/data/ranger-t3-body-revision-v2.json'],
+  // 여우 아바타 몸 v1 은 다리 가중치를 가른 v2 가 대신한다. 자기 기록과 v2 기록(authoring.base)에만 나온다.
+  'models/heroes-next/ranger-fox-body-fit-v1.glb': ['src/data/fox-body-revision-v1.json', 'src/data/fox-body-revision-v2.json'],
+  // 흡혈 백작 아바타 몸 v1 은 v2 가 대신한다. t5 기록의 이전 개정(previous)과 v1 띠 곡선 기록(body)에만 나온다.
+  'models/heroes-next/rogue-vampire-body-fit-v1.glb': ['src/data/t5-avatar-body-revisions-v1.json', 'src/data/rogue-vampire-body-motion-v1.json'],
   'models/heroes-next/rogue-library-t1-axis-v1.glb': ['src/data/rogue-library-revision-v1.json', 'src/data/rogue-library-revision-v2.json'],
   'models/oathhall-v2': ['src/engine/oathhall-asset.js'],
 };

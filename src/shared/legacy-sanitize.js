@@ -12,6 +12,7 @@ import { normalizeGearDex, seedGearDex, setGearDex } from '../game/gear-dex.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 import { normalizeLegend } from '../game/legend-rank.js';
 import { CHAPTERS } from '../data/stages.js';
+import { progressItemLevel } from '../data/loot-tables.js';
 import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
 import { isChapterOpen } from '../data/chapter-open.js';
 import { DIFFICULTY_ORDER } from '../game/difficulty.js';
@@ -24,14 +25,14 @@ export const INVENTORY_CAP = 3000;
 /** 재화별 일 최대 획득률(가정). */
 export const DAILY_MAX = Object.freeze({
   gold: 3000000, gems: 5000, tickets: 40, ssrTickets: 2, sweep: 30, stones: 600, stones2: 200, stones3: 80,
-  fragments: 500, protect: 10, bless: 10, transcendStones: 40, skillResets: 3, heroShards: 200, material: 500,
+  fragments: 500, protect: 10, bless: 10, transferScroll: 5, transcendStones: 40, skillResets: 3, heroShards: 200, material: 500,
 });
 /** 일회성 원천 합(환영 우편·임무·첫 클리어·패스 무료 트랙 등, 가정). */
 export const ONE_TIME = Object.freeze({
   gold: 2000000, gems: 40000, tickets: 200, ssrTickets: 10, sweep: 30, stones: 2000, stones2: 500, stones3: 200,
-  fragments: 2000, protect: 20, bless: 20, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
+  fragments: 2000, protect: 20, bless: 20, transferScroll: 5, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
 });
-const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transcendStones', 'skillResets'];
+const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transferScroll', 'transcendStones', 'skillResets'];
 
 const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -202,6 +203,9 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   for (const item of s.inventory) delete item.sockets;
   // 고통 단계 장비 파워(tp)·전설 수련도 서버 명령이 생기기 전까지 가져오지 않는다(조작 세이브로 tp 50 장비·전설 단계 주입 방지).
   for (const item of s.inventory) { delete item.tp; delete item.il; }   // il(스테이지 장비 레벨)도 같은 이유로 가져오지 않는다.
+  // 가져온 il 대신 서버가 정화한 진행도의 장비 레벨을 모든 장비에 다시 준다(저장 정화의 il 이월과 같은 규칙). 없으면 il 이 붙은 새 필드 드랍이
+  // 가져온 유니크·레전드리를 앞섰다(2026-10-29 신고). 정화된 진행도라 조작 세이브로 il 을 부풀릴 수 없다.
+  { const il = progressItemLevel(s.progress); if (il > 1) for (const item of s.inventory) item.il = il; }
   s.legend = normalizeLegend(undefined);
   // 계승 문장은 가져오지 않는다(외부 저장으로 재화 주입 금지). 도감은 가져온 장비로 다시 만든 드랍 도감 + 서버 문서 값(수령 기록 포함)만 인정한다:
   // 가져온 kin·claimed 는 버린다(마일스톤 보상 주입·재수령 방지).

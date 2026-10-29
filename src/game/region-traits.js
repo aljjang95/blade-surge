@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { EliteAffixes } from './elite-affixes.js';
+import { speciesSourceId } from '../data/stages.js';
 
 export const REGION_TRAITS = {
   garden: { id: 'echo', name: '망각의 잔향', hint: '평타로 쓰러진 해골은 한 번 다시 일어납니다. 마무리 타격·스킬로 뼈를 부수세요.' },
@@ -17,6 +18,7 @@ export const REGION_TRAITS = {
   crown: { id: 'decree', name: '왕의 칙령', hint: '금빛 기수가 살아 있는 동안 그 분대가 단단합니다. 기수부터 쓰러뜨리세요.' },
 };
 // 지역 전용 종에 붙는 두 번째 동사(기존 정예 접두사 동작을 일반 몹 주기로 재사용).
+// 키는 원래 적 id 다. 장 전용 몸(stages.js CHAPTER_SPECIES, 예: 4장 squidle → ch4_drowned)은 speciesSourceId 로 원래 종의 동사를 이어받는다.
 export const REGION_SPECIES_VERBS = {
   tide: { squidle: { key: 'tether', name: '촉수 낚아채기' } },
   crown: { ninja: { key: 'blink', name: '그림자 걸음' } },
@@ -25,6 +27,13 @@ export const REGION_SPECIES_VERBS = {
 export const SKELETAL = /^Skeleton_|Skull|^Ch1_/;
 const POOLS = 12;
 const _v = new THREE.Vector3();
+
+/** 지역 동사: 적 id 로 먼저, 없으면 장 전용 종이 복사한 원래 적 id 로 찾는다. */
+export function regionSpeciesVerb(theme, id) {
+  const verbs = theme && REGION_SPECIES_VERBS[theme];
+  if (!verbs || !id) return null;
+  return verbs[id] || verbs[speciesSourceId(id)] || null;
+}
 
 export function regionTheme(stage) {
   // 지역 특성은 각 지역 2관문부터(1관문은 기본 적 학습 — 단계 곡선과 같은 규칙).
@@ -47,7 +56,7 @@ export class RegionTraits {
   /** 생성 직후: 지역 전용 종 동사와 왕관 기수. */
   attach(e, role) {
     if (!this.trait || e.isBoss || e.isElite || e.summoned) return;
-    const verb = REGION_SPECIES_VERBS[this.theme]?.[e.runtimeSpeciesId];
+    const verb = regionSpeciesVerb(this.theme, e.runtimeSpeciesId);
     if (verb && !e.affixes) {
       e.affixes = new EliteAffixes(e, [verb.key], { trash: true }); e.regionVerb = verb.name;
       if (!this.verbAnnounced) { this.verbAnnounced = true; this.game.ui?.toast?.(`지역 적 · ${e.def.name} — ${verb.name}: ${verb.key === 'tether' ? '예고선 뒤 영웅을 끌어당깁니다. 선이 닿기 전에 회피하세요.' : '멀어지면 영웅 뒤로 도약합니다. 도착 원을 보고 비키세요.'}`, 'gold'); }

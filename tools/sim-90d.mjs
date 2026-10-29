@@ -42,6 +42,34 @@ export const PERSONAS = Object.freeze({
   // 하루 8시간(120분×4세션). 세션 사이 4시간이라 에너지는 세션마다 80(= 4h/180s)만 찬다. 고통 단계(에너지 0)로 남는 시간을 쓴다.
   marathon: { id: 'marathon', name: '마라톤(8시간)', minutes: 480, sessions: 4, skill: 0.85, enhCap: 20, towerShare: .3, hero: 'knight', torment: true, energyGapH: 4, regionFirst: true },
 });
+/**
+ * 소액 과금 페르소나(report-only, 대표님 2026-10-29). 밴드·assertBands·PERSONAS 순회에 들어가지 않는다(기존 네 페르소나의 시드·밴드 불변).
+ * 활동량은 미드(일반)와 같고 한 달(30일)마다 보석 기본 팩(gems_300_v1: 3,900원 = 300보석, 보너스·묶음 할인 제외)을 예산 안에서 살 수 있는 만큼 산다.
+ * 이 시뮬레이터는 보석을 소환에 쓰는 모델이 아니라서(PERSONAS 주석 '소환·결제 제외') 진행 곡선(SSSR일·정체)은 미드와 같고, 여기서는 유료 보석 흐름과
+ * 영웅 직접 영입(HERO_DIRECT_PURCHASE, 유료 보석 전용)을 켰을 때 살 수 있는 시점만 계산한다.
+ */
+export const SPENDER_PERSONAS = Object.freeze({
+  low10: { id: 'low10', name: '소액 과금(월 1만원)', base: 'mid', monthlyKRW: 10000 },
+  low20: { id: 'low20', name: '소액 과금(월 2만원)', base: 'mid', monthlyKRW: 20000 },
+  low30: { id: 'low30', name: '소액 과금(월 3만원)', base: 'mid', monthlyKRW: 30000 },
+});
+const GEM_PACK = Object.freeze({ krw: 3900, gems: 300 });
+/** 유료 보석 흐름: 1·31·61일 차에 기본 팩을 예산 안에서 최대한 산다. 영입 가격(2,308)은 hero-direct-purchase.js 와 같은 값. */
+export function spenderReport(base, days = 90) {
+  const out = {};
+  for (const P of Object.values(SPENDER_PERSONAS)) {
+    const packs = Math.floor(P.monthlyKRW / GEM_PACK.krw), gemsPerMonth = packs * GEM_PACK.gems, krwPerMonth = packs * GEM_PACK.krw;
+    const buyDays = [1, 31, 61].filter((d) => d <= days);
+    const cumGems = (d) => buyDays.filter((b) => b <= d).length * gemsPerMonth;
+    const price = HERO_DIRECT_PURCHASE_GEMS;
+    // 영입 가능 시점: 누적 유료 보석 ≥ price × n 이 되는 첫 구매일(n번째 영웅). 다른 곳에 쓰지 않고 모은다고 가정.
+    const heroDay = (n) => buyDays.find((b) => cumGems(b) >= price * n) ?? null;
+    out[P.id] = { name: P.name, monthlyKRW: P.monthlyKRW, packsPerMonth: packs, gemsPerMonth, krwPerMonth, paidGemsByDay: { D30: cumGems(30), D60: cumGems(60), D90: cumGems(days) },
+      heroPrice: price, firstHeroDay: heroDay(1), secondHeroDay: heroDay(2), heroesByD90: Math.floor(cumGems(days) / price), pullsPerMonth: Math.floor(gemsPerMonth / 300),
+      progression: { baseOn: P.base, sssrDay: base.milestones.sssr, longestStall: base.stalls.longest, note: '소환·영입 지출을 진행 모델에 넣지 않아 미드(F2P)와 같은 곡선' } };
+  }
+  return out;
+}
 const MIN_STAGE = 3, MIN_HARD = 4;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
 const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
@@ -564,6 +592,7 @@ export function assertBands(report) {
   return f;
 }
 
+import { HERO_DIRECT_PURCHASE_GEMS } from '../src/data/hero-direct-purchase.js';
 export function run90d({ days = 90, seeds = 16, tormentAll = false, only = null } = {}) {
   const summary = {}, samples = {};
   for (const id of Object.keys(PERSONAS)) {
@@ -575,7 +604,7 @@ export function run90d({ days = 90, seeds = 16, tormentAll = false, only = null 
   return { assumptions: { days, seeds, personas: PERSONAS, powerNeed: POWER_NEED, tower: { baseScale: TOWER.baseScale, exponent: TOWER.exponent, capBase: TOWER.capBase, capPerWeek: TOWER.capPerWeek },
     notes: ['캠페인 기댓값은 economy-estimate.perRun(실제 Floor 방 구성·loot-tables)', '장비 드랍·강화 성공은 시드 난수, 나머지는 기댓값',
       '재료 던전·소환·결제·광고 보상은 제외(보수적)', '등급 초월일은 ECONOMY_PACE 무과금 초월일을 플레이 분량으로 환산', '요구 전투력 모델은 content-90d POWER_NEED(현행 7일 캠페인 실측으로 보정)'] },
-    summary, samples };
+    summary, samples, spenders: summary.mid ? spenderReport(summary.mid, days) : null };
 }
 
 if (import.meta.main) {
@@ -596,6 +625,12 @@ if (import.meta.main) {
       console.log('경제:', JSON.stringify(s.economy));
       console.log('룬:', JSON.stringify(Object.fromEntries(Object.entries(s.checkpoints).map(([k, c]) => [k, { II: c.runeII.p50, III: c.runeIII.p50, powerPct: c.runePowerPct.p50, dust: c.runeDust, dropped: c.runeDropped, crafted: c.runeCrafted }]))));
     }
+  }
+  if (!process.argv.includes('--json') && report.spenders) {
+    console.log('\n## 소액 과금 페르소나 (report-only, 밴드 없음 · 기본 팩 3,900원=300보석, 30일마다 구매 · 진행 곡선은 미드 기준)');
+    console.table(Object.fromEntries(Object.entries(report.spenders).map(([id, r]) => [id, { 월예산: r.monthlyKRW, 팩수: r.packsPerMonth, 월보석: r.gemsPerMonth, D30: r.paidGemsByDay.D30, D60: r.paidGemsByDay.D60, D90: r.paidGemsByDay.D90, 영입가: r.heroPrice, 첫영입일: r.firstHeroDay ?? '없음', 둘째영입일: r.secondHeroDay ?? '없음', D90영입수: r.heroesByD90 }])));
+    const sp = Object.values(report.spenders)[0].progression;
+    console.log('소액 과금 진행:', JSON.stringify({ SSSR일: sp.sssrDay, 최장정체: sp.longestStall, 비고: sp.note }));
   }
   if (process.argv.includes('--assert')) {
     const failures = assertBands(report);

@@ -6,6 +6,7 @@ import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown, ENH_SAFE_MAX } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
+import { enhanceSureCost } from '../data/enhance.js';
 import { weaponLook } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { GACHA } from '../data/shop.js';
@@ -15,12 +16,13 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
-import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems } from '../game/gear-advice.js';
+import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems, transferUpgrades } from '../game/gear-advice.js';
 import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
 import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
 import { openVault } from './vault-panel.js';
+import { canTransfer } from './enhance-transfer-panel.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -110,7 +112,7 @@ export function renderOwnedHero(meta, id, det) {
       const bought = eco.buyAvatar(avatar.id); if (!bought.ok) { meta.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
     }
     if (!eco.equipAvatar(id, equippedNow ? null : avatar.id).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const tryButton = det.querySelector('[data-avatar-try]');
@@ -135,7 +137,7 @@ export function renderOwnedHero(meta, id, det) {
   const gearButton = det.querySelector('[data-avatar-gear]');
   if (gearButton) gearButton.onclick = () => {
     if (!eco.setShowGear(id, !eco.s.avatars.showGear?.[id]).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const sortieButton = $('h-next'); if (sortieButton) sortieButton.onclick = () => meta.app.commandUI?.openPreparation();
@@ -226,7 +228,7 @@ export function renderBag(meta, heroId) {
   // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
   const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
   const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
-  const junk = junkItems(eco, { heroId, rarities: clean?.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
+  const junk = junkItems(eco, { heroId, rarities: !clean || clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
   const cleanHtml = clean ? '<div class="bag-clean" role="group" aria-label="가방 정리"><b>가방 정리</b>' + (junk.length
       ? '<p>착용 중인 장비보다 약해 쓸 일이 없는 장비 <b>' + junk.length + '개</b>를 분해합니다 (노말 ' + (sum.byRarity.N || 0) + ' · 스페셜 ' + (sum.byRarity.S || 0) + (clean.includeE ? ' · 에픽 ' + (sum.byRarity.E || 0) : '') + ').<br>받는 것: 골드 +' + fmt(sum.gold) + ' · 강화석 +' + fmt(sum.stones) + (sum.stones2 ? ' · 상급 강화석 +' + fmt(sum.stones2) : '') + '</p>'
       : '<p>지금 정리할 장비가 없습니다. 장착 중인 장비보다 약한 장비가 쌓이면 여기에 나타납니다.</p>') +
@@ -268,7 +270,7 @@ export function renderBag(meta, heroId) {
     refreshHero();
     if (done.swaps.length && heroId === eco.s.selected) meta.app.showcaseHero?.(heroId);   // 로비 캐릭터 외형도 바로 반영
   });
-  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: false }; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: true }; rerender('[data-bag-clean]'); });
   bag.querySelector('[data-clean-e]')?.addEventListener('change', (event) => { meta.bagClean = { open: true, step: 0, includeE: event.target.checked }; rerender('[data-clean-e]'); });
   bag.querySelector('[data-clean-go]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 1 }; rerender('[data-clean-confirm]'); });
   bag.querySelector('[data-clean-back]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 0 }; rerender('[data-clean-go]'); });
@@ -313,22 +315,32 @@ function setChangesHtml(p) {
   return rows ? '<ul class="is-sets">' + rows + '</ul>' : '';
 }
 
+/** 강화 전승 버튼: 이 장비가 원본이나 대상으로 짝이 하나라도 있을 때만(enhance-transfer-panel canTransfer). */
+// 착용 고강 장비의 강화를 옮기면 전투력이 오르는 조합(gear-advice transferUpgrades)이면 추천 표시를 붙인다.
+const transferHtml = (meta, inst) => {
+  if (!canTransfer(meta.eco, inst.uid)) return '';
+  const tip = transferUpgrades(meta.eco, inst.owner ?? meta.eco.s.selected).find((x) => x.srcUid === inst.uid || x.dstUid === inst.uid);
+  return '<button type="button" class="btn btn-ghost btn-sm is-transfer" id="e-transfer" title="강화 단계를 같은 부위의 다른 장비로 옮깁니다">강화 전승' + (tip ? ' <b class="stat-up">추천 ▲' + fmt(tip.delta) + '</b>' : '') + '</button>';
+};
+
 /** 강화 영역: 같은 시트 안에서 확률 · 비용을 보고 바로 강화한다. */
 function enhanceHtml(meta, inst) {
   const s = meta.eco.s, it = ITEM_BY_ID[inst.id], lv = inst.enh, maxed = lv >= ENH_MAX;
-  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p></section>';
+  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p>' + transferHtml(meta, inst) + '</section>';
   const cur = itemStats(inst), nxt = itemStats({ ...inst, enh: Math.min(ENH_MAX, lv + 1) });
   const cost = enhanceCost(lv), stones = enhanceStones(lv), tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
-  const chance = enhanceChance(lv), destroy = destroyChance(lv);
+  const chance = enhanceChance(lv), destroy = destroyChance(lv), sureGold = enhanceSureCost(lv);
   const rows = [['공격력', cur.atk, nxt.atk], ['HP', cur.hp, nxt.hp], ['방어', cur.def, nxt.def]].filter((row) => row[1] || row[2]);
   return '<section class="is-enh" aria-label="장비 강화"><h3>강화 <small class="is-lv">+' + lv + ' → <b>+' + (lv + 1) + '</b></small></h3>' +
     '<div class="enh-stats">' + rows.map((row) => '<div><span>' + row[0] + '</span><span>' + fmt(row[1]) + ' → <b>' + fmt(row[2]) + '</b></span></div>').join('') + '</div>' +
     '<div class="enh-rate">성공 <b id="e-rate">' + Math.round(chance * 100) + '%</b>' + (destroy > 0 ? ' · <span class="warn" id="e-destroy">파괴 ' + Math.round(destroy * 100) + '%</span>' : '') + (enhanceDown(lv) ? ' · 실패 시 <b>-1</b>' : '') + '</div>' +
     '<div class="enh-opts"><button type="button" class="enh-opt" data-opt="bless" aria-pressed="false"><img src="' + resourceArt('bless') + '" alt="" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×' + s.bless + '</span></button>' +
-    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') + '</div>' +
-    '<div class="enh-cost"><span class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
-    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' +
-    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험</p></section>';
+    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') +
+    // 확정 강화(골드 웃돈): +3 → +11 구간. 축복과 함께 쓰지 않는다(규칙은 enhance.js enhanceSureCost).
+    (sureGold ? '<button type="button" class="enh-opt" data-opt="sure" data-sure-gold="' + sureGold + '" aria-pressed="false" aria-label="확정 강화, 골드 ' + fmt(sureGold) + ' 추가"><i class="ic ic-gold"></i><span>확정 강화</span><span class="cnt">+' + fmt(sureGold) + '</span></button>' : '') + '</div>' +
+    '<div class="enh-cost"><span id="e-gold" class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
+    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' + transferHtml(meta, inst) +
+    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험' + (sureGold ? ' · +11까지는 골드를 더 내고 확정 강화할 수 있습니다' : '') + '</p></section>';
 }
 
 /** 가방 장비를 눌렀을 때 열리는 시트. 현재 장비와 나란히 비교하고 주 버튼 하나로 장착한다. */
@@ -433,14 +445,27 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         else showItemSheet(meta, uid, heroId);
       };
       // 강화
-      const opts = { bless: false, protect: false };
+      const opts = { bless: false, protect: false, sure: false };
+      const setOpt = (key, on) => { opts[key] = on; const el = b.querySelector('.enh-opt[data-opt="' + key + '"]'); if (el) { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); } };
       b.querySelectorAll('.enh-opt').forEach((el) => el.onclick = () => {
-        const key = el.dataset.opt; if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
-        opts[key] = !opts[key]; el.classList.toggle('on', opts[key]); el.setAttribute('aria-pressed', String(opts[key]));
-        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100) + '%';
+        const key = el.dataset.opt;
+        if (key === 'sure') {
+          // 확정 강화는 골드만 쓴다. 켜면 축복을 끈다(함께 쓰지 않음).
+          const total = enhanceCost(inst.enh) + (enhanceSureCost(inst.enh) || 0);
+          if (!opts.sure && eco.s.gold < total) { ui.toast('골드 부족 — 확정 강화에는 ' + fmt(total) + ' 골드가 필요합니다', 'red'); audio.play('ui_error'); return; }
+          setOpt('sure', !opts.sure); if (opts.sure) setOpt('bless', false);
+        } else {
+          if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
+          setOpt(key, !opts[key]); if (key === 'bless' && opts.bless) setOpt('sure', false);
+        }
+        const goldNeed = enhanceCost(inst.enh) + (opts.sure ? enhanceSureCost(inst.enh) || 0 : 0);
+        const gold = b.querySelector('#e-gold'); if (gold) { gold.innerHTML = '<i class="ic ic-gold"></i> ' + fmt(goldNeed); gold.classList.toggle('lack', eco.s.gold < goldNeed); }
+        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = (opts.sure ? 100 : Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100)) + '%';
         const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : '파괴 ' + Math.round(destroyChance(inst.enh) * 100) + '%';
         audio.play('ui_click', { vol: 0.4 });
       });
+      const transfer = b.querySelector('#e-transfer');
+      if (transfer) transfer.onclick = () => { audio.play('ui_click', { vol: 0.4 }); meta.openTransfer(uid, heroId); };
       const go = b.querySelector('#e-go');
       let staging = false;
       if (go) go.onclick = async () => {

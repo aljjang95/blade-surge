@@ -1,0 +1,18 @@
+{
+  "purpose": "아이콘 정체성 그대로 무기 3D(검성 아르카 sword/greatsword 형태). 1차는 등급 대표 4자루로 파이프라인 끝까지 통과.",
+  "flow": [
+    "1. Tripo Image(무료 쿼터): 참조 이미지 = 아이콘 PNG(R2 blade-surge-handoff/<iconKey>), 아래 conceptPrompt + extra 로 정측면 원화 1장",
+    "2. Tripo H3.1 이미지→3D(텍스처·PBR 켬), 원화 그대로",
+    "3. Retopology Triangle 3000 (상한 4000 넘지 않게)",
+    "4. GLB와 원화 PNG를 R2 blade-surge-handoff/tripo-3d/weapons/<id>.glb, <id>-concept.png 로 업로드 + task id 기록"
+  ],
+  "conceptPrompt": "Orthographic side view concept art of the exact same weapon shown in the reference image: keep the identical silhouette, colors, materials, gem placement and ornaments. The weapon stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face, the entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating).",
+  "targetTriangles": 3000,
+  "maxTriangles": 4000,
+  "weapons": [
+    { "id": "w_rusty", "rarity": "N", "form": "sword", "iconKey": "tripo-image/C/w_rusty.png", "extra": "rusty iron longsword, pitted orange rust patches, wrapped leather grip, round pommel" },
+    { "id": "w_hunter", "rarity": "S", "form": "sword", "iconKey": "tripo-image/C/w_hunter.png", "extra": "steel sword with a saw-toothed back edge, square cross guard, green gem pommel" },
+    { "id": "w_frost", "rarity": "E", "form": "sword", "iconKey": "tripo-image/C/w_frost.png", "extra": "translucent blue ice-crystal blade made of faceted shards, gold cross guard with a blue gem, blue crystal pommel" },
+    { "id": "w_king", "rarity": "L", "form": "greatsword", "iconKey": "tripo-image/C/w_king.png", "extra": "royal greatsword with a dark bronze-gold blade, golden feathered wings on the cross guard, the golden radiant halo ring fused solidly to the back of the guard behind the blade base, crown-shaped pommel, red gem" }
+  ]
+}

@@ -2,7 +2,7 @@
   "renderer": "tools/item-render-studio.mjs + tools/item-render-studio.html (Three.js WebGL2, gear-icon-studio 카메라·조명)",
   "sourceHashes": {
     "src/data/gear-catalog.js": "4c28bb17f47bb1a77d39b9a44241483cd71361c0e62e42cac51a890643ab7cc9",
-    "src/data/items.js": "63043d0591f921d2294f12927dbdbf9988e9559cfb708df3729ab145331b2b28",
+    "src/data/items.js": "d2dc940822c31e32831f7f6f549074350719b72c47dd359b81b149cacb76f20a",
     "src/data/armory.js": "5551d3b7a8543b08bd5e53d350027877a7f6283535c0ca489bbd9c222346efeb",
     "src/engine/item-forge.js": "e7e140bb7a6a2c1ca4c8679ae10fbf232f6e184fb0d3075fc098ce0c5d34e718",
     "src/game/armor-appearance.js": "1fec39abb9bb229ebcbf99043ee99aaf291afc9dc1c22d3c1a9be9513dfd15d8",
@@ -13,533 +13,533 @@
       "id": "a_bind",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "2744d417fb4fe94291524a69a5fc86b9615d14b5d4f98a1cee497e8d41444f63",
-      "occupancy": 0.852
+      "sha256": "18fd9fa85b75508578bafc529f245e736cf0ec7a3cb48352bac71df6daf3cea8",
+      "occupancy": 0.879
     },
     {
       "id": "a_blood",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "7f946ac998d22a3b5a2fbbcdbdb0476ce1d285c854fc786951ee381b56145e43",
-      "occupancy": 0.852
+      "sha256": "4e1800a75a19c84cf8deb7057988d41be690e662b354799ca2ccbc0a6556da38",
+      "occupancy": 0.879
     },
     {
       "id": "a_gravity",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "82096bf63a1057be031e43f041eaa7797c2b9a960e73c7efc73948090d0420df",
-      "occupancy": 0.852
+      "sha256": "f48711e6c5c1b41acc5986d881b1fbf640c82be73abb911629345ce6b5cf521f",
+      "occupancy": 0.879
     },
     {
       "id": "a_phoenix",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "6911628e4d3c877c92539f902b942ff0cbd0c145cb8c05c5c9675437de45d03a",
-      "occupancy": 0.852
+      "sha256": "7388c0dc63ea8ec8ebc3a1ff665028974f567d0883d38f5fd896e6e06191b28b",
+      "occupancy": 0.879
     },
     {
       "id": "a_plague",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "00bcd508155e361229baca5b5735e457188dcfb88c9070389f12b9f0f1bf1282",
-      "occupancy": 0.852
+      "sha256": "f5a0c9f317cfd2e3cd6b71db29e7def6fe6ea7b678cb1324bfeb8b79d67308f5",
+      "occupancy": 0.879
     },
     {
       "id": "a_rime",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "ba6c184ab0b0650b994a050acb5e5535d91966da58b835f06f7098b4a71ba2f4",
-      "occupancy": 0.852
+      "sha256": "56fc80d284308868bfc615f161be3c0875b50d11ed3c77d497d5801553e54d3b",
+      "occupancy": 0.879
     },
     {
       "id": "a_sigil",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "ec17226894875a2b335cdac4f51358d405d00c4b94b65ec3ed363058ab102de5",
-      "occupancy": 0.852
+      "sha256": "d97b383f50ae2587574300e9f6bbb7842e7c721be842ff562ce9f13d817e83e1",
+      "occupancy": 0.879
     },
     {
       "id": "a_storm",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "89a1c93ef0af569bf8fdb8128abb7bc2493e8d4a5a10a5165b49bd2d5f704edf",
-      "occupancy": 0.852
+      "sha256": "871bfa0aa04c28621050432317f96fe0adfd9e6f530cb739eb12ebeeb4804acd",
+      "occupancy": 0.879
     },
     {
       "id": "arm_aegis_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "df4051f89bf652f522cdc1eb80bfbca0e3bea781242b6c2ce49b8a6750eedf47",
-      "occupancy": 0.852
+      "sha256": "78e75cec7245288b66c52601bce34f1cb89576a46e48fe8c18434598fabb30b0",
+      "occupancy": 0.879
     },
     {
       "id": "arm_aegis_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "fef005ca4cc82695ab0b83d355421f05f6efbb4ac4b8f52f9a4da0c2228d9e89",
-      "occupancy": 0.852
+      "sha256": "890a53f6d7008951e473711854d799e31e2d5a347fa620ee7f64c8586e893a39",
+      "occupancy": 0.879
     },
     {
       "id": "arm_aegis_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "37d53b4a5a69c13bbcce6de7b4e14c48dd51b45d56c961d91a0a951d94499e13",
-      "occupancy": 0.852
+      "sha256": "4783725674d761f1440fbcfc08433e31359a991e682c1a16d5f1f8162cf798d5",
+      "occupancy": 0.879
     },
     {
       "id": "arm_aegis_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "ddc2577e99464593d721f3c4718fcaad4fb03089e70238353f6b9f6196cedb76",
-      "occupancy": 0.852
+      "sha256": "0406e09f5d0b4333709ad45584df284dd16f8815ecf693746f4a342870790ea7",
+      "occupancy": 0.879
     },
     {
       "id": "arm_anchor_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "65266a36306e1709b9ab682d9d1495547e3af33fd1d54ab156de5e73de591d7d",
-      "occupancy": 0.852
+      "sha256": "af2435afd6a31a61dba5b5829168b7e2d362585d190e6201d84d59b7fe9706af",
+      "occupancy": 0.879
     },
     {
       "id": "arm_anchor_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "8ad1bb87768cd775f25361e7c6e8718d55fb0e6af52dc2585b58fe306973f262",
-      "occupancy": 0.852
+      "sha256": "116ddbaee4ae71efc1996222e0d32f5ff39deee461bb313bd0cd0e23b729110a",
+      "occupancy": 0.879
     },
     {
       "id": "arm_anchor_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "c37fc8acf9fec5984f65252b2408b9c1911df8a34f385b24bccbf04146bcf2c1",
-      "occupancy": 0.852
+      "sha256": "b6e2068104fe3eb2c7be9400029965c76c0476b8bf2009c7468b9546dffabb0e",
+      "occupancy": 0.879
     },
     {
       "id": "arm_anchor_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "a592188c2095c657b657746baec2869e4d6d8420194110f65109edbd86a1069c",
-      "occupancy": 0.852
+      "sha256": "209f2a5b61fd2874052413f098642294568f8c5d6b99fac7781ff6667581ac86",
+      "occupancy": 0.879
     },
     {
       "id": "arm_echo_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "87bc1f2ece2b32f2c25560c9437fd59fea470d9ed47f914f717bd945bbd1ba3c",
-      "occupancy": 0.852
+      "sha256": "36f3971a2c0da402b327dea89318cbd9973504678bb8f8619592914f887c1d72",
+      "occupancy": 0.879
     },
     {
       "id": "arm_echo_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "0c6482b0ccf65dce9c59f80c90afbcf103f31545cbfe72d25818da7fe50a8e3c",
-      "occupancy": 0.852
+      "sha256": "3de80e0911a580b9ba96a1b361fc6d005ef6502c2764dc4521643e60ee0f84bb",
+      "occupancy": 0.879
     },
     {
       "id": "arm_echo_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "2e3a91421953727a0df381208d56603d281572fb5169f92d821fa7b14fd78d4c",
-      "occupancy": 0.852
+      "sha256": "068343266e53a327378a9aebc84fc7adb4cae4d5f26843e7cc177ae594670b7e",
+      "occupancy": 0.879
     },
     {
       "id": "arm_echo_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "e42afb84f28bde2bdfd59296f1ef50f5403a5e328da0aaac24603d0440cb70c5",
-      "occupancy": 0.852
+      "sha256": "5c378b9163c14fae6809bbe363583be221adcbcee40a3480b24631f9cb0d5983",
+      "occupancy": 0.879
     },
     {
       "id": "arm_lance_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "82ea39cee1c9815405ad31872f12286ec4aea2ef47b87773974eaa3c24fc7b1b",
-      "occupancy": 0.852
+      "sha256": "606c351e5c07dabe1f96aebdce2f721bb936aa2c370d69dcefbbf739cc9b2d42",
+      "occupancy": 0.879
     },
     {
       "id": "arm_lance_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "f9493da40036cd86d78899ece953dda8a959c01dc99b7492ff8aa5634be5334c",
-      "occupancy": 0.852
+      "sha256": "b2b9dabc7a3ec8722345ba3c73664a51b190366633cb99576a66abe028b93704",
+      "occupancy": 0.879
     },
     {
       "id": "arm_lance_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "779626930df8986fac4ad534b05b8aa7600bee489543bdd771e970beb25cb3b6",
-      "occupancy": 0.852
+      "sha256": "c0a839c954a2fcde235e78d7fd9c4b4d9f819d9006812113a6b5a5c7f9d7dce6",
+      "occupancy": 0.879
     },
     {
       "id": "arm_lance_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "f57a5d7a2199b9ad28128056c5936b62a42992447d082228b13a187ba7cedab7",
-      "occupancy": 0.852
+      "sha256": "b6f42312a0b0f919783dc94f853bf4d864be0868ea52461c90afdd53be790085",
+      "occupancy": 0.879
     },
     {
       "id": "arm_mercy_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "3bb562caf93a2222cd107135b7d612640ecc375e311eb995cf4e091602509845",
-      "occupancy": 0.852
+      "sha256": "d86730d0cb0275bd8491190f8c24f52cb51999634afc1c17094e269ead3059cd",
+      "occupancy": 0.879
     },
     {
       "id": "arm_mercy_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "8818d4fca5f483c2076bbe220065018a223bb009904230c29bdfff0f58b4f50b",
-      "occupancy": 0.852
+      "sha256": "93880bc5e430e4462943b58ae84647bf51a25b6254a4e6e7cd32d967cc18f1ba",
+      "occupancy": 0.879
     },
     {
       "id": "arm_mercy_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "468f42ead16300a1bbc4620ca527b10e080498e47d681360426e90098e3a300f",
-      "occupancy": 0.852
+      "sha256": "5c10c7b8f57eb1788dfd547cc46e9056d2a4e3015781a0d48fda90cb8cf4b333",
+      "occupancy": 0.879
     },
     {
       "id": "arm_mercy_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "8c010aacff0408631e4a0df9ec765b53e3653bbe63b13be98ed3e533dcee7f1b",
-      "occupancy": 0.852
+      "sha256": "a1c91229b6b879b9538a07c7d968879bac587b4fd857a22ae9353f87b03a4eb5",
+      "occupancy": 0.879
     },
     {
       "id": "arm_relay_armor",
       "slot": "armor",
       "source": "armory-glb",
-      "sha256": "e0dc0841e0652cf35a4cfc82fe14d3199d2f2a7ca3d289207291b3a800972746",
-      "occupancy": 0.852
+      "sha256": "64a7ca0777ba9e68bf06020ebe9c010d71b0201da3b6670ac6bfff7b43b17913",
+      "occupancy": 0.879
     },
     {
       "id": "arm_relay_boots",
       "slot": "boots",
       "source": "armory-glb",
-      "sha256": "c188acb3458aebb07117a0246092cfda8be405b0ec9bbbafd48e36743484f826",
-      "occupancy": 0.852
+      "sha256": "ac73e90da63e1ada843387754ee875978e2fc4a0125c2ac4bc49ef8f93c28772",
+      "occupancy": 0.879
     },
     {
       "id": "arm_relay_ring",
       "slot": "ring",
       "source": "armory-glb",
-      "sha256": "6f1d34b184b70b1fb455d7289a40578679aaf16fbb0027d832cf69674c276b82",
-      "occupancy": 0.852
+      "sha256": "ccc56f944efc6991bdeb76febe962c393a49e20559a35ac0f3e1060ae52db0c6",
+      "occupancy": 0.879
     },
     {
       "id": "arm_relay_weapon",
       "slot": "weapon",
       "source": "armory-glb",
-      "sha256": "5bc020ffaae09d45a2f7d4b532fc4afcac778635f12ee4d8446984ef70ba8087",
-      "occupancy": 0.852
+      "sha256": "b57220f7e6d11e28415baeb3d83abdaea38eae5bee8af816bb020a96d05bf742",
+      "occupancy": 0.879
     },
     {
       "id": "b_bind",
       "slot": "boots",
       "source": "forge",
-      "sha256": "12d85c1111d4b90ffa2cea9b2a191eea31a375b4a1640a333ec09bc408b50135",
-      "occupancy": 0.852
+      "sha256": "5c784a818cc2517708bc9dd7501c76599e96c07a1c9d74e6c7fd82fc98203690",
+      "occupancy": 0.879
     },
     {
       "id": "b_blood",
       "slot": "boots",
       "source": "forge",
-      "sha256": "b093b9103a700f1013154f6a11d1aa5a6afdcd37e564392f134b61053e446d9a",
-      "occupancy": 0.852
+      "sha256": "b69ae9ceaa118cbb0063bd7347c232f83046ee91f742d92070435bba937c781b",
+      "occupancy": 0.879
     },
     {
       "id": "b_gravity",
       "slot": "boots",
       "source": "forge",
-      "sha256": "db116b0e2f3943b435497feed2d559dada1461f2533006a507a89cd56f2d1b2f",
-      "occupancy": 0.852
+      "sha256": "fed88cc25ef3c37cc353a333a97f7fea8f39c70c5df5cc5f2ada57bcabe731c9",
+      "occupancy": 0.879
     },
     {
       "id": "b_phoenix",
       "slot": "boots",
       "source": "forge",
-      "sha256": "5053d82dbd2b6cfb777054a9f449d1abd55f890135580169f4c03f4b28c4d7ba",
-      "occupancy": 0.852
+      "sha256": "511e43f2295420e27a07dbecabf55cf05e93793679348194c0155522f3390582",
+      "occupancy": 0.879
     },
     {
       "id": "b_plague",
       "slot": "boots",
       "source": "forge",
-      "sha256": "b6297ff0cace01746e0e2bccc40ce0a2059880d2e9073700111928d41e5a107a",
-      "occupancy": 0.852
+      "sha256": "393a93d951d83d187fcea05a5bfe551b05af17151ea6c63b5ede31089f21bd9f",
+      "occupancy": 0.879
     },
     {
       "id": "b_rime",
       "slot": "boots",
       "source": "forge",
-      "sha256": "b2f51342e961718b531db93ea7b68d2ada57ad565d755ac90594d5da32091c45",
-      "occupancy": 0.852
+      "sha256": "0ff45bffe355e86de24ea74774984c167ecc8f564153090a7462ae6837e81446",
+      "occupancy": 0.879
     },
     {
       "id": "b_sigil",
       "slot": "boots",
       "source": "forge",
-      "sha256": "78c2176b331cb3ef9aaacc28029067452efc9c36c520a23045ff6478e413436b",
-      "occupancy": 0.852
+      "sha256": "1040d86ad7b2ed697343e803e3b6b90a1534847345dea675ca49ed91fd041739",
+      "occupancy": 0.879
     },
     {
       "id": "b_storm",
       "slot": "boots",
       "source": "forge",
-      "sha256": "f78d59930dc7fa7fe0ed38e29fc21d51b36eb7ddb6b3c39ea8ded51867fa836c",
-      "occupancy": 0.852
+      "sha256": "47522334cf911db6070bf14113073d47307052ac1012b42876a7d4695fe6b861",
+      "occupancy": 0.879
     },
     {
       "id": "exp_emberknight_armor",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "294222531f0e03e73ea7886785df22efe483567114a2c20a614984c59706d783",
-      "occupancy": 0.852
+      "sha256": "338873e767855c213b7420feab5d47f6da5c336368d997270c1e4ffcdef56b6e",
+      "occupancy": 0.879
     },
     {
       "id": "exp_emberknight_boots",
       "slot": "boots",
       "source": "forge",
-      "sha256": "012cd921db6254a18e7c45c2b55d63e42c5da53b32af2523ea6486ac0e44d0e0",
-      "occupancy": 0.852
+      "sha256": "d6cc81309171b82bbee3794df96a84156f82ede500dec7b8abdd39f1cec50abf",
+      "occupancy": 0.879
     },
     {
       "id": "exp_emberknight_ring",
       "slot": "ring",
       "source": "forge",
-      "sha256": "5568e685066a7a85e28564b4d35843c0b00d6ce4303f142bdb3ab12a0edf6b1b",
-      "occupancy": 0.852
+      "sha256": "e44c601e46365663cf77ac735d1349c81b1d96438809c0fe7081075d1b5e5932",
+      "occupancy": 0.879
     },
     {
       "id": "exp_emberknight_weapon",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "c9e0cdcc2d6bf4a4e881fe0761cf56bfba198f972925e7161105906640bdb7ae",
-      "occupancy": 0.852
+      "sha256": "8ca9d2b0b1f8c95e4a3b1b53c1fbbd1379fb9bb153eed837a6d874f92283e10a",
+      "occupancy": 0.879
     },
     {
       "id": "exp_glasswarden_armor",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "9f29b4e26296e02237adea645f8c7aacdf6c26a8aea6614e1c847ce23e13274c",
-      "occupancy": 0.852
+      "sha256": "fcd509375acfbf26f27532d15f5a22e8887f50b30d070a634a27744a8d2154c4",
+      "occupancy": 0.879
     },
     {
       "id": "exp_glasswarden_boots",
       "slot": "boots",
       "source": "forge",
-      "sha256": "b66b76fd59c4ec1e70664571b0175185a6234f9287622ade6f78db15014a3ee5",
-      "occupancy": 0.852
+      "sha256": "f1fc3c171a59a5274a1b9b3513d9c60b3817ac8d1d3e519adaa2591e3616086d",
+      "occupancy": 0.879
     },
     {
       "id": "exp_glasswarden_ring",
       "slot": "ring",
       "source": "forge",
-      "sha256": "4a32fe62d6ad40de251a13e47311342f03f46f0356017ec7239aeae99eac2664",
-      "occupancy": 0.852
+      "sha256": "6504a9682f8ac4cbe8e38d4d91e009a3b867ac21c836cbdc6694a29a4897f834",
+      "occupancy": 0.879
     },
     {
       "id": "exp_glasswarden_weapon",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "466cb151f82f9b6bcaa46ee20b1a6df41bd89500ebfb35359431acbe29a496d8",
-      "occupancy": 0.852
+      "sha256": "440bf58443d84d49d59eb585397b21b076c28202eb9de5d60c5fdbb2527c8c33",
+      "occupancy": 0.879
     },
     {
       "id": "exp_starreader_armor",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "4c48bbde4040292ddb285921a1fcf0beacc220353acfcd3e2b8be985e1bc448e",
-      "occupancy": 0.852
+      "sha256": "7ff907bfa91876adb35ab696edbe7f148feebeb696642eda812239129b6bbb0e",
+      "occupancy": 0.879
     },
     {
       "id": "exp_starreader_boots",
       "slot": "boots",
       "source": "forge",
-      "sha256": "8e8e2472f5e587d694893cf6fa14b89276893d034c17b1e31e8956025c0d4662",
-      "occupancy": 0.852
+      "sha256": "8cfbb8ce66c39ebae3b099587384b23832fa090926a3c1d4b94c8722ce4e1026",
+      "occupancy": 0.879
     },
     {
       "id": "exp_starreader_ring",
       "slot": "ring",
       "source": "forge",
-      "sha256": "bc9e52f54fcb4b8b4d02e6b57d922f7a41bb2b6cfb996168eebda5928244df84",
-      "occupancy": 0.852
+      "sha256": "f96ed357a49b80f8b4f15f7999940c0b99be0343c4334a1ccfa321830b9f48c3",
+      "occupancy": 0.879
     },
     {
       "id": "exp_starreader_weapon",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "d91c2dc1e35dae5f071107b4b3da7745be7a77bd88675af48f95cee05c3c9107",
-      "occupancy": 0.852
+      "sha256": "bf3887243258e0492785d0836dba5775a929d18a32f84497983079094718e3fc",
+      "occupancy": 0.879
     },
     {
       "id": "r_blood",
       "slot": "ring",
       "source": "forge",
-      "sha256": "f911fce4a659774e29b376de24bdba0a523625decbf89031129219fcc49a38fa",
-      "occupancy": 0.852
+      "sha256": "fa3a6ff5adfe7bb219a63a47c4ee0e3eb152b80afc637ad2a60b98e53546f7b1",
+      "occupancy": 0.879
     },
     {
       "id": "r_chain",
       "slot": "ring",
       "source": "forge",
-      "sha256": "87416cdeb72f0f1d5d46b1cf7a3b1fa66fec5b7bbf3c66153a6d26693b727ec9",
-      "occupancy": 0.852
+      "sha256": "1c24c8431aeac3c0cc103ec71887b2eb511b23e886ee4fef786242fad42cf718",
+      "occupancy": 0.879
     },
     {
       "id": "r_gravity",
       "slot": "ring",
       "source": "forge",
-      "sha256": "3b4483afd60b0451f02f31e2798f914776d156f8c4934844a3f0637258d572ae",
-      "occupancy": 0.852
+      "sha256": "362338396abc0cc9c2b40a90bf31c7ba7f95b578fb3e8f5fa343150213ff3e56",
+      "occupancy": 0.879
     },
     {
       "id": "r_phoenix",
       "slot": "ring",
       "source": "forge",
-      "sha256": "63319c2bde654f280286eab813164602731c20bf923b8269024464851a8c67c1",
-      "occupancy": 0.852
+      "sha256": "7245a4b46a720e02d5bb72466fbe24ebeb1c015b62d58ae62d19e4518bdde777",
+      "occupancy": 0.879
     },
     {
       "id": "r_plague",
       "slot": "ring",
       "source": "forge",
-      "sha256": "d5e61f2d1a8d068e8249abce5dba516648fb24a4c1ba169f51f23349923f44c0",
-      "occupancy": 0.852
+      "sha256": "6461052b00a84644f5a472e4a948f70eddec692c3321a54f55f3d471caab6ced",
+      "occupancy": 0.879
     },
     {
       "id": "r_rime",
       "slot": "ring",
       "source": "forge",
-      "sha256": "715d50641dc4cd3a0f58fca0a0b489810388e53b1af9ede48e3fb5fdfc60ba8e",
-      "occupancy": 0.852
+      "sha256": "7f7a5832be2a3a3a3314acfd3afd8fdd3670a19d83ce0da9f84ed27b88ae9f84",
+      "occupancy": 0.879
     },
     {
       "id": "r_sigil",
       "slot": "ring",
       "source": "forge",
-      "sha256": "90c69870309c36eb8e71e3edc6e87ba5fa55466c53600c38bc84f76cf9a8c4d3",
-      "occupancy": 0.852
+      "sha256": "414fa5de5508c14921c96009e2622e323e0db5c9571c9e97b2662083600012a2",
+      "occupancy": 0.879
     },
     {
       "id": "r_storm",
       "slot": "ring",
       "source": "forge",
-      "sha256": "efb93c8a5b4f33b9351a09ea5fb8eda31e2e28d71aa218a69558012c57fa8dad",
-      "occupancy": 0.852
+      "sha256": "7e4af30f952c5be1f622dc4ebc8681ecb61f85e7d4020e6e49481ce9c1fcafb1",
+      "occupancy": 0.879
     },
     {
       "id": "sg_abyss_husk",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "edd1187fc9413bf51ad68440ecd3ae8d272aaa5765b39fd7dbc124abcbe1ae03",
-      "occupancy": 0.852
+      "sha256": "d7a565c766fcf34a3cff39463bd7f62bff81982d7830db387e6379c348986897",
+      "occupancy": 0.879
     },
     {
       "id": "sg_astral_prism",
       "slot": "ring",
       "source": "forge",
-      "sha256": "1ae230306149d9529529f1e0a15a836c09287efb44435bec8523c2eb2e787036",
-      "occupancy": 0.852
+      "sha256": "37e982e0c24ab8d807c453a6532df48719738d546d39b1c04c1a0a5fd1f9e997",
+      "occupancy": 0.879
     },
     {
       "id": "sg_comet_stride",
       "slot": "boots",
       "source": "forge",
-      "sha256": "f6957d6efbb748b4aafde3f9cb9857356b21c7fd891945aa8ed8050e57d44aa1",
-      "occupancy": 0.852
+      "sha256": "beac08a8c289339823bd2ab4044cf41869ba10aa82ee72d348f42feadd30e086",
+      "occupancy": 0.879
     },
     {
       "id": "sg_ember_lantern",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "94df6c000f63a20e39a1983922ae3aecb6ae6c10d7a67237b981d33c131bed70",
-      "occupancy": 0.852
+      "sha256": "2600ea39441ee8dba83158374e72cd14cc6e97131753163622fa95f9d0afa010",
+      "occupancy": 0.879
     },
     {
       "id": "sg_moonward_aegis",
       "slot": "armor",
       "source": "armor-rig",
-      "sha256": "0abb885b969fae495ed47a84335ada24d0fd2aaf7f9374ff14fc742838d09973",
-      "occupancy": 0.852
+      "sha256": "d3f21a68a378a6ed0264977083443d6167cdc152d4c5ef54f2214cfdf5bf0763",
+      "occupancy": 0.879
     },
     {
       "id": "sg_orbit_crown",
       "slot": "ring",
       "source": "forge",
-      "sha256": "571cd09b485eadfd1f40e24321ddffeef46568ac6406a2f29db74d1fa957e8eb",
-      "occupancy": 0.852
+      "sha256": "fe05f284a2fdbd0a1ffcc2c5a1af57ee6f4693540c63c2e245139efe40061ee5",
+      "occupancy": 0.875
     },
     {
       "id": "sg_solar_grimoire",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "588481115c2534c176f0a53bfc8ff95237df1970dacb9424c0a10a126fda4330",
-      "occupancy": 0.852
+      "sha256": "7069e6245950fcc5e86ffdee3eddf8ddfa0dc38b8da91af7fdb9d67772d19d29",
+      "occupancy": 0.879
     },
     {
       "id": "sg_stormstep_treads",
       "slot": "boots",
       "source": "forge",
-      "sha256": "4f9e86546319e54e7f9955817109d91063cba41f32709c839ae6424bea884d34",
-      "occupancy": 0.852
+      "sha256": "2b91f3b65d6399dd47001d7a38acaed8ea6d0782c6c35998664e28d73d1b52e1",
+      "occupancy": 0.879
     },
     {
       "id": "w_blood",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "b7bd78fd0385766b8f4f26e9eeb2bd215f7c34b1b26cc09fdf5eedbc91ed9ce2",
-      "occupancy": 0.852
+      "sha256": "6fa5304035902d206891e7cd76d9bce3bb243094e2b2bf9b5fd195602d1e9e4f",
+      "occupancy": 0.879
     },
     {
       "id": "w_chain",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "6ec3292f4b7cc73e7ee86c15d82b4169da4a3a08523c5c711de8923d2f3cda0c",
-      "occupancy": 0.852
+      "sha256": "6e9c7cb2e467e4e2b6ddcda7f75248d031a34bfe725ebb7728db8339815b46b7",
+      "occupancy": 0.879
     },
     {
       "id": "w_gravity",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "6abf32bc6615173a9d9241feb8a8037933f722fc4fdace3419a16db4fc67dca8",
-      "occupancy": 0.852
+      "sha256": "c62a5e9aa9c170ce6bdebee4f4d6a23cbdb17c63b6ce721e3b4bdf1d483b5c6b",
+      "occupancy": 0.879
     },
     {
       "id": "w_phoenix",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "68720c66ba296b29fe151f4b4a3ca87437bcecd9cd979668bc802fcb82290f28",
-      "occupancy": 0.852
+      "sha256": "15a8d062e4bb74c66bc8b5f7323baf9d520bad71b5fdb6b064d7af3d561af1b0",
+      "occupancy": 0.879
     },
     {
       "id": "w_plague",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "5cf17f475daabd0c00840132ed4e41b613770798a8954355946940e4b38e599f",
-      "occupancy": 0.852
+      "sha256": "392396dcb037919d4be1714d0689973c745a7ac069ef12f54050f62a1e9b5d75",
+      "occupancy": 0.879
     },
     {
       "id": "w_rime",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "bbbd891ebd63a8852c69f6c777d87b4b8e431ebbdb5fe804296be281a34c5c2f",
-      "occupancy": 0.852
+      "sha256": "e93bae6c61ecad8c60e2d8f15cadf78f7a030976b5052bcd95fd12b3a0f9806e",
+      "occupancy": 0.879
     },
     {
       "id": "w_sigil",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "6108a24d6ec3573e7ded60201535357827ee0c68aa69a12c96093814d81861ca",
-      "occupancy": 0.852
+      "sha256": "29614cce60cafc16b4767067154a846ffded7592b7522834811e7983eafce883",
+      "occupancy": 0.879
     },
     {
       "id": "w_storm",
       "slot": "weapon",
       "source": "forge",
-      "sha256": "5bbd10ba55e35b8d2850b72cc8aa2dfb0b6a97f8ac902b062d980e33f4bc3cb3",
-      "occupancy": 0.852
+      "sha256": "edbf88ba32cb9c2d0d811689cce84480f80e13ef0c01316b944fa5551a66aa66",
+      "occupancy": 0.879
     }
   ]
 }
