@@ -1,7 +1,7 @@
 // 보관·파기·남용 방지 묘비(지휘 2026-10-29, docs/ACCOUNT_POLICY.md 7장).
 import { describe, expect, test } from 'bun:test';
 import { v1Harness } from './helpers/v1-harness';
-import { archiveIdleGuests, IDLE_MS, IDLE_PURGE_MS } from '../worker/v1/archive';
+import { archiveIdleGuests, IDLE_MS, IDLE_PURGE_MS, restoreIdle } from '../worker/v1/archive';
 import { purgeExpiredArchives, purgeWithdrawnAccounts, runRetention } from '../worker/v1/retention';
 import { BANNED_TOMBSTONE_MS, hasRecentTombstone, purgeExpiredTombstones, syncBannedTombstones, WITHDRAWN_TOMBSTONE_MS } from '../worker/v1/tombstone';
 import { providerSubject } from '../worker/v1/auth';
@@ -171,5 +171,86 @@ describe('남용 방지 묘비', () => {
     await withdraw(h);
     h.setNow(h.now() + 91 * DAY);
     expect(await runRetention(h.db as any, h.now())).toEqual({ withdrawn: 1, archives: 0, idleAccounts: 0, tombstones: 1, banned: 0 });
+  });
+});
+
+describe('idle 파기 후속(교차 리뷰)', () => {
+  test('1) 파기된 게스트를 되살려도 옛 임포트·우편·원장 흔적이 없고 결제 원장은 남는다', async () => {
+    const h = await v1Harness({ social: true });
+    const idle = await h.session();
+    const id = idle.accountId;
+    h.db.sqlite.exec(`INSERT INTO mail(mail_id, account_id, kind, title, rewards, created_at, expires_at) VALUES ('m:${id}', '${id}', 'x', 't', '{}', 1, 2)`);
+    h.db.sqlite.exec(`INSERT INTO legacy_saves(legacy_id, account_id, uploaded_at, doc, report, status) VALUES ('${id.padEnd(64, 'a')}', '${id}', 1, '{}', '{}', 'shadow')`);
+    h.db.sqlite.exec(`INSERT INTO wallet_ledger(op_id, account_id, kind, delta, receipt, rev_after, at) VALUES ('import:x${id}', '${id}', 'import', '{}', 'r', 1, 1), ('cid:x${id}', '${id}', 'cmd:x', '{}', 'r', 1, 1), ('iap:x${id}', '${id}', 'iap:gem', '{}', 'r', 1, 1)`);
+    h.advance(IDLE_MS + 1000);
+    expect(await archiveIdleGuests(h.db as any, h.now())).toBe(1);
+    h.setNow(q(h, 'SELECT purge_at FROM account_archive WHERE account_id = ?', id).purge_at);
+    expect((await purgeExpiredArchives(h.db as any, h.now())).idleAccounts).toBe(1);
+    for (const t of ['legacy_saves', 'mail']) expect([t, count(h, t, id)]).toEqual([t, 0]);
+    expect(q(h, "SELECT COUNT(*) AS n FROM wallet_ledger WHERE account_id = ? AND kind NOT LIKE 'iap%'", id).n).toBe(0);
+    expect(q(h, "SELECT COUNT(*) AS n FROM wallet_ledger WHERE account_id = ? AND kind LIKE 'iap%'", id).n).toBe(1);
+    const back = await h.session(idle.deviceKey);
+    expect(back.created).toBe(true);
+    expect(count(h, 'legacy_saves', id)).toBe(0);
+  });
+  test('2) restoreIdle 직후 파기가 끼어들면 복원 INSERT는 아무것도 되살리지 않는다', async () => {
+    const h = await v1Harness();
+    const idle = await h.session();
+    const id = idle.accountId;
+    h.advance(IDLE_MS + 1000);
+    await archiveIdleGuests(h.db as any, h.now());
+    h.setNow(q(h, 'SELECT purge_at FROM account_archive WHERE account_id = ?', id).purge_at);
+    let raced = false;
+    const racing = { prepare: (x: string) => h.db.prepare(x), batch: async (st: any[]) => {
+      if (!raced) { raced = true; await purgeExpiredArchives(h.db as any, h.now()); }
+      return h.db.batch(st);
+    } };
+    expect(await restoreIdle(racing as any, id, h.now())).toBe(false);
+    expect(raced).toBe(true);
+    expect(count(h, 'account_docs', id)).toBe(0);
+    expect(q(h, 'SELECT status FROM accounts WHERE account_id = ?', id).status).toBe('deleted');
+  });
+  test('2) 보관 뒤 돌아온(last_seen 갱신) 계정은 파기가 건드리지 않는다', async () => {
+    const h = await v1Harness();
+    const idle = await h.session();
+    const id = idle.accountId;
+    h.advance(IDLE_MS + 1000);
+    await archiveIdleGuests(h.db as any, h.now());
+    h.setNow(q(h, 'SELECT purge_at FROM account_archive WHERE account_id = ?', id).purge_at);
+    h.db.sqlite.exec(`UPDATE accounts SET last_seen = ${h.now()} WHERE account_id = '${id}'`);
+    expect((await purgeExpiredArchives(h.db as any, h.now())).idleAccounts).toBe(0);
+    expect(q(h, 'SELECT status FROM accounts WHERE account_id = ?', id).status).toBe('active');
+    expect(count(h, 'account_archive', id)).toBe(1);
+    expect(await restoreIdle(h.db as any, id, h.now())).toBe(true);
+    expect(count(h, 'account_docs', id)).toBe(1);
+  });
+  test('3) 보호 대상이 limit개 이상 앞을 막아도 뒤의 정상 대상이 파기된다', async () => {
+    const h = await v1Harness();
+    // account_id 순서에서 정상 대상이 맨 뒤가 되게 한다(LIMIT이 앞의 보호 대상 3개에 먼저 걸리는 상황).
+    const all = [await h.session(), await h.session(), await h.session(), await h.session()].sort((x, y) => x.accountId.localeCompare(y.accountId));
+    const guards = all.slice(0, 3), plain = all[3];
+    h.advance(IDLE_MS + 1000);
+    expect(await archiveIdleGuests(h.db as any, h.now())).toBe(4);
+    for (const g of guards) h.db.sqlite.exec(`INSERT INTO account_flags(account_id, flag, at) VALUES ('${g.accountId}', 'test', 1)`);
+    h.setNow(h.now() + IDLE_PURGE_MS + 1);
+    expect((await purgeExpiredArchives(h.db as any, h.now(), 2)).idleAccounts).toBe(1);
+    expect(q(h, 'SELECT status FROM accounts WHERE account_id = ?', plain.accountId).status).toBe('deleted');
+  });
+  test('4) 재제재하면 기존 banned 묘비 만료일이 새 기한으로 연장된다', async () => {
+    const h = await v1Harness();
+    const s = await h.session();
+    h.google.set('gr', 'sub-reban');
+    await h.send('POST', '/auth/link', { provider: 'google', idToken: 'gr' }, s.token);
+    h.db.sqlite.exec(`UPDATE accounts SET status = 'banned' WHERE account_id = '${s.accountId}'`);
+    h.db.sqlite.exec(`INSERT INTO sanctions(account_id, kind, until, reason, by, at) VALUES ('${s.accountId}', 'ban', NULL, 't', 'gm', ${h.now()})`);
+    expect(await syncBannedTombstones(h.db as any, h.now())).toBe(1);
+    const first = q(h, 'SELECT expires_at FROM abuse_tombstones').expires_at;
+    const later = h.now() + 100 * DAY;
+    h.setNow(later);
+    h.db.sqlite.exec(`INSERT INTO sanctions(account_id, kind, until, reason, by, at) VALUES ('${s.accountId}', 'ban', NULL, 't2', 'gm', ${later})`);
+    expect(await syncBannedTombstones(h.db as any, later)).toBe(1);
+    expect(q(h, 'SELECT expires_at FROM abuse_tombstones').expires_at).toBe(later + BANNED_TOMBSTONE_MS);
+    expect(later + BANNED_TOMBSTONE_MS).toBeGreaterThan(first);
+    expect(await syncBannedTombstones(h.db as any, later)).toBe(0);
   });
 });
