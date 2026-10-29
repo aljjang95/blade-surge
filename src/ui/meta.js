@@ -898,8 +898,19 @@ export class Meta {
     } });
   }
   showMail() {
-    const mails = this.eco.s.mail;
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('mail')}" alt="">우편함</h2>${mails.map((m) => `<div class="mail-item"><div class="mi-body"><div class="mi-t">${m.title}</div><div class="mi-d">${m.body}</div></div><button class="btn btn-gold btn-sm" data-mail="${m.id}" ${m.read ? 'disabled' : ''}>${m.read ? '수령' : '받기'}</button></div>`).join('') || '<p>우편이 없습니다</p>'}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelectorAll('[data-mail]').forEach((x) => x.onclick = () => { const got = this.eco.claimMail(+x.dataset.mail); if (got) { this.trackFunnel('reward_claim', { source: 'mail' }); audio.pick('coin', 2); this.ui.rewardToast(got); x.disabled = true; x.textContent = '수령'; } }); } });
+    // 받을 우편 먼저, 남은 기간 표시, 모두 받기(docs/RPG_ESSENTIALS.md E5). 받기는 우편마다 서버 명령 하나(claimMail).
+    const now = this.eco.trustedClock?.() ?? Date.now();
+    const mails = [...this.eco.mailbox()].sort((x, y) => (x.read - y.read) || (y.id - x.id));
+    const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const left = (m) => Number.isFinite(m.until) ? `<small class="mi-left">${Math.max(1, Math.ceil((m.until - now) / 86400000))}일 남음</small>` : '';
+    const unread = mails.filter((m) => !m.read).length;
+    const claim = (id) => { const got = this.eco.claimMail(id); if (got) this.trackFunnel('reward_claim', { source: 'mail' }); return got; };
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('mail')}" alt="">우편함</h2>${mails.map((m) => `<div class="mail-item"><div class="mi-body"><div class="mi-t">${m.title} ${left(m)}</div><div class="mi-d">${m.body}</div>${Object.keys(m.rewards || {}).length ? `<div class="q-r">${label(m.rewards)}</div>` : ''}</div><button class="btn btn-gold btn-sm" data-mail="${m.id}" ${m.read ? 'disabled' : ''}>${m.read ? '수령' : '받기'}</button></div>`).join('') || '<p>우편이 없습니다</p>'}<div class="modal-btns">${unread > 1 ? '<button class="btn btn-gold" id="m-all">모두 받기</button>' : ''}<button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      const all = b.querySelector('#m-all');
+      if (all) all.onclick = () => { const got = mails.filter((m) => !m.read).flatMap((m) => claim(m.id) || []); if (got.length) { audio.pick('coin', 2); this.ui.rewardToast(got); } this.showMail(); };
+      b.querySelectorAll('[data-mail]').forEach((x) => x.onclick = () => { const got = claim(+x.dataset.mail); if (got) { audio.pick('coin', 2); this.ui.rewardToast(got); } this.showMail(); });
+    } });
   }
   showQuests() {
     const qs = this.eco.quests();
