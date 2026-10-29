@@ -54,6 +54,9 @@ export async function restoreIdle(db: D1Database, accountId: string, now: number
       .bind(accountId, rev, arc.doc, new TextEncoder().encode(arc.doc).length, now),
     db.prepare("DELETE FROM account_flags WHERE account_id = ? AND flag = 'idle-archived' AND EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ? AND doc = ?)")
       .bind(accountId, accountId, rev, arc.doc),
+    // 복원이 끝났으면 쓴 보관본은 지운다. 남기면 다시 보관될 때 INSERT OR IGNORE가 옛 purge_at을 유지해 파기 기한이 앞당겨진다(retention.ts).
+    db.prepare("DELETE FROM account_archive WHERE archive_id = ? AND NOT EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'idle-archived')")
+      .bind(arc.archive_id, accountId),
   ]);
   return !!out[1]?.meta?.changes;
 }
