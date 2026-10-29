@@ -1,5 +1,5 @@
 import { SIGNATURES as RANGER, PRELUDES as RANGER_PRELUDES, screenReach, SCREEN_REACH } from './sig-ranger.js';
-import { SIGNATURES as KNIGHT } from './sig-knight.js';
+import { SIGNATURES as KNIGHT, PRELUDES as KNIGHT_PRELUDES } from './sig-knight.js';
 import { SIGNATURES as MAGE, PRELUDES as MAGE_PRELUDES } from './sig-mage.js';
 import { SIGNATURES as ROGUE, PRELUDES as ROGUE_PRELUDES } from './sig-rogue.js';
 import { SIGNATURES as BARBARIAN, PRELUDES as BARBARIAN_PRELUDES } from './sig-barbarian.js';
@@ -13,6 +13,7 @@ export { screenReach, SCREEN_REACH };
  */
 export const SKILL_PRELUDES = {
   ...RANGER_PRELUDES,
+  ...KNIGHT_PRELUDES,
   ...ROGUE_PRELUDES,
   ...MAGE_PRELUDES,
   ...BARBARIAN_PRELUDES,
