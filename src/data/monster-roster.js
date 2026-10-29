@@ -140,7 +140,7 @@ export const MONSTER_ROSTER = Object.freeze({
   Ch6_PassengerDrift: { asset: 'tll_ch6_passenger', fallback: 'void_wisp', scale: 0.85, fallbackScale: 1.17 },
   // 가방 방패 승객: 여행 가방을 왼손에 방패처럼 앞으로 든다(가시 방벽·골렘 수호자 shield 행동 자리).
   Ch6_PassengerTrunk: { asset: 'tll_ch6_passenger', fallback: 'bone_knight', scale: 0.97, fallbackScale: 1.03,
-    offhand: { asset: 'tll_ch6_suitcase', hand: 'left', grip: [0, 0.4, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
+    offhand: { asset: 'tll_ch6_suitcase', hand: 'left', grip: [0, 0.08, 0.05], at: [0, 0.05, 0.08], rot: [90, 0, 0] } },
   Ch6_Witness: { asset: 'tll_ch6_witness', fallback: 'goblin_chief', scale: 0.8, fallbackScale: 1.03 },
   // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
   // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
