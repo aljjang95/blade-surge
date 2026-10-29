@@ -157,6 +157,18 @@
       }
     },
     {
+      "id": "w_sun",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sun.glb",
+      "sha256": "5dc4f5fcafce029a384ab53753d7c661fb08e63f7777b3a76368b50a12d36d9d",
+      "bytes": 640948,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "8186b758-9d60-4f9d-a346-d478209ffd72",
+        "concept": "sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
       "id": "w_wood",
       "form": "sword",
       "file": "/models/item-weapons/w_wood.glb",
