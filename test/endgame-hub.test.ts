@@ -57,6 +57,16 @@ test('고통 목표는 다음 장비 접두 단계(고대 T10, 태고 T25, 최�
   expect(at(10).progress.max).toBe(25);
   expect(at(10).title).toContain('태고');
   expect(at(25).progress.max).toBe(50);
+  // T50(최고 단계)을 깼으면 더 오를 고통 목표를 내지 않는다(리뷰 P2).
+  expect(endgameGoals(save({ heroes: { knight: { level: 80 } }, endgame: { peak: peakOf(1, 3), torment: { best: 50 } } })).goals.some((g) => g.id === 'torment')).toBe(false);
+});
+
+test('심층 원정은 실제 입장 조건을 따른다: 기본 원정 미클리어면 기본 원정을 안내한다(리뷰 P2)', () => {
+  const base = { heroes: { knight: { level: 80 } }, progress: { unlocked: 40, stars: { '2-10': 3 } } };
+  const pick = (expedition: any) => endgameGoals(save({ ...base, expedition }), { limit: 99 }).goals.find((g) => g.id.startsWith('expedition'));
+  expect(pick({})).toMatchObject({ id: 'expedition-basic', target: { screen: 'expedition', arg: 'glass_garden', depth: 'standard' } });
+  expect(pick({ stats: { glass_garden: 1 } })).toMatchObject({ id: 'expedition', target: { arg: 'glass_garden', depth: 'deep' } });
+  expect(pick({ stats: { glass_garden: 1 }, depthWins: { glass_garden: 1 } })).toBeUndefined();
 });
 
 test('전설 점수가 남았으면 항상 맨 앞, 만렙 이후에는 전설 수련이 목표가 된다', () => {

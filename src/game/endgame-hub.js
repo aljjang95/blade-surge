@@ -3,6 +3,8 @@
 import { TORMENT } from '../data/content-90d.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { EXPEDITION_DEPTHS } from '../data/expedition-depths.js';
+import { EXPEDITION_ROUTES } from '../data/expedition-routes.js';
+import { dungeonVisibility } from './region-dungeon-gate.js';
 import { HEROES } from '../data/heroes.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { DIFFICULTY_ORDER, tormentUnlockedTier } from './difficulty.js';
@@ -52,12 +54,12 @@ const bar = (cur, max, text) => ({ cur: Math.max(0, Math.min(cur, max)), max, te
 
 /**
  * 다음 목표(최대 3개). 후보마다 우선순위 숫자를 주고 작은 순(동률은 id 순)으로 3개를 고른다.
- *   1 전설 점수 미분배 · 2 주간 보급 수령 · 10 Lv.80 · 15 성문 개방 주간의 탑 · 20 악몽→지옥→고통 사다리 · 30 전설 수련 · 40 무한의 성 · 50 심층 원정.
+ *   1 전설 점수 미분배 · 2 주간 보급 수령 · 10 Lv.80 · 15 성문 개방 주간의 탑 · 20 악몽→지옥→고통 사다리 · 30 전설 수련 · 40 무한의 성 · 50 심층 원정(기본 원정 미클리어면 그 기본 원정).
  * @param {any} save  Economy 저장(s). 바꾸지 않는다.
- * @param {{ nowMs?: number }} [options]
- * @returns {{ unlocked: boolean, reason: string|null, level: number, goals: Array<{id:string,title:string,why:string,progress:{cur:number,max:number,text:string},target:{screen:string,arg?:string},priority:number}>, season: {id:string,name:string,tagline:string}|null }}
+ * @param {{ nowMs?: number, limit?: number }} [options]  limit: 고를 개수(기본 3, 시험용으로 늘릴 수 있다)
+ * @returns {{ unlocked: boolean, reason: string|null, level: number, goals: Array<{id:string,title:string,why:string,progress:{cur:number,max:number,text:string},target:{screen:string,arg?:string,depth?:string},priority:number}>, season: {id:string,name:string,tagline:string}|null }}
  */
-export function endgameGoals(save, { nowMs = 0 } = {}) {
+export function endgameGoals(save, { nowMs = 0, limit = MAX_GOALS } = {}) {
   const gate = endgameUnlock(save), events = activeEvents(nowMs), season = events[0] ? { id: events[0].id, name: events[0].name, tagline: events[0].tagline } : null;
   if (!gate.unlocked) return { ...gate, goals: [], season };
   const level = gate.level, eg = normalizeEndgame(save?.endgame), legend = normalizeLegend(save?.legend), progress = object(save?.progress) ? save.progress : {};
@@ -82,11 +84,14 @@ export function endgameGoals(save, { nowMs = 0 } = {}) {
 
   // 악몽 → 지옥 → 고통 사다리: 가장 앞 단계 하나만 목표가 된다.
   if (tormentTier >= 1) {
+    // T50(최고 단계)을 깼으면 더 오를 단계가 없다 — 불가능한 목표로 세 칸을 차지하지 않는다.
+    if (tormentBest < TORMENT.maxTier) {
     const marks = TORMENT.itemPrefixes.map((p) => ({ tier: p.from, name: p.name })).sort((a, b) => a.tier - b.tier), next = marks.find((m) => m.tier > tormentBest);
     const cap = next ? next.tier : TORMENT.maxTier, name = next ? `${next.name} 장비` : '최고 단계';
     out.push(goal(20, 'torment', `고통 ${tormentBest + 1}단계 도전 (목표 T${cap} ${name})`,
       `에너지 0으로 반복하는 지옥 위의 난이도입니다. T${marks[0].tier}부터 고대, T${marks[1].tier}부터 태고 장비가 나오고, 경험치가 커서 전설 수련도 함께 오릅니다.`,
       bar(tormentBest, cap, `최고 T${tormentBest} / T${cap}`), { screen: 'stage' }));
+    }
   } else {
     const hellRow = best(rows.filter((r) => r.nightmare >= STAGES_PER_CHAPTER && r.hell < STAGES_PER_CHAPTER), 'hell');
     if (hellRow) out.push(goal(20, 'hell', `${hellRow.ch}장 지옥 10관문 클리어`, '한 지역의 지옥 10관문을 모두 깨면 고통 단계 T1이 열리고, 이후 고대·태고 장비를 노릴 수 있습니다.', bar(hellRow.hell, STAGES_PER_CHAPTER, `${hellRow.ch}장 지옥 ${hellRow.hell}/${STAGES_PER_CHAPTER}`), { screen: 'stage' }));
@@ -103,9 +108,16 @@ export function endgameGoals(save, { nowMs = 0 } = {}) {
 
   if (tower.unlocked && !tower.capped && !towerEvent) out.push(towerGoal());
 
-  const deep = EXPEDITION_DEPTHS.filter((d) => d.depth === 'deep').find((d) => Number(progress.stars?.[d.unlockCode]) >= 1 && !(save?.expedition?.depthWins?.[d.id] > 0));
-  if (deep) out.push(goal(50, 'expedition', `심층 원정: ${deep.name}`, '캠페인 보스 뒤의 이야기를 잇는 던전입니다. 첫 클리어 보상이 있고 심층 원정 기록이 쌓입니다.', bar(0, 1, '첫 클리어 대기'), { screen: 'expedition', arg: deep.id }));
+  // 심층 원정은 dungeonAccess(expedition-economy.js)와 같은 조건을 본다: 캠페인 X-10, 탐험 레벨, 지역 개방, 기본 원정 첫 클리어.
+  // 캠페인은 열렸는데 기본 원정을 아직 안 깼으면 심층 대신 그 기본 원정을 안내한다(잠긴 심층을 가리키지 않게).
+  const exp = save?.expedition || {}, expLevel = Number(exp.level) || 1;
+  const candidates = EXPEDITION_DEPTHS.filter((d) => d.depth === 'deep' && Number(progress.stars?.[d.unlockCode]) >= 1 && !(exp.depthWins?.[d.id] > 0)
+    && dungeonVisibility(save, d.id).open && expLevel >= d.minLevel);
+  const deep = candidates.find((d) => exp.stats?.[d.id]);
+  const basic = deep ? null : candidates.map((d) => EXPEDITION_ROUTES.find((r) => r.id === d.id)).find((r) => r && expLevel >= (r.minLevel || 1));
+  if (deep) out.push(goal(50, 'expedition', `심층 원정: ${deep.name}`, '캠페인 보스 뒤의 이야기를 잇는 던전입니다. 첫 클리어 보상이 있고 심층 원정 기록이 쌓입니다.', bar(0, 1, '첫 클리어 대기'), { screen: 'expedition', arg: deep.id, depth: 'deep' }));
+  else if (basic) out.push(goal(50, 'expedition-basic', `기본 원정: ${basic.name}`, '이 던전의 기본 원정을 한 번 깨면 심층 원정이 열립니다.', bar(0, 1, '첫 클리어 대기'), { screen: 'expedition', arg: basic.id, depth: 'standard' }));
 
-  const goals = out.sort((a, b) => a.priority - b.priority || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(0, MAX_GOALS);
+  const goals = out.sort((a, b) => a.priority - b.priority || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(0, limit);
   return { ...gate, goals, season };
 }

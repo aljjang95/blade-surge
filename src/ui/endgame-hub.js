@@ -6,7 +6,7 @@ import './endgame-hub.css';
 const el = (tag, cls = '', text = '') => { const e = document.createElement(tag); e.className = cls; e.textContent = text; return e; };
 const SEEN_KEY = 'bs.endgame-hub.seen';
 const store = { get() { try { return localStorage.getItem(SEEN_KEY); } catch { return null; } }, set() { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* 저장소가 막혀도 허브는 동작한다 */ } } };
-const SCREEN_LABEL = { stage: '캠페인으로', legend: '전설 수련으로', tower: '무한의 성으로', expedition: '심층 원정으로' };
+const SCREEN_LABEL = { stage: '캠페인으로', legend: '전설 수련으로', tower: '무한의 성으로', expedition: '원정으로' };
 
 export class EndgameHubView {
   constructor(app) {
@@ -56,7 +56,7 @@ export class EndgameHubView {
     this.close();
     if (target.screen === 'tower') app.journeyView?.open('tower');
     else if (target.screen === 'legend') { meta.openTab('heroes'); meta.openLegend?.(document.activeElement); }
-    else if (target.screen === 'expedition') app.expeditionUI?.open('dungeons', { depth: 'deep' });
+    else if (target.screen === 'expedition') app.expeditionUI?.open('dungeons', { depth: target.depth === 'standard' ? 'standard' : 'deep' });
     else meta.openTab('stage');
   }
 }
