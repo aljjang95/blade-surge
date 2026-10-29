@@ -49,7 +49,8 @@ export function parityHash(state) { return hashValue(paritySubset(state)); }
 // 수령 기록이라 결과 재화가 해시에 들어가므로 따로 비교하지 않는다. 셋 다 서버 권위에서는 서버 값을 쓴다(docs/RPG_ESSENTIALS.md).
 // clearCard(클리어 카드)는 서버 정산만 만들고 외부 저장·그림자 스냅샷에서는 가져오지 않는다(legacy-sanitize). 그래서 그림자 패리티 비교에서는 빼고
 // 서버 권위 문서 적용(덮어쓰기·없으면 삭제)에만 넣는다.
-export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT', 'idle', 'newbie', 'achievements', 'clearCard']);
+// slain(서버 처치 원장, docs/SERVER_AUTHORITY_GATES.md)은 서버 정산만 늘린다. 그림자 모드에는 정산 티켓이 없어 패리티에서 뺀다.
+export const SERVER_OWNED_KEYS = Object.freeze([...PARITY_KEYS, 'energy', 'energyT', 'idle', 'newbie', 'achievements', 'clearCard', 'slain']);
 /** 0·빈 값이면 서버 문서가 필드를 생략하는 서버 소유 키. 서버 문서에 없으면 "삭제(0)"로 반영한다(로컬 값을 남기면 서버가 지운 잔액이 되살아난다). */
 export const OPTIONAL_SERVER_KEYS = Object.freeze(['lineageSigil', 'gearDex', 'sigilClaims', 'clearCard']);
 export function mergeServerOwned(local, server) {

@@ -113,6 +113,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   const state = check.verdict === 'rejected' ? 'rejected' : 'settled';
   const receipt = { receiptId: runId, verdict: check.verdict, issues: check.issues, win: !!facts.win && check.verdict !== 'rejected',
     got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, stars: outcome.stars ?? null, fullClear: outcome.fullClear ?? false, exp: outcome.exp, combatExp: outcome.combatExp,
+    killLedger: outcome.killLedger ?? { kills: 0, species: 0, dropped: 0 },
     rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION,
     ...(Object.keys(debt.repaid).length ? { debtRepaid: debt.repaid } : {}) };
   const writes: GuardedWrite[] = [
@@ -123,7 +124,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (check.verdict !== 'ok') writes.push({ sql: `INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) SELECT ?, ?, ?, ?, ?, ? WHERE ${REV_GUARD}`,
     values: [accountId, runId, 'settle-' + check.verdict, check.verdict === 'rejected' ? 2 : 1, JSON.stringify(check.issues), c.now] });
   const result = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot }, receipt },
+    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot, killLedger: outcome.killLedger ?? null }, receipt },
     projection: next.projection, writes });
   if (!result.ok) {
     if (result.reason === 'duplicate') {

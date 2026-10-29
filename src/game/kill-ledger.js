@@ -1,0 +1,127 @@
+// 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md). 서버 정산이 개연성 검사를 통과한 처치 수와 종을 누적한다.
+// slain = { seeded, kills: { [enemyId]: n } }. 서버 권위 계정은 서버 값이 정본이고, 로컬 전용 저장은 같은 형태를 기기에서 쓴다.
+import { ENEMIES, stageDef, chapterSpeciesId, CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
+
+export const SLAIN_MAX = 1_000_000_000;
+/** 정산 한 판이 보고할 수 있는 종 수 상한(형식 검사). */
+export const SPECIES_PER_RUN = 64;
+const BLOCKED = new Set(['__proto__', 'constructor', 'prototype']);
+const record = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const known = (id) => typeof id === 'string' && !BLOCKED.has(id) && Object.hasOwn(ENEMIES, id);
+const count = (v) => (Number.isSafeInteger(v) && v > 0 ? Math.min(v, SLAIN_MAX) : 0);
+
+/** 저장 정규화. 알 수 없는 종·0 이하는 버린다. seeded 가 없으면 도입 전 저장(false). */
+export function normalizeSlain(raw, { seeded = false } = {}) {
+  const kills = {};
+  const src = record(raw) && record(raw.kills) ? raw.kills : {};
+  for (const id of Object.keys(src).sort()) if (known(id) && count(src[id])) kills[id] = count(src[id]);
+  return { seeded: record(raw) && typeof raw.seeded === 'boolean' ? raw.seeded : seeded, kills };
+}
+
+/** 저장의 slain 을 정규화된 객체로 보장한다(변경 경로 전용). */
+export function slainOf(save) {
+  if (!record(save.slain) || !record(save.slain.kills) || typeof save.slain.seeded !== 'boolean') save.slain = normalizeSlain(save.slain);
+  return save.slain;
+}
+
+/** 처치 기록. 알 수 없는 종은 무시한다. */
+export function recordSlain(save, id, n = 1) {
+  if (!known(id) || !count(n)) return false;
+  const slain = slainOf(save);
+  slain.kills[id] = Math.min(SLAIN_MAX, (slain.kills[id] || 0) + count(n));
+  return true;
+}
+
+/** 1마리 이상 처치한 종 수(도감 보상 stat 'species'). */
+export function slainSpecies(save) {
+  const kills = record(save?.slain) && record(save.slain.kills) ? save.slain.kills : {};
+  let n = 0;
+  for (const id of Object.keys(kills)) if (known(id) && count(kills[id])) n++;
+  return n;
+}
+
+const poolCache = new Map();
+/**
+ * 한 관문에서 처치될 수 있는 종(서버 상한 검사용). 전투 명단·보상 명단·관문 보스·던전 보스 + 각 종의 소환 종,
+ * 그리고 장 전용 몸 id(chapterSpeciesId)까지. 난이도는 편성을 바꾸지 않으므로 관문 번호로 캐시한다.
+ */
+export function stageSpeciesPool(stage) {
+  const key = stage?.code;
+  if (key && poolCache.has(key)) return poolCache.get(key);
+  const raw = new Set();
+  const add = (id) => { if (typeof id === 'string') raw.add(id); };
+  const roster = (R) => { if (R) for (const k of ['trash', 'ranged', 'elite']) for (const id of R[k] || []) add(id); };
+  roster(stage?.combatRosterFor?.()); roster(stage?.rosterFor?.());
+  for (const w of stage?.waves || []) for (const id of w) add(id);
+  add(stage?.encounter?.enemyId); add(stage?.dungeonBossId); add(stage?.encounter?.dungeonBossId);
+  for (const id of [...raw]) add(ENEMIES[id]?.summon);
+  const pool = new Set();
+  for (const id of raw) for (const x of [id, chapterSpeciesId(stage, id)]) if (known(x)) pool.add(x);
+  const frozen = Object.freeze(pool);
+  if (key) poolCache.set(key, frozen);
+  return frozen;
+}
+
+/** 1번 관문부터 floor 번 관문까지의 종 풀 합집합(가져오기 상한 검사). */
+export function poolUpToFloor(floor) {
+  const out = new Set();
+  const last = Math.max(0, Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, floor | 0));
+  for (let f = 1; f <= last; f++) {
+    const ch = Math.ceil(f / STAGES_PER_CHAPTER), st = f - (ch - 1) * STAGES_PER_CHAPTER;
+    for (const id of stageSpeciesPool(stageDef(ch, st))) out.add(id);
+  }
+  return out;
+}
+
+/**
+ * 정산 사실의 species 를 관문 풀과 처치 합으로 자른다. id 정렬 순서로 total 을 넘지 않게 채운다.
+ * @returns {{ species: Record<string, number>, dropped: number }}
+ */
+export function clampSpecies(species, pool, total) {
+  const out = {};
+  let left = Math.max(0, total | 0), dropped = 0;
+  if (!record(species)) return { species: out, dropped };
+  for (const id of Object.keys(species).sort()) {
+    const n = count(species[id]);
+    if (!n) continue;
+    if (!known(id) || !pool.has(id)) { dropped += n; continue; }
+    const take = Math.min(n, left);
+    dropped += n - take; left -= take;
+    if (take) out[id] = take;
+  }
+  return { species: out, dropped };
+}
+
+/**
+ * 가져오기·첫 스냅샷의 1회 병합: 기기 기록(slain.kills 와 rpg.bestiary 중 큰 값)을 진행 범위 종 풀과 처치 합 상한으로 자르고,
+ * 서버가 이미 가진 값은 바닥값으로 둔다. 결과는 seeded: true.
+ * @param {any} raw 기기 저장 원본 @param {{ server?: any, floor: number, killsCap: number }} opts
+ */
+export function trustedSlain(raw, { server, floor, killsCap }) {
+  const sv = normalizeSlain(server);
+  if (sv.seeded) return sv;
+  const device = {};
+  const fromSlain = record(raw?.slain) && record(raw.slain.kills) ? raw.slain.kills : {};
+  const fromBestiary = record(raw?.rpg) && record(raw.rpg.bestiary) ? raw.rpg.bestiary : {};
+  for (const id of new Set([...Object.keys(fromSlain), ...Object.keys(fromBestiary)])) {
+    const n = Math.max(count(fromSlain[id]), count(record(fromBestiary[id]) ? fromBestiary[id].kills : 0));
+    if (n) device[id] = n;
+  }
+  const { species } = clampSpecies(device, poolUpToFloor(floor), killsCap);
+  const kills = { ...sv.kills };
+  for (const [id, n] of Object.entries(species)) kills[id] = Math.max(kills[id] || 0, n);
+  return normalizeSlain({ seeded: true, kills });
+}
+
+/**
+ * 서버 정산 처치 원장 적용. 판정을 통과한 처치 수(계급별 + 소환)를 quests.kills 에, 종을 slain 에 더한다.
+ * @returns {{ kills: number, species: number, dropped: number }}
+ */
+export function applyKillLedger(save, stage, facts) {
+  const ranks = ['normal', 'elite', 'boss'];
+  const total = ranks.reduce((a, k) => a + (facts.kills?.[k] ?? 0) + (facts.summonedKills?.[k] ?? 0), 0);
+  if (record(save.quests)) save.quests.kills = Math.min(SLAIN_MAX, (Number.isSafeInteger(save.quests.kills) ? save.quests.kills : 0) + total);
+  const { species, dropped } = clampSpecies(facts.species, stageSpeciesPool(stage), total);
+  for (const [id, n] of Object.entries(species)) recordSlain(save, id, n);
+  return { kills: total, species: Object.keys(species).length, dropped };
+}

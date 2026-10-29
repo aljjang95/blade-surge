@@ -206,7 +206,7 @@ export class Economy {
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: freshMailbox(),
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, slain: { seeded: true, kills: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
     };
   }
   load() {
