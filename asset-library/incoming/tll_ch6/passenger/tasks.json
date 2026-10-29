@@ -1,0 +1,49 @@
+{
+ "id": "tll_ch6_passenger",
+ "workspace_task_id": "710e7a51-8c75-4206-ab94-0f18c8cb4eea",
+ "tpose_prompt": "Full-body game character illustration in the exact same art style, rendering, chunky chibi proportions and plain light gray background tone as the reference images (stylized hand-painted game art: very big head, only about 2.5 to 3 heads tall overall, stylized chunky chibi, thick short limbs, big hands and feet, strict front-facing T-pose with both arms stretched straight out horizontally to the sides, palms down, symmetrical, full body head to toe fully visible). Do not copy the reference characters exactly. NOT realistic, NOT 8 heads tall. NO weapon, hands completely empty. Palette: ash gray and soot-light gray tones, with glowing echo teal #6fe0c4 accent points, the body is a solid opaque textured surface (not transparent, not glass). No religious symbols, no crosses. Plain solid light gray background, no text, no logo, no UI, no watermark. Character: an echo of a returning-train passenger: a faceless humanoid figure with a smooth blank blurry ash-gray face (no eyes, no mouth, just a faint teal #6fe0c4 glow), wearing an old worn long ash-gray coat and scarf, many blank empty name tags hanging on strings around the neck, solid opaque body, droopy posture but chunky chibi, bare gloved hands empty.",
+ "image_refs": [
+  "goblin_0.png (asset-library/concepts, origin/main)",
+  "tll_ch1_coffinbearer front render (asset-library/normalized, origin/main)"
+ ],
+ "image_model": "GPT Image 2.5 (3:4, x1, free quota -> 0 subscription credits)",
+ "model": "H3.1 Best Quality (HD Model), Ultra Mesh Quality on, generation texture 2K, PBR off (price 40); export texture 1k",
+ "retopology": "Triangle, Smart Mesh P1.0, target 11000",
+ "retopo_tris": 10113,
+ "rig": "Humanoid / Mixamo skeleton",
+ "bones": 65,
+ "bones_note": "rigged.fbx = 65 Mixamo joints (verified by Blender FBX import); rigged.glb export from Tripo now omits end/leaf joints (glb bones: 52)",
+ "steps": {
+  "image_to_3d": {
+   "credits": 40
+  },
+  "retopology": {
+   "credits": 35
+  },
+  "auto_rig": {
+   "credits": 20
+  }
+ },
+ "credits_total": 95,
+ "note_scale": "Tripo exports normalized to ~1.0 height; scale to target height (game side)",
+ "raw_glb": "R2 blade-surge-handoff/tripo-originals/ch6/tll_ch6_passenger/raw.glb",
+ "props": {
+  "suitcase": {
+   "file": "tll_ch6_suitcase.glb",
+   "workspace_task_id": "18236527-af64-417e-bc53-2f3e9f814f67",
+   "concept_prompt": "Game prop illustration in the exact same stylized hand-painted game-art style, chunky simplified shapes, clean painted rendering and thick chibi-friendly proportions as the reference image. Do not copy the reference character. Object: an old worn travel suitcase: a battered ash-gray leather suitcase with metal corners, two buckled straps, a frayed handle, a few blank paper luggage tags attached, small teal #6fe0c4 glowing stitches, chunky compact shape. Single isolated object only, centered, shown from a slight three-quarter front angle, whole object fully visible, no hand, no character, no stand, no shadow on the ground. Plain solid white background, no text, no logo, no UI, no watermark.",
+   "concept_style_ref": "tll_ch6_passenger tpose.png (this folder)",
+   "image_model": "GPT Image 2.5 (free quota -> 0 subscription credits)",
+   "model": "H3.1 Best Quality (HD Model), Ultra Mesh Quality on, generation texture 2K, PBR off (price 40); export texture 1k",
+   "retopology": "Triangle, Smart Mesh P1.0, target 3700; no decimation",
+   "tris": 3717,
+   "credits": {
+    "image_to_3d": 40,
+    "retopology": 35
+   },
+   "rigging": "none",
+   "raw_glb_r2": "blade-surge-handoff/tripo-originals/ch6/tll_ch6_suitcase/raw.glb"
+  }
+ },
+ "credits_props": 75
+}
