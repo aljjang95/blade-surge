@@ -36,6 +36,8 @@ const legit = (over: Record<string, unknown> = {}) => ({ win: true, elapsedMs: L
 async function ready() {
   const h = await v1Harness();
   const a = await h.session();
+  // 처치 원장은 서버 권위 계정만 쓴다(그림자 계정 정산은 원장 0 — 아래 별도 테스트).
+  h.db.sqlite.query("UPDATE accounts SET authority = 'server' WHERE account_id = ?").run(a.accountId);
   let n = 0;
   const start = async () => (await h.send('POST', '/runs/start', { kind: 'campaign', contentId: '1-1', heroId: 'knight', cid: 'run-start-' + String(++n).padStart(4, '0') }, a.token)).body as { runId: string };
   const settle = (runId: string, body: unknown) => h.send('POST', `/runs/${runId}/settle`, body, a.token);
@@ -645,5 +647,21 @@ describe('Codex 재리뷰 반영(PR #435)', () => {
     expect(rows.craft).toBe(false);
     const local = Object.fromEntries(journeySteps(save).map((r: any) => [r.id, r.complete]));
     expect(local.garden).toBe(true);
+  });
+});
+
+describe('그림자 계정 정산은 처치 원장에 쓰지 않는다(Codex 보안 재리뷰)', () => {
+  test('shadow 계정이 상한 처치·종으로 정산해도 killLedger 0, quests.kills·slain 그대로', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    expect(a.authority).toBe('shadow');
+    const t = (await h.send('POST', '/runs/start', { kind: 'campaign', contentId: '1-1', heroId: 'knight', cid: 'run-start-shadow-01' }, a.token)).body as { runId: string };
+    const before = (await h.send('GET', '/me', undefined, a.token)).body.doc;
+    h.advance(LIMITS.minClearMs + 40000);
+    const r = await h.send('POST', `/runs/${t.runId}/settle`, legit({ win: false, kills: { normal: LIMITS.kills.normal, elite: LIMITS.kills.elite, boss: LIMITS.kills.boss }, species: { [N1]: 5 } }), a.token);
+    expect(r.status).toBe(200);
+    expect(r.body.killLedger).toEqual({ kills: 0, species: 0, dropped: 0 });
+    expect(r.body.doc.quests.kills).toBe(before.quests.kills);
+    expect(r.body.doc.slain).toEqual(before.slain);
   });
 });

@@ -106,7 +106,9 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (!isChapterOpen(at.ch, c.now)) fail(403, 'chapter-closed');
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
-  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed, wallMs: c.now - ticket.started_at }, facts, check.verdict);
+  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed, wallMs: c.now - ticket.started_at,
+    // 처치 원장은 서버 권위 계정만: 그림자 계정은 클라이언트가 티켓을 쓰지 않아 정산이 직접 API 호출뿐이고, 그 값이 컷오버까지 남는다(Codex 보안 리뷰 PR #435).
+    killLedger: auth.account.authority === 'server' }, facts, check.verdict);
   // 결제 환불로 생긴 미상환 부채는 서버 정산 획득분에서 먼저 갚는다(같은 배치, 영수증에 상환량 표시).
   const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
   const next = docOf(eco);
