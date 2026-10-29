@@ -94,3 +94,32 @@ test('성역 기둥 지오메트리는 기둥 수별로 캐시돼 lite↔정상 
   expect(a4).not.toBe(a8);
   expect(a4.getIndex()!.count).toBe(4 * 6);
 });
+
+test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 모두 있고, 결정적이며 칸 상한·지면 표식 반경 안에서 그린다', async () => {
+  const { PRELUDES } = await import('../src/engine/sig-knight.js');
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  for (const id of ['holy_slash', 'shield_bash', 'judgment', 'dragon_slash']) {
+    expect(typeof (PRELUDES as any)[id]).toBe('function');
+    expect((SKILL_PRELUDES as any)[id]).toBe((PRELUDES as any)[id]);
+    const v = make(), l = make(); const real = Math.random; let calls = 0;
+    Math.random = () => { calls++; return real(); };
+    try { (PRELUDES as any)[id](ctxOf(v)); (PRELUDES as any)[id](ctxOf(l, true)); } finally { Math.random = real; }
+    expect(calls).toBe(0);
+    expect(v.ring.high).toBeGreaterThan(0);
+    expect(v.ring.high).toBeLessThanOrEqual(KNIGHT_SIG_MAX_SLOTS);
+    expect(l.ring.high).toBeLessThanOrEqual(v.ring.high);
+    for (const s of slots(v)) if (s.kind === IMPACT_KIND.mark) expect(s.size).toBeLessThanOrEqual(KNIGHT_MARK_MAX_RADIUS);
+    v.dispose(); l.dispose();
+  }
+});
+
+test('심판 표적 박자(knightJudgmentStrike): 하늘 별빛은 판정 .1초 전, 바닥 별빛·균열은 판정 순간에 켜진다', async () => {
+  const { knightJudgmentStrike } = await import('../src/engine/sig-knight.js');
+  const v = make(); const n = knightJudgmentStrike(v, new THREE.Vector3(2, 0, 3), .21, 3);
+  const s = slots(v);
+  expect(n).toBe(s.length);
+  expect(s.filter(x => x.kind === IMPACT_KIND.star).map(x => x.start).sort()).toEqual([expect.closeTo(.11, 5), expect.closeTo(.21, 5)]);
+  for (const b of s.filter(x => x.kind === IMPACT_KIND.beam)) expect(b.start).toBeCloseTo(.21, 5);
+  const lite = make(); expect(knightJudgmentStrike(lite, new THREE.Vector3(), 0, 0, true)).toBeLessThan(n);
+  v.dispose(); lite.dispose();
+});

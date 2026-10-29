@@ -87,11 +87,12 @@ export function knightJudgmentStrike(impact, pt, delay, i, lite = false) {
   if (!impact || !pt) return 0;
   let n = 0;
   if (impact._emit(IMPACT_KIND.star, pt.x, 7.5, pt.z, 1.1, HOT, .14, { angle: .3 + i * .5, grow: .4, delay: Math.max(0, delay - .1) })) n++;
+  if (impact._emit(IMPACT_KIND.star, pt.x, .5, pt.z, 1.5, GOLD, .16, { angle: .2 + i * .4, grow: .4, delay })) n++;
   if (lite) return n;
   for (let k = 0; k < 3; k++) {
     const a = i * 1.3 + k * 2.09; _d.set(Math.cos(a), 0, Math.sin(a));
     _b.set(pt.x, .07, pt.z);
-    if (impact.beam(_b, _d, 1.6 + (k % 2) * .6, AMBER, { speed: 30, width: .06, fade: .32, delay })) n++;
+    if (impact.beam(_b, _d, 1.8 + (k % 2) * .7, AMBER, { speed: 30, width: .1, fade: .36, delay })) n++;
   }
   return n;
 }
@@ -119,9 +120,9 @@ export const PRELUDES = {
   // 심판 예비: 검을 치켜들면 금빛 입자가 몸을 타고 하늘로 솟고, 판정 직전 하늘로 쏘아 올리는 신호 광선.
   judgment(ctx) {
     const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a, 1.9);
-    for (let i = 0, n = lite ? 4 : 10; i < n; i++) {
-      const a = yawOf(f) + i * 2.4, r = .8 + (i % 3) * .35;
-      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .3, player.pos.z + Math.sin(a) * r, .22, i % 2 ? GOLD : HOT, .5,
+    for (let i = 0, n = lite ? 5 : 14; i < n; i++) {
+      const a = yawOf(f) + i * 2.4, r = .8 + (i % 3) * .4;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .3, player.pos.z + Math.sin(a) * r, .34, i % 2 ? GOLD : HOT, .55,
         { vx: -Math.cos(a) * 2, vy: 26, vz: -Math.sin(a) * 2, stretch: 1, grow: 1, delay: (i % 5) * .07 });
     }
     impact.beam(h, UP, 12, HOT, { speed: 60, tail: 5, width: .08, delay: .3 });
@@ -130,12 +131,13 @@ export const PRELUDES = {
   // 용살검 예비(시전 연출 내내): 사방의 빛이 검으로 두 물결 모이고, 검을 따라 가는 금빛 기둥이 서며, 벨 부채꼴(130°) 가장자리가 먼저 깔린다.
   dragon_slash(ctx) {
     const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a, 1.6);
-    gather(impact, h, lite ? 4 : 9, 3.2, GOLD, { life: .34, size: .26 });
-    gather(impact, h, lite ? 3 : 7, 2.4, HOT, { life: .3, size: .2, delay: .3, phase: .4 });
+    gather(impact, h, lite ? 4 : 9, 3.2, GOLD, { life: .36, size: .32 });
+    gather(impact, h, lite ? 3 : 7, 2.6, AMBER, { life: .34, size: .3, delay: .22, phase: .4 });
+    if (!lite) gather(impact, h, 6, 2, HOT, { life: .3, size: .26, delay: .44, phase: .8 });
     _b.copy(h).setY(.9);
     impact.beam(_b, UP, 5, AMBER, { speed: 9, width: .2, fade: .4 });
     impact.beam(_b, UP, 6, HOT, { speed: 12, width: .07, fade: .35, delay: .12 });
-    for (const sgn of [-1, 1]) { turn(f, sgn * 1.13, _d); _b.copy(player.pos).setY(.07); impact.beam(_b, _d, 7.2, KNIGHT_SIG_COLOR.wide, { speed: 18, width: .05, fade: 1.1 }); }
+    for (const sgn of [-1, 1]) { turn(f, sgn * 1.13, _d); _b.copy(player.pos).setY(.07); impact.beam(_b, _d, 7.2, AMBER, { speed: 18, width: .07, fade: 1.1 }); }
     impact.mark(_b.copy(player.pos).addScaledVector(f, 1.6), GOLD, { radius: 1.6, life: 1.1, style: MARK_STYLE.fan, angle: yawOf(f) });
   },
 };
@@ -175,7 +177,7 @@ Object.assign(SIGNATURES, {
     impact.mark(at, GOLD, { radius: 1.6, life: .45, style: MARK_STYLE.thorn, angle: yawOf(f) });
     impact._emit(IMPACT_KIND.star, at.x, .7, at.z, 1.3, HOT, .12, { angle: .4, grow: .4 });
     const waves = lite ? 3 : 4;
-    for (let k = 0; k < waves; k++) arcFront(impact, at, f, 1.4 + k * 1.2, 1.05 - k * .08, lite ? 4 : 6, k % 2 ? GOLD : AMBER, { delay: k * .045, width: .09 - k * .01 });
+    for (let k = 0; k < waves; k++) arcFront(impact, at, f, 1.4 + k * 1.4, 1.05 - k * .08, lite ? 4 : 6, k % 2 ? GOLD : AMBER, { delay: k * .05, width: .17 - k * .025, life: .3 });
     const ang = bladeAngle(impact, f);
     for (let k = 0; k < 2; k++) impact._emit(IMPACT_KIND.cut, at.x, .45 + k * .25, at.z, 3 - k * .5, k ? GOLD : AMBER, .28, { vx: f.x * 30, vz: f.z * 30, angle: ang, stretch: 1.8, grow: .9, delay: k * .04 });
     cracks(impact, at, f, lite ? 4 : 7, 2.1, 4.6, AMBER, { width: .06, speed: 34, phase: .4 });
@@ -209,7 +211,7 @@ Object.assign(SIGNATURES, {
       const jag = (i % 2 ? 1 : -1) * .35 * (1 - i / segs * .5);
       _e.set(f.x * L + sx * jag, 0, f.z * L + sz * jag);
       const dl = .04 + (i * L) / SPEED;
-      impact.beam(_p, _e, _e.length(), i % 3 ? AMBER : HOT, { width: .16 - i * .008, fade: .55, delay: dl });
+      impact.beam(_p, _e, _e.length(), i % 3 ? AMBER : HOT, { width: .24 - i * .01, fade: .6, delay: dl });
       if (!lite && i % 2 === 0) impact._emit(IMPACT_KIND.shard, _p.x, .3, _p.z, .26, i % 4 ? GOLD : HOT, .5,
         { vx: sx * (i % 4 ? 2 : -2), vy: 6, vz: sz * (i % 4 ? 2 : -2), angle: i, stretch: 1.8, grow: .8, gravity: 16, delay: dl });
       _p.add(_e);

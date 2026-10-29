@@ -296,8 +296,8 @@ export const SKILLS = {
       if (hasTownSkillVariant(p, 'shield_bash', 'aftershock')) game.after(.22, () => game.hitRadius(center, 3.4, c.dmg * .45, { kb: 3, kind: 'blunt', stun: .45, source: p, quietStop: true }));
       // 방패 강타: 크림 폭발 원화(4.5m, 적 키 높이) 대신 바닥을 두 번 때리는 금빛 충격 고리 + 낮은 금빛 임팩트 + 사방 불똥.
       // 바닥 전체를 덮던 금빛 충격 원화 두 겹(6.5m) → 진한 주황 금 한 겹(3.6m). 방패 충격 고리·지면 균열은 sig-knight 서명.
-      game.fx.shockTex(center, 0xff9a20, { r1: 3.6, life: 0.4 });
-      game.fx.dustPuff(center, { size: 3.5 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
+      // 둥근 주황 충격 원화(3.6m)는 영웅 둘레 원으로 읽혀 부채 파동을 가렸다 → 생략. 흰 먼지도 작게(3.5 → 2m).
+      game.fx.dustPuff(center, { size: 2 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
       game.fx.light(center, 0xffd080, 10, 14, 0.4);
       game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
@@ -326,7 +326,7 @@ export const SKILLS = {
           // 심판의 빛기둥: 크림(0xfff0c0) 대신 금빛 결, 폭 1.4m. 착지점에는 하늘에서 내리꽂는 얇은 광선과 금빛 고리.
           if (i < 4) game.fx.firePillar(pt, { height: 11, width: 1.4, life: 0.5, color: 0xffc040 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          if (i < 5) game.fx.holyBurst(pt, { size: 1.6, life: 0.24, color: 0xff9a18 });
+          // 성광 원화(holyBurst)는 표적마다 크림 고리를 남겼다 → 생략. 착지 섬광·균열은 knightJudgmentStrike(인스턴스 층).
           game.fx.impact?.mark?.(pt, 0xff9a18, { radius: 1.3, life: .4, style: MARK_STYLE.thorn });
           game.fx.burst(pt.clone().setY(0.6), 0xffb040, { n: 12, speed: 7, size: 0.32, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
@@ -374,8 +374,8 @@ export const SKILLS = {
       const hitC = fwd(p, 3.5);
       // 용참 착탄: 크림 폭발(11m)·성광(12m)·화면 섬광 .45 는 화면을 하얗게 덮었다. 진한 금 폭발(6m) + 바닥 충격 2겹 + 금빛 임팩트 + 부채꼴 불똥으로 '앞으로 베어 낸' 방향을 남긴다.
       // 14m 금빛 충격 원화·성광 원화는 바닥을 한 색으로 덮었다. 진한 폭발(5m) + 주황 충격 한 겹(8m). 수직 참격·부채 균열은 sig-knight 서명.
-      game.fx.explosion(hitC, { size: 5, color: 0xff8a10, life: 0.55 });
-      game.fx.shockTex(hitC, 0xff9a20, { r1: 6, life: 0.5 });
+      // 둥근 폭발·충격 원화가 달려 나가는 균열을 덮었다: 폭발 5 → 3.4m, 6m 충격 원화 생략(부채 균열은 서명).
+      game.fx.explosion(hitC, { size: 3.4, color: 0xff8a10, life: 0.5 });
       game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
       game.fx.dustPuff(hitC, { size: 4 }); game.fx.burst(hitC.setY(1), 0xffa830, { n: 24, speed: 14, size: 0.42, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
