@@ -155,6 +155,7 @@ export class Battle extends BaseBattle {
     const dealt = enemy.hurt(amount, { ...opts, crit, attacker: p });
     if (!(dealt > 0) && !(enemy.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
+    this.readability?.hit(enemy, dealt, crit, p);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });

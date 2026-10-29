@@ -1,0 +1,25 @@
+{
+  "tool": "tools/art/split-leg-weights.mjs",
+  "input": {
+    "path": "public/models/heroes-next/ranger-fox-body-fit-v1.glb",
+    "sha256": "d681fb91eb32622e5f106e2a02f055ba1fb7cbbd7385b22eaa4d703f66e6c7e9"
+  },
+  "output": {
+    "path": "public/models/heroes-next/ranger-fox-body-fit-v2.glb",
+    "sha256": "181ab3b1bb48cea0aeaac84ab16a28154d87b64c57a64e88d5086bf6d48664f6"
+  },
+  "crotchY": 0.791,
+  "hipsX": 0.0035,
+  "fade": 0.14,
+  "deadband": 0.012,
+  "floor": 0.06,
+  "primitives": [
+    {
+      "vertices": 15470,
+      "touched": 4220,
+      "movedWeight": 1067.864,
+      "bothLegsBefore": 4169,
+      "bothLegsAfter": 418
+    }
+  ]
+}

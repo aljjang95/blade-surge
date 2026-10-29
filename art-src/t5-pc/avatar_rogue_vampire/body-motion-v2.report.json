@@ -1,0 +1,59 @@
+{
+  "gain": 0.017999996736645762,
+  "clips": {
+    "dodge": {
+      "densePenetrationMinMeters": -0.020558,
+      "densePenetrationAt": 0.226042,
+      "denseFloatMaxMeters": 0.023006,
+      "denseFloatAt": 0.153646,
+      "endMeters": -0.004437,
+      "acceptance": {
+        "low": -0.03,
+        "high": 0.03,
+        "endAbs": null
+      },
+      "pass": true,
+      "rawSkinMeters": {
+        "min": -0.131097,
+        "minAt": 0.364583,
+        "max": 0.270667,
+        "maxAt": 0.3125,
+        "start": -0.007287,
+        "end": -0.004437
+      },
+      "offsetRange": [
+        -0.250667,
+        0.111097
+      ],
+      "maxStep": 0.038357,
+      "iter": 4000
+    },
+    "death": {
+      "densePenetrationMinMeters": -0.006004,
+      "densePenetrationAt": 0.896875,
+      "denseFloatMaxMeters": 0.028673,
+      "denseFloatAt": 1.036979,
+      "endMeters": 0.001697,
+      "acceptance": {
+        "low": -0.01,
+        "high": null,
+        "endAbs": 0.03
+      },
+      "pass": true,
+      "rawSkinMeters": {
+        "min": -0.083683,
+        "minAt": 0.9125,
+        "max": 0.090077,
+        "maxAt": 1.0375,
+        "start": 0.000534,
+        "end": 0.007106
+      },
+      "offsetRange": [
+        -0.065077,
+        0.077683
+      ],
+      "maxStep": 0.005834,
+      "iter": 4000
+    }
+  }
+}
