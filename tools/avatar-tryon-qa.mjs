@@ -26,6 +26,8 @@ const page = await context.newPage();
 await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 const errors = [], results = [];
 page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text().slice(0, 240)); });
+const missing = [];
+page.on('response', (response) => { if (response.status() === 404) missing.push(response.url().replace(BASE, '/')); });
 page.on('pageerror', (error) => errors.push('PAGEERR ' + error.message.slice(0, 240)));
 const check = (name, ok, detail) => { results.push({ name, ok: !!ok, detail }); console.log((ok ? 'OK   ' : 'FAIL ') + name, typeof detail === 'string' ? detail : JSON.stringify(detail ?? '')); };
 const shot = (name) => page.screenshot({ path: resolve(OUT, name + '.png') });
@@ -65,6 +67,9 @@ try {
   await page.goto(BASE);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
+  // 첫 실행: 시작 영웅 선택(검성 아르카)
+  const starter = page.getByRole('button', { name: /이 영웅으로 시작/ }).first();
+  if (await starter.isVisible().catch(() => false)) { await starter.click(); await page.waitForTimeout(2000); }
   for (let i = 0; i < 4; i++) { const close = page.getByRole('button', { name: '닫기' }).first(); if (await close.isVisible().catch(() => false)) { await close.click(); await page.waitForTimeout(400); } }
   await page.evaluate(() => {
     const app = window.app, eco = app.eco;
@@ -114,8 +119,12 @@ try {
   await page.waitForTimeout(1500); await shot('11-battle-avatar');
   writeFileSync(resolve(OUT, 'frames.json'), JSON.stringify(frames, null, 2));
 } finally {
-  check('콘솔 오류 0', errors.length === 0, errors.slice(0, 5).join(' | '));
-  writeFileSync(resolve(OUT, 'result.json'), JSON.stringify({ at: new Date().toISOString(), viewport: VIEW, renderer: 'swiftshader(headless, GPU 없음)', results, errors }, null, 2));
+  // vite dev 에는 Worker(/api/*)가 없어 그 404 만은 환경 소음으로 뺀다(정적 자산 404 는 그대로 실패).
+  const apiOnly = missing.length > 0 && missing.every((url) => url.startsWith('/api/'));
+  const real = errors.filter((text) => !(apiOnly && /status of 404/.test(text)));
+  check('콘솔 오류 0(dev /api 404 제외)', real.length === 0, real.slice(0, 5).join(' | '));
+  writeFileSync(resolve(OUT, 'result.json'), JSON.stringify({ at: new Date().toISOString(), viewport: VIEW, renderer: 'swiftshader(headless, GPU 없음)', results, errors, missing }, null, 2));
+  if (missing.length) console.log('404 ' + missing.join(' '));
   const video = page.video();
   await context.close(); await br.close(); srv?.kill();
   if (video) console.log('VIDEO ' + await video.path());

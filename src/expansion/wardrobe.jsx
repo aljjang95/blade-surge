@@ -257,7 +257,7 @@ function TryOnView({ app, id, equipment, avatarId, base }) {
   const reduced = app.reducedMotion.matches;
   const equipKey = useMemo(() => JSON.stringify(equipment), [equipment]);
   return <div className="tryon-view">
-    <div className="tryon-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
+    <div className="tryon-canvas"><Canvas resize={{offsetSize:true}} dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
       <FitCamera frame={frame}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} equipKey={equipKey} avatarId={tryOnShown(base, avatarId, wearing)} yaw={.28} reduced={reduced} onFit={setFrame}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
@@ -292,7 +292,7 @@ function warmBody(view, bodyScene) {
     if (list.length) requestAnimationFrame(next);
   };
   requestAnimationFrame(next);
-  view.gl.compileAsync?.(bodyScene, view.camera, view.scene).catch(() => {});
+  if (view.camera && view.scene) view.gl.compileAsync?.(bodyScene, view.camera, view.scene).catch(() => {});
 }
 
 export class Wardrobe {
@@ -301,7 +301,11 @@ export class Wardrobe {
     this.three=null;
     // 영웅 화면 아바타 몸 미리 받기(상한 4개, 넘치면 오래된 영웅 것부터 해제).
     this.preloader=createAvatarPreloader({
-      preload: (avatarId) => preloadAvatarBody(avatarId).then((ok) => { if (ok) warmBody(this.three, avatarBodyScene(avatarId)); return ok; }),
+      // 받은 몸은 옷장 캔버스와 본 화면(로비 쇼케이스·전투) 두 GL 컨텍스트 모두에 텍스처를 미리 올린다.
+      preload: (avatarId) => preloadAvatarBody(avatarId).then((ok) => {
+        if (ok) { const body = avatarBodyScene(avatarId); warmBody(this.three, body); if (app.renderer?.r) warmBody({ gl: app.renderer.r }, body); }
+        return ok;
+      }),
       release: releaseAvatarBody,
     });
   }
