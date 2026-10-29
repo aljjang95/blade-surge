@@ -81,6 +81,10 @@ const LINEUPS = {
     ['skel_minion', 'skel_shield', 'skel_rogue', 'bone_orc'],
     ['ghost', 'ghost_skull', 'blob_green', 'skel_mage'],
     ['skel_priest', 'elite_skel_captain', 'elite_wraith', 'elite_bone_lord'],
+    // 7장 전용 Tripo 몸(해골 시민·굽쇠 주술사), 종지기와 비교.
+    ['ch7_citizen', 'ch7_citizen_late', 'ch7_citizen_ledger', 'bell_ringer'],
+    ['ch7_citizen_hauler', 'ch7_citizen_fuse', 'blob_green'],
+    ['ch7_tuner', 'ch7_tuner_cantor', 'ch7_tuner_echo', 'ch7_tuner_drift'],
   ],
 };
 const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });

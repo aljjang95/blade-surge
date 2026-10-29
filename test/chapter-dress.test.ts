@@ -158,14 +158,14 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'skel_minion')).toBe('ch6_passenger');
   expect(chapterSpeciesId({ chapter: { id: 1 }, expedition: {} }, 'skel_minion')).toBe('skel_minion');
   expect(chapterSpeciesId({ chapter: { id: 1 } }, 'bone_orc')).toBe('bone_orc');
-  // 3장: 서리 해골 사서·망령 검열관 갈래. 같은 종이 나오는 6·7장과 원정은 그대로다.
+  // 3장: 서리 해골 사서·망령 검열관 갈래. 같은 종이 나오는 6장과 원정은 그대로, 7장은 7장 해골 시민 몸이다.
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'ghost')).toBe('ch3_censor');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'skel_shield')).toBe('ch3_shelfguard');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'bone_orc')).toBe('ch3_keykeeper');
   expect(chapterSpeciesId({ chapter: { id: 3 } }, 'golem_guard')).toBe('golem_guard');
   expect(chapterSpeciesId({ chapter: { id: 3 }, expedition: {} }, 'ghost')).toBe('ghost');
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'ghost')).toBe('ch6_passenger_drift');
-  expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('skel_shield');
+  expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('ch7_citizen_ledger');
   // 4장: 따개비 수부·미끼등 아귀 갈래. 같은 종이 나오는 5장(왕관)·원정은 그대로, 진화한 독침벌은 옛 몸.
   expect(chapterSpeciesId({ chapter: { id: 4 } }, 'squidle')).toBe('ch4_drowned');
   expect(chapterSpeciesId({ chapter: { id: 4 } }, 'golem_guard')).toBe('ch4_plankguard');
@@ -274,7 +274,7 @@ test('6장(잔향): 졸병 자리는 승객 갈래, 나머지는 경로 고향 �
   expect(chapterSpeciesId({ chapter: { id: 6 }, dungeon: { id: 'beacon' }, expedition: {} }, 'squidle')).toBe('squidle');
   // 다른 장은 경로와 무관하다.
   expect(chapterSpeciesSwap(4, 'kiln')).toBe(CHAPTER_SPECIES[4]);
-  expect(chapterSpeciesSwap(7, 'belfry')).toBeUndefined();
+  expect(chapterSpeciesSwap(7, 'belfry')).toBe(CHAPTER_SPECIES[7]);
   for (let st = 1; st <= 10; st++) {
     const s: any = stageDef(6, st), R = s.combatRosterFor();
     let n = 0, passenger = 0;
@@ -295,4 +295,44 @@ test('6장 승객 갈래 의상은 귀환 청록 발광이고, 잔향 몸은 고
   const echo = chapterDressFor({ chapter: { id: 6 }, dungeon: { id: 'beacon' } }, 'ch4_drowned_anchor', 'tll_ch4_drowned')!;
   expect(echo.props).toEqual(CHAPTER_DRESS[4].species.ch4_drowned_anchor.props);
   expect(echo.emissive).toBe('#13403a');
+});
+
+test('7장 관문·보스 지원병은 해골 시민 몸, 갈래는 원본 수치를 그대로 복사하고 종지기·보스 몸은 그대로다', async () => {
+  const { ENEMIES: E, CHAPTER_SPECIES, speciesSourceId } = await import('../src/data/stages.js');
+  const ENEMIES = E as Record<string, any>;
+  for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) expect(ENEMIES[`belltower_${rank}`].summon, rank).toBe('ch7_citizen');
+  expect(ENEMIES.bell_ringer.model).toBe('Bell_Ringer');
+  expect((CHAPTER_SPECIES[7] as Record<string, string>).bell_ringer).toBeUndefined();
+  for (const [src, id] of Object.entries(CHAPTER_SPECIES[7]) as [string, string][]) {
+    expect(speciesSourceId(id), id).toBe(src);
+    for (const k of ['hp', 'atk', 'spd', 'range', 'atkTime', 'exp', 'gold', 'scale', 'visualScale', 'ranged', 'behavior', 'summon', 'armor', 'meleeRole', 'dodge']) expect(ENEMIES[id][k], `${id}.${k}`).toEqual(ENEMIES[src][k]);
+    expect(ENEMIES[id].model, id).toMatch(/^Ch7_(Citizen|Tuner)/);
+    expect(ENEMIES[id].ghostly, id).toBeUndefined();
+  }
+  // 해골 사제의 연두 색조는 황동 몸을 초록으로 물들여 뺐다(원본은 그대로).
+  expect(ENEMIES.ch7_tuner_cantor.tint).toBeUndefined();
+  expect(ENEMIES.skel_priest.tint).toBe('#b0ffc0');
+  expect(ENEMIES.ch7_citizen_fuse.behavior).toBe('bomber');
+});
+
+test('7장 일반 방은 새 몸(종지기 포함)이 85% 이상이다(10방×16), 보상 명단은 그대로', async () => {
+  const { stageDef } = await import('../src/data/stages.js');
+  const { composeRoom } = await import('../src/game/squads.js');
+  for (let st = 1; st <= 10; st++) {
+    const s: any = stageDef(7, st), R = s.combatRosterFor();
+    let n = 0, fresh = 0;
+    for (let room = 1; room <= 10; room++) for (const id of composeRoom(R, st, room, s.idx, 16).list) { n++; if (id.startsWith('ch7_') || id === 'bell_ringer') fresh++; }
+    expect(fresh / n, `7-${st}`).toBeGreaterThanOrEqual(0.85);
+    for (const id of [...s.rosterFor().trash, ...s.rosterFor().ranged]) expect(id.startsWith('ch7_'), `7-${st} ${id}`).toBe(false);
+  }
+});
+
+test('7장 Tripo 갈래 의상은 BRASS 재배치 없이 발광만, 손 소품과 겹치는 장식 소품은 없다', () => {
+  for (const id of Object.values(CHAPTER_SPECIES[7]) as string[]) {
+    const spec = chapterDressFor({ chapter: { id: 7 } }, id, 'tll_ch7_citizen')!;
+    expect(spec, id).toBe(CHAPTER_DRESS[7].species[id]);
+    expect(spec.emissive, id).toBeTruthy();
+    expect(spec.remap, id).toBeUndefined();
+    for (const key of spec.props || []) { expect(DRESS_PROP_KEYS).toContain(key); expect(['bellLedger', 'tuningFork', 'spiritBell'], `${id} ${key}`).not.toContain(key); }
+  }
 });
