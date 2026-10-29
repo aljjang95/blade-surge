@@ -62,10 +62,10 @@ export function stageSpeciesPool(stage) {
   return frozen;
 }
 
-/** 1번 관문부터 floor 번 관문까지의 종 풀 합집합(가져오기 상한 검사). */
+/** 1번 관문부터 floor 번 관문(들어갈 수 있는 마지막 관문 = progress.unlocked)까지의 종 풀 합집합(가져오기 상한 검사). */
 export function poolUpToFloor(floor) {
   const out = new Set();
-  const last = Math.max(0, Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, floor | 0));
+  const last = Number.isSafeInteger(floor) ? Math.max(0, Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, floor)) : 0;
   for (let f = 1; f <= last; f++) {
     const ch = Math.ceil(f / STAGES_PER_CHAPTER), st = f - (ch - 1) * STAGES_PER_CHAPTER;
     for (const id of stageSpeciesPool(stageDef(ch, st))) out.add(id);
@@ -79,7 +79,7 @@ export function poolUpToFloor(floor) {
  */
 export function clampSpecies(species, pool, total) {
   const out = {};
-  let left = Math.max(0, total | 0), dropped = 0;
+  let left = Number.isSafeInteger(total) && total > 0 ? total : 0, dropped = 0;
   if (!record(species)) return { species: out, dropped };
   for (const id of Object.keys(species).sort()) {
     const n = count(species[id]);
