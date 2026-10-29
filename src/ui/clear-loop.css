@@ -173,3 +173,13 @@
   .cl-card { width: min(calc(var(--cl-card-h) * .79), calc((100vw - 96px) / 3)); }
   .cl-ico { width: 52px; height: 52px; }
 }
+
+/* 세로 결과 화면 알림 띠: 기본 위치(화면 18%)는 VICTORY 제목을 덮었다(2026-10-29 390×844 실측 겹침 2,819px²).
+   바닥 행동 줄 바로 위 가장자리로 내린다. 높이는 ui.placeResultToasts 가 알림이 생길 때 잰 --result-toast-bottom. */
+@media (orientation: portrait) {
+  body:has(#result.show) #toast-layer {
+    top: auto; bottom: var(--result-toast-bottom, calc(var(--sab, 0px) + 170px)); left: 12px; right: 12px;
+    flex-direction: column-reverse; align-items: center; gap: 4px; z-index: 40;
+  }
+  body:has(#result.show) #toast-layer .toast { max-width: 100%; padding: 3px 10px; font-size: 12px; line-height: 18px; border-radius: 9px; }
+}

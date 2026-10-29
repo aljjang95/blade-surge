@@ -305,7 +305,16 @@ export class UI {
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; if (on) this.bag?.close(); b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
-  toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
+  toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); if (this.el.result.classList.contains('show')) { this.placeResultToasts(); setTimeout(() => { if (this.el.result.classList.contains('show')) this.placeResultToasts(); }, 600); } }
+  /** 세로 결과 화면: 알림 띠를 VICTORY·카드 위가 아니라 바닥 행동 줄(소환 권유·로비/다시/다음) 바로 위 가장자리에 둔다.
+   *  행동 줄 높이가 상황마다 달라 알림이 생길 때 재고, 결과 상자 등장 애니메이션(0.5초)·소환 권유가 늦게 붙는 경우를 위해 0.6초 뒤 한 번 더 잰다(가로는 density-result.css 고정 규칙). */
+  placeResultToasts() {
+    const layer = this.el.toast, box = this.el.result;
+    if (!layer?.style || typeof box?.querySelectorAll !== 'function' || !globalThis.matchMedia?.('(orientation: portrait)').matches) { layer?.style?.removeProperty?.('--result-toast-bottom'); return; }
+    const tops = [...box.querySelectorAll('.result-use:not([hidden]), .result-btns')].map((el) => el.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.top);
+    if (!tops.length) { layer.style.removeProperty('--result-toast-bottom'); return; }
+    layer.style.setProperty('--result-toast-bottom', Math.max(8, Math.round(innerHeight - Math.min(...tops) + 6)) + 'px');
+  }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
   /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
