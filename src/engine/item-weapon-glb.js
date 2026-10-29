@@ -8,7 +8,8 @@ import MANIFEST from '../data/item-weapon-glb.json';
 export const ITEM_WEAPON_GLB_FORMS = Object.freeze(['sword', 'greatsword']);
 /** 텍스처가 있는 GLB 무기는 등급·강화 발광을 이 비율로만 칠한다(절차적 무기 대비). */
 export const ITEM_WEAPON_GLB_EMISSIVE_SCALE = 0.4;
-export const ITEM_WEAPON_GLB_METALNESS_MAX = 0.6;
+export const ITEM_WEAPON_GLB_METALNESS_MAX = 0.3;
+export const ITEM_WEAPON_GLB_COLOR_LIFT = 1.35;
 export const ITEM_WEAPON_GLB_BUDGET = Object.freeze({ triangles: 4000, textureMax: 1024 });
 
 const records = new Map();   // id → { form, geometry, material }
@@ -73,8 +74,10 @@ function bakeRecord(entry, gltf) {
   const material = new THREE.MeshStandardMaterial({
     map: source.map || null, normalMap: source.normalMap || null, metalnessMap, roughnessMap,
     roughness: roughnessMap ? (source.roughness ?? 1) : (source.roughness ?? .5),
-    // 금속 맵이 1에 가까운 강철은 이 게임의 조명(환경맵 약함)에서 검게 가라앉는다. 아이콘처럼 밝은 강철이 되게 계수를 0.6 으로 묶는다.
+    // Tripo 강철은 중간 회색 albedo(sRGB 약 100)에 금속 맵 약 0.85 라, 이 게임 조명에서는 반사색이 어둡게 가라앉는다.
+    // 아이콘의 밝은 손그림 강철에 맞추려고 금속 계수를 낮추고(맵의 부위 차이는 유지) 색을 조금 밝힌다.
     metalness: Math.min(source.metalness ?? .6, ITEM_WEAPON_GLB_METALNESS_MAX),
+    color: new THREE.Color(ITEM_WEAPON_GLB_COLOR_LIFT, ITEM_WEAPON_GLB_COLOR_LIFT, ITEM_WEAPON_GLB_COLOR_LIFT),
     // 강화 빛(look.js)이 emissive 를 칠한다. 발광을 색 텍스처로 곱해 무늬가 남게 하고(단색 덩어리 방지),
     // look.js 는 userData.emissiveScale 로 절차적 무기보다 약하게 칠한다.
     emissive: new THREE.Color(0), emissiveMap: source.map || null, vertexColors: false,
