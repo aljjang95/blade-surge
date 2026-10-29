@@ -10,6 +10,7 @@ import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
 import { dropUnownedJob } from './expedition-economy.js';
 import { HERO_CAMPAIGN_JOIN, HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_DIRECT_PURCHASE } from '../data/hero-direct-purchase.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
@@ -385,6 +386,44 @@ export class Economy {
     return { ok: true, id, gems: q.gems };
   }
   /**
+   * 보석 직접 영입 견적(UI·서버 공통). HERO_DIRECT_PURCHASE.enabled 가 꺼져 있으면 항상 reason 'disabled'.
+   * reason: disabled | unknown | owned | policy | starter-pending | unreleased | no-price | campaign-pending | gems | null(영입 가능).
+   * campaign-pending = 진행이 이미 합류 관문을 지나 다음 클리어에 무료로 합류할 영웅(보석을 쓰지 않게 막는다, heroUnlockQuote 와 같은 규칙).
+   */
+  heroBuyQuote(id) {
+    const s = this.s, r = s.roster, have = s.gems, base = { id, ok: false, price: 0, have, reason: null };
+    if (!HERO_DIRECT_PURCHASE.enabled) return { ...base, reason: 'disabled' };
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !s.heroes[id]) return { ...base, reason: 'unknown' };
+    if (this.ownHero(id)) return { ...base, reason: 'owned' };
+    // grantHero 와 같은 조건: 정책 1 이거나 시작 영웅을 고른 정책 2 만 소유를 늘릴 수 있다.
+    if (!r || !Array.isArray(r.owned)) return { ...base, reason: 'policy' };
+    if (r.policy === HERO_POLICY.STARTER && !r.starterChosen) return { ...base, reason: 'starter-pending' };
+    if (r.policy !== HERO_POLICY.LEGACY && r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
+    if (!heroReleased(id, nowOf(this))) return { ...base, reason: 'unreleased' };
+    const price = HERO_DIRECT_PURCHASE.prices[HEROES[id].rarity];
+    if (!Number.isSafeInteger(price) || price <= 0) return { ...base, reason: 'no-price' };
+    const join = HERO_CAMPAIGN_JOIN[id];
+    if (join && (s.progress?.unlocked || 1) >= join) return { ...base, price, reason: 'campaign-pending' };
+    if (have < price) return { ...base, price, reason: 'gems' };
+    return { ...base, price, ok: true };
+  }
+  /**
+   * 보석 직접 영입: 아직 소유하지 않은 영웅을 보석으로 바로 연다. 보석 차감·소유 추가·시작 레벨/장비는 저장이 성공해야 확정(실패하면 전부 되돌린다).
+   * 시작 레벨·장비는 캠페인 합류와 같은 규칙(_startCompanion). 나중에 캠페인 합류 관문에 닿아도 이미 소유라 grantCampaignHeroes 가 건너뛰므로
+   * 중복 지급·레벨/경험치 덮어쓰기가 없다. 소비는 소환과 같이 무료 보석부터(spendGems).
+   * @param {string} id @returns {{ ok: boolean, reason?: string, id?: string, gems?: number }}
+   */
+  buyHero(id) {
+    const q = this.heroBuyQuote(id);
+    if (!q.ok) return { ok: false, reason: q.reason };
+    const before = structuredClone(this.s), r = this.s.roster;
+    spendGems(this.s, q.price);
+    r.owned = [...r.owned, id];
+    this._startCompanion(id, Math.max(1, this.s.progress?.unlocked || 1));
+    if (!this._commit(before)) return { ok: false, reason: 'storage' };
+    return { ok: true, id, gems: q.price };
+  }
+  /**
    * 성장형 합류: 방금 클리어한 관문(clearedIdx)이 합류 관문 이상이면 그 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만).
    * 저장된 progress 가 아니라 이번에 실제로 깬 관문으로 판정한다: 가져오기·그림자 스냅샷이 부풀린 progress 만으로 영웅을
    * 받지 못하게 한다(독립 리뷰 P1). 진행이 이미 지난 이용자는 그 관문 이상을 다시 깰 때 한꺼번에 합류한다. 저장은 호출자가 한다.
@@ -396,14 +435,22 @@ export class Economy {
     for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
       if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
       r.owned = [...r.owned, id]; joined.push(id);
-      // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
-      // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
-      const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
-      const nextIdx = Math.max(1, progress), joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
-      if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
-      this.grantCompanionKit(id, nextIdx);
+      this._startCompanion(id, Math.max(1, progress));
     }
     return joined;
+  }
+  /**
+   * 합류·직접 영입 동료의 시작 상태(레벨·장비). 합류와 영입이 같은 규칙을 쓰므로 한곳에 둔다.
+   * 레벨은 낮추지 않는다(미소유 상태로 보존된 레벨이 더 높으면 그대로). 이미 낀 장비 부위는 건드리지 않는다. 난수 없음. 저장은 호출자가 한다.
+   * @param {string} id @param {number} nextIdx 다음에 도전할 관문 번호(진행 progress.unlocked)
+   */
+  _startCompanion(id, nextIdx) {
+    // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
+    // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
+    const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
+    const joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
+    if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
+    this.grantCompanionKit(id, nextIdx);
   }
   /**
    * 합류 동료 시작 장비: 부위마다 에픽(E)·강화 0·il = 다음 관문의 드랍 장비 레벨 한 점씩, 그 영웅 소유로 만들어 바로 착용시킨다.
