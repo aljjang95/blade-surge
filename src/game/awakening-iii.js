@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
+import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
+import { impactReady } from '../engine/skill-vfx.js';
+
+/** 태양파쇄 예비 표식(skills.js skillPrelude 와 같은 규칙: 인스턴스 층만, 난수 미사용, 동작 줄이기 생략). */
+function sunPrelude(game, player) {
+  const impact = game.fx?.impact, fn = SKILL_PRELUDES.sunbreaker;
+  if (!impactReady(impact) || !fn || game.app?.reducedMotion?.matches || typeof player.forward !== 'function') return;
+  try { fn({ fx: game.fx, impact, player, at: player.pos, f: player.forward(new THREE.Vector3()), lite: !!game.fx.lite, scale: 1 }); } catch (error) { console.warn('skill prelude', 'sunbreaker', error); }
+}
 
 /** Sunbreaker traces a visible lane out and draws surviving enemies back along it. */
 export function solarLaneNodes(origin, facing, count = 4) {
@@ -27,6 +36,7 @@ export const AWAKENING_III = {
   sunbreaker: {
     dur: .9,
     start(game, player, ctx) {
+      sunPrelude(game, player);
       // Player plays the cached bark synchronously. A cache miss must stay bound
       // to this cast; the same Battle object can be reused after stop/start.
       const key = 'hero_knight_skill6';
@@ -52,32 +62,35 @@ export const AWAKENING_III = {
       });
     },
     cast(game, player, ctx) {
+      // 가독성(2026-10-30 각성 VFX 레인): 크림·흰빛(0xfff0b0·0xffefab 등)을 검성 금·주황으로, 노출 보정이 없는 참격 원화(4.8→3.4m)·
+      // 노드 번개 폭(1.7→1.1m)을 줄여 적 몸을 덮던 흰 덩어리를 걷었다. 재질·메시는 호출마다 새로 만들어 색·크기와 무관하게
+      // Math.random 소비(UUID·boltTex 갱신)가 같다. 호출 수·순서·수명은 그대로(시드 전투 난수 진행 보존).
       const origin = player.pos.clone().setY(0);
       const direction = player.forward(new THREE.Vector3()).setY(0).normalize();
       const nodes = solarLaneNodes(origin, direction);
       const forwardHit = new WeakSet(), returnHit = new WeakSet();
       ctx.data.solarLane = nodes.map(node => node.clone());
-      game.fx.groundTex(origin, 'circle_gold', 0xffd060, { r0: .5, r1: 2.8, life: .55, spin: 1, y: .08 });
-      game.fx.boltTex(origin.clone().setY(.42), nodes[nodes.length - 1].clone().setY(.42), 0xfff0b0, { width: .7, life: 1.25 });
+      game.fx.groundTex(origin, 'circle_gold', 0xffb21e, { r0: .5, r1: 2.8, life: .55, spin: 1, y: .08 });
+      game.fx.boltTex(origin.clone().setY(.42), nodes[nodes.length - 1].clone().setY(.42), 0xffb21e, { width: .7, life: 1.25 });
       nodes.forEach((at, i) => game.after(i * .1, () => {
         if (!game.active || !player.alive) return;
         const from = i ? nodes[i - 1] : origin;
-        game.fx.boltTex(from.clone().setY(.75), at.clone().setY(.75), 0xffe18a, { width: 1.7, life: .45 });
-        game.fx.slashSprite(at.clone().setY(2.1), direction, 0xffefab,
-          { size: 4.8, life: .48, speed: 3.2, tilt: -.2 });
-        game.fx.shockTex(at, 0xffd060, { r1: 3.4, life: .5 });
+        game.fx.boltTex(from.clone().setY(.75), at.clone().setY(.75), 0xffa020, { width: 1.1, life: .45 });
+        game.fx.slashSprite(at.clone().setY(2.1), direction, 0xffb21e,
+          { size: 3.4, life: .48, speed: 3.2, tilt: -.2 });
+        game.fx.shockTex(at, 0xff9a20, { r1: 3.4, life: .5 });
         hitSolarPulse(game, player, ctx, at, forwardHit, 1, 4);
       }));
       [...nodes].reverse().forEach((at, i) => game.after(.48 + i * .1, () => {
         if (!game.active || !player.alive) return;
         const toward = i < nodes.length - 1 ? nodes[nodes.length - 2 - i] : origin;
-        game.fx.boltTex(at.clone().setY(.75), toward.clone().setY(.75), 0xffb84a, { width: 2.0, life: .35 });
+        game.fx.boltTex(at.clone().setY(.75), toward.clone().setY(.75), 0xffb84a, { width: 1.3, life: .35 });
         game.fx.slashSprite(at.clone().setY(2.1), direction.clone().negate(), 0xffa33e,
-          { size: 4.4, life: .38, speed: 3.2, tilt: .2, flip: true });
+          { size: 3.2, life: .38, speed: 3.2, tilt: .2, flip: true });
         game.fx.groundTex(at, 'circle_gold', 0xffc160, { r0: .4, r1: 3.2, life: .28, spin: -1, y: .08 });
         game.vacuum(toward, 3.2, 12);   // 표시된 낙점 원(반경 3.2) 안으로만 끌어 표시=판정을 지킨다(재감사 2026-10-19: 4.5였을 때 표시 밖 좌우 4m 적이 끌려와 맞음)
         hitSolarPulse(game, player, ctx, at, returnHit, .75, 0);
-        if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32 });
+        if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32, color: 0xff9a18 });
       }));
     },
   },
