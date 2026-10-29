@@ -18,6 +18,9 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const reducedMotion = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const TIER_RATE = { common: 0.95, rare: 1.05, epic: 1.15, legend: 1 };
 
+/** 버튼 글: 첫 낱말(동작) + 나머지(값). 좁은 세로 화면에서는 CSS가 값을 둘째 줄로 내린다(글자 넘침 방지). */
+const twoLine = (text) => { const t = String(text), i = t.indexOf(' '); return i < 0 ? esc(t) : `${esc(t.slice(0, i))}<small class="cl-bval"> ${esc(t.slice(i + 1))}</small>`; };
+
 export class ClearLoop {
   constructor(ui) { this.ui = ui; this.timers = []; this.state = null; }
   get eco() { return this.ui.eco; }
@@ -204,9 +207,9 @@ export class ClearLoop {
       + `<button type="button" class="btn btn-ghost cl-btn" data-act="detail" title="영웅 장비 화면에서 자세히 보기">상세</button>`
       // 강화 전승(성장·경제 레인 #398 소유, 진입점 meta.openTransfer 만 호출). 그 기능이 없는 빌드에서는 버튼을 숨긴다.
       + (typeof this.ui.app?.meta?.openTransfer === 'function' ? `<button type="button" class="btn btn-ghost cl-btn" data-act="transfer"${dis(false)} title="낡은 장비의 강화 단계를 이 장비로 옮기기">전승</button>` : '')
-      + `<button type="button" class="btn btn-ghost cl-btn" data-act="sell"${dis(r.sellDisabled)} title="판매">판매 +${fmt(r.sell)}</button>`
+      + `<button type="button" class="btn btn-ghost cl-btn" data-act="sell"${dis(r.sellDisabled)} title="판매">${twoLine(`판매 +${fmt(r.sell)}`)}</button>`
       + `<button type="button" class="btn btn-ghost cl-btn" data-act="salvage"${dis(!r.canSalvage)} title="${esc(r.salvageText)}">${r.canSalvage ? '분해' : r.equipped ? '착용 중' : '분해 불가'}</button>`
-      + `<button type="button" class="btn btn-blue cl-btn${r.enhanceLack ? ' lack' : ''}" data-act="enhance"${dis(!r.canEnhance)}>${esc(r.enhanceText)}</button>`
+      + `<button type="button" class="btn btn-blue cl-btn${r.enhanceLack ? ' lack' : ''}" data-act="enhance"${dis(!r.canEnhance)}>${twoLine(r.enhanceText)}</button>`
       + '</div></li>';
   }
   /** 행 하나를 지운다(판매·분해·파괴). */
