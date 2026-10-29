@@ -25,6 +25,18 @@
       }
     },
     {
+      "id": "w_flame",
+      "form": "sword",
+      "file": "/models/item-weapons/w_flame.glb",
+      "sha256": "210f2e3a98a485d01146f38d2c9668cd5f8524de8ae8e7d3d8da15cac5bd69d9",
+      "bytes": 546632,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fced7943-80db-4ac4-9fb2-d4fb3a1cf928",
+        "concept": "flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
       "id": "w_frost",
       "form": "sword",
       "file": "/models/item-weapons/w_frost.glb",
