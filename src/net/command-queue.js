@@ -9,7 +9,7 @@ import { newCid } from './account-client.js';
 /** Economy 메서드 인자 → /cmd args. 메서드 이름이 op 이름과 같다(selectHero는 상태 변화로 감지). */
 const TO_ARGS = {
   resetSkills: (id, opts) => [id, !!opts?.useGems],
-  enhance: (uid, opts) => [uid, !!opts?.protect, !!opts?.bless],
+  enhance: (uid, opts) => opts?.sure ? [uid, !!opts?.protect, !!opts?.bless, true] : [uid, !!opts?.protect, !!opts?.bless],
   equipAvatar: (heroId, id = null) => [heroId, id ?? null],
   setDifficulty: (id, ch = 1, st = 1) => [id, ch, st],
   claimDaily: () => [], claimMonthly: () => [],

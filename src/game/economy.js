@@ -21,6 +21,7 @@ import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown,
 import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
 import { skuGate } from '../data/shop-gates.js';
 import { THEMED_SETS } from '../data/items.js';
+import { enhanceSureCost } from '../data/enhance.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
@@ -739,17 +740,28 @@ export class Economy {
   }
   equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; if ((inst.owner ?? this.s.selected) !== heroId) return false; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
   unequip(heroId, slot) { if (this.heroLocked(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
-  /** 강화: +3까지 100%, +4부터 확률이 단계마다 떨어지고 +10부터 하락·+12부터 파괴(items.js ENHANCE_CHANCE). protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
-  enhance(uid, { protect = false, bless = false } = {}) {
+  /** 강화 견적(읽기 전용): 일반 비용·강화석과 확정 강화 웃돈(범위 밖이면 null). UI·성장 안내·서버가 같은 값을 쓴다. */
+  enhanceQuote(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return null;
+    const lv = inst.enh, tier = enhanceStoneTier(lv);
+    return { lv, gold: enhanceCost(lv), stones: enhanceStones(lv), tier, stoneKey: STONE_KEY[tier], chance: enhanceChance(lv), sureGold: enhanceSureCost(lv) };
+  }
+  /** 강화: +3까지 100%, +4부터 확률이 단계마다 떨어지고 +10부터 하락·+12부터 파괴(items.js ENHANCE_CHANCE). protect=보호주문서(파괴 방지), bless=축복(성공률 +20%),
+   *  sure=확정 강화(골드 웃돈 enhanceSureCost, +3 → +11 구간만, 축복과 같이 쓰지 않음). 서버 /cmd enhance 가 같은 메서드를 부른다(성공이 확정이라 난수 결과와 무관). */
+  enhance(uid, { protect = false, bless = false, sure = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
-    if (this.s.gold < cost) return { ok: false, reason: 'gold' };
+    const sureGold = sure ? enhanceSureCost(lv) : 0;   // 결과에 늘 싣는다(0 = 확정 강화 안 씀)
+    if (sure && sureGold === null) return { ok: false, reason: 'sure' };
+    if (sure && (bless || protect)) return { ok: false, reason: 'stack' };   // 확정이면 축복·보호 주문서가 쓸모없이 차감된다
+    if (this.s.gold < cost + sureGold) return { ok: false, reason: 'gold' };
     const sk = STONE_KEY[enhanceStoneTier(lv)];
     if ((this.s[sk] || 0) < stones) return { ok: false, reason: 'stones', tier: enhanceStoneTier(lv) };
     if (protect && this.s.protect <= 0) return { ok: false, reason: 'protect' };
     if (bless && this.s.bless <= 0) return { ok: false, reason: 'bless' };
-    this.s.gold -= cost; this.s[sk] -= stones; if (protect) this.s.protect--; if (bless) this.s.bless--;
-    let chance = enhanceChance(lv) + (bless ? 0.2 : 0); const success = rngOf(this)() < chance;
+    this.s.gold -= cost + sureGold; this.s[sk] -= stones; if (protect) this.s.protect--; if (bless) this.s.bless--;
+    // 확정 강화도 난수 하나를 똑같이 뽑는다(서버·클라이언트 난수 소비 순서를 일반 강화와 같게 유지).
+    let chance = sure ? 1 : enhanceChance(lv) + (bless ? 0.2 : 0); const roll = rngOf(this)(); const success = sure || roll < chance;
     let destroyed = false, down = 0;
     if (success) inst.enh++;
     else {
@@ -758,7 +770,7 @@ export class Economy {
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.recordJourneyAction('upgrades');
-    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
+    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance, sureGold };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } Runes.recoverItemRunes(this, inst, 'sell'); this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   isUpgrade(heroId, inst) {

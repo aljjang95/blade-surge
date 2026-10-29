@@ -3,6 +3,7 @@ import { canLearnSkill } from '../data/skill-tree.js';
 import * as Items from '../data/items.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX, ENH_SAFE_MAX, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
+import { enhanceSureCost } from '../data/enhance.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 import { planBestEquip, junkItems, salvagePreview } from './gear-advice.js';
 
@@ -47,7 +48,9 @@ export function growthOptions(save, eco = null) {
     }
     if (pick) options.push({ kind: 'equipment', mode: 'risk', heroId, uid: pick.item.uid, name: ITEM_BY_ID[pick.item.id].name, from: pick.item.enh, to: pick.item.enh + 1,
       gold: pick.gold, stones: pick.stones, chance: enhanceChance(pick.item.enh), destroy: rule('destroyChance', pick.item.enh), down: rule('enhanceDown', pick.item.enh),
-      protect: save.protect || 0 });
+      protect: save.protect || 0,
+      // 확정 강화(골드 웃돈) 견적: 지금 골드로 일반 비용 + 웃돈을 낼 수 있을 때만 싣는다. 실제 사용은 강화 화면에서 사람이 고른다.
+      ...(() => { const extra = enhanceSureCost(pick.item.enh); return extra && save.gold >= pick.gold + extra ? { sureGold: extra } : {}; })() });
   }
   // 스킬은 스킬 포인트(SP)로 배우고 올린다. 지금 남은 SP로 가능한 것 중 가장 낮은 레벨(새 각성 습득 포함)을 안내한다.
   const skills = def.skills.map((skill, index) => ({ skill, index, rank: Math.floor(Number(hero.skills?.[index]) || 0), check: canLearnSkill(def, hero, index) }))
