@@ -305,6 +305,7 @@ test('가독성 약한 갈래는 색만이 아니라 실루엣 소품으로 갈�
   expect(pick(6, 'ch6_passenger_porter')).toContain('luggagePack');
   expect(pick(6, 'ch6_passenger_lost')).toContain('lostLantern');
   for (const key of ['glowPouchesLarge', 'squireBokken', 'dawnBrazier', 'luggagePack', 'lostLantern']) expect(DRESS_PROP_KEYS).toContain(key);
+});
 
 test('7장 관문·보스 지원병은 해골 시민 몸, 갈래는 원본 수치를 그대로 복사하고 종지기·보스 몸은 그대로다', async () => {
   const { ENEMIES: E, CHAPTER_SPECIES, speciesSourceId } = await import('../src/data/stages.js');
