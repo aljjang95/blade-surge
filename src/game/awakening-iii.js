@@ -62,20 +62,22 @@ export const AWAKENING_III = {
       });
     },
     cast(game, player, ctx) {
+      // 연출 색만 크림·흰빛(0xfff0b0·0xffefab 등)에서 검성 금·주황으로 바꿨다: 재질은 호출마다 새로 만들어 색과 무관하게
+      // Math.random 소비(UUID·회전)가 같다. 호출 수·수명·크기는 그대로(시드 전투 난수 진행 보존).
       const origin = player.pos.clone().setY(0);
       const direction = player.forward(new THREE.Vector3()).setY(0).normalize();
       const nodes = solarLaneNodes(origin, direction);
       const forwardHit = new WeakSet(), returnHit = new WeakSet();
       ctx.data.solarLane = nodes.map(node => node.clone());
-      game.fx.groundTex(origin, 'circle_gold', 0xffd060, { r0: .5, r1: 2.8, life: .55, spin: 1, y: .08 });
-      game.fx.boltTex(origin.clone().setY(.42), nodes[nodes.length - 1].clone().setY(.42), 0xfff0b0, { width: .7, life: 1.25 });
+      game.fx.groundTex(origin, 'circle_gold', 0xffb21e, { r0: .5, r1: 2.8, life: .55, spin: 1, y: .08 });
+      game.fx.boltTex(origin.clone().setY(.42), nodes[nodes.length - 1].clone().setY(.42), 0xffb21e, { width: .7, life: 1.25 });
       nodes.forEach((at, i) => game.after(i * .1, () => {
         if (!game.active || !player.alive) return;
         const from = i ? nodes[i - 1] : origin;
-        game.fx.boltTex(from.clone().setY(.75), at.clone().setY(.75), 0xffe18a, { width: 1.7, life: .45 });
-        game.fx.slashSprite(at.clone().setY(2.1), direction, 0xffefab,
+        game.fx.boltTex(from.clone().setY(.75), at.clone().setY(.75), 0xffa020, { width: 1.7, life: .45 });
+        game.fx.slashSprite(at.clone().setY(2.1), direction, 0xffb21e,
           { size: 4.8, life: .48, speed: 3.2, tilt: -.2 });
-        game.fx.shockTex(at, 0xffd060, { r1: 3.4, life: .5 });
+        game.fx.shockTex(at, 0xff9a20, { r1: 3.4, life: .5 });
         hitSolarPulse(game, player, ctx, at, forwardHit, 1, 4);
       }));
       [...nodes].reverse().forEach((at, i) => game.after(.48 + i * .1, () => {
@@ -87,7 +89,7 @@ export const AWAKENING_III = {
         game.fx.groundTex(at, 'circle_gold', 0xffc160, { r0: .4, r1: 3.2, life: .28, spin: -1, y: .08 });
         game.vacuum(toward, 3.2, 12);   // 표시된 낙점 원(반경 3.2) 안으로만 끌어 표시=판정을 지킨다(재감사 2026-10-19: 4.5였을 때 표시 밖 좌우 4m 적이 끌려와 맞음)
         hitSolarPulse(game, player, ctx, at, returnHit, .75, 0);
-        if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32 });
+        if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32, color: 0xff9a18 });
       }));
     },
   },
