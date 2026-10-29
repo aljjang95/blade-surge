@@ -10,7 +10,7 @@ import { SKILL_VFX, castSkillVfx, impactReady } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
-import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
+import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail, mageChronoRelease } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { rogueXCut } from '../engine/sig-rogue.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
@@ -1084,6 +1084,7 @@ export const SKILLS = {
           const at = s.e.pos.clone();
           game.fx.explosion(at, { size: 4.2, color: 0x8a7cff, life: 0.5 });
           game.fx.impact?.burst?.(at.clone().setY(1), 0xa898ff, { size: 1.6 });
+          mageChronoRelease(game, at, i); // 시계 파편(인스턴스 층, Math.random 미사용)
           game.fx.burst(at.clone().setY(0.8), 0xa898ff, { n: 22, speed: 11, size: 0.4 });
           game.hitRadius(at, 3.8, c.dmg + taken * 0.75, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: at, quietStop: i > 1 });
           if (i < 3) game.fx.light(at, 0x9a8cff, 12, 12, 0.4);
@@ -1200,9 +1201,9 @@ export const SKILLS = {
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
   bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.fx.shockTex(at,0xc81810,{r1:6.5,life:.4}); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});game.fx.shockTex(at,0xff4a1a,{r1:echo?10:8.5,life:.5});game.fx.scorch(at,{radius:5,life:5});}); } },
   cataclysm: { dur:1.1, start(game,p){skillPrelude(game,p,'cataclysm');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
-  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x4a4cff,{radius:7,life:.8,demon:true}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
+  star_prison: { dur:.9, start(game,p){skillPrelude(game,p,'star_prison');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x4a4cff,{radius:7,life:.8,demon:true}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x2a8cff,{radius:8,life:.9,demon:true}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
+  absolute_zero: { dur:1.05, start(game,p){skillPrelude(game,p,'absolute_zero');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x2a8cff,{radius:8,life:.9,demon:true}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
@@ -1224,4 +1225,10 @@ for (const id of Object.keys(SKILL_VFX)) {
     return cast?.call(this, game, p, c);
   };
   impl.vfxWrapped = true;
+}
+
+// 태양파쇄 예비 표식: awakening-iii.js 는 노드 도구(tools/sunbreaker-sim·metrics)가 엔진 없이 불러오므로 서명 연결은 여기서 제자리로 감싼다(SKILLS.sunbreaker 와 같은 객체 유지).
+{
+  const sun = AWAKENING_III.sunbreaker, baseStart = sun.start;
+  if (!sun.preludeWrapped) { sun.start = function (game, p, c) { skillPrelude(game, p, 'sunbreaker'); return baseStart?.call(this, game, p, c); }; sun.preludeWrapped = true; }
 }

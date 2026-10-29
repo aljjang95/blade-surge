@@ -1,15 +1,5 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
-import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
-import { impactReady } from '../engine/skill-vfx.js';
-
-/** 태양파쇄 예비 표식(skills.js skillPrelude 와 같은 규칙: 인스턴스 층만, 난수 미사용, 동작 줄이기 생략). */
-function sunPrelude(game, player) {
-  const impact = game.fx?.impact, fn = SKILL_PRELUDES.sunbreaker;
-  if (!impactReady(impact) || !fn || game.app?.reducedMotion?.matches || typeof player.forward !== 'function') return;
-  try { fn({ fx: game.fx, impact, player, at: player.pos, f: player.forward(new THREE.Vector3()), lite: !!game.fx.lite, scale: 1 }); } catch (error) { console.warn('skill prelude', 'sunbreaker', error); }
-}
-
 /** Sunbreaker traces a visible lane out and draws surviving enemies back along it. */
 export function solarLaneNodes(origin, facing, count = 4) {
   const direction = facing.clone().setY(0);
@@ -36,7 +26,6 @@ export const AWAKENING_III = {
   sunbreaker: {
     dur: .9,
     start(game, player, ctx) {
-      sunPrelude(game, player);
       // Player plays the cached bark synchronously. A cache miss must stay bound
       // to this cast; the same Battle object can be reused after stop/start.
       const key = 'hero_knight_skill6';
