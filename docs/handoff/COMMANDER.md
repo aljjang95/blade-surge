@@ -39,11 +39,33 @@
 - 선택 화면: C안(전장 쇼케이스) + A안 룬 서클·빛기둥, 영웅은 일러스트 배경 제거.
 - 1장 난이도: 전투력/권장 1.6~1.9배.
 
-## 대표님 대기(대표님만 할 수 있음)
-1. 카카오 Developers 앱 등록(카카오 로그인+OIDC, Redirect URI `https://blade.tllhouse.com/api/v1/auth/oauth/callback/kakao`) — 등록됐다고만 하면 키 연결은 에이전트.
-2. ChatGPT 로그인 대기자 신청 여부(추천: 신청).
-3. KG이니시스 문의 메일(ch@kggroup.co.kr) 발송 승인 — BM 레인 초안 준비됨.
-4. 결제 개방 시 가격 최종 확인.
+## 대표님 대기 — 2026-10-29 22:50 KST 진행분
+대표님 지시(2026-10-29): "금고·ego-browser·TLL 확장으로 할 수 있는 데까지 최대한 진행". 에이전트는 각 건의 제출·발송·약관 동의 직전까지 하고, 그 버튼만 대표님 한 줄 확인 뒤 누른다.
+
+| # | 건 | 에이전트가 한 것 | 남은 것(누가) |
+|---|---|---|---|
+| 1 | 카카오 Developers 앱 등록 | TLL 확장(장치 `tllextention Chrome`)으로 대표님 Chrome 탭 하나에 `developers.kakao.com/console/app` 열어 둠. 대표님 Chrome에 카카오 로그인 없음(로그인 화면), 금고에도 카카오 없음 | 대표님: 그 탭에서 카카오 로그인 1회(비밀번호·QR은 대표님만). 이후 에이전트: 앱 생성(이름 "블레이드 서지") → 카카오 로그인·OpenID Connect 켜기 → Redirect URI `https://blade.tllhouse.com/api/v1/auth/oauth/callback/kakao` → 동의항목(닉네임·이메일 선택) → REST 키를 wrangler secret `KAKAO_REST_KEY`로(값 출력 없음) → 배포·readback. 개발자 약관 동의 화면이 나오면 그 한 번만 확인 |
+| 2 | ChatGPT 로그인(Sign in with ChatGPT) 대기자 | 공식 문서 확인: 공개 신청서 없음, "OpenAI 담당자를 통해 대기자 등록". 경로 = `https://openai.com/contact-sales/`(2단계 양식: 업무 이메일 → 회사·용도). 헤드리스는 Cloudflare 봇 확인으로 막힘(우회 안 함) → 대표님 Chrome으로 양식 확인 | 대표님: 제출 한 줄 확인. 문안(영문): "We run Blade Surge (https://blade.tllhouse.com), a Korean mobile web action RPG by The Luxury Lord. We'd like to join the Sign in with ChatGPT limited-trial waitlist as a login option next to Google/Kakao. OIDC + PKCE flow is already implemented server-side and disabled until approval." 마케팅 수신 체크 해제 |
+| 3 | KG이니시스 문의 메일 | 초안을 aljjang95@gmail.com Gmail **임시보관함**에 넣음(받는 곳 ch@kggroup.co.kr, 상호·사업자번호·통신판매업번호 기재). 판매가 범위를 현재 카탈로그에 맞춰 1,200~14,900원 → **1,200~89,000원**(영웅 기본 해금 30,000원·전원 89,000원 포함)으로 고치고 "확률형·충전형 웹 미판매" 유지 | 대표님: 발송 한 줄 확인(또는 임시보관함에서 직접 보내기) |
+| 4 | 결제 개방 전 가격 확인 | 아래 표 | 대표님: 표 승인 또는 수정. 승인 전에는 결제 플래그를 켜지 않는다 |
+| 5 | 보관본·탈퇴 문서 파기 | **지휘 결정으로 확정**(대표님 2026-10-29 "남용 방지 수준은 정하는 게 맞다"): 탈퇴 진행 기록 30일 후 파기·익명화, 기기 이관 보관본 90일, 미접속 게스트 보관본 1년 후 파기, 남용 방지용 제공자 식별자 해시 탈퇴 90일·정지 1년(계정당 1회 보상 재수령만 막고 가입·진행은 막지 않음), 결제 5년·분쟁 3년. 구현 브랜치 `claude/account-retention-purge`(0007) | 없음(에이전트) |
+
+결제 상품 가격(`src/shared/iap-catalog.js`, 2026-10-29):
+
+| 상태 | 상품 | 가격(원) | 채널 |
+|---|---|---|---|
+| 켬 | 광고 제거 `remove_ads_v1` | 4,900 | 웹+Play |
+| 켬 | 첫 구매 스타터 팩 `starter_pack_v1` | 1,200 | 웹+Play |
+| 켬 | 월정액 카드 `monthly_card_v1`(자동 갱신) | 5,900 | Play |
+| 켬 | 시즌 1 프리미엄 패스 `season_pass_s1` | 9,900 | 웹+Play |
+| 끔 | 월정액 30일 이용권 `monthly_pass_v1` | 5,900 | 웹 |
+| 끔 | 성장 패키지 `growth_pack_v1` | 12,000 | 웹+Play |
+| 끔 | 아바타 풀셋 7종 | 각 14,900 | 웹+Play |
+| 끔 | 영웅 기본 해금 5종 | 각 30,000 | 웹+Play |
+| 끔 | 영웅 전원 해금 `hero_all_v1` | 89,000 | 웹+Play |
+| 끔 | 보석 300 / 980 / 1,980 | 3,900 / 12,000 / 25,000 | (채널 없음) |
+
+"켬"은 카탈로그 값이고 운영 결제 플래그(IAP·웹 결제)는 꺼져 있어 실제 판매는 없다.
 
 ## 운영 규칙(모든 레인 공통)
 - 배포: PC 깨끗한 detached worktree `C:\Work\tasks\blade-deploy-<sha7>`에서 막 fetch한 origin/main 최신 SHA만, `node tools/deploy.mjs --auth=wrangler`만(raw wrangler·rollback·대시보드 금지). 잠금 거부(exit 1)는 원격 변경 없음 → 앞 배포 끝난 뒤 1회 재시도. readback `https://blade.tllhouse.com/version.json` sha·dirty=false 확인. 확인 폴링 시간초과는 실패로 본다.
