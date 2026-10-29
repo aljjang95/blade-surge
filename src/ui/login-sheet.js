@@ -30,7 +30,9 @@ function dialog(title, label) {
   box.append(body);
   overlay.append(box);
   document.body.append(overlay);
-  return { overlay, box, body, close: () => overlay.remove() };
+  let done;
+  const closed = new Promise((resolve) => { done = resolve; });
+  return { overlay, box, body, closed, close: () => { overlay.remove(); done(); } };
 }
 
 /** 예/아니오 확인. */
@@ -131,5 +133,6 @@ export function installAccountEntry(app) {
 export async function setupLogin(app) {
   installAccountEntry(app);
   const back = await consumeLoginReturn(app, loginReturn, { toast: toastOf(app), confirm: askConfirm }).catch(() => ({ handled: false }));
-  if (!back.handled) await maybeShowLoginSheet(app).catch(() => null);
+  // 시트가 뜨면 닫힐 때까지 기다린다(시작 영웅 선택보다 먼저: 다른 기기의 진행을 불러올 사람이 새 영웅부터 고르지 않게).
+  if (!back.handled) await (await maybeShowLoginSheet(app).catch(() => null))?.closed;
 }

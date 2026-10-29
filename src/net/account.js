@@ -62,7 +62,7 @@ export async function setupAccount(app, { fetchImpl, deferGuest = true } = {}) {
   if (completeStage) {
     eco.completeStage = (...args) => {
       const receipt = completeStage(...args);
-      if (state.status === 'deferred') { state.status = 'connecting'; void run(); }
+      if (state.status === 'deferred') { state.status = 'connecting'; mark(state); void run(); }
       return receipt;
     };
   }
