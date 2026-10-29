@@ -1,4 +1,5 @@
 import './style.css';
+import { setupLogin } from './ui/login-sheet.js'; // 콜백 쿼리(ticket)를 다른 부팅 코드보다 먼저 지우려고 앞쪽에서 불러온다
 import { autoSalvageNormal } from './game/gear-advice.js';
 import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
@@ -47,6 +48,7 @@ import { JourneyView } from './ui/journey.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
+import { EndgameHubView } from './ui/endgame-hub.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
 import { NewsView } from './ui/news.js';
@@ -232,6 +234,7 @@ class App {
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
     this.arsenalView = new ArsenalView(this);
+    this.endgameHub = new EndgameHubView(this);
     await this.showcaseHero(this.eco.s.selected, true);
     startup.stage = 'shaders';
     setP(0.95, '게임 화면 준비 중…');
@@ -247,6 +250,10 @@ class App {
       await audio.init(); audio.resume(); await screenReady; res();
     }; start.addEventListener('click', go, { once: true }); });
     startup.stage = 'lobby';
+    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
+    // 첫 실행 로그인 시트는 시작 영웅 선택보다 먼저 띄운다(다른 기기 진행 복원 → 복원된 저장이면 영웅 선택을 건너뛴다).
+    await setupAccount(this).catch(() => null);
+    await setupLogin(this).catch(() => null); // 콜백 복귀 처리·첫 로그인 시트·설정 계정 진입점
     // 새 저장(정책 2)은 튜토리얼·로비보다 먼저 시작 영웅을 하나 고른다. 기존 저장(정책 1)과 이미 고른 저장은 건너뛴다.
     await runStarterSelect(this).catch((error) => console.error(error));
     clearInterval(this._tipTimer);
@@ -261,8 +268,6 @@ class App {
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
-    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
-    await setupAccount(this).catch(() => null);
     setupBilling(this); setupFunnelUpload(this); // 서버 검증 결제·가입 퍼널 업로드(v1이 닫혀 있으면 아무 것도 바뀌지 않는다)
     setupCommunity(this);
     this.news = new NewsView(this); // 공지·패치노트·개발 노트(content/news). 로비 메뉴의 '소식'

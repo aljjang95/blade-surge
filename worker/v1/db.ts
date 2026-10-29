@@ -15,7 +15,7 @@ export interface D1Database {
   batch<T = unknown>(statements: D1Statement[]): Promise<D1Result<T>[]>;
 }
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 5;
 export const DOC_LIMIT = 262144;
 
 export class V1Error extends Error {

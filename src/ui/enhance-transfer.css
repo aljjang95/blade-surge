@@ -1,0 +1,18 @@
+/* 강화 전승 시트(enhance-transfer-panel.js). 좁은 화면에서는 원본·대상 목록이 위아래로 쌓인다. */
+.enh-transfer { display: grid; gap: 10px; max-width: 640px; }
+.enh-transfer h3 { margin: 0 0 6px; font-size: 14px; }
+.enh-transfer h3 small { font-weight: 400; opacity: .75; margin-left: 4px; }
+.et-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .et-cols { grid-template-columns: 1fr; } }
+.et-list { display: grid; gap: 6px; max-height: 32vh; overflow-y: auto; }
+.et-item { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,18,28,.6); color: inherit; cursor: pointer; }
+.et-item span { font-size: 12px; opacity: .8; }
+.et-item.on { border-color: var(--gold, #f5c451); box-shadow: 0 0 0 1px var(--gold, #f5c451) inset; }
+.et-preview { display: grid; gap: 4px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 13px; }
+.et-preview > div > span:first-child { display: inline-block; min-width: 40px; opacity: .7; }
+.et-cost { display: flex; flex-wrap: wrap; gap: 12px; }
+.et-cost .lack { color: var(--red, #ff6b6b); }
+.et-note, .et-empty, .et-reason { margin: 0; font-size: 12px; }
+.et-scroll { justify-self: start; }
+.et-confirm p { margin: 0 0 6px; }
+.is-transfer { margin-top: 6px; }
