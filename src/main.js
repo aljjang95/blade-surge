@@ -278,6 +278,8 @@ class App {
     document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden) suspend(); if (!document.hidden) { this.last = performance.now(); audio.resume(); } });
     window.addEventListener('pagehide', suspend);
     window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
+    // 인앱 브라우저(WebView)는 앱 전환 뒤 제스처 없는 resume()을 막아 소리가 멈춘 채 남는다. 다음 터치·키 입력에서 다시 켠다(켜져 있으면 아무 일도 안 함).
+    for (const type of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(type, () => audio.resume(), { capture: true, passive: true });
     requestAnimationFrame((t) => this.loop(t));
   }
   /** 화면 흔들림: 직접 고른 값이 우선이고, 미선택이면 동작 줄이기 선호일 때만 기본 OFF 다. */
@@ -705,5 +707,7 @@ try {
   window.__skillAimShape = playerSkillAimShape;
   // 전투 자세 QA(tools/combat-pose-qa.mjs)가 정식 빌드에서도 무기·방어구 노드 이름을 읽도록 읽기 전용 표만 노출한다.
   window.__LOOKS = LOOKS;
+  // 인앱 터치 QA(tools/qa/inapp-touch.mjs)가 첫 터치 뒤 소리 재개를 확인하도록 상태 문자열만 노출한다.
+  window.__audioState = () => audio.ctx?.state ?? 'none';
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));

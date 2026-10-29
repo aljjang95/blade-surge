@@ -742,14 +742,15 @@ export class Meta {
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
     for (const sku of this.shopSkus()) {
       const d = document.createElement('div'); const big = sku.tab === 'hot' || sku.tab === 'pack'; d.className = 'shop-item' + (sku.badge ? ' hot' : '') + (big ? ' big' : '');
-      const first = sku.gems && !s.firstPurchaseUsed[sku.id]; const sold = sku.once && s.purchases.includes(sku.id);
+      // 보석 팩은 서버 카탈로그 grant만 지급한다(첫 결제·추가 보너스 없음) — 화면에도 보너스를 적지 않는다.
+      const sold = sku.once && s.purchases.includes(sku.id);
       const cash = sku.kind === 'cash';
       // 현금 상품 가격은 Play가 돌려준 문구만 쓴다(카탈로그 가격은 표시하지 않는다).
       const priceText = cash ? this.cashProduct(sku.id)?.formattedPrice || '' : '';
       const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : esc(priceText);
       // 현금 상품은 결제가 연결됐을 때만 이 목록에 온다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
       const value = '';
-      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
@@ -826,7 +827,7 @@ export class Meta {
     if (this.billingOn()) { await this.buyWithBilling(sku); return; }
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
-    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 보너스 적용!</p>' : ''));
+    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : '');
     if (this.tab === 'shop') this.renderShop(); this.refreshTop();
   }
 
@@ -892,7 +893,7 @@ export class Meta {
     const rows = this.eco.achievementRows();
     const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
     const list = rows.map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name} <small>${x.tier}/${x.tiers}단계</small></div><div class="q-r">${x.done ? '모든 단계 달성' : label(x.rewards)}</div><div class="bar"><div style="width:${Math.min(100, Math.round(x.cur / x.target * 100))}%"></div></div><small>${fmt(Math.min(x.cur, x.target))} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-ach="${x.id}" ${x.ready ? '' : 'disabled'}>${x.done ? '완료' : x.ready ? '받기' : '진행 중'}</button></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집·몬스터 도감의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelectorAll('[data-ach]').forEach((el) => el.onclick = () => { const got = this.eco.claimAchievement(el.dataset.ach); if (got) { this.trackFunnel('reward_claim', { source: 'achievement' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showAchievements(); });
     } });

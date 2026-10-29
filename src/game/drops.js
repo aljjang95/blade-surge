@@ -269,6 +269,9 @@ export class DropSystem {
   onSeededKill(enemy, stage, rank) {
     const counts = enemy.summoned ? (this.summonedKills ||= { normal: 0, elite: 0, boss: 0 }) : (this.killCounts ||= { normal: 0, elite: 0, boss: 0 });
     const index = counts[rank]++, pos = enemy.pos.clone(), eco = this.game.app?.eco;
+    // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md): 정산 사실 species. 서버가 관문 종 풀·처치 합으로 다시 자른다.
+    const species = enemy.speciesId || enemy.def?.id;
+    if (typeof species === 'string') { const k = (this.speciesKills ||= Object.create(null)); k[species] = (k[species] || 0) + 1; }
     for (const d of killDrops(stage, this.game.v1Run.lootSeed, rank, index, { summoned: !!enemy.summoned })) {
       if (d.kind === 'gold') this.spawn(pos, 'gold', d.amount, { count: d.count, spread: rank === 'boss' ? 2 : 1 });
       else if (d.kind === 'material') this.spawn(pos, 'material', { id: d.id, n: d.n });
@@ -285,6 +288,6 @@ export class DropSystem {
     while (this.items.length) this._remove(this.items.length - 1);
     this.auras.update(0);
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
-    this.killCounts = null; this.summonedKills = null;
+    this.killCounts = null; this.summonedKills = null; this.speciesKills = null;
   }
 }

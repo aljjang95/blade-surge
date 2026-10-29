@@ -11,6 +11,7 @@ import { HitCrowd, hitWeight, weightedHitstop, flashFor } from './feel.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain } from './control-rewards.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
+import { slainOf, recordSlain } from './kill-ledger.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
 import { RpgView } from '../ui/rpg.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
@@ -38,6 +39,13 @@ export class Battle extends BaseBattle {
     if (this.rpgState !== this.app.eco.s) {
       this.rpgState = this.app.eco.s;
       this.rpgState.rpg = normalizeRpg(this.rpgState.rpg, Object.keys(ENEMIES));
+      // 처치 원장 도입 전 저장: 기기 도감의 처치 수를 한 번 옮긴다(로컬은 신뢰 경계 밖이라 상한 없음).
+      // 서버 권위 계정은 서버 문서의 slain 이 덮어쓴다(서버 병합은 가져오기의 trustedSlain, docs/SERVER_AUTHORITY_GATES.md 3절).
+      const slain = slainOf(this.rpgState);
+      if (!slain.seeded) {
+        for (const [id, r] of Object.entries(this.rpgState.rpg.bestiary)) if (r.kills > 0) recordSlain(this.rpgState, id, r.kills);
+        slain.seeded = true;
+      }
     }
     return this.rpgState.rpg;
   }
@@ -97,6 +105,7 @@ export class Battle extends BaseBattle {
     // 무리 졸개는 도감 처치·경험치에 넣지 않는다(기존 명단 보상만 유지).
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId) && !enemy.packFollower) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
+      if (!this.stage.party) recordSlain(this.app.eco.s, enemy.speciesId);
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
       this.combatXp = Math.min(1e9, this.combatXp + award.gained);
