@@ -38,6 +38,23 @@ export class AccountClient {
     }
   }
   me() { return this.request('GET', '/me'); }
+  // 계정 로그인: 제공자 목록은 인증이 필요 없다(서버가 키 유무로 판단, V1이 꺼져 있으면 503).
+  providers() { return this.raw('GET', '/auth/providers', undefined, null); }
+  /** 카카오·ChatGPT 로그인 시작. link 는 세션이 필요하고 recover 는 세션 없이 기기 키를 보낸다. 응답 { url } 로 location.assign 한다. */
+  oauthStart(provider, mode) {
+    if (mode === 'recover') return this.raw('POST', '/auth/oauth/start', { provider, mode, deviceKey: this.deviceKey, channel: this.channel }, null);
+    return this.request('POST', '/auth/oauth/start', { provider, mode });
+  }
+  /** 구글 id_token 으로 현재 계정에 연동(세션 필요). 이미 다른 진행에 묶였으면 409 linked-elsewhere { mine, other }. */
+  link(provider, idToken) { return this.request('POST', '/auth/link', { provider, idToken }); }
+  /** 구글 id_token 으로 기존 진행을 이 기기로 복원(세션 불필요). 연동이 없으면 404 no-link. */
+  async recover(provider, idToken) {
+    const data = await this.raw('POST', '/auth/recover', { provider, idToken, deviceKey: this.deviceKey, channel: this.channel }, null);
+    this.token = null; this.account = null; // 기기 키가 다른 계정으로 옮겨졌으니 이전 세션은 버린다
+    return data;
+  }
+  /** 회원 탈퇴(세션 필요). */
+  deleteAccount() { return this.request('POST', '/auth/delete', { confirm: 'DELETE' }); }
   cmd(command) { return this.request('POST', '/cmd', command); }
   importSave(installId, save, clientHash) { return this.request('POST', '/import', { installId, save, clientHash }); }
   shadowSnapshot(cid, save, clientHash) { return this.request('POST', '/shadow/snapshot', { cid, save, clientHash }); }

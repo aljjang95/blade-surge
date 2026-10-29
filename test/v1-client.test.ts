@@ -81,7 +81,7 @@ describe('MMO P1-F 클라이언트 명령 큐·그림자 모드', () => {
     expect(eco.hasStoredSave).toBe(false);
     expect(eco.chooseStarter('mage').ok).toBe(true);
     const app: any = { eco, battle: null };
-    const state = await setupAccount(app, { fetchImpl: fetchImpl as any });
+    const state = await setupAccount(app, { fetchImpl: fetchImpl as any, deferGuest: false });
     for (let i = 0; i < 200 && state.status === 'connecting'; i++) await new Promise(r => setTimeout(r, 10));
     expect(state.status).toBe('ready');
     expect(state.authority).toBe('server');
