@@ -25,6 +25,18 @@
       }
     },
     {
+      "id": "w_chain",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_chain.glb",
+      "sha256": "90852258d3cc6687cf4cf7e2595158b3aef2cb8bf4c7e84b2baa9bde48af01f9",
+      "bytes": 648488,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "15dcf295-c1ed-4dde-bd1b-f9255f7275d4",
+        "concept": "abyss chain greatsword: teal-green crystal blade wrapped by a heavy dark iron chain spiraling around it, teal crystal cross guard with a teal gem, grip with the chain end hanging solidly attached at the pommel with a teal crystal tip"
+      }
+    },
+    {
       "id": "w_cleaver",
       "form": "sword",
       "file": "/models/item-weapons/w_cleaver.glb",
