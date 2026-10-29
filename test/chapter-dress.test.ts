@@ -140,10 +140,10 @@ test('장 소품은 방 가장자리 띠에만, 문 근처를 비워 결정적�
   expect(sceneryPlacements(floor, 8)).toEqual({});
 });
 
-test('도감은 1·2·3장 전용 종의 실제 출현 위치를 잡는다', async () => {
+test('도감은 1~4장 전용 종의 실제 출현 위치를 잡는다', async () => {
   const { buildCatalogue } = await import('../src/game/rpg-catalogue.js');
   const byId = new Map(buildCatalogue().map((e: any) => [e.id, e]));
-  for (const id of ['ch1_coffinbearer', 'ch1_mourner', 'ch1_tombguard', 'ch1_mourner_wail', 'ch2_smith', 'ch2_emberimp', 'ch2_smith_line', 'ch2_emberimp_line', 'ch2_emberimp_bomb', 'ch1_mourner_dirge', 'ch1_hoodbearer', 'ch1_gravewisp', 'ch2_anvilguard', 'ch2_ashimp', 'ch3_censor', 'ch3_censor_slip', 'ch3_censor_tome', 'ch3_censor_quill', 'ch3_librarian', 'ch3_shelfguard', 'ch3_keykeeper', 'ch3_icecrawler', 'ch3_moldkeeper']) {
+  for (const id of ['ch1_coffinbearer', 'ch1_mourner', 'ch1_tombguard', 'ch1_mourner_wail', 'ch2_smith', 'ch2_emberimp', 'ch2_smith_line', 'ch2_emberimp_line', 'ch2_emberimp_bomb', 'ch1_mourner_dirge', 'ch1_hoodbearer', 'ch1_gravewisp', 'ch2_anvilguard', 'ch2_ashimp', 'ch3_censor', 'ch3_censor_slip', 'ch3_censor_tome', 'ch3_censor_quill', 'ch3_librarian', 'ch3_shelfguard', 'ch3_keykeeper', 'ch3_icecrawler', 'ch3_moldkeeper', 'ch4_drowned', 'ch4_drowned_line', 'ch4_drowned_anchor', 'ch4_drowned_coral', 'ch4_plankguard', 'ch4_deckhand', 'ch4_drowned_drift', 'ch4_lurer', 'ch4_lurer_bomb', 'ch4_lurer_seer', 'ch4_lurer_glim']) {
     const entry: any = byId.get(id);
     expect(entry, id).toBeTruthy();
     expect(entry.locations.length, id).toBeGreaterThan(0);
@@ -165,6 +165,14 @@ test('1·2장 편성 밖에서 생기는 적(소환·정예 접두사)도 장 �
   expect(chapterSpeciesId({ chapter: { id: 3 }, expedition: {} }, 'ghost')).toBe('ghost');
   expect(chapterSpeciesId({ chapter: { id: 6 } }, 'ghost')).toBe('ghost');
   expect(chapterSpeciesId({ chapter: { id: 7 } }, 'skel_shield')).toBe('skel_shield');
+  // 4장: 따개비 수부·미끼등 아귀 갈래. 같은 종이 나오는 5장(왕관)·원정은 그대로, 진화한 독침벌은 옛 몸.
+  expect(chapterSpeciesId({ chapter: { id: 4 } }, 'squidle')).toBe('ch4_drowned');
+  expect(chapterSpeciesId({ chapter: { id: 4 } }, 'golem_guard')).toBe('ch4_plankguard');
+  expect(chapterSpeciesId({ chapter: { id: 4 } }, 'abyss_seer')).toBe('ch4_lurer_seer');
+  expect(chapterSpeciesId({ chapter: { id: 4 } }, 'armabee_evo')).toBe('armabee_evo');
+  expect(chapterSpeciesId({ chapter: { id: 4 }, expedition: {} }, 'squidle')).toBe('squidle');
+  expect(chapterSpeciesId({ chapter: { id: 5 } }, 'alien')).toBe('alien');
+  expect(chapterSpeciesId({ chapter: { id: 5 } }, 'abyss_seer')).toBe('abyss_seer');
 });
 
 test('3장 중간 보스는 오르딘 몸, 3장 관문·보스 지원병은 검열관 몸으로 나온다', async () => {
@@ -176,5 +184,36 @@ test('3장 중간 보스는 오르딘 몸, 3장 관문·보스 지원병은 검�
   for (const [id, src] of [['ch3_censor', 'ghost'], ['ch3_shelfguard', 'skel_shield'], ['ch3_censor_tome', 'skel_mage'], ['ch3_icecrawler', 'frost_burrower']]) {
     expect(ENEMIES[id].hp, id).toBe(ENEMIES[src].hp);
     expect(ENEMIES[id].behavior, id).toBe(ENEMIES[src].behavior);
+  }
+});
+
+test('4장 중간 보스는 마렌 몸, 4장 관문·보스 지원병은 수부 몸, 원령 자리 수부·아귀는 불투명이다', async () => {
+  const { ENEMIES: E, CHAPTER_SPECIES, speciesSourceId } = await import('../src/data/stages.js');
+  const ENEMIES = E as Record<string, any>;
+  expect(ENEMIES.tide_midboss.model).toBe('Ch4_Maren');
+  for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) expect(ENEMIES[`tide_${rank}`].summon, rank).toBe('ch4_drowned');
+  // 원본 종 수치·행동을 그대로 복사한다(보상·경제 불변). 색조만 경고등·빛주머니 아귀에서 바꾼다.
+  for (const [src, id] of Object.entries(CHAPTER_SPECIES[4]) as [string, string][]) {
+    expect(speciesSourceId(id), id).toBe(src);
+    for (const k of ['hp', 'atk', 'spd', 'range', 'atkTime', 'exp', 'gold', 'scale', 'ranged', 'behavior', 'summon', 'armor', 'meleeRole']) expect(ENEMIES[id][k], `${id}.${k}`).toEqual(ENEMIES[src][k]);
+    expect(ENEMIES[id].model, id).toMatch(/^Ch4_/);
+  }
+  expect(ENEMIES.ch4_drowned_drift.ghostly).toBeUndefined();
+  expect(ENEMIES.ch4_lurer_glim.ghostly).toBeUndefined();
+  expect(ENEMIES.ghost.ghostly).toBe(true);
+  expect(ENEMIES.ghost_skull.ghostly).toBe(true);
+  expect(ENEMIES.bomb_abyss.tint).toBe('#ff70ff');
+});
+
+test('4장 일반 방은 새 몸이 85% 이상이다(10방×16)', async () => {
+  const { stageDef } = await import('../src/data/stages.js');
+  const { composeRoom } = await import('../src/game/squads.js');
+  for (let st = 1; st <= 10; st++) {
+    const s: any = stageDef(4, st), R = s.combatRosterFor();
+    let n = 0, fresh = 0;
+    for (let room = 1; room <= 10; room++) for (const id of composeRoom(R, st, room, s.idx, 16).list) { n++; if (id.startsWith('ch4_')) fresh++; }
+    expect(fresh / n, `4-${st}`).toBeGreaterThanOrEqual(0.85);
+    // 보상 명단은 원래 종 그대로.
+    for (const id of [...s.rosterFor().trash, ...s.rosterFor().ranged]) expect(id.startsWith('ch4_'), `4-${st} ${id}`).toBe(false);
   }
 });

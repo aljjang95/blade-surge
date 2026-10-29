@@ -35,3 +35,15 @@
 
 - 기존 아바타와 같은 경로: Codex 이미지 생성 컨셉 → 무기 없는 T포즈 원화 → Tripo Studio H3.1 이미지→3D → 리토폴로지(약 10k 삼각형) → 자동 리그(Mixamo 프리셋) → `tools/asset-library/blender_retarget_tier.py`로 영웅 1단계 골격에 다시 묶기(클립 공유) → `assets:ingest`(`--avatar`) → `assets:verify` → 초상 굽기(`tools/art/avatar-portrait/render.mjs`).
 - 첫 대상: 광전사 드라칸 풀셋 1종. 운영 화면에서 확인한 뒤 다른 영웅으로 넓힌다.
+
+## 입기/벗기 실시간 전환 (2026-10-29)
+
+대표님: "착용했을 때 변화가 자연스러워야, 탈착이 실시간으로 보여야 사람들이 좋아한다."
+
+- 영웅 화면 옷장(`src/expansion/wardrobe.jsx`)은 캔버스를 영웅 단위로 유지한다. 아바타 입기·벗기·미리보기는 인스턴스를 다시 만들지 않고 `applyLook` 재적용으로 같은 인스턴스 안에서 몸만 바꾼다(`applyLibraryHeroBody`). 믹서·재생 중 동작·무기·강화 빛(광륜·불씨)이 그대로라 포즈와 애니메이션 시간이 이어진다. 장비가 바뀔 때만 인스턴스를 새로 만든다.
+- 전환 연출은 빛 실루엣 와이프 0.4초(`src/engine/body-wipe.js`): 발밑→머리로 빛띠가 오르며 실루엣이 밝아지고, 가장 밝은 순간 몸을 바꾼 뒤 걷힌다. 가산 셰이더 평면 하나, 화면 흔들림·카메라 이동 없음. 몸이 아직 받아지지 않았으면 최대 1.2초 밝은 채 기다린다. 동작 줄이기면 연출 없이 바로 바꾼다.
+- 프리로드(`src/engine/avatar-preload.js`): 영웅 화면에 들어오면 그 영웅의 판매·보유 아바타 몸을 보이는 것·고른 것 순서로 하나씩 받고, 옷장·본 화면 GL 컨텍스트에 텍스처를 한 프레임에 하나씩 미리 올린다. 상한 4개(최근 영웅 순)를 넘으면 오래된 것부터 `releaseAvatarBody`로 해제한다. 입은 인스턴스가 있는 몸, 영웅 기본 몸(`bodyAvatar`), 공유 클립 원본은 해제하지 않는다(`assets.js` 몸체 사용 수).
+- 로비 쇼케이스도 아바타 입기/벗기·장비 외형 표시 전환은 `app.refreshShowcaseAvatar`로 같은 인스턴스에서 몸만 바꾼다(재생성·기둥 연출 없음).
+- 상점 아바타 카드의 **입어 보기**: 구매 없이 모달 3D로 원래 모습→입어 본 모습 와이프를 보여 주고 '원래 모습 보기'로 오간다. 저장·보석·착용·가격·결제 플래그는 건드리지 않으며, 닫으면 미리보기 루트를 정리한다.
+- 전투 입장은 기존대로 `displayAvatar` → `preloadHeroBody` → `Player` `applyLook`이라 영웅 화면에 보이던 몸과 같다(`test/avatar-body-cache.test.ts`, `tools/avatar-tryon-qa.mjs`).
+- 검증: `node tools/avatar-tryon-qa.mjs <출력폴더>` — 844×390 영상·전후 스크린샷·전환 중 프레임 간격(frames.json). 헤드리스 swiftshader라 프레임 수치는 상대 비교용이며 실기기 GPU 성능 증거가 아니다.

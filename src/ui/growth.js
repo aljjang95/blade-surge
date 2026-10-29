@@ -106,7 +106,8 @@ export function renderGrowthPreparation(container, app, result) {
     if (gear) detail = option.mode === 'equipBest' ? '교체 ' + option.count + '곳 · 전투력 +' + number(option.delta) : '착용 중보다 약한 노말·스페셜 ' + number(option.count) + '개';
     else if (equip) detail = option.name + ' · 비어 있는 ' + SLOT_NAME[option.slot] + ' 슬롯';
     else if (risk) detail = option.name + ' +' + option.from + ' → +' + option.to + ' · 성공 ' + Math.round(option.chance * 100) + '%'
-      + (option.destroy > 0 ? ' · 실패 시 파괴 ' + Math.round(option.destroy * 100) + '%' + (option.protect ? '(보호 ' + option.protect + ')' : '') : '') + (option.down > 0 ? ' · 하락 -' + option.down : '');
+      + (option.destroy > 0 ? ' · 실패 시 파괴 ' + Math.round(option.destroy * 100) + '%' + (option.protect ? '(보호 ' + option.protect + ')' : '') : '') + (option.down > 0 ? ' · 하락 -' + option.down : '')
+      + (option.sureGold ? ' · 골드 +' + number(option.sureGold) + '로 확정 가능' : '');
     else if (option.kind === 'equipment') detail = option.name + ' +' + option.from + ' → +' + option.to + ' · 성공 100%';
     else if (option.kind === 'skill') detail = option.name + ' Lv.' + option.from + ' → Lv.' + option.to;
     else if (option.kind === 'training') detail = '영웅 Lv.' + option.from + ' → Lv.' + option.to;

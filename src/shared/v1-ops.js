@@ -35,10 +35,14 @@ export const OPS = {
   // 금고(docs/GEAR_OWNERSHIP_VAULT.md): 서버 시계로 하루 유료 꺼내기를 센다.
   vaultDeposit: { args: [(v) => int(v, 1)], run: (e, uid) => e.vaultDeposit(uid), ok: okResult },
   vaultWithdraw: { args: [(v) => int(v, 1), str], run: (e, uid, h) => e.vaultWithdraw(uid, h), ok: okResult },
+  vaultRitual: { args: [(v) => int(v, 1), str], run: (e, uid, h) => e.vaultRitual(uid, h), ok: okResult },
+  gearDexClaim: { args: [str, str], run: (e, h, m) => e.gearDexClaim(h, m), ok: okResult },
+  claimJourneySigil: { args: [(v) => v === 'daily' || v === 'weekly', str], run: (e, kind, id) => e.claimJourneySigil(kind, id), ok: okResult },
   vaultExpand: { args: [], run: (e) => e.vaultExpand(), ok: okResult },
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)
-  enhance: { args: [(v) => int(v, 1), bool, bool], run: (e, uid, protect, bless) => e.enhance(uid, { protect, bless }), ok: okResult, random: true },
+  // 네 번째 인자 sure(확정 강화, 골드 웃돈)는 선택이다: 이전 클라이언트의 3인자 명령도 그대로 받는다.
+  enhance: { args: [(v) => int(v, 1), bool, bool, bool], optional: 1, run: (e, uid, protect, bless, sure = false) => e.enhance(uid, { protect, bless, sure }), ok: okResult, random: true },
   // 소환 (서버 난수·서버 시계 픽업). 배너 표는 src/data/gacha-banners.js 하나를 클라이언트·서버가 함께 읽는다.
   pull: { args: [(v) => v === 1 || v === 10, (v) => v === 'hero' || v === 'gear' || v === 'beginner'], run: (e, n, banner) => e.pull(n, banner), ok: okValue, random: true },
   pullSSR: { args: [], run: (e) => e.pullSSR(), ok: okValue, random: true },
@@ -61,6 +65,6 @@ export const OP_NAMES = Object.freeze(Object.keys(OPS));
 export function validateOp(op, args) {
   if (typeof op !== 'string' || !Object.hasOwn(OPS, op)) return null;
   const def = OPS[op];
-  if (!Array.isArray(args) || args.length !== def.args.length) return null;
-  return def.args.every((check, i) => check(args[i])) ? def : null;
+  if (!Array.isArray(args) || args.length > def.args.length || args.length < def.args.length - (def.optional || 0)) return null;
+  return args.every((value, i) => def.args[i](value)) ? def : null;
 }

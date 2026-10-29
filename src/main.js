@@ -385,6 +385,16 @@ class App {
     this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.copy(root.position);
     this.renderer.lobbyNavigation = this.hubWalkMode;
   }
+  /**
+   * 아바타 입기/벗기·장비 외형 표시 전환: 로비 쇼케이스를 새로 만들지 않고 같은 인스턴스에서 몸만 바꾼다(포즈·대기 동작 시간 유지,
+   * 기둥·폭발 연출 없음). 다른 영웅이 서 있거나 쇼케이스가 없으면 기존 showcaseHero 로 새로 세운다.
+   */
+  refreshShowcaseAvatar(id) {
+    const s = this.showcase;
+    if (!s || s.def?.id !== id || s.root.userData.libraryDisposed) return this.showcaseHero(id);
+    s.look = applyLook(s.root, s.def, this.eco.heroEquipInsts(id), { avatarId: this.eco.displayAvatar(id) });
+    return Promise.resolve();
+  }
   setLobbyVisible(v) {
     this.lobbyVisible = v;
     if (!v) {
