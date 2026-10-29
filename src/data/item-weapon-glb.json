@@ -1,6 +1,18 @@
 {
   "items": [
     {
+      "id": "w_cleaver",
+      "form": "sword",
+      "file": "/models/item-weapons/w_cleaver.glb",
+      "sha256": "b713d9fef34e18d62eefd233875487b08ea0fd737a5d954ac859649a55a09def",
+      "bytes": 487732,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "69c05944-f982-4704-8431-2860d8e9d6a3",
+        "concept": "butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top"
+      }
+    },
+    {
       "id": "w_frost",
       "form": "sword",
       "file": "/models/item-weapons/w_frost.glb",
