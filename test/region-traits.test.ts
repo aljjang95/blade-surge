@@ -297,3 +297,8 @@ test('종 동사: 5장 전용 몸(그림자 닌자 → 새벽 가면 닌자)도 
   expect(nj.affixes.has.blink).toBe(true);
   expect(nj.regionVerb).toBe('그림자 걸음');
 });
+
+test('망각의 잔향은 6장 승객 잔향과 3장 해골 사서 몸에도 걸린다', () => {
+  for (const m of ['Ch6_Passenger', 'Ch6_PassengerSmall', 'Ch3_Librarian', 'Ch3_ShelfGuard']) expect(SKELETAL.test(m), m).toBe(true);
+  for (const m of ['Ch6_Witness', 'Ch3_Censor', 'Ch2_Smith']) expect(SKELETAL.test(m), m).toBe(false);
+});

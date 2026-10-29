@@ -23,8 +23,8 @@ export const REGION_SPECIES_VERBS = {
   tide: { squidle: { key: 'tether', name: '촉수 낚아채기' } },
   crown: { ninja: { key: 'blink', name: '그림자 걸음' } },
 };
-// 1장 전용 Tripo 몸(Ch1_*: 관꾼·곡하는 원령 갈래)도 언데드라 망각의 잔향으로 되살아난다.
-export const SKELETAL = /^Skeleton_|Skull|^Ch1_/;
+// 1장 전용 Tripo 몸(Ch1_*), 3장 해골 사서 몸, 6장 승객 잔향도 망각의 잔향으로 되살아난다(6장 귀환로는 정원 테마라 이 특성이 켜진다).
+export const SKELETAL = /^Skeleton_|Skull|^Ch1_|^Ch3_(Librarian|ShelfGuard)|^Ch6_Passenger/;
 const POOLS = 12;
 const _v = new THREE.Vector3();
 
