@@ -36,23 +36,25 @@ test('전체 훈련 레벨에서 50% 경계와 남은 경험치 비례 비용을
 });
 
 test('훈련은 정확한 골드만 차감하고 남은 EXP를 채운 뒤 연속 클릭을 거절한다', () => {
-  const eco = new Economy(), hero = eco.hero(); hero.exp = 70;
+  // Lv1 필요 180(입문 곡선)·훈련 골드 360(EXP 1당 골드는 예전 곡선과 같다): 120 을 채우면 남은 60 EXP 에 120 골드.
+  const eco = new Economy(), hero = eco.hero(); hero.exp = 120;
   const gold = eco.s.gold, quote = eco.trainingQuote('knight');
-  expect(quote.cost).toBe(60); expect(eco.levelUpHero('knight')).toBe(true);
-  expect(hero.level).toBe(2); expect(hero.exp).toBe(0); expect(eco.s.gold).toBe(gold - 60);
-  expect(eco.levelUpHero('knight')).toBe(false); expect(eco.s.gold).toBe(gold - 60);
+  expect(levelExp(1)).toBe(180); expect(levelGold(1)).toBe(360);
+  expect(quote.cost).toBe(120); expect(eco.levelUpHero('knight')).toBe(true);
+  expect(hero.level).toBe(2); expect(hero.exp).toBe(0); expect(eco.s.gold).toBe(gold - 120);
+  expect(eco.levelUpHero('knight')).toBe(false); expect(eco.s.gold).toBe(gold - 120);
   const reload = new Economy(); expect(reload.hero().level).toBe(2); expect(reload.hero().exp).toBe(0);
 });
 
 test('저장 실패 시 훈련을 원복하고 복구 뒤 한 번만 결제한다', () => {
-  const eco = new Economy(); eco.hero().exp = 50; eco.save();
+  const eco = new Economy(); eco.hero().exp = 100; eco.save();
   const before = JSON.stringify(eco.s), disk = values.get(key), lastGood = eco._lastGoodSave;
   let notifications = 0; eco.onChange(() => notifications++); blocked = true;
   expect(eco.levelUpHero('knight')).toBe(false); expect(eco.lastTrainingError).toBe('storage');
   expect(JSON.stringify(eco.s)).toBe(before); expect(values.get(key)).toBe(disk); expect(eco._lastGoodSave).toBe(lastGood);
   expect(notifications).toBe(0); blocked = false;
   expect(eco.levelUpHero('knight')).toBe(true); expect(notifications).toBe(1);
-  expect(new Economy().s.gold).toBe(JSON.parse(before).gold - 100);
+  expect(new Economy().s.gold).toBe(JSON.parse(before).gold - 160);
 });
 
 test('이미 보유한 레벨과 경험치·재화는 업데이트 후에도 보존한다', () => {
@@ -71,7 +73,7 @@ test('각성 Lv10 경계를 실제 스킬 정의와 연결하고 훈련 후 다�
 
 test('상한·잘못된 영웅과 수치는 차감하지 않으며 패널도 NaN을 만들지 않는다', () => {
   const eco = new Economy(); expect(eco.levelUpHero('missing')).toBe(false);
-  for (const hero of [{level: 0, exp: 0}, {level: 1, exp: -1}, {level: 1, exp: NaN}, {level: 1, exp: 100}]) {
+  for (const hero of [{level: 0, exp: 0}, {level: 1, exp: -1}, {level: 1, exp: NaN}, {level: 1, exp: levelExp(1)}]) {
     const q = heroTrainingQuote(hero, 1000); expect(q.ok).toBe(false);
     expect(trainingButtonLabel(q)).toBe('성장 정보 확인 필요');
     expect(heroProgressionHtml(hero, HEROES.knight, 1000)).not.toMatch(/NaN|undefined/);
