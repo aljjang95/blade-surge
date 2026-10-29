@@ -21,6 +21,7 @@ export class CommandQueue {
   constructor(eco, client, hooks) {
     this.eco = eco; this.client = client; this.hooks = hooks;
     this.pending = []; this.busy = false; this.depth = 0; this.suspended = 0;
+    this.lastCid = null; this.results = new Map(); this.waiters = new Map();   // 명령별 서버 결과(UI가 성공 뒤에만 연출하도록 settled 로 구독)
     this.stats = { sent: 0, matched: 0, mismatched: 0, rejected: 0 };
     this.lastSelected = eco.s.selected;
     for (const op of Object.keys(OPS)) if (op !== 'selectHero' && typeof eco[op] === 'function') this.wrap(op);
@@ -51,8 +52,22 @@ export class CommandQueue {
   push(op, args) {
     if (isAccountResetting()) return;
     if (!validateOp(op, args)) return;
-    this.pending.push({ cid: newCid(), op, args, clientHash: parityHash(this.eco.s) });
+    const cid = newCid(); this.lastCid = cid;
+    this.pending.push({ cid, op, args, clientHash: parityHash(this.eco.s) });
     void this.flush();
+  }
+  finish(cid, result) {
+    this.results.set(cid, result); if (this.results.size > 64) this.results.delete(this.results.keys().next().value);
+    const w = this.waiters.get(cid); if (w) { this.waiters.delete(cid); w(result); }
+  }
+  /** 명령 하나의 서버 결과: { ok:true } | { ok:false, status, error } | { ok:false, timeout:true }(응답 없음; 큐는 계속 재전송). */
+  settled(cid, ms = 10000) {
+    if (!cid) return Promise.resolve({ ok: true });
+    const done = this.results.get(cid); if (done) return Promise.resolve(done);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { this.waiters.delete(cid); resolve({ ok: false, timeout: true }); }, ms);
+      this.waiters.set(cid, (r) => { clearTimeout(timer); resolve(r); });
+    });
   }
   /** 그림자 모드: 로컬 정본 상태를 서버 그림자 문서로 다시 맞춘다(전투 보상 등 명령 밖 변화 뒤). 큐 순서를 지킨다. */
   snapshot() {
@@ -83,19 +98,21 @@ export class CommandQueue {
           this.stats.rejected++;
           this.pending.shift();
           this.hooks.onResult?.(entry, { error: /** @type {any} */ (error).body?.error, status });
+          this.finish(entry.cid, { ok: false, status, error: /** @type {any} */ (error).body?.error });
           if (this.hooks.authority() === 'server') await this.resync();
           continue;
         }
         this.pending.shift();
         if (response.match === false) this.stats.mismatched++; else if (response.match) this.stats.matched++;
         this.hooks.onResult?.(entry, response);
+        this.finish(entry.cid, { ok: true });
         // 서버 권위: 해시가 다르면 서버 문서가 정본이다. 대기 명령이 남아 있으면 마지막 응답에서 한 번에 맞춘다.
         if (this.hooks.authority() === 'server' && response.match === false && !this.pending.length && response.doc) this.hooks.adopt(response.doc, response.rev);
       }
     } finally { this.busy = false; }
   }
   async resync() {
-    try { const me = await this.client.me(); this.pending.length = 0; this.hooks.adopt(me.doc, me.rev); }
+    try { const me = await this.client.me(); for (const e of this.pending) this.finish(e.cid, { ok: false, dropped: true }); this.pending.length = 0; this.hooks.adopt(me.doc, me.rev); }
     catch (error) { this.hooks.onError?.(error); }
   }
 }

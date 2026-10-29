@@ -69,6 +69,8 @@ export const PASS_TRACK = Array.from({ length: 30 }, (_, i) => {
   const lv = i + 1;
   const free = lv % 5 === 0 ? { gems: 100 } : (lv % 2 ? { gold: 4000 * lv } : { tickets: 1 });
   const prem = lv % 10 === 0 ? { ssrTicket: 1 } : (lv % 5 === 0 ? { gems: 500 } : (lv % 2 ? { gems: 120 } : { tickets: 2 }));
+  // 계승 문장(docs/GEAR_VAULT_INHERIT.md): 콘텐츠 보상 소량만 — 무료 트랙 10·20·30레벨에 1개씩. 프리미엄 트랙·상점·IAP 에는 넣지 않는다(현금 판매 금지).
+  if (lv % 10 === 0) free.lineageSigil = 1;
   if ([5, 15, 25].includes(lv)) prem.transcendStones = 5;
   if ([8, 18, 28].includes(lv)) prem.skillResets = 1;
   return { lv, free, prem };

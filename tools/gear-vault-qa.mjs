@@ -37,13 +37,15 @@ try {
   const starter = page.getByRole('button', { name: /이 영웅으로 시작/ }).first();
   if (await starter.isVisible().catch(() => false)) { await starter.click(); await page.waitForTimeout(1500); }
   for (let i = 0; i < 4; i++) { const close = page.getByRole('button', { name: '닫기' }).first(); if (await close.isVisible().catch(() => false)) { await close.click(); await page.waitForTimeout(400); } }
+  // 세로 화면(360×800)은 가로 안내가 덮는다: 세로로 계속한다.
+  const ignoreRotate = page.locator('#btn-ignore-rotate'); if (await ignoreRotate.isVisible().catch(() => false)) { await ignoreRotate.click(); await page.waitForTimeout(500); }
   // 상태 준비: 기사·마법사 소유, 기사 가방 3개(하나 착용), 마법사가 금고에 맡긴 전설 무기 1개, 골드 넉넉.
   const prep = await page.evaluate(() => {
     const eco = window.app.eco;
     eco.s.roster.owned = [...new Set([...eco.s.roster.owned, 'knight', 'mage'])]; eco.s.roster.starterChosen = true; eco.s.selected = 'knight'; eco.s.gold = 3_000_000;
     const k1 = eco.addItem('E', 'weapon', undefined, 0, 'knight'), k2 = eco.addItem('S', 'armor', undefined, 0, 'knight'), k3 = eco.addItem('U', 'ring', undefined, 0, 'knight');
     k1.enh = 9; eco.equip('knight', k1.uid);
-    const m1 = eco.addItem('L', 'weapon', undefined, 0, 'mage'); m1.enh = 12; eco.vaultDeposit(m1.uid);
+    const m1 = eco.addItem('U', 'weapon', undefined, 0, 'mage'); m1.enh = 12; eco.vaultDeposit(m1.uid);
     const m2 = eco.addItem('N', 'boots', undefined, 0, 'mage');
     eco.emit(); window.app.meta.heroSel = 'knight'; window.app.meta.heroPane = 'gear'; window.app.meta.openTab('heroes');
     return { k1: k1.uid, k2: k2.uid, k3: k3.uid, m1: m1.uid, m2: m2.uid, bag: eco.heroBag('knight').map((x) => x.uid) };
@@ -61,12 +63,12 @@ try {
   await page.waitForTimeout(400); await shot('02-vault');
   await inModal(`[data-vault-uid="${prep.m1}"]`).click(); await page.waitForTimeout(300);
   const takeLabel = await inModal('#v-take').textContent(), pickText = await inModal('.vault-pick').textContent();
-  check('꺼내기 견적: 다른 영웅 → 골드 176,000', pickText.includes('176,000'), pickText);
+  check('꺼내기 견적: 다른 영웅 → 골드 55,010', pickText.includes('55,010'), pickText);
   await shot('03-vault-pick');
   const goldBefore = await page.evaluate(() => window.app.eco.s.gold);
   await inModal('#v-take').click(); await page.waitForTimeout(500);
   const after = await page.evaluate((uid) => ({ owner: window.app.eco.s.inventory.find((x) => x.uid === uid)?.owner, gold: window.app.eco.s.gold, used: window.app.eco.s.vault.used }), prep.m1);
-  check('꺼낸 장비는 기사 소유·골드 차감·하루 1회 사용', after.owner === 'knight' && goldBefore - after.gold === 176000 && after.used === 1, { takeLabel, ...after });
+  check('꺼낸 장비는 기사 소유·골드 차감·하루 1회 사용', after.owner === 'knight' && goldBefore - after.gold === 55010 && after.used === 1, { takeLabel, ...after });
   await shot('04-vault-after-take');
   await inModal('[data-vault-tab="bag"]').click(); await page.waitForTimeout(300);
   await inModal(`[data-bag-uid="${prep.k2}"]`).click(); await page.waitForTimeout(300);
@@ -82,6 +84,58 @@ try {
   // 버튼이 화면 안에 다 보이는지(가로 844×390)
   const box = await inModal('#i-vault').boundingBox();
   check('맡기기 버튼이 화면 안', box && box.y + box.height <= H && box.x + box.width <= W, box);
+
+  // ---- 계승 의식 · 도감 (docs/GEAR_VAULT_INHERIT.md 덩어리 3) ----
+  await page.evaluate(() => window.app.meta.ui.closeModal()); await page.waitForTimeout(400);
+  const rit = await page.evaluate(() => {
+    const eco = window.app.eco; eco.s.lineageSigil = 6; eco.s.gold = 3_000_000;
+    const l = eco.addItem('L', 'weapon', undefined, 0, 'mage'); l.enh = 15; eco.vaultDeposit(l.uid);
+    const l2 = eco.addItem('L', 'armor', undefined, 0, 'mage'); eco.vaultDeposit(l2.uid);
+    eco.emit(); window.app.meta.heroSel = 'knight'; window.app.meta.openTab('heroes');
+    return { l: l.uid, l2: l2.uid, hops: 0 };
+  });
+  await page.waitForSelector('#hero-bag [data-bag-vault]', { state: 'attached', timeout: 30000 }); await page.waitForTimeout(800);
+  const overlap = async (sel) => page.evaluate((q) => {
+    const rects = [...document.querySelectorAll(q)].filter((e) => e.offsetParent !== null).map((e) => e.getBoundingClientRect());
+    let bad = 0; for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) { const a = rects[i], b = rects[j]; if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) bad++; }
+    return bad;
+  }, sel);
+  const inView = async (sel) => page.evaluate(([q, vw, vh]) => [...document.querySelectorAll(q)].every((e) => { const r = e.getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= vw + 1 && r.bottom <= vh + 1; }), [sel, W, H]);
+  await page.click('#hero-bag [data-bag-vault]'); await inModal('.vault-sheet').waitFor(); await page.waitForTimeout(300);
+  await inModal(`[data-vault-uid="${rit.l}"]`).click(); await page.waitForTimeout(300);
+  const boundText = await inModal('.vault-pick').textContent();
+  check('bound 안내: 계승 의식으로만 옮길 수 있어요', boundText.includes('계승 의식으로만 옮길 수 있어요'), boundText);
+  check('bound 일 때 일반 꺼내기 비활성·의식 버튼 활성', await inModal('#v-take').isDisabled() && await inModal('#v-ritual').isEnabled(), '');
+  check('금고 하단 버튼 겹침 0·화면 안', (await overlap('#modal .vault-actions > *')) === 0 && await inView('#modal .vault-actions .btn'), await overlap('#modal .vault-actions > *'));
+  await shot('10-bound-notice');
+  await inModal('#v-ritual').click(); await inModal('#ritual-go').waitFor(); await page.waitForTimeout(300);
+  const quoteText = await inModal('.ritual-quote').textContent();
+  check('의식 견적: 문장 2개(+15)·남은 2/2·골드', /2개/.test(quoteText) && quoteText.includes('2/2') && quoteText.includes('200,000'), quoteText.replace(/\s+/g, ' '));
+  check('의식 시트 겹침 0·화면 안', (await overlap('#modal .ritual-quote > div, #modal .ritual-item, #modal .vault-actions > *')) === 0 && await inView('#modal #ritual-go, #modal #ritual-back, #modal .ritual-quote'), await overlap('#modal .ritual-quote > div, #modal .ritual-item, #modal .vault-actions > *'));
+  await shot('11-ritual-quote');
+  const rBefore = await page.evaluate(() => ({ gold: window.app.eco.s.gold, sigil: window.app.eco.s.lineageSigil }));
+  await inModal('#ritual-go').click(); await inModal('#rite-stage').waitFor({ timeout: 5000 }); await page.waitForTimeout(2400);
+  const rAfter = await page.evaluate((uid) => { const e = window.app.eco; const it = e.s.inventory.find((x) => x.uid === uid); return { gold: e.s.gold, sigil: e.s.lineageSigil, owner: it.owner, hops: it.hops, enh: it.enh, used: e.s.vault.rused }; }, rit.l);
+  check('서버 응답(결과 확정) 뒤 연출: 소유 knight·계승 1·강화 +15·문장 -2·하루 1회', rAfter.owner === 'knight' && rAfter.hops === 1 && rAfter.enh === 15 && rBefore.sigil - rAfter.sigil === 2 && rBefore.gold - rAfter.gold === 200000 && after.used === 1, after);
+  const phase = await inModal('.vault-rite').getAttribute('data-phase');
+  check('연출 중간 단계 재생', ['glow', 'arrive'].includes(phase), phase);
+  await shot('12-rite-mid');
+  await inModal('#rite-stage').click(); await page.waitForTimeout(500);
+  check('탭으로 건너뛰기 → 결과 표시(계승 1)', (await inModal('#rite-result').textContent()).includes('계승 1') && (await inModal('.vault-rite').getAttribute('data-phase')) === 'done', await inModal('#rite-result').textContent());
+  check('연출 시트 겹침 0·화면 안', (await overlap('#modal .rite-stage > *, #modal .rite-result, #modal .vault-actions > *')) === 0 && await inView('#modal #rite-ok, #modal .rite-stage, #modal #rite-result'), await overlap('#modal .rite-stage > *, #modal .rite-result, #modal .vault-actions > *'));
+  await shot('13-rite-done');
+  await inModal('#rite-ok').click(); await inModal('.vault-grid').waitFor(); await page.waitForTimeout(300);
+  await inModal('[data-vault-tab="dex"]').click(); await inModal('.dex-list').waitFor(); await page.waitForTimeout(300);
+  const dexText = await inModal('.dex-body').textContent();
+  check('도감: 계승 도감 1종·마일스톤 목록', dexText.includes('계승 도감 1종') && dexText.includes('드랍 도감 25%'), dexText.replace(/\s+/g, ' ').slice(0, 160));
+  check('도감 화면 겹침 0·가로 넘침 없음', (await overlap('#modal .dex-ms, #modal .dex-bar')) === 0 && await page.evaluate(() => { const b = document.querySelector('#modal .dex-body'); return b.scrollWidth <= b.clientWidth + 1; }), '');
+  await shot('14-dex');
+  // 전투 중 의식 비활성: 전투 플래그를 켜고 다시 연다.
+  await page.evaluate(() => { window.app.__qaBattle = window.app.battle; window.app.battle = { active: true }; });
+  await inModal('[data-vault-tab="vault"]').click(); await page.waitForTimeout(300);
+  await inModal(`[data-vault-uid="${rit.l2}"]`).click(); await page.waitForTimeout(300);
+  check('전투 중 의식 버튼 비활성', await inModal('#v-ritual').isDisabled(), '');
+  await page.evaluate(() => { window.app.battle = window.app.__qaBattle; });
 } finally {
   // 404 는 미리보기 서버에 없는 원격 자산 묶음·/api 이다(콘솔 오류와 별개로 경로를 남긴다).
   if (missing.length) console.log('4xx 경로:', [...new Set(missing)].slice(0, 10).join(', '));
