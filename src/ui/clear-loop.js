@@ -43,6 +43,8 @@ export class ClearLoop {
     this.reset();
     const rw = result.reward;
     if (!rw || rw.ok === false || rw.rejected || !rw.clearCard) return false;
+    // 서버 권위 계정은 서버 정산이 아직 카드를 만들지 않는다(settlement.js SERVER_CLEAR_CARDS, #404). 고를 수 없는 카드를 보여 주지 않는다.
+    if (this.ui.app?.account?.authority === 'server') return false;
     const cc = this.eco.s.clearCard?.id === rw.clearCard.id ? this.eco.s.clearCard : rw.clearCard;
     this.state = { result, rw, cc, heroId: rw.heroId || battle.heroId, uids: (rw.loot || []).map((it) => it.uid), picking: false, flipped: false, revealed: false };
     $('result').classList.add('has-clear');
