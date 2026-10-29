@@ -161,15 +161,15 @@ export class LootModelLibrary {
         parts.push({ geometry: lease.geometry, material: null, matrix: new THREE.Matrix4().makeRotationZ(Math.PI / 2).setPosition(mid, mid, -.06 * Math.max(.5, length)) });
       }
     }
-    const source = { parts, slot: def.slot, kind: info.kind, fit: fitTransform(boxOf(parts), def.slot) };
+    const source = { parts, slot: def.slot, kind: info.kind, form: info.form, fit: fitTransform(boxOf(parts), def.slot) };
     this.sources.set(info.key, source);
     return source;
   }
-  _material(def, rarity, index, base) {
-    const key = `${def.id}|${rarity}|${index}`;
+  _material(def, rarity, index, base, form = null) {
+    const key = `${def.id}|${rarity}|${index}${form ? '|' + form : ''}`;
     if (!this.materials.has(key)) {
       // 대장간 재질은 장비 표면(얼음 등)을 읽어 새로 만들고, 방어구 · 병기고 원본 재질은 복제해 등급 윤곽만 더한다.
-      const material = base ? base.clone() : createItemMaterial(def)[0];
+      const material = base ? base.clone() : createItemMaterial(def, form)[0];
       if (base?.onBeforeCompile && base.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
         material.onBeforeCompile = base.onBeforeCompile; material.customProgramCacheKey = base.customProgramCacheKey;
       }
@@ -205,7 +205,7 @@ export class LootModelLibrary {
     const pivot = new THREE.Group(); pivot.name = 'loot-pivot';
     pivot.scale.setScalar(source.fit.scale); pivot.position.copy(source.fit.offset);
     source.parts.forEach((part, index) => {
-      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material);
+      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material, source.form);
       const mesh = new THREE.Mesh(part.geometry, material);
       if (part.matrix) part.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
       mesh.castShadow = false; mesh.receiveShadow = false; mesh.name = `loot-mesh-${def.id}`;
