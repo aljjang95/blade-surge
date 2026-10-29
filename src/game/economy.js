@@ -15,6 +15,7 @@ import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
@@ -32,7 +33,8 @@ import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventReward
 import { recordTormentRun, tormentStatus } from './torment-core.js';
 import { HERO_LEVEL_CAP } from './rpg-core.js';
 import { TORMENT } from '../data/content-90d.js';
-import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, expandGold, normalizeVault } from './gear-vault.js';
+import { recordGearDex, milestoneOf, milestoneReached, milestoneClaimed } from './gear-dex.js';
+import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, relayToday, VAULT_INHERIT } from './gear-vault.js';
 import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -188,7 +190,7 @@ export class Economy {
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
-      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
+      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, gearDex: { v: 1, drop: {}, kin: {}, claimed: {} }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
@@ -198,7 +200,10 @@ export class Economy {
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false },
         // 장비 귀속·금고 안내(docs/GEAR_OWNERSHIP_VAULT.md). 보상 없는 안내 우편이라 경제·정산에는 영향이 없다.
-        { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false }],
+        { id: 2, title: '장비가 영웅마다 따로 보관됩니다', body: '이제 장비는 얻은 영웅의 것이며, 다른 영웅에게 주려면 영웅 화면 가방의 [금고]에 맡긴 뒤 꺼내세요. 맡기기는 무료, 꺼내기는 골드가 들고 하루 5회까지입니다. 이전부터 갖고 있던 장비는 처음 한 번 무료로 옮길 수 있고, 강화·룬은 그대로 유지됩니다.', rewards: {}, read: false },
+        // 계승 의식·도감 안내(docs/GEAR_VAULT_INHERIT.md 4.6). 안내만 있고 보상은 없다. 문장은 의뢰·고통 단계·도감 보상으로만 얻고 상점에서 팔지 않는다.
+        { id: 3, title: '레전드리는 계승 의식으로 물려줘요', body: '레전드리 장비는 얻은 영웅의 것입니다. 되돌리기와 같은 무기 계열 이동은 그대로 무료이고, 다른 계열에게 주려면 금고의 [계승 의식]을 치르세요. 골드와 계승 문장이 들고 하루 2회까지이며, 확률 없이 반드시 성공하고 강화·룬은 그대로 이어집니다. 계승 문장은 일일·주간 의뢰(계승 장비로 캠페인 승리), 고통 단계 5단계마다 새 기록, 도감 보상으로 얻습니다.', rewards: {}, read: false },
+        { id: 4, title: '장비 도감 마일스톤', body: '금고의 [도감]에서 영웅별 드랍 도감(직접 얻은 장비)과 계승 도감(의식으로 받은 장비)을 확인하세요. 25·50·75·100%와 계승 5·15·30종마다 영웅당 한 번씩 강화석·세트 조각·계승 문장 보상을 받고, 칭호도 얻습니다. 능력치는 오르지 않습니다.', rewards: {}, read: false }],
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
     };
   }
@@ -309,6 +314,7 @@ export class Economy {
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
     if (r.runeDust) { const runes = Runes.runesOf(this); runes.dust += r.runeDust; got.push({ k: 'runeDust', n: r.runeDust }); }
     if (r.blessingCharm) { const n = Runes.grantCharms(this, r.blessingCharm); if (n) got.push({ k: 'blessingCharm', n }); }
+    if (r.lineageSigil) { s.lineageSigil = (s.lineageSigil || 0) + r.lineageSigil; got.push({ k: 'lineageSigil', n: r.lineageSigil }); }
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
@@ -626,7 +632,9 @@ export class Economy {
   pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = 0 } = {}) {
     const lv = tp > 0 ? 0 : validItemLevel(il);   // il = 스테이지 장비 레벨(item-tier.js). 없으면 필드를 두지 않는다.
     const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(lv ? { il: lv } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
-    this.s.inventory.push(inst); return inst;
+    this.s.inventory.push(inst);
+    if (inst.owner !== VAULT_OWNER) recordGearDex(this.s, 'drop', inst.owner, id);   // 직접 얻은 장비만 드랍 도감에(일반 꺼내기·장착은 등재하지 않는다)
+    return inst;
   }
   /** 그 영웅 소유 장비(가방에 보이는 것). */
   heroBag(heroId = this.s.selected) { return heroItems(this.s, heroId); }
@@ -655,6 +663,73 @@ export class Economy {
     if (!q.free) this.s.vault = { ...normalizeVault(this.s.vault), day: q.daily.day, used: q.daily.used + 1 };
     inst.owner = heroId; delete inst.from; delete inst.legacy;
     this.emit(); return { ok: true, gold: q.gold, free: q.free, heroId };
+  }
+  vaultRitualQuote(uid, heroId) { return ritualQuote(this.s, uid, heroId, nowOf(this), { ownsHero: (id) => this.ownHero(id) }); }
+  /** 계승 의식(docs/GEAR_VAULT_INHERIT.md 3.4): 금고 장비를 소유 영웅에게. 골드+계승 문장, 하루 2회(일반 꺼내기와 별도), 확정. */
+  vaultRitual(uid, heroId) {
+    const q = this.vaultRitualQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, sigil: q.sigil };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    const before = { gold: this.s.gold, sigil: this.s.lineageSigil, vault: this.s.vault, inst: { ...inst }, dex: this.s.gearDex === undefined ? undefined : structuredClone(this.s.gearDex) };
+    try {
+      const from = inst.from, hops = Math.min(VAULT_INHERIT.hopsMax, (inst.hops || 0) + 1);
+      this.s.gold -= q.gold;
+      const left = (this.s.lineageSigil || 0) - q.sigil;
+      if (left > 0) this.s.lineageSigil = left; else delete this.s.lineageSigil;
+      this.s.vault = { ...normalizeVault(this.s.vault), rday: q.daily.day, rused: q.daily.used + 1 };
+      inst.owner = heroId; delete inst.from; delete inst.legacy;
+      inst.hops = hops;
+      recordGearDex(this.s, 'kin', heroId, inst.id);
+      const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));  // hops>=1 이라 keep>=1
+      if (lin.length) inst.lin = lin; else delete inst.lin;
+    } catch (e) {
+      this.s.gold = before.gold; this.s.vault = before.vault;
+      if (before.sigil === undefined) delete this.s.lineageSigil; else this.s.lineageSigil = before.sigil;
+      if (before.dex === undefined) delete this.s.gearDex; else this.s.gearDex = before.dex;
+      for (const k of Object.keys(inst)) delete inst[k]; Object.assign(inst, before.inst);
+      return { ok: false, reason: 'error', gold: q.gold, sigil: q.sigil };
+    }
+    this.emit(); return { ok: true, gold: q.gold, sigil: q.sigil, heroId, hops: inst.hops };
+  }
+  /**
+   * vaultRelay(docs/GEAR_VAULT_INHERIT.md 4.5): heroId 가 계승 의식으로 받은 장비(hops>=1)를 끼고 이겼으면, 오늘 아직 안 센 장비 하나를 세고 `vaultRelay` 임무 카운터를 올린다.
+   * 같은 uid 는 하루 1회(왕복 이동·재장착으로 오르지 않는다). 서버 정산(applySettlement → completeStage)에서만 불리고 클라이언트 보고 값은 쓰지 않는다.
+   */
+  recordVaultRelay(heroId) {
+    const at = nowOf(this), today = relayToday(this.s.vault, at), equip = Object.values(this.hero(heroId)?.equip || {});
+    const inst = equip.map((uid) => this.s.inventory.find((x) => x.uid === uid)).find((x) => x && x.owner === heroId && (x.hops || 0) >= 1 && !today.uids.includes(x.uid));
+    if (!inst) return false;
+    if (!this.recordJourneyAction('vaultRelay').ok) return false;
+    this.s.vault = { ...normalizeVault(this.s.vault), rl: { day: today.day, uids: [...today.uids, inst.uid].slice(-VAULT_INHERIT.relayUidsMax) } };
+    return true;
+  }
+  /**
+   * 일일·주간 의뢰의 계승 문장 보상(서버 명령). 의뢰 달성은 로컬 여정 기록이 정본이라 서버가 검증할 수 없으므로,
+   * 서버는 (종류, 의뢰, 서버 기준 기간)당 한 번만 의뢰 표의 문장 수만큼 지급해 상한을 지킨다(재수령·반복 지급 차단).
+   * 클라이언트는 같은 메서드를 불러 서버와 잔액이 같게 한다. 골드·강화석 등 나머지 의뢰 보상은 기존 로컬 경로 그대로.
+   */
+  claimJourneySigil(kind, id) {
+    const list = kind === 'daily' ? DAILY_CONTRACTS : kind === 'weekly' ? WEEKLY_CONTRACTS : null;
+    const def = list?.find((c) => c.id === id);
+    if (!def) return { ok: false, reason: 'unknown' };
+    const sigil = Number(def.rewards?.lineageSigil) || 0;
+    if (!(sigil > 0)) return { ok: false, reason: 'unknown' };
+    const p = periodAt(endgameNow(this)), no = kind === 'daily' ? p.day : p.week, key = kind + ':' + id + ':' + no;
+    const keep = (Array.isArray(this.s.sigilClaims) ? this.s.sigilClaims : []).filter((k) => typeof k === 'string' && k.endsWith(':' + (k.startsWith('daily:') ? p.day : p.week)) && (k.startsWith('daily:') || k.startsWith('weekly:')));
+    if (keep.includes(key)) return { ok: false, reason: 'claimed' };
+    keep.push(key); this.s.sigilClaims = keep.slice(-16);
+    this.s.lineageSigil = (this.s.lineageSigil || 0) + sigil;
+    this.emit(); return { ok: true, sigil };
+  }
+  /** 도감 마일스톤 수령(중복 수령 불가, 달성은 gearDex 로 재계산). 보상 수치는 gear-dex.js 표. */
+  gearDexClaim(heroId, milestoneId) {
+    const m = milestoneOf(milestoneId);
+    if (!m) return { ok: false, reason: 'milestone' };
+    if (!this.ownHero(heroId)) return { ok: false, reason: 'hero' };
+    if (milestoneClaimed(this.s, heroId, milestoneId)) return { ok: false, reason: 'claimed' };
+    if (!milestoneReached(this.s, heroId, milestoneId)) return { ok: false, reason: 'locked' };
+    const dex = this.s.gearDex; (dex.claimed[heroId] ||= []).push(milestoneId);
+    const got = this.addRewards({ ...m.rewards }, { silent: true, applyVip: false });
+    this.emit(); return { ok: true, got };
   }
   /** 금고 칸 확장(골드). */
   vaultExpand() {
@@ -827,6 +902,7 @@ export class Economy {
     const difficultyId = stage.difficultyId || 'story';
     recordDifficultyClear(s.endgame, stage.ch, stage.st, difficultyId);
     if (difficultyId !== 'story') this.recordJourneyAction('hardClears');
+    this.recordVaultRelay(heroId);   // 받은(계승 의식) 장비를 끼고 이긴 판: 같은 uid 하루 1회
     // 고통 단계(에너지 0): 하루 첫 fullRuns 판은 보상 100%, 그 뒤는 골드·재료 decayMul 이고 EXP 는 100%. 판 수는 이 트랜잭션 안에서 센다.
     // 전설 수련 약탈 갈래는 골드·강화석·조각 몫을 더한다(서버 정산도 이 함수를 지나 같은 값이다).
     const tormentTier = tormentTierOf(difficultyId);
@@ -848,6 +924,8 @@ export class Economy {
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
     if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));
+    // 고통 단계 새 최고 기록이 5의 배수면 계승 문장(콘텐츠 보상, 한 단계에 한 번만 — 최고 단계는 앞으로만 오른다).
+    if (tormentRun?.newBest && tormentRun.best % VAULT_INHERIT.tormentEvery === 0) got.push(...this.addRewards({ lineageSigil: VAULT_INHERIT.tormentSigil }, { silent: true, applyVip: false }));
     const prevLv = this.hero(heroId).level;
     // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (expBase + expStep×n)). EXP 는 판 수 감쇠를 받지 않는다.
     const combatBase = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
@@ -1252,4 +1330,4 @@ export class Economy {
 
 export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
 // 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
-Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
+Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], lineageSigil: ['계승 문장', '/img/icon_fragment.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });

@@ -197,7 +197,9 @@ describe('금고 이전 규칙', () => {
     const eco = newEco(); eco.s.gold = 0; eco.s.roster.owned.push('blackcat');
     const bow = eco.addItem('L', 'weapon', undefined, 0, 'ranger'); eco.vaultDeposit(bow.uid);
     expect(eco.vaultWithdrawQuote(bow.uid, 'blackcat')).toMatchObject({ ok: true, free: 'kin', gold: 0 });
-    expect(eco.vaultWithdrawQuote(bow.uid, 'knight')).toMatchObject({ ok: false, reason: 'gold' });
+    expect(eco.vaultWithdrawQuote(bow.uid, 'knight')).toMatchObject({ ok: false, reason: 'bound' });   // L 은 다른 계열에게 골드로 못 간다(계승 의식)
+    const ring = eco.addItem('E', 'weapon', undefined, 0, 'ranger'); eco.vaultDeposit(ring.uid);
+    expect(eco.vaultWithdrawQuote(ring.uid, 'knight')).toMatchObject({ ok: false, reason: 'gold' });
     const storage = memory(); storage.setItem('bladesurge_save_v1', JSON.stringify(legacySave()));
     const old = grandfather(new Economy({ now: () => T, storage })); old.s.gold = 0;
     const leg = old.s.inventory.find((x: any) => x.uid === 11);
@@ -255,7 +257,7 @@ describe('서버 경로(/cmd)', () => {
     const a = await h.session();
     const seed = EconomyCore.fromState(null, { now: () => h.now(), rng: createSeededRng(9) }) as any;
     seed.s.gold = 5_000_000; seed.s.roster.owned.push('mage'); seed.s.roster.starterChosen = true;
-    const w = seed.addItem('L', 'weapon', undefined, 0, 'knight'); w.enh = 10;
+    const w = seed.addItem('E', 'weapon', undefined, 0, 'knight'); w.enh = 10;
     const start = seed.snapshot();
     const text = JSON.stringify(start);
     h.db.sqlite.query('UPDATE account_docs SET doc = ?, bytes = ? WHERE account_id = ?').run(text, text.length, a.accountId);

@@ -4,6 +4,7 @@
 import { stageDef, ENEMIES, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { applyDifficulty, resolveDifficulty, tormentTierOf } from '../game/difficulty.js';
 import { lootTable, dropItemLevel } from '../data/loot-tables.js';
+import { recordGearDex } from '../game/gear-dex.js';
 import { validItemLevel } from '../data/item-tier.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { monsterXp } from '../game/rpg-core.js';
@@ -150,6 +151,7 @@ export function grantLootItem(eco, item, tp = 0, owner = eco.s.selected) {
   const il = tp > 0 ? 0 : validItemLevel(item.il);
   const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(il ? { il } : {}), owner: eco.s.heroes?.[owner] ? owner : eco.s.selected };
   eco.s.inventory.push(inst);
+  recordGearDex(eco.s, 'drop', inst.owner, inst.id);   // pushItem 과 같은 등재 지점(직접 얻은 드랍)
   return inst;
 }
 
