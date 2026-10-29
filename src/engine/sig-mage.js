@@ -200,9 +200,9 @@ const PRISM_SPECTRUM = Object.freeze([0x7a3cff, 0x3a4cff, 0x1f7cff, 0x2a90d0, 0x
 export function magePrismBounce(game, pos, dir, n = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned;
-  // 맞은 자리 별빛(흰 심)은 적 몸을 하얗게 덮어 빼고, 청록·보라 두 겹 고리로 굴절 지점을 찍는다.
-  impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.2 + Math.min(n, 12) * .08, C.prismDeep, .22, { grow: 1 });
-  impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.8, C.arcane, .26, { grow: 1, delay: .04 });
+  // 맞은 자리 별빛(흰 심)은 적 몸을 하얗게 덮어 빼고, 굴절 지점은 적 몸 바깥으로 튀는 작은 청록 별 하나로 찍는다.
+  // 두 겹 고리(1.2~1.8m)는 가까운 무리에서 연달아 튕길 때 영웅 앞에 분홍·흰 원 더미로 쌓였다(각성 갤러리 2026-10-30).
+  impact._emit(IMPACT_KIND.star, pos.x, pos.y + .9, pos.z, .8 + Math.min(n, 12) * .03, C.prismDeep, .2, { angle: n * .7, grow: .5 });
   _q.set(pos.x, 0, pos.z);
   impact.mark(_q, C.arcane, { radius: 1.4 + Math.min(n, 12) * .05, life: .55, style: MARK_STYLE.compass, angle: n * .6 });
   if (!game.fx.lite && dir) {
@@ -279,7 +279,7 @@ export const PRELUDES = {
         { vx: -_d.x * r / (life - d), vy: -_d.y * r / (life - d), vz: -_d.z * r / (life - d), stretch: 1.4, grow: 1, delay: d });
     }
     impact._emit(IMPACT_KIND.star, H.x, H.y, H.z, .8, C.frost, .2, { angle: .3, grow: .6, delay: life - .08 });
-    impact.mark(c, C.frostDeep, { radius: 1.8, life: .6, style: MARK_STYLE.thorn, angle: .3 });
+    impact.mark(c, C.frostDeep, { radius: 2.6, life: .6, style: MARK_STYLE.thorn, angle: .3 });
     if (!lite) for (let k = 0; k < 6; k++) {
       const a = (k / 6) * TAU + .52; _a.set(c.x + Math.cos(a) * 1.3, .02, c.z + Math.sin(a) * 1.3); _b.set(Math.cos(a) * .35, 1, Math.sin(a) * .35);
       impact.beam(_a, _b, 1.1, k % 2 ? C.frostMid : C.frostDeep, { speed: 10, width: .16, delay: k * .06, fade: .4, style: BEAM_STYLE.ice });
@@ -417,7 +417,7 @@ export const SIGNATURES = {
     for (let k = 0; k < sweeps; k++) {
       const a = Math.PI / 2 - (k / sweeps) * Math.PI * 1.5; _d.set(Math.cos(a), 0, -Math.sin(a));
       _a.set(c.x, .12, c.z);
-      impact.beam(_a, _d, 6, k % 2 ? C.arcane : C.star, { width: .24, fade: .16, delay: k * (.4 / sweeps) });
+      impact.beam(_a, _d, 6, k % 2 ? C.arcane : C.star, { width: .18, fade: .16, delay: k * (.4 / sweeps) });
     }
     _d.set(Math.cos(.6), 0, -Math.sin(.6)); _a.set(c.x, .14, c.z);
     impact.beam(_a, _d, 3.4, C.arcane, { width: .42, fade: 1.6, delay: .05 });
@@ -433,7 +433,8 @@ export const SIGNATURES = {
         const mid = 1.75 * (e.def?.scale || 1) * .55;
         for (let s = -1; s <= 1; s += 2) {
           _a.set(e.pos.x + .8 - .28 * s, mid + .42, e.pos.z); _d.set(.56 * s, -.84, 0);
-          impact.beam(_a, _d, _d.length(), C.arcane, { width: .14, fade: 1.2, delay: .06 + shown * .04 });
+          // 모래시계 = 금빛 모래(보라 시계판 위에서 갈린다).
+          impact.beam(_a, _d, _d.length(), C.starGold, { width: .12, fade: 1.2, delay: .06 + shown * .04 });
         }
         shown++;
       }
@@ -482,9 +483,9 @@ export const SIGNATURES = {
     }
     // 판정(T): 감옥이 닫히는 순간 중심에서 하늘로 솟는 별빛 기둥(남색 굵은 + 금 가는 심) — 원형이 아닌 수직 실루엣.
     _a.set(at.x, .2, at.z); _d.set(0, 1, 0);
-    impact.beam(_a, _d, 9, C.star, { speed: 60, tail: 7, width: .9, delay: T });
-    impact.beam(_a, _d, 9, C.starGold, { speed: 60, tail: 5, width: .22, delay: T });
-    impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 1.8, C.star, .2, { angle: .3, grow: .4, delay: T });
+    // 끌려온 적 무리 위라 굵은 기둥·중심 별빛은 흰 덩어리가 된다(iter1): 가는 남색 기둥 + 더 가는 금 심, 중심 별빛 없음.
+    impact.beam(_a, _d, 9, C.starLine, { speed: 60, tail: 7, width: .45, delay: T });
+    impact.beam(_a, _d, 9, C.starGold, { speed: 60, tail: 5, width: .12, delay: T });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
     // 별 파편: 일곱 꼭짓점 쪽으로 땅을 긋는 짧은 금빛 선(폭발이 별 모양으로 갈라진다).
     for (let k = 0, m = lite ? 0 : N; k < m; k++) {
@@ -526,7 +527,7 @@ export const SIGNATURES = {
       _a.set(at.x + Math.cos(a) * r, .02, at.z + Math.sin(a) * r); _b.set(Math.cos(a) * .4, 1, Math.sin(a) * .4);
       impact.beam(_a, _b, 1.7 + (i % 3) * .4, i % 2 ? C.frostMid : C.frostDeep, { speed: 14, width: .26, delay: T + r * .02, fade: .7, style: BEAM_STYLE.ice });
     }
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 5, C.frost, .4, { grow: 1, delay: T });
+    // 중심 5m 고리는 skills.js 얼음 폭발과 겹쳐 중심 흰 원판이 됐다(iter1): 빼고 눈결정 선이 실루엣을 맡는다.
     // ③ 파쇄: 결정 파편이 바깥·위로 튀고 떨어진다.
     for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
       const a = (i / n) * TAU + .2, sp = 9 + (i % 3) * 2;
