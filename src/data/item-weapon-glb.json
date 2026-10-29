@@ -1,6 +1,18 @@
 {
   "items": [
     {
+      "id": "w_bronze",
+      "form": "sword",
+      "file": "/models/item-weapons/w_bronze.glb",
+      "sha256": "dc0378e377f1fb543d848a3bce34742bdb90b8c71677e8641fb40846af75bf01",
+      "bytes": 485736,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "5f939b04-1e00-4126-b522-66961ece5425",
+        "concept": "curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel"
+      }
+    },
+    {
       "id": "w_cleaver",
       "form": "sword",
       "file": "/models/item-weapons/w_cleaver.glb",
