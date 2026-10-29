@@ -15,6 +15,7 @@ import { applyArmorAppearance } from './armor-appearance.js';
 import { itemRenderSource } from '../ui/item-presentation.js';
 import { resolveItemForm } from '../ui/item-visual-forms.js';
 import { createLootVisual } from './loot-visual.js';
+import { itemWeaponGlb } from '../engine/item-weapon-glb.js';
 
 /** 부위별 드랍 대각선 길이(월드 단위). 기존 0.5~2 범위 안에서 멀리서도 실루엣이 읽히게 키운다. */
 export const LOOT_MODEL_SIZE = Object.freeze({ weapon: 1.75, armor: 1.3, boots: 1.1, ring: .95 });
@@ -161,15 +162,17 @@ export class LootModelLibrary {
         parts.push({ geometry: lease.geometry, material: null, matrix: new THREE.Matrix4().makeRotationZ(Math.PI / 2).setPosition(mid, mid, -.06 * Math.max(.5, length)) });
       }
     }
-    const source = { parts, slot: def.slot, kind: info.kind, fit: fitTransform(boxOf(parts), def.slot) };
+    // 재질 형태는 지오메트리를 임대한 그 순간의 GLB 여부로 고정한다(선로드 전에 절차적으로 캐시된 소스에 GLB 재질이 붙지 않게).
+    const glbForm = info.form && itemWeaponGlb(def.id, info.form) ? info.form : null;
+    const source = { parts, slot: def.slot, kind: info.kind, form: glbForm, fit: fitTransform(boxOf(parts), def.slot) };
     this.sources.set(info.key, source);
     return source;
   }
-  _material(def, rarity, index, base) {
-    const key = `${def.id}|${rarity}|${index}`;
+  _material(def, rarity, index, base, form = null) {
+    const key = `${def.id}|${rarity}|${index}${form ? '|' + form : ''}`;
     if (!this.materials.has(key)) {
       // 대장간 재질은 장비 표면(얼음 등)을 읽어 새로 만들고, 방어구 · 병기고 원본 재질은 복제해 등급 윤곽만 더한다.
-      const material = base ? base.clone() : createItemMaterial(def)[0];
+      const material = base ? base.clone() : createItemMaterial(def, form)[0];
       if (base?.onBeforeCompile && base.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
         material.onBeforeCompile = base.onBeforeCompile; material.customProgramCacheKey = base.customProgramCacheKey;
       }
@@ -205,7 +208,7 @@ export class LootModelLibrary {
     const pivot = new THREE.Group(); pivot.name = 'loot-pivot';
     pivot.scale.setScalar(source.fit.scale); pivot.position.copy(source.fit.offset);
     source.parts.forEach((part, index) => {
-      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material);
+      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material, source.form);
       const mesh = new THREE.Mesh(part.geometry, material);
       if (part.matrix) part.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
       mesh.castShadow = false; mesh.receiveShadow = false; mesh.name = `loot-mesh-${def.id}`;

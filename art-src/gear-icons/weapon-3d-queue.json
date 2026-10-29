@@ -1,0 +1,301 @@
+{
+  "purpose": "검성(아르카) sword/greatsword 형태 무기 3D 나머지. 1차 4자루(weapon-3d-brief.json)와 같은 흐름·프롬프트(conceptPrompt)·Retopo 3000.",
+  "excluded": {
+    "armory": "arm_*_weapon 6종은 병기고 GLB(modelNode) 경로가 따로 있어 제외",
+    "summon": "sg_ember_lantern·sg_solar_grimoire는 소환 장비(등·책)라 검 형태 아님",
+    "otherClasses": "광전사 도끼·마법사 지팡이·도적 단검·궁수 활 형태는 다음 단계 후보(같은 아이콘 정체성으로 형태별 3D, 그때 item-renders/forms 215장도 함께 다시 그림)"
+  },
+  "waves": [
+    {
+      "wave": 2,
+      "why": "기본 드롭 풀(가장 자주 보임), 승인 아이콘 그대로",
+      "weapons": [
+        {
+          "id": "w_iron",
+          "name": "철검",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/A/w_iron.png"
+        },
+        {
+          "id": "w_wood",
+          "name": "훈련용 목검",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_wood.png"
+        },
+        {
+          "id": "w_cleaver",
+          "name": "푸줏간 식칼",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_cleaver.png"
+        },
+        {
+          "id": "w_steel",
+          "name": "강철 대검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_steel.png"
+        },
+        {
+          "id": "w_bronze",
+          "name": "청동 곡도",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_bronze.png"
+        },
+        {
+          "id": "w_guard",
+          "name": "수비대 장검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_guard.png"
+        },
+        {
+          "id": "w_flame",
+          "name": "화염 검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/A/w_flame.png"
+        },
+        {
+          "id": "w_rune",
+          "name": "룬 각인 검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_rune.png"
+        },
+        {
+          "id": "w_knight",
+          "name": "기사단 장검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/C/w_knight.png"
+        },
+        {
+          "id": "w_dragon",
+          "name": "용살자의 검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/A/w_dragon.png"
+        },
+        {
+          "id": "w_sun",
+          "name": "태양의 대검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/C/w_sun.png"
+        }
+      ]
+    },
+    {
+      "wave": 3,
+      "why": "U 테마 세트 무기(세트 정체성이 큼). 검성 U는 대검 형태라 낫·사슬검도 대검 손잡이 축으로 맞춘다",
+      "weapons": [
+        {
+          "id": "w_storm",
+          "name": "뇌명검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_storm.png"
+        },
+        {
+          "id": "w_blood",
+          "name": "흡혈귀의 송곳니",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_blood.png"
+        },
+        {
+          "id": "w_gravity",
+          "name": "특이점 대검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_gravity.png"
+        },
+        {
+          "id": "w_phoenix",
+          "name": "불사조의 검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_phoenix.png"
+        },
+        {
+          "id": "w_rime",
+          "name": "한설검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_rime.png"
+        },
+        {
+          "id": "w_plague",
+          "name": "역병의 낫",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_plague.png"
+        },
+        {
+          "id": "w_sigil",
+          "name": "각인 대검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_sigil.png"
+        },
+        {
+          "id": "w_chain",
+          "name": "심연의 사슬검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_chain.png"
+        },
+        {
+          "id": "w_void",
+          "name": "공허의 조각검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_void.png"
+        }
+      ]
+    },
+    {
+      "wave": 4,
+      "why": "도감·마을 장비",
+      "weapons": [
+        {
+          "id": "gear_weapon_n_1",
+          "name": "초소의 직검",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_n_1.png"
+        },
+        {
+          "id": "gear_weapon_n_2",
+          "name": "산길의 넓은날",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_n_2.png"
+        },
+        {
+          "id": "gear_weapon_n_3",
+          "name": "나그네 곡검",
+          "rarity": "N",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_n_3.png"
+        },
+        {
+          "id": "gear_weapon_s_1",
+          "name": "톱날 전투검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_s_1.png"
+        },
+        {
+          "id": "gear_weapon_s_2",
+          "name": "잎새 수호검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_s_2.png"
+        },
+        {
+          "id": "gear_weapon_s_3",
+          "name": "물결 장검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_s_3.png"
+        },
+        {
+          "id": "gear_weapon_e_1",
+          "name": "파쇄 도살검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_e_1.png"
+        },
+        {
+          "id": "gear_weapon_e_2",
+          "name": "은빛 세검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_e_2.png"
+        },
+        {
+          "id": "gear_weapon_e_3",
+          "name": "성문 수호검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/gear_weapon_e_3.png"
+        },
+        {
+          "id": "gear_weapon_l_1",
+          "name": "별의 대검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/gear_weapon_l_1.png"
+        },
+        {
+          "id": "gear_weapon_l_2",
+          "name": "용비늘 검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/gear_weapon_l_2.png"
+        },
+        {
+          "id": "gear_weapon_l_3",
+          "name": "황혼 성검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/gear_weapon_l_3.png"
+        },
+        {
+          "id": "w_town_oath",
+          "name": "서약 수비대검",
+          "rarity": "S",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/w_town_oath.png"
+        },
+        {
+          "id": "w_town_ember",
+          "name": "잿불 항해검",
+          "rarity": "E",
+          "form": "sword",
+          "iconKey": "tripo-image/D-split/w_town_ember.png"
+        },
+        {
+          "id": "w_town_star",
+          "name": "별마루 성검",
+          "rarity": "L",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/w_town_star.png"
+        }
+      ]
+    },
+    {
+      "wave": 5,
+      "why": "원정 세트",
+      "weapons": [
+        {
+          "id": "exp_glasswarden_weapon",
+          "name": "유리 파수꾼의 검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/exp_glasswarden_weapon.png"
+        },
+        {
+          "id": "exp_emberknight_weapon",
+          "name": "잿불 기사의 검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/exp_emberknight_weapon.png"
+        },
+        {
+          "id": "exp_starreader_weapon",
+          "name": "별빛 기록자의 검",
+          "rarity": "U",
+          "form": "greatsword",
+          "iconKey": "tripo-image/D-split/exp_starreader_weapon.png"
+        }
+      ]
+    }
+  ],
+  "total": 38
+}

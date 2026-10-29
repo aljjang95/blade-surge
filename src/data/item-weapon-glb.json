@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": "w_frost",
+      "form": "sword",
+      "file": "/models/item-weapons/w_frost.glb",
+      "sha256": "de52adec6a9a6c7f518bce4b97d5c70cc8f5163e80bcdf704379347c22500179",
+      "bytes": 1060868,
+      "triangles": 2503,
+      "source": {
+        "tripoTaskId": "f30e3e71-1232-457f-9480-2a003ab3095b",
+        "concept": "R2 tripo-3d/weapons/w_frost/w_frost-concept.png"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "sword",
+      "file": "/models/item-weapons/w_hunter.glb",
+      "sha256": "aa394848132c1d8e794e6989e4d5908baf2be944960fee66241836f55ff174e8",
+      "bytes": 742020,
+      "triangles": 2756,
+      "source": {
+        "tripoTaskId": "2cc3b2c5-1945-410f-b3fa-bd26c06a05da",
+        "concept": "R2 tripo-3d/weapons/w_hunter/w_hunter-concept.png"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_king.glb",
+      "sha256": "caa859dbde73b8896512398b66a6bcf399e2477174c680638aa3c41407216e81",
+      "bytes": 1189452,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "bf43e6f7-efa4-49f4-99b1-740bd1ce44a9",
+        "concept": "R2 tripo-3d/weapons/w_king/w_king-concept.png"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rusty.glb",
+      "sha256": "48b3fe84ebf73a3db50cf9df2a869b08c98029a8b18e7f7ffdcaede9c71cd862",
+      "bytes": 822420,
+      "triangles": 2700,
+      "source": {
+        "tripoTaskId": "39724b82-1247-4d09-bf32-30fc0a121032",
+        "concept": "R2 tripo-3d/weapons/w_rusty/w_rusty-concept.png"
+      }
+    }
+  ]
+}
