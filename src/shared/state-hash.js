@@ -57,5 +57,7 @@ export function mergeServerOwned(local, server) {
   const out = { ...local };
   for (const key of SERVER_OWNED_KEYS) if (server && server[key] !== undefined) out[key] = server[key];
   if (server) for (const key of OPTIONAL_SERVER_KEYS) if (server[key] === undefined) delete out[key];
+  // 여정 단계 수령 기록만 서버 명령(claimJourneyStep)이 소유한다. 일일·주간 의뢰는 아직 기기 전용이라 journey 전체는 덮지 않는다.
+  if (Array.isArray(server?.journey?.claimedSteps) && local?.journey && typeof local.journey === 'object') out.journey = { ...local.journey, claimedSteps: [...server.journey.claimedSteps] };
   return out;
 }

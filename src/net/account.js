@@ -159,7 +159,7 @@ function hookRuns(app, state) {
     const k = battle.drops?.killCounts || {}, s = battle.drops?.summonedKills || null;
     const kills = { normal: k.normal || 0, elite: k.elite || 0, boss: k.boss || 0 };
     // 처치 종(서버 처치 원장). 형식 상한(64종) 안에서만 보낸다.
-    const sp = battle.drops?.speciesKills, species = sp ? Object.fromEntries(Object.entries(sp).filter(([id, n]) => /^[a-z][a-z0-9_]{0,47}$/.test(id) && n > 0).slice(0, 64)) : null;
+    const sp = battle.drops?.speciesKills, species = sp ? Object.fromEntries(Object.entries(sp).filter(([id, n]) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id) && n > 0).slice(0, 64)) : null;
     return { win, elapsedMs: Math.max(0, Math.round((battle.elapsed || 0) * 1000)), kills, ...(s ? { summonedKills: { normal: s.normal, elite: s.elite, boss: s.boss } } : {}),
       ...(species && Object.keys(species).length ? { species } : {}),
       roomsCleared: Math.max(0, battle.roomsCleared | 0), damageDealt: Math.max(0, Math.round(battle.dmgDealt || 0)), ...extra };

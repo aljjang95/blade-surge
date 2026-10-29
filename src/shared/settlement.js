@@ -123,7 +123,7 @@ export function validateFacts(facts) {
     // 종 id 형식·개수만 본다. 어떤 종이 그 관문에 나올 수 있는지는 정산 때 관문 풀로 자른다(판정에는 영향 없음).
     if (!facts.species || typeof facts.species !== 'object' || Array.isArray(facts.species)) return 'species';
     const ids = Object.keys(facts.species);
-    if (ids.length > SPECIES_PER_RUN || ids.some((id) => !/^[a-z][a-z0-9_]{0,47}$/.test(id) || !finiteInt(facts.species[id], 100000))) return 'species';
+    if (ids.length > SPECIES_PER_RUN || ids.some((id) => !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id) || !finiteInt(facts.species[id], 100000))) return 'species';
   }
   return null;
 }

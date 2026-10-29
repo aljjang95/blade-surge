@@ -54,9 +54,16 @@ export function stageSpeciesPool(stage) {
   roster(stage?.combatRosterFor?.()); roster(stage?.rosterFor?.());
   for (const w of stage?.waves || []) for (const id of w) add(id);
   add(stage?.encounter?.enemyId); add(stage?.dungeonBossId); add(stage?.encounter?.dungeonBossId);
-  for (const id of [...raw]) add(ENEMIES[id]?.summon);
-  const pool = new Set();
-  for (const id of raw) for (const x of [id, chapterSpeciesId(stage, id)]) if (known(x)) pool.add(x);
+  // 소환 종은 장 전용 몸으로 바뀐 뒤 다시 소환할 수 있으므로(예: 1-8 기록 대장 → 밤유리 서기관 → 서리 거울) 더 늘지 않을 때까지 펼친다.
+  const pool = new Set(), queue = [...raw];
+  while (queue.length) {
+    const id = queue.pop();
+    for (const x of [id, chapterSpeciesId(stage, id)]) {
+      if (!known(x) || pool.has(x)) continue;
+      pool.add(x);
+      if (typeof ENEMIES[x].summon === 'string') queue.push(ENEMIES[x].summon);
+    }
+  }
   const frozen = Object.freeze(pool);
   if (key) poolCache.set(key, frozen);
   return frozen;

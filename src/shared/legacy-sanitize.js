@@ -15,7 +15,7 @@ import { normalizeIdle, importedIdle } from '../game/idle-rewards.js';
 import { normalizeNewbie } from '../game/newbie-event.js';
 import { normalizeAchievements } from '../game/achievements.js';
 import { trustedSlain } from '../game/kill-ledger.js';
-import { periodAt } from '../game/journey-core.js';
+import { periodAt, normalizeJourney } from '../game/journey-core.js';
 import { CHAPTERS } from '../data/stages.js';
 import { progressItemLevel } from '../data/loot-tables.js';
 import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
@@ -160,13 +160,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, snapshot?: boolean }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, serverJourney?: any, snapshot?: boolean }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, snapshot = false }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, serverJourney, snapshot = false }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -245,6 +245,8 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     s.idle = normalizeIdle(serverIdle, importedIdle(now));
     s.newbie = normalizeNewbie(serverNewbie, { start: periodAt(now).day });
     s.achievements = normalizeAchievements(serverAchievements);
+    // 여정 단계 수령 기록도 서버 명령(claimJourneyStep)이 소유한다: 반복 스냅샷으로 비워 재수령하지 못하게 서버 값만(docs/SERVER_AUTHORITY_GATES.md 4절).
+    if (s.journey && typeof s.journey === 'object') s.journey.claimedSteps = normalizeJourney(serverJourney).claimedSteps;
   } else {
     s.idle = importedIdle(now);
     s.newbie = normalizeNewbie(raw?.newbie, { start: periodAt(now).day });

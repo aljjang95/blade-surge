@@ -131,7 +131,7 @@ describe('A1/A2 처치 원장: 서버 정산', () => {
     const { start, settle, h } = await ready();
     const t = await start();
     h.advance(LIMITS.minClearMs + 40000);
-    const r = await settle(t.runId, legit({ species: { Skel_Minion: 1 } }));
+    const r = await settle(t.runId, legit({ species: { 'skel-minion': 1 } }));
     expect(r.status).toBe(400);
   });
 });
@@ -145,9 +145,11 @@ describe('A1 validateFacts species 형식', () => {
     expect(bad({ skel_minion: 100000 })).toBeNull();
     expect(bad(Object.fromEntries(Array.from({ length: 64 }, (_, i) => ['mob_' + i, 1])))).toBeNull();
   });
-  test('65종 이상·대문자·특수문자·음수·소수·100001·배열·null 은 species', () => {
+  test('실제 적 id 의 대문자(dungeon_reverseRiver_captain 등)는 통과', () => {
+    expect(bad({ dungeon_reverseRiver_captain: 1, dungeon_crackedNave_warden: 1 })).toBeNull();
+  });
+  test('65종 이상·특수문자·음수·소수·100001·배열·null 은 species', () => {
     expect(bad(Object.fromEntries(Array.from({ length: 65 }, (_, i) => ['mob_' + i, 1])))).toBe('species');
-    expect(bad({ Skel: 1 })).toBe('species');
     expect(bad({ 'skel-minion': 1 })).toBe('species');
     expect(bad({ 'skel minion': 1 })).toBe('species');
     expect(bad({ '1skel': 1 })).toBe('species');
@@ -485,5 +487,43 @@ describe('A5 병합: 가져오기·스냅샷', () => {
     const server = { slain: { seeded: true, kills: { skel_minion: 3 } } };
     expect(mergeServerOwned(local, server).slain).toEqual(server.slain);
     expect(mergeServerOwned(local, {}).slain).toEqual(local.slain);
+  });
+});
+
+describe('Codex 리뷰 반영(PR #435)', () => {
+  const NOW = Date.UTC(2026, 10, 20);
+  test('소환 종은 장 전용 몸 변환 뒤 다시 소환하는 종까지 풀에 든다(1-8 → ch1_tombguard_frost)', async () => {
+    const { stageSpeciesPool } = await import('../src/game/kill-ledger.js');
+    const { stageDef } = await import('../src/data/stages.js');
+    expect(stageSpeciesPool(stageDef(1, 8)).has('ch1_tombguard_frost')).toBe(true);
+  });
+
+  test('대문자 보스 id 도 그 관문 풀에 있으면 원장에 들어간다', async () => {
+    const { stageSpeciesPool, clampSpecies } = await import('../src/game/kill-ledger.js');
+    const { stageDef } = await import('../src/data/stages.js');
+    const pool = stageSpeciesPool(stageDef(3, 8));
+    const upper = [...pool].find((id) => /[A-Z]/.test(id));
+    expect(upper).toBeDefined();
+    expect(clampSpecies({ [upper!]: 1 }, pool, 1).species).toEqual({ [upper!]: 1 });
+  });
+
+  test('반복 스냅샷은 여정 단계 수령 기록을 서버 값으로 둔다(비워서 재수령 차단)', async () => {
+    const { sanitizeLegacySave } = await import('../src/shared/legacy-sanitize.js');
+    const raw = fresh(NOW).snapshot() as any;
+    raw.journey = { ...(raw.journey || {}), claimedSteps: [] };
+    const snap = sanitizeLegacySave(raw, { now: NOW, createdAt: NOW - 3 * DAY, snapshot: true, serverJourney: { claimedSteps: ['oath'] } }) as any;
+    expect(snap.state.journey.claimedSteps).toEqual(['oath']);
+    raw.journey.claimedSteps = ['oath', 'garden'];
+    const again = sanitizeLegacySave(raw, { now: NOW, createdAt: NOW - 3 * DAY, snapshot: true, serverJourney: { claimedSteps: [] } }) as any;
+    expect(again.state.journey.claimedSteps).toEqual([]);
+  });
+
+  test('서버 문서 적용은 여정 단계 수령 기록만 서버 값으로, 의뢰는 로컬 값 유지', async () => {
+    const { mergeServerOwned } = await import('../src/shared/state-hash.js');
+    const local = { journey: { claimedSteps: [], daily: { wins: 3 } }, gold: 1 };
+    const out = mergeServerOwned(local, { journey: { claimedSteps: ['oath', 'garden'], daily: { wins: 0 } }, gold: 9 }) as any;
+    expect(out.journey.claimedSteps).toEqual(['oath', 'garden']);
+    expect(out.journey.daily.wins).toBe(3);
+    expect(out.gold).toBe(9);
   });
 });
