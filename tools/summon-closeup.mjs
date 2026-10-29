@@ -47,6 +47,8 @@ try {
       if (!boss) return { error: 'boss spawn failed' };
       boss.atkCd = 999;
       const before = new Set(b.enemies);
+      // 시작 방은 정화(cleared) 상태라 실제 소환이 취소된다 — 대장 방을 전투 중으로 되돌린 뒤 부른다.
+      if (boss.homeRoom) boss.homeRoom.cleared = false;
       b.summonMinions(boss, 3);
       const hold = () => { boss.pos.copy(bossAt); boss.vel.set(0, 0, 0); boss.atkCd = 999; boss.face?.(p.pos.x, p.pos.z); };
       // 소환 타이머(0.12초 간격)를 돌린 뒤, 졸병을 대장과 영웅 사이에 한 줄로 세워 몸이 가리지 않게 한다.
@@ -54,7 +56,7 @@ try {
       const minions = b.enemies.filter((x) => x.alive && !before.has(x));
       minions.forEach((m, i) => { m.at = p.pos.clone().add(new V(3.4, 0, (i - (minions.length - 1) / 2) * 2.2)); });
       for (let k = 0; k < 150; k++) { hold(); for (const m of minions) { m.pos.copy(m.at); m.vel.set(0, 0, 0); m.atkCd = 999; m.face?.(p.pos.x, p.pos.z); } a.step(1 / 60, k === 149); }
-      return { code: b.stage.code, dungeon: b.stage.dungeon?.id ?? null, boss: { id: boss.runtimeSpeciesId, name: boss.def.name, summon: boss.def.summon },
+      return { cleared: boss.homeRoom?.cleared ?? null, alive: b.enemies.filter((x) => x.alive).length, max: b.maxAlive, code: b.stage.code, dungeon: b.stage.dungeon?.id ?? null, boss: { id: boss.runtimeSpeciesId, name: boss.def.name, summon: boss.def.summon },
         minions: minions.map((m) => ({ id: m.runtimeSpeciesId, name: m.def.name, model: m.def.model, asset: m.libraryAsset?.id || null, dress: m.dress?.props || null })) };
     }, [ch, st]);
     await page.waitForTimeout(300);
