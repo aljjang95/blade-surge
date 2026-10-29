@@ -147,19 +147,21 @@ test('summary never invents gains for missing or foreign snapshots, unknown XP o
   expect(growthSummary(input)).toMatchObject({ levels: 0, combatXp: 0, unlocked: [] });
 });
 
-test('gems get a visible use: summon quotes pity and affordable pulls, protect scroll is offered during risky enhancing, nothing is mutated', () => {
+test('gems get a visible use: summon quotes pity and affordable pulls, scrolls are offered only where they help, nothing is mutated', () => {
   const eco = fixture(), save: any = eco.s;
   save.gems = 6430; save.tickets = 0; save.gacha = { ...(save.gacha || {}), beginner: 20, pity: 25 };
-  save.inventory[0].enh = ENH_SAFE_MAX; save.protect = 0;
+  save.protect = 0; save.bless = 0;
+  const scrolls = () => (growthOptions(save, eco) as any[]).filter(o => o.kind === 'scroll').map(o => o.item).sort();
+  // 확정 강화 구간(+3~+10)에서는 주문서가 쓸모없어 안내하지 않는다.
+  save.inventory[0].enh = ENH_SAFE_MAX; expect(scrolls()).toEqual([]);
+  // +11: 확정이 끝난 확률 단계 → 축복만. +12: 파괴 가능 → 보호(축복은 파괴 구간에서 함께 안내하지 않음).
+  save.inventory[0].enh = 11; expect(scrolls()).toEqual(['bless']);
+  save.inventory[0].enh = 12;
   const before = JSON.stringify(save);
   const options: any[] = growthOptions(save, eco);
   expect(JSON.stringify(save)).toBe(before);
-  const summon = options.find(o => o.kind === 'summon');
-  expect(summon).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
-  const protect = options.find(o => o.kind === 'protect');
-  expect(protect).toMatchObject({ have: 0, gems: eco.sku('protect1')!.price });
-  // 충분히 쌓였거나 위험 구간이 아니면 안내하지 않는다.
-  save.protect = 3; expect(growthOptions(save, eco).some(o => o.kind === 'protect')).toBe(false);
-  save.protect = 0; save.inventory[0].enh = 0; expect(growthOptions(save, eco).some(o => o.kind === 'protect')).toBe(false);
-  save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'protect')).toBe(false);
+  expect(options.find(o => o.kind === 'summon')).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
+  expect(options.find(o => o.kind === 'scroll')).toMatchObject({ item: 'protect', have: 0, gems: eco.sku('protect1')!.price });
+  save.protect = 3; expect(scrolls()).toEqual([]);
+  save.protect = 0; save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'scroll')).toBe(false);
 });

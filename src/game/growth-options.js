@@ -3,13 +3,13 @@ import { canLearnSkill } from '../data/skill-tree.js';
 import * as Items from '../data/items.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX, ENH_SAFE_MAX, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
 import { itemStats } from '../data/item-tier.js';
-import { enhanceSureCost } from '../data/enhance.js';
+import { enhanceSureCost, ENH_SURE_MAX } from '../data/enhance.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 import { planBestEquip, junkItems, salvagePreview } from './gear-advice.js';
 
 // 강화 규칙은 다른 작업이 바꿀 수 있어 값을 박지 않고 items.js 의 함수를 호출 시점에 읽는다(없으면 0 = 위험 없음).
 const rule = (name, level) => { const fn = Items[name]; const value = typeof fn === 'function' ? Number(fn(level)) : 0; return Number.isFinite(value) ? value : 0; };
-export const PROTECT_STOCK_GOAL = 3;   // 위험 구간 강화 중 보호 주문서가 이 수보다 적으면 보석 구매를 안내
+export const SCROLL_STOCK_GOAL = 3;   // 쓸모 있는 단계에서 보호·축복 주문서가 이 수보다 적으면 보석 구매를 안내
 export const JUNK_MIN = 5;   // 가방 정리 안내를 띄우는 최소 개수
 
 /** Read-only next steps, each affordable on its own. Never a bulk purchase quote.
@@ -97,11 +97,18 @@ function gearAndSinkOptions(eco, save, heroId) {
       break;
     }
   }
-  // 위험 구간 강화 중이고 보호 주문서가 부족하면, 보석으로 살 수 있다는 안내(기존 상점 상품 protect1 가격 그대로, 구매는 상점 화면에서 사람이 한다).
-  if (eco.sku && (save.protect || 0) < PROTECT_STOCK_GOAL) {
-    const sku = eco.sku('protect1');
-    const risky = Object.values(save.heroes?.[heroId]?.equip || {}).some((uid) => { const it = save.inventory?.find((x) => x.uid === uid); return it && it.enh >= ENH_SAFE_MAX && it.enh < ENH_MAX; });
-    if (risky && sku?.kind === 'gem' && Number.isFinite(sku.price) && (save.gems || 0) >= sku.price) out.push({ kind: 'protect', heroId, have: save.protect || 0, gems: sku.price });
+  // 주문서 안내(기존 상점 상품 가격 그대로, 구매는 상점 화면에서 사람이 한다). 실제로 쓸모 있는 단계에서만:
+  //  · 보호 주문서 = 파괴 방지 → 착용 장비 중 실패 시 파괴될 수 있는 단계(destroyChance > 0, 현재 +12↑)가 있을 때
+  //  · 축복 주문서 = 성공률 +20% → 확정 강화가 끝난 확률 단계(+ENH_SURE_MAX 초과, 파괴 전)가 있을 때
+  if (eco.sku) {
+    const worn = Object.values(save.heroes?.[heroId]?.equip || {}).map((uid) => save.inventory?.find((x) => x.uid === uid)).filter((it) => it && Number.isInteger(it.enh) && it.enh < ENH_MAX);
+    const scroll = (item, key, need) => {
+      if (!need || (save[key] || 0) >= SCROLL_STOCK_GOAL) return;
+      const sku = eco.sku(item);
+      if (sku?.kind === 'gem' && Number.isFinite(sku.price) && (save.gems || 0) >= sku.price) out.push({ kind: 'scroll', heroId, item: key, have: save[key] || 0, gems: sku.price });
+    };
+    scroll('protect1', 'protect', worn.some((it) => rule('destroyChance', it.enh) > 0));
+    scroll('bless1', 'bless', worn.some((it) => it.enh > ENH_SURE_MAX && rule('destroyChance', it.enh) === 0 && enhanceChance(it.enh) < 1));
   }
   return out;
 }
