@@ -26,6 +26,8 @@ export const OPS = {
   // 소유 정책(수익화 1단계): 시작 영웅 선택과 무료 해금. 서버 규칙 엔진이 같은 Economy 메서드를 부른다(유료 권한은 결제 검증만 연다).
   chooseStarter: { args: [str], run: (e, h) => e.chooseStarter(h), ok: okResult },
   unlockHeroFree: { args: [str], run: (e, h) => e.unlockHeroFree(h), ok: okResult },
+  // 보석 직접 영입(HERO_DIRECT_PURCHASE.enabled=false 가 기본이라 꺼져 있으면 서버도 rejected/disabled). 난수 없음.
+  buyHero: { args: [str], run: (e, h) => e.buyHero(h), ok: okResult },
   selectHero: { args: [str], run: (e, h) => { if (!e.ownHero(h) || e.s.selected === h) return false; e.s.selected = h; e.emit(); return true; }, ok: okBool, offline: true },
   // 장비 (난수 없음)
   equip: { args: [str, (v) => int(v, 1)], run: (e, h, uid) => { if (!e.ownHero(h) || !e.s.inventory.some((x) => x.uid === uid)) return false; return e.equip(h, uid) !== false; }, ok: okBool, offline: true },
@@ -43,6 +45,8 @@ export const OPS = {
   // 장비 (서버 난수)
   // 네 번째 인자 sure(확정 강화, 골드 웃돈)는 선택이다: 이전 클라이언트의 3인자 명령도 그대로 받는다.
   enhance: { args: [(v) => int(v, 1), bool, bool, bool], optional: 1, run: (e, uid, protect, bless, sure = false) => e.enhance(uid, { protect, bless, sure }), ok: okResult, random: true },
+  // 강화 전승(난수 없음, data/enhance-transfer.js): 원본 uid · 대상 uid · 전승 보호 주문서 사용 여부.
+  enhanceTransfer: { args: [(v) => int(v, 1), (v) => int(v, 1), bool], run: (e, src, dst, scroll) => e.enhanceTransfer(src, dst, { scroll }), ok: okResult },
   // 소환 (서버 난수·서버 시계 픽업). 배너 표는 src/data/gacha-banners.js 하나를 클라이언트·서버가 함께 읽는다.
   pull: { args: [(v) => v === 1 || v === 10, (v) => v === 'hero' || v === 'gear' || v === 'beginner'], run: (e, n, banner) => e.pull(n, banner), ok: okValue, random: true },
   pullSSR: { args: [], run: (e) => e.pullSSR(), ok: okValue, random: true },

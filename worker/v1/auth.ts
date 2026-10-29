@@ -7,7 +7,8 @@ import { CHANNELS, TOKEN_TTL_MS, type Channel, type SessionClaims, resolveSecret
 import { createAccountDoc } from './state';
 
 export const DEVICE_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
-export const PROVIDERS = ['google', 'play_games', 'toss'] as const;
+export const PROVIDERS = ['google', 'play_games', 'toss', 'kakao', 'chatgpt'] as const;
+export type Provider = typeof PROVIDERS[number];
 const KEYS_PER_ACCOUNT = 5;
 const ARCHIVE_MS = 90 * 24 * 3600 * 1000;
 export const GAME_ID = 'blade-surge';
@@ -22,7 +23,9 @@ export interface AuthEnv {
 }
 export interface AuthDeps {
   now(): number;
-  verifyIdToken?(provider: string, token: string, clientIds: string[]): Promise<{ sub: string }>;
+  verifyIdToken?(provider: string, token: string, clientIds: string[]): Promise<{ sub: string; nonce?: string }>;
+  /** 제공자 토큰 교환(인가 코드 → id_token). 테스트는 가짜를 넣는다. */
+  fetch?(url: string, init: RequestInit): Promise<Response>;
 }
 export interface Ctx { env: AuthEnv; db: D1Database; deps: AuthDeps; now: number; request: Request }
 export interface AccountRow { account_id: string; status: string; token_ver: number; authority: string; shard: number; level: number; stage_idx: number; last_seen: number; age_band: string | null }
@@ -44,7 +47,7 @@ async function secret(env: AuthEnv): Promise<string> {
   return value;
 }
 
-async function accountByKey(db: D1Database, keyHash: string): Promise<AccountRow | null> {
+export async function accountByKey(db: D1Database, keyHash: string): Promise<AccountRow | null> {
   return db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM account_keys k JOIN accounts a ON a.account_id = k.account_id WHERE k.key_hash = ?`).bind(keyHash).first<AccountRow>();
 }
 export async function accountById(db: D1Database, accountId: string): Promise<AccountRow | null> {
@@ -85,7 +88,7 @@ function assertActive(account: AccountRow): void {
   if (account.status === 'deleting' || account.status === 'deleted') fail(403, 'deleted');
 }
 
-async function issue(env: AuthEnv, account: AccountRow, channel: Channel, now: number) {
+export async function issueSession(env: AuthEnv, account: AccountRow, channel: Channel, now: number) {
   const claims: SessionClaims = { aid: account.account_id, ch: channel, ver: account.token_ver, iat: now, exp: now + TOKEN_TTL_MS, att: 0 };
   return { token: await signToken(await secret(env), claims), accountId: account.account_id, expiresAt: claims.exp, serverTime: now, authority: account.authority };
 }
@@ -112,7 +115,9 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
   let account = await accountByKey(c.db, keyHash), created = false;
   if (!account) {
     // 새 계정 생성은 IP(해시)당 시간 한도를 따로 둔다(기기 키 대량 발급으로 계정을 찍어 내는 남용 차단).
-    await rateLimit(c, 'sessionNew', await ipKey(c.request));
+    const ip = await ipKey(c.request);
+    await rateLimit(c, 'sessionNew', ip);
+    await rateLimit(c, 'sessionNewDay', ip);
     const player = await resolvePlayer(c.env, keyHash);
     await ensureAccount(c, player.playerId, keyHash, channel, player.banned);
     account = await accountByKey(c.db, keyHash);
@@ -126,7 +131,7 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
   }
   assertActive(account);
   account = await maybeCutover(c, account);
-  return { ...await issue(c.env, account, channel, c.now), created };
+  return { ...await issueSession(c.env, account, channel, c.now), created };
 }
 
 /**
@@ -152,8 +157,11 @@ export async function requireSession(c: Ctx): Promise<Authed> {
   return { claims: check.claims, account };
 }
 
+export const providerSubject = (provider: string, sub: string): Promise<string> => sha256Hex(provider + ':' + sub);
+
 async function subjectHash(c: Ctx, provider: unknown, idToken: unknown): Promise<string> {
   if (!(PROVIDERS as readonly unknown[]).includes(provider)) fail(400, 'provider');
+  // 카카오·ChatGPT는 서버 리다이렉트(인가 코드) 흐름으로만 받는다(oidc.ts). 클라이언트가 건넨 id_token은 받지 않는다.
   // P1은 구글만 연결한다. Play Games·토스는 서버 교환 흐름을 붙이는 레인에서 연다.
   if (provider !== 'google') fail(501, 'provider-unavailable');
   const clientIds = (c.env.GOOGLE_CLIENT_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
@@ -167,7 +175,7 @@ async function subjectHash(c: Ctx, provider: unknown, idToken: unknown): Promise
     fail(status === 503 ? 503 : 401, status === 503 ? 'link-unavailable' : 'bad-token');
   }
   if (typeof sub! !== 'string' || !sub) fail(401, 'bad-token');
-  return sha256Hex(provider + ':' + sub);
+  return providerSubject(provider, sub!);
 }
 
 const summary = (a: AccountRow) => ({ accountId: a.account_id, level: a.level, stageIdx: a.stage_idx, lastSeen: a.last_seen });
@@ -175,31 +183,37 @@ const summary = (a: AccountRow) => ({ accountId: a.account_id, level: a.level, s
 export async function link(c: Ctx, auth: Authed, body: Record<string, unknown>) {
   onlyKeys(body, ['provider', 'idToken']);
   const hash = await subjectHash(c, body.provider, body.idToken);
-  const provider = body.provider as string;
+  return linkSubject(c, auth.account, body.provider as string, hash);
+}
+
+/** 이미 확인한 제공자 주체(해시)를 이 계정에 잇는다. 다른 계정에 이어져 있으면 409 linked-elsewhere(병합 금지). */
+export async function linkSubject(c: Ctx, account: AccountRow, provider: string, hash: string) {
   const owner = await c.db.prepare('SELECT account_id FROM account_links WHERE provider = ? AND subject_hash = ?').bind(provider, hash).first<{ account_id: string }>();
-  if (owner && owner.account_id !== auth.account.account_id) {
+  if (owner && owner.account_id !== account.account_id) {
     // 병합 금지: 양쪽 요약만 보여 주고 "그 계정으로 전환"(recover)만 허용한다.
     const other = await accountById(c.db, owner.account_id);
-    fail(409, 'linked-elsewhere', { mine: summary(auth.account), other: other ? summary(other) : null });
+    fail(409, 'linked-elsewhere', { mine: summary(account), other: other ? summary(other) : null });
   }
   if (!owner) {
-    const mine = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND account_id = ?').bind(provider, auth.account.account_id).first();
+    const mine = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND account_id = ?').bind(provider, account.account_id).first();
     if (mine) fail(409, 'already-linked');
     try {
-      await c.db.prepare('INSERT INTO account_links(provider, subject_hash, account_id, created_at) VALUES (?, ?, ?, ?)')
-        .bind(provider, hash, auth.account.account_id, c.now).run();
+      // 탈퇴와 경쟁해도 deleting 계정에 연동이 남지 않게 계정 상태를 같은 문장에서 확인한다.
+      const added = await c.db.prepare("INSERT INTO account_links(provider, subject_hash, account_id, created_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM accounts WHERE account_id = ? AND status IN ('active','muted'))")
+        .bind(provider, hash, account.account_id, c.now, account.account_id).run();
+      if (!added.meta?.changes) fail(403, 'deleted');
     } catch (error) {
       // 동시 요청이 먼저 같은 제공자 계정(PRIMARY KEY) 또는 이 계정의 같은 제공자(UNIQUE)를 차지했다: 500이 아니라 409.
       if (!isConstraint(error)) throw error;
       const winner = await c.db.prepare('SELECT account_id FROM account_links WHERE provider = ? AND subject_hash = ?').bind(provider, hash).first<{ account_id: string }>();
-      if (winner && winner.account_id !== auth.account.account_id) {
+      if (winner && winner.account_id !== account.account_id) {
         const other = await accountById(c.db, winner.account_id);
-        fail(409, 'linked-elsewhere', { mine: summary(auth.account), other: other ? summary(other) : null });
+        fail(409, 'linked-elsewhere', { mine: summary(account), other: other ? summary(other) : null });
       }
       fail(409, 'already-linked');
     }
   }
-  return { linked: await links(c.db, auth.account.account_id) };
+  return { linked: await links(c.db, account.account_id) };
 }
 
 export async function links(db: D1Database, accountId: string): Promise<string[]> {
@@ -214,7 +228,13 @@ export async function recover(c: Ctx, body: Record<string, unknown>) {
   if (!(CHANNELS as readonly unknown[]).includes(channel)) fail(400, 'channel');
   const keyHash = await deviceKeyHash(body.deviceKey);
   const hash = await subjectHash(c, body.provider, body.idToken);
-  const owner = await c.db.prepare('SELECT account_id FROM account_links WHERE provider = ? AND subject_hash = ?').bind(body.provider as string, hash).first<{ account_id: string }>();
+  const { target, switchedFrom } = await recoverSubject(c, body.provider as string, hash, keyHash);
+  return { ...await issueSession(c.env, target, channel, c.now), switchedFrom };
+}
+
+/** 이미 확인한 제공자 주체(해시)의 계정으로 이 기기 키를 옮긴다. */
+export async function recoverSubject(c: Ctx, provider: string, hash: string, keyHash: string): Promise<{ target: AccountRow; switchedFrom: string | null }> {
+  const owner = await c.db.prepare('SELECT account_id FROM account_links WHERE provider = ? AND subject_hash = ?').bind(provider, hash).first<{ account_id: string }>();
   if (!owner) fail(404, 'no-link');
   const target = await accountById(c.db, owner.account_id);
   if (!target) fail(404, 'no-link');
@@ -238,7 +258,7 @@ export async function recover(c: Ctx, body: Record<string, unknown>) {
   const keys = await c.db.prepare('SELECT key_hash FROM account_keys WHERE account_id = ? AND key_hash != ? ORDER BY last_seen, created_at').bind(target.account_id, keyHash).all<{ key_hash: string }>();
   const stale = (keys.results ?? []).slice(0, Math.max(0, (keys.results ?? []).length + 1 - KEYS_PER_ACCOUNT));
   if (stale.length) await c.db.batch(stale.map(k => c.db.prepare('DELETE FROM account_keys WHERE key_hash = ?').bind(k.key_hash)));
-  return { ...await issue(c.env, target, channel, c.now), switchedFrom: current && current.account_id !== target.account_id ? current.account_id : null };
+  return { target, switchedFrom: current && current.account_id !== target.account_id ? current.account_id : null };
 }
 
 /** 연동 해제는 세션 토큰만으로 하지 않고 제공자 ID 토큰을 다시 확인한다(탈취된 세션이 복구 수단을 지우지 못하게). */
@@ -256,5 +276,31 @@ export async function unlink(c: Ctx, auth: Authed, body: Record<string, unknown>
 /** 모든 기기의 세션을 끊는다(token_ver 증가). */
 export async function logoutAll(c: Ctx, auth: Authed) {
   await c.db.prepare('UPDATE accounts SET token_ver = token_ver + 1 WHERE account_id = ?').bind(auth.account.account_id).run();
+  return { ok: true };
+}
+
+const DELETE_ARCHIVE_MS = 30 * 24 * 3600 * 1000;
+/**
+ * 회원 탈퇴: 계정을 deleting으로 바꾸고 모든 세션·연동·기기 키를 끊는다. 진행 문서는 30일 보관(파기 시점 purge_at) 뒤 정리 대상.
+ * 결제 원장(wallet_ledger·iap_*)은 법정 보존 기간 때문에 여기서 지우지 않는다(docs/ACCOUNT_POLICY.md).
+ */
+export async function deleteAccount(c: Ctx, auth: Authed, body: Record<string, unknown>) {
+  onlyKeys(body, ['confirm']);
+  if (body.confirm !== 'DELETE') fail(400, 'confirm');
+  const id = auth.account.account_id;
+  // 환불 부채가 남았거나 1시간 안에 시작한 웹 결제(결제창 진행 중)가 있으면 탈퇴를 미룬다(새 키로 부채를 털고 다시 시작하는 회피 차단).
+  const pending = await c.db.prepare(`SELECT
+      (SELECT COUNT(*) FROM iap_debt WHERE account_id = ? AND amount > 0) AS debt,
+      (SELECT COUNT(*) FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?) AS web`)
+    .bind(id, id, c.now - 3600_000).first<{ debt: number; web: number }>();
+  if (pending && (pending.debt > 0 || pending.web > 0)) fail(409, 'billing-pending');
+  const doc = await c.db.prepare("SELECT doc FROM account_docs WHERE account_id = ? AND doc_name = 'core'").bind(id).first<{ doc: string }>();
+  await c.db.batch([
+    c.db.prepare('INSERT INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind('delete:' + randomHex(12), id, 'deleted-by-user', doc?.doc ?? '{}', c.now, c.now + DELETE_ARCHIVE_MS),
+    c.db.prepare("UPDATE accounts SET status = 'deleting', token_ver = token_ver + 1 WHERE account_id = ?").bind(id),
+    c.db.prepare('DELETE FROM account_links WHERE account_id = ?').bind(id),
+    c.db.prepare('DELETE FROM account_keys WHERE account_id = ?').bind(id),
+  ]);
   return { ok: true };
 }

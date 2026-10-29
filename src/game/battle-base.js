@@ -822,8 +822,8 @@ export class Battle {
     }
     // 흑사막 가짜 왕좌처럼 적이 아닌 공격 대상. 한 판정에 왕좌 하나 최대 1타.
     if (this.routeObjectives?.strike?.(this, pos.x, pos.z, range)) n++;
-    // 헛스윙(평타): 칼끝 자리에 회색 먼지 — 맞았을 때의 영웅색 불꽃·숫자와 구분된다.
-    if (!n && opts.basic && src === this.player) { _v.set(pos.x + Math.sin(yaw) * range * .8, .9, pos.z + Math.cos(yaw) * range * .8); this.readability?.whiff(_v, src, .8); }
+    // 헛스윙(평타 첫 타, 연타 틱 제외): 칼끝 자리에 회색 먼지 — 맞았을 때의 영웅색 불꽃·숫자와 구분된다.
+    if (!n && opts.basic && !opts.quietStop && src === this.player) { _v.set(pos.x + Math.sin(yaw) * range * .8, .9, pos.z + Math.cos(yaw) * range * .8); this.readability?.whiff(_v, src, .8); }
     return n;
   }
   hitRadius(center, radius, dmg, opts = {}) {
@@ -932,7 +932,7 @@ export class Battle {
         if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
       if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p);
-        else if (!p.hostile && !p.hit.size && p.t >= p.life) this.readability?.whiff(p.pos, p.owner, p.basic ? .9 : 1.1); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
+        else if (p.basic && !p.hostile && !p.hit.size && p.t >= p.life) this.readability?.whiff(p.pos, p.owner, .9); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {

@@ -60,6 +60,8 @@ export class DropSystem {
   /** kind: 'gold' | 'stone' | 'item' */
   spawn(pos, kind, payload, { count = 1, spread = 1 } = {}) {
     if (!fieldDropsAllowed(this.game.stage)) return;
+    // 장비는 떨어지는 순간 이미 인벤토리에 들어 있다(fieldDrop·grantLootItem 은 emit 하지 않음). 전투 가방 배지·시트만 따로 갱신한다.
+    if (kind === 'item') this.game.ui?.bag?.schedule?.();
     for (let i = 0; i < count; i++) {
       let mesh;
       if (kind === 'gold') { mesh = new THREE.Mesh(this._geoCoin, this._matCoin); mesh.scale.setScalar(1.1); }

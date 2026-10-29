@@ -11,7 +11,7 @@ import MOTION_T1S from '../src/data/rogue-t1s-body-motion-v1.json';
 import MOTION_T2U from '../src/data/rogue-t2u-body-motion-v1.json';
 import RANGER_T1S from '../src/data/ranger-t1s-body-motion-v1.json';
 import RANGER_T2U from '../src/data/ranger-t2u-body-motion-v1.json';
-import ROGUE_VAMPIRE from '../src/data/rogue-vampire-body-motion-v1.json';
+import ROGUE_VAMPIRE from '../src/data/rogue-vampire-body-motion-v2.json';
 import RANGER_BLACKCAT from '../src/data/ranger-blackcat-body-motion-v1.json';
 import ROGUE_LIBRARY from '../src/data/rogue-library-revision-v2.json';
 import RANGER_V4 from '../src/data/ranger-library-revision-v4.json';
@@ -115,7 +115,7 @@ for (const { id, HERO, MOTION, ASSET, REV } of CASES) {
     expect(bad(() => {})).not.toThrow();
     expect(bad((m) => { m.body.sha256 = 'f'.repeat(64); })).toThrow();
     expect(bad((m) => { m.revisionId = HERO + '-t2-body-fit-v1'; })).toThrow();
-    expect(bad((m) => { m.motionRevisionId = m.motionRevisionId.replace(/v1$/, 'v2'); })).toThrow();
+    expect(bad((m) => { m.motionRevisionId = m.motionRevisionId.replace(/v(\d+)$/, (_: string, n: string) => 'v' + (Number(n) + 1)); })).toThrow();
     expect(bad((m) => { m.schema = 'blade-surge.ranger-band-body-motion.v1'; })).toThrow();
     expect(bad((m) => { m.asset = 'hero_' + HERO + '_t1'; })).toThrow();
     expect(bad((m) => { m.heroId = HERO === 'rogue' ? 'ranger' : 'rogue'; })).toThrow();

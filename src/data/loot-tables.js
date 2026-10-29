@@ -78,7 +78,8 @@ export function levelExperienceMultiplier(heroLevel, recommendedLevel) {
 }
 // RPG 즉시 처치 XP + 정화 포함 클리어 XP로 검증한다(tools/progression-estimate.mjs).
 // 다음 장 시작은 앞 장 도달 레벨보다 0~2 높게 두며 기존 저장 레벨은 바꾸지 않는다(7장은 46→50).
-const CHAPTER_START_LEVEL = [1, 20, 30, 35, 40, 43, 46, 50];
+// 2026-10-29 입문 레벨 곡선(heroes.js EARLY_LEVEL_EXP, 첫 각성 약 1시간)에 맞춰 2장 시작 20→9, 3장 시작 30→22(1장 끝 Lv8, 2장 끝 Lv21).
+const CHAPTER_START_LEVEL = [1, 9, 22, 35, 40, 43, 46, 50];
 export function recommendedLevel(chapter, stage = 1) {
   const ch = Math.max(1, Math.min(CHAPTER_COUNT, Math.floor(Number(chapter) || 1))), st = Math.max(1, Math.min(STAGES_PER_CHAPTER, Math.floor(Number(stage) || 1)));
   const from = CHAPTER_START_LEVEL[ch - 1], to = CHAPTER_START_LEVEL[ch];
@@ -102,4 +103,11 @@ export function dropItemLevel(stage) {
   if (!Number.isInteger(stage.ch) || !Number.isInteger(stage.st)) return 0;
   const il = recommendedLevel(stage.ch, stage.st);
   return il > 1 ? il : 0;
+}
+/** 진행 장비 레벨: 지금까지 깬 가장 깊은 본편 관문의 드랍 장비 레벨(progress.unlocked 는 다음에 열린 관문). 하나도 못 깼으면 0.
+ *  스테이지가 없는 획득(가챠·제작·상점·보상)과 il 도입 전 장비의 이월이 같은 진행의 필드 드랍과 같은 단계에 서게 한다. */
+export function progressItemLevel(progress) {
+  const cleared = Math.min(CHAPTER_COUNT * STAGES_PER_CHAPTER, Math.floor(Number(progress?.unlocked) || 1) - 1);
+  if (cleared < 1) return 0;
+  return dropItemLevel({ ch: Math.floor((cleared - 1) / STAGES_PER_CHAPTER) + 1, st: (cleared - 1) % STAGES_PER_CHAPTER + 1 });
 }

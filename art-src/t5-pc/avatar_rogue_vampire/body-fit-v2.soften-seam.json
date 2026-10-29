@@ -1,0 +1,24 @@
+{
+  "tool": "tools/art/soften-rigid-seam.mjs",
+  "input": {
+    "path": "public/models/heroes-next/rogue-vampire-body-fit-v1.glb",
+    "sha256": "e416cbf6b23ce4f15088cf1277e4c696c16d903059d398bd3acbafed2bd3255e"
+  },
+  "output": {
+    "path": "public/models/heroes-next/rogue-vampire-body-fit-v2.glb",
+    "sha256": "cb8625fe17dee2c3d46b680c278306bb01ef9c0807c8e52ccbb5872f21d0dc26"
+  },
+  "bone": "Head",
+  "rings": 10,
+  "iterations": 40,
+  "release": "Neck",
+  "releaseOffset": 0.04,
+  "vertices": 15809,
+  "weldedGroups": 5345,
+  "rigidGroups": 1164,
+  "releasedGroups": 145,
+  "releaseY": 1.238,
+  "softenedGroups": 1093,
+  "changedVertices": 3325,
+  "softenedWithRigidBone": 649
+}

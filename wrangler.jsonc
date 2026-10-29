@@ -31,8 +31,8 @@
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
     "SOCIAL_ADMIN_IDS": "",
     "SOCIAL_DEV_ORIGINS": "false",
-    // MMO 계정(/api/v1): 기본 비활성. SESSION_HMAC 시크릿과 D1 마이그레이션(worker/v1/migrations)은 코디네이터가 적용한다.
-    "V1_ENABLED": "false",
+    // MMO 계정(/api/v1): 2026-10-29 그림자(0%)로 개방(docs/ACCOUNT_POLICY.md). SESSION_HMAC 시크릿과 D1 마이그레이션 0001~0005가 먼저 있어야 한다.
+    "V1_ENABLED": "true",
     "V1_SERVER_AUTHORITY_PERCENT": "0",
     // BM(/api/v1/iap): 기본 비활성. Play 서비스 계정은 아래 Secrets Store 바인딩 PLAY_SA_JSON(apex-shared-apis의 APEX_CLOUD_PLAY_SA_JSON).
     // RTDN은 Pub/Sub push 구독의 OIDC audience·푸시 서비스 계정 고유 ID(sub)를 코디네이터가 설정한 뒤에만 받는다(docs/BM_DESIGN.md 9장).
@@ -50,7 +50,11 @@
     "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
     "RTDN_AUDIENCE": "",
     "RTDN_PUSH_SUBJECT": "",
-    "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com",
+    // 리다이렉트 로그인(docs/ACCOUNT_POLICY.md). 비면 그 제공자는 꺼진다. 카카오 Client Secret·ChatGPT 기밀 비밀은 vars가 아니라 Worker secret으로만.
+    // KAKAO_REST_KEY: Kakao Developers 앱 등록 후. CHATGPT_CLIENT_ID(oaiapp_…): OpenAI 상업 파트너 승인 후.
+    "KAKAO_REST_KEY": "",
+    "CHATGPT_CLIENT_ID": ""
   },
   "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" },
     { "binding": "PORTONE_API_SECRET", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PORTONE_API_SECRET" }],
