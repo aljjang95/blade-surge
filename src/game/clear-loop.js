@@ -25,8 +25,8 @@ const GEAR_RARITY = Object.freeze({ common: 'S', rare: 'S', epic: 'E', legend: '
 const STONE_N = Object.freeze({ common: 2, rare: 3, epic: 5, legend: 8 });
 const FRAGMENT_N = Object.freeze({ common: 5, rare: 10, epic: 18, legend: 35 });
 export const CARD_COUNT = 3;
-/** sim-90d 모형: 고른 카드의 기댓값. 골드 카드 평균(관문 골드 × 약 1.14)을 고를 확률 약 절반 + 강화석 카드 몫. */
-export const CLEAR_CARD_SIM = Object.freeze({ goldShare: 0.55, stones: 1 });
+/** sim-90d 모형: 고른 카드의 기댓값. 골드 카드 평균(관문 골드 × 약 0.93)을 고를 확률 약 절반 + 강화석 카드 몫. */
+export const CLEAR_CARD_SIM = Object.freeze({ goldShare: 0.45, stones: 1 });
 
 const pickTier = (rng, floor = 0) => {
   const list = CARD_TIER_ORDER.slice(floor), total = list.reduce((n, id) => n + CARD_TIERS[id].weight, 0);
@@ -60,7 +60,7 @@ export function rollClearCards({ seed, gold, ch, first = false, boss = false, il
 
 function makeCard(kind, tier, { base, ch, il, rng }) {
   const t = CARD_TIERS[tier];
-  if (kind === 'gold') return { kind, tier, gold: Math.round(base * t.mul * 1.6 / 10) * 10 };
+  if (kind === 'gold') return { kind, tier, gold: Math.round(base * t.mul * 1.3 / 10) * 10 };
   if (kind === 'stones') {
     // 5장부터 중급 강화석을 섞는다(그 단계의 강화에 실제로 쓰는 재료).
     const key = ch >= 5 ? 'stones2' : 'stones';
