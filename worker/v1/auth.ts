@@ -6,6 +6,7 @@ import { fail, onlyKeys } from './http';
 import { CHANNELS, TOKEN_TTL_MS, type Channel, type SessionClaims, resolveSecret, sha256Hex, signToken, verifyToken, randomHex } from './token';
 import { createAccountDoc } from './state';
 import { restoreIdle } from './archive';
+import { WITHDRAWN_TOMBSTONE_MS, WITHDRAWN_TOMBSTONE_SQL } from './tombstone';
 
 export const DEVICE_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 export const PROVIDERS = ['google', 'play_games', 'toss', 'kakao', 'chatgpt'] as const;
@@ -98,6 +99,12 @@ export async function issueSession(env: AuthEnv, account: AccountRow, channel: C
 async function ensureAccount(c: Ctx, accountId: string, keyHash: string, channel: Channel, banned: boolean): Promise<void> {
   const doc = createAccountDoc(c.now);
   await c.db.batch([
+    // 미접속 보관본 파기로 'deleted'가 된 게스트의 기기가 돌아왔다(소셜 허브가 같은 기기 키에 같은 playerId를 돌려준다): 새 계정으로 되살린다.
+    // 연동·결제 이력이 없을 때만(retention.ts가 그런 계정만 deleted로 만든다). 탈퇴 계정은 허브 매핑이 지워져 새 id를 받으므로 여기 오지 않는다.
+    c.db.prepare(`UPDATE accounts SET status = ?, created_at = ?, last_seen = ?, token_ver = token_ver + 1, authority = 'shadow', level = ?, power = 0, stage_idx = ?, gold = ?, gems_free = ?
+      WHERE account_id = ? AND status = 'deleted' AND gems_paid = 0
+      AND NOT EXISTS (SELECT 1 FROM iap_purchases WHERE account_id = ?) AND NOT EXISTS (SELECT 1 FROM iap_web_payments WHERE account_id = ?)`).bind(banned ? 'banned' : 'active', c.now, c.now,
+      doc.projection.level, doc.projection.stageIdx, doc.projection.gold, doc.projection.gemsFree, accountId, accountId, accountId),
     c.db.prepare(`INSERT OR IGNORE INTO accounts(account_id, created_at, last_seen, status, channel_first, shard, level, stage_idx, gold, gems_free)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(accountId, c.now, c.now, banned ? 'banned' : 'active', channel, shardOf(accountId),
       doc.projection.level, doc.projection.stageIdx, doc.projection.gold, doc.projection.gemsFree),
@@ -318,6 +325,8 @@ export async function deleteAccount(c: Ctx, auth: Authed, body: Record<string, u
     c.db.prepare('INSERT INTO account_archive(archive_id, account_id, reason, doc, archived_at, purge_at) VALUES (?, ?, ?, ?, ?, ?)')
       .bind('delete:' + randomHex(12), id, 'deleted-by-user', doc?.doc ?? '{}', c.now, c.now + DELETE_ARCHIVE_MS),
     c.db.prepare("UPDATE accounts SET status = 'deleting', token_ver = token_ver + 1 WHERE account_id = ?").bind(id),
+    // 연동을 지우기 전에 해시를 90일 묘비로 옮긴다(1회 보상 재수령 방지 전용, worker/v1/tombstone.ts).
+    c.db.prepare(WITHDRAWN_TOMBSTONE_SQL).bind(c.now, c.now + WITHDRAWN_TOMBSTONE_MS, id),
     c.db.prepare('DELETE FROM account_links WHERE account_id = ?').bind(id),
     c.db.prepare('DELETE FROM account_keys WHERE account_id = ?').bind(id),
   ]);
