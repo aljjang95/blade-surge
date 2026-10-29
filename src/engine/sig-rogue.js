@@ -90,7 +90,7 @@ export const SIGNATURES = {
       const a = i * 2.1 + .3, y = .5 + (i % 3) * .45, R = 1.7, t = i * BEAT;
       _a.set(cx + Math.cos(a) * R, y, cz + Math.sin(a) * R);
       _d.set(-Math.sin(a), i % 2 ? .35 : -.35, Math.cos(a));
-      impact.beam(_a, _d, 2.6, i % 2 ? MAGENTA : VIOLET, { speed: 26, tail: 1.1, width: .11, delay: t });
+      impact.beam(_a, _d, 3.2, i % 2 ? MAGENTA : VIOLET, { speed: 30, tail: 1.4, width: .17, delay: t });
       _b.copy(_a).addScaledVector(_d, .9);
       impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.2, i % 2 ? VIOLET : MAGENTA, .2, { angle: cutAngle(impact, _d), stretch: 1.15, grow: .9, delay: t + .05 });
     }
