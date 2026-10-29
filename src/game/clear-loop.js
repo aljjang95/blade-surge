@@ -94,7 +94,7 @@ export const durStep = (dur) => DUR_STEPS.find((s) => dur >= s.min) || DUR_STEPS
 export const durMul = (inst) => durStep(durOf(inst)).mul;
 /**
  * 완전 수리(0 → 100) 골드: 등급 판매가의 30% + 그 단계 강화 비용의 60%.
- * 강화가 높을수록 비싸서(+10 약 2,000, +15 약 7,700 골드) 후반 골드 잔액을 꾸준히 빨아들인다.
+ * 강화가 높을수록 비싸서(강화 몫만 +10 약 2,070, +15 약 7,680 골드) 후반 골드 잔액을 꾸준히 빨아들인다.
  */
 export function repairFullCost(inst, rarity) {
   const sell = RARITY_INFO[rarity]?.sell || 200, enh = Math.max(0, Math.min(20, Number(inst?.enh) || 0));
