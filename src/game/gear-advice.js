@@ -1,7 +1,8 @@
 // 장비 조언: 더 좋은 장비 찾기·한 번에 장착·가방 정리. 화면을 그리지 않는 순수 규칙이라 UI와 플레이 도구가 같은 함수를 쓴다.
 // 장비는 영웅 소유라 모든 함수가 그 영웅의 가방(heroBag)만 다룬다. 비교 기준은 영웅 전투력(heroBuildStats: 세트·룬 반영)이고, 후보는 장비 점수(gearScore)로 먼저 걸러 비용을 줄인다.
 // 분해는 economy.salvage(uids)와 salvageRewards 를 그대로 쓴다(N/S/E 만, 장착 중 불가, 보상 계산은 그쪽 규칙).
-import { ITEM_BY_ID, SLOTS } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, rarityRank } from '../data/items.js';
+import { TRANSFER_MIN_ENH, TRANSFER_LOSS } from '../data/enhance-transfer.js';
 import { itemStats } from '../data/item-tier.js';
 import { salvageRewards } from './economy.js';
 
@@ -106,6 +107,34 @@ function planBestEquipNow(eco, heroId) {
     equip[best.slot] = best.uid; plan.push({ ...best, delta: Math.round(best.delta) });
   }
   return plan;
+}
+
+/**
+ * 강화 전승 추천: 착용 중인 고강 장비(+TRANSFER_MIN_ENH 이상)의 강화를 옮기면(기본 손실 −1 기준) 지금보다 전투력이 오르는 같은 부위 장비.
+ * 같은 영웅 가방 · 같거나 높은 등급 · 전승 결과가 대상 현재 강화보다 높음. 비용·보유 재화는 따지지 않는다(시트 견적이 보여 준다). 저장 상태는 바꾸지 않는다.
+ * @returns {Array<{ slot: string, srcUid: number, dstUid: number, to: number, delta: number }>} 부위마다 가장 좋은 하나
+ */
+export function transferUpgrades(eco, heroId, { perSlot = 4 } = {}) {
+  return cached(eco, 'transfer', heroId + ':' + perSlot, () => transferUpgradesNow(eco, heroId, perSlot)).map((x) => ({ ...x }));
+}
+function transferUpgradesNow(eco, heroId, perSlot) {
+  const out = [], hero = eco.s.heroes?.[heroId];
+  if (!hero || eco.heroLocked?.(heroId)) return out;
+  const worn = wornMap(eco), inv = byUid(eco), base = eco.heroBuildStats(heroId).power;
+  for (const slot of SLOTS) {
+    const cur = inv.get(hero.equip?.[slot]); if (!cur || (cur.enh || 0) < TRANSFER_MIN_ENH) continue;
+    const to = cur.enh - TRANSFER_LOSS, curRank = rarityRank(ITEM_BY_ID[cur.id].rarity), curScore = gearScore(cur);
+    const cands = slotCandidates(bagOf(eco, heroId).filter((x) => slotOf(x) === slot && !worn.has(x.uid) && (x.enh || 0) < to && rarityRank(ITEM_BY_ID[x.id].rarity) >= curRank), () => true)
+      .map((x) => ({ x, score: gearScore({ ...x, enh: to }) })).filter((c) => c.score > curScore).sort((a, b) => b.score - a.score).slice(0, perSlot);
+    let best = null;
+    for (const { x } of cands) {
+      const inventory = eco.s.inventory.map((i) => i.uid === x.uid ? { ...i, enh: to } : i.uid === cur.uid ? { ...i, enh: 0 } : i);
+      const delta = Math.round(eco.heroBuildStats(heroId, { ...hero.equip, [slot]: x.uid }, inventory).power - base);
+      if (delta > 0 && (!best || delta > best.delta)) best = { slot, srcUid: cur.uid, dstUid: x.uid, to, delta };
+    }
+    if (best) out.push(best);
+  }
+  return out;
 }
 
 /** 계획대로 장착한다. 반환: 적용한 교체 목록과 전투력 전후. */

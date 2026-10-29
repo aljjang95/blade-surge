@@ -7,6 +7,7 @@ import { ITEM_BY_ID, SLOT_NAME, RARITY_INFO, RARITY_COLOR, rarityRank, STONE_NAM
 import { TRANSFER_MIN_ENH } from '../data/enhance-transfer.js';
 import { tierName } from '../game/item-tier-label.js';
 import { inBattle } from './vault-panel.js';
+import { transferUpgrades } from '../game/gear-advice.js';
 
 const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 /** 거절 사유(Economy reason 그대로) + UI 전용 battle·pending·server. */
@@ -39,7 +40,9 @@ export function transferModel(eco, uid, pick = {}) {
   if (!role) return { uid, role: null, slot: def.slot, sources: [], targets: [], srcUid: null, dstUid: null, quote: null, scroll, scrolls: s.transferScroll || 0 };
   const sources = role === 'source' ? [inst] : asTargetSources, targets = role === 'source' ? asSourceTargets : [inst];
   const srcUid = role === 'source' ? uid : (sources.find((x) => x.uid === pick.srcUid) || sources[0]).uid;
-  const dstUid = role === 'target' ? uid : (targets.find((x) => x.uid === pick.dstUid) || targets[0]).uid;
+  // 대상을 아직 고르지 않았으면 전투력이 가장 오르는 추천 대상(gear-advice transferUpgrades)을 먼저 고른다.
+  const tip = role === 'source' && pick.dstUid === undefined ? transferUpgrades(eco, owner).find((x) => x.srcUid === uid) : null;
+  const dstUid = role === 'target' ? uid : (targets.find((x) => x.uid === (pick.dstUid ?? tip?.dstUid)) || targets[0]).uid;
   const quote = eco.enhanceTransferQuote(srcUid, dstUid, { scroll });
   const src = s.inventory.find((x) => x.uid === srcUid), dst = s.inventory.find((x) => x.uid === dstUid);
   const preview = quote.from === undefined ? null : {

@@ -16,7 +16,7 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
-import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems } from '../game/gear-advice.js';
+import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems, transferUpgrades } from '../game/gear-advice.js';
 import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
 import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
@@ -316,7 +316,12 @@ function setChangesHtml(p) {
 }
 
 /** 강화 전승 버튼: 이 장비가 원본이나 대상으로 짝이 하나라도 있을 때만(enhance-transfer-panel canTransfer). */
-const transferHtml = (meta, inst) => canTransfer(meta.eco, inst.uid) ? '<button type="button" class="btn btn-ghost btn-sm is-transfer" id="e-transfer" title="강화 단계를 같은 부위의 다른 장비로 옮깁니다">강화 전승</button>' : '';
+// 착용 고강 장비의 강화를 옮기면 전투력이 오르는 조합(gear-advice transferUpgrades)이면 추천 표시를 붙인다.
+const transferHtml = (meta, inst) => {
+  if (!canTransfer(meta.eco, inst.uid)) return '';
+  const tip = transferUpgrades(meta.eco, inst.owner ?? meta.eco.s.selected).find((x) => x.srcUid === inst.uid || x.dstUid === inst.uid);
+  return '<button type="button" class="btn btn-ghost btn-sm is-transfer" id="e-transfer" title="강화 단계를 같은 부위의 다른 장비로 옮깁니다">강화 전승' + (tip ? ' <b class="stat-up">추천 ▲' + fmt(tip.delta) + '</b>' : '') + '</button>';
+};
 
 /** 강화 영역: 같은 시트 안에서 확률 · 비용을 보고 바로 강화한다. */
 function enhanceHtml(meta, inst) {
