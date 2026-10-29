@@ -8,9 +8,10 @@ const H = 3600000, DAY = 86400000;
 export const IDLE = Object.freeze({
   capHours: 12,
   minMinutes: 30, // 이보다 짧으면 자동 안내를 띄우지 않는다(메뉴에서는 언제든 수령)
-  // 시간당 = 최고 클리어 관문 기본 골드 × 0.25 (관문 30 ≈ 1.2천/시간, 12시간 ≈ 1.5만).
-  // sim:90d: 0.8은 라이트 마지막 주 일 골드 +36%, 0.4는 미드 지옥 6-10 도달 67일(밴드 70일 이상)이라 0.25.
-  goldRunShare: 0.25,
+  // 지금은 강화석만 쌓는다(시간당 0.2, 12시간 2.4개). 골드는 sim:90d 밴드가 막는다 — 실측: 0.8 라이트 일 골드 +36% · 0.4 미드 지옥 6-10 67일
+  // · 0.25 68일·정체 9일 · 0.12 미드 D90 룬 전투력 35.9% · 0.05 시드 3에서 35.2%(밴드 35% 이하, 기준선이 경계 34.4%).
+  // 골드 비율(goldRunShare)은 곡선 레인이 밴드를 다시 잡을 때 올린다(docs/RPG_ESSENTIALS.md E2).
+  goldRunShare: 0,
   stonesPerHour: 0.2,
   seenEveryMs: 30 * 60000, // 접속 표시 간격(서버 명령 수를 줄인다)
   comeback: Object.freeze({ awayDays: 7, cooldownDays: 30, minCleared: 3,

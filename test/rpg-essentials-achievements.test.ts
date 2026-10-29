@@ -1,7 +1,7 @@
 // RPG 필수 E4: 업적(docs/RPG_ESSENTIALS.md).
 import { describe, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
-import { ACHIEVEMENTS, achievementRows, claimAchievement, normalizeAchievements, importedAchievements } from '../src/game/achievements.js';
+import { ACHIEVEMENTS, achievementRows, claimAchievement, normalizeAchievements } from '../src/game/achievements.js';
 
 const memory = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } }; };
 
@@ -23,11 +23,6 @@ describe('업적', () => {
   test('정규화는 모르는 id·잘못된 값·초과 단계를 거른다', () => {
     expect(normalizeAchievements({ claimed: { slayer: 99, x: 1, conqueror: -1 } })).toEqual({ claimed: { slayer: 6 } });
     expect(normalizeAchievements(null)).toEqual({ claimed: {} });
-  });
-  test('가져오기는 이미 닿은 단계를 받은 것으로 친다', () => {
-    const st = importedAchievements({ kills: 3500, cleared: 0 } as any);
-    expect(st.claimed).toEqual({ slayer: 2 });
-    expect(claimAchievement(st, { kills: 3500 } as any, 'slayer').ok).toBe(false);
   });
   test('Economy 연결', () => {
     const eco: any = new Economy({ now: () => Date.UTC(2026, 9, 29, 3), storage: memory(), rng: () => .5 });

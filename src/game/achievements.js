@@ -45,9 +45,3 @@ export function claimAchievement(state, stats, id) {
   state.claimed[id] = row.tier + 1; return { ok: true, rewards: { ...row.rewards }, tier: row.tier + 1 };
 }
 
-/** 외부 저장 가져오기(서버 정화): 가져온 기록으로 이미 닿은 단계는 받은 것으로 친다(가져오기로 재수령 방지). */
-export function importedAchievements(stats) {
-  const claimed = {};
-  for (const x of ACHIEVEMENTS) { const n = x.tiers.filter((t) => (stats[x.stat] || 0) >= t.target).length; if (n) claimed[x.id] = n; }
-  return { claimed };
-}

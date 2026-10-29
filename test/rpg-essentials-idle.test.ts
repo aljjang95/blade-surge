@@ -14,7 +14,7 @@ describe('방치 보급 규칙', () => {
     expect(idleQuote(st, { unlocked: 1 }, T + 5 * H).ready).toBe(false);
     const q2: any = idleQuote(st, { unlocked: 31 }, T + 2 * H);
     expect(q2.minutes).toBe(120);
-    expect(q2.rewards.gold).toBe(Math.floor(stageDef(3, 10).rewards.gold * IDLE.goldRunShare * 2));
+    expect(q2.rewards.gold || 0).toBe(Math.floor(stageDef(3, 10).rewards.gold * IDLE.goldRunShare * 2));
     expect(q2.rewards.stones || 0).toBe(Math.floor(IDLE.stonesPerHour * 2));
     const q30 = idleQuote(st, { unlocked: 31 }, T + 30 * H);
     expect(q30.minutes).toBe(IDLE.capHours * 60); expect(q30.capped).toBe(true);
@@ -22,12 +22,12 @@ describe('방치 보급 규칙', () => {
   });
   test('수령하면 기준이 지금으로, 시계가 뒤로 가면 기록을 건드리지 않고 거부', () => {
     const st = { since: T, seen: T, comebackAt: 0 };
-    const r = claimIdle(st, { unlocked: 11 }, T + 3 * H);
-    expect(r.ok).toBe(true); expect(st.since).toBe(T + 3 * H);
-    expect(claimIdle(st, { unlocked: 11 }, T + 3 * H).ok).toBe(false);
-    expect(claimIdle(st, { unlocked: 11 }, T)).toEqual({ ok: false, error: 'clock' }); expect(st.since).toBe(T + 3 * H);
+    const r = claimIdle(st, { unlocked: 11 }, T + 10 * H);
+    expect(r.ok).toBe(true); expect(st.since).toBe(T + 10 * H);
+    expect(claimIdle(st, { unlocked: 11 }, T + 10 * H).ok).toBe(false);
+    expect(claimIdle(st, { unlocked: 11 }, T)).toEqual({ ok: false, error: 'clock' }); expect(st.since).toBe(T + 10 * H);
     // 되돌렸다 복구해도 쌓인 시간은 실제 경과만큼
-    expect((claimIdle(st, { unlocked: 11 }, T + 4 * H) as any).minutes).toBe(60);
+    expect((claimIdle(st, { unlocked: 11 }, T + 15 * H) as any).minutes).toBe(300);
   });
   test('보급 팝업을 닫기만 해도 매일 접속(markSeen)하면 복귀로 잡지 않는다', () => {
     const st = { since: T, seen: T, comebackAt: 0 };
@@ -61,15 +61,15 @@ describe('방치 보급 규칙', () => {
 });
 
 describe('Economy 연결', () => {
-  test('claimIdle 가 골드를 더하고 저장한다', () => {
+  test('claimIdle 가 보급을 더하고 저장한다', () => {
     let clock = T;
     const eco: any = new Economy({ now: () => clock, storage: memory(), rng: () => .5 });
-    eco.s.progress.unlocked = 11; const gold = eco.s.gold;
+    eco.s.progress.unlocked = 11; const stones = eco.s.stones;
     expect(eco.claimIdle()).toBeNull();
     clock += 6 * H;
     expect(eco.idleQuote().notable).toBe(true);
     const r = eco.claimIdle();
-    expect(r.minutes).toBe(360); expect(eco.s.gold).toBeGreaterThan(gold);
+    expect(r.minutes).toBe(360); expect(eco.s.stones).toBeGreaterThan(stones);
     expect(eco.idleQuote().ready).toBe(false);
   });
 });

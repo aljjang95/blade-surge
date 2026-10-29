@@ -2,7 +2,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { sanitizeLegacySave } from '../src/shared/legacy-sanitize.js';
-import { newbieView } from '../src/game/newbie-event.js';
 import { grandfather } from './helpers/legacy-roster';
 
 const memory = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } }; };
@@ -16,12 +15,13 @@ const forged = () => {
 };
 
 describe('정화', () => {
-  test('외부 가져오기: 지금부터 쌓고 7일 여정은 닫고 닿은 업적은 받은 것으로', () => {
-    const r: any = sanitizeLegacySave(forged(), { now: T, createdAt: T - 400 * DAY });
+  test('외부 가져오기: 방치는 지금부터, 여정·업적 기록은 원본을 정규화해 이어받는다', () => {
+    const raw = forged(); raw.newbie.claimed = ['d1a', 'bogus']; raw.achievements = { claimed: { slayer: 99 } };
+    const r: any = sanitizeLegacySave(raw, { now: T, createdAt: T - 400 * DAY });
     expect(r.ok).toBe(true);
     expect(r.state.idle).toEqual({ since: T, seen: T, comebackAt: T });
-    expect(newbieView(r.state.newbie, r.state, T).open).toBe(false);
-    expect(r.state.achievements.claimed.slayer || 0).toBe(0); // 처치 100은 첫 단계(500) 미달
+    expect(r.state.newbie.claimed).toEqual(['d1a']);
+    expect(r.state.achievements.claimed).toEqual({ slayer: 6 });
   });
   test('스냅샷: 서버 문서 값을 그대로', () => {
     const server = { idle: { since: T - 3600000, seen: T - 60000, comebackAt: T - DAY }, newbie: { start: 1, claimed: ['d1a'], final: false }, achievements: { claimed: { slayer: 1 } } };

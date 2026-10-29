@@ -7,13 +7,13 @@ import { GACHA_BANNERS } from '../data/gacha-banners.js';
 // 정당한 헤비 플레이어를 깎지 않는 쪽으로 보수했다. 베타 지표로 보정한다.
 import { EconomyCore } from '../game/economy-core.js';
 import { HEROES } from '../data/heroes.js';
-import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE, rosterOwns } from '../data/hero-roster.js';
+import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE } from '../data/hero-roster.js';
 import { normalizeGearDex, seedGearDex, setGearDex } from '../game/gear-dex.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 import { normalizeLegend } from '../game/legend-rank.js';
 import { normalizeIdle, importedIdle } from '../game/idle-rewards.js';
-import { normalizeNewbie, importedNewbie } from '../game/newbie-event.js';
-import { normalizeAchievements, importedAchievements, achievementStats } from '../game/achievements.js';
+import { normalizeNewbie } from '../game/newbie-event.js';
+import { normalizeAchievements } from '../game/achievements.js';
 import { periodAt } from '../game/journey-core.js';
 import { CHAPTERS } from '../data/stages.js';
 import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
@@ -228,16 +228,17 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     const sv = normalizeGearDex(serverGearDex), mine = seedGearDex(s), merge = (a, b) => { const o = {}; for (const h of Object.keys(HEROES)) { const l = [...new Set([...(a?.[h] || []), ...(b?.[h] || [])])]; if (l.length) o[h] = l; } return o; };
     setGearDex(s, normalizeGearDex({ drop: merge(sv?.drop, mine?.drop), kin: sv?.kin, claimed: sv?.claimed }));
   }
-  // 방치 보급·7일 여정·업적(docs/RPG_ESSENTIALS.md)은 수령 기록이라 클라이언트 값을 믿지 않는다(편집 저장으로 재수령 방지).
-  // 스냅샷은 서버 문서 값을 그대로 쓰고(없으면 지금부터), 외부 가져오기는 지금부터 쌓고·7일 여정은 닫고·이미 닿은 업적 단계는 받은 것으로 친다.
+  // 방치 보급·7일 여정·업적(docs/RPG_ESSENTIALS.md)은 수령 기록이다. 반복 스냅샷은 서버 문서 값을 그대로 쓴다(편집 저장으로 재수령 방지).
+  // 외부 가져오기(계정당 1회)는 방치 시각만 서버 지금으로 다시 시작하고, 여정·업적 수령 기록은 원본을 정규화해 이어받는다
+  // (정직한 이용자의 진행을 지우지 않고 그림자 명령이 같은 상태에서 판정되게. 재화 주입은 기존 일일 한도가 막는다).
   if (snapshot) {
     s.idle = normalizeIdle(serverIdle, importedIdle(now));
     s.newbie = normalizeNewbie(serverNewbie, { start: periodAt(now).day });
     s.achievements = normalizeAchievements(serverAchievements);
   } else {
     s.idle = importedIdle(now);
-    s.newbie = importedNewbie(now);
-    s.achievements = importedAchievements(achievementStats(s, Object.keys(HEROES).filter((id) => rosterOwns(roster, id)).length));
+    s.newbie = normalizeNewbie(raw?.newbie, { start: periodAt(now).day });
+    s.achievements = normalizeAchievements(raw?.achievements);
   }
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).

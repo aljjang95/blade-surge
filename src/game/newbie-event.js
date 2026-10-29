@@ -74,5 +74,3 @@ export function claimNewbie(state, save, nowMs, id) {
   state.claimed.push(id); return { ok: true, rewards: { ...row.rewards } };
 }
 
-/** 외부 저장 가져오기(서버 정화): 7일 여정은 닫힌 상태로 둔다(가져오기로 다시 열어 재수령 방지). */
-export const importedNewbie = (nowMs) => ({ start: Math.max(0, periodAt(nowMs).day - NEWBIE.openDays), claimed: [], final: false });

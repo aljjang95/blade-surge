@@ -849,7 +849,7 @@ export class Meta {
     const q = this.eco.idleQuote(); const h = Math.floor(q.minutes / 60), m = q.minutes % 60;
     const row = (r) => Object.entries(r || {}).map(([k, n]) => { const [nm, ic] = REWARD_LABEL[k] || [k, '']; return `<div class="idle-reward"><img src="${RESOURCE_ART[k] ? resourceArt(k) : ic}" alt="" onerror="this.remove()"><b>${nm}</b><span>${fmt(n)}</span></div>`; }).join('');
     const body = q.cleared === 0 ? '<p>첫 관문을 깨면 자리를 비운 동안 보급이 쌓입니다.</p>'
-      : `<p>자리를 비운 <b>${h ? h + '시간 ' : ''}${m}분</b> 동안 쌓인 보급입니다${q.capped ? ' (최대 12시간분)' : ''}. 최고 관문이 높을수록 많이 쌓입니다.</p><div class="idle-rewards">${row(q.rewards) || '<p class="idle-empty">아직 쌓인 보급이 없습니다.</p>'}</div>`
+      : `<p>자리를 비운 <b>${h ? h + '시간 ' : ''}${m}분</b> 동안 쌓인 보급입니다${q.capped ? ' (최대 12시간분)' : ''}. 강화에 쓰는 강화석이 쌓입니다.</p><div class="idle-rewards">${row(q.rewards) || '<p class="idle-empty">아직 쌓인 보급이 없습니다.</p>'}</div>`
       + (q.comeback ? `<h3 class="idle-cb">돌아오신 것을 환영합니다 · ${q.awayDays}일 만</h3><div class="idle-rewards">${row(q.comebackRewards)}</div>` : '');
     this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('treasure-chest')}" alt="">방치 보급</h2>${body}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${q.ready ? '' : 'disabled'}>${q.ready ? '받기' : '쌓이는 중'}</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
