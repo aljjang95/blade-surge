@@ -81,6 +81,10 @@ describe('회원 탈퇴 → 소셜 허브 정리', () => {
     expect(q('SELECT COUNT(*) AS n FROM player_keys WHERE player_id = ?', profile.id)).toEqual({ n: 0 });
     expect(q('SELECT COUNT(*) AS n FROM friends WHERE a = ? OR b = ?', profile.id, profile.id)).toEqual({ n: 0 });
     expect(q('SELECT name FROM players WHERE id = ?', profile.id)).toEqual({ name: '탈퇴한 모험가' });
+    const row = q('SELECT tag, hero, created_ip_hash FROM players WHERE id = ?', profile.id);
+    expect(String(row.tag).startsWith('x')).toBe(true);
+    expect(row.hero).toBeNull();
+    expect(row.created_ip_hash).toBeNull();
     // 남은 친구의 목록에서도 사라진다.
     expect((await h.social!.call('GET', '/me', friendKey)).body.friends).toEqual([]);
     // 허브가 실패하면 탈퇴를 진행하지 않는다.
@@ -134,5 +138,15 @@ describe('미접속 게스트 보관(영구 삭제 아님)', () => {
     expect(h.db.sqlite.query("SELECT rev, doc FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual(before);
     expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_archive WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 0 });
     expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_flags WHERE account_id = ? AND flag = 'idle-archived'").get(idle.accountId)).toEqual({ n: 0 });
+  });
+  test('복원 실패 뒤 last_seen이 최근인 상태에서 재시도해도 문서가 복원되고 /me가 200이다', async () => {
+    const h = await v1Harness();
+    const idle = await h.session();
+    h.advance(IDLE_MS + 1000);
+    expect(await archiveIdleGuests(h.db as any, h.now())).toBe(1);
+    h.db.sqlite.exec(`UPDATE accounts SET last_seen = ${h.now()} WHERE account_id = '${idle.accountId}'`); // 앞선 복원이 실패한 채 접속 시각만 갱신된 상태
+    const back = await h.session(idle.deviceKey);
+    expect(h.db.sqlite.query("SELECT COUNT(*) AS n FROM account_docs WHERE account_id = ?").get(idle.accountId)).toEqual({ n: 1 });
+    expect((await h.send('GET', '/me', undefined, back.token)).status).toBe(200);
   });
 });
