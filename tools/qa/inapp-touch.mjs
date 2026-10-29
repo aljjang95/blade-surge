@@ -157,7 +157,8 @@ const hudRects = page => page.evaluate(() => {
 });
 
 async function battleChecks(page, cdp, viewport, out) {
-  const joy = await page.evaluate(() => { const r = document.getElementById('joy').getBoundingClientRect(); return { x: r.left + r.width * .35, y: r.top + r.height * .6, right: r.right }; });
+  // 이용자는 화면에 그려진 조이스틱 원을 누른다(영역 비율 지점은 화면 크기에 따라 다른 버튼 위에 떨어진다).
+  const joy = await page.evaluate(() => { const a = document.getElementById('joy').getBoundingClientRect(), b = document.querySelector('#joy .joy-base').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, right: a.right }; });
   const read = () => page.evaluate(() => { const i = window.app.input; return { active: i.joy.active, sx: +i.screenMove.x.toFixed(3), sy: +i.screenMove.y.toFixed(3), attackHeld: i.attackHeld }; });
   const res = {};
   await page.evaluate(() => Object.assign(window.__inappProbe, { touchmoves: 0, unprevented: 0, scroll: 0, pointercancel: 0 }));
