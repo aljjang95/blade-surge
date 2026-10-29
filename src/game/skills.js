@@ -10,7 +10,7 @@ import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
 import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
-import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
+import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
@@ -89,10 +89,10 @@ function onlyWithin(game, center, limit, fn) {
 }
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
 const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
-/** 시위를 놓는 순간의 바람 섬광(궁수 VFX 2026-10-29): 활 끝 짧은 빛 + 세로 바람 고리. 표시 전용이며 판정·난수와 무관하다. */
+/** 시위를 놓는 순간의 바람 섬광(궁수 VFX 2026-10-29): 활 끝 짧은 빛(조명 풀) + 바람 고리(인스턴스 임팩트 층). 메시를 새로 만들지 않고 판정·난수와 무관하다. */
 function rangerRelease(game, pos, color = 0x7feac0, power = 1) {
   game.fx?.light?.(pos, color, 2.5 + power * 2, 5 + power * 2, .16);
-  game.fx?.ring?.(pos, color, { r0: .15, r1: .9 + power * .5, life: .2, width: .3, vertical: true, y: 0 });
+  game.fx?.impact?._emit?.(IMPACT_KIND.ring, pos.x, pos.y, pos.z, .9 + power * .5, color, .2, { grow: 1 });
 }
 function rangerArrows(game, p, dmg, count = 1, options = {}) {
   const f = p.forward(new THREE.Vector3());
@@ -212,7 +212,7 @@ export const SKILLS = {
       const star = hasTownSkillVariant(p, 'ranger_pierce', 'star');
       game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined, streak: 'pierce' });
       rangerRelease(game, pos, 0x22e6c4, empowered ? 2.2 : 1.4);
-      if (empowered) game.fx?.castCircle?.(p.pos, 0x22e6c4, { radius: 1.9, life: .5 });
+      if (empowered) game.fx?.impact?.mark?.(p.pos, 0x22e6c4, { radius: 1.9, life: .5, style: MARK_STYLE.compass });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -245,7 +245,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      game.fx?.groundTex?.(p.pos, 'circle_gold', 0x3fe0a0, { r0: 1.2, r1: 4.4, life: .7, spin: 1.4, y: .07, fadeIn: .08, hold: .2, gain: .55 });
+      game.fx?.impact?.mark?.(p.pos, 0x3fe0a0, { radius: 4.2, life: .7, style: MARK_STYLE.compass });
       rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58, streak: 'storm' });
     },
   },
