@@ -101,8 +101,10 @@ async function ensureAccount(c: Ctx, accountId: string, keyHash: string, channel
     c.db.prepare(`INSERT OR IGNORE INTO accounts(account_id, created_at, last_seen, status, channel_first, shard, level, stage_idx, gold, gems_free)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(accountId, c.now, c.now, banned ? 'banned' : 'active', channel, shardOf(accountId),
       doc.projection.level, doc.projection.stageIdx, doc.projection.gold, doc.projection.gemsFree),
-    c.db.prepare(`INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) VALUES (?, 'core', 1, ?, ?, ?)`)
-      .bind(accountId, doc.text, doc.bytes, c.now),
+    // 미접속 보관된 계정에는 새 문서를 심지 않는다(뒤이은 restoreIdle이 보관본을 그대로 되돌리게).
+    c.db.prepare(`INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) SELECT ?, 'core', 1, ?, ?, ?
+      WHERE NOT EXISTS (SELECT 1 FROM account_flags WHERE account_id = ? AND flag = 'idle-archived')`)
+      .bind(accountId, doc.text, doc.bytes, c.now, accountId),
     c.db.prepare('INSERT OR IGNORE INTO account_keys(key_hash, account_id, created_at, last_seen) VALUES (?, ?, ?, ?)').bind(keyHash, accountId, c.now, c.now),
   ]);
 }
@@ -124,6 +126,8 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
     account = await accountByKey(c.db, keyHash);
     if (!account) fail(503, 'account-unavailable');
     created = account.account_id === player.playerId && account.last_seen === c.now;
+    // 키만 새로 붙은 기존 계정(키 5개 한도로 밀려난 기기 등)도 접속 시각을 남겨 보관 크론이 다시 고르지 않게 한다.
+    if (!created) await c.db.prepare('UPDATE accounts SET last_seen = ? WHERE account_id = ?').bind(c.now, account.account_id).run();
   } else if (c.now - account.last_seen > 60000) {
     // last_seen을 먼저 갱신해 보관 크론이 이 계정을 더는 고르지 못하게 한 뒤, 이미 보관됐으면 진행 문서를 되돌린다(archive.ts).
     // 순서가 반대면 확인과 갱신 사이에 보관된 문서를 60초 동안 놓친다.

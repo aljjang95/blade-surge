@@ -48,10 +48,12 @@ export async function restoreIdle(db: D1Database, accountId: string, now: number
     .bind(accountId).first<{ archive_id: string; doc: string }>();
   if (!arc) return false;
   const rev = Number(arc.archive_id.split(':').pop()) || 1;
-  await db.batch([
+  // 표시는 보관본이 실제로 문서 자리에 돌아왔을 때만 지운다. 다른 문서가 이미 있으면 보관본·표시를 그대로 두어 진행을 잃지 않는다.
+  const out = await db.batch([
     db.prepare("INSERT OR IGNORE INTO account_docs(account_id, doc_name, rev, doc, bytes, updated_at) VALUES (?, 'core', ?, ?, ?, ?)")
       .bind(accountId, rev, arc.doc, new TextEncoder().encode(arc.doc).length, now),
-    db.prepare("DELETE FROM account_flags WHERE account_id = ? AND flag = 'idle-archived'").bind(accountId),
+    db.prepare("DELETE FROM account_flags WHERE account_id = ? AND flag = 'idle-archived' AND EXISTS (SELECT 1 FROM account_docs WHERE account_id = ? AND doc_name = 'core' AND rev = ? AND doc = ?)")
+      .bind(accountId, accountId, rev, arc.doc),
   ]);
-  return true;
+  return !!out[1]?.meta?.changes;
 }
