@@ -60,3 +60,22 @@ test('il 도입 전 장비는 한 번 이월되고, 이월 뒤 하위 등급 필
   const better = betterItems(eco, hero);
   for (const uid of [901, 902, 903]) expect(better.has(uid)).toBe(false);
 });
+
+import { sanitizeLegacySave, LEGACY_EPOCH } from '../src/shared/legacy-sanitize.js';
+import { EconomyCore } from '../src/game/economy-core.js';
+
+test('서버 가져오기는 가져온 il·tp 를 버리고 정화된 진행도의 장비 레벨을 다시 준다', () => {
+  const NOW = Date.UTC(2026, 10, 20);
+  const raw: any = EconomyCore.fromState(null, { now: () => NOW, rng: () => 0.5 }).snapshot();
+  const stars: Record<string, number> = {};
+  for (let st = 1; st <= 10; st++) stars['1-' + st] = 3;
+  for (let st = 1; st <= 5; st++) stars['2-' + st] = 3;
+  raw.progress = { ...raw.progress, stars, unlocked: 16 };
+  raw.inventory = [{ uid: 900, id: 'r_phoenix', enh: 1, owner: raw.selected }, { uid: 901, id: 'gear_ring_e_1', enh: 0, il: 80, owner: raw.selected }, { uid: 902, id: 'r_wood', enh: 0, tp: 40, owner: raw.selected }];
+  raw.invSeq = 1000;
+  const r: any = sanitizeLegacySave(raw, { now: NOW, createdAt: LEGACY_EPOCH });
+  expect(r.ok).toBe(true);
+  const il = progressItemLevel(r.state.progress);
+  expect(il).toBeGreaterThan(1);
+  for (const item of r.state.inventory.filter((x: any) => x.uid >= 900)) { expect(item.il).toBe(il); expect(item.tp).toBeUndefined(); }
+});
