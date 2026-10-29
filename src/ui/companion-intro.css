@@ -13,6 +13,9 @@
   animation: nebIntroIn .22s ease-out;
 }
 #hud .neb-intro[hidden] { display: none; }
+/* 위쪽 띠(좁은 화면): 경로 줄을 빼 높이를 줄인다. 같은 내용은 일시정지 메뉴 동료 줄에 있다. */
+#hud .neb-intro.compact { padding: 5px 8px; }
+#hud .neb-intro.compact .neb-intro-route { display: none; }
 .neb-intro-mark { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(115, 216, 220, .2); border: 1px solid #73d8dc; color: #aef0f3; font: 800 17px/1 var(--font-ui, system-ui, sans-serif); }
 .neb-intro-copy { min-width: 0; display: grid; gap: 2px; }
 .neb-intro-copy b { font-size: 12px; line-height: 1.25; color: #f2d27a; }

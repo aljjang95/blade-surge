@@ -207,7 +207,7 @@ export class CompanionDirector {
     if (battle !== this.battle) this.battle = battle;
     this.actor?.setTactic(this.mind.getSnapshot().tactic);
     this.actor?.update(dt);
-    if (this.actor) this.presence?.update(this.actor, battle.renderer, realDt);
+    if (this.actor) this.presence?.update(this.actor, battle.renderer, realDt, battle.player);
     this.telemetryT -= realDt;
     if (this.telemetryT <= 0) {
       this.telemetryT = 0.25;
