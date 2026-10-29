@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, afterAll } from 'bun:test';
 import { AccountClient } from '../src/net/account-client.js';
 import { setupAccount, REGISTERED_KEY } from '../src/net/account.js';
-import { loadProviders, startProviderLogin, googleLogin, consumeLoginReturn, deleteAccount } from '../src/net/account-login.js';
+import { loadProviders, startProviderLogin, googleLogin, consumeLoginReturn, takeLoginReturn, deleteAccount } from '../src/net/account-login.js';
 import { createMemoryStorage } from '../src/game/economy-core.js';
 import { Economy } from '../src/game/economy.js';
 
@@ -66,7 +66,7 @@ describe('게스트 서버 행 지연 생성', () => {
   test('첫 실행은 부팅 때 /auth/session 을 부르지 않고, 1-1 클리어 뒤에 연결해 등록 표시를 남긴다', async () => {
     const srv = mockServer(routes);
     const app = newApp();
-    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '' });
+    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
     await new Promise((r) => setTimeout(r, 30));
     expect(state.status).toBe('deferred');
     expect(srv.calls.length).toBe(0);
@@ -78,19 +78,19 @@ describe('게스트 서버 행 지연 생성', () => {
   test('등록 표시가 있으면 부팅 즉시 연결하고, 로컬 클리어 진행이 있어도 연결한다', async () => {
     localStorage.setItem(REGISTERED_KEY, '1');
     const a = mockServer(routes);
-    const sa = await setupAccount(newApp(), { fetchImpl: a.fetchImpl as any, search: '' });
+    const sa = await setupAccount(newApp(), { fetchImpl: a.fetchImpl as any });
     await wait(() => sa.status === 'ready');
     expect(a.calls.some((c) => c.path === '/auth/session')).toBe(true);
     localStorage.removeItem(REGISTERED_KEY);
     const app = newApp(); app.eco.s.progress.stars['1-1'] = 3;
     const b = mockServer(routes);
-    const sb = await setupAccount(app, { fetchImpl: b.fetchImpl as any, search: '' });
+    const sb = await setupAccount(app, { fetchImpl: b.fetchImpl as any });
     await wait(() => sb.status === 'ready');
     expect(b.calls.some((c) => c.path === '/auth/session')).toBe(true);
   });
   test('사용자가 연동을 시작(ensure)하면 연결된다', async () => {
     const srv = mockServer(routes);
-    const state = await setupAccount(newApp(), { fetchImpl: srv.fetchImpl as any, search: '' });
+    const state = await setupAccount(newApp(), { fetchImpl: srv.fetchImpl as any });
     expect(srv.calls.length).toBe(0);
     expect(await state.ensure()).toBe(true);
     expect(srv.calls.filter((c) => c.path === '/auth/session').length).toBe(1);
@@ -113,7 +113,7 @@ describe('로그인 흐름', () => {
       'POST /auth/link': () => ({ body: { ok: true } }),
     });
     const app: any = newApp();
-    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '' });
+    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
     const out = await googleLogin(app, { signIn: async () => 'idtok' });
     expect(out).toMatchObject({ ok: true, action: 'linked' });
     expect(srv.calls.map((c) => c.path)).toEqual(expect.arrayContaining(['/auth/recover', '/auth/session', '/auth/link']));
@@ -128,7 +128,7 @@ describe('로그인 흐름', () => {
       'POST /auth/link': () => ({ status: 409, body: { error: 'linked-elsewhere', mine: {}, other: {} } }),
     });
     const app: any = newApp();
-    await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '' });
+    await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
     const no = await googleLogin(app, { signIn: async () => 't', confirm: async () => false });
     expect(no).toMatchObject({ ok: false, reason: 'linked-elsewhere-declined' });
     expect(recovered).toBe(1);
@@ -137,46 +137,92 @@ describe('로그인 흐름', () => {
     expect(yes).toMatchObject({ ok: true, action: 'recovered' });
     expect(recovered).toBe(2);
   });
-  test('콜백 복귀: 결과별 토스트와 쿼리 제거, no-link 는 link 자동 시작, linked-elsewhere 확인 시 recover', async () => {
-    const srv = mockServer({ 'POST /auth/oauth/start': (b) => ({ body: { url: 'https://p.test/' + b.provider + '/' + b.mode } }), 'POST /auth/session': session, 'GET /me': () => me() });
-    const run = async (search: string, confirm = async () => true) => {
-      const app: any = newApp();
-      await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '' });
-      const toasts: string[] = []; let url = ''; let replaced = '';
-      const out = await consumeLoginReturn(app, {
-        location: { search, pathname: '/', hash: '' } as any, history: { state: null, replaceState: (_s: any, _t: string, u: string) => { replaced = u; } } as any,
-        toast: (m: string) => toasts.push(m), confirm, assign: (u: string) => { url = u; },
-      });
-      return { out, toasts, url, replaced };
-    };
-    const cancel = await run('?login=kakao&result=cancel&mode=link');
-    expect(cancel.replaced).toBe('/'); expect(cancel.toasts.length).toBe(1);
-    expect((await run('?login=chatgpt&result=rate&mode=recover')).toasts[0]).toContain('잠시 후');
-    const nolink = await run('?login=kakao&result=no-link&mode=recover');
-    expect(nolink.url).toBe('https://p.test/kakao/link');
-    const elsewhere = await run('?login=kakao&result=linked-elsewhere&mode=link');
-    expect(elsewhere.url).toBe('https://p.test/kakao/recover');
-    expect((await run('?login=kakao&result=linked-elsewhere&mode=link', async () => false)).url).toBe('');
-    expect((await run('?other=1')).out.handled).toBe(false);
+  test('takeLoginReturn: ticket 쿼리를 읽자마자 주소에서 지운다', () => {
+    let replaced = '';
+    const ret = takeLoginReturn({ location: { search: '?x=1&login=kakao&result=ok&mode=link&ticket=' + 'T'.repeat(43), pathname: '/', hash: '' } as any, history: { state: null, replaceState: (_s: any, _t: string, u: string) => { replaced = u; } } as any });
+    expect(ret).toEqual({ provider: 'kakao', result: 'ok', mode: 'link', ticket: 'T'.repeat(43) });
+    expect(replaced).toBe('/?x=1');
+    expect(takeLoginReturn({ location: { search: '?x=1', pathname: '/', hash: '' } as any, history: {} as any })).toBeNull();
   });
-  test('recover ok 복귀: 세션을 새로 받고 서버 문서를 그림자 모드여도 적용한다', async () => {
-    const doc = { gold: 777_777 };
-    const srv = mockServer({ 'POST /auth/session': session, 'GET /me': () => me({ legacy: true, doc: { ...JSON.parse(JSON.stringify(newApp().eco.s)), gold: 777_777 } }) });
+  test('콜백 복귀: ok 가 아니면 토스트만, ok 의 link 는 Bearer 로 finish', async () => {
+    const srv = mockServer({ 'POST /auth/session': session, 'GET /me': () => me(), 'POST /auth/oauth/finish': () => ({ body: { mode: 'link', provider: 'kakao', linked: ['kakao'] } }) });
     const app: any = newApp();
-    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '?login=kakao&result=ok&mode=recover' });
-    await consumeLoginReturn(app, { location: { search: '?login=kakao&result=ok&mode=recover', pathname: '/', hash: '' } as any, history: { replaceState() {} } as any });
+    await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
+    const toasts: string[] = [];
+    for (const result of ['cancel', 'expired', 'error', 'unavailable', 'rate']) await consumeLoginReturn(app, { provider: 'kakao', result, mode: 'link', ticket: '' }, { toast: (m: string) => toasts.push(m) });
+    expect(toasts.length).toBe(5);
+    expect(srv.calls.some((c) => c.path === '/auth/oauth/finish')).toBe(false);
+    const out = await consumeLoginReturn(app, { provider: 'kakao', result: 'ok', mode: 'link', ticket: 'tk' }, { toast: (m: string) => toasts.push(m) });
+    expect(out.action).toBe('linked');
+    const fin = srv.calls.find((c) => c.path === '/auth/oauth/finish')!;
+    expect(fin.body).toEqual({ ticket: 'tk' });
+    expect(fin.auth).toBe('Bearer t1');
+  });
+  test('recover finish: 세션 없이 deviceKey 로 보내고 응답 토큰을 쓰며 서버 문서를 그림자 모드여도 적용', async () => {
+    const doc = { ...JSON.parse(JSON.stringify(newApp().eco.s)), gold: 777_777 };
+    const srv = mockServer({
+      'POST /auth/oauth/finish': () => ({ body: { mode: 'recover', provider: 'kakao', token: 'newtok', accountId: 'a2', authority: 'shadow', expiresAt: 1, serverTime: Date.now(), switchedFrom: 'a1' } }),
+      'POST /auth/session': () => ({ body: { token: 'newtok', accountId: 'a2', authority: 'shadow', serverTime: Date.now() } }),
+      'GET /me': () => me({ doc }),
+    });
+    const app: any = newApp();
+    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
+    const out = await consumeLoginReturn(app, { provider: 'kakao', result: 'ok', mode: 'recover', ticket: 'tk' }, {});
+    expect(out.action).toBe('recovered');
+    const fin = srv.calls.find((c) => c.path === '/auth/oauth/finish')!;
+    expect(Object.keys(fin.body).sort()).toEqual(['deviceKey', 'ticket']);
+    expect(fin.auth).toBeNull();
     await wait(() => state.status === 'ready');
     expect(state.authority).toBe('shadow');
-    expect(app.eco.s.gold).toBe(doc.gold);
+    expect(app.eco.s.gold).toBe(777_777);
   });
-  test('회원 탈퇴: 성공하면 등록 표시를 지운다', async () => {
+  test('finish 오류: no-link 는 게스트 세션 후 link 자동 시작, linked-elsewhere 는 확인 후 recover, 만료는 안내', async () => {
+    let code = 'no-link', status = 404;
+    const srv = mockServer({
+      'POST /auth/oauth/finish': () => ({ status, body: { error: code } }),
+      'POST /auth/oauth/start': (b) => ({ body: { url: 'https://p.test/' + b.provider + '/' + b.mode } }),
+      'POST /auth/session': session, 'GET /me': () => me(),
+    });
+    const run = async (mode: string, confirm = async () => true) => {
+      const app: any = newApp(); await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
+      const toasts: string[] = []; let url = '';
+      await consumeLoginReturn(app, { provider: 'kakao', result: 'ok', mode, ticket: 'tk' }, { toast: (m: string) => toasts.push(m), confirm, assign: (u: string) => { url = u; } });
+      return { toasts, url };
+    };
+    expect((await run('recover')).url).toBe('https://p.test/kakao/link');
+    code = 'linked-elsewhere'; status = 409;
+    expect((await run('link')).url).toBe('https://p.test/kakao/recover');
+    expect((await run('link', async () => false)).url).toBe('');
+    code = 'ticket-expired'; status = 410;
+    expect((await run('link')).toasts[0]).toContain('다시 시도');
+    code = 'x'; status = 429;
+    expect((await run('link')).toasts[0]).toContain('잠시 후');
+  });
+  test('회원 탈퇴: 성공하면 등록 표시를 지우고 기기 키까지 초기화(keepIdentity:false)한 뒤 새로고침', async () => {
     const srv = mockServer({ 'POST /auth/session': session, 'GET /me': () => me(), 'POST /auth/delete': () => ({ body: { ok: true } }) });
     const app: any = newApp();
-    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any, search: '' });
+    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
     await state.ensure();
     expect(localStorage.getItem(REGISTERED_KEY)).toBe('1');
-    expect((await deleteAccount(app)).ok).toBe(true);
+    let resetOpts: any = null, reloaded = false;
+    const out = await deleteAccount(app, { reset: async (o: any) => { resetOpts = o; return { ok: true }; }, pending: () => false, reload: () => { reloaded = true; } });
+    expect(out.ok).toBe(true);
     expect(localStorage.getItem(REGISTERED_KEY)).toBeNull();
     expect(srv.calls.at(-1)!.body).toEqual({ confirm: 'DELETE' });
+    expect(resetOpts).toEqual({ keepIdentity: false });
+    expect(reloaded).toBe(true);
+  });
+  test('회원 탈퇴: 결제 대기면 서버를 부르지 않고, 서버 409 billing-pending 은 안내하며 로컬을 지우지 않는다', async () => {
+    const srv = mockServer({ 'POST /auth/session': session, 'GET /me': () => me(), 'POST /auth/delete': () => ({ status: 409, body: { error: 'billing-pending' } }) });
+    const app: any = newApp();
+    const state = await setupAccount(app, { fetchImpl: srv.fetchImpl as any });
+    await state.ensure();
+    let resetCalled = false;
+    const reset = async () => { resetCalled = true; return { ok: true }; };
+    expect(await deleteAccount(app, { reset, pending: () => true, reload() {} })).toMatchObject({ ok: false, reason: 'payment' });
+    expect(srv.calls.some((c) => c.path === '/auth/delete')).toBe(false);
+    expect(await deleteAccount(app, { reset, pending: () => false, reload() {} })).toMatchObject({ ok: false, reason: 'billing-pending' });
+    expect(resetCalled).toBe(false);
+    expect(localStorage.getItem(REGISTERED_KEY)).toBe('1');
   });
 });

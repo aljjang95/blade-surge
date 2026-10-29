@@ -1,7 +1,9 @@
 // 계정 로그인 흐름(화면 없는 로직). 시트·계정 메뉴가 부르고, 테스트는 fetch 목으로 이 계약을 직접 검증한다.
 // - 구글: id_token 경로(recover → 연동 없음이면 게스트 세션 후 link). 카카오/ChatGPT: 서버 OAuth 로 이동(location.assign).
-// - 콜백 복귀 쿼리: /?login=<provider>&result=<ok|linked-elsewhere|cancel|error|unavailable|no-link|rate>&mode=<link|recover>
+// - 콜백 복귀 쿼리: /?login=<provider>&result=<ok|cancel|expired|error|unavailable|rate>&mode=<link|recover>[&ticket=<43자>]
+//   콜백은 연동·복구를 하지 않는다(CSRF 방지). result=ok 의 ticket 을 POST /auth/oauth/finish 로 확정한다.
 import { clearRegisteredMark } from './account.js';
+import { resetAccountFromScratch, hasPendingPayment, PAYMENT_PENDING_MESSAGE } from '../game/account-reset.js';
 
 export const PROVIDER_LABEL = { google: 'Google', kakao: '카카오', chatgpt: 'ChatGPT' };
 const RESULT_TEXT = {
@@ -86,62 +88,106 @@ export async function linkProvider(app, provider, { signIn, confirm, assign } = 
 }
 
 /**
- * 부팅 시 콜백 복귀 쿼리를 처리한다. 쿼리는 항상 history.replaceState 로 지운다.
- * 반환: { handled, message, nextOAuth?: {provider, mode} }
+ * 부팅 직후 가장 먼저: 콜백 복귀 쿼리를 읽어 두고 곧바로 history.replaceState 로 지운다(ticket 이 주소창·기록에 남지 않게).
+ * 반환: null(복귀 아님) 또는 { provider, result, mode, ticket }.
  */
-/** @param {any} app @param {any} [opts] */
-export async function consumeLoginReturn(app, { location = globalThis.location, history = globalThis.history, toast = (/** @type {string} */ _m) => {}, confirm, assign } = {}) {
+export function takeLoginReturn({ location = globalThis.location, history = globalThis.history } = {}) {
   let params;
-  try { params = new URLSearchParams(location.search); } catch { return { handled: false }; }
-  const provider = params.get('login');
-  if (!provider) return { handled: false };
-  const result = params.get('result') || 'error', mode = params.get('mode') || 'link';
+  try { params = new URLSearchParams(location.search); } catch { return null; }
+  const provider = params.get('login'), hasTicket = params.has('ticket');
+  if (!provider && !hasTicket) return null;
+  const out = { provider: provider || '', result: params.get('result') || 'error', mode: params.get('mode') || 'link', ticket: params.get('ticket') || '' };
   try {
-    for (const key of ['login', 'result', 'mode']) params.delete(key);
+    for (const key of ['login', 'result', 'mode', 'ticket']) params.delete(key);
     const rest = params.toString();
     history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + (location.hash || ''));
   } catch { /* 주소 정리 실패는 무시 */ }
+  return provider ? out : null;
+}
+
+const FINISH_ERROR = {
+  'ticket-expired': '로그인 시간이 지났어요. 다시 시도해 주세요.',
+  'already-linked': '이미 연동된 계정이에요.',
+  'ticket-mismatch': '로그인 정보가 맞지 않아요. 처음부터 다시 시도해 주세요.',
+  banned: '이 계정은 사용할 수 없어요.',
+  deleted: '탈퇴한 계정이에요.',
+  'key-in-use': '이 기기는 지금 다른 진행에서 쓰고 있어 복구할 수 없어요.',
+};
+const errCode = (error) => String(error?.body?.error || '');
+
+/**
+ * 콜백 복귀 처리(takeLoginReturn 결과). result=ok 이면 ticket 을 oauth/finish 로 확정한다.
+ * 반환: { handled, result, mode, ... }
+ */
+/** @param {any} app @param {any} ret @param {any} [opts] */
+export async function consumeLoginReturn(app, ret, { toast = (/** @type {string} */ _m) => {}, confirm = undefined, assign = undefined } = {}) {
+  if (!ret?.provider) return { handled: false };
+  const { provider, result, mode, ticket } = ret;
   const label = PROVIDER_LABEL[provider] || provider;
-  if (result === 'ok') {
+  if (result !== 'ok') { toast(RESULT_TEXT[result] || (result === 'expired' ? FINISH_ERROR['ticket-expired'] : RESULT_TEXT.error)); return { handled: true, result, mode }; }
+  const state = app.account;
+  if (!ticket || !state?.client) { toast(RESULT_TEXT.error); return { handled: true, result: 'error', mode }; }
+  try {
     if (mode === 'recover') {
-      await app.account?.refreshFromServer?.().catch(() => {});
+      await state.client.oauthFinish(ticket, 'recover');
+      await state.refreshFromServer?.();
       toast(`${label} 계정의 진행을 불러왔어요.`);
-    } else toast(`${label} 계정을 연동했어요. 다른 기기에서도 이어서 할 수 있어요.`);
-    return { handled: true, result, mode };
-  }
-  if (result === 'no-link') {
-    // 연동 없음: 게스트 세션을 만들고 같은 제공자 link 를 자동 시작한다.
-    toast(`${label}에 연결된 진행이 없어 새로 연동할게요.`);
-    const out = await startOAuth(app, provider, 'link', { assign });
-    if (!out.ok) toast(RESULT_TEXT[out.reason] || RESULT_TEXT.error);
-    return { handled: true, result, mode, autoLink: out.ok };
-  }
-  if (result === 'linked-elsewhere') {
-    const yes = confirm ? await confirm('이미 다른 진행에 연결된 계정입니다. 그 진행으로 바꿀까요?') : false;
-    if (yes) {
-      const out = await startOAuth(app, provider, 'recover', { assign });
-      if (!out.ok) toast(RESULT_TEXT[out.reason] || RESULT_TEXT.error);
+      return { handled: true, result, mode, action: 'recovered' };
     }
-    return { handled: true, result, mode };
+    if (!(await state.ensure())) { toast(RESULT_TEXT.unavailable); return { handled: true, result: 'unavailable', mode }; }
+    await state.client.oauthFinish(ticket, 'link');
+    toast(`${label} 계정을 연동했어요. 다른 기기에서도 이어서 할 수 있어요.`);
+    return { handled: true, result, mode, action: 'linked' };
+  } catch (error) {
+    const code = errCode(error);
+    if (code === 'no-link' && mode === 'recover') {
+      // 연동 없음: 게스트 세션을 만들고 같은 제공자 link 를 자동 시작한다.
+      toast(`${label}에 연결된 진행이 없어 새로 연동할게요.`);
+      const out = await startOAuth(app, provider, 'link', { assign });
+      if (!out.ok) toast(failText(out.reason));
+      return { handled: true, result: 'no-link', mode, autoLink: out.ok };
+    }
+    if (code === 'linked-elsewhere') {
+      const yes = confirm ? await confirm('이미 다른 진행에 연결된 계정입니다. 그 진행으로 바꿀까요?') : false;
+      if (yes) {
+        const out = await startOAuth(app, provider, 'recover', { assign });
+        if (!out.ok) toast(failText(out.reason));
+      }
+      return { handled: true, result: 'linked-elsewhere', mode };
+    }
+    toast(error?.status === 429 ? RESULT_TEXT.rate : FINISH_ERROR[code] || RESULT_TEXT.error);
+    return { handled: true, result: 'error', mode, code };
   }
-  toast(RESULT_TEXT[result] || RESULT_TEXT.error);
-  return { handled: true, result, mode };
 }
 
 /** 첫 로그인 시트에서 카카오/ChatGPT 선택: recover 로 시작(서버가 연동 없음이면 result=no-link 로 돌려준다). */
 export const startProviderLogin = (app, provider, opts) => startOAuth(app, provider, 'recover', opts);
 
-/** 회원 탈퇴. 성공하면 로컬 등록 표시를 지운다(로컬 저장은 그대로). */
-export async function deleteAccount(app) {
+export const BILLING_PENDING_TEXT = '결제 처리 중이거나 환불 정산이 남아 있어 지금은 탈퇴할 수 없어요. 고객센터로 문의해 주세요';
+
+/**
+ * 회원 탈퇴. 결제 대기가 있으면 서버에 보내기 전에 막고, 서버가 409 billing-pending 을 주면 안내한다.
+ * 성공하면 같은 기기 키가 서버에서 영구히 막히므로 로컬 진행·기기 키를 모두 지우고(resetAccountFromScratch keepIdentity:false) 새 키로 시작하게 한다.
+ * @returns {Promise<{ ok: boolean, reason?: string, reloaded?: boolean }>}
+ */
+/** @param {any} app @param {{ reset?: any, pending?: any, storage?: any, reload?: any }} [deps] */
+export async function deleteAccount(app, { reset = resetAccountFromScratch, pending = hasPendingPayment, storage = globalThis.localStorage, reload = () => globalThis.location?.reload() } = {}) {
   const state = app.account;
   if (!state?.client) return { ok: false, reason: 'unavailable' };
-  try {
-    await state.client.deleteAccount();
-    clearRegisteredMark();
-    state.status = 'deleted'; state.authority = 'off'; state.accountId = null;
-    state.client.token = null; state.client.account = null;
-    return { ok: true };
-  } catch (error) { return { ok: false, reason: error?.status === 429 ? 'rate' : 'error' }; }
+  if (pending(storage)) return { ok: false, reason: 'payment' };
+  try { await state.client.deleteAccount(); }
+  catch (error) {
+    if (errCode(error) === 'billing-pending') return { ok: false, reason: 'billing-pending' };
+    return { ok: false, reason: error?.status === 429 ? 'rate' : 'error' };
+  }
+  clearRegisteredMark();
+  try { storage?.removeItem?.('blade.login.sheetSeen'); } catch { /* 무시 */ }
+  state.status = 'deleted'; state.authority = 'off'; state.accountId = null;
+  state.client.token = null; state.client.account = null;
+  const out = await reset({ keepIdentity: false }).catch(() => ({ ok: false, reason: 'storage' }));
+  if (!out.ok) return { ok: false, reason: 'reset-' + out.reason, deleted: true };
+  try { reload(); } catch { /* 새로고침 불가 환경 */ }
+  return { ok: true, reloaded: true };
 }
 
-export const failText = (reason) => RESULT_TEXT[reason] || RESULT_TEXT.error;
+export const failText = (reason) => (reason === 'billing-pending' ? BILLING_PENDING_TEXT : reason === 'payment' ? PAYMENT_PENDING_MESSAGE : RESULT_TEXT[reason] || RESULT_TEXT.error);

@@ -3,7 +3,10 @@
 import './login-sheet.css';
 import { isNativeBuild } from '../platform/api-base.js';
 import { googleSignIn } from '../social/google-signin.js';
-import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, consumeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
+import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, consumeLoginReturn, takeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
+
+// 모듈이 불러와지는 즉시(부팅 코드보다 먼저) 콜백 쿼리를 읽고 주소에서 지운다. ticket 이 주소창에 남지 않게 한다.
+const loginReturn = takeLoginReturn();
 
 const SEEN_KEY = 'blade.login.sheetSeen';
 const seen = () => { try { return globalThis.localStorage?.getItem(SEEN_KEY) === '1'; } catch { return false; } };
@@ -97,8 +100,8 @@ export async function openAccountMenu(app, { native = isNativeBuild() } = {}) {
           node('p', 'ls-note', '서버에 저장된 계정과 진행이 삭제돼요. 되돌릴 수 없어요. 정말 탈퇴할까요?'),
           button('네, 탈퇴합니다', 'ls-danger-btn', async () => {
             const out = await deleteAccount(app);
-            if (out.ok) { toast('탈퇴했어요. 이 기기의 로컬 저장은 그대로예요.'); d.close(); }
-            else toast(failText(out.reason));
+            if (out.ok) { toast('탈퇴했어요. 새로 시작합니다.'); d.close(); }
+            else toast(out.deleted ? '탈퇴는 됐지만 이 기기 초기화에 실패했어요. 설정에서 완전 초기화를 해 주세요.' : failText(out.reason));
           }),
           button('취소', 'ls-ghost', () => render()),
         );
@@ -127,6 +130,6 @@ export function installAccountEntry(app) {
 /** main.js 부트에서 한 번: 콜백 복귀 처리 → 첫 로그인 시트 → 설정 진입점. 어떤 실패도 게임을 막지 않는다. */
 export async function setupLogin(app) {
   installAccountEntry(app);
-  const back = await consumeLoginReturn(app, { toast: toastOf(app), confirm: askConfirm }).catch(() => ({ handled: false }));
+  const back = await consumeLoginReturn(app, loginReturn, { toast: toastOf(app), confirm: askConfirm }).catch(() => ({ handled: false }));
   if (!back.handled) await maybeShowLoginSheet(app).catch(() => null);
 }

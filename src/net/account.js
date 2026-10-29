@@ -22,12 +22,12 @@ const hasClearedStage = (eco) => Object.values(eco?.s?.progress?.stars || {}).so
 
 /**
  * 계정 연결. 게스트 서버 행은 지연 생성한다(deferGuest 기본 true):
- * 등록 표시가 있거나, 로컬에 클리어 진행이 있거나, 로그인 복귀(recover ok)일 때 바로 연결하고,
+ * 등록 표시가 있거나, 로컬에 클리어 진행이 있을 때 바로 연결하고,
  * 아니면 첫 스테이지 클리어 뒤 또는 사용자가 연동을 시작할 때(state.ensure()) 연결한다.
  * @param {any} app
- * @param {{ fetchImpl?: typeof fetch, deferGuest?: boolean, search?: string }} [options]
+ * @param {{ fetchImpl?: typeof fetch, deferGuest?: boolean }} [options]
  */
-export async function setupAccount(app, { fetchImpl, deferGuest = true, search } = {}) {
+export async function setupAccount(app, { fetchImpl, deferGuest = true } = {}) {
   // 키 복구(IndexedDB 사본)는 소셜 클라이언트가 새 키를 만들기 전에 끝내야 한다. 네트워크는 기다리지 않는다.
   const [key, install] = await Promise.all([deviceKey(), installId()]).catch(() => [null, null]);
   /** @type {any} */
@@ -55,10 +55,7 @@ export async function setupAccount(app, { fetchImpl, deferGuest = true, search }
     adoptNow(app, state, me.doc); state.forceAdopt = false; mark(state);
     return true;
   };
-  const query = new URLSearchParams(search ?? globalThis.location?.search ?? '');
-  const recovered = query.get('login') && query.get('mode') === 'recover' && query.get('result') === 'ok';
-  if (recovered) state.forceAdopt = true;
-  if (!deferGuest || recovered || readMark() || hasClearedStage(app.eco)) { void run(); return state; }
+  if (!deferGuest || readMark() || hasClearedStage(app.eco)) { void run(); return state; }
   // 지연: 서버 행이 아직 없다. 첫 스테이지 클리어 뒤에 연결한다.
   state.status = 'deferred'; mark(state);
   const eco = app.eco, completeStage = eco.completeStage?.bind(eco);

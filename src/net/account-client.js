@@ -53,6 +53,16 @@ export class AccountClient {
     this.token = null; this.account = null; // 기기 키가 다른 계정으로 옮겨졌으니 이전 세션은 버린다
     return data;
   }
+  /**
+   * OAuth 콜백 뒤 일회용 ticket 을 확정한다(CSRF 방지: 콜백 자체는 연동·복구를 하지 않는다).
+   * link: Bearer 세션 필요 → { mode, provider, linked }. recover: 세션 불필요, 응답이 곧 새 세션이라 토큰을 바로 갈아 끼운다.
+   */
+  async oauthFinish(ticket, mode) {
+    if (mode !== 'recover') return this.request('POST', '/auth/oauth/finish', { ticket });
+    const data = await this.raw('POST', '/auth/oauth/finish', { ticket, deviceKey: this.deviceKey }, null);
+    if (data?.token) { this.token = data.token; this.account = data; }
+    return data;
+  }
   /** 회원 탈퇴(세션 필요). */
   deleteAccount() { return this.request('POST', '/auth/delete', { confirm: 'DELETE' }); }
   cmd(command) { return this.request('POST', '/cmd', command); }

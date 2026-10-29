@@ -1,4 +1,5 @@
 import './style.css';
+import { setupLogin } from './ui/login-sheet.js'; // 콜백 쿼리(ticket)를 다른 부팅 코드보다 먼저 지우려고 앞쪽에서 불러온다
 import { autoSalvageNormal } from './game/gear-advice.js';
 import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
@@ -51,7 +52,6 @@ import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
 import { NewsView } from './ui/news.js';
 import { setupAccount } from './net/account.js';
-import { setupLogin } from './ui/login-sheet.js';
 import { setupBilling } from './platform/billing-service.js';
 import { setupFunnelUpload } from './net/funnel-upload.js';
 import './ui/mobile-combat.css';
