@@ -139,7 +139,7 @@ export class CompanionPresence {
 
   /**
    * 카드는 가장자리 띠에만 둔다(대표님 규칙: 주인공·앞길·적 위 팝업 금지). 후보: ① 왼쪽 띠(시점 버튼 오른쪽, 영웅 카드 아래)
-   * ② 위쪽 띠(영웅 카드·목표 아래, 오른쪽 지도 열 앞까지, 좁은 화면은 경로 줄 생략). 실제 크기를 재서 HUD·주인공 둘레와
+   * ② 위쪽 띠(영웅 카드·목표 아래, 오른쪽 지도 열 앞까지, 경로 줄 생략) ③ 주인공 둘레 왼쪽까지 줄인 왼쪽 띠. 실제 크기를 재서 HUD·주인공 둘레와
    * 겹치지 않는 첫 자리를 쓰고, 없으면 false 를 돌려준다.
    */
   showCard() {
@@ -166,6 +166,9 @@ export class CompanionPresence {
     const candidates = [];
     if (sideW >= 150) candidates.push({ left: sideLeft, width: sideW, compact: false });
     if (topW >= 200) candidates.push({ left: topLeft, width: topW, compact: true });
+    // ③ 왼쪽 띠를 주인공 둘레 왼쪽 끝까지만(가로 화면에서 ①이 둘레에 걸칠 때).
+    const narrowW = hero ? Math.floor(Math.min(280, hero.x - hero.r - CARD_GAP - sideLeft)) : 0;
+    if (narrowW >= 150) candidates.push({ left: sideLeft, width: narrowW, compact: true });
     const slots = [];
     this.card.style.visibility = 'hidden'; this.card.hidden = false;
     for (const c of candidates) {
