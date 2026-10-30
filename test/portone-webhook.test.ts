@@ -6,10 +6,10 @@ import { verifyWebhookSignature, webhookPaymentId, WEBHOOK_TOLERANCE_MS } from '
 
 // 포트원 웹훅(F)·실결제 수단 대조(G). 실제 포트원은 호출하지 않는다(단건 조회 가짜).
 const STORE = 'store-test-0001', CHANNEL = 'channel-key-real-0001';
-const KEY = crypto.getRandomValues(new Uint8Array(32));
+const KEY: Uint8Array<ArrayBuffer> = crypto.getRandomValues(new Uint8Array(32));
 const SECRET = 'whsec_' + Buffer.from(KEY).toString('base64');
 
-async function sign(body: string, id: string, tsSec: number, key: Uint8Array = KEY): Promise<string> {
+async function sign(body: string, id: string, tsSec: number, key: Uint8Array<ArrayBuffer> = KEY): Promise<string> {
   const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const mac = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`${id}.${tsSec}.${body}`));
   return 'v1,' + Buffer.from(mac).toString('base64');
