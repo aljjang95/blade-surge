@@ -1,15 +1,195 @@
 {
   "items": [
     {
+      "id": "exp_emberknight_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_emberknight_weapon.glb",
+      "sha256": "beab4e08c44943a144e31fdae830e76d3f82f48fc805c566f5dbe2b425dc877d",
+      "bytes": 369488,
+      "triangles": 2823,
+      "source": {
+        "tripoTaskId": "3a566ba9-7a2f-4e52-8421-27230d1a21e6",
+        "concept": "dark charcoal stone greatsword blade with glowing orange lava cracks and orange flame-shaped edges solidly attached, bronze cross guard with an orange diamond gem, brown grip, orange gem pommel"
+      }
+    },
+    {
+      "id": "exp_glasswarden_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_glasswarden_weapon.glb",
+      "sha256": "d5bd12f03ddac5b02e8786676feff6e5ba55c469084b0bf05206bbdccbdabedf",
+      "bytes": 476788,
+      "triangles": 2913,
+      "source": {
+        "tripoTaskId": "6b588bba-4b91-4245-a968-d6ddc53b39ed",
+        "concept": "translucent pale-blue glass crystal greatsword blade with jagged shard edges, silver crescent leaf guard with a blue gem, navy grip, blue bead pommel with a light blue tassel, all crystal shards solidly attached to the blade"
+      }
+    },
+    {
+      "id": "exp_starreader_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_starreader_weapon.glb",
+      "sha256": "c7ba2a91292dbd5be91f3fa095fb91cf67372dbaea03461a7fb266cd710c5aa5",
+      "bytes": 412088,
+      "triangles": 2586,
+      "source": {
+        "tripoTaskId": "08ace6d0-5def-4edb-a899-9f3912a44aca",
+        "concept": "deep navy blue greatsword blade with glowing white constellation lines and star dots, silver edge, silver four-point star guard with a blue sphere gem, navy grip, blue crystal pommel, no floating sparkles"
+      }
+    },
+    {
+      "id": "gear_weapon_e_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_1.glb",
+      "sha256": "75c3085ae6ab2675ee5812a33cca622fef60a8409fdd0c5988adce8d096adc98",
+      "bytes": 350004,
+      "triangles": 2662,
+      "source": {
+        "tripoTaskId": "55dfe5f6-a75f-43eb-9ea4-c0e9461bc5d7",
+        "concept": "heavy wide steel cleaver blade with two small blue diamond inlays along the fuller, silver cross guard, dark grip, spiked silver star pommel with a blue gem"
+      }
+    },
+    {
+      "id": "gear_weapon_e_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_2.glb",
+      "sha256": "234c9f58faa81290318d8c1e0f334ca2bf34256ffed00f793cb0d67117de94f9",
+      "bytes": 353992,
+      "triangles": 2758,
+      "source": {
+        "tripoTaskId": "e2310d56-a96b-4f10-b201-740667ac8523",
+        "concept": "thin needle rapier blade, silver crescent-moon shaped guard with a small blue star gem, navy grip, blue gem pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_e_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_3.glb",
+      "sha256": "d390bff1928797109d4d6fc4333d9012dd698938db4dfa6d91d35d6529eaf7e2",
+      "bytes": 341572,
+      "triangles": 2842,
+      "source": {
+        "tripoTaskId": "5c856bce-0ef3-49b0-a2ae-feccaa06be0a",
+        "concept": "straight steel rapier blade, ornate gold swept-hilt basket of looping rings around a large blue sphere gem, gold pommel with blue gem"
+      }
+    },
+    {
+      "id": "gear_weapon_l_1",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_1.glb",
+      "sha256": "aa6de3dbf594dbd1496ced99df41f8fd256443e2fa2223e7fa006f53b790885e",
+      "bytes": 417644,
+      "triangles": 2708,
+      "source": {
+        "tripoTaskId": "b262d176-1a59-43a3-a376-8ac638fa7dae",
+        "concept": "large curved golden greatsword blade with red engraved inlay lines, gold horn-shaped guard with a red round gem, dark red grip, red gem pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_l_2",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_2.glb",
+      "sha256": "f51f902e61fd241aeacae76504080f5acbf02658ef8afc0378ca770ab03e8ea2",
+      "bytes": 446420,
+      "triangles": 2830,
+      "source": {
+        "tripoTaskId": "c67e0eae-2ea5-447d-b08e-5be40a466e2b",
+        "concept": "golden greatsword with a dark brown jagged dragon-scale blade core and glowing orange molten cracks, golden spiked sun guard, the golden star rays fused solidly to the guard, gold sun pommel with orange gem"
+      }
+    },
+    {
+      "id": "gear_weapon_l_3",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_3.glb",
+      "sha256": "b4375e820f1d225a48eca4216d21cd8ad883a883ed966273c97794cf5752c15e",
+      "bytes": 423788,
+      "triangles": 2898,
+      "source": {
+        "tripoTaskId": "1a5a422c-ca08-4b54-b409-1195ca8da3d8",
+        "concept": "wavy flame-shaped lilac-silver greatsword blade with a gold edge, gold looped ring guard with an amber center, gold radiant star rays fused solidly to the guard, gold ring pommel with an orange tassel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_1.glb",
+      "sha256": "86f0b498011964e4cf369983777c45a31281df4b5bb5bcd6df3f34dfb9a80a99",
+      "bytes": 291932,
+      "triangles": 2568,
+      "source": {
+        "tripoTaskId": "c44eb935-7738-4b6f-bbdb-31b103c479b6",
+        "concept": "plain steel arming sword, straight double-edged blade, flat square cross guard, navy wrapped grip, silver ring pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_2.glb",
+      "sha256": "32f2d8020cab410e114d017f2bf9f800490730260ed992f4bc13cad58e09c196",
+      "bytes": 222412,
+      "triangles": 2734,
+      "source": {
+        "tripoTaskId": "6744655e-15ed-4450-aee0-ae5ec46a8706",
+        "concept": "very wide flat steel broad blade like a cleaver with an angled tip, no cross guard, brown leather grip, round steel ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_3.glb",
+      "sha256": "c5039c4d2f5ff00a29d1aad96e4242c2ed1fd4a844ec517af9eeb56225ac92c6",
+      "bytes": 263656,
+      "triangles": 2898,
+      "source": {
+        "tripoTaskId": "edcb652f-8f48-4098-ac1d-ec9b8437d995",
+        "concept": "curved bronze scimitar blade, small bronze cross guard with round center boss, brown leather grip, bronze ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_1.glb",
+      "sha256": "86603cbea11f614732170154ae9ac67f288a85deb9b6d1b0ace4825581299a4b",
+      "bytes": 284948,
+      "triangles": 2884,
+      "source": {
+        "tripoTaskId": "13194ca7-b00d-41bc-9730-61615bbf124e",
+        "concept": "steel sword with large saw teeth along one edge, no cross guard, navy wrapped grip, steel ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_2.glb",
+      "sha256": "db49ea09f506ff41a20c82d408e8e2c09885919c73fdc568fba8a0849d988ad8",
+      "bytes": 327280,
+      "triangles": 2872,
+      "source": {
+        "tripoTaskId": "4277c812-4911-4030-b855-dd368d28c89f",
+        "concept": "light blue faceted ice-crystal blade, gold cross guard with a blue diamond gem, brown grip, blue crystal pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_3.glb",
+      "sha256": "aea5de5000209465febcbda116e45d2ee306299e9d5c20d2c887b63fde348b44",
+      "bytes": 377488,
+      "triangles": 2730,
+      "source": {
+        "tripoTaskId": "254d1160-3d29-4307-8e3d-9cb965139c07",
+        "concept": "steel blade with a gold center ridge, gold feather-wing cross guard with a round amber gem, brown grip, gold spike pommel"
+      }
+    },
+    {
       "id": "w_blood",
       "form": "greatsword",
       "file": "/models/item-weapons/w_blood.glb",
-      "sha256": "7391e78dbc791917d61e4d0e7af941dcc6646f902a6ccb92094319c94c7bea36",
-      "bytes": 512304,
-      "triangles": 3000,
+      "sha256": "d7a5369b21f25d9afe1a9bc99c31345bebdff23380ce16e243e46c118878fdee",
+      "bytes": 343876,
+      "triangles": 2797,
       "source": {
-        "tripoTaskId": "667fe7c6-ef1f-4b13-a1ba-d7915dc58d55",
-        "concept": "vampire fang greatsword: curved bone-white fang blade with crimson edge, dark red and black bat-wing shaped cross guard with a red diamond gem, dark red wrapped grip, black pommel with a red blood drop shape"
+        "tripoTaskId": "63c36763-2217-4178-873a-406dc3f6ae8c",
+        "concept": "the blade itself is dark blackish crimson red metal, not white or ivory, curved jagged blood greatsword with bright red edge highlights, black bat-wing cross guard with a red diamond gem, dark red wrapped grip, black spiked pommel with a red drop"
       }
     },
     {
@@ -262,6 +442,42 @@
       "source": {
         "tripoTaskId": "8186b758-9d60-4f9d-a346-d478209ffd72",
         "concept": "sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_town_ember",
+      "form": "sword",
+      "file": "/models/item-weapons/w_town_ember.glb",
+      "sha256": "9413db74fe0d8fa05d21a8598b3c463fd0cc8873e3e9e2f9e01be3a2dbd5b130",
+      "bytes": 340340,
+      "triangles": 2796,
+      "source": {
+        "tripoTaskId": "374f479d-6e73-41ad-a225-151ce7174363",
+        "concept": "steel sword with notched serrated edges, silver cross guard with a red ruby, brown grip, spiked silver pommel with a red gem"
+      }
+    },
+    {
+      "id": "w_town_oath",
+      "form": "sword",
+      "file": "/models/item-weapons/w_town_oath.glb",
+      "sha256": "ac7e49f46a4a44107a54b4aa6655db979bac1fcdd1f04d1f93979c8ab336180d",
+      "bytes": 355132,
+      "triangles": 2883,
+      "source": {
+        "tripoTaskId": "fc822fd5-508d-4097-9315-23d652e027d4",
+        "concept": "straight steel longsword, white feather wings on the gold cross guard with a green emerald gem, navy grip, green gem pommel"
+      }
+    },
+    {
+      "id": "w_town_star",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_town_star.glb",
+      "sha256": "e68f99f73db93a905539b15dcf9fd21d707bbe99c476f3dedf39a0a2e1734d8e",
+      "bytes": 427440,
+      "triangles": 2844,
+      "source": {
+        "tripoTaskId": "f1e34fe6-7a09-4fa3-aad0-ce5ddc2aaff1",
+        "concept": "broad ivory-gold greatsword blade with orange diamond inlays, large golden sun-star guard with an orange gem, the radiant rays fused solidly to the guard, dark purple grip, gold ring pommel with orange gem"
       }
     },
     {
