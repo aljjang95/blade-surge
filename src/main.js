@@ -1,6 +1,7 @@
 import './style.css';
 import { setupLogin } from './ui/login-sheet.js'; // 콜백 쿼리(ticket)를 다른 부팅 코드보다 먼저 지우려고 앞쪽에서 불러온다
 import { autoSalvageNormal } from './game/gear-advice.js';
+import { ratingLabel } from './data/game-rating.js';
 import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
 import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
@@ -211,6 +212,7 @@ class App {
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
     // 팁 로테이션 — 로딩 중에도 손이 배운다
+    const ratingEl = $('boot-rating'); if (ratingEl) ratingEl.textContent = ratingLabel();
     const tipEl = $('boot-tip'); let tipI = Math.floor(Math.random() * BOOT_TIPS.length);
     const showTip = () => { tipEl.classList.remove('on'); setTimeout(() => { tipEl.innerHTML = BOOT_TIPS[tipI++ % BOOT_TIPS.length]; tipEl.classList.add('on'); }, 450); };
     showTip(); this._tipTimer = setInterval(showTip, 3600);

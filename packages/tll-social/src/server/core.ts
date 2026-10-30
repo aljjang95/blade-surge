@@ -224,13 +224,14 @@ export class SocialCore {
   private saveProfile(c: Ctx) {
     if (!c.keyHash) throw new SocialError('bad-key', 401);
     const body = object(c.req.body, ['name', 'hero']);
-    const name = this.cleanName(body.name);
     const hero = body.hero === undefined ? null : playerHero(body.hero);
     const now = this.d.now();
     const existing = this.one('SELECT p.* FROM player_keys k JOIN players p ON p.id = k.player_id WHERE k.key_hash = ?', c.keyHash);
+    // 같은 이름 재저장은 금칙어 검사를 다시 하지 않는다(금칙어 목록이 늘어도 기존 이름의 프로필 저장이 깨지지 않게).
+    if (existing && !existing.banned && existing.name === playerName(body.name)) return this.profile(existing);
+    const name = this.cleanName(body.name);
     if (existing) {
       if (existing.banned) throw new SocialError('banned', 403);
-      if (existing.name === name) return this.profile(existing);
       if (existing.renamed_at && now - existing.renamed_at < 24 * HOUR) throw new SocialError('rename-cooldown', 429, existing.renamed_at + 24 * HOUR - now);
       this.run('UPDATE players SET name = ?, tag = ?, renamed_at = ? WHERE id = ?', name, this.freeTag(name), now, existing.id);
       return this.profile(this.player(existing.id));
