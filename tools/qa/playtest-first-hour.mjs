@@ -23,7 +23,7 @@ const OUT = path.resolve(arg('out', `work/qa/playtest-${profile}`));
 const HUMAN = { tap: 900, read: 2200 }; // 보수적 사람 속도(ms): 탭 사이 간격·화면 읽는 시간
 
 const events = []; const defects = []; const consoleErrors = []; const shots = [];
-let battleSec = 0; let menuMs = 0; let lastMark = Date.now(); let battles = 0; const wallStart = Date.now();
+let battleSec = 0; let menuMs = 0; let lastMark = Date.now(); let battles = 0; let losses = 0; const wallStart = Date.now();
 const clock = () => battleSec + menuMs / 1000;
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const mark = () => { lastMark = Date.now(); };
@@ -105,6 +105,7 @@ async function playBattle(first) {
   await page.waitForFunction(() => window.app.battle?.active && window.app.battle.elapsed > .5 && window.app.input.enabled, null, { timeout: 180000 }).catch(() => defect('전투', '전투 시작 대기 3분 초과'));
   const t0 = (await state()).el; mark(); addMenu();
   const startClock = clock(); const base = battleSec;
+  let lost = false;
   const live = async () => { const s = await state(); battleSec = base + s.el; return s; };
   if (first) {
     ev('첫 전투 시작', '튜토리얼 안내 표시');
@@ -122,12 +123,14 @@ async function playBattle(first) {
   for (let guard = 0; guard < 80; guard++) {
     s = await live();
     if (!s.active || s.mode !== 'battle') break;
-    const dead = await page.evaluate(() => { const a = window.app; a.testPause = true; try { for (let i = 0; i < 400 && a.battle.active; i++) a.step(0.05, false); } finally { a.testPause = false; } return !a.battle.active; });
+    // 주인공이 쓰러지면(hp 0) 부활창이 뜰 때까지만 3초 더 감고 멈춘다. 부활창 뒤로 계속 감으면 시계가 부풀려진다.
+    const dead = await page.evaluate(() => { const a = window.app; a.testPause = true; let down = 0; try { for (let i = 0; i < 400 && a.battle.active; i++) { a.step(0.05, false); if (a.battle.player.hp <= 0 && ++down > 60) break; } } finally { a.testPause = false; } return !a.battle.active; });
     if (dead) break;
+    if (await page.locator('#r-no').isVisible().catch(() => false)) { lost = true; break; }
   }
   s = await live(); mark();
   battles++;
-  return s;
+  return { ...s, lost };
 }
 
 async function result() {
@@ -164,6 +167,12 @@ try {
     addMenu();
     const s1 = await playBattle(battles === 0);
     mark();
+    if (s1.lost) {
+      // AUTO 만으로 쓰러졌다: 이용자는 부활(보석 50) 또는 정비하기를 고른다. 봇은 정비하기(무료)를 눌러 막힘 시각을 남긴다.
+      losses++; ev('쓰러짐·부활창', `Lv.${s1.lv} · 진행 ${s1.unlocked} · 전투 ${Math.round(s1.el)}초 · ${losses}번째`); await shot(`down-${losses}`);
+      await tap('#r-no', { optional: true, label: '정비하기' });
+      if (losses >= 2) { ev('벽 도달', `AUTO 만으로 같은 구간에서 ${losses}번 쓰러짐 — 성장 개입 없이는 진행이 멈춤`); await sleep(HUMAN.read); break; }
+    }
     const r = await result(); addMenu();
     ev(`전투 ${battles} 끝`, `${r.title} · Lv.${s1.lv} · 진행 ${s1.unlocked} · 버튼 ${r.vis.join(',')}`);
     await shot(`result-${battles}`);
@@ -179,7 +188,7 @@ try {
 } catch (e) { defect('봇 중단', String(e.stack || e).slice(0, 300)); }
 
 const final = await state().catch(() => ({}));
-const out = { profile, origin: ORIGIN, viewport: VIEW, ua: UA ? 'threads' : '기본', targetMin: TARGET_MIN, gameMinutes: +(clock() / 60).toFixed(1), wallMinutes: +((Date.now() - wallStart) / 60000).toFixed(1), battles, final, events, defects, consoleErrors, shots, at: new Date().toISOString() };
+const out = { profile, origin: ORIGIN, viewport: VIEW, ua: UA ? 'threads' : '기본', targetMin: TARGET_MIN, gameMinutes: +(clock() / 60).toFixed(1), wallMinutes: +((Date.now() - wallStart) / 60000).toFixed(1), battles, losses, final, events, defects, consoleErrors, shots, at: new Date().toISOString() };
 await fs.writeFile(path.join(OUT, 'result.json'), JSON.stringify(out, null, 2));
 console.log(`끝: 게임 시계 ${out.gameMinutes}분 · 벽시계 ${out.wallMinutes}분 · 전투 ${battles} · 결함 ${defects.length} · 콘솔오류 ${consoleErrors.length}`);
 await browser.close();
