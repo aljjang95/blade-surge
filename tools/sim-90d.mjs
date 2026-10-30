@@ -352,7 +352,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
             if (time < 3) bountyLeft = true; // 의뢰 한 건 미만 자투리는 '할 일 없음'이 아니다(고통 단계 자투리와 같은 취급)
             else if (time >= def.minutes) {
               time -= def.minutes; dayBountyMin += def.minutes; bountyMinTotal.v += def.minutes;
-              const r = completeBounty(bounty, save, def.id, { win: true, timeSec: 0, hitsTaken: 0, maxCombo: 999, potionsUsed: 0 });
+              const r = completeBounty(bounty, save, def.id, { win: true, time: 0, revives: 0, maxCombo: 999, stars: 3 });
               if (r.ok) {
                 dayBountyDone++; earn('gold', r.rewards.gold); earn('stones', r.rewards.stones);
                 for (const u of r.ups) bountyLog.push({ day, minuteOfDay: Math.round(usedMin + sessionMin - time), rank: u.rank });
