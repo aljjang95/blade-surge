@@ -87,7 +87,7 @@ function arcFront(impact, c, f, R, half, n, color, { delay = 0, life = .26, widt
  * 그대로 소비해 이후 전투·드랍 난수 진행을 바꾸지 않는다(fx.js contact 의 retiredRandomDraws 와 같은 방식).
  * 실제 FX(flipbook 보유)일 때만 소비한다: 모의 전투의 가짜 fx 에서는 원래도 난수를 쓰지 않았다.
  */
-export const KNIGHT_RETIRED_DRAWS = Object.freeze({ rune: 8, castCircle: 8, firePillar: 16, holyBurst: 9, shockTex: 8 });
+export const KNIGHT_RETIRED_DRAWS = Object.freeze({ rune: 8, castCircle: 8, firePillar: 16, holyBurst: 9, shockTex: 8, explosion: 8 });
 export function knightRetiredDraws(fx, n) {
   if (typeof fx?.flipbook !== 'function') return 0;
   for (let i = 0; i < n; i++) Math.random();

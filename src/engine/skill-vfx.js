@@ -128,6 +128,21 @@ export const impactReady = (impact) => !!impact && typeof impact.mark === 'funct
 const vfxRandom = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 
 /**
+ * 서명용 표적 목록(표시 전용): skills.js 의 targets(가까운 순 max 명, range m 안) 와 같은 규칙으로 고른 적. sorted=false 면
+ * game.enemies 순서 그대로(공허 보법의 점멸 표적 순번). center 를 주면 그 지점 기준 거리. filter·sort 만 쓰므로 Math.random 을 소비하지 않는다.
+ * @param {any} game @param {any} player @param {number} [max] @param {number} [range] @param {boolean} [sorted] @param {{x: number, z: number}|null} [center]
+ * @returns {any[]}
+ */
+export function sigTargets(game, player, max = 8, range = 13, sorted = true, center = null) {
+  if (!Array.isArray(game?.enemies) || typeof player?.distTo !== 'function') return [];
+  // center: 판정이 영웅 현재 위치가 아닌 저장된 지점(공허 보법 c.data.origin)에서 거리를 잴 때 같은 기준으로 고른다.
+  const dist = center ? (e) => Math.hypot(e.pos.x - center.x, e.pos.z - center.z) : (e) => player.distTo(e);
+  const list = game.enemies.filter((e) => e?.alive && !e.spawning && e.pos && dist(e) < range);
+  if (sorted) list.sort((a, b) => dist(a) - dist(b));
+  return list.slice(0, max);
+}
+
+/**
  * 스킬 시전 순간의 장악 레이어. 판정·피해·타이밍은 건드리지 않는다.
  * @param {any} game @param {string} skillId @param {any} player
  * @param {{data?: {aimPoint?: THREE.Vector3}}|null} [ctx]
@@ -175,7 +190,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
       }
     }
     // 스킬 고유 모양 언어(광선·지면 표식·고리, 인스턴스 층). 동작 줄이기에서는 생략한다.
-    if (!reduced && impactReady(fx.impact) && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
+    if (!reduced && impactReady(fx.impact) && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale, origin: ctx?.data?.origin ?? null, targets: (max, range, sorted, center) => sigTargets(game, player, max, range, sorted, center) });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !r.noRune && !(r.mode === 'ground' && size >= 10)) {

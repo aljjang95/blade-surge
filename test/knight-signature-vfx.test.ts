@@ -136,6 +136,7 @@ test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX �
       firePillar: () => fx.firePillar(p, { height: 10, width: 1.6, life: 1, color: 0xff9a18 }),
       holyBurst: () => fx.holyBurst(p, { size: 1.6, life: .24, color: 0xff9a18 }),
       shockTex: () => fx.shockTex(p, 0xff9a20, { r1: 6, life: .5 }),
+      explosion: () => fx.explosion(p, { size: 7, color: 0xd0a0ff, life: .5 }),
     };
     const count = (run: () => void) => { const real = Math.random; let n = 0; Math.random = () => { n++; return real(); }; try { run(); } finally { Math.random = real; } return n; };
     for (const [k, run] of Object.entries(calls)) { run(); expect(count(run)).toBe((KNIGHT_RETIRED_DRAWS as any)[k]); }

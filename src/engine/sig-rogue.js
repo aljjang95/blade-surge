@@ -145,12 +145,16 @@ export const SIGNATURES = {
   // 표식마다 분신 단검이 공중(높이 3m, 비스듬히)에서 내리꽂히며 X 자 자국(.18 + i×.09초, skills.js 분신 박자),
   // 끌어당김(표식 6개 기준 .18+6×.09+.25초) 순간 표식들에서 중심점으로 실이 빨려들어 HUB(+.18초)에 닿고, 중심에서 가시 표식·짙은 고리·사방 파편.
   // 영웅 둘레 큰 원은 쓰지 않는다(다른 스킬과 같은 '원형 문양' 금지, 레시피도 바닥 룬·원화 없음).
+  // 표적 위(2차 2026-10-30): ctx.targets 로 skills.js 와 같은 규칙(가까운 순 8명, 13m)의 실제 표적 위에 표식·분신·당김 실을 찍고,
+  // 당김 중심도 표적 평균(판정 hub 와 같은 식)에 둔다. 표적이 없으면(skills.js 는 shadowWave 만) 예전처럼 영웅 앞 부채 자리에 그린다.
   shadow_mark(ctx) {
-    const { impact, f, player, lite } = ctx; const ang = cutAngle(impact, f), N = 6, PULL = .18 + N * .09 + .25, HUB = PULL + .18;
-    const hx = player.pos.x + f.x * 3.6, hz = player.pos.z + f.z * 3.6;
+    const { impact, f, player, lite } = ctx; const ang = cutAngle(impact, f);
+    const ts = ctx.targets?.(8, 13) ?? [], N = ts.length || 6, PULL = .18 + N * .09 + .25, HUB = PULL + .18;
+    let hx = player.pos.x + f.x * 3.6, hz = player.pos.z + f.z * 3.6;
+    if (ts.length) { hx = 0; hz = 0; for (const e of ts) { hx += e.pos.x / ts.length; hz += e.pos.z / ts.length; } }
     for (let i = 0, step = lite ? 2 : 1; i < N; i += step) {
       const a = yawOf(f) + (i - (N - 1) / 2) * .5, r = 3.2 + (i % 2) * 1.6, t = .18 + i * .09;
-      const mx = player.pos.x + Math.cos(a) * r, mz = player.pos.z + Math.sin(a) * r;
+      const mx = ts.length ? ts[i].pos.x : player.pos.x + Math.cos(a) * r, mz = ts.length ? ts[i].pos.z : player.pos.z + Math.sin(a) * r;
       // ① 표식 새기는 실: 발밑에서 표식 자리까지 빠르게 뻗는 가는 선 + 표식 조준 원.
       _a.copy(player.pos).setY(.12); _d.set(mx - _a.x, 0, mz - _a.z);
       impact.beam(_a, _d, _d.length(), i % 2 ? VIOLET : MAGENTA, { speed: 30, tail: 3.2, width: .14, delay: i * .02 });
@@ -179,12 +183,19 @@ export const SIGNATURES = {
   // 별꼴 한 획이 공허 균열(짙은 굵은 획 + 자홍 칼날 자국)로 그어지고, 획 끝(도착점)에 공허 기둥이 솟았다 꺼진다. 별의 반지름은
   // 점멸이 이어질수록 3.4 → 5.6m 로 벌어져 나선처럼 퍼진다. 끝(total 2초)에 균열이 시작점으로 빨려 닫히는 선 + 시계판 + 작은 고리.
   void_step(ctx) {
-    const { impact, player, lite } = ctx; const P = 8, LAG = .045, END = 2 - LAG, px = player.pos.x, pz = player.pos.z;
-    impact.mark(player.pos, NIGHT, { radius: 6.5, life: END, style: MARK_STYLE.thorn, angle: .3 });
+    // 시전 지점(c.data.origin): 서명이 불릴 때(.045초)는 이미 첫 점멸로 영웅이 옮겨 갔을 수 있다 — 별·닫힘·표적 거리를 시전 지점 기준으로.
+    const { impact, player, lite } = ctx; const o = ctx.origin ?? player.pos, P = 8, LAG = .045, END = 2 - LAG, px = o.x, pz = o.z;
+    impact.mark(o, NIGHT, { radius: 6.5, life: END, style: MARK_STYLE.thorn, angle: .3 });
     const node = (v, k, R) => v.set(px + Math.cos(k / P * 6.2831853 + .2) * R, .5, pz + Math.sin(k / P * 6.2831853 + .2) * R);
+    // 표적 위(2차): skills.js 점멸 표적 순번(시전 지점 c.data.origin 18m 안, game.enemies 순서, n 번째 = list[(n*3+1) % 길이])대로 획이 실제 표적에서 표적으로
+    // 이어진다(도착 자리 ±1.5m 난수 오프셋은 표시하지 않는다). 표적이 둘 미만이거나 순번이 한 표적에 모이면(한 적 둘레를 도는 점멸) 예전 별꼴 자리.
+    const ts = ctx.targets?.(64, 18, false, o) ?? [], tp = (v, n) => { const e = ts[(n * 3 + 1) % ts.length]; return v.set(e.pos.x, .5, e.pos.z); };
+    // 순번이 한 표적으로 모이면(표적 3명이면 (n*3+1)%3 이 늘 1) 획이 전부 사라지므로 별꼴로 돌아간다.
+    let onTargets = false;
+    for (let n = 1; n < 12 && !onTargets && ts.length > 1; n++) onTargets = (n * 3 + 1) % ts.length !== 1 % ts.length;
     for (let i = 1, step = lite ? 2 : 1; i < 12; i += step) {
       const j = (i * 3) % P, k = ((i + 1) * 3) % P, R0 = 3.4 + i * .18, R1 = 3.4 + (i + 1) * .18;
-      node(_a, j, R0); node(_b, k, R1);
+      if (onTargets) { tp(_a, i - 1); tp(_b, i); if (_a.distanceToSquared(_b) < .25) continue; } else { node(_a, j, R0); node(_b, k, R1); }
       _d.copy(_b).sub(_a); const len = _d.length(), t = i * .13 - LAG;
       impact.beam(_a, _d, len, i % 2 ? MAGENTA : VIOLET, { speed: 70, tail: 0, width: .3, fade: .5, delay: t });
       const hit = t + len / 70;
@@ -198,7 +209,7 @@ export const SIGNATURES = {
       node(_a, k * (P / n), 5.8); _a.y = .3; _d.set(px - _a.x, 0, pz - _a.z); const l = _d.length();
       impact.beam(_a, _d, l, k % 2 ? MAGENTA : DEEP, { speed: l / .2, tail: 1.6, width: .11, delay: END - .2 });
     }
-    impact.mark(player.pos, VIOLET, { radius: 7, life: .55, style: MARK_STYLE.clock, delay: END - .05 });
+    impact.mark(o, VIOLET, { radius: 7, life: .55, style: MARK_STYLE.clock, delay: END - .05 });
     impact._emit(IMPACT_KIND.ring, px, 1, pz, 3.2, MAGENTA, .4, { grow: 1, delay: END });
   },
   // 야행 · 그림자연무(각성 강화 2026-10-30) — 실루엣 = '안으로 감기는 나선 행렬': 판정 세 박자(0/.1/.2초)마다 칼날 행렬이
