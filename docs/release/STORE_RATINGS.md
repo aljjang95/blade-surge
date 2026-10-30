@@ -61,3 +61,28 @@
 
 ## 4. `src/data/game-rating.js` 채널별 값(payment-readiness 레인 반영용)
 - 아직 확정된 스토어 등급 없음: play·onestore 모두 `status: 'pending'`. IARC 제출 뒤 한국 등급·IARC 인증 ID를 채운다.
+
+## 5. 원스토어 우선 전략 (지휘 2026-10-31) — 근거와 준비 상태
+
+### 5.1 카롬 마스터 선례 (aljjang95/carom-master, 2026-10-31 확인)
+- `public/legal/game-info.html`: 이용등급 "전체이용가 — **원스토어 IARC 대한민국 결과**"를 표시한다. 등급분류 경로는 "원스토어 IARC · 대한민국(KR)", IARC 인증 ID는 `7b6a5e95-a731-8010-8150-3f8dc1e042f7`(발급 2026-09-08)이다. 같은 페이지에 "GRAC 직접 심사 번호는 별도로 기재하지 않습니다. 위 IARC 인증 ID는 GRAC 직접 심사 번호가 아닙니다."라고 적혀 있다.
+- `docs/RELEASE-CHECKPOINT-20260909.md`: 원스토어에서 받은 등급을 다른 채널(토스)에 재사용하는 것을 전제로, 기존 IARC 인증 ID·발급일·상품 ID로 증빙 방법을 문의했다(새 등급분류 신청 아님).
+- `docs/BUSINESS.md`, `docs/PORTONE-OPERATIONS.md`: KG 추가 MID 신청과 정식 릴리스 전 게이트로 "게임제작업·배급업 등록 + 등급분류·표시"를 둔다. `scripts/release-gates.ts`는 `ratingAuthority`로 `IARC` 또는 `GRAC`를 허용한다.
+- **결론:** 카롬은 원스토어 IARC 결과와 IARC 인증 ID로 웹 등급 표시와 KG MID 준비를 했다. 블레이드 서지도 같은 경로가 가능하다. 다만 RATING_DECISION.md 3장(직접 운영하는 웹은 자체등급분류 대체 불가라는 해석)과 충돌하므로, 이 해석 차이는 지휘·대표님 결정으로 기록한다. 카롬은 GRAC 직접 번호가 아니라고 명시해 표시했다.
+
+### 5.2 등급 번호를 받는 가장 빠른 길
+- 원스토어 공식 가이드: ONEconsole에서 IARC 설문을 직접 작성하거나, **다른 스토어에서 받은 IARC 인증 ID를 등록**할 수 있다.
+- Play IARC 설문은 이미 저장했다(한국 12세). 인증 ID는 Play 검토 전송 뒤에 발급되는데, 검토 전송은 대시보드 필수 단계 때문에 잠겨 있다. 그래서 **원스토어에서 직접 설문하는 쪽이 더 빠르다.** 같은 IARC 엔진이라 한국 결과는 12세가 나올 것으로 예상한다.
+- 15세 신청 원칙과의 관계: IARC 결과는 문항 답으로 정해진다. 원하는 등급을 직접 고를 수 없다. 사실대로 답하면 12세가 나온다. 표시를 15세로 올리는 것은 사업자 판단이고, 15세로 표시하는 것은 허용된다(높은 쪽).
+
+### 5.3 원스토어 출시용 서명 (확인 결과)
+- 서명 금고에 `BLADESURGE_ONESTORE`가 **없다**. 원스토어 키는 BADUK_ONESTORE·HLB_ACADEMY_ONESTORE·SINGICHUNGMAN_ONESTORE·TLLREMOTE_RELEASE뿐이다. 또 APK 서명 허용 목록은 `BADUK_ONESTORE`만 있다(75-cloud-session).
+- 필요한 일:
+  1. PC에서 `admin.ps1 -AddSigning BLADESURGE_ONESTORE -SigningAlias bladesurge-onestore`로 업로드 키를 생성한다.
+  2. apex-skill-forge `claude/cloud/broker/signer`의 APK 허용 목록에 `BLADESURGE_ONESTORE → com.theluxurylord.bladesurge`를 추가하는 PR을 낸다.
+  3. `-DeploySigner`를 실행한다.
+  4. 출시 APK마다 `-ApproveRelease <패키지> -ApproveSha256 <해시>`로 1회용 승인을 받는다.
+- 등급 설문 자체는 바이너리 없이 앱 등록만으로 진행할 수 있다(원스토어 가이드상 상품 기본 정보 단계). 그래서 서명 키는 등급과 병렬로 준비하면 된다.
+
+### 5.4 지금 막힌 것
+- ONEconsole 로그인 만료. 대표님이 클라우드 데스크톱에서 `tllhouse` 계정으로 로그인 한 번 하면 된다. 그 뒤 앱 등록 확인 → (없으면) 앱 등록 → IARC 설문 순서로 진행한다.
