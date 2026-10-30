@@ -56,6 +56,7 @@ try {
       const beacon = p.beacon, ringR = g => g?.geometry?.parameters?.outerRadius ?? null;
       return {
         heroRing: { shadow: ringR(beacon?.shadowRing), primary: ringR(beacon?.primaryRing), focus: ringR(beacon?.focusRing) },
+        gradeRingDiameter: p.gradeAura?.ring?.scale?.x ?? null,
         foeRings: r ? r.rings.geometry.instanceCount : null,
         foeRingRadius: r ? Array.from(r.ringAttr.array.slice(2, 3)) : null,
         enemyMarkers: b.enemies.filter(e => e.marker).map(e => ({ boss: !!e.isBoss, outer: ringR(e.marker) })),
