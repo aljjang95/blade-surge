@@ -52,6 +52,10 @@ test('그림자 표식·공허 보법 서명은 ctx.targets 가 주는 실제 �
   const w = make(); ROGUE.shadow_mark({ ...base, impact: w, targets: () => [] } as any);
   expect(slots(w).filter((s) => s.kind === IMPACT_KIND.mark && s.style === MARK_STYLE.reticle).length).toBe(6);
   // 공허 보법: 표적이 있으면 예외 없이 그리고 Math.random 을 쓰지 않는다(표적 하나면 같은 자리 획은 건너뛴다).
+  // 표적 3명: 순번 (n*3+1)%3 이 늘 같은 표적이라 별꼴로 돌아가 획이 남는다(Codex 리뷰).
+  const three = [...ts, { pos: new THREE.Vector3(2, 0, -8) }];
+  const cuts = (list: any[]) => { const u = make(); ROGUE.void_step({ ...base, impact: u, targets: () => list } as any); return slots(u).filter((x) => x.kind === IMPACT_KIND.cut).length; };
+  for (const list of [[ts[0]], ts, three, [...three, { pos: new THREE.Vector3(9, 0, 9) }]]) expect(cuts(list)).toBeGreaterThan(5);
   for (const list of [ts, [ts[0]], []]) {
     const u = make();
     expect(counting(() => ROGUE.void_step({ ...base, impact: u, targets: () => list } as any))).toBe(0);

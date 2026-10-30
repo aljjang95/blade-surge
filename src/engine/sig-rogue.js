@@ -188,11 +188,14 @@ export const SIGNATURES = {
     impact.mark(o, NIGHT, { radius: 6.5, life: END, style: MARK_STYLE.thorn, angle: .3 });
     const node = (v, k, R) => v.set(px + Math.cos(k / P * 6.2831853 + .2) * R, .5, pz + Math.sin(k / P * 6.2831853 + .2) * R);
     // 표적 위(2차): skills.js 점멸 표적 순번(시전 지점 c.data.origin 18m 안, game.enemies 순서, n 번째 = list[(n*3+1) % 길이])대로 획이 실제 표적에서 표적으로
-    // 이어진다(도착 자리 ±1.5m 난수 오프셋은 표시하지 않는다). 표적이 둘 미만이면(한 적 둘레를 도는 점멸) 예전 별꼴 자리.
+    // 이어진다(도착 자리 ±1.5m 난수 오프셋은 표시하지 않는다). 표적이 둘 미만이거나 순번이 한 표적에 모이면(한 적 둘레를 도는 점멸) 예전 별꼴 자리.
     const ts = ctx.targets?.(64, 18, false, o) ?? [], tp = (v, n) => { const e = ts[(n * 3 + 1) % ts.length]; return v.set(e.pos.x, .5, e.pos.z); };
+    // 순번이 한 표적으로 모이면(표적 3명이면 (n*3+1)%3 이 늘 1) 획이 전부 사라지므로 별꼴로 돌아간다.
+    let onTargets = false;
+    for (let n = 1; n < 12 && !onTargets && ts.length > 1; n++) onTargets = (n * 3 + 1) % ts.length !== 1 % ts.length;
     for (let i = 1, step = lite ? 2 : 1; i < 12; i += step) {
       const j = (i * 3) % P, k = ((i + 1) * 3) % P, R0 = 3.4 + i * .18, R1 = 3.4 + (i + 1) * .18;
-      if (ts.length > 1) { tp(_a, i - 1); tp(_b, i); if (_a.distanceToSquared(_b) < .25) continue; } else { node(_a, j, R0); node(_b, k, R1); }
+      if (onTargets) { tp(_a, i - 1); tp(_b, i); if (_a.distanceToSquared(_b) < .25) continue; } else { node(_a, j, R0); node(_b, k, R1); }
       _d.copy(_b).sub(_a); const len = _d.length(), t = i * .13 - LAG;
       impact.beam(_a, _d, len, i % 2 ? MAGENTA : VIOLET, { speed: 70, tail: 0, width: .3, fade: .5, delay: t });
       const hit = t + len / 70;
