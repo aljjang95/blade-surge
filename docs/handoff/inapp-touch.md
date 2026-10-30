@@ -35,6 +35,12 @@
 | 키보드 위 채팅 입력창 | 통과 | 통과(390x700: 입력창 bottom 401 ≤ 보이는 높이 406) |
 | 소리 첫 터치 뒤 | 측정 불가(노출 없음) | running 4/4 |
 
+## 운영 확인 (2026-10-30)
+- #437 → `eb75659` 배포, #439 → `e95c29a` 배포. readback `https://blade.tllhouse.com/version.json` sha `e95c29a94aa3c7ad6ea214cfaf5c5f9119e0da71`, dirty=false.
+- 운영 주소 `NODE_USE_ENV_PROXY=1 node tools/qa/inapp-touch.mjs --origin=https://blade.tllhouse.com`: 4조합 모두 통과(앱 바 resize 중 전투·로비 조이스틱 유지, 영역 밖 드래그, 조이스틱+공격+스킬 동시, 새는 touchmove 0, HUD 겹침·가림 0, 키보드 위 입력창, 소리 running), `/api/social/me` 401 **0건**(#437 배포 직후엔 조합마다 1건 → #439로 제거).
+- #439 원인: 운영은 계정 모듈(`src/net/secure-storage.js`)이 소셜 클라이언트보다 먼저 같은 기기 키를 만들어, 소셜 쪽이 새 키인 줄 몰랐다. 키 생성 지점에서도 noprofile 표지를 남긴다.
+- 하네스는 운영 첫 실행 로그인 시트에서 '게스트로 시작'을 누르고, 실패하면 `fail-*.png`를 남긴다. `--limit=N`으로 일부만 돌린다.
+
 ## 남은 것
 - **실기기 확인은 대표님 체험 항목**: 갤럭시 Threads 앱에서 blade.tllhouse.com 링크를 열고 전투 1-1에서 조이스틱을 끌면서 공격을 누른 채 위아래로 크게 움직여 보기(앱 바가 접혀도 끊기지 않아야 함). 헤드리스 Chromium은 실제 Threads/Instagram WebView의 네이티브 제스처(스와이프로 닫기 등)를 재현하지 못한다.
 - 관찰한 결함(이 레인 범위 밖, 클리어 루프·첫인상 레인 소유): 세로 390x700 전투 시작 때 "네브 · 여섯 번째 증인" 소개 카드가 주인공 위를 덮는다(`work/qa/inapp-after/threads-390x700.png`). 가장자리 띠로 옮겨야 한다.
