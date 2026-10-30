@@ -49,6 +49,7 @@ export class BattleTutorial {
     // 접힌 안내 버튼은 한 번 열어 보기 전까지 은은하게 맥동한다(기기 저장, 세이브와 무관).
     this.toggleOpened = readToggleOpened();
     this.expandUntil = 0;
+    this.toastLayer = null; this.placedNotices = -1; this.placeAt = 0;
     this.highlightTarget = null;
     this.healTipLevel = 0;
     this.healTipUntil = 0;
@@ -185,6 +186,11 @@ export class BattleTutorial {
     this.syncVisibility();
     if (!this.battle?.active || this.battle.paused) return;
     if (this.expanded && this.battle.elapsed >= this.expandUntil) { this.setExpanded(false); this.restorePlayFocus(); }
+    // 펼친 동안 전투 안내 띠가 생기거나 사라지면(1-1 목표 안내는 1.2초 뒤에 뜬다) 카드 자리를 다시 잰다. 그 밖에는 0.5초마다 한 번만.
+    if (this.expanded) {
+      const notices = this.toastLayer?.childElementCount ?? (this.toastLayer = document.getElementById?.('toast-layer'))?.childElementCount ?? 0;
+      if (notices !== this.placedNotices || this.battle.elapsed >= this.placeAt) { this.placedNotices = notices; this.placeAt = this.battle.elapsed + .5; this.placeCard(); }
+    }
     if (!this.phase) return;
     if (this.battle.roomsCleared > 0 && !this.reviewing) { this.finish(false); return; }
     const p = this.battle.player;

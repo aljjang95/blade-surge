@@ -48,13 +48,15 @@ try {
     for (const phase of ['move', 'attack', 'dodge', 'skill', 'clear']) {
       const m = await page.evaluate(({ phase, HUD }) => {
         const app = window.app, t = app.tutorial;
-        t.setExpanded(true, 60); t.show(phase);
-        for (let i = 0; i < 6; i++) app.step(1 / 60, i === 5);
+        // 첫 단계에서만 펼치고, 단계마다 실제 시간 1.5초를 흘려 전투 안내 띠(1.2초 뒤 등장)가 생긴 뒤의 자리를 잰다.
+        if (!t.expanded) t.setExpanded(true, 60);
+        t.show(phase);
+        for (let i = 0; i < 90; i++) app.step(1 / 60, i === 89);
         const card = document.querySelector('#battle-tutorial .tutorial-card');
         const rc = card && !card.hidden ? card.getBoundingClientRect() : null;
         const area = (a, c) => { const w = Math.min(a.right, c.right) - Math.max(a.left, c.left), h = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top); return w > 0 && h > 0 ? Math.round(w * h) : 0; };
         const hits = [];
-        if (rc) for (const sel of HUD) for (const el of document.querySelectorAll('#hud ' + sel)) {
+        if (rc) for (const sel of [...HUD.map(x => '#hud ' + x), '#toast-layer .toast']) for (const el of document.querySelectorAll(sel)) {
           const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) continue;
           const a = area(rc, r); if (a > 0) hits.push({ sel, area: a });
         }
