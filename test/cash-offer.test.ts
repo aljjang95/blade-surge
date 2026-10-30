@@ -43,9 +43,9 @@ describe('웹 상점 현금 상품', () => {
     expect(payCalls).toEqual([]);
   });
 
-  test('heroPurchase가 없어도(계정 서버 꺼짐) 웹은 준비 중, 서버 호출 없음', async () => {
+  test('heroPurchase가 없으면(계정 서버 꺼짐) 웹 현금 상품은 숨기고 서버 호출 없음', async () => {
     const offer = cashOffer('starter', { channel: 'web', heroPurchase: null });
-    expect(offer?.mode).toBe('pending');
+    expect(offer).toBeNull();
     expect(await payCash(offer, {})).toEqual({ ok: false, reason: 'unavailable' });
   });
 

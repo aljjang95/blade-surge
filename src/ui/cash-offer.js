@@ -20,11 +20,13 @@ export function webCatalogProduct(skuId) {
  * @returns {{ mode: 'play', productId: string, formattedPrice: string, type: string } | { mode: 'web', productId: string, formattedPrice: string, type: string } | { mode: 'pending', productId: string, type: string } | null}
  */
 export function cashOffer(skuId, { channel = STORE_CHANNEL, billing = null, heroPurchase = null } = {}) {
-  if (channel !== 'web') {
-    if (billing?.available?.() !== true) return null;
+  // Play 결제가 연결돼 있으면(Play 앱) 항상 Play 경로. 웹 포트원으로 새지 않는다.
+  if (billing?.available?.() === true) {
     const p = billing.productForShopSku?.(skuId);
     return p && p.sellable === true && typeof p.formattedPrice === 'string' ? { mode: 'play', productId: p.id, formattedPrice: p.formattedPrice, type: p.type } : null;
   }
+  // 웹 채널이고 계정 서버가 구매 트리거를 꽂았을 때만 웹 상품을 보인다(계정 서버가 없으면 지금처럼 숨긴다).
+  if (channel !== 'web' || !heroPurchase) return null;
   const p = webCatalogProduct(skuId);
   if (!p) return null;
   let on = false, price = null;

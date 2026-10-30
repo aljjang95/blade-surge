@@ -33,10 +33,10 @@ export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
 };
 
 /** webBilling은 서버 권위 계정에게만 켠다(그림자·로컬 계정은 roster를 서버가 강제하지 못해 현금 판매를 열지 않는다). */
-export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId),
+export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null, deps: PortoneDeps = {}): Record<string, boolean> {
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId, deps.webRating),
     // 웹 결제창의 간편결제 선택지(카드는 항상). 웹 결제가 켜진 계정에만 의미가 있다.
-    ...(() => { const on = authority === 'server' && webBillingOn(env, accountId), m = webPayMethods(env);
+    ...(() => { const on = authority === 'server' && webBillingOn(env, accountId, deps.webRating), m = webPayMethods(env);
       return { webKakaoPay: on && m.includes('KAKAOPAY'), webNaverPay: on && m.includes('NAVERPAY'), webTossPay: on && m.includes('TOSSPAY') }; })() };
 }
 
@@ -107,7 +107,7 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       return json(await oauthFinish(c, auth, await readJson(request)));
     }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
-    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
+    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority, deps))); }
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
       const auth = await requireSession(c);
       await rateLimit(c, 'iapRead', auth.account.account_id);

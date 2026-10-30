@@ -31,3 +31,20 @@ test('게임 금칙어가 채팅에서 가려지고 일상 문장은 건드리�
   expect(maskBanned('니애미', extra)).toBe('***');
   for (const ok of ['보스 보지 말고 피해', '오늘 자지 말고 레이드 가자', '시바견 귀엽다', '미친 데미지네', '애비게일', 'Dickens', '졸라맨', '불이 꺼져요', '닥쳐올 위기', '섹스턴', '개새싹', 'Scunthorpe']) expect(maskBanned(ok, extra)).toBe(ok);
 });
+
+test('채널별 등급: 웹=GRAC, Play=IARC 인증 ID, 원스토어=등급분류번호. 값이 없으면 준비 중', async () => {
+  const { GAME_RATINGS, ratingFor, ratingReady } = await import('../src/data/game-rating.js');
+  expect(ratingFor('web')).toBe(GAME_RATING);
+  expect(ratingFor('unknown-channel')).toBe(GAME_RATING);
+  for (const ch of ['googleplay', 'onestore']) {
+    expect(ratingFor(ch)).toBe(GAME_RATINGS[ch]);
+    expect(ratingLabel(ratingFor(ch))).toBe('게임물 등급분류 신청 준비 중');
+    expect(ratingReady(ratingFor(ch))).toBe(false);
+  }
+  expect(ratingLabel({ authority: 'IARC', status: 'rated', age: '12', number: 'a1b2c3d4-iarc', date: null, descriptors: [] })).toBe('12세이용가 · IARC 인증 ID a1b2c3d4-iarc');
+  expect(ratingLabel({ authority: 'ONESTORE', status: 'rated', age: '15', number: 'OS-2026-0001', date: null, descriptors: [] })).toBe('15세이용가 · 등급분류번호 OS-2026-0001');
+  // 결제 게이트용: 결정+연령+번호가 모두 있어야 준비됨
+  expect(ratingReady(GAME_RATING)).toBe(false);
+  expect(ratingReady({ status: 'rated', age: '15', number: ' ', date: null, descriptors: [] })).toBe(false);
+  expect(ratingReady({ status: 'rated', age: '15', number: 'CC-1', date: null, descriptors: [] })).toBe(true);
+});
