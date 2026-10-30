@@ -50,7 +50,9 @@ AAB 가 서명 서비스 한도(약 100MB)에 닿고 콘텐츠(3개월치 지역
 
 ### 갱신 3 (2026-10-31, vc5 — AAB 132.4MB → 100MB 미만)
 - 원인: core 가 83MB → 193MB(비압축)로 늘었다. 장비 무기 Tripo GLB 102개(`models/item-weapons`, 41.6MB, AAB 압축 후 37.1MB)가 가장 컸고 몬스터 GLB(`assets/`, 83MB)가 그다음이다.
-- remote 로 이동(`asset-split.json`): `weapons`(무기 GLB 102개 41.6MB), `item-icons`(장비 렌더 아이콘 77개 2.8MB), `ui-art`(각인 일러스트 2.4MB + 아바타 상점 초상 0.7MB).
+- remote 로 이동(`asset-split.json`): `weapons`(무기 GLB 102개 41.6MB), `item-icons`(장비 렌더 아이콘 77개 2.8MB), `ui-art`(각인 일러스트 2.4MB).
 - 무기 GLB 런타임(`src/engine/item-weapon-glb.js`): 스트리밍 채널에서는 **이미 보관된 파일만** 부팅 선로드가 읽는다(첫 실행 부팅이 다운로드를 기다리지 않음). 아이템이 화면에 나올 때(`item-visual-model`)는 그 아이템 GLB 만 받아 기다리고(8초 상한), 드랍(`loot-models`)·장착(`look.js`)은 뒤에서 받아 두고 이번에는 절차적 무기로 그린다. 실패해도 `failed` 에 넣지 않아 다음에 다시 시도한다. 사전 내려받기는 와이파이 한가할 때 `weapons`·`ui-art`, 로비 진입 때 `item-icons`(셀룰러 포함).
+- 되돌린 것: 아바타 상점 초상(`img/tll/avatars`, 0.7MB)을 remote 로 옮기면 `remote-assets-qa` 의 소환 단계에서 로컬 404(`avatar_barbarian_werewolf-v2.webp`)가 났고 부팅 중 호스트 요청도 생겨 core 로 되돌렸다(원인 미규명: 소환 화면의 아바타 초상 경로).
+- 알려진 기존 QA 실패 2건(이번 변경과 무관): 부팅 중 `starter-village` 소품 호스트 요청, 소환 단계의 `dungeon-forge-keyart.webp` 로컬 404.
 - 시도하지 않은 것: 2지역 이후 몬스터 GLB(`assets/tll_ch2..7_*`, 비압축 약 50MB)는 부팅 예열(`MODEL_LIST`)과 전투 동기 스폰(`app.models[def.model]`) 때문에 지연 로딩 개편이 먼저 필요하다. 다음 크기 압박 때의 1순위 후보.
 - **웹 배포 전에는 새 remote 파일(무기 GLB·아이콘·각인)이 호스트에 없다.** 앱 업로드 전에 반드시 웹 배포 → `check-remote-assets.mjs` 로 확인한다(위 '정식 호스트 요구사항').
