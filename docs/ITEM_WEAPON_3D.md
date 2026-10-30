@@ -28,7 +28,7 @@
 
 ## 제작 흐름
 
-Tripo 원화(아이콘 정체성, Nano Banana 9:16) → H3.1 생성(2K·PBR·Polycount 3000이면 Retopo 생략, 45크레딧) → `blender_weapon_prep` → `register-item-weapon` → `bun run check`.
+Tripo 원화(아이콘 정체성, Nano Banana 9:16) → H3.1 생성(2K·PBR·Polycount 3000이면 Retopo 생략, 실측 자루당 약 86크레딧) → `blender_weapon_prep` → `register-item-weapon` → `bun run check`.
 
 ```bash
 blender -b --python-exit-code 1 --python tools/asset-library/blender_weapon_prep.py -- \
