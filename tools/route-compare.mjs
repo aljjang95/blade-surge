@@ -1,5 +1,5 @@
 // 던전 동선 비교 — 같은 시드·영웅·저장에서 AUTO 로 mode=full / mode=direct 를 돌려 시간·보상을 견준다.
-//   node tools/route-compare.mjs [--stages 1-1,1-5,1-10,2-5,3-5] [--hero knight] [--level 45] [--levels 2-5=40,3-5=50]
+//   node tools/route-compare.mjs [--stages 1-1,1-5,1-10,2-5,3-5] [--hero knight] [--level rec|<숫자>] [--levels 2-5=40,3-5=50]
 //        [--root <dist 가 있는 체크아웃>] [--seed 1] [--max-sec 900] [--determinism 1-1] [--out work/qa/route-compare/<시각>]
 // 전제: `bun run build` 산출물(dist). vite preview + Playwright, 고정 dt(1/60)로 window.app 을 진행한다. p.auto 는 true(게임의 AUTO 경로).
 // 동선은 localStorage 'bs.dungeonRoute.v1' 로만 바꾼다(게임이 입장 때 읽는다). 시드·영웅·레벨·에너지는 두 동선에 똑같이 적용한다.
@@ -12,13 +12,14 @@ import { CHROME } from './chrome.mjs';
 import { installAutoStarter } from './qa-starter.mjs';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
+import { recommendedLevel } from '../src/data/loot-tables.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const projectRoot = path.resolve(import.meta.dirname, '..');
 // --root: dist 를 만든 다른 체크아웃(기본은 이 저장소). 결과는 항상 이 저장소의 work/ 아래에 쓴다.
 const root = path.resolve(arg('root', projectRoot));
 const STAGES = arg('stages', '1-1,1-5,1-10,2-5,3-5').split(',').map((s) => s.trim()).filter(Boolean);
-const HERO = arg('hero', 'knight'), LEVEL = Number(arg('level', 45)), SEED = Number(arg('seed', 1)) >>> 0;
+const HERO = arg('hero', 'knight'), LEVEL = arg('level', 'rec'), SEED = Number(arg('seed', 1)) >>> 0;
 const LEVELS = Object.fromEntries(arg('levels', '').split(',').filter(Boolean).map((x) => x.split('=')));
 const MAX_SEC = Number(arg('max-sec', 900)), DET = arg('determinism', STAGES[0]);
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
@@ -34,7 +35,8 @@ const storyEvents = STORY_EVENTS.map(({ id, choices }) => ({ id, choices: choice
 /** 관문 하나 × 동선 하나. 새 컨텍스트(빈 저장)에서 시작해 매번 같은 조건이다. */
 async function runOne(code, mode) {
   const [ch, st] = code.split('-').map(Number);
-  const level = Number(LEVELS[code] ?? LEVEL);
+  // --level rec(기본): 관문 권장 레벨. 숫자면 전 관문 고정, --levels 로 관문별 덮어쓰기.
+  const level = Number(LEVELS[code] ?? (LEVEL === 'rec' ? recommendedLevel(ch, st) : LEVEL));
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce', serviceWorkers: 'block' });
   const page = await ctx.newPage();
   const errors = [];
@@ -92,7 +94,7 @@ async function runOne(code, mode) {
     }
     const res = await page.evaluate(() => {
       const a = window.app, b = a.battle;
-      for (let i = 0; i < 900 && !b.result; i++) a.step(1 / 60, false);
+      for (let i = 0; i < 900 && !(b.result && a.ui.resultData === b.result && b.result.reward); i++) a.step(1 / 60, false);
       const r = b.result, rw = r?.reward;
       const opt = b.world.rooms.filter((x) => x.type !== 'start' && x.type !== 'boss');
       return { hasResult: !!r, win: !!r?.win, elapsed: +(r?.time ?? b.elapsed).toFixed(2), battleElapsed: +b.elapsed.toFixed(2), kills: r?.kills ?? b.kills,
