@@ -36,7 +36,7 @@ test('trial judge: pass, fail, no-fact, lost', () => {
   expect(judgeBounty(def, { ...good, win: false })).toMatchObject({ ok: false, reason: 'lost' });
   expect(judgeBounty(def, null)).toMatchObject({ ok: false, reason: 'lost' });
   expect(judgeBounty(null, good)).toMatchObject({ ok: false, reason: 'unknown' });
-  expect(t.fact).toBeTruthy();
+  expect(t!.fact).toBeTruthy();
   const hunt = bountyDef('story:1-1:hunt')!; expect(judgeBounty(hunt, { win: true }).ok).toBe(true);
 });
 
@@ -48,7 +48,7 @@ test('completeBounty: rewards once, never twice, locked tiers refuse', () => {
   expect(completeBounty(st, sv, 'adept:1-1:hunt', r)).toMatchObject({ ok: false, reason: 'locked' });
   expect(completeBounty(st, save(), 'story:1-1:hunt', r)).toMatchObject({ ok: false, reason: 'locked' });
   expect(completeBounty(st, sv, 'story:1-1:trial', { win: true })).toMatchObject({ ok: false, reason: 'no-fact' });
-  expect(st.done['story:1-1']).toBe(1);
+  expect((st.done as Record<string, number>)['story:1-1']).toBe(1);
   expect(completeBounty(st, save(open(), { '1-1': 1 }), 'adept:1-1:hunt', r).ok).toBe(true);
   expect(completeBounty(st, sv, 'bogus', r)).toMatchObject({ ok: false, reason: 'unknown' });
 });
