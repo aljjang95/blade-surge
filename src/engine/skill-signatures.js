@@ -4,7 +4,7 @@ import { SIGNATURES as MAGE, PRELUDES as MAGE_PRELUDES } from './sig-mage.js';
 import { SIGNATURES as ROGUE, PRELUDES as ROGUE_PRELUDES } from './sig-rogue.js';
 import { SIGNATURES as BARBARIAN, PRELUDES as BARBARIAN_PRELUDES } from './sig-barbarian.js';
 
-/** @typedef {{ fx: any, impact: any, player: any, at: any, f: any, lite: boolean, scale: number, targets?: (max?: number, range?: number, sorted?: boolean) => any[] }} SigCtx */
+/** @typedef {{ fx: any, impact: any, player: any, at: any, f: any, lite: boolean, scale: number, origin?: any, targets?: (max?: number, range?: number, sorted?: boolean, center?: any) => any[] }} SigCtx */
 export { screenReach, SCREEN_REACH };
 
 /**

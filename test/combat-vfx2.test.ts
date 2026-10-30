@@ -34,6 +34,11 @@ test('sigTargets: skills.js targets 와 같은 규칙(살아 있고 출현 중 �
   expect(sigTargets(game, player, 2, 13).map((t) => t.pos.x)).toEqual([2, 6]);
   expect(sigTargets(game, player, 8, 13, false).map((t) => t.pos.x)).toEqual([9, 2, 6]);
   expect(sigTargets({}, player)).toEqual([]);
+  // center: 공허 보법처럼 저장된 시전 지점 기준(영웅이 이미 첫 점멸로 옮겨 간 뒤에도 같은 표적).
+  const moved = { pos: new THREE.Vector3(17, 0, 0), distTo(o: any) { return Math.hypot(o.pos.x - 17, o.pos.z); } };
+  const far = { enemies: [e(17, 0), e(-17, 0)] };
+  expect(sigTargets(far, moved, 64, 18, false).map((t) => t.pos.x)).toEqual([17]);
+  expect(sigTargets(far, moved, 64, 18, false, new THREE.Vector3()).map((t) => t.pos.x)).toEqual([17, -17]);
 });
 
 test('그림자 표식·공허 보법 서명은 ctx.targets 가 주는 실제 표적 위에 표식을 찍는다', () => {
