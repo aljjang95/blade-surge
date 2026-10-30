@@ -30,7 +30,9 @@ function plan() {
   const uas = Object.keys(IN_APP_UAS);
   if (flag('full')) return IN_APP_VIEWPORTS.flatMap(viewport => uas.map(ua => ({ ua, viewport })));
   const runs = IN_APP_VIEWPORTS.map((viewport, i) => ({ ua: uas[i % uas.length], viewport }));
-  return arg('limit') ? runs.slice(0, Number(arg('limit'))) : runs;
+  const only = arg('viewports')?.split(',');
+  const picked = only ? runs.filter(r => only.includes(`${r.viewport.width}x${r.viewport.height}`)) : runs;
+  return arg('limit') ? picked.slice(0, Number(arg('limit'))) : picked;
 }
 
 // 페이지 시작 전에 설치: 페이지 기본 동작(스크롤·당겨서 새로고침)이 일어났는지 window 버블 단계에서 기록한다.
@@ -221,7 +223,7 @@ async function battleChecks(page, cdp, viewport, out) {
     const t0 = performance.now();
     while (performance.now() - t0 < 4000 && p.cardState === 'idle') await new Promise(r => setTimeout(r, 100));
     const card = document.querySelector('#hud .neb-intro'); const r = card?.getBoundingClientRect();
-    const out = { state: p.cardState, visible: !!card && !card.hidden && r.width > 0 };
+    const out = { state: p.cardState, visible: !!card && !card.hidden && r.width > 0, placement: p.lastPlacement ?? null };
     if (out.visible) {
       out.rect = { left: Math.round(r.left), top: Math.round(r.top), right: Math.round(r.right), bottom: Math.round(r.bottom) };
       const T = window.__THREE, cam = app.renderer?.camera, pl = app.battle?.player;

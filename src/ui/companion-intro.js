@@ -34,6 +34,21 @@ export const HERO_CLEAR_RATIO = 0.22;
 const _hero = new THREE.Vector3();
 const CARD_GAP = 6;
 
+/** 카드 자리용 HUD 사각형. 크기는 있어도 지금 안 보이는 요소(연속 처치 표시처럼 opacity 0 대기)는 뺀다. 카드를 띄울 때 한 번만 부른다. */
+function visibleBlockers(selectors) {
+  const out = [];
+  for (const selector of selectors) {
+    for (const el of document.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+      out.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, id: el.id || selector });
+    }
+  }
+  return out;
+}
+
 /** 사각형이 원(주인공 둘레)과 겹치는가(순수). */
 export function rectHitsCircle(r, cx, cy, radius) {
   const dx = Math.max(r.left - cx, 0, cx - r.right), dy = Math.max(r.top - cy, 0, cy - r.bottom);
@@ -147,7 +162,7 @@ export class CompanionPresence {
     const viewW = innerWidth, viewH = innerHeight;
     const player = hud.querySelector('.hud-player')?.getBoundingClientRect();
     const cam = (document.querySelector('.oath-camera-details') || document.getElementById('battle-camera-controls'))?.getBoundingClientRect();
-    const blockers = collectHudBlockers(document.body, CARD_BLOCKERS);
+    const blockers = visibleBlockers(CARD_BLOCKERS);
     const hero = this.heroCircle(viewW, viewH);
     const topBelow = (left, width) => {
       let top = (player?.bottom ?? box.top) + CARD_GAP;
@@ -177,6 +192,8 @@ export class CompanionPresence {
       slots.push({ left: c.left, top, width: c.width, height: Math.ceil(this.card.getBoundingClientRect().height), compact: c.compact });
     }
     const pick = pickCardSlot(slots, blockers, hero, viewW, viewH);
+    // QA(tools/qa/inapp-touch.mjs)가 자리 선택 근거를 읽는다. 카드를 띄울 때 한 번만 갱신된다.
+    this.lastPlacement = { hero, slots, blockers: blockers.map(b => [b.id, Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]), picked: pick ? slots.indexOf(pick) : -1 };
     this.card.style.visibility = '';
     if (!pick) { this.card.hidden = true; return false; }
     this.applySlot(pick.left - box.left, pick.top - box.top, pick.width, pick.compact);
