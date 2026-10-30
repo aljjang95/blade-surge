@@ -7,6 +7,7 @@ export const LEGAL_PAGES = Object.freeze({
   privacy: Object.freeze({ href: '/privacy.html', label: '개인정보처리방침' }),
   support: Object.freeze({ href: '/support.html', label: '고객센터' }),
   odds: Object.freeze({ href: '/odds.html', label: '확률 정보' }),
+  gameInfo: Object.freeze({ href: '/game-info.html', label: '게임 정보·등급' }),
 });
 
 export const WITHDRAWAL_NOTICE = '구매 후 7일 이내 사용하지 않은 상품·보석은 청약철회할 수 있습니다. 사용했거나 즉시 지급되어 사용된 부분은 철회가 제한됩니다.';
@@ -26,7 +27,7 @@ import { BUSINESS_INFO as B } from '../shared/business-info.js';
 const link = (page) => `<a href="${page.href}" target="_blank" rel="noopener">${page.label}</a>`;
 
 /** 화면 가장자리에 작게 놓는 링크 줄(새 탭). */
-export function legalLinksHtml(pages = ['terms', 'refund', 'privacy', 'support', 'odds'], cls = 'legal-links') {
+export function legalLinksHtml(pages = ['terms', 'refund', 'privacy', 'support', 'odds', 'gameInfo'], cls = 'legal-links') {
   return `<nav class="${cls}" aria-label="약관 및 정책">${pages.map((k) => link(LEGAL_PAGES[k])).join('<span aria-hidden="true"> · </span>')}</nav>`;
 }
 

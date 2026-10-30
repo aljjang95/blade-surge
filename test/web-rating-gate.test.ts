@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { v1Harness } from './helpers/v1-harness';
+import { webRatingFromOnestoreIarc } from '../src/data/game-rating.js';
 
-// 웹(blade.tllhouse.com)은 스토어 자체등급이 적용되지 않는다: GRAC 등급분류번호가 들어오기 전까지 웹 포트원 실채널 판매는 서버가 닫는다.
+// 웹(blade.tllhouse.com)은 스토어 자체등급이 적용되지 않는다: 원스토어 IARC 인증 ID(웹 등급)가 들어오기 전까지 웹 포트원 실채널 판매는 서버가 닫는다.
 const STORE = 'store-test-0001';
 async function setup(env: Record<string, string>) {
   const h = await v1Harness({ env: { WEB_BILLING_ENABLED: 'true', PORTONE_STORE_ID: STORE, V1_SERVER_AUTHORITY_PERCENT: '100', ...env } as any });
@@ -13,7 +14,7 @@ async function setup(env: Record<string, string>) {
 }
 
 describe('웹 결제 등급 게이트', () => {
-  test('웹 등급번호가 없으면 실채널 intent는 503 rating-required, /me webBilling=false, 의도 행 없음', async () => {
+  test('웹 IARC 인증 ID가 없으면 실채널 intent는 503 rating-required, /me webBilling=false, 의도 행 없음', async () => {
     const { h, a } = await setup({ PORTONE_CHANNEL_KEY: 'channel-key-real-0001' });
     expect((await h.send('GET', '/me', undefined, a.token)).body.flags.webBilling).toBe(false);
     const r = await h.send('POST', '/iap/web/intent', { productId: 'remove_ads_v1' }, a.token);
@@ -22,9 +23,9 @@ describe('웹 결제 등급 게이트', () => {
     expect(h.db.sqlite.query('SELECT COUNT(*) AS n FROM iap_web_payments').get()).toEqual({ n: 0 });
   });
 
-  test('등급번호가 들어오면 실채널 intent가 열린다', async () => {
+  test('IARC 인증 ID가 들어오면 실채널 intent가 열린다', async () => {
     const { h, a } = await setup({ PORTONE_CHANNEL_KEY: 'channel-key-real-0001' });
-    (h.deps as any).webRating = { authority: 'GRAC', status: 'rated', age: '15', number: 'CC-OM-0001', date: '2026-11-20', descriptors: [] };
+    (h.deps as any).webRating = webRatingFromOnestoreIarc({ age: '12', certId: 'IARC-CERT-0001', date: '2026-11-20', descriptors: [] });
     expect((await h.send('GET', '/me', undefined, a.token)).body.flags.webBilling).toBe(true);
     expect((await h.send('POST', '/iap/web/intent', { productId: 'remove_ads_v1' }, a.token)).status).toBe(200);
   });
