@@ -45,11 +45,11 @@ export class ReadabilityView {
       fragmentShader: /* glsl */`
         uniform vec3 uColor; uniform float uTime; varying vec2 vUv; varying float vA;
         void main(){ vec2 q = vUv * 2. - 1.; float r = length(q);
-          float band = smoothstep(.70, .80, r) * (1. - smoothstep(.90, 1., r));
-          float inner = (1. - smoothstep(.0, .8, r)) * .16;
+          float band = smoothstep(.76, .84, r) * (1. - smoothstep(.92, 1., r));
+          float inner = (1. - smoothstep(.0, .8, r)) * .07;
           // 네 방향 짧은 눈금: 바닥 무늬와 섞이지 않게 '적' 표식으로 읽히도록.
           float a = atan(q.y, q.x) + uTime * .6; float tick = step(.82, abs(cos(a * 2.))) * smoothstep(.62, .7, r) * (1. - smoothstep(.98, 1., r));
-          float alpha = (band * .85 + inner + tick * .55) * vA; if (alpha < .01) discard;
+          float alpha = (band * .72 + inner + tick * .38) * vA; if (alpha < .01) discard;
           gl_FragColor = vec4(uColor * (1. + band * .4), alpha); }`,
       transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     }));
@@ -190,7 +190,7 @@ export class ReadabilityView {
     const vis = show > .01 && !!target; this.reticle.visible = vis; this.chevron.visible = vis; this.edge.visible = false;
     if (!vis) return;
     if (camera) this.placeEdge(target, camera, show);
-    const r = Math.max(.7, target.radius * 1.55) * (1 + pulse * .22);
+    const r = Math.max(.6, target.radius * 1.12) * (1 + pulse * .18);
     this.reticle.position.set(target.pos.x, .06, target.pos.z); this.reticle.scale.setScalar(r * 2);
     const top = target.headY + .8 + Math.sin(this.time * 5.2) * .09 - pulse * .12;
     this.chevron.position.set(target.pos.x, top, target.pos.z);
