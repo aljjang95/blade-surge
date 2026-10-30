@@ -31,6 +31,7 @@ import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-g
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel, dropItemLevel, progressItemLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
+import * as Bounty from './bounty-service.js';
 import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
 import { recordTormentRun, tormentStatus } from './torment-core.js';
@@ -1510,6 +1511,13 @@ export class Economy {
   }
   // ---------- 성장 여정 단계(서버 명령, docs/SERVER_AUTHORITY_GATES.md 4절) ----------
   /** 여정 상태. 이미 정규화된 객체(JourneyService 가 쥔 참조)는 그대로 쓴다. */
+  // 현상금 의뢰판(docs/BOUNTY_BOARD.md): 에너지 0, 캠페인 진행·필드 전리품·전투 경험치 없음.
+  bountySummary() { return Bounty.bountySummaryOf(this); }
+  bounties(limit = 8) { return Bounty.bountyList(this, limit); }
+  startBounty(id) { return Bounty.startBounty(this, id); }
+  settleBounty(result, stage) { return Bounty.settleBounty(this, result, stage); }
+  bountyShop() { return Bounty.bountyShop(this); }
+  buyBounty(itemId) { return Bounty.buyBounty(this, itemId); }
   journeyState() {
     const j = this.s.journey;
     if (!j || typeof j !== 'object' || Array.isArray(j) || !Array.isArray(j.claimedSteps)) this.s.journey = normalizeJourney(j);

@@ -46,6 +46,7 @@ import { playExpeditionIntro } from './expansion/cinematic.js';
 import { Wardrobe } from './expansion/wardrobe.jsx';
 import { JourneyService } from './game/journey-service.js';
 import { JourneyView } from './ui/journey.js';
+import { BountyView } from './ui/bounty.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
@@ -236,6 +237,7 @@ class App {
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks, this.models);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
+    this.bountyView = new BountyView(this);
     this.arsenalView = new ArsenalView(this);
     this.endgameHub = new EndgameHubView(this);
     await this.showcaseHero(this.eco.s.selected, true);
@@ -481,7 +483,13 @@ class App {
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     // 무한의 성: 넘겨받은 층이 지금 도전할 다음 층일 때만, 저장 상태로 다시 만든 정의로 출격한다(에너지 없음).
     const tower = stage?.tower ? this.eco.nextTowerStage() : null;
-    if (stage?.tower) {
+    // 현상금 의뢰: 저장에서 열림·미완료를 다시 확인해 만든 스테이지(에너지 0)로만 출격한다.
+    const bountyStart = stage?.bounty ? this.eco.startBounty(stage.bounty.id) : null;
+    if (stage?.bounty) {
+      if (this.account?.authority === 'server') { this.ui.toast('서버 계정의 현상금 의뢰는 준비 중입니다.', 'red'); return false; }
+      if (!bountyStart?.ok) { this.ui.toast('지금 받을 수 없는 의뢰입니다.', 'red'); return false; }
+      stage = bountyStart.stage;
+    } else if (stage?.tower) {
       if (!tower || tower.tower.floor !== stage.tower.floor || this.account?.authority === 'server') { this.ui.toast('지금 도전할 수 있는 층이 아닙니다.', 'red'); return false; }
       stage = tower;
     } else {
@@ -497,16 +505,23 @@ class App {
     }
     this.stageStarting = true;
     // 그 지역에 처음 들어가는 출격이면 입장 장면을 먼저 보여 준다(어느 진입 경로든 한 번, 건너뛰기 가능, docs/WORLD_BIBLE.md 5장).
-    if (!tower) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
+    if (!tower && !bountyStart) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
     this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
     try {
       // 무한의 성은 에너지를 쓰지 않으므로 실패 시 되돌릴 것도 없다(spent=false).
-      if (!tower) {
+      if (!tower && !bountyStart) {
         spent = this.eco.spendEnergy(stage.energy);
         if (!spent) {
           audio.play('ui_error');
+          // 현상금 의뢰판이 열려 있으면 에너지 0 활동으로 먼저 안내한다(리텐션 순간). 충전은 상점 메뉴에 그대로 있다.
+          const board = this.eco.bountySummary();
+          if (board.open && board.available > 0) {
+            const go = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 에너지 없이 받을 수 있는 현상금 의뢰가 ${board.available}건 있습니다. (충전은 상점에서)`, { ok: '의뢰판 열기', cancel: '닫기' });
+            if (go) { if (this.mode === 'battle') this.toLobby(); setTimeout(() => this.bountyView?.open(), 0); }
+            return false;
+          }
           const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
           if (ok) this.meta.openTab('shop', 'energy');
           return false;

@@ -12,6 +12,7 @@ import { normalizeAchievements } from './achievements.js';
 import { normalizeRunes, normalizeBlessing, restoreSockets } from './rune-economy.js';
 import { normalizeClearCard } from './clear-loop.js';
 import { normalizeSlain } from './kill-ledger.js';
+import { normalizeBounty } from './bounty-board.js';
 
 /** Additive migration: inventory, currency, campaign and hero records retain their existing validation. */
 export function normalizeSave(raw, fresh) {
@@ -19,6 +20,7 @@ export function normalizeSave(raw, fresh) {
   save.rpg = normalizeRpg(raw.rpg, Object.keys(ENEMIES));
   save.masterworks = normalizeMasterworks(raw.masterworks);
   save.journey = normalizeJourney(raw.journey);
+  save.bounty = normalizeBounty(raw.bounty); // 현상금 의뢰판(docs/BOUNTY_BOARD.md): 기기 전용, 에너지 없는 고유 의뢰·사냥꾼 등급
   save.arsenal = normalizeArsenal(raw.arsenal);
   // 엔드게임 도입 전 저장은 별점(스토리 클리어)과 최근 전투 기록의 난이도 승리를 최고 난이도 기록으로 이월한다.
   save.endgame = raw.endgame && typeof raw.endgame === 'object' ? normalizeEndgame(raw.endgame) : migrateEndgame(save);

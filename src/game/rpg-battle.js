@@ -107,7 +107,8 @@ export class Battle extends BaseBattle {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
       if (!this.stage.party) recordSlain(this.app.eco.s, enemy.speciesId);
       const hero = this.app.eco.hero(this.heroId);
-      const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
+      // 현상금 의뢰 판은 처치 경험치·전설 수련이 없다(의뢰 보상만, docs/BOUNTY_BOARD.md).
+      const award = this.stage.bounty ? { gained: 0, overflow: 0, levels: 0 } : grantCombatXp(hero, enemy.xpReward || 0, levelExp);
       this.combatXp = Math.min(1e9, this.combatXp + award.gained);
       // Lv.80 이후 처치 EXP 는 전설 수련으로(계정 공통). 정산 영수증의 legend 에 함께 모인다.
       if (award.overflow > 0 && this.app.eco.grantLegend) { this.app.eco.grantLegend(award.overflow); this.legendXp = Math.min(1e12, (this.legendXp || 0) + award.overflow); }
