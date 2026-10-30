@@ -2,7 +2,7 @@
 // 분 단위 목표 시각표·막힘 지점·콘솔 오류를 JSON·Markdown 표로 남긴다.
 // 사용: node tools/qa/playtest-first-hour.mjs --profile=a|b [--origin=https://blade.tllhouse.com] [--minutes=30] [--out=work/qa/playtest-a]
 //   a: 390x700 세로(Threads 인앱 UA) 첫 30분 / b: 844x390 가로 첫 60분
-// 성장 행동(--growth=1 기본): 보상 수령·소환(소환권·무료 보석만)·장비 착용·장비 강화·스킬 강화·현상금 의뢰·첫 보스를 실제 탭으로 수행하고 처음 도달 시각을 firstReached 로 남긴다.
+// 성장 행동(--growth=1 기본, defeat 는 쓰러진 뒤에만): 보상 수령·소환(소환권·무료 보석만)·장비 착용·장비 강화·스킬 강화·현상금 의뢰·첫 보스를 실제 탭으로 수행하고 처음 도달 시각을 firstReached 로 남긴다.
 //   --growth=0 이면 예전처럼 AUTO 전투만. 유료 재화(paidGems)·결제 화면은 절대 건드리지 않는다.
 // 시계 계약: 소프트웨어 GL(컨테이너)은 약 6fps라 게임 시간이 실시간의 약 0.3배로 흐른다. 그래서 전투 중 "기다리는 구간"만
 //   app.step(0.05, false) 로 빨리 감고(전투 판정·AI는 게임 코드 그대로), 메뉴·로딩·화면 대기는 벽시계 그대로 더한다.
@@ -21,7 +21,8 @@ const ORIGIN = arg('origin', 'https://blade.tllhouse.com');
 const TARGET_MIN = Number(arg('minutes', profile === 'a' ? 30 : 60));
 const VIEW = profile === 'a' ? { width: 390, height: 700 } : { width: 844, height: 390 };
 const UA = profile === 'a' ? THREADS_UA : undefined;
-const GROWTH = arg('growth', '1') !== '0';
+const GROWTH_MODE = arg('growth', '1'); // 1: 처음부터 성장 / defeat: 쓰러진 뒤에만 성장(안내를 따르는 이용자) / 0: AUTO만
+const GROWTH = GROWTH_MODE !== '0';
 const OUT = path.resolve(arg('out', `work/qa/playtest-${profile}`));
 const HUMAN = { tap: 900, read: 2200 }; // 보수적 사람 속도(ms): 탭 사이 간격·화면 읽는 시간
 
@@ -324,7 +325,7 @@ try {
       const a0 = await state(); if (a0.gold !== b0.gold || a0.gems !== b0.gems || a0.tickets !== b0.tickets) reach('reward-claim', `로비 창 ${head} 수령`);
     }
     // 성장 라운드: 첫 승리 직후(소환권 등 즉시 사용 가능), 그리고 쓰러진 뒤 매번.
-    if (GROWTH && (!grew || sameStageLosses > 0)) { await growthRound(grew ? `${lastLossStage} 쓰러진 뒤` : '첫 승리 뒤'); grew = true; }
+    if (GROWTH && (GROWTH_MODE === 'defeat' ? sameStageLosses > 0 : (!grew || sameStageLosses > 0))) { await growthRound((grew || GROWTH_MODE === 'defeat') ? `${lastLossStage} 쓰러진 뒤` : '첫 승리 뒤'); grew = true; }
     addMenu();
     // 의뢰판이 열렸으면(1-10 클리어 뒤) 첫 의뢰를 한 번 수락한다.
     let startedBounty = false;
@@ -365,7 +366,7 @@ try {
     mark();
     // 승리 직후 결과 화면의 "지금 쓸 곳"(스킬 강화 ›, 더 좋은 장비 등)을 처음 한 번은 이용자처럼 눌러 본다.
     const use = page.locator('#btn-result-use:not([hidden]):not([disabled])');
-    if (GROWTH && win && !firstReached['result-use-tap'] && await use.isVisible().catch(() => false)) {
+    if (GROWTH && GROWTH_MODE !== 'defeat' && win && !firstReached['result-use-tap'] && await use.isVisible().catch(() => false)) {
       const label = (await use.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
       await use.tap({ timeout: 4000 }).catch(() => defect('결과', '지금 쓸 곳 탭 실패'));
       await page.waitForFunction(() => window.app.mode === 'lobby', null, { timeout: 30000 }).catch(() => {});
