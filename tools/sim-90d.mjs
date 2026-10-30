@@ -72,7 +72,10 @@ export function spenderReport(base, days = 90) {
   }
   return out;
 }
-const MIN_STAGE = 3, MIN_HARD = 4;
+// 던전 동선(tools/route-economy.mjs): SIM_ROUTE=direct 면 모든 판을 보스 직행으로 본다(최단 경로 방 + 보스, 전체 정화 보너스 없음,
+// 판 시간 = 방 수 비례 평균 0.61배). 기본(full)은 지금까지와 같은 전부 사냥 모형이다.
+const SIM_ROUTE = process.env.SIM_ROUTE === 'direct' ? 'direct' : 'full', ROUTE_TIME = SIM_ROUTE === 'direct' ? 0.61 : 1;
+const MIN_STAGE = 3 * ROUTE_TIME, MIN_HARD = 4 * ROUTE_TIME;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
 const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
 // 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
@@ -95,11 +98,11 @@ const runCache = new Map();
 function runValue(idx, diffId) {
   const key = idx + diffId; if (runCache.has(key)) return runCache.get(key);
   // 고통 단계는 깊이 칸(loot-tables difficultyDepth)으로 드랍 표·필드 골드를 읽고, 에너지 0·권장 레벨 80·처치 EXP ×(1 + expStep×n).
-  const base = perRun(idx, { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
+  const base = perRun(idx, SIM_ROUTE === 'direct' ? { fullClear: false, route: 'direct' } : { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
   const dRank = tier ? difficultyDepth(diffId) : DIFFICULTY_ORDER.indexOf(diffId);
   const stage = stageDef(ch, base.st), out = { idx, ch, st: base.st, energy: tier ? 0 : base.energy, boss: base.boss, firstGems: base.firstGems,
     stageGold: Math.floor(base.stageGold * d.rewardMul), fieldGold: base.fieldGold * (1 + dRank * .2), combatExp: base.combatExp * (d.combatExpMul || 1),
-    stageExp: Math.floor(stage.rewards.exp * 1.5 * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
+    stageExp: Math.floor(stage.rewards.exp * (SIM_ROUTE === 'direct' ? 1 : 1.5) * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
     heroShards: base.heroShards, transcendStones: base.transcendStones, kills: base.kills, recLevel: tier ? TORMENT.recLevel : recommendedLevel(ch, base.st) };
   for (const rank of ['normal', 'elite', 'boss']) {
     const t = lootTable(ch, rank, diffId), n = base.kills[rank];
