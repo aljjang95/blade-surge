@@ -17,8 +17,11 @@ import { resolveItemForm } from '../ui/item-visual-forms.js';
 import { createLootVisual } from './loot-visual.js';
 import { itemWeaponGlb } from '../engine/item-weapon-glb.js';
 
-/** 부위별 드랍 대각선 길이(월드 단위). 기존 0.5~2 범위 안에서 멀리서도 실루엣이 읽히게 키운다. */
-export const LOOT_MODEL_SIZE = Object.freeze({ weapon: 1.75, armor: 1.3, boots: 1.1, ring: .95 });
+/** 부위별 드랍 대각선 길이(월드 단위). 2026-10-30 대표님 "드랍이 너무 크다": 영웅 키(≈1.9) 대비 0.3~0.5 배로 줄인다.
+ *  이름이 이름표로 읽히므로 실루엣을 크게 키울 필요가 줄었다. 줍기(자석·획득) 반경은 그대로다. */
+export const LOOT_MODEL_SIZE = Object.freeze({ weapon: 1, armor: .8, boots: .7, ring: .6 });
+/** 폴백 슬롯 형상(loot-visual) 배율. 무기 폴백 길이 ≈1.35 → ≈.85. */
+export const LOOT_FALLBACK_SCALE = .62;
 /** 등급 윤곽광: [윤곽 세기, 바탕 발광]. N 은 거의 없고 S 부터 단계적으로 강해진다. 블룸이 꺼진 저화질에서도 테두리 색으로 읽힌다. */
 export const LOOT_RIM = Object.freeze({ N: [.22, 0], S: [.75, .03], E: [1.15, .06], U: [1.55, .1], L: [2.1, .16] });
 const RIM_PULSE = Object.freeze({ N: 0, S: .12, E: .18, U: .24, L: .3 });
@@ -235,8 +238,9 @@ export class LootModelLibrary {
     catch (error) { console.warn('loot model fallback', item?.id, error?.message); source = null; }
     if (source) { this._attach(root, def, rarity, source); return root; }
     const fallback = this._fallback(item);
-    for (const child of [...fallback.children]) root.add(child);
-    root.userData.lootSource = 'fallback'; root.userData.lootRestY = .72;
+    // 폴백 슬롯 형상도 원본 드랍과 같은 비율로 줄인다(2026-10-30). 메시는 원점에 있고 형상은 공유하므로 크기만 바꾼다.
+    for (const child of [...fallback.children]) { child.scale.multiplyScalar(LOOT_FALLBACK_SCALE); root.add(child); }
+    root.userData.lootSource = 'fallback'; root.userData.lootRestY = .6;
     if (def && info.kind === 'armory-glb') {
       root.userData.lootPendingSource = 'armory-glb';
       this._armory(def).then(async (ready) => {

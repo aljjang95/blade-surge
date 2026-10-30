@@ -1,0 +1,13 @@
+/* 땅에 떨어진 장비 이름표(대표님 2026-10-30). 등급 색 글자 · 고등급일수록 테두리와 빛. 레이아웃을 읽지 않으므로 폭은 스크립트가 정한다. */
+.loot-labels{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
+.loot-label{position:absolute;left:0;top:0;box-sizing:border-box;height:17px;padding:0 5px;border-radius:4px;background:#070b10b8;border:1px solid #ffffff1f;
+  color:var(--rc,#e6e6e6);font:700 10px/15px var(--font-ui,sans-serif);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 1px 1px #000;will-change:transform;transition:opacity .2s}
+.loot-label[hidden]{display:none}
+.loot-label.is-N{color:#d9dde2;background:#070b1094}
+.loot-label.is-E{border-color:color-mix(in srgb,var(--rc) 55%,transparent)}
+.loot-label.is-U{border-color:var(--rc);box-shadow:0 0 6px color-mix(in srgb,var(--rc) 55%,transparent)}
+.loot-label.is-L{border-color:var(--rc);box-shadow:0 0 9px color-mix(in srgb,var(--rc) 75%,transparent);animation:loot-label-glow 1.4s ease-in-out infinite alternate}
+.loot-label.is-dim{opacity:.38}
+@keyframes loot-label-glow{to{box-shadow:0 0 4px color-mix(in srgb,var(--rc) 40%,transparent)}}
+@media(prefers-reduced-motion:reduce){.loot-label{transition:none}.loot-label.is-L{animation:none}}

@@ -2,6 +2,7 @@ import { Battle as RpgBattle } from './rpg-battle.js';
 import { MasterworksService } from './masterworks-service.js';
 import { MasterworksView } from '../ui/masterworks.js';
 import { TargetTag } from '../ui/target-tag.js';
+import { LootLabels } from '../ui/loot-labels.js';
 import { STORY_EVENTS } from '../data/masterworks.js';
 import { boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory, seedRunBoons, sumEffects } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
@@ -18,6 +19,8 @@ export class Battle extends RpgBattle {
     this.chronicle = new MasterworksView(app, this);
     // 대상 적 이름·HP·균형은 화면 위쪽 줄 대신 적 머리 위 표식으로 보인다.
     this.targetTag = typeof document !== 'undefined' ? new TargetTag() : null;
+    // 땅에 떨어진 장비 위 등급 색 이름표(대표님 2026-10-30).
+    this.lootLabels = typeof document !== 'undefined' ? new LootLabels() : null;
     app.eco.onChange(() => this.chronicle.refresh());
   }
   async start(...args) {
@@ -233,5 +236,6 @@ export class Battle extends RpgBattle {
     }
     this.chronicle?.tick(realDt);
     this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
+    this.lootLabels?.update(this, this.renderer, realDt, this.app?.mode);
   }
 }
