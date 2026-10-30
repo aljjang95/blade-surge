@@ -71,6 +71,7 @@ function install({ seed, storyFirst: story }) {
     const b = a.battle, p = b.player;
     if (ok === false || !b.active || !p) return { ok: false };
     p.auto = true; a.ui.closeModal?.();
+    a.tutorial.end?.(); // 첫 전투 안내 카드(실시간 타이머)를 치워 1-1 도 같은 조건으로 돌린다
     return { ok: true, recPower: def.recPower, power: e.heroPower(e.s.selected), level: e.hero().level, mode: b.routeMode, early: !!b.routeOpenEarly, rooms: b.world.rooms.length, hero: e.s.selected };
   };
   const offers = () => {
