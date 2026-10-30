@@ -8,9 +8,12 @@ function memoryStorage() {
 
 describe('기기 키 생성과 소셜 noprofile 표지', () => {
   let storage: ReturnType<typeof memoryStorage>;
-  const saved = { localStorage: (globalThis as any).localStorage, indexedDB: (globalThis as any).indexedDB };
-  afterEach(() => { (globalThis as any).localStorage = saved.localStorage; (globalThis as any).indexedDB = saved.indexedDB; });
-  beforeEach(() => { storage = memoryStorage(); (globalThis as any).localStorage = storage; (globalThis as any).indexedDB = undefined; });
+  // 다른 테스트 파일이 localStorage 를 읽기 전용 속성으로 정의해 둘 수 있어 대입 대신 속성 정의로 바꾸고 되돌린다.
+  const keys = ['localStorage', 'indexedDB'] as const;
+  const saved = keys.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)] as const);
+  const put = (k: string, value: unknown) => Object.defineProperty(globalThis, k, { value, configurable: true, writable: true });
+  afterEach(() => { for (const [k, d] of saved) { if (d) Object.defineProperty(globalThis, k, d); else delete (globalThis as any)[k]; } });
+  beforeEach(() => { storage = memoryStorage(); put('localStorage', storage); put('indexedDB', undefined); });
 
   test('새로 만든 기기 키는 같은 값으로 noprofile 표지를 남긴다', async () => {
     const key = await deviceKey();
