@@ -122,13 +122,16 @@ export class Battle extends RpgBattle {
     super.onEnemyDeath(e);
     if (!this.run) return;
     if (this.player.stats !== this.appliedStats) { this.buildBase={...this.player.stats}; this.applyBuild(); }
+    if (earn && !e.summoned && this.run.enabled) {
+      // 처치 회복은 전투 효과라 의뢰 판에서도 적용, 명성·진척·룬 처치만 보상 자격(rewards)에 묶는다.
+      if (this.player.alive && this.effects.healOnKill) this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*Math.min(.05,this.effects.healOnKill));
+    }
     if (earn && !e.summoned && this.run.enabled && this.run.rewards !== false) {
       const previousKills=this.masterworks.s.bounties.counts.kills;
       const validKills=recordProgress(this.masterworks.s,'kills');
       if (e.isBoss || e.isElite) { recordProgress(this.masterworks.s,'eliteKills'); this.app?.eco?.recordRuneKill?.(this.stage,e.isBoss?'boss':'elite',this.heroId); }
       if (validKills>previousKills && validKills%5===0) { const gained=grantRenown(this.masterworks.s,1); this.run.renown+=gained; }
       this.rpgDirty=true;
-      if (this.player.alive && this.effects.healOnKill) this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*Math.min(.05,this.effects.healOnKill));
     }
   }
   markCleared(room) {

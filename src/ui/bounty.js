@@ -56,7 +56,7 @@ export class BountyView {
     return card;
   }
   boardList(sum) {
-    const wrap = node('div', 'bounty-list'), list = this.app.eco.bounties(8);
+    const shown = this.shown || 8, wrap = node('div', 'bounty-list'), list = this.app.eco.bounties(shown);
     if (!list.length) { wrap.append(node('p', 'journey-muted', '지금 받을 수 있는 의뢰를 모두 끝냈습니다. 더 높은 난이도로 관문을 클리어하면 새 의뢰가 열립니다.')); return wrap; }
     wrap.append(node('p', 'journey-muted', `받을 수 있는 의뢰 ${sum.available}건 · 에너지 소모 없음, 한 번만 받을 수 있습니다.`));
     for (const d of list) {
@@ -69,6 +69,8 @@ export class BountyView {
         button('출발', () => this.go(d.id), `go-${d.id}`, 'journey-action bounty-go'));
       wrap.append(row);
     }
+    // 앞 의뢰(어려운 조건)를 남겨 둬도 뒤 의뢰를 고를 수 있게 8건씩 더 펼친다.
+    if (sum.available > list.length) wrap.append(button(`의뢰 더 보기 (${fmt(sum.available - list.length)}건 남음)`, () => { this.shown = shown + 8; this.render(); }, 'bounty-more', 'journey-action bounty-go'));
     return wrap;
   }
   shopList() {
