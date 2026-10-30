@@ -2,6 +2,7 @@ import { growthOptions, growthSummary } from '../game/growth-options.js';
 import { applyBestEquip } from '../game/gear-advice.js';
 import { uiArt } from './illustrated.js';
 import { SLOT_NAME } from '../data/items.js';
+import { orderGrowthOptions } from '../game/loss-streak.js';
 import { nextGuide, levelStatusLabel } from '../data/region-guide.js';
 
 const number = n => n.toLocaleString('ko-KR');
@@ -90,7 +91,7 @@ export function renderGrowthPreparation(container, app, result) {
   renderSummary(container, app, result);
   renderNextGuide(container, app, result);
   container.append(element('h2', '다음 출격 준비', 'growth-options-title'));
-  const options = growthOptions(app.eco.s, app.eco);
+  const options = orderGrowthOptions(growthOptions(app.eco.s, app.eco), result.lossStreak || 0);   // 같은 스테이지 연패 뒤에는 장착 → 강화 → 소환 순
   container.append(element('p', options.length
     ? '현재 재화로 각각 가능 · 화면을 열어 선택, 자동 소비 없음'
     : '지금 바로 가능한 강화가 없습니다. 장비 구성을 살펴보거나 완료한 지역에서 재료를 모아 보세요.'));
