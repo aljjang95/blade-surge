@@ -41,6 +41,7 @@ import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
 import { RoomProps, roomPropsAllowed } from './room-props.js';
 import { RegionTraits, regionTheme } from './region-traits.js';
 import { bossShortcutRule } from './boss-shortcut.js';
+import { ROUTE_MODE, bossApproachOpen, directRouteNext, loadRoutePrefs, routeSummary, saveRoutePrefs } from './dungeon-route.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
@@ -123,7 +124,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.portalOpened = false; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = withAvatarSpeed(heroStats(def, heroState, equipBonus), equipBonus, { party: !!stage.party });
     this.setBonus = equipBonus.active || [];
@@ -174,7 +175,12 @@ export class Battle {
     this.regionTraits = regionTheme(stage) ? new RegionTraits(this) : null;
     // 보스 직행은 출격 시점의 별·전투력으로 한 번 정한다(전투 중 별이 바뀌어도 이번 판 조건은 같다).
     { const eco = this.app?.eco, key = `${stage.ch}-${stage.st}`;
-      this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 }); }
+      this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 });
+      // 동선(보스 직행/전부 사냥): 보스 방은 입장 즉시 지도에 보이고, 정화한 방으로 보스 문까지 이어지면 봉인이 풀린다.
+      this.routePrefs = loadRoutePrefs(); this._routeWorldGen = (this._routeWorldGen || 0) + 1; this._directKey = this._routeViewKey = null;
+      this.routeOpenEarly = routeEarlyAllowed(stage, this);
+      this.world.bossRevealed = this.routeOpenEarly;
+      this.underPowered = (eco?.heroPower?.(eco.s?.selected) || 0) < (stage.recPower || 0); }
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
@@ -535,24 +541,73 @@ export class Battle {
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
     if (room.type === ROOM_TYPE.BOSS) this.after(2.4, () => this.victory());
-    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.remaining === 1 && !this.world.bossRoom.cleared) this.after(1.2, () => this.unsealBoss());
+    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.bossRoom && !this.world.bossRoom.cleared) {
+      // 남은 방을 모두 정화: 예전처럼 봉인 해제 + 보스방 포탈(이미 길로 풀렸으면 포탈만).
+      if (this.world.remaining === 1) this.after(1.2, () => this.world?.sealed ? this.unsealBoss() : this.openPortalOnce());
+      // 정화한 방만으로 보스 문까지 닿으면 봉인을 먼저 푼다. 남은 방은 선택(전부 정화 보너스)이다.
+      else if (this.routeOpenEarly && this.world.sealed && bossApproachOpen(this.world)) this.after(1.2, () => this.unsealBoss({ early: true }));
+    }
+  }
+  /** 동선 모드 — 지도에서 고른다. AUTO 가 따르고 기기에 남는다. */
+  get routeMode() { return this.routePrefs?.mode || ROUTE_MODE.FULL; }
+  setRoutePrefs(next) {
+    this.routePrefs = { ...(this.routePrefs || loadRoutePrefs()), ...next }; saveRoutePrefs(this.routePrefs);
+    // 이미 정한 AUTO 목표는 새 동선으로 다시 고른다.
+    if (!this.routeObjectives && !this.conquest) this.autoTarget = null;
+    this._directKey = this._routeViewKey = null;
+    return this.routePrefs;
+  }
+  /** AUTO 직행 목표(직행 모드가 아니거나 경로 목표가 있는 모드면 null). */
+  directAutoRoom() {
+    if (!this.routeOpenEarly || this.routeMode !== ROUTE_MODE.DIRECT || !this.world) return null;
+    // AUTO 는 매 프레임 묻는다. 경로 탐색(Map·배열 할당)은 현재 방·정화 수·봉인이 바뀔 때만 다시 한다.
+    const key = this.routeStateKey();
+    if (this._directKey !== key) { this._directKey = key; this._directRoom = directRouteNext(this.world, this.curRoom?.id ?? this.world.startRoom.id); }
+    return this._directRoom;
+  }
+  routeView() {
+    if (!this.world) return null;
+    const key = `${this.routeStateKey()}:${this.routeMode}:${this.routePrefs?.guide !== false ? 1 : 0}`;
+    if (this._routeViewKey !== key) {
+      this._routeViewKey = key;
+      this._routeView = { ...routeSummary(this.world, this.curRoom?.id ?? this.world.startRoom?.id ?? 0), mode: this.routeMode, guide: this.routePrefs?.guide !== false, revealed: !!this.world.bossRevealed, early: !!this.routeOpenEarly };
+    }
+    return this._routeView;
+  }
+  /** 동선 캐시 열쇠(숫자만, 할당 없음): 월드 세대 · 현재 방 · 정화한 방 수 · 봉인 · 보스 정화. */
+  routeStateKey() {
+    const W = this.world; let cleared = 0;
+    for (const room of W.rooms) if (room.cleared) cleared++;
+    return (((this._routeWorldGen || 0) * 64 + (this.curRoom?.id ?? 63)) * 64 + cleared) * 4 + (W.sealed ? 2 : 0) + (W.bossRoom?.cleared ? 1 : 0);
   }
   /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
-  unsealBoss() {
+  unsealBoss({ early = false } = {}) {
     if (!this.active || !this.world || !this.world.sealed) return;
     if (this.routeObjectives && (this.paused || !this.routeObjectives.canUnseal())) return;
     this.world.unseal(); this.arena.openSeal(this.fx);
     this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
     audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('seal_break', { min: 30 });
     this.ui.setObjective(this.world);
+    if (early) {
+      // 길로 푼 봉인: 보스 문이 바로 옆이라 포탈은 열지 않는다. 남은 방 수와 (전투력 미달이면) 위험 안내만 가장자리 토스트로.
+      const left = this.world.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS).length;
+      this.after(1.4, () => { if (this.active) this.ui.toast(`보스 문 열림 · 남은 구역 ${left}곳은 선택 — 전부 정화하면 경험치·골드 보너스`, 'gold'); });
+      if (this.underPowered) this.after(3.2, () => { if (this.active && !this.bossDefeated) this.ui.toast('권장 전투력 미달 — 남은 구역을 돌며 성장하면 보스가 쉬워집니다', 'red'); });
+      return;
+    }
     this.openPortal();
+  }
+  /** 길로 먼저 연 뒤 마지막 구역을 정화하면 예전과 같은 보스방 포탈을 한 번 연다(보스방에 이미 있으면 생략). */
+  openPortalOnce() {
+    if (!this.active || !this.world || this.portal || this.portalOpened || this.world.bossRoom.cleared || this.curRoom === this.world.bossRoom) return;
+    this.portalOpened = true; this.openPortal();
   }
   canBossShortcut() {
     return !!(this.active && this.bossShortcut?.ok && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
   }
   shortcutBoss() {
     if (!this.canBossShortcut()) return false;
-    this.bossRush = true;
+    this.bossRush = true; this.portalOpened = true;
     this.autoTarget = this.world.bossRoom;
     this.world.bossRoom.discovered = true;
     this.world.unseal(); this.arena.openSeal(this.fx); this.ui.setObjective(this.world); this.openPortal();
@@ -561,7 +616,7 @@ export class Battle {
   }
   /** 봉인 해제 포탈 — 마지막 구역에서 보스방 문 앞까지. 가장 먼 방까지 20초 넘게 걷는 동안 보상이 끊겼다 (longestDryStreakSec 40~44 실측) */
   openPortal() {
-    const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return;
+    const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return; this.portalOpened = true;
     const p = this.player.pos; const f = this.player.forward(new THREE.Vector3());
     let [px, pz] = W.resolve(p.x, p.z, p.x + f.x * 3, p.z + f.z * 3, 0.8);
     if (Math.hypot(px - p.x, pz - p.z) < 1.5) { px = p.x; pz = p.z; }   // 벽 앞이면 제자리
@@ -1065,4 +1120,7 @@ export class Battle {
   }
 }
 
-
+/** 길로 봉인을 먼저 여는 판: 일반 캠페인 던전만. 무한의 성·원정·파티·전술 원정·경로 목표(장치) 판은 기존 계약(전부 정화)을 유지한다. */
+function routeEarlyAllowed(stage, battle) {
+  return !stage?.expedition && !stage?.party && !stage?.field && !stage?.tower && !battle.conquest && !battle.routeObjectives;
+}

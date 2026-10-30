@@ -74,7 +74,13 @@ export function spenderReport(base, days = 90) {
   }
   return out;
 }
-const MIN_STAGE = 3, MIN_HARD = 4;
+// 던전 동선(tools/route-economy.mjs): SIM_ROUTE_SHARE(0~1, SIM_ROUTE=direct 는 1)만큼의 판을 보스 직행으로 본다
+// (최단 경로 방 + 보스, 전체 정화 보너스 없음, 판 시간 = 방 수 비례 평균 0.61배). 기본 0 은 지금까지와 같은 전부 사냥 모형이다.
+const ROUTE_SHARE = process.env.SIM_ROUTE === 'direct' ? 1 : Math.min(1, Math.max(0, Number(process.env.SIM_ROUTE_SHARE) || 0));
+const ROUTE_TIME = 1 - ROUTE_SHARE * (1 - 0.61);
+// 별 3은 탐색 80% 초과가 필요하다(Battle.victory). 직행만 하는 모형은 별 2가 상한, 섞는 모형은 별이 필요한 판만 전부 사냥한다고 본다.
+const STAR_CAP = ROUTE_SHARE >= 1 ? 2 : 3;
+const MIN_STAGE = 3 * ROUTE_TIME, MIN_HARD = 4 * ROUTE_TIME;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
 const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
 // 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
@@ -96,18 +102,27 @@ export const towerNeed = (floor) => POWER_NEED.k * Math.pow(towerScale(floor), P
 const runCache = new Map();
 function runValue(idx, diffId) {
   const key = idx + diffId; if (runCache.has(key)) return runCache.get(key);
+  const full = runValueOf(idx, diffId, false);
+  if (!ROUTE_SHARE) { runCache.set(key, full); return full; }
+  // 직행 비율만큼 수입을 섞는다(에너지·관문 정보는 같다).
+  const direct = runValueOf(idx, diffId, true), mix = (a, b) => a * (1 - ROUTE_SHARE) + b * ROUTE_SHARE, out = { ...full, kills: { ...full.kills } };
+  for (const k of ['stageGold', 'fieldGold', 'combatExp', 'stageExp', 'stones', 'stones2', 'stones3', 'heroShards', 'transcendStones']) out[k] = mix(full[k], direct[k]);
+  for (const r of ['normal', 'elite', 'boss']) out.kills[r] = mix(full.kills[r], direct.kills[r]);
+  runCache.set(key, out); return out;
+}
+function runValueOf(idx, diffId, direct) {
   // 고통 단계는 깊이 칸(loot-tables difficultyDepth)으로 드랍 표·필드 골드를 읽고, 에너지 0·권장 레벨 80·처치 EXP ×(1 + expStep×n).
-  const base = perRun(idx, { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
+  const base = perRun(idx, direct ? { fullClear: false, route: 'direct' } : { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
   const dRank = tier ? difficultyDepth(diffId) : DIFFICULTY_ORDER.indexOf(diffId);
   const stage = stageDef(ch, base.st), out = { idx, ch, st: base.st, energy: tier ? 0 : base.energy, boss: base.boss, firstGems: base.firstGems,
     stageGold: Math.floor(base.stageGold * d.rewardMul), fieldGold: base.fieldGold * (1 + dRank * .2), combatExp: base.combatExp * (d.combatExpMul || 1),
-    stageExp: Math.floor(stage.rewards.exp * 1.5 * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
+    stageExp: Math.floor(stage.rewards.exp * (direct ? 1 : 1.5) * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
     heroShards: base.heroShards, transcendStones: base.transcendStones, kills: base.kills, recLevel: tier ? TORMENT.recLevel : recommendedLevel(ch, base.st) };
   for (const rank of ['normal', 'elite', 'boss']) {
     const t = lootTable(ch, rank, diffId), n = base.kills[rank];
     out.stones += n * t.stones * t.stoneChance; out.stones2 += n * t.stones2; out.stones3 += n * t.stones3;
   }
-  runCache.set(key, out); return out;
+  return out;
 }
 
 // ---------- 장비 ----------
@@ -311,7 +326,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
           const idx = st.storyUnlocked, v = runValue(idx, 'story');
           if (ok(stageNeed(idx)) && st.energy >= v.energy) {
             st.energy -= v.energy; time -= MIN_STAGE; playStage(idx, 'story', events, day);
-            st.stars[idx] = pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2; st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
+            st.stars[idx] = Math.min(STAR_CAP, pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2); st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
             if (v.st === STAGES_PER_CHAPTER) mark(day, 'story', `스토리 ${v.ch}-10`);
             acted = true;
           }
@@ -325,7 +340,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
             const v = runValue(next.idx, next.diff);
             if (ok(stageNeed(next.idx, next.diff)) && st.energy >= v.energy) {
               st.energy -= v.energy; time -= MIN_HARD; playStage(next.idx, next.diff, events, day);
-              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = 3;
+              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = STAR_CAP;
               dayHard++; newContent++; if (v.boss) dayBoss++;
               if (v.st === STAGES_PER_CHAPTER) mark(day, next.diff, `${DIFFICULTIES[next.diff].name} ${v.ch}-10`);
               acted = true;
