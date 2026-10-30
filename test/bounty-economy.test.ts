@@ -52,7 +52,7 @@ test('start gives an energy-free marked stage and settle pays exactly once', () 
   const first = eco.settleBounty(result, start.stage);
   expect(first.ok).toBe(true);
   expect(eco.s.gold).toBe(gold + def.rewards.gold + 0);
-  expect(eco.s.stones).toBe(stones + first.rewards.stones);
+  expect(eco.s.stones).toBe(stones + first.rewards!.stones);
   expect(eco.s.bounty.marks).toBe(def.rewards.marks);
   // same result object again, and the same bounty with a fresh result: both rejected, nothing granted.
   const afterGold = eco.s.gold, afterMarks = eco.s.bounty.marks;
