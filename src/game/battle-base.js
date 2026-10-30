@@ -177,7 +177,7 @@ export class Battle {
     { const eco = this.app?.eco, key = `${stage.ch}-${stage.st}`;
       this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 });
       // 동선(보스 직행/전부 사냥): 보스 방은 입장 즉시 지도에 보이고, 정화한 방으로 보스 문까지 이어지면 봉인이 풀린다.
-      this.routePrefs = loadRoutePrefs();
+      this.routePrefs = loadRoutePrefs(); this._routeWorldGen = (this._routeWorldGen || 0) + 1; this._directKey = this._routeViewKey = null;
       this.routeOpenEarly = routeEarlyAllowed(stage, this);
       this.world.bossRevealed = this.routeOpenEarly;
       this.underPowered = (eco?.heroPower?.(eco.s?.selected) || 0) < (stage.recPower || 0); }
@@ -554,14 +554,32 @@ export class Battle {
     this.routePrefs = { ...(this.routePrefs || loadRoutePrefs()), ...next }; saveRoutePrefs(this.routePrefs);
     // 이미 정한 AUTO 목표는 새 동선으로 다시 고른다.
     if (!this.routeObjectives && !this.conquest) this.autoTarget = null;
+    this._directKey = this._routeViewKey = null;
     return this.routePrefs;
   }
   /** AUTO 직행 목표(직행 모드가 아니거나 경로 목표가 있는 모드면 null). */
   directAutoRoom() {
     if (!this.routeOpenEarly || this.routeMode !== ROUTE_MODE.DIRECT || !this.world) return null;
-    return directRouteNext(this.world, this.curRoom?.id ?? this.world.startRoom.id);
+    // AUTO 는 매 프레임 묻는다. 경로 탐색(Map·배열 할당)은 현재 방·정화 수·봉인이 바뀔 때만 다시 한다.
+    const key = this.routeStateKey();
+    if (this._directKey !== key) { this._directKey = key; this._directRoom = directRouteNext(this.world, this.curRoom?.id ?? this.world.startRoom.id); }
+    return this._directRoom;
   }
-  routeView() { return this.world ? { ...routeSummary(this.world, this.curRoom?.id ?? this.world.startRoom?.id ?? 0), mode: this.routeMode, guide: this.routePrefs?.guide !== false, revealed: !!this.world.bossRevealed, early: !!this.routeOpenEarly } : null; }
+  routeView() {
+    if (!this.world) return null;
+    const key = `${this.routeStateKey()}:${this.routeMode}:${this.routePrefs?.guide !== false ? 1 : 0}`;
+    if (this._routeViewKey !== key) {
+      this._routeViewKey = key;
+      this._routeView = { ...routeSummary(this.world, this.curRoom?.id ?? this.world.startRoom?.id ?? 0), mode: this.routeMode, guide: this.routePrefs?.guide !== false, revealed: !!this.world.bossRevealed, early: !!this.routeOpenEarly };
+    }
+    return this._routeView;
+  }
+  /** 동선 캐시 열쇠(숫자만, 할당 없음): 월드 세대 · 현재 방 · 정화한 방 수 · 봉인 · 보스 정화. */
+  routeStateKey() {
+    const W = this.world; let cleared = 0;
+    for (const room of W.rooms) if (room.cleared) cleared++;
+    return (((this._routeWorldGen || 0) * 64 + (this.curRoom?.id ?? 63)) * 64 + cleared) * 4 + (W.sealed ? 2 : 0) + (W.bossRoom?.cleared ? 1 : 0);
+  }
   /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
   unsealBoss({ early = false } = {}) {
     if (!this.active || !this.world || !this.world.sealed) return;
@@ -1102,7 +1120,7 @@ export class Battle {
   }
 }
 
-/** 길로 봉인을 먼저 여는 판: 일반 캠페인 던전만. 원정·파티·전술 원정·경로 목표(장치) 판은 기존 계약(전부 정화)을 유지한다. */
+/** 길로 봉인을 먼저 여는 판: 일반 캠페인 던전만. 무한의 성·원정·파티·전술 원정·경로 목표(장치) 판은 기존 계약(전부 정화)을 유지한다. */
 function routeEarlyAllowed(stage, battle) {
-  return !stage?.expedition && !stage?.party && !stage?.field && !battle.conquest && !battle.routeObjectives;
+  return !stage?.expedition && !stage?.party && !stage?.field && !stage?.tower && !battle.conquest && !battle.routeObjectives;
 }
