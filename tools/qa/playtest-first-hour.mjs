@@ -117,7 +117,7 @@ async function closeAll() {
   for (let i = 0; i < 8; i++) {
     await dismissRotate();
     if (await page.locator('#reveal.show').count()) { for (const sel of ['#btn-reveal-skip', '#btn-reveal-close']) { const l = page.locator(sel); if (await l.isVisible().catch(() => false)) await l.tap({ timeout: 3000 }).catch(() => {}); } await sleep(500); continue; }
-    const closers = ['dialog[open] .oath-menu-close', 'dialog[open] button[aria-label="닫기"]', '.i-close', '#modal.show #m-cancel', '#modal.show #m-ok', 'dialog[open] button:has-text("닫기")', 'dialog[open] button:has-text("×")'];
+    const closers = ['dialog[open] .oath-menu-close', 'dialog[open] button[aria-label="닫기"]', '#i-close', '#modal.show #m-cancel', '#modal.show #m-ok', 'dialog[open] button:has-text("닫기")', 'dialog[open] button:has-text("×")'];
     let hit = false;
     for (const c of closers) { const l = page.locator(c).first(); if (await l.isVisible().catch(() => false)) { await l.tap({ timeout: 3000 }).catch(() => {}); await sleep(500); hit = true; break; } }
     if (!hit) { if (!(await dialogOpen())) break; await page.keyboard.press('Escape'); await sleep(400); }
@@ -185,7 +185,7 @@ async function equipBetter() {
   await closeAll();
   const nav = page.getByRole('button', { name: '영웅·장비' }).first();
   if (!(await nav.isVisible().catch(() => false))) return false;
-  await nav.tap({ timeout: 3000 }).catch(() => {}); await sleep(1200);
+  await nav.tap({ timeout: 20000 }).catch(() => {}); await sleep(1200);
   const before = await state(); let did = false;
   for (let i = 0; i < 4; i++) {
     const b = page.getByRole('button', { name: /더 좋은 장비 장착/ }).first();
@@ -199,15 +199,15 @@ async function equipBetter() {
 // 장비 강화: 영웅·장비 화면에서 가방 장비를 눌러 "강화하기". 골드가 허락하는 만큼 몇 번만.
 async function enhanceGear(maxTaps = 6) {
   const nav = page.getByRole('button', { name: '영웅·장비' }).first();
-  if (!(await page.locator('.bag-item').first().isVisible().catch(() => false))) { if (!(await nav.isVisible().catch(() => false))) return 0; await nav.tap({ timeout: 3000 }).catch(() => {}); await sleep(1200); }
+  if (!(await page.locator('.bag-item').first().isVisible().catch(() => false))) { if (!(await nav.isVisible().catch(() => false))) return 0; await nav.tap({ timeout: 20000 }).catch(() => {}); await sleep(1200); }
   const items = page.locator('.bag-item'); const count = Math.min(await items.count(), 3);
   let taps = 0; const b0 = await state();
   for (let i = 0; i < count && taps < maxTaps; i++) {
-    await items.nth(i).tap({ timeout: 4000 }).catch(() => {}); await sleep(700);
+    await items.nth(i).tap({ timeout: 20000 }).catch(() => {}); await sleep(700);
     for (let k = 0; k < 3 && taps < maxTaps; k++) {
-      const go = page.locator('.e-go').first();
+      const go = page.locator('#e-go').first();
       if (!(await go.isVisible().catch(() => false)) || await go.isDisabled().catch(() => true)) break;
-      await go.tap({ timeout: 4000 }).catch(e => defect('강화', String(e.message).split('\n')[0].slice(0, 100))); await sleep(1300); taps++;
+      await go.tap({ timeout: 20000 }).catch(e => defect('강화', String(e.message).split('\n')[0].slice(0, 100))); await sleep(1300); taps++;
     }
     await closeAllDetail();
   }
@@ -215,20 +215,21 @@ async function enhanceGear(maxTaps = 6) {
   if (a1.enh > b0.enh || a1.gold < b0.gold) { reach('enhance-first', `강화합 ${b0.enh}→${a1.enh} · 골드 ${b0.gold}→${a1.gold}`); ev('장비 강화', `${taps}번 · 강화합 ${b0.enh}→${a1.enh}`); }
   return taps;
 }
-async function closeAllDetail() { const c = page.locator('.i-close').first(); if (await c.isVisible().catch(() => false)) { await c.tap({ timeout: 3000 }).catch(() => {}); await sleep(500); } }
+async function closeAllDetail() { const c = page.locator('#i-close').first(); if (await c.isVisible().catch(() => false)) { await c.tap({ timeout: 3000 }).catch(() => {}); await sleep(500); } }
 // 스킬 강화: 영웅·장비 → 스킬 트리 → "+"(SP) 눌러 올린 뒤 "강화".
 async function skillUp() {
   const nav = page.getByRole('button', { name: '영웅·장비' }).first();
   const tree = page.getByRole('button', { name: '스킬 트리' }).first();
-  if (!(await tree.isVisible().catch(() => false))) { if (!(await nav.isVisible().catch(() => false))) return 0; await nav.tap({ timeout: 3000 }).catch(() => {}); await sleep(1200); }
+  if (!(await tree.isVisible().catch(() => false))) { if (!(await nav.isVisible().catch(() => false))) return 0; await nav.tap({ timeout: 20000 }).catch(() => {}); await sleep(1200); }
   if (!(await tree.isVisible().catch(() => false))) return 0;
-  await tree.tap({ timeout: 3000 }).catch(() => {}); await sleep(900);
+  await tree.tap({ timeout: 20000 }).catch(() => {}); await sleep(900);
   const b0 = await state(); let ups = 0;
   for (let i = 0; i < 10; i++) {
     const act = page.locator('button:not([disabled])').filter({ hasText: /^강화 \(SP/ }).first();
-    if (await act.isVisible().catch(() => false)) { await act.tap({ timeout: 3000 }).catch(() => {}); await sleep(700); ups++; continue; }
+    const sum0 = (await state()).skillSum;
+    if (await act.isVisible().catch(() => false)) { await act.tap({ timeout: 8000 }).catch(() => {}); await sleep(700); if ((await state()).skillSum > sum0) { ups++; continue; } }
     const plus = page.locator('.st-plus:not([disabled])').first();
-    if (await plus.isVisible().catch(() => false)) { await plus.tap({ timeout: 3000 }).catch(() => {}); await sleep(700); ups++; continue; }
+    if (await plus.isVisible().catch(() => false)) { await plus.tap({ timeout: 8000 }).catch(() => {}); await sleep(700); if ((await state()).skillSum > sum0) { ups++; continue; } }
     break;
   }
   const a1 = await state();
@@ -253,7 +254,7 @@ async function bountyRun() {
   reach('bounty-board-open', `의뢰 ${s0.bounty.available}건`);
   const go = page.locator('#bounty .bounty-go').first();
   if (!(await go.isVisible().catch(() => false))) { await closeAll(); return null; }
-  await go.tap({ timeout: 4000 }).catch(() => {}); await sleep(HUMAN.tap);
+  await go.tap({ timeout: 20000 }).catch(() => {}); await sleep(HUMAN.tap);
   await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle?.active, null, { timeout: 120000 }).catch(() => {});
   reach('bounty-accept', '의뢰 출발 탭');
   return true;
@@ -297,7 +298,7 @@ async function playBattle(first) {
 async function result() {
   await page.waitForFunction(() => document.querySelector('#result.show, #result.on, #result:not(.hidden)') && getComputedStyle(document.querySelector('#result')).display !== 'none', null, { timeout: 60000 }).catch(() => {});
   await sleep(HUMAN.read);
-  const info = await page.evaluate(() => ({ title: document.querySelector('#result-title')?.innerText, lvl: document.querySelector('#result-levelup')?.innerText, vis: [...document.querySelectorAll('#result button')].filter(b => b.offsetParent).map(b => b.id || b.innerText.slice(0, 8)) }));
+  const info = await page.evaluate(() => ({ title: document.querySelector('#result-title')?.innerText, lvl: document.querySelector('#result-levelup')?.innerText, vis: [...document.querySelectorAll('#result button')].filter(b => b.offsetParent && b.id).map(b => b.id) }));
   return info;
 }
 
