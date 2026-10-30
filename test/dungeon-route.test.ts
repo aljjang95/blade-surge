@@ -62,13 +62,13 @@ describe('던전 동선 — 보스 직행 / 전부 사냥', () => {
 
   test('동선 선호는 기기 저장소에 남고, 손상·없음이면 전부 사냥 + 경로 표시', () => {
     const mem = new Map<string, string>();
-    const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v); } };
+    const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v); } } as unknown as Storage;
     expect(loadRoutePrefs(storage)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
     saveRoutePrefs({ mode: ROUTE_MODE.DIRECT, guide: false }, storage);
     expect(loadRoutePrefs(storage)).toEqual({ mode: ROUTE_MODE.DIRECT, guide: false });
     mem.set('bs.dungeonRoute.v1', '{bad');
     expect(loadRoutePrefs(storage)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
-    expect(loadRoutePrefs({ getItem: () => { throw new Error('blocked'); } })).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
+    expect(loadRoutePrefs({ getItem: () => { throw new Error('blocked'); } } as unknown as Storage)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
     expect(loadRoutePrefs(undefined)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
   });
 });

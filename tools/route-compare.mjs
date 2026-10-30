@@ -1,6 +1,6 @@
 // 던전 동선 비교 — 같은 시드·영웅·저장에서 AUTO 로 mode=full / mode=direct 를 돌려 시간·보상을 견준다.
 //   node tools/route-compare.mjs [--stages 1-1,1-5,1-10,2-5,3-5] [--hero knight] [--level 45] [--levels 2-5=40,3-5=50]
-//        [--seed 1] [--max-sec 900] [--determinism 1-1] [--out work/qa/route-compare/<시각>]
+//        [--root <dist 가 있는 체크아웃>] [--seed 1] [--max-sec 900] [--determinism 1-1] [--out work/qa/route-compare/<시각>]
 // 전제: `bun run build` 산출물(dist). vite preview + Playwright, 고정 dt(1/60)로 window.app 을 진행한다. p.auto 는 true(게임의 AUTO 경로).
 // 동선은 localStorage 'bs.dungeonRoute.v1' 로만 바꾼다(게임이 입장 때 읽는다). 시드·영웅·레벨·에너지는 두 동선에 똑같이 적용한다.
 // 결정성: --determinism 관문(기본 첫 관문)을 같은 조건으로 한 번 더 돌려 핵심 수치가 같은지 비교한다('off' 면 생략).
@@ -14,13 +14,15 @@ import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const root = path.resolve(import.meta.dirname, '..');
+const projectRoot = path.resolve(import.meta.dirname, '..');
+// --root: dist 를 만든 다른 체크아웃(기본은 이 저장소). 결과는 항상 이 저장소의 work/ 아래에 쓴다.
+const root = path.resolve(arg('root', projectRoot));
 const STAGES = arg('stages', '1-1,1-5,1-10,2-5,3-5').split(',').map((s) => s.trim()).filter(Boolean);
 const HERO = arg('hero', 'knight'), LEVEL = Number(arg('level', 45)), SEED = Number(arg('seed', 1)) >>> 0;
 const LEVELS = Object.fromEntries(arg('levels', '').split(',').filter(Boolean).map((x) => x.split('=')));
 const MAX_SEC = Number(arg('max-sec', 900)), DET = arg('determinism', STAGES[0]);
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
-const OUT = path.resolve(root, arg('out', `work/qa/route-compare/${stamp}`));
+const OUT = path.resolve(projectRoot, arg('out', `work/qa/route-compare/${stamp}`));
 await fs.mkdir(OUT, { recursive: true });
 
 const server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
