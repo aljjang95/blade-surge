@@ -72,12 +72,11 @@ SELECT op_id, kind, at FROM wallet_ledger WHERE kind LIKE 'iap-void:%' AND accou
 SELECT payment_id, granted_at, checked_at FROM iap_web_payments WHERE state = 'granted' ORDER BY COALESCE(checked_at, 0) ASC LIMIT 20;
 ```
 
-## 5. 웹훅 (별도 레인이 추가 중)
+## 5. 웹훅
 
-- 별도 레인이 `POST /api/v1/iap/web/webhook`와 바인딩 이름 `PORTONE_WEBHOOK_SECRET`을 추가하고 있다. 이 문서 작성 시점에는 병합 전이므로 병합 후 코드를 다시 확인한다.
-- 시크릿(`PORTONE_WEBHOOK_SECRET`)이 설정되지 않으면 엔드포인트는 **503으로 닫힌다**(기본 닫힘).
-- 웹훅 본문은 신뢰하지 않는다. **`paymentId`만 믿고** 서버가 포트원 `GET /payments/{id}`로 **재조회**해서 상태를 판단하고 기존 `settleWebPayment` 경로(금액·통화·storeId·채널 검증)로 처리한다. 웹훅이 오지 않아도 위 크론 대사가 같은 일을 하므로 웹훅은 지연을 줄이는 보조다.
-- 포트원 콘솔의 웹훅 URL 등록은 콘솔 변경이므로 대표님 확인 후 한다(이 문서 작업에서는 하지 않음).
+- `POST /api/v1/iap/web/webhook`가 구현됐다(별도 레인, 이 브랜치 기준 코드에는 아직 병합 전이므로 병합 후 코드를 다시 확인한다). 포트원 Standard Webhooks 서명을 검증하며 타임스탬프 허용 오차는 ±5분이다. 바인딩 이름은 `PORTONE_WEBHOOK_SECRET`이고, **시크릿이 없으면 503으로 닫힌다**.
+- 웹훅 본문은 신뢰하지 않는다. **`paymentId`만 믿고** 서버가 포트원 `GET /payments/{id}`로 **재조회**해서 기존 `settleWebPayment` 경로(금액·통화·storeId·채널 검증)로 처리한다. 웹훅이 오지 않아도 위 크론 대사가 같은 일을 하므로 웹훅은 지연을 줄이는 보조다.
+- 포트원 콘솔의 웹훅 URL·시크릿 등록은 콘솔 변경이므로 대표님 확인 후 한다(이 문서 작업에서는 하지 않음).
 
 ## 6. 일별 대사 스크립트 `tools/payment-reconcile.mjs`
 
@@ -99,8 +98,10 @@ node tools/payment-reconcile.mjs --d1-json d1.json --date 2026-10-29
 
 ## 7. 켜는 순서 (결제 공개)
 
-① 포트원 실채널 생성 — KG 새 MID 승인 후 포트원에서 새 KG이니시스 채널 생성 → 채널 키를 `PORTONE_CHANNEL_KEY`로 설정(키 값은 채팅·Git 금지, Secrets Store/Worker 시크릿).
-② 테스트 계정 결제 E2E — 테스트 계정 플래그(`account_flags.flag='test'`) 또는 테스트 채널로 결제 → 지급 → 포트원 콘솔 취소 → 크론 회수까지 3·4장 SQL로 확인, 6장 대사 0건 차이.
+⓪ D1 마이그레이션 `0004`(웹 결제 표 `iap_web_payments`)와 `0008`(결제수단 대조용 `iap_web_pay_methods` 표)을 적용한다. 웹 결제만 스키마 v8이 필요하다(v8 미만이면 웹 결제는 열리지 않는다). 적용 뒤 `SELECT version FROM v1_schema`로 확인.
+⓪' 게임물 등급분류: 웹 등급번호가 `src/data/game-rating.js`의 `GAME_RATING`(`status: 'rated'` + `number`)에 들어와야 서버가 웹 실채널 판매를 연다. 없으면 의도 발급이 503 `rating-required`로 거절된다. 등급 신청·번호 수령은 대표님 몫(`docs/GRAC_RATING_DRAFT.md`).
+① 포트원 실채널 생성 — KG 새 MID 승인 후 포트원에서 새 KG이니시스 채널 생성 → 채널 키를 `PORTONE_CHANNEL_KEY`로 설정(키 값은 채팅·Git 금지, Secrets Store/Worker 시크릿). 웹훅을 쓰면 `PORTONE_WEBHOOK_SECRET`도 같은 방식으로.
+② 테스트 계정 결제 E2E — 테스트 계정 플래그(`account_flags.flag='test'`) 또는 테스트 채널로 결제 → 지급 → 포트원 콘솔 취소 → 크론(또는 웹훅) 회수까지 3·4장 SQL로 확인, 6장 대사 0건 차이.
 ③ `WEB_BILLING_ENABLED=true`.
 ④ `V1_SERVER_AUTHORITY_PERCENT` 단계 상향(0 → 소수 % → 단계적으로, 단계마다 지표·대사 확인. 서버 권위 계정이 늘어야 서버 지급이 유효하다).
 ⑤ 대표님 금액 확인 후 공개 — 웹 최대 1회 결제액 ₩9,900, 상품 3종(₩1,200·₩4,900·₩9,900)을 보여 드리고 확인 받는다. 공개 게시·가격 공개는 집행 직전 확인.
