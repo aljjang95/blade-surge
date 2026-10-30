@@ -40,11 +40,14 @@ const iou = (a, b) => { let both = 0, any = 0; for (let i = 0; i < a.length; i++
 
 // 형상 · 카메라 · 조합을 정하는 원본. 바뀌면 test/item-visual-forms.test.ts 가 실패하므로 다시 굽는다.
 const TEXT_SOURCES = ['src/data/gear-catalog.js', 'src/data/items.js', 'src/data/armory.js', 'src/engine/item-forge.js', 'src/engine/forged-weapons.js',
-  'src/engine/armory-assets.js', 'src/engine/hero-model-paths.js', 'src/ui/item-visual-model.js', 'src/data/item-presentation-forms.json', 'tools/item-render-variants.html'];
+  'src/engine/armory-assets.js', 'src/engine/hero-model-paths.js', 'src/ui/item-visual-model.js', 'src/data/item-presentation-forms.json', 'tools/item-render-variants.html',
+  // 검성 무기 GLB(Tripo)는 형태 그림에도 그대로 나온다. 등록·재질이 바뀌면 해당 대검 그림을 --only 로 다시 굽는다.
+  'src/engine/item-weapon-glb.js', 'src/data/item-weapon-glb.json'];
 async function assetSources() {
   const forge = (await readdir(root + 'public/models/dungeon-forge-v2')).filter((name) => name.endsWith('.glb')).sort().map((name) => 'public/models/dungeon-forge-v2/' + name);
   const armory = (await readdir(root + 'public/models/armory-v1')).filter((name) => name.endsWith('_weapon.glb')).sort().map((name) => 'public/models/armory-v1/' + name);
-  return [...forge, ...armory];
+  const weapons = (await readdir(root + 'public/models/item-weapons')).filter((name) => name.endsWith('.glb')).sort().map((name) => 'public/models/item-weapons/' + name);
+  return [...forge, ...armory, ...weapons];
 }
 
 const browser = await chromium.launch(launchOpts());
