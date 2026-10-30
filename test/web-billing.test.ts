@@ -33,7 +33,9 @@ function fakePortone() {
   /** intent 응답대로 결제가 PAID가 된 것처럼 등록한다(overrides로 변조). */
   const pay = (intent: any, overrides: Partial<PortonePayment> = {}) => payments.set(intent.paymentId, {
     status: 'PAID', storeId: STORE, currency: 'KRW', amount: { total: intent.totalAmount, paid: intent.totalAmount, cancelled: 0 },
-    channel: { key: intent.channelKey }, customData: intent.customData, ...overrides });
+    channel: { key: intent.channelKey }, customData: intent.customData,
+    // 실제 결제수단: intent가 고른 수단 그대로(카드 또는 간편결제 공급자).
+    method: intent.payMethod === 'EASY_PAY' ? { type: 'PaymentMethodEasyPay', provider: intent.easyPay?.easyPayProvider } : { type: 'PaymentMethodCard' }, ...overrides });
   return { api, payments, calls, state, pay };
 }
 

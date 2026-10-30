@@ -20,8 +20,8 @@ import {
 } from '../../src/shared/iap-catalog.js';
 
 export const IAP_SCHEMA_VERSION = 3;
-/** 웹 결제(포트원) 표가 있는 스키마 버전(마이그레이션 0004). Play 흐름은 3이면 돈다. */
-export const WEB_SCHEMA_VERSION = 4;
+/** 웹 결제(포트원) 표가 있는 스키마 버전(0004 결제 원장 + 0008 결제수단 대조). Play 흐름은 3이면 돈다. */
+export const WEB_SCHEMA_VERSION = 8;
 const HERO_IDS: readonly string[] = HERO_ORDER;
 const TOKEN = /^[A-Za-z0-9._:-]{10,4096}$/;
 const DAY = 86400000;

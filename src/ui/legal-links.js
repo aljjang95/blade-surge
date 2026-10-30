@@ -11,6 +11,8 @@ export const LEGAL_PAGES = Object.freeze({
 
 export const WITHDRAWAL_NOTICE = '구매 후 7일 이내 사용하지 않은 상품·보석은 청약철회할 수 있습니다. 사용했거나 즉시 지급되어 사용된 부분은 철회가 제한됩니다.';
 export const INSTANT_GRANT_CONSENT = '구매 즉시 지급되며 지급된 보상을 사용하면 그만큼 청약철회가 제한됩니다.';
+/** 미성년자 결제 전 고지(약관의 법정대리인 동의 조항과 같은 내용). */
+export const MINOR_NOTICE = '미성년자는 결제 전에 법정대리인(부모 등)의 동의를 받아 주세요. 동의 없이 한 결제는 미성년자 본인 또는 법정대리인이 취소할 수 있습니다.';
 export const SUBSCRIPTION_NOTICE = '자동 갱신 상품입니다. Google Play 구독 관리에서 언제든 해지할 수 있습니다.';
 
 import { BUSINESS_INFO as B } from '../shared/business-info.js';
@@ -38,7 +40,7 @@ export function paymentNoticeHtml(sku, { subscription = false } = {}) {
   const pages = ['refund', 'terms'];
   if (summonRelated(sku)) pages.push('odds');
   const links = pages.map((k) => link(LEGAL_PAGES[k])).join(' · ');
-  return `<span class="pay-notice">${subscription ? `<span class="pay-notice-sub">${SUBSCRIPTION_NOTICE}</span>` : ''}<span>${WITHDRAWAL_NOTICE}</span><span class="pay-notice-links">${links}</span></span>`;
+  return `<span class="pay-notice">${subscription ? `<span class="pay-notice-sub">${SUBSCRIPTION_NOTICE}</span>` : ''}<span>${WITHDRAWAL_NOTICE}</span><span class="pay-notice-minor">${MINOR_NOTICE}</span><span class="pay-notice-links">${links}</span></span>`;
 }
 
 const bizEsc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
