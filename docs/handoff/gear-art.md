@@ -21,6 +21,11 @@
 - 흐름: Image(Nano Banana, 9:16, 무료 쿼터) → Model H3.1(2K·PBR·Triangle·Polycount 3000), 리토폴로지 불필요. 실측: 화면 표시 45, 첫 자루 직전·직후 45 차감, 19자루 전체는 23,895 → 22,255(1,640 = 원화 포함 자루당 약 86) — 화면 가격보다 크게 잡을 것. 모델 GLB는 meshopt 압축이라 gltf-transform으로 풀고 prep.
 - l_2·l_3 헤일로가 날 뒤에 떠서 `blender_weapon_center_islands.py`로 보정.
 
+## 다른 직업 무기 (2026-10-30)
+- 1차 #452(7c34086): 대표 4종(w_rusty·w_hunter·w_frost·w_king) × 광전사·마법사·도적·궁수 16자루, GLB 8형태 확장. heartytn 크레딧 22,255 → 21,535(720, 자루당 45).
+- 2차(이 PR): 기본 드롭 11종(w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) × 4직업 44자루 + 활 방향 정렬(`blender_bow_align.py`, 1차 w_hunter·w_rusty 활이 반대였던 것 수정). heartytn 크레딧 21,535 → 19,230(2,305, 자루당 약 52). 대표님 지침: 개발 에셋 5,000까지 건별 확인 없이, 덩어리 시작·끝 잔량 기록.
+- 형태는 `src/game/look.js` (kit, 등급) 표. 남은 것: 3차 U 테마 9종·4차 도감·마을 15·5차 원정 3 × 4직업.
+
 ## Tripo 비용 실측 (화면 가격을 믿지 말 것)
 - 생성 H3.1(2K·PBR) 45, 리토폴로지는 화면 5인데 25가 빠지는 경우가 많음 → 자루당 50~70으로 계산. GLB 내보내기(기본 GLB 2k)는 직전·직후 잔량 측정 3회 모두 0.
 - 컨셉 이미지(Nano Banana 2)도 장당 약 8로 보임(미확정).
