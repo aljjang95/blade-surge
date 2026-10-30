@@ -73,7 +73,8 @@
    "cumMinutes": 5,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 192초(n=3). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-2",
@@ -85,7 +86,8 @@
    "cumMinutes": 8,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 201초(n=3), 직전 승리→이 승리 평균 4.0분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-3",
@@ -98,7 +100,7 @@
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
    "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
-   "note": " | 2026-10-30 운영 표본(AUTO만, 성장 개입 없음): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(부활창 표시) — docs/playtest/2026-10-30-first-hour.md"
+   "note": " | 2026-10-30 운영 표본(AUTO만, 성장 개입 없음): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(부활창 표시) — docs/playtest/2026-10-30-first-hour.md |  | 2026-10-30 운영 표본(AUTO만·장비 미착용): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(전투력 3676~3914 < 권장 4140). 같은 봇이 소환·장비 착용·강화·스킬을 하면 전투력 4664~4774(권장의 1.13배)로 첫 시도에 넘음 — docs/playtest/2026-10-30-bot-growth.md. 2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 286초(n=3), 직전 승리→이 승리 평균 5.3분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-4",
@@ -110,7 +112,8 @@
    "cumMinutes": 14,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 182초(n=3), 직전 승리→이 승리 평균 3.5분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "level-5",
@@ -134,7 +137,8 @@
    "cumMinutes": 17,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 279초(n=3), 직전 승리→이 승리 평균 5.2분(n=1, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-6",
@@ -146,7 +150,8 @@
    "cumMinutes": 20,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 187초(n=3), 직전 승리→이 승리 평균 3.6분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-7",
@@ -158,7 +163,8 @@
    "cumMinutes": 23,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 229초(n=3), 직전 승리→이 승리 평균 4.3분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-8",
@@ -170,7 +176,8 @@
    "cumMinutes": 26,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 217초(n=3), 직전 승리→이 승리 평균 4.1분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-9",
@@ -182,7 +189,8 @@
    "cumMinutes": 29,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 291초(n=3), 직전 승리→이 승리 평균 5.5분(n=2, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "level-8",
@@ -207,7 +215,8 @@
    "cumMinutes": 32,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": "2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 251초(n=3), 직전 승리→이 승리 평균 4.6분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "level-10",
@@ -5443,7 +5452,7 @@
    "source": "sim:tools/playtime-bounty-units.mjs daily[1]+rankUps[2] (marathon 16시드 p50, sha256 e9bbfcd408eb); 분 = 그날 '할 일 없음' 감소분(312→9)을 그날 등급 수로 나눔",
    "status": "verified",
    "evidence": "src/game/bounty-board.js, tools/sim-90d.mjs",
-   "note": "의뢰 분(3/4/6분)은 시간 모델 — 실측 전(docs/BOUNTY_BOARD.md 4절)"
+   "note": "의뢰 분(3/4/6분)은 시간 모델 — 실측 전(docs/BOUNTY_BOARD.md 4절) | 2026-10-30 [telemetry:bot] 현상금 의뢰판 실입력 확인: 1-10 클리어 직후(로컬 a 47:28·b 49:22·운영 a 51:46) 첫 의뢰 수락, 수락→완료 약 2.5분(1-1 사냥 의뢰, 전투 132~139초). 의뢰 분 모델(3/4/6분)은 아직 1건 표본."
   },
   {
    "id": "bounty-rank-3",
@@ -5785,6 +5794,7 @@
  "notes": [
   "2026-10-30 재고 조사(Sonnet, 기준 HEAD e44884f3, sim-90d 마라톤 16시드). 경고: 고통 단계 파밍이 약 502h(70%) — 반복 상한 60% 규칙과 목표 간격으로 판정. 진짜 고유 콘텐츠는 live 37.8h.",
   "2026-10-30 던전 동선(보스 직행/전부 사냥, docs/DUNGEON_ROUTE.md). 출처 sim:tools/route-economy.mjs + SIM_ROUTE_SHARE sim-90d 16시드: 직행 판 시간 평균 0.61배, 판당 골드 0.67·경험치 0.56배. 단위 minutes는 전부 사냥(기본 AUTO) 기준 그대로. 직행 비율 30%까지 sim:90d 밴드 전부 통과, 50%·100%는 일부 실패(100%: 미드 스토리 6-10 4일·라이트 골드 잔액 115일, 50%: 미드 최장 정체 10일) — 직행을 기본값으로 바꾸지 않는 근거.",
-  "2026-10-30 3month-highend#1: 현상금 의뢰판 단위 bounty-rank-* 추가(마라톤 1~3일차 할 일 없음 감소분만, 고통·반복 시간과 이중 계산 없음)."
+  "2026-10-30 3month-highend#1: 현상금 의뢰판 단위 bounty-rank-* 추가(마라톤 1~3일차 할 일 없음 감소분만, 고통·반복 시간과 이중 계산 없음).",
+  "2026-10-30 3month-highend#3 봇 성장 표본: 첫 소환·착용·강화·스킬·보상 수령은 로비 도착 직후(0:34~1:45), 첫 승리 5~7.5분, 1-3 통과 15:18~17:07(성장 행동 시), 1-10 클리어 47~56분, 의뢰판 수락 47~56분. 증거=telemetry:bot(실입력·AUTO 가속). 2·3일차 의뢰 소진 공백은 simulated(sim-90d 16시드): 의뢰 OFF 1~3일 공백 약 926분 → ON 약 253분, 4일차부터 0."
  ]
 }
