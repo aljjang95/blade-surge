@@ -88,8 +88,8 @@
       "id": "gear_weapon_l_2",
       "form": "greatsword",
       "file": "/models/item-weapons/gear_weapon_l_2.glb",
-      "sha256": "f51f902e61fd241aeacae76504080f5acbf02658ef8afc0378ca770ab03e8ea2",
-      "bytes": 446420,
+      "sha256": "981e524c8b58bd84e8a15be832c37b55337d32369b3a992450cdb8c7eddba40c",
+      "bytes": 446416,
       "triangles": 2830,
       "source": {
         "tripoTaskId": "c67e0eae-2ea5-447d-b08e-5be40a466e2b",
@@ -100,7 +100,7 @@
       "id": "gear_weapon_l_3",
       "form": "greatsword",
       "file": "/models/item-weapons/gear_weapon_l_3.glb",
-      "sha256": "b4375e820f1d225a48eca4216d21cd8ad883a883ed966273c97794cf5752c15e",
+      "sha256": "433f4d7156d6b389835617701a4fa3e82a1fb3fed87af776a6972f0b60679a64",
       "bytes": 423788,
       "triangles": 2898,
       "source": {
