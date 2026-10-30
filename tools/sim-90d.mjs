@@ -76,6 +76,8 @@ export function spenderReport(base, days = 90) {
 // (최단 경로 방 + 보스, 전체 정화 보너스 없음, 판 시간 = 방 수 비례 평균 0.61배). 기본 0 은 지금까지와 같은 전부 사냥 모형이다.
 const ROUTE_SHARE = process.env.SIM_ROUTE === 'direct' ? 1 : Math.min(1, Math.max(0, Number(process.env.SIM_ROUTE_SHARE) || 0));
 const ROUTE_TIME = 1 - ROUTE_SHARE * (1 - 0.61);
+// 별 3은 탐색 80% 초과가 필요하다(Battle.victory). 직행만 하는 모형은 별 2가 상한, 섞는 모형은 별이 필요한 판만 전부 사냥한다고 본다.
+const STAR_CAP = ROUTE_SHARE >= 1 ? 2 : 3;
 const MIN_STAGE = 3 * ROUTE_TIME, MIN_HARD = 4 * ROUTE_TIME;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
 const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
@@ -312,7 +314,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
           const idx = st.storyUnlocked, v = runValue(idx, 'story');
           if (ok(stageNeed(idx)) && st.energy >= v.energy) {
             st.energy -= v.energy; time -= MIN_STAGE; playStage(idx, 'story', events, day);
-            st.stars[idx] = pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2; st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
+            st.stars[idx] = Math.min(STAR_CAP, pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2); st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
             if (v.st === STAGES_PER_CHAPTER) mark(day, 'story', `스토리 ${v.ch}-10`);
             acted = true;
           }
@@ -326,7 +328,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
             const v = runValue(next.idx, next.diff);
             if (ok(stageNeed(next.idx, next.diff)) && st.energy >= v.energy) {
               st.energy -= v.energy; time -= MIN_HARD; playStage(next.idx, next.diff, events, day);
-              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = 3;
+              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = STAR_CAP;
               dayHard++; newContent++; if (v.boss) dayBoss++;
               if (v.st === STAGES_PER_CHAPTER) mark(day, next.diff, `${DIFFICULTIES[next.diff].name} ${v.ch}-10`);
               acted = true;

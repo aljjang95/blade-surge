@@ -15,20 +15,24 @@ const PREF_KEY = 'bs.dungeonRoute.v1';
 /** 기기별 동선 선호(지도에서 고른 값). 저장이 막힌 브라우저에서도 기본값으로 동작한다. */
 /** @typedef {{mode:'full'|'direct', guide:boolean}} RoutePrefs */
 /** @param {Storage|undefined} [storage] @returns {RoutePrefs} */
-export function loadRoutePrefs(storage = globalThis.localStorage) {
+export function loadRoutePrefs(storage) {
   /** @type {RoutePrefs} */
   const prefs = { mode: ROUTE_MODE.FULL, guide: true };
   try {
-    const raw = JSON.parse(storage?.getItem?.(PREF_KEY) || 'null');
+    // 개인정보 설정이 저장소를 막으면 globalThis.localStorage 읽기 자체가 SecurityError 를 던진다 — try 안에서 고른다.
+    const store = arguments.length ? storage : globalThis.localStorage;
+    const raw = JSON.parse(store?.getItem?.(PREF_KEY) || 'null');
     if (raw?.mode === ROUTE_MODE.DIRECT) prefs.mode = ROUTE_MODE.DIRECT;
     if (raw?.guide === false) prefs.guide = false;
-  } catch { /* 저장소 없음·손상 — 기본값 */ }
+  } catch { /* 저장소 없음·차단·손상 — 기본값 */ }
   return prefs;
 }
 /** @param {Partial<RoutePrefs>} prefs @param {Storage|undefined} [storage] */
-export function saveRoutePrefs(prefs, storage = globalThis.localStorage) {
-  try { storage?.setItem?.(PREF_KEY, JSON.stringify({ mode: prefs.mode === ROUTE_MODE.DIRECT ? ROUTE_MODE.DIRECT : ROUTE_MODE.FULL, guide: prefs.guide !== false })); }
-  catch { /* 저장 실패는 이번 판 값만 유지 */ }
+export function saveRoutePrefs(prefs, storage) {
+  try {
+    const store = arguments.length > 1 ? storage : globalThis.localStorage;
+    store?.setItem?.(PREF_KEY, JSON.stringify({ mode: prefs.mode === ROUTE_MODE.DIRECT ? ROUTE_MODE.DIRECT : ROUTE_MODE.FULL, guide: prefs.guide !== false }));
+  } catch { /* 저장 실패는 이번 판 값만 유지 */ }
 }
 
 const optionalRoom = (room) => room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS;

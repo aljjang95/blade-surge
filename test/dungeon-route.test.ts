@@ -70,5 +70,12 @@ describe('던전 동선 — 보스 직행 / 전부 사냥', () => {
     expect(loadRoutePrefs(storage)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
     expect(loadRoutePrefs({ getItem: () => { throw new Error('blocked'); } } as unknown as Storage)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
     expect(loadRoutePrefs(undefined)).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
+    // 저장소 접근 자체가 막힌 브라우저(localStorage getter 가 SecurityError)
+    const desc = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+    try {
+      expect(loadRoutePrefs()).toEqual({ mode: ROUTE_MODE.FULL, guide: true });
+      expect(() => saveRoutePrefs({ mode: ROUTE_MODE.DIRECT })).not.toThrow();
+    } finally { if (desc) Object.defineProperty(globalThis, 'localStorage', desc); else delete (globalThis as any).localStorage; }
   });
 });
