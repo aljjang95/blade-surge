@@ -54,6 +54,8 @@
 
     { "class": "remote", "group": "starter-village", "glob": "models/starter-village-v1/*.glb", "reason": "초보자 마을 Tripo 소품 8종(약 4.1MB). AAB 60MB 여유 0.49MB 라 core 금지. 로비 진입 때 바로 받고(EARLY), 못 받으면 절차 모델 폴백" },
 
+    { "class": "remote", "group": "weapons", "glob": "models/item-weapons/**", "reason": "장비 무기 Tripo GLB 102개(약 41.6MB, AAB 압축 후 약 37MB). 선택 사항 외형이라 부팅·1지역 플레이에 필요 없고, 없으면 절차적 무기로 폴백한다(item-weapon-glb). 와이파이 한가할 때 받고, 아이템이 화면에 나올 때 그 아이템 것만 먼저 받는다" },
+
     { "class": "core", "glob": "news/**", "reason": "소식 웹 읽기 페이지(/news, tools/build-news.mjs 산출물). 글 몇 편 분량의 정적 HTML 이라 크기가 작아 core 로 둔다(remote 로 두면 _headers CORS 규칙이 필요)" },
 
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },

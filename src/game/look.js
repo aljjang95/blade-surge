@@ -8,6 +8,7 @@ import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
 import { acquireItemGeometry, createItemMaterial, ITEM_WEAPON_FORMS } from '../engine/item-forge.js';
+import { loadItemWeaponGlbsFor } from '../engine/item-weapon-glb.js';
 import { excludeFromBloom } from '../engine/character-bloom.js';
 import { removeGearAccents } from './gear-accents.js';
 import { removeHeroBoots } from '../engine/hero-boots.js';
@@ -134,6 +135,8 @@ export function applyLook(model, def, equip = {}, opts = {}) {
 
 // 기존 노드의 변환·이름·애니메이션을 유지한다. 원본 버퍼는 빌린 것이므로 해제하지 않는다.
 function applyItemWeapons(model, looks, item) {
+  // 스토어 채널의 APK 밖 무기 GLB: 이번 장착은 절차적 무기로 그리고, 뒤에서 받아 두면 다음 장착·갱신부터 GLB 가 보인다(실패해도 폴백 그대로).
+  if (item?.id) void loadItemWeaponGlbsFor(item.id).catch(() => {});
   const owned = model.userData.itemWeaponAppearance || (model.userData.itemWeaponAppearance = new Map());
   const targets = new Set(item && !item.modelNode ? looks?.weapon?.[item.rarity] || [] : []);
   for (const [name, state] of owned) {

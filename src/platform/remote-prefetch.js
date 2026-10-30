@@ -11,7 +11,7 @@ export const EARLY_GROUP = 'early-music';
 export const STARTER_VILLAGE_GROUP = 'starter-village';
 /** 로비에 들어오면 네트워크 종류와 상관없이(데이터 절약 모드만 제외) 바로 받는 묶음. */
 export const EARLY_GROUPS = Object.freeze([EARLY_GROUP, STARTER_VILLAGE_GROUP]);
-export const IDLE_GROUP_ORDER = Object.freeze(['heroes-t2', 'expeditions', 'avatars', 'arena', 'heroes-t3', 'cinematic', 'bgm-extra']);
+export const IDLE_GROUP_ORDER = Object.freeze(['heroes-t2', 'expeditions', 'weapons', 'avatars', 'arena', 'heroes-t3', 'cinematic', 'bgm-extra']);
 
 export function connectionKind(nav = globalThis.navigator) {
   const c = nav?.connection;

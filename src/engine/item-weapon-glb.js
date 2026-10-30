@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import MANIFEST from '../data/item-weapon-glb.json';
+import { isRemoteAsset, readRemoteBuffer, remoteAssets } from '../platform/remote-assets.js';
 
 export const ITEM_WEAPON_GLB_FORMS = Object.freeze(['sword', 'greatsword', 'axe', 'greataxe', 'wand', 'staff', 'dagger', 'bow']);
 /** 텍스처가 있는 GLB 무기는 등급·강화 발광을 이 비율로만 칠한다(절차적 무기 대비). */
@@ -94,23 +95,56 @@ function bakeRecord(entry, gltf) {
  */
 export function preloadItemWeaponGlbs(options = {}) {
   if (options.manifest) { active = options.manifest; pending = null; }
-  if (pending) return pending;
-  const load = options.load || (url => {
-    if (!loader) { loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder); }
-    return loader.loadAsync(url);
-  });
-  pending = Promise.all(active.items.map(async entry => {
+  const load = options.load || defaultLoad;
+  // 스토어 네이티브 채널에서 APK 밖(remote)인 GLB 는 이미 기기에 보관된 것만 여기서 읽는다(첫 실행 부팅이 다운로드를 기다리지 않는다).
+  // 나머지는 사전 내려받기('weapons' 묶음, 와이파이)나 loadItemWeaponGlbsFor 가 채우고, 그때까지 호출 쪽은 절차적 무기로 폴백한다.
+  if (!pending) pending = Promise.all(active.items.map(async entry => {
     const key = keyOf(entry.id, entry.form);
     if (records.has(key) || failed.has(key)) return;
     if (!ITEM_WEAPON_GLB_FORMS.includes(entry.form)) { failed.add(key); warnOnce(key, `[item-weapon-glb] 지원하지 않는 형태: ${key}`); return; }
+    if (!options.load && isRemoteAsset(entry.file) && !remoteAssets.isCached(entry.file)) return;
     try { records.set(key, bakeRecord(entry, await withTimeout(load(entry.file), key))); }
     catch (error) { failed.add(key); warnOnce(key, `[item-weapon-glb] 로딩 실패, 절차적 무기로 대체: ${key}`, error); }
   })).then(() => undefined);
-  return pending;
+  return pending.then(() => sweepStoredRemote(load, options));
+}
+
+function defaultLoad(url) {
+  if (!loader) { loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder); }
+  if (isRemoteAsset(url)) return readRemoteBuffer(url).then(buffer => loader.parseAsync(buffer, url.slice(0, url.lastIndexOf('/') + 1)));
+  return loader.loadAsync(url);
+}
+
+const remoteJobs = new Map();   // key → Promise (같은 GLB 를 동시에 두 번 읽지 않는다)
+/** remote GLB 한 개를 읽어 기록한다. 실패해도 failed 에 넣지 않아 다음 호출에서 다시 시도한다. */
+function loadRemoteEntry(entry, load) {
+  const key = keyOf(entry.id, entry.form);
+  if (records.has(key)) return Promise.resolve();
+  if (remoteJobs.has(key)) return remoteJobs.get(key);
+  const job = (async () => {
+    try { records.set(key, bakeRecord(entry, await withTimeout(load(entry.file), key))); }
+    catch (error) { warnOnce(key, `[item-weapon-glb] remote 로딩 실패, 절차적 무기로 대체: ${key}`, error); }
+  })().finally(() => remoteJobs.delete(key));
+  remoteJobs.set(key, job);
+  return job;
+}
+
+/** 이미 보관된 remote GLB 를 (사전 내려받기가 끝난 뒤) 기록으로 올린다. */
+function sweepStoredRemote(load, options) {
+  if (options.load) return undefined;
+  const todo = active.items.filter(entry => !records.has(keyOf(entry.id, entry.form)) && !failed.has(keyOf(entry.id, entry.form))
+    && ITEM_WEAPON_GLB_FORMS.includes(entry.form) && isRemoteAsset(entry.file) && remoteAssets.isCached(entry.file));
+  return todo.length ? Promise.all(todo.map(entry => loadRemoteEntry(entry, load))).then(() => undefined) : undefined;
+}
+
+/** 아이템 하나가 화면에 나오기 직전: 그 아이템의 remote GLB(형태마다 수백 KB)만 받아 기록한다. 못 받으면 절차적 무기 그대로. */
+export function loadItemWeaponGlbsFor(id) {
+  return Promise.all(active.items.filter(entry => entry.id === id && ITEM_WEAPON_GLB_FORMS.includes(entry.form) && !records.has(keyOf(entry.id, entry.form))
+    && !failed.has(keyOf(entry.id, entry.form)) && isRemoteAsset(entry.file)).map(entry => loadRemoteEntry(entry, defaultLoad))).then(() => undefined);
 }
 
 /** 시험용: 캐시와 상태를 비운다. */
 export function resetItemWeaponGlbsForTest() {
   for (const record of records.values()) { record.geometry.dispose(); record.material.dispose(); }
-  records.clear(); failed.clear(); warned.clear(); active = MANIFEST; pending = null;
+  records.clear(); failed.clear(); warned.clear(); remoteJobs.clear(); active = MANIFEST; pending = null;
 }

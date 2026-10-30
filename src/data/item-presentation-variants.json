@@ -18,10 +18,10 @@
     "src/engine/forged-weapons.js": "9c724af1a1ffddf441f12be686a11575facf2cb140fca78f04bdae91336fa02e",
     "src/engine/armory-assets.js": "cbb1345a845cac3077480cfde1e335300914513b4150ea68e43caaaa3475e21a",
     "src/engine/hero-model-paths.js": "48d5a8977b1aa4421064674185711965b58092f0562a7037f035fa40dd5ec057",
-    "src/ui/item-visual-model.js": "771789a1a2a184694bb9057831f2b87b92d1de9562ea3865e78a18f52a7abed2",
+    "src/ui/item-visual-model.js": "9ac61776b61cd82a9f85b4ae3904c9030a2739711c96d2c22f7deac2ff51d146",
     "src/data/item-presentation-forms.json": "b7ef83a6382902cf6204b8e8084185717ac3b784eb7021d7549b88e76d80a4b2",
     "tools/item-render-variants.html": "c11f2f40600f6d3daf0c7baa5fca4400e4e8746fa7ae8a17db6edb040d2086b0",
-    "src/engine/item-weapon-glb.js": "8c8803dc67609c90b668e80c2db2da402c369de6e4baccd3b5863858988e1556",
+    "src/engine/item-weapon-glb.js": "13c55e8ca8d63a19a31b2cfc9c8bede8bbc5b3e9ac84a31c5c25f442ab6137a0",
     "src/data/item-weapon-glb.json": "01db1db70716ae69b5722ed10e61fedc26a0ca89f92f3b46e801059de4a1a14f"
   },
   "assetHashes": {
