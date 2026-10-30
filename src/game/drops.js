@@ -17,7 +17,7 @@ const LAND_SQUASH_TIME = .32;
 const hash01 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // Free AI practice pays its catalog reward only; it never creates field loot.
-export const fieldDropsAllowed = stage => !stage?.party && stage?.expedition?.kind !== 'arena';
+export const fieldDropsAllowed = stage => !stage?.party && !stage?.bounty && stage?.expedition?.kind !== 'arena';
 
 /**
  * 필드 드랍: 코인/장비/강화석이 3D 로 튀어나오고, 플레이어가 가까이 가면 자석처럼 빨려온다.
