@@ -126,13 +126,19 @@
   #battle-tutorial .tutorial-actions .btn { min-height: 40px; min-width: 52px; padding: 2px 6px; font-size: 10px; }
 }
 @media (orientation: portrait) {
-  /* 좌측 물약 행 아래, 짧은 화면의 시점 버튼과 이동 스틱 위에 별도 공간을 쓴다. */
+  /* 접힌 안내는 시점 버튼(카메라 자동)과 이동 스틱 사이의 빈 띠에 둔다. */
   #battle-tutorial .tutorial-toggle[aria-expanded='false'] {
     top: auto;
     right: auto;
-    bottom: calc(176px + var(--sab));
+    bottom: calc(122px + var(--sab));
     left: calc(14px + var(--sal));
   }
+  /* 펼친 카드는 상단 HUD(체력·MP 패널, 미니맵 ≈148px)를 가리지 않도록 그 아래에서 시작하고,
+     접기 버튼은 카드 아래 오른쪽 끝으로 보내 주인공 위를 비운다. */
+  #battle-tutorial { padding-top: calc(154px + var(--sat)); }
+  /* 오른쪽 가방 버튼 열(≈70px)은 비워 둔다. */
+  #battle-tutorial .tutorial-card { order: 1; align-self: flex-start; width: min(320px, calc(100vw - 94px)); }
+  #battle-tutorial .tutorial-toggle[aria-expanded='true'] { order: 2; align-self: flex-end; }
 }
 /* 키 큰 가로 화면의 체력 카드는 234px, 미니맵·목표 카드는 오른쪽에서 274px까지 차지하므로 띠의 범위를 그만큼 좁힌다. */
 @media (orientation: landscape) and (min-height: 551px) {
