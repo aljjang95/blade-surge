@@ -16,3 +16,6 @@ src/data/rogue-t2-body-motion-v2.json text eol=lf
 src/data/higher-body-motion-v1.json text eol=lf
 src/data/higher-body-revisions-v1.json text eol=lf
 tools/combat-mesh-qa.mjs text eol=lf
+
+# 원격 스트리밍 자산은 앱 매니페스트의 내용 해시와 호스트 바이트가 같아야 한다. Windows(PC 배포) 체크아웃의 CRLF 변환을 막는다(2026-10-31 각인 manifest.json 해시 불일치).
+public/**/*.json text eol=lf
