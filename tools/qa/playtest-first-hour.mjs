@@ -145,10 +145,18 @@ try {
     if (s0.mode !== 'lobby') { defect('흐름', `로비 아님: ${s0.mode}`); break; }
     mark();
     await sleep(1500);
+    // 로비에 뜨는 보상·안내 창(출석 보상 등)은 이용자처럼 "보상 받기"/확인으로 처리하고 시각표에 남긴다.
+    for (let k = 0; k < 5; k++) {
+      const ok = page.locator('#m-ok'); if (!(await ok.isVisible().catch(() => false))) break;
+      const head = await page.evaluate(() => (document.querySelector('#m-ok')?.closest('dialog, .modal, [role=dialog], div')?.innerText || '').slice(0, 30).replace(/\s+/g, ' '));
+      await shot(`lobby-modal-${k + 1}`);
+      ev('로비 창 처리', `${head} → ${(await ok.innerText().catch(() => '')).trim()}`);
+      await ok.tap({ timeout: 4000 }).catch(() => defect('로비', '창 확인 버튼 탭 실패'));
+      await sleep(HUMAN.read);
+    }
     if (!(await page.locator('#citadel-dungeon-prepare').first().isVisible().catch(() => false))) {
-      // 출격이 안 보이면 이용자도 막힌 것이다: 화면과 보이는 버튼·열린 창을 남긴다.
-      const seen = await page.evaluate(() => ({ dialogs: [...document.querySelectorAll('dialog[open], .modal.show, [role=dialog]')].filter(e => e.offsetParent || e.tagName === 'DIALOG').map(e => (e.id || e.className) + ':' + (e.innerText || '').slice(0, 40).replace(/\s+/g, ' ')), buttons: [...document.querySelectorAll('button')].filter(b => b.offsetParent).map(b => (b.id || '') + '|' + (b.innerText || '').slice(0, 10).replace(/\s+/g, ' ')).slice(0, 25), mode: window.app?.mode }));
-      defect('로비', `출격 버튼 없음 · 창 ${JSON.stringify(seen.dialogs)} · 버튼 ${seen.buttons.join(' ')}`);
+      const seen = await page.evaluate(() => [...document.querySelectorAll('button')].filter(b => b.offsetParent).map(b => (b.id || '') + '|' + (b.innerText || '').slice(0, 10).replace(/\s+/g, ' ')).slice(0, 25));
+      defect('로비', `출격 버튼 없음 · 버튼 ${seen.join(' ')}`);
       await shot('lobby-no-sortie');
     }
     await tap('#citadel-dungeon-prepare', { label: '출격' }); await sleep(HUMAN.read);
