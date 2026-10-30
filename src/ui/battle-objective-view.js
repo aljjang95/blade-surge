@@ -238,13 +238,18 @@ function mainObjectiveView(battle) {
     }
   }
   const remaining = world.rooms.filter(room => !room.cleared && !['start', 'boss'].includes(room.type)).length;
-  if (world.sealed) return step('보스 봉인 해제', `남은 구역 ${remaining}곳 정화`, {
-    progress: world.rooms.filter(room => room.cleared && !['start', 'boss'].includes(room.type)).length,
-    total: world.rooms.filter(room => !['start', 'boss'].includes(room.type)).length });
-  if (!boss?.discovered) return step('보스 찾기', '미탐험 구역을 따라 이동');
+  const progress = world.rooms.filter(room => room.cleared && !['start', 'boss'].includes(room.type)).length;
+  const total = world.rooms.filter(room => !['start', 'boss'].includes(room.type)).length;
+  // 길로 봉인이 풀리는 판: 보스 문까지 남은 방 수가 주 목표이고, 전부 정화는 보너스로 함께 보인다.
+  const routeInfo = battle.routeView?.();
+  if (world.sealed && routeInfo?.early) return step('보스 문 열기', `보스까지 ${routeInfo.pathLeft}곳 정화 · 전부 정화 보너스 ${progress}/${total}`, {
+    progress, total, roomId: routeInfo.path.find(id => id !== boss.id && !world.rooms[id].cleared && world.rooms[id].discovered) ?? null });
+  if (world.sealed) return step('보스 봉인 해제', `남은 구역 ${remaining}곳 정화`, { progress, total });
+  if (!boss?.discovered && !world.bossRevealed) return step('보스 찾기', '미탐험 구역을 따라 이동');
   const atBoss = battle.curRoom?.id === boss.id;
+  const bonusLeft = remaining > 0 && routeInfo?.early ? ` · 전부 정화 보너스까지 ${remaining}곳` : '';
   return step('보스 처치', atBoss ? battle.boss?.alive ? '공격 예고를 피하고 보스를 공격' : '보스 출현에 대비'
-    : '발견한 보스 구역으로 이동', { roomId: boss.id });
+    : `${boss.discovered ? '발견한 ' : ''}보스 구역으로 이동${bonusLeft}`, { roomId: boss.id });
 }
 
 export function battleObjectiveView(battle) {
