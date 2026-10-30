@@ -28,9 +28,9 @@ test('ids: build/parse round trip and rejects', () => {
 
 test('trial judge: pass, fail, no-fact, lost', () => {
   const def = bountyDef('story:1-1:trial')!; const t = def.trial;
-  const good: any = { win: true, timeSec: 0, hitsTaken: 0, maxCombo: 999, potionsUsed: 0 };
+  const good: any = { win: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
   expect(judgeBounty(def, good).ok).toBe(true);
-  const bad: any = { win: true, timeSec: 9999, hitsTaken: 999, maxCombo: 0, potionsUsed: 9 };
+  const bad: any = { win: true, time: 9999, revives: 9, maxCombo: 0, stars: 1 };
   expect(judgeBounty(def, bad)).toMatchObject({ ok: false, reason: 'trial' });
   const noFact: any = { win: true }; expect(judgeBounty(def, noFact)).toMatchObject({ ok: false, reason: 'no-fact' });
   expect(judgeBounty(def, { ...good, win: false })).toMatchObject({ ok: false, reason: 'lost' });
@@ -41,7 +41,7 @@ test('trial judge: pass, fail, no-fact, lost', () => {
 });
 
 test('completeBounty: rewards once, never twice, locked tiers refuse', () => {
-  const st = normalizeBounty(null), sv = save(open()), r: any = { win: true, timeSec: 0, hitsTaken: 0, maxCombo: 999, potionsUsed: 0 };
+  const st = normalizeBounty(null), sv = save(open()), r: any = { win: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
   const a = completeBounty(st, sv, 'story:1-1:hunt', r);
   expect(a.ok).toBe(true); expect(a.rewards!.gold).toBeGreaterThan(0); expect(st.marks).toBe(1); expect(st.completed).toBe(1);
   expect(completeBounty(st, sv, 'story:1-1:hunt', r)).toMatchObject({ ok: false, reason: 'done' }); expect(st.completed).toBe(1);
