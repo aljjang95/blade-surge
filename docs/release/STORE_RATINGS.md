@@ -93,3 +93,8 @@
 - RATING_DECISION 3장 해석(직접 운영 웹은 자체등급분류로 대체할 수 없음)과 다르다. 이 차이는 **위험 '중'**으로 남긴다. 게임위/GCRB 서면 질의 초안은 web-rating 레인이 맡는다.
 - 원스토어 IARC는 직접 설문으로 받는다. 서명 키는 apex-skill-forge 레인이 맡는다. 이 레인은 앱 등록과 IARC 설문까지만 맡는다.
 - 로그인은 지휘 세션의 클라우드 데스크톱에서 받는다. 로그인되면 지휘 세션이 `apex vault capture onestore`로 금고를 갱신한 뒤 이 레인에 알린다.
+
+## 6. Play 내부 테스트 AAB (2026-10-31)
+- 빌드: versionCode **4** / versionName 1.0.4. 서명 없는 googleplay 릴리스(docs/CLOUD_AAB_BUILD.md 절차), 132,415,568 B, sha256 `cc46e4d586566e8db64a2c497f07f54b8de7306feb39f1440bc600834a601c3b`. Play에 올라간 최댓값은 3이었다.
+- 업로드: `apex play … BLADESURGE_PLAY internal`를 2회 시도했고 둘 다 `503 signer_busy`로 실패했다. 응답의 `holdingBytes:0`, `requestBytes:142,901,328`로 보아, 다른 요청이 점유한 것이 아니라 **서명기 요청 본문 한도(약 100MB) 초과**로 판단한다.
+- 다음(출시 레인 claude/app-release 범위): AAB 축소(Play Asset Delivery 팩 분리 또는 에셋 압축), 서명기 한도 상향, PC 업로드 중 하나를 고른다. 내부 트랙 업로드가 끝나야 대시보드 단계를 마치고 검토 전송 → IARC 인증 ID 발급으로 이어진다.
