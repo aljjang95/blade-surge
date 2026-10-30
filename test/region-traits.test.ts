@@ -315,3 +315,13 @@ test('망각의 잔향: 7장 해골 시민·굽쇠 주술사는 원본 종이 �
   // 원령·폭탄 슬라임 자리는 몸이 해골이어도 교체 전처럼 되살아나지 않는다(난이도 체감 유지).
   for (const src of ['ghost', 'bomb_slime']) expect(isSkeletalSpecies(E[sw[src]].model, sw[src]), src).toBe(false);
 });
+
+test('slag autoEscape: 쇳물(예고 중 포함) 1.75 안이면 바깥 2.4 지점, 밖이거나 쇳물 없으면 null', () => {
+  const hero = makeHero(), game = makeGame('forge', hero), rt = new RegionTraits(game);
+  expect(rt.autoEscape(hero)).toBeNull();
+  rt.pool(1, 0, 'slag', 3.5);
+  const out = rt.autoEscape(hero)!;
+  expect(out.x).toBeCloseTo(1 - 2.4, 5); expect(out.z).toBeCloseTo(0, 5);
+  hero.pos.x = -3; expect(rt.autoEscape(hero)).toBeNull();
+  rt.update(5); hero.pos.x = 1; expect(rt.autoEscape(hero)).toBeNull();   // 식은 쇳물은 피하지 않는다
+});
