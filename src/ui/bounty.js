@@ -1,7 +1,7 @@
 // 현상금 의뢰판 화면(docs/BOUNTY_BOARD.md). 허브/메뉴의 모달이며 전투 화면 위에는 열리지 않는다.
 // 규칙은 eco.bounties()/startBounty()/buyBounty() 가 정본이고 여기서는 보여 주고 출발만 시킨다.
 import { audio } from '../engine/audio.js';
-import { HUNTER_TITLES } from '../data/bounties.js';
+import { HUNTER_TITLES, BOUNTY_SHOP } from '../data/bounties.js';
 import './journey.css';
 import './bounty.css';
 
@@ -49,6 +49,9 @@ export class BountyView {
     const top = node('div', 'bounty-hunter-top');
     top.append(node('b', 'bounty-rank', `사냥꾼 ${sum.rank}등급`), node('span', 'bounty-title', title ? title.name : '칭호 없음'), node('span', 'bounty-marks', `증표 ${fmt(sum.marks)}`));
     const bar = document.createElement('progress'); bar.max = Math.max(1, sum.need); bar.value = sum.need ? sum.xp : 1; bar.setAttribute('aria-label', '사냥꾼 경험치');
+    // 산 깃발은 사냥꾼 카드에 걸린다(표시 전용 장식).
+    const flags = BOUNTY_SHOP.filter((x) => x.grant.cosmetic && (st?.owned || []).includes(x.grant.cosmetic));
+    if (flags.length) { const row = node('div', 'bounty-flags'); for (const f of flags) row.append(node('span', `bounty-flag ${f.grant.cosmetic}`, f.name.replace('사냥꾼 깃발: ', '🚩 '))); top.append(row); }
     card.append(top, bar, node('small', 'journey-muted', sum.need ? `다음 등급까지 ${fmt(sum.need - sum.xp)} · 완료한 의뢰 ${fmt(sum.completed)}건` : `최고 등급 · 완료한 의뢰 ${fmt(sum.completed)}건`));
     return card;
   }

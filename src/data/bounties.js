@@ -31,7 +31,7 @@ export const BOUNTY_TRIALS = Object.freeze([
 ]);
 
 /** 사냥꾼 등급: 등급 r → r+1 에 필요한 경험치. 의뢰 4~8개(대략 20~30분)마다 한 등급. */
-export const HUNTER_RANK = Object.freeze({ max: 60, need: (rank) => 40 + 5 * rank });
+export const HUNTER_RANK = Object.freeze({ max: 55, need: (rank) => 40 + 5 * rank });
 
 /** 5등급마다 칭호. 칭호는 효과 없음(표시 전용). */
 export const HUNTER_TITLES = Object.freeze([
@@ -45,8 +45,7 @@ export const HUNTER_TITLES = Object.freeze([
   { rank: 40, id: 'bounty_belltower', name: '종탑 집행자' },
   { rank: 45, id: 'bounty_veteran', name: '노련한 현상금 사냥꾼' },
   { rank: 50, id: 'bounty_master', name: '의뢰판의 주인' },
-  { rank: 55, id: 'bounty_legend', name: '전설의 추적자' },
-  { rank: 60, id: 'bounty_apex', name: '정점의 사냥꾼' },
+  { rank: 55, id: 'bounty_apex', name: '정점의 사냥꾼' },
 ]);
 
 /** 등급 보상(등급에 도달한 순간 1회): 강화석 소량. 전투력 곡선을 흔들지 않는 크기(sim:90d 밴드로 가드). */

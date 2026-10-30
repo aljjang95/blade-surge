@@ -26,7 +26,8 @@ export function startBounty(eco, id) {
   if (!availableBounties(state, eco.s).some((x) => x.id === id)) return { ok: false, reason: 'done' };
   const base = stageDef(def.ch, def.st), diff = eco.difficultyFor(def.ch, def.st, def.tier);
   if (diff.id !== def.tier) return { ok: false, reason: 'locked' };
-  const stage = { ...applyDifficulty(base, diff), energy: 0, bounty: { id, kind: def.kind, tier: def.tier } };
+  // 펼침은 열거되지 않는 combatRosterFor(지역 전투 명단)를 버리므로 난이도 적용본에 직접 붙인다.
+  const stage = Object.assign(applyDifficulty(base, diff), { energy: 0, bounty: { id, kind: def.kind, tier: def.tier } });
   return { ok: true, def, stage };
 }
 
