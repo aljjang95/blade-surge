@@ -35,7 +35,7 @@ test('일회성은 PATCH + 활성화, 구독은 POST + basePlan 활성화이고 
       expect(bp.regionalConfigs[0].price).toEqual({ currencyCode: 'KRW', units: String(p.priceKRW) });
       expect(reqs.some((r: any) => r.path === `/subscriptions/${p.id}/basePlans/${p.basePlanId}:activate`)).toBe(true);
     } else {
-      const patch = reqs.find((r: any) => r.method === 'PATCH' && r.path === `/oneTimeProducts/${p.id}`);
+      const patch = reqs.find((r: any) => r.method === 'PATCH' && r.path === `/onetimeproducts/${p.id}`);
       expect(patch).toBeTruthy();
       expect(patch.query.allowMissing).toBe('true');
       expect(patch.body.purchaseOptions[0].regionalPricingAndAvailabilityConfigs[0].price).toEqual({ currencyCode: 'KRW', units: String(p.priceKRW) });

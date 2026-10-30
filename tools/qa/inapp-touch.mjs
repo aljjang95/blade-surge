@@ -3,7 +3,7 @@
 // 조이스틱·멀티터치·하단 HUD 배치·소리 재개를 숫자로 판정한다. 실기기 WebView 확인을 대신하지 않는다.
 // 사용: bun run qa:inapp            (빌드 산출물 dist 를 vite preview 로 띄워 검사)
 //       node tools/qa/inapp-touch.mjs --origin=https://blade.tllhouse.com [--full] [--out=work/qa/inapp-<시각>]
-//       --full: UA 4종 × 뷰포트 3종 전부(기본은 뷰포트마다 UA 하나씩 돌려 3회 + 나머지 UA 1회)
+//       --full: UA 4종 × 뷰포트 4종 전부(기본은 뷰포트마다 UA 하나씩 4회)
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 import fs from 'node:fs/promises';
@@ -23,15 +23,16 @@ export const IN_APP_UAS = {
   naver: `${ANDROID} NAVER(inapp; search; 2000; 12.10.3)`,
 };
 // 세로 두 종은 하단 앱 바·툴바가 차지한 뒤의 높이, 가로는 상태 표시줄을 뺀 높이.
-export const IN_APP_VIEWPORTS = [{ width: 390, height: 700 }, { width: 360, height: 640 }, { width: 844, height: 390 }];
+export const IN_APP_VIEWPORTS = [{ width: 390, height: 700 }, { width: 360, height: 640 }, { width: 844, height: 390 }, { width: 390, height: 844 }];
 const BAR = 56; // 인앱 브라우저가 스크롤·터치 때 접었다 펴는 앱 바 높이(대략)
 
 function plan() {
   const uas = Object.keys(IN_APP_UAS);
   if (flag('full')) return IN_APP_VIEWPORTS.flatMap(viewport => uas.map(ua => ({ ua, viewport })));
-  const runs = IN_APP_VIEWPORTS.map((viewport, i) => ({ ua: uas[i], viewport }));
-  runs.push({ ua: uas[3], viewport: IN_APP_VIEWPORTS[0] });
-  return arg('limit') ? runs.slice(0, Number(arg('limit'))) : runs;
+  const runs = IN_APP_VIEWPORTS.map((viewport, i) => ({ ua: uas[i % uas.length], viewport }));
+  const only = arg('viewports')?.split(',');
+  const picked = only ? runs.filter(r => only.includes(`${r.viewport.width}x${r.viewport.height}`)) : runs;
+  return arg('limit') ? picked.slice(0, Number(arg('limit'))) : picked;
 }
 
 // 페이지 시작 전에 설치: 페이지 기본 동작(스크롤·당겨서 새로고침)이 일어났는지 window 버블 단계에서 기록한다.
@@ -158,7 +159,8 @@ const hudRects = page => page.evaluate(() => {
 });
 
 async function battleChecks(page, cdp, viewport, out) {
-  const joy = await page.evaluate(() => { const r = document.getElementById('joy').getBoundingClientRect(); return { x: r.left + r.width * .35, y: r.top + r.height * .6, right: r.right }; });
+  // 이용자는 화면에 그려진 조이스틱 원을 누른다(영역 비율 지점은 화면 크기에 따라 다른 버튼 위에 떨어진다).
+  const joy = await page.evaluate(() => { const a = document.getElementById('joy').getBoundingClientRect(), b = document.querySelector('#joy .joy-base').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, right: a.right }; });
   const read = () => page.evaluate(() => { const i = window.app.input; return { active: i.joy.active, sx: +i.screenMove.x.toFixed(3), sy: +i.screenMove.y.toFixed(3), attackHeld: i.attackHeld }; });
   const res = {};
   await page.evaluate(() => Object.assign(window.__inappProbe, { touchmoves: 0, unprevented: 0, scroll: 0, pointercancel: 0 }));
@@ -212,6 +214,32 @@ async function battleChecks(page, cdp, viewport, out) {
   res.hud = await hudRects(page);
   res.audio = await page.evaluate(() => window.__audioState?.() ?? 'unknown');
 
+  // 동료 네브 첫 등장 소개 카드: 강제로 다시 띄워 실제 자리가 HUD·주인공 둘레와 겹치지 않는지(없으면 안 띄움도 통과).
+  res.nebCard = await page.evaluate(async () => {
+    const app = window.app, p = app.companionAgent?.presence, settings = app.eco?.s?.settings;
+    if (!p || !p.active || !settings) return { skipped: 'no-companion' };
+    const seen = settings.companionIntroSeen;
+    settings.companionIntroSeen = false; p.cardState = 'idle'; p.elapsed = 0;
+    const t0 = performance.now();
+    while (performance.now() - t0 < 4000 && p.cardState === 'idle') await new Promise(r => setTimeout(r, 100));
+    const card = document.querySelector('#hud .neb-intro'); const r = card?.getBoundingClientRect();
+    const out = { state: p.cardState, visible: !!card && !card.hidden && r.width > 0, placement: p.lastPlacement ?? null };
+    if (out.visible) {
+      out.rect = { left: Math.round(r.left), top: Math.round(r.top), right: Math.round(r.right), bottom: Math.round(r.bottom) };
+      const T = window.__THREE, cam = app.renderer?.camera, pl = app.battle?.player;
+      const v = new T.Vector3(pl.pos.x, pl.pos.y + 1, pl.pos.z).project(cam);
+      const hero = { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, r: Math.min(innerWidth, innerHeight) * .22 };
+      const dx = Math.max(r.left - hero.x, 0, hero.x - r.right), dy = Math.max(r.top - hero.y, 0, hero.y - r.bottom);
+      out.heroDist = Math.round(Math.hypot(dx, dy)); out.heroR = Math.round(hero.r);
+      const sel = '.hud-player, #objective, #bossbar, .hud-right-top, #btn-map, .joy-base, .actions .skill-btn, #btn-dodge, #btn-attack, .exp-potions, .oath-camera-details, .battle-camera-controls, #btn-bag, #battle-bag';
+      out.overlaps = [...document.querySelectorAll(sel)].map(el => ({ el, b: el.getBoundingClientRect() }))
+        .filter(({ b }) => b.width && b.height && r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top)
+        .map(({ el }) => el.id || el.className);
+      out.inside = r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+    }
+    card?.click(); settings.companionIntroSeen = seen;
+    return out;
+  });
   const pressed = new Set(res.pressLog);
   out.battle = res;
   out.battle.pass = {
@@ -229,6 +257,7 @@ async function battleChecks(page, cdp, viewport, out) {
     hudInsideViewport: res.hud.outside.length === 0,
     hudClearOfPlay: res.hud.coversPlay.length === 0,
     audioRunningAfterTouch: res.audio === 'running',
+    nebCardClear: !!res.nebCard.skipped || !res.nebCard.visible || (res.nebCard.heroDist >= res.nebCard.heroR && res.nebCard.overlaps.length === 0 && res.nebCard.inside),
   };
 }
 
@@ -266,7 +295,7 @@ try {
     if (!run.battle) run.failed.push('battle-not-run');
     run.ok = run.failed.length === 0 && run.errors.length === 0;
     report.runs.push(run);
-    console.log(JSON.stringify({ ua, viewport: `${viewport.width}x${viewport.height}`, ok: run.ok, failed: run.failed, lobby: run.lobby?.skipped || 'ran', keyboard: run.keyboard?.skipped || 'ran', audio: run.battle?.audio, unprevented: run.battle?.probe?.unprevented, scroll: run.battle?.probe?.scroll, overlaps: run.battle?.hud?.overlaps?.length, outside: run.battle?.hud?.outside, coversPlay: run.battle?.hud?.coversPlay, http401: run.console401, errors: run.errors.length }));
+    console.log(JSON.stringify({ ua, viewport: `${viewport.width}x${viewport.height}`, ok: run.ok, failed: run.failed, lobby: run.lobby?.skipped || 'ran', keyboard: run.keyboard?.skipped || 'ran', audio: run.battle?.audio, neb: run.battle?.nebCard && (run.battle.nebCard.skipped || (run.battle.nebCard.visible ? `${JSON.stringify(run.battle.nebCard.rect)} heroDist=${run.battle.nebCard.heroDist}/${run.battle.nebCard.heroR} overlaps=${run.battle.nebCard.overlaps.length}` : 'not-shown')), unprevented: run.battle?.probe?.unprevented, scroll: run.battle?.probe?.scroll, overlaps: run.battle?.hud?.overlaps?.length, outside: run.battle?.hud?.outside, coversPlay: run.battle?.hud?.coversPlay, http401: run.console401, errors: run.errors.length }));
     await context.close();
   }
 } finally {
