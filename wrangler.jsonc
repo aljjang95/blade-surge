@@ -60,7 +60,9 @@
     "CHATGPT_CLIENT_ID": ""
   },
   "secrets_store_secrets": [{ "binding": "PLAY_SA_JSON", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PLAY_SA_JSON" },
-    { "binding": "PORTONE_API_SECRET", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PORTONE_API_SECRET" }],
+    { "binding": "PORTONE_API_SECRET", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_PORTONE_API_SECRET" },
+    // 원스토어 서버 API v7 자격 JSON(worker/v1/onestore.ts). PC D:\\Work\\tasks\\logs\\set-onestore-secret.ps1 로 만든 뒤에만 배포 가능하다.
+    { "binding": "ONE_PUBLISHER", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_CLOUD_BLADESURGE_ONE_PUBLISHER" }],
   "observability": { "enabled": true },
   "triggers": { "crons": ["17 * * * *"] },
   "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28", "migrations_dir": "worker/v1/migrations" }],
