@@ -125,7 +125,7 @@ describe('원스토어 IAP 서버 검증 → 지급', () => {
     one.state.voided = [{ purchaseToken: TOK('v'), purchaseId: null, marketCode: 'MKT_ONE' }, { purchaseToken: TOK('unknown'), purchaseId: null, marketCode: 'MKT_ONE' }];
     const ctx = { env: h.env, db: h.db, deps: h.deps, now: h.now(), request: new Request('https://x/') } as any;
     const r = await reconcileOneVoided(ctx);
-    expect(r).toMatchObject({ seen: 2, reversed: 1, failed: 0 });
+    expect(r).toMatchObject({ seen: 4, reversed: 1, failed: 0 }); // 두 시장(MKT_ONE·MKT_GLB)을 모두 본다
     const st = await h.send('GET', '/iap/state', undefined, a.token);
     expect(st.body.entitlements.adsRemoved).toBe(false);
   });
@@ -144,11 +144,13 @@ describe('원스토어 IAP 서버 검증 → 지급', () => {
     expect(again.body.acked).toBe(true);
   });
 
-  test('SANDBOX 테스트 토큰은 IAP_ALLOW_TEST일 때만, 허용되지 않은 marketCode는 거부', async () => {
-    const { one, a, intent, verify } = await setup();
-    const it = (await intent(a.token, 'remove_ads_v1')).body;
-    one.buy('SANDBOX' + TOK('t'), 'remove_ads_v1', it.obfuscatedAccountId);
-    expect((await verify(a.token, 'remove_ads_v1', 'SANDBOX' + TOK('t'))).body.error).toBe('test-purchase-not-allowed');
+  test('허용되지 않은 marketCode는 거부, 카탈로그는 채널별 결제 가능 여부를 낸다', async () => {
+    const { h, a, verify } = await setup();
+    const one = await h.send('GET', '/iap/catalog?channel=onestore', undefined, a.token);
+    expect(one.body.billing).toBe(true);
+    expect(one.body.products.find((p: any) => p.id === 'remove_ads_v1').channels).toContain('onestore');
+    // Play 자격이 없으면 Play 카탈로그는 닫힌다(채널을 섞지 않는다).
+    expect((await h.send('GET', '/iap/catalog', undefined, a.token)).body.reason).toBe('credential-route-unavailable');
     expect((await verify(a.token, 'remove_ads_v1', TOK('m'), { marketCode: 'MKT_XXX' })).body.error).toBe('market-code');
   });
 
@@ -198,5 +200,15 @@ describe('원스토어 API 클라이언트', () => {
     };
     const out = await createOneApi(env, fetcher, () => 3_000_000_000).voided(0, 'MKT_ONE');
     expect(out.map((v) => v.purchaseToken)).toEqual(['a1', 'a2']);
+  });
+});
+
+describe('원스토어 구매취소내역 페이지 상한', () => {
+  test('continuationKey가 계속 남으면 실패로 돌려 대사 커서를 멈춘다', async () => {
+    const cred = JSON.stringify({ client_id: 'oauth-1', api_client_id: 'app-1', package_name: 'com.theluxurylord.bladesurge', environment: 'production-v7', client_secret: 's3cret' });
+    const env = { ONE_PUBLISHER: cred, BLADESURGE_ONE_API_CLIENT_ID: 'app-1', BLADESURGE_ONE_OAUTH_CLIENT_ID: 'oauth-1' };
+    const fetcher = async (r: Request) => r.url.endsWith('/v7/oauth/token') ? Response.json({ access_token: 'at-3', expires_in: 3600 })
+      : Response.json({ voidedPurchaseList: [], continuationKey: 'more' });
+    await expect(createOneApi(env, fetcher, () => 4_000_000_000).voided(0, 'MKT_ONE')).rejects.toThrow('one-voided-truncated');
   });
 });

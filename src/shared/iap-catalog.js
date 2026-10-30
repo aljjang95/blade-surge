@@ -34,7 +34,7 @@ export const HERO_ALL_PRICE_KRW = 89000;
 /** hero_<id>_v1 상품 id ↔ 영웅 id. */
 export const heroProductId = (heroId) => `hero_${heroId}_v1`;
 export const HERO_ALL_PRODUCT_ID = 'hero_all_v1';
-// 원스토어(onestore)는 일회성 상품만 판다(정기 결제·보석 팩은 Play 전용, iap.ts intent가 막는다).
+// 원스토어(onestore)는 일회성 상품만 판다. 정기 결제는 iap.ts intent가 막고, channels가 없는 보석 팩은 soldOn으로 Play만 판다.
 const CHANNELS_ALL = Object.freeze(['web', 'play', 'onestore']);
 const CHANNELS_WEB = Object.freeze(['web']);
 const DAY_MS = 86400000;

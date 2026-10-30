@@ -116,9 +116,10 @@ export function createOneApi(env: OneEnv, fetcher: Fetch = (r) => fetch(r), now:
           if (token) out.push({ purchaseToken: token, purchaseId: str(row.purchaseId), marketCode: str(row.marketCode) ?? market });
         }
         key = str(r.continuationKey);
-        if (!key) break;
+        if (!key) return out;
       }
-      return out;
+      // 페이지 상한에 걸리면 남은 취소를 놓치지 않게 실패로 돌려 대사 커서를 멈춘다.
+      throw new V1Error(503, 'one-voided-truncated');
     },
   };
 }

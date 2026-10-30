@@ -110,8 +110,9 @@ export async function iapAllowance(db: D1Database, accountId: string): Promise<R
 }
 
 // ── 공개 API ─────────────────────────────────────────────
-export async function catalog(c: Ctx, auth: Authed) {
-  const reason = await billingReason(c);
+export async function catalog(c: Ctx, auth: Authed, channelParam?: string | null) {
+  const channel = appChannel(channelParam ?? undefined);
+  const reason = await billingReason(c, channel);
   const owned = reason ? new Set<string>() : await ownedProducts(c.db, auth.account.account_id);
   const activeKeys = reason ? new Set<string>() : await activeEntitlementKeys(c.db, auth.account.account_id, c.now);
   // 월정액 권한('monthly')이 살아 있으면 월정액 계열(Play 구독·웹 30일 이용권)은 다시 살 수 없다(intent와 같은 기준).
@@ -370,8 +371,8 @@ export async function processOnePurchase(c: Ctx, product: IapProduct, token: str
   const prior = await c.db.prepare('SELECT account_id, product_id, state, acked, consumed, expires_at FROM iap_purchases WHERE token_hash = ?').bind(hash).first<PurchaseRow>();
   if (prior && who.accountId && prior.account_id !== who.accountId) fail(409, 'purchase-owned-by-another-account');
   if (prior && prior.product_id !== product.id) fail(409, 'purchase-mismatch');
-  const test = /^SANDBOX/i.test(token);
-  if (test && iapEnv(c).IAP_ALLOW_TEST !== 'true') fail(422, 'test-purchase-not-allowed');
+  // 상용 호스트만 쓰므로 원스토어 샌드박스(검증 호스트) 구매는 조회되지 않는다(422). 상용 응답에는 테스트 표시 필드가 없다.
+  const test = false;
   const api = one(c);
   const p = await api.purchase(product.id, token, market);
   if (p.quantity !== 1 || (p.consumptionState !== 0 && p.consumptionState !== 1) || (p.acknowledgeState !== 0 && p.acknowledgeState !== 1)) fail(422, 'purchase-unverified');
@@ -695,7 +696,9 @@ export async function reconcileOneVoided(c: Ctx): Promise<{ seen: number; revers
   if (!await iapSchemaReady(c.db) || (!oneConfigured(iapEnv(c)) && !(c as IapCtx).deps.oneApi)) return { seen: 0, reversed: 0, failed: 0, since: 0 };
   const cursor = await c.db.prepare('SELECT value FROM iap_meta WHERE key = ?').bind(ONE_RECONCILE_KEY).first<{ value: number }>();
   const since = Math.max(c.now - 29 * DAY, cursor ? cursor.value - RECONCILE_OVERLAP_MS : 0);
-  const voided = await one(c).voided(since, 'MKT_ONE');
+  // verify가 받는 시장(MKT_ONE·MKT_GLB) 모두를 본다. 한 시장이라도 실패하면 throw로 커서를 멈춘다.
+  const voided = [];
+  for (const market of ONE_MARKETS) voided.push(...await one(c).voided(since, market));
   let reversed = 0, failed = 0;
   for (const v of voided) {
     try {

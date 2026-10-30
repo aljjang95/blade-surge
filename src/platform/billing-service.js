@@ -33,7 +33,7 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
 
   async function refreshCatalog() {
     try {
-      const cat = await account.iapCatalog();
+      const cat = await account.iapCatalog(adapter?.billingChannel);
       if (cat?.billing === true && Array.isArray(cat.products)) catalog = cat.products.filter((p) => validProduct(p, channel())).map((p) => ({ ...p }));
     } catch { /* 다음 기회에 */ }
   }
@@ -44,7 +44,7 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
     if (!adapter) { permanentOff = true; return false; }
     const me = await account.me();
     if (me?.flags?.iap !== true) return false;
-    const cat = await account.iapCatalog();
+    const cat = await account.iapCatalog(adapter?.billingChannel);
     if (cat?.billing !== true || !Array.isArray(cat.products)) return false;
     const list = cat.products.filter((p) => validProduct(p, channel())).map((p) => ({ ...p }));
     if (!list.length) return false;
