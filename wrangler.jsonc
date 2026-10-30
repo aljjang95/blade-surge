@@ -29,6 +29,18 @@
     "TOSS_AD_GROUP_ID": "ait.v2.live.b311470e6321418c",
     "TOSS_AD_GROUP_ENABLED": "true",
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
+    // 앱 광고(AdMob 전면, 전투 밖·보상형 위치만): 빌드에 넣은 ID(config/store-providers.json)와 승인 ID가 같아야 켜진다(worker/store.ts nativeAdConfiguration).
+    "BLADESURGE_ADMOB_PACKAGE_NAME": "com.theluxurylord.bladesurge",
+    "BLADESURGE_GOOGLEPLAY_ADS_ENABLED": "true",
+    "BLADESURGE_GOOGLEPLAY_ADMOB_APP_ID": "ca-app-pub-2682150499836559~7085430828",
+    "BLADESURGE_GOOGLEPLAY_ADMOB_INTERSTITIAL_ID": "ca-app-pub-2682150499836559/7872908048",
+    "BLADESURGE_GOOGLEPLAY_ADMOB_APPROVED_APP_ID": "ca-app-pub-2682150499836559~7085430828",
+    "BLADESURGE_GOOGLEPLAY_ADMOB_APPROVED_INTERSTITIAL_ID": "ca-app-pub-2682150499836559/7872908048",
+    "BLADESURGE_ONESTORE_ADS_ENABLED": "true",
+    "BLADESURGE_ONESTORE_ADMOB_APP_ID": "ca-app-pub-2682150499836559~3088230082",
+    "BLADESURGE_ONESTORE_ADMOB_INTERSTITIAL_ID": "ca-app-pub-2682150499836559/8739267157",
+    "BLADESURGE_ONESTORE_ADMOB_APPROVED_APP_ID": "ca-app-pub-2682150499836559~3088230082",
+    "BLADESURGE_ONESTORE_ADMOB_APPROVED_INTERSTITIAL_ID": "ca-app-pub-2682150499836559/8739267157",
     "SOCIAL_ADMIN_IDS": "",
     "SOCIAL_DEV_ORIGINS": "false",
     // MMO 계정(/api/v1): 2026-10-29 그림자(0%)로 개방(docs/ACCOUNT_POLICY.md). SESSION_HMAC 시크릿과 D1 마이그레이션 0001~0005가 먼저 있어야 한다.
@@ -36,8 +48,9 @@
     "V1_SERVER_AUTHORITY_PERCENT": "0",
     // BM(/api/v1/iap): 기본 비활성. Play 서비스 계정은 아래 Secrets Store 바인딩 PLAY_SA_JSON(apex-shared-apis의 APEX_CLOUD_PLAY_SA_JSON).
     // RTDN은 Pub/Sub push 구독의 OIDC audience·푸시 서비스 계정 고유 ID(sub)를 코디네이터가 설정한 뒤에만 받는다(docs/BM_DESIGN.md 9장).
-    "IAP_ENABLED": "false",
-    "IAP_ALLOW_TEST": "false",
+    "IAP_ENABLED": "true",
+    // 2026-10-31 앱 출시 테스트 기간: 라이선스 테스터(Play)만 test=true를 만들 수 있다. production 개방 확인 뒤 false로 되돌린다.
+    "IAP_ALLOW_TEST": "true",
     // 웹 테스트 채널을 받을 수 있는 account_id(쉼표 구분). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제 intent/지급이 된다. 기본 비어 있음.
     "IAP_TEST_ACCOUNTS": "",
     // 웹 결제(포트원 V2): 기본 꺼짐. 켜는 순서는 docs/BM_DESIGN.md '영웅 해금' 개방 순서(D1 0004 원격 적용 → 실채널 키 → 이 스위치 → 대표님 금액 확인).
