@@ -21,16 +21,23 @@ export const LATE_CHAPTER_FROM = 5, LATE_CHAPTER_ATK = 1.3;
 // (1-2 ×1.15×1.18 ≈ 1.36 → 1-10 ×1.15×1.02 ≈ 1.17). 전투력/권장을 약 1.6~1.9 로 맞추는 짝이다.
 export const CH1_RAMP = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze(i === 0 ? { atk: 1, hp: 1 }
   : { atk: +(1.8 - (i - 1) * .0625).toFixed(4), hp: +(1.15 * Math.sqrt(CH1_REC_POWER_MUL[i])).toFixed(4) })));
+// 2장 위협 보정(2026-10-31, 3개월 ch2-entry). 같은 시작 상태·레벨만 바꾼 AUTO 스윕(tools/qa/stage-power-sweep.mjs)에서 2장은 권장 전투력의
+// 약 1.25배(2-1·2-2·2-10)~1.5배(2-5)가 되어야 이겼다(1-10 은 1.03배에서 승). 권장 전투력 식(배율^0.7)이 2장 종의 높은 기본 능력치(체력 +25%)와
+// 11관문부터 붙는 웨이브당 정예 +1 을 반영하지 못한 탓이다. 보상·배율(scale)·드랍·정산·권장 표시는 그대로 두고 전투 생성자에서만 곱한다.
+// 후반(2-8~2-10)은 0.95배로도 이겨 조금 되돌린다: 2-7 까지 공격 ×0.8·체력 ×0.82, 2-10 공격 ×0.86·체력 ×0.88 까지 선형.
+export const CH2_THREAT = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze({
+  atk: +(.8 + Math.max(0, i - 6) * .02).toFixed(4), hp: +(.82 + Math.max(0, i - 6) * .02).toFixed(4) })));
 export function campaignAtkMul(stage) {
   if (!campaignCombat(stage) || stage.tower) return 1;
   const ch = stage.chapter?.id ?? stage.ch;
   if (ch >= LATE_CHAPTER_FROM) return LATE_CHAPTER_ATK;
-  return ch === 1 ? CH1_RAMP[stage.st - 1]?.atk ?? 1 : 1;
+  return ch === 1 ? CH1_RAMP[stage.st - 1]?.atk ?? 1 : ch === 2 ? CH2_THREAT[stage.st - 1]?.atk ?? 1 : 1;
 }
-/** 1장 체력 배율(1-1은 1). 공격과 같은 이유로 1-2~1-10에만. */
+/** 1장 체력 배율(1-1은 1, 1-2~1-10 램프)과 2장 위협 보정. */
 export function campaignHpMul(stage) {
-  if (!campaignCombat(stage) || stage.tower || (stage.chapter?.id ?? stage.ch) !== 1) return 1;
-  return CH1_RAMP[stage.st - 1]?.hp ?? 1;
+  if (!campaignCombat(stage) || stage.tower) return 1;
+  const ch = stage.chapter?.id ?? stage.ch;
+  return ch === 1 ? CH1_RAMP[stage.st - 1]?.hp ?? 1 : ch === 2 ? CH2_THREAT[stage.st - 1]?.hp ?? 1 : 1;
 }
 
 export function speciesRole(def) {
