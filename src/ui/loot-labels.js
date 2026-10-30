@@ -16,7 +16,10 @@ export const LOOT_LABEL = Object.freeze({
   far: 9,          // 이 거리(월드) 밖이면 흐림
   oldAfter: 12,    // 떨어진 지 이만큼 지나면 흐림(초)
   lift: .42,       // 드랍 모델 대기 높이 위로 띄우는 높이(월드)
+  blockerRefresh: .5, // HUD·안내 띠 사각형을 다시 재는 간격(초)
 });
+/** #hud 밖에서 이름표가 피해야 하는 안내 띠. */
+export const NOTICE_SELECTORS = Object.freeze(['.toast']);
 export const RARITY_RANK = Object.freeze({ N: 0, S: 1, E: 2, U: 3, L: 4 });
 const _p = new THREE.Vector3();
 const UNLIMITED = Object.freeze({ max: Infinity, maxCommon: Infinity });
@@ -76,7 +79,7 @@ export class LootLabels {
   constructor(hud = document.getElementById('hud')) {
     this.root = document.createElement('div'); this.root.className = 'loot-labels'; this.root.setAttribute('aria-hidden', 'true');
     hud?.append(this.root);
-    this.hud = hud; this.blockers = []; this.blockerT = 0; this.picked = []; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    this.hud = hud; this.toastLayer = null; this.blockers = []; this.blockerT = 0; this.picked = []; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
     this.placedOut = { dx: 0, dy: 0, hidden: false }; this.hero = { left: 0, top: 0, right: 0, bottom: 0 };
     this.rects = Array.from({ length: LOOT_LABEL.max }, () => ({ left: 0, top: 0, right: 0, bottom: 0 }));
     this.slots = Array.from({ length: LOOT_LABEL.max }, () => {
@@ -91,7 +94,11 @@ export class LootLabels {
     if (mode !== 'battle' || !battle?.active || battle.result || !drops?.items?.length || !cam || !player) { this.stats.shown = 0; this.hideFrom(0); return; }
     const w = renderer?._width || innerWidth, h = renderer?._height || innerHeight;
     this.blockerT -= Number.isFinite(dt) ? dt : 0;
-    if (this.blockerT <= 0) { this.blockerT = 2; this.blockers = collectHudBlockers(this.hud); }
+    if (this.blockerT <= 0) {
+      // 전투 안내 띠(#toast-layer, 예: 1-1 '환경 장치 · 공명종…')는 #hud 밖에 있고 수시로 생겼다 사라지므로 함께 모으고 자주 다시 잰다.
+      this.blockerT = LOOT_LABEL.blockerRefresh; this.blockers = collectHudBlockers(this.hud);
+      for (const r of collectHudBlockers(this.toastLayer ||= document.getElementById('toast-layer'), NOTICE_SELECTORS)) this.blockers.push(r);
+    }
     this.bounds.right = w; this.bounds.bottom = h;
     // 영웅 몸 사각형(발~머리). 이름표가 올라타면 흐리게 해 주인공을 가리지 않는다.
     _p.set(player.pos.x, player.pos.y || 0, player.pos.z).project(cam);
