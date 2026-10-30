@@ -17,7 +17,8 @@ const obj = (v: unknown): Obj => (v && typeof v === 'object' && !Array.isArray(v
 
 async function webhookSecret(c: Ctx): Promise<string> {
   const source = (c.env as unknown as PortoneEnv).PORTONE_WEBHOOK_SECRET;
-  return typeof source === 'string' ? source : source && typeof source.get === 'function' ? await source.get().catch(() => '') : '';
+  const value = typeof source === 'string' ? source : source && typeof source.get === 'function' ? await source.get().catch(() => '') : '';
+  return value.trim(); // 저장 값 끝의 줄바꿈·공백 방어
 }
 
 /** whsec_ 접두를 떼고 base64로 푼 키(Standard Webhooks 규칙). 형식이 틀리면 null(설정 오류 → 503). */

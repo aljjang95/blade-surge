@@ -833,6 +833,8 @@ export class Meta {
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
     if (this.cashProduct(id)) { await this.buyWithBilling(sku); return; }
+    // 웹 결제 준비 중 상품(프로모 등 다른 입구로 들어온 경우)은 가짜 결제창 없이 알린다.
+    if (this.cashOfferFor(id)?.mode === 'pending') { this.ui.toast('결제 준비 중입니다', 'gold'); return; }
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
     this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : '');

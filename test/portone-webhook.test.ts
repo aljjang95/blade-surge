@@ -166,39 +166,48 @@ describe('실결제 수단 method.type 대조(G)', () => {
     expect(methodMismatch({ status: 'PAID', method: { type: 'PaymentMethodCard' } }, 'KAKAOPAY')).toBe(true);
   });
 
-  test('카드로 의도했는데 다른 수단(가상계좌)으로 결제되면 지급하지 않고 감사 플래그를 남긴다', async () => {
+  test('카드로 의도했는데 다른 수단(가상계좌)으로 결제되면 지급은 하고(금액은 대조됨) 감사 플래그를 한 번만 남긴다', async () => {
     const t = await setup();
     const it = await t.intent();
     expect(t.count("SELECT COUNT(*) AS n FROM iap_web_pay_methods WHERE payment_id = ? AND pay_method = 'CARD'", it.paymentId)).toBe(1);
     t.pn.pay(it, { method: { type: 'PaymentMethodVirtualAccount' } });
     const r = await t.h.send('POST', '/iap/web/complete', { paymentId: it.paymentId }, t.a.token);
-    expect(r.status).toBe(422);
-    expect(r.body.error).toBe('method-mismatch');
-    expect(t.ents()).toBe(0);
-    expect(t.count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-payment-mismatch' AND detail LIKE '%method-mismatch%'")).toBe(1);
+    expect(r.status).toBe(200);
+    expect(r.body.state).toBe('granted');
+    expect(t.ents()).toBe(1);
+    expect((await t.hook(t.paid(it.paymentId))).body.outcome).toBe('already');
+    expect(t.count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-method-unknown'")).toBe(1);
   });
 
-  test('카카오페이로 의도했는데 카드로 결제되면 불일치, 같은 간편결제면 지급(웹훅 경로도 같은 검증)', async () => {
+  test('카카오페이로 의도했는데 카드로 결제되면 web-method-mismatch 플래그, 같은 수단이면 플래그 없음(웹훅 경로)', async () => {
     const t = await setup();
     const kakao = await t.intent('remove_ads_v1', 'KAKAOPAY');
     expect(kakao.payMethod).toBe('EASY_PAY');
     t.pn.pay(kakao, { method: { type: 'PaymentMethodCard' } });
-    const bad = await t.hook(t.paid(kakao.paymentId));
-    expect(bad.status).toBe(200);
-    expect(bad.body.outcome).toBe('rejected:method-mismatch');
-    expect(t.ents()).toBe(0);
-    t.h.advance(11 * 60000);
-    const ok = await t.intent('remove_ads_v1', 'KAKAOPAY');
-    t.pn.pay(ok);
-    expect((await t.hook(t.paid(ok.paymentId))).body.outcome).toBe('granted');
-    expect(t.ents()).toBe(1);
+    expect((await t.hook(t.paid(kakao.paymentId))).body.outcome).toBe('granted');
+    expect(t.count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-method-mismatch'")).toBe(1);
+    const u = await setup();
+    const ok = await u.intent('starter_pack_v1', 'KAKAOPAY');
+    u.pn.pay(ok);
+    expect((await u.hook(u.paid(ok.paymentId))).body.outcome).toBe('granted');
+    expect(u.count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind LIKE 'web-method%'")).toBe(0);
   });
 
-  test('결제수단 정보가 없는 PAID는 fail-closed(지급 안 함)', async () => {
+  test('간편결제 provider가 빠진 PAID도 지급한다(오탐으로 결제만 되고 지급이 막히지 않게), 플래그만 남김', async () => {
     const t = await setup();
-    const it = await t.intent(); t.pn.pay(it, { method: null });
+    const it = await t.intent('remove_ads_v1', 'KAKAOPAY'); t.pn.pay(it, { method: { type: 'PaymentMethodEasyPay' } });
     const r = await t.h.send('POST', '/iap/web/complete', { paymentId: it.paymentId }, t.a.token);
-    expect(r.body.error).toBe('method-mismatch');
-    expect(t.ents()).toBe(0);
+    expect(r.body.state).toBe('granted');
+    expect(t.count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-method-unknown'")).toBe(1);
+  });
+
+  test('FAILED 알림으로 failed가 된 행이 뒤에 PAID로 확인되면 지급하고 granted로 바꿔 이후 취소 대사 대상에 남긴다', async () => {
+    const t = await setup();
+    const it = await t.intent();
+    t.pn.pay(it, { status: 'FAILED' });
+    expect((await t.hook(t.paid(it.paymentId))).body.outcome).toBe('failed');
+    t.pn.pay(it);
+    expect((await t.hook(t.paid(it.paymentId))).body.outcome).toBe('granted');
+    expect(t.count("SELECT COUNT(*) AS n FROM iap_web_payments WHERE state = 'granted'")).toBe(1);
   });
 });

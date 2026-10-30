@@ -281,9 +281,17 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
   // PAID: 서버가 낸 의도와 한 글자도 다르면 지급하지 않는다. 돈은 나갔으므로 감사 플래그를 남겨 사람이 취소하게 한다.
   const bad = mismatchCode(payment, row, product);
   if (bad) {
-    await audit(c, row.account_id, 'web-payment-mismatch', { code: bad, paymentId: row.payment_id, productId: product.id });
+    // 같은 결제를 웹훅·complete·대사가 다시 봐도 플래그는 한 번만(이미 failed면 남기지 않는다).
+    if (row.state !== 'failed') await audit(c, row.account_id, 'web-payment-mismatch', { code: bad, paymentId: row.payment_id, productId: product.id });
     await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', updated_at = ?, checked_at = ? WHERE payment_id = ? AND state = 'intent'").bind(c.now, c.now, row.payment_id).run();
     fail(422, bad);
+  }
+  // 결제수단은 지급을 막지 않는다(금액·상점·채널·상품은 위에서 대조했으므로 돈 차이가 없다. 오탐으로 결제만 되고 지급이 막히는 손해가 더 크다).
+  // 의도와 다르거나 알 수 없는 수단이면 감사 플래그만 남겨 수단별 정산·감사에서 사람이 본다(지급 전 한 번만).
+  const methodNote = methodMismatch(payment, row.pay_method ?? null);
+  if (methodNote && row.state === 'intent') {
+    const actual = paidMethod(payment);
+    await audit(c, row.account_id, actual ? 'web-method-mismatch' : 'web-method-unknown', { paymentId: row.payment_id, productId: product.id, expected: row.pay_method ?? null, actual, type: payment.method?.type ?? null });
   }
   const test = row.test === 1;
   const before = await activeEntitlementKeys(c.db, row.account_id, c.now);
@@ -312,7 +320,7 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
     return { ...base, state: 'refund-pending', granted: [] };
   }
   if (result === 'refunded') return { ...base, state: 'cancelled', granted: [] };
-  await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted')")
+  await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted','failed')")
     .bind(hash, c.now, c.now, c.now, row.payment_id).run();
   // 이미 가진 권한을 또 결제한 경우(동시 의도 두 건 결제): 지급·환불 회수는 정상 동작하지만 중복 결제이므로 사람이 취소하도록 표시한다.
   if (result === 'granted' && duplicate) await audit(c, row.account_id, 'web-duplicate-payment', { paymentId: row.payment_id, productId: product.id });
@@ -326,7 +334,6 @@ function mismatchCode(payment: PortonePayment, row: WebRow, product: IapProduct)
   if (payment.currency !== 'KRW') return 'currency-mismatch';
   if (payment.storeId !== row.store_id) return 'store-mismatch';
   if (payment.channel?.key && payment.channel.key !== row.channel_key) return 'channel-mismatch';
-  if (methodMismatch(payment, row.pay_method ?? null)) return 'method-mismatch';
   if (typeof payment.customData === 'string' && payment.customData.length) {
     let custom: Record<string, unknown> = {};
     try { custom = asObj(JSON.parse(payment.customData)); } catch { custom = {}; }
@@ -343,8 +350,8 @@ export function paidMethod(payment: PortonePayment): WebPayMethod | null {
   return null;
 }
 /**
- * 실제 결제수단이 의도와 다른가. 수단 정보가 없거나 웹에서 팔지 않는 수단이면 다르다고 본다(fail-closed → 감사 플래그·사람 확인).
- * 의도에 기록된 수단이 없는 옛 행(0008 이전)은 허용 수단 목록 안이면 통과시킨다.
+ * 실제 결제수단이 의도와 다른가(감사 플래그용, 지급은 막지 않는다). 수단 정보가 없거나 웹에서 팔지 않는 수단이면 다르다고 본다.
+ * 의도에 기록된 수단이 없는 옛 행(0008 이전)은 허용 수단 목록 안이면 같다고 본다.
  */
 export function methodMismatch(payment: PortonePayment, expected: string | null): boolean {
   const actual = paidMethod(payment);
