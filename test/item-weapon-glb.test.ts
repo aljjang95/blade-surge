@@ -10,7 +10,7 @@ import { acquireItemGeometry, buildItemGeometry, createItemMaterial } from '../s
 import {
   ITEM_WEAPON_GLB_BUDGET, itemWeaponGlb, itemWeaponGlbEntry, preloadItemWeaponGlbs, resetItemWeaponGlbsForTest,
 } from '../src/engine/item-weapon-glb.js';
-import { inspectWeaponGlb, registerItemWeapon, sha256 } from '../tools/art/register-item-weapon.mjs';
+import { inspectWeaponGlb, registerItemWeapon, sha256, weaponGlbFileName } from '../tools/art/register-item-weapon.mjs';
 
 const root = new URL('../', import.meta.url).pathname;
 const FIXTURE = join(root, 'test/fixtures/item-weapon-sword-prepped.glb');
@@ -27,19 +27,20 @@ afterEach(() => resetItemWeaponGlbsForTest());
 
 test('매니페스트: 스키마 · 파일 해시 · 예산 (등록 항목이 있으면 모두 검사)', () => {
   expect(Array.isArray(MANIFEST.items)).toBe(true);
-  const ids = new Set<string>();
+  const keys = new Set<string>();
   for (const item of MANIFEST.items as any[]) {
     expect(item.id).toMatch(/^[a-z0-9][a-z0-9_-]{0,63}$/);
-    expect(ids.has(item.id)).toBe(false); ids.add(item.id);
-    expect(['sword', 'greatsword']).toContain(item.form);
-    expect(item.file).toBe(`/models/item-weapons/${item.id}.glb`);
+    const key = `${item.id}:${item.form}`;
+    expect(keys.has(key)).toBe(false); keys.add(key);
+    expect(['sword', 'greatsword', 'axe', 'greataxe', 'wand', 'staff', 'dagger', 'bow']).toContain(item.form);
+    expect(item.file).toBe(`/models/item-weapons/${weaponGlbFileName(item.id, item.form)}`);
     expect(item.source.tripoTaskId).toBeTruthy();
     const path = join(root, 'public', item.file);
     expect(existsSync(path)).toBe(true);
     const bytes = readFileSync(path);
     expect(sha256(bytes)).toBe(item.sha256);
     expect(bytes.length).toBe(item.bytes);
-    const report = inspectWeaponGlb(bytes);
+    const report = inspectWeaponGlb(bytes, item.form);
     expect(report.errors).toEqual([]);
     expect(report.triangles).toBe(item.triangles);
     expect(item.triangles).toBeLessThanOrEqual(ITEM_WEAPON_GLB_BUDGET.triangles);
@@ -59,8 +60,20 @@ test('등록 도구: 픽스처 GLB 를 임시 위치에 등록하고 해시 · �
     // 다시 등록하면 교체한다(중복 항목 없음).
     await registerItemWeapon({ id: 'fixture-sword', form: 'sword', input: FIXTURE, taskId: 'task-2', manifestPath, outDir: join(dir, 'glb') });
     expect(JSON.parse(readFileSync(manifestPath, 'utf8')).items).toHaveLength(1);
-    // 검성 외 형태와 정점색 GLB 는 거부한다.
-    await expect(registerItemWeapon({ id: 'bad-axe', form: 'axe', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('검성 전용');
+    // 같은 id 의 다른 형태는 별도 항목·별도 파일(<id>--<form>.glb)이고, 같은 (id, form)만 교체한다.
+    const { entry: axe } = await registerItemWeapon({ id: 'fixture-sword', form: 'axe', input: FIXTURE, taskId: 'task-3', manifestPath, outDir: join(dir, 'glb') });
+    expect(axe.file).toBe('/models/item-weapons/fixture-sword--axe.glb');
+    expect(existsSync(join(dir, 'glb/fixture-sword--axe.glb'))).toBe(true);
+    expect(JSON.parse(readFileSync(manifestPath, 'utf8')).items.map((i: any) => `${i.id}:${i.form}`)).toEqual(['fixture-sword:axe', 'fixture-sword:sword']);
+    await registerItemWeapon({ id: 'fixture-sword', form: 'axe', input: FIXTURE, taskId: 'task-4', manifestPath, outDir: join(dir, 'glb') });
+    expect(JSON.parse(readFileSync(manifestPath, 'utf8')).items).toHaveLength(2);
+    // 모르는 형태, 활이 아닌 손잡이 위치(활은 중앙 40~60%), 정점색 GLB 는 거부한다.
+    // 검·대검은 같은 <id>.glb 를 쓰므로 같은 id 의 다른 쪽 형태 등록은 파일을 덮어쓰기 전에 거부한다.
+    const swordBytes = readFileSync(join(dir, 'glb/fixture-sword.glb'));
+    await expect(registerItemWeapon({ id: 'fixture-sword', form: 'greatsword', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('fixture-sword.glb');
+    expect(readFileSync(join(dir, 'glb/fixture-sword.glb')).equals(swordBytes)).toBe(true);
+    await expect(registerItemWeapon({ id: 'bad-form', form: 'spear', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('--form');
+    await expect(registerItemWeapon({ id: 'bad-bow', form: 'bow', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('40~60%');
     await expect(registerItemWeapon({ id: 'bad-color', form: 'sword', input: COLORED, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('정점색');
     expect(existsSync(join(dir, 'glb/bad-color.glb'))).toBe(false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -130,6 +143,7 @@ test('form 이 매니페스트와 다르면 null 이고 기존 절차적 무기�
   expect(itemWeaponGlbEntry(weapon.id, 'sword')).not.toBeNull();
   expect(itemWeaponGlbEntry(weapon.id, 'greatsword')).toBeNull();
   expect(itemWeaponGlb(weapon.id, 'axe')).toBeNull();
+  expect(itemWeaponGlb(weapon.id, 'greatsword')).toBeNull();
   const procedural = buildItemGeometry('greatsword', weapon);
   expect(procedural.attributes.color).toBeDefined();
   expect((createItemMaterial(weapon, 'greatsword')[0] as THREE.MeshStandardMaterial).vertexColors).toBe(true);
@@ -145,10 +159,30 @@ test('GLB 가 없거나 로딩이 실패하면 경고 한 번만 남기고 절�
     expect(itemWeaponGlb(weapon.id, 'sword')).toBeNull();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(buildItemGeometry('sword', weapon).attributes.color).toBeDefined();
-    // 검성 외 형태(도끼)는 매니페스트에 있어도 로딩하지 않고 폴백한다.
+    // 모르는 형태는 매니페스트에 있어도 로딩하지 않고 폴백한다.
     resetItemWeaponGlbsForTest();
-    await preloadItemWeaponGlbs({ manifest: manifestOf('axe'), load: fixtureLoad });
+    await preloadItemWeaponGlbs({ manifest: manifestOf('spear'), load: fixtureLoad });
+    expect(itemWeaponGlb(weapon.id, 'spear')).toBeNull();
+  } finally { warn.mockRestore(); }
+});
+
+test('같은 id 에 형태별 GLB 둘: 둘 다 읽히고 서로의 형태에는 null, 한쪽 실패가 다른 쪽을 막지 않는다', async () => {
+  const entry = (form: string, file: string) => ({ id: weapon.id, form, file, sha256: '', bytes: 0, triangles: 456, source: { tripoTaskId: 't', concept: 'c' } });
+  const manifest = { items: [entry('axe', '/a.glb'), entry('sword', '/s.glb')] };
+  await preloadItemWeaponGlbs({ manifest, load: fixtureLoad });
+  const axe = itemWeaponGlb(weapon.id, 'axe'), sword = itemWeaponGlb(weapon.id, 'sword');
+  expect(axe).not.toBeNull(); expect(sword).not.toBeNull();
+  expect(axe).not.toBe(sword);
+  expect(axe!.form).toBe('axe'); expect(sword!.form).toBe('sword');
+  expect(itemWeaponGlbEntry(weapon.id, 'axe')!.file).toBe('/a.glb');
+  expect(itemWeaponGlbEntry(weapon.id, 'sword')!.file).toBe('/s.glb');
+  expect(itemWeaponGlb(weapon.id, 'bow')).toBeNull();
+  resetItemWeaponGlbsForTest();
+  const warn = spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    await preloadItemWeaponGlbs({ manifest, load: async url => { if (url === '/a.glb') throw new Error('404'); return fixtureLoad(); } });
     expect(itemWeaponGlb(weapon.id, 'axe')).toBeNull();
+    expect(itemWeaponGlb(weapon.id, 'sword')).not.toBeNull();
   } finally { warn.mockRestore(); }
 });
 

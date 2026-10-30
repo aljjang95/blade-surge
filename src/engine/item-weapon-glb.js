@@ -1,18 +1,18 @@
-// 장비 무기 id별 Tripo GLB(검성 sword / greatsword 전용) 선로드와 캐시.
+// 장비 무기 id·형태별 Tripo GLB(영웅 무기 8형태 전부; 같은 id가 형태마다 GLB를 가질 수 있음) 선로드와 캐시.
 // 매니페스트에 없거나 형태가 다르거나 로딩이 실패하면 항상 null → 호출 쪽이 기존 절차적 무기로 폴백한다.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import MANIFEST from '../data/item-weapon-glb.json';
 
-export const ITEM_WEAPON_GLB_FORMS = Object.freeze(['sword', 'greatsword']);
+export const ITEM_WEAPON_GLB_FORMS = Object.freeze(['sword', 'greatsword', 'axe', 'greataxe', 'wand', 'staff', 'dagger', 'bow']);
 /** 텍스처가 있는 GLB 무기는 등급·강화 발광을 이 비율로만 칠한다(절차적 무기 대비). */
 export const ITEM_WEAPON_GLB_EMISSIVE_SCALE = 0.4;
 export const ITEM_WEAPON_GLB_METALNESS_MAX = 0.3;
 export const ITEM_WEAPON_GLB_COLOR_LIFT = 1.35;
 export const ITEM_WEAPON_GLB_BUDGET = Object.freeze({ triangles: 4000, textureMax: 1024 });
 
-const records = new Map();   // id → { form, geometry, material }
+const records = new Map();   // `${id}:${form}` → { form, geometry, material }
 const failed = new Set();
 const warned = new Set();
 let active = MANIFEST;
@@ -33,18 +33,17 @@ function warnOnce(key, message, error) {
   console.warn(message, error?.message || error || '');
 }
 
-function entryOf(id) { return active.items.find(item => item.id === id) || null; }
+const keyOf = (id, form) => `${id}:${form}`;
+function entryOf(id, form) { return active.items.find(item => item.id === id && item.form === form) || null; }
 
-/** 매니페스트 항목. 형태가 다르면 null(검성 외 영웅·다른 형태에 검 모델이 붙지 않게). */
+/** 매니페스트 항목. 형태가 다르면 null(같은 id의 다른 형태 모델이 붙지 않게). */
 export function itemWeaponGlbEntry(id, form) {
-  const entry = entryOf(id);
-  return entry && entry.form === form ? entry : null;
+  return entryOf(id, form);
 }
 
 /** 로딩이 끝난 GLB 기록. 없거나 실패했거나 형태가 다르면 null. 프레임 루프에서 불려도 할당이 없다. */
 export function itemWeaponGlb(id, form) {
-  const record = records.get(id);
-  return record && record.form === form ? record : null;
+  return records.get(keyOf(id, form)) || null;
 }
 
 function bakeRecord(entry, gltf) {
@@ -84,7 +83,7 @@ function bakeRecord(entry, gltf) {
     side: source.side ?? THREE.FrontSide,
   });
   material.userData.emissiveScale = ITEM_WEAPON_GLB_EMISSIVE_SCALE;
-  material.name = `ItemWeaponGlb_${entry.id}`;
+  material.name = `ItemWeaponGlb_${entry.id}_${entry.form}`;
   if (material.map) material.map.colorSpace = THREE.SRGBColorSpace;
   mesh.geometry.dispose(); source.dispose();
   return { form: entry.form, geometry, material };
@@ -101,10 +100,11 @@ export function preloadItemWeaponGlbs(options = {}) {
     return loader.loadAsync(url);
   });
   pending = Promise.all(active.items.map(async entry => {
-    if (records.has(entry.id) || failed.has(entry.id)) return;
-    if (!ITEM_WEAPON_GLB_FORMS.includes(entry.form)) { failed.add(entry.id); warnOnce(entry.id, `[item-weapon-glb] 지원하지 않는 형태: ${entry.id}:${entry.form}`); return; }
-    try { records.set(entry.id, bakeRecord(entry, await withTimeout(load(entry.file), entry.id))); }
-    catch (error) { failed.add(entry.id); warnOnce(entry.id, `[item-weapon-glb] 로딩 실패, 절차적 무기로 대체: ${entry.id}`, error); }
+    const key = keyOf(entry.id, entry.form);
+    if (records.has(key) || failed.has(key)) return;
+    if (!ITEM_WEAPON_GLB_FORMS.includes(entry.form)) { failed.add(key); warnOnce(key, `[item-weapon-glb] 지원하지 않는 형태: ${key}`); return; }
+    try { records.set(key, bakeRecord(entry, await withTimeout(load(entry.file), key))); }
+    catch (error) { failed.add(key); warnOnce(key, `[item-weapon-glb] 로딩 실패, 절차적 무기로 대체: ${key}`, error); }
   })).then(() => undefined);
   return pending;
 }

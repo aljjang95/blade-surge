@@ -254,6 +254,54 @@
     },
     {
       "id": "w_frost",
+      "form": "axe",
+      "file": "/models/item-weapons/w_frost--axe.glb",
+      "sha256": "55eb4cf5502ee036a16e0ecf91fa0555c909623575a7daafb3a09da8d775ca6f",
+      "bytes": 361844,
+      "triangles": 2926,
+      "source": {
+        "tripoTaskId": "3dd90189-b531-4095-bcfc-4d415732f7bd",
+        "concept": "w_frost@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "bow",
+      "file": "/models/item-weapons/w_frost--bow.glb",
+      "sha256": "a3b84c3dac54784a1dcf4163360deb1c2396cda36075c71dd4d9c3124f62d852",
+      "bytes": 471268,
+      "triangles": 2911,
+      "source": {
+        "tripoTaskId": "31f0ec2e-6c10-4059-9974-730d25f54e9a",
+        "concept": "w_frost@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_frost--dagger.glb",
+      "sha256": "a13ef4764783904afb414da10741ae7657be6dcfc99ba517d487cad5f46798c4",
+      "bytes": 375176,
+      "triangles": 2844,
+      "source": {
+        "tripoTaskId": "833714a0-5b40-418a-b177-992030221191",
+        "concept": "w_frost@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "staff",
+      "file": "/models/item-weapons/w_frost--staff.glb",
+      "sha256": "30d628a42270b2046b599450648d83ee3e43279764ff1b0bce276a3971acc001",
+      "bytes": 379180,
+      "triangles": 2922,
+      "source": {
+        "tripoTaskId": "a79c2889-d336-4493-ac60-b51b116f76f6",
+        "concept": "w_frost@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
       "form": "sword",
       "file": "/models/item-weapons/w_frost.glb",
       "sha256": "de52adec6a9a6c7f518bce4b97d5c70cc8f5163e80bcdf704379347c22500179",
@@ -290,6 +338,54 @@
     },
     {
       "id": "w_hunter",
+      "form": "axe",
+      "file": "/models/item-weapons/w_hunter--axe.glb",
+      "sha256": "353a1ed7e13fb8b722cb285b2c0eab23cde064c4a40db1452254a37ca85ec31a",
+      "bytes": 277484,
+      "triangles": 2736,
+      "source": {
+        "tripoTaskId": "988e0f78-dcb2-4a5c-8f0e-aa2a82b94b69",
+        "concept": "w_hunter@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "bow",
+      "file": "/models/item-weapons/w_hunter--bow.glb",
+      "sha256": "df717074d11c3e561d25d404a51b2718fd2452c0a50da4a386eec55323a402af",
+      "bytes": 293648,
+      "triangles": 2835,
+      "source": {
+        "tripoTaskId": "b82330a9-8f04-45ae-a0fc-0552b8257ea0",
+        "concept": "w_hunter@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_hunter--dagger.glb",
+      "sha256": "6112f4a64b72d3572bd84e54460eaba4c23180015f712f0e6ab9455845f0d825",
+      "bytes": 271804,
+      "triangles": 2770,
+      "source": {
+        "tripoTaskId": "f12764c2-753d-489b-9acf-d8e58c04854a",
+        "concept": "w_hunter@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "staff",
+      "file": "/models/item-weapons/w_hunter--staff.glb",
+      "sha256": "6d8b16c83dd39a767a41f3658142313066183aeee6fdc3d473e9d7944eebad4c",
+      "bytes": 345788,
+      "triangles": 2758,
+      "source": {
+        "tripoTaskId": "64d9199d-dd0c-49dd-aae7-3b2fcb6d660d",
+        "concept": "w_hunter@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
       "form": "sword",
       "file": "/models/item-weapons/w_hunter.glb",
       "sha256": "aa394848132c1d8e794e6989e4d5908baf2be944960fee66241836f55ff174e8",
@@ -314,6 +410,42 @@
     },
     {
       "id": "w_king",
+      "form": "bow",
+      "file": "/models/item-weapons/w_king--bow.glb",
+      "sha256": "cbdfb1f8b22c956953508308e0ff1c966c675f9168f043271c0507c541a6797b",
+      "bytes": 376540,
+      "triangles": 2798,
+      "source": {
+        "tripoTaskId": "b6b28bc0-0e98-4b4d-81cc-d47e8a947f6e",
+        "concept": "w_king@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_king--dagger.glb",
+      "sha256": "d322b324f51e6c289c8947a578265cfffd03f4a7b0621661c5d126a1c55fe894",
+      "bytes": 385036,
+      "triangles": 2739,
+      "source": {
+        "tripoTaskId": "096d9c58-1078-461a-b47f-e1ceceac568a",
+        "concept": "w_king@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "greataxe",
+      "file": "/models/item-weapons/w_king--greataxe.glb",
+      "sha256": "7474636cbbb2aa0ae1a32f26e897421fb022aa807bcbda72868e126fd87d6125",
+      "bytes": 445352,
+      "triangles": 2858,
+      "source": {
+        "tripoTaskId": "036b134c-064d-49bb-90a4-48928522f871",
+        "concept": "w_king@greataxe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
       "form": "greatsword",
       "file": "/models/item-weapons/w_king.glb",
       "sha256": "caa859dbde73b8896512398b66a6bcf399e2477174c680638aa3c41407216e81",
@@ -322,6 +454,18 @@
       "source": {
         "tripoTaskId": "bf43e6f7-efa4-49f4-99b1-740bd1ce44a9",
         "concept": "R2 tripo-3d/weapons/w_king/w_king-concept.png"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "staff",
+      "file": "/models/item-weapons/w_king--staff.glb",
+      "sha256": "1826f3306807125d3c5069a3ce3812f8665a8b9b32bcb1908f18f0aee4848f6c",
+      "bytes": 403236,
+      "triangles": 2812,
+      "source": {
+        "tripoTaskId": "f3f698c9-0abc-4ccd-8d10-2e152406d40a",
+        "concept": "w_king@staff (아이콘 정체성 형태 변환)"
       }
     },
     {
@@ -386,6 +530,42 @@
     },
     {
       "id": "w_rusty",
+      "form": "axe",
+      "file": "/models/item-weapons/w_rusty--axe.glb",
+      "sha256": "38a75478b30f096bfd921d4c7bce4a75d5a8080960418a856d37d8f25123e2fd",
+      "bytes": 353368,
+      "triangles": 2859,
+      "source": {
+        "tripoTaskId": "329fb291-1313-4c80-96c6-147ca033a492",
+        "concept": "w_rusty@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "bow",
+      "file": "/models/item-weapons/w_rusty--bow.glb",
+      "sha256": "29942f1cad810533821aed3df853544375403b538d7f7efcc4764b70cd099619",
+      "bytes": 418016,
+      "triangles": 2507,
+      "source": {
+        "tripoTaskId": "23b5ea34-fe91-44be-9e73-7a1073d04f5c",
+        "concept": "w_rusty@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_rusty--dagger.glb",
+      "sha256": "e25aae936db779e7f3ca11992de6bebe2ba9f3b6d367fd48e16940362b6e7fbc",
+      "bytes": 367076,
+      "triangles": 2882,
+      "source": {
+        "tripoTaskId": "1a74f8c1-edf6-4f6b-a43f-08d4f1393ca5",
+        "concept": "w_rusty@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
       "form": "sword",
       "file": "/models/item-weapons/w_rusty.glb",
       "sha256": "48b3fe84ebf73a3db50cf9df2a869b08c98029a8b18e7f7ffdcaede9c71cd862",
@@ -394,6 +574,18 @@
       "source": {
         "tripoTaskId": "39724b82-1247-4d09-bf32-30fc0a121032",
         "concept": "R2 tripo-3d/weapons/w_rusty/w_rusty-concept.png"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "wand",
+      "file": "/models/item-weapons/w_rusty--wand.glb",
+      "sha256": "be58bdd61a63d86a89058599af116e27ab635552eb195d3fd15d25bb22ca2c34",
+      "bytes": 403680,
+      "triangles": 2946,
+      "source": {
+        "tripoTaskId": "11113622-4378-4b08-ae2e-eb259ce80d56",
+        "concept": "w_rusty@wand (아이콘 정체성 형태 변환)"
       }
     },
     {

@@ -1,15 +1,18 @@
-// blender_weapon_prep.py 출력 GLB 를 장비 무기 GLB 로 등록한다(검성 sword / greatsword 전용).
-// 사용: node tools/art/register-item-weapon.mjs --id <itemId> --form sword|greatsword --input <prepped.glb> --taskId <tripoTaskId> [--concept "아이콘 원화 설명"]
+// blender_weapon_prep.py 출력 GLB 를 장비 무기 GLB 로 등록한다(영웅 무기 8형태).
+// 사용: node tools/art/register-item-weapon.mjs --id <itemId> --form sword|greatsword|axe|greataxe|wand|staff|dagger|bow --input <prepped.glb> --taskId <tripoTaskId> [--concept "아이콘 원화 설명"]
 // 시험용: --manifest <json> --outDir <dir> 로 기록 위치를 바꾼다(기본은 src/data/item-weapon-glb.json, public/models/item-weapons).
 import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const WEAPON_GLB_FORMS = ['sword', 'greatsword'];
+export const WEAPON_GLB_FORMS = ['sword', 'greatsword', 'axe', 'greataxe', 'wand', 'staff', 'dagger', 'bow'];
 export const WEAPON_GLB_BUDGET = { triangles: 4000, textureMax: 1024, bytes: 2 * 1024 * 1024 };
-// 손잡이 원점이 전체 길이의 아래 몇 %에 있어야 하는지(prep 기본 18%). 등록은 느슨하게 5~40%를 받는다.
+// 손잡이 원점이 전체 길이의 아래 몇 %에 있어야 하는지(prep 기본 18%). 등록은 느슨하게 5~40%를 받고, 활은 중앙 손잡이라 40~60%.
 export const GRIP_FRACTION_RANGE = [0.05, 0.40];
+export const GRIP_FRACTION_RANGE_BOW = [0.40, 0.60];
+// 검·대검은 예전 파일명(<id>.glb) 그대로, 나머지 형태는 <id>--<form>.glb (같은 id가 형태마다 GLB를 가질 수 있다).
+export const weaponGlbFileName = (id, form) => (form === 'sword' || form === 'greatsword' ? `${id}.glb` : `${id}--${form}.glb`);
 const ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -43,7 +46,8 @@ function imageSize(data) {
 }
 
 /** 무기 GLB 규약 검사. 예외 없이 { ok, errors, triangles, bbox, ... } 를 돌려준다. */
-export function inspectWeaponGlb(bytes) {
+export function inspectWeaponGlb(bytes, form = 'sword') {
+  const gripRange = form === 'bow' ? GRIP_FRACTION_RANGE_BOW : GRIP_FRACTION_RANGE;
   const errors = [];
   const { json, bin } = readGlb(bytes);
   const meshes = json.meshes || [];
@@ -66,7 +70,7 @@ export function inspectWeaponGlb(bytes) {
     if (!(position.min[1] < 0 && position.max[1] > 0)) errors.push('손잡이 원점이 길이축(Y) 범위 안에 없음');
     else {
       gripFraction = -position.min[1] / size[1];
-      if (gripFraction < GRIP_FRACTION_RANGE[0] || gripFraction > GRIP_FRACTION_RANGE[1]) errors.push(`손잡이 원점이 길이의 ${(gripFraction * 100).toFixed(0)}% 지점(허용 5~40%, 손잡이가 아래)`);
+      if (gripFraction < gripRange[0] || gripFraction > gripRange[1]) errors.push(`손잡이 원점이 길이의 ${(gripFraction * 100).toFixed(0)}% 지점(허용 ${gripRange[0] * 100}~${gripRange[1] * 100}%${form === 'bow' ? ', 활은 중앙' : ', 손잡이가 아래'})`);
     }
   }
   if (triangles > WEAPON_GLB_BUDGET.triangles) errors.push(`삼각형 예산 초과: ${triangles} > ${WEAPON_GLB_BUDGET.triangles}`);
@@ -85,21 +89,25 @@ export function inspectWeaponGlb(bytes) {
 
 export async function registerItemWeapon({ id, form, input, taskId, concept = '', manifestPath, outDir }) {
   if (!ID_PATTERN.test(id || '')) throw new Error('--id 형식 오류');
-  if (!WEAPON_GLB_FORMS.includes(form)) throw new Error(`--form 은 ${WEAPON_GLB_FORMS.join('|')} 만 가능(검성 전용)`);
+  if (!WEAPON_GLB_FORMS.includes(form)) throw new Error(`--form 은 ${WEAPON_GLB_FORMS.join('|')} 만 가능`);
   if (!taskId) throw new Error('--taskId 필요');
   const bytes = await readFile(input);
-  const report = inspectWeaponGlb(bytes);
+  const report = inspectWeaponGlb(bytes, form);
   if (!report.ok) throw new Error(`무기 GLB 규약 위반:\n- ${report.errors.join('\n- ')}`);
-  const target = resolve(outDir, `${id}.glb`), staged = `${target}.staged`;
+  const file = weaponGlbFileName(id, form);
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  // 검·대검은 둘 다 <id>.glb 라 같은 id 로 다른 형태를 등록하면 앞 모델을 덮어쓴다. 파일을 쓰기 전에 거부한다.
+  const clash = manifest.items.find(item => item.id === id && item.form !== form && weaponGlbFileName(item.id, item.form) === file);
+  if (clash) throw new Error(`같은 파일(${file})을 쓰는 다른 형태가 이미 있음: ${id}:${clash.form}`);
+  const target = resolve(outDir, file), staged = `${target}.staged`;
   await mkdir(outDir, { recursive: true });
   await copyFile(input, staged);
   try { await rename(staged, target); } finally { await rm(staged, { force: true }); }
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   const entry = {
-    id, form, file: `/models/item-weapons/${id}.glb`, sha256: sha256(bytes), bytes: bytes.length, triangles: report.triangles,
+    id, form, file: `/models/item-weapons/${file}`, sha256: sha256(bytes), bytes: bytes.length, triangles: report.triangles,
     source: { tripoTaskId: String(taskId), concept: String(concept) },
   };
-  manifest.items = [...manifest.items.filter(item => item.id !== id), entry].sort((a, b) => a.id.localeCompare(b.id));
+  manifest.items = [...manifest.items.filter(item => !(item.id === id && item.form === form)), entry].sort((a, b) => a.id.localeCompare(b.id) || a.form.localeCompare(b.form));
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   return { entry, report };
 }
