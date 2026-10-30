@@ -11,6 +11,7 @@ import { recordServerMilestone } from './funnel';
 import {
   WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, assertAvatarFullsetDeliverable, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
 } from './iap';
+import { GAME_RATINGS, ratingReady, type GameRating } from '../../src/data/game-rating.js';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
 
 const API_BASE = 'https://api.portone.io';
@@ -67,7 +68,8 @@ export interface PortonePayment {
   method?: { type?: string | null; provider?: string | null } | null;
 }
 export interface PortoneApi { getPayment(paymentId: string): Promise<PortonePayment | null> }
-export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request: Request) => Promise<Response> }
+/** webRating: 웹(GRAC) 등급 주입(테스트용). 없으면 src/data/game-rating.js의 웹 등급 정본. */
+export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request: Request) => Promise<Response>; webRating?: GameRating }
 type WebCtx = Ctx & { deps: Ctx['deps'] & PortoneDeps };
 const penv = (c: Ctx) => c.env as unknown as PortoneEnv;
 
@@ -99,9 +101,18 @@ export function payMethodFields(method: WebPayMethod): { payMethod: string; easy
   return method === 'CARD' ? { payMethod: 'CARD' } : { payMethod: 'EASY_PAY', easyPay: { easyPayProvider: method } };
 }
 
-/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
-export function webBillingOn(env: PortoneEnv, accountId?: string | null): boolean {
-  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!webChannel(env, accountId);
+/**
+ * 웹 판매 등급 게이트: 웹은 스토어 자체등급이 적용되지 않아 GRAC 등급분류번호가 있어야 실채널 판매를 연다.
+ * 허용 테스터의 테스트 채널 결제(공개 판매 아님)는 막지 않는다.
+ */
+export function webRatingReady(rating: GameRating | undefined): boolean {
+  return ratingReady(rating ?? GAME_RATINGS.web);
+}
+
+/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정·등급만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
+export function webBillingOn(env: PortoneEnv, accountId?: string | null, rating?: GameRating): boolean {
+  const channel = webChannel(env, accountId);
+  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!channel && (channel.test || webRatingReady(rating));
 }
 
 async function webSchemaReady(db: D1Database): Promise<boolean> {
@@ -187,6 +198,8 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   const env = penv(c);
   const channel = webChannel(env, auth.account.account_id, body.test === true);
   if (!env.PORTONE_STORE_ID || !channel) fail(503, 'web-not-configured');
+  // 웹 등급(GRAC) 번호가 없으면 실채널 판매를 열지 않는다(테스트 채널 허용 테스터만 예외).
+  if (!channel.test && !webRatingReady((c as WebCtx).deps.webRating)) fail(503, 'rating-required');
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   // 서버가 roster를 강제하는 계정(authority=server)에만 현금 판매를 연다. 그림자·로컬은 저장 편집으로 소유를 늘릴 수 있다.
   if (auth.account.authority !== 'server') fail(403, 'server-authority-required');

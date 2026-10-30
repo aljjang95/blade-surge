@@ -36,6 +36,8 @@ export async function v1Harness(opts: { social?: boolean; env?: Partial<V1Env> }
     ...(social ? { SOCIAL: social.namespace as any } : {}), ...opts.env };
   const deps = {
     now: () => t,
+    // 웹 결제 기계 테스트는 웹(GRAC) 등급이 나온 것으로 둔다. 등급 게이트 자체는 test/portone-webhook.test.ts가 정본 값(undefined)으로 검증한다.
+    webRating: { authority: 'GRAC', status: 'rated', age: '15', number: 'TEST-RATING-0001', date: '2026-11-01', descriptors: [] } as any,
     verifyIdToken: async (_p: string, token: string) => { const sub = google.get(token); if (!sub) throw Object.assign(new Error('bad'), { status: 401 }); return { sub }; },
   };
   const send = async (method: string, path: string, body?: unknown, token?: string, headers: Record<string, string> = {}) => {
