@@ -1,0 +1,14 @@
+/* 현상금 의뢰판: journey.css 의 모달 틀을 쓰고 목록 줄만 더한다. 터치 대상 44px 이상, 360px 폭에서 겹치지 않는다. */
+.bounty-tabs{display:flex;gap:6px}.bounty-tabs button{flex:1;min-height:44px;border:1px solid #a4b5ae35;border-radius:8px;cursor:pointer;font:inherit;font-weight:700}
+.bounty-hunter{margin-bottom:10px}.bounty-hunter-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:6px}
+.bounty-rank{font-size:18px;color:#fff1c9}.bounty-title{color:#cadbd4}.bounty-marks{margin-left:auto;color:#ffd98a;font-weight:700}
+.bounty-hunter progress{display:block;width:100%;height:10px}
+.bounty-list{display:grid;gap:10px;padding-bottom:6px}
+.bounty-row{display:grid;gap:6px}.bounty-row-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.bounty-tier{padding:1px 8px;border-radius:999px;background:#ffffff14;font-size:12px}
+.tier-adept .bounty-tier{background:#3b6a4a}.tier-nightmare .bounty-tier{background:#5a3b78}.tier-hell .bounty-tier{background:#8a2f2f}
+.bounty-stage{font-size:16px}.bounty-min{margin-left:auto;color:#cadbd4;font-size:12px}
+.bounty-cond{margin:0;color:#e8eee6}.bounty-rewards{display:flex;flex-wrap:wrap;gap:4px 12px;color:#ffd98a;font-size:13px}
+.bounty-go{min-height:44px;width:100%;cursor:pointer}.bounty-go:disabled{opacity:.5;cursor:default}
+.bounty-result{margin:8px 0;padding:10px 12px;border:1px solid #e3c97a66;border-radius:10px;background:#1b2b1f;color:#ffe9a8;text-align:center;line-height:1.6}
+@media(max-width:620px){.bounty-dialog{width:96vw}.bounty-tabs{padding:7px}.bounty-tabs button{font-size:13px}}

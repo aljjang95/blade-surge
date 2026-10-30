@@ -20,14 +20,14 @@ export const BOUNTY_TIERS = Object.freeze({
 export const BOUNTY_TIER_ORDER = Object.freeze(['story', 'adept', 'nightmare', 'hell']);
 
 /**
- * 조건 의뢰의 조건. 관문마다 결정적으로 하나(키 해시). fact 는 전투 결과 객체의 필드, 없으면 그 조건은 실패로 본다.
+ * 조건 의뢰의 조건. 관문마다 결정적으로 하나(키 해시). fact 는 전투 결과 객체(battle.result)의 필드 — time(초)·revives·maxCombo·stars, 없으면 그 조건은 실패로 본다.
  * 값은 쉬움 쪽에서 시작한다: 의뢰는 이미 클리어한 관문이라 숙련을 가르치는 목적이다.
  */
 export const BOUNTY_TRIALS = Object.freeze([
-  { id: 'swift', name: '신속', text: '제한 시간 {n}초 안에 클리어', fact: 'timeSec', op: 'lte', base: 240 },
-  { id: 'guard', name: '버티기', text: '받은 피격 {n}회 이하로 클리어', fact: 'hitsTaken', op: 'lte', base: 12 },
+  { id: 'swift', name: '신속', text: '제한 시간 {n}초 안에 클리어', fact: 'time', op: 'lte', base: 240 },
+  { id: 'guard', name: '버티기', text: '한 번도 쓰러지지 않고 클리어', fact: 'revives', op: 'lte', base: 0 },
   { id: 'chain', name: '연격', text: '최대 연속 타격 {n} 이상', fact: 'maxCombo', op: 'gte', base: 25 },
-  { id: 'nopotion', name: '맨몸', text: '물약 없이 클리어', fact: 'potionsUsed', op: 'lte', base: 0 },
+  { id: 'flawless', name: '완벽', text: '별 {n}개로 클리어', fact: 'stars', op: 'gte', base: 3 },
 ]);
 
 /** 사냥꾼 등급: 등급 r → r+1 에 필요한 경험치. 의뢰 4~8개(대략 20~30분)마다 한 등급. */

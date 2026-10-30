@@ -131,6 +131,7 @@ export class UI {
     $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
     $('btn-result-retry').addEventListener('click', () => {
       if (!canPrepareGrowth(this.app, this.resultData)) return;
+      if (this.app.battle.stage?.bounty && this.resultData?.win) { this.app.toLobby(); setTimeout(() => this.app.bountyView?.open(), 0); return; }
       if (this.app.battle.stage?.tower) this.app.startTower(); else this.app.startStage(this.app.battle.stage);
     });
     $('btn-result-auto-retry').addEventListener('click', async () => {
@@ -804,7 +805,7 @@ export class UI {
     this.el.result.querySelector('.result-scroll').scrollTop = 0;
     const stars = [...$('result-stars').children]; stars.forEach((s) => { s.className = ''; });
     $('result-stats').innerHTML = `<span>처치 <b>${b.kills}</b></span><span>최대 콤보 <b>${b.maxCombo}</b></span><span>피해량 <b>${fmt(b.dmgDealt)}</b></span><span>시간 <b>${Math.floor(b.elapsed)}s</b></span><span>득템 <b>${b.drops.loot.length}</b></span>`;
-    $('btn-result-retry').textContent = `다시 · 에너지 ${b.stage.energy}`;
+    $('btn-result-retry').textContent = b.stage.bounty ? '다시 도전 · 에너지 0' : `다시 · 에너지 ${b.stage.energy}`;
     const loot = $('result-loot'); loot.innerHTML = '';
     $('btn-result-next').style.display = win && !b.stage.finale ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     const autoRetry = $('btn-result-auto-retry'), showAutoRetry = !win && b.stage.code === '1-1' && b.stage.difficultyId === 'story';
@@ -837,6 +838,25 @@ export class UI {
       }
       if (!r.reward.rejected) later(() => this.toast(`무한의 성 ${tower.floor}층 돌파!${r.reward.events?.length ? ` · ${r.reward.events[0].name}` : ''}`, 'gold'), 600);
       later(() => { const h = eco.hero(b.heroId); $('result-exp').style.width = Math.min(100, h.exp / Math.max(1, levelExp(h.level)) * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${r.reward.exp || 0}`; }, 900);
+    } else if (win && b.stage.bounty) {
+      // 현상금 의뢰: 캠페인 정산(completeStage)·원정 기록·클리어 카드를 지나지 않는다. 의뢰 보상만 한 번 정산한다.
+      if (!r.bountyResult) r.bountyResult = eco.settleBounty(r, b.stage);
+      const br = r.bountyResult;
+      r.reward ||= { ok: true, rejected: br.ok ? undefined : br.reason, saveError: !!br.saveError, got: br.got || [], loot: [], ups: 0, exp: 0, bounty: true };
+      r.expeditionRecorded = true; this.lastReward = r.reward;
+      this.refreshResultGrowth(r);
+      lootDetails.hidden = true; $('btn-result-next').style.display = 'none'; $('btn-result-double').style.display = 'none';
+      $('btn-result-retry').textContent = '의뢰판으로';
+      const line = document.createElement('div'); line.className = 'bounty-result'; line.dataset.bountyResult = br.ok ? 'ok' : br.reason;
+      if (br.ok) {
+        const parts = [`현상금 완료 · ${br.def.name}`, `골드 +${fmt(br.rewards.gold)} · 증표 +${br.rewards.marks} · 사냥꾼 경험치 +${br.rewards.xp}`];
+        for (const u of br.ups) parts.push(`사냥꾼 ${u.rank}등급 달성 · 강화석 +${u.reward.stones}${u.title ? ` · 칭호 「${u.title.name}」` : ''}`);
+        parts.push(`증표 ${fmt(br.marks)}개 보유${br.need ? ` · 다음 등급까지 ${fmt(br.need - br.xp)}` : ''}`);
+        line.innerHTML = parts.map((x) => `<div>${x}</div>`).join('');
+      } else line.textContent = br.reason === 'trial' || br.reason === 'no-fact' ? '조건을 채우지 못했습니다. 보상은 없고 의뢰는 그대로 남아 있습니다.' : br.reason === 'done' ? '이미 끝낸 의뢰입니다.' : '의뢰를 정산하지 못했습니다.';
+      loot.parentNode.insertBefore(line, loot);
+      if (br.ok) { later(() => this.toast(br.ups.length ? `사냥꾼 ${br.ups.at(-1).rank}등급!` : '현상금 완료!', 'gold'), 600); audio.play('ui_glass', { vol: 0.5 }); }
+      later(() => { const h = eco.hero(b.heroId); $('result-exp-txt').textContent = `Lv.${h.level} · 의뢰 판은 전투 경험치 없음`; }, 600);
     } else if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot, fullClear: !!r.fullClear });
       r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
@@ -924,5 +944,5 @@ export class UI {
     return false;
   }
   cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
-  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.clearLoopOf().reset(); this.show(this.el.result, false); }
+  hideResult() { for (const el of document.querySelectorAll('.bounty-result')) el.remove(); if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.clearLoopOf().reset(); this.show(this.el.result, false); }
 }
