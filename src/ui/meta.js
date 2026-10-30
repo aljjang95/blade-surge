@@ -23,7 +23,7 @@ import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/b
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
-import { paymentNoticeHtml, legalLinksHtml, businessInfoHtml, INSTANT_GRANT_CONSENT } from './legal-links.js';
+import { paymentNoticeHtml, legalLinksHtml, businessInfoHtml, PURCHASE_CHECKS } from './legal-links.js';
 import { cashOffer, payCash, PAY_VIA } from './cash-offer.js';
 import { ratingLabel } from '../data/game-rating.js';
 import './legal-links.css';
@@ -441,7 +441,7 @@ export class Meta {
     if (this._heroBuying) return;
     // 웹·Play 공통: 결제 전에 청약철회 고지 + 즉시 지급 동의 체크(기본 미체크)를 거친다.
     const price = (() => { try { return this.app.heroPurchase.price?.(productId) || ''; } catch { return ''; } })();
-    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
+    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
     if (!ok) return;
     this._heroBuying = true; this.trackFunnel('paysheet_open', { sku: productId });
     try {
@@ -796,7 +796,7 @@ export class Meta {
     // 청약철회 고지(PAYMENT_COMPLIANCE 4.2): 모든 현금 상품은 구매 즉시 지급되므로 제한 사실에 동의(기본 미체크)해야 구매 버튼이 켜진다. 구독은 자동 갱신·해지 문구를 더한다.
     const subscription = product.type === 'subscription' || sku.id === 'monthly';
     const notice = paymentNoticeHtml({ ...sku, rewards: this.eco.sku(sku.id)?.rewards ?? sku.rewards }, { subscription });
-    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · ${PAY_VIA[offer.mode]}${notice}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
+    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · ${PAY_VIA[offer.mode]}${notice}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
     if (!ok) return null;
     const r = await payCash(offer, { billing: this.eco.billing, heroPurchase: this.app?.heroPurchase });
     if (r.reason === 'cancelled' || r.reason === 'customer-cancelled') return null;

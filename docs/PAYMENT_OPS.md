@@ -94,7 +94,7 @@ node tools/payment-reconcile.mjs --d1-json d1.json --date 2026-10-29
 
 - 종료 코드 0 = 일치, 2 = 차이 있음, 1 = 입력·호출 오류.
 - 차이 종류: `missing_on_portone`(서버만 지급), `missing_on_server`(포트원 PAID인데 서버 미지급 — 돈은 받았고 상품은 안 나감, 최우선), `amount_mismatch`, `cancel_not_reflected`(포트원 취소가 아직 서버에 안 반영), `cancelled_but_paid`.
-- 포트원 목록 조회는 `GET /payments?requestBody={"page":{"number":0,"size":100},"filter":{...}}` 형식을 쓴다. 공식 문서(developers.portone.io)에서 `GetPaymentsBody { page, filter }`, `filter.timestampType`(CREATED_AT/STATUS_CHANGED_AT), `page.totalCount`를 확인했다. `filter.from`/`until`/`storeId` 이름과 쿼리 파라미터 이름 `requestBody`는 문서 발췌에서 확인하지 못했고 기억에 따랐다 — 실제 호출 전에 공식 문서로 재확인하고, 안 맞으면 `--portone-json`으로 콘솔·API 응답을 넘긴다. 이 레인에서는 실제 포트원 호출을 하지 않았다.
+- 포트원 목록 조회는 `GET /payments?requestBody={"page":{"number":0,"size":100},"filter":{...}}` 형식을 쓴다. 공식 문서(developers.portone.io)에서 `GetPaymentsBody { page, filter }`, `filter.timestampType`(CREATED_AT/STATUS_CHANGED_AT), `page.totalCount`를 확인했다. `filter.from`/`until`/`storeId`, 쿼리 파라미터 이름 `requestBody`, 응답 `items`는 2026-10-30 포트원 공식 server-sdk(`portone-io/server-sdk` `PaymentFilterInput`·`GetPaymentsBody`·`GetPaymentsResponse`·`getPayments`)와 대조해 스크립트와 같음을 확인했다. 안 맞는 응답이 오면 `--portone-json`으로 콘솔·API 응답을 넘긴다. 이 레인에서는 실제 포트원 호출을 하지 않았다.
 
 ## 7. 켜는 순서 (결제 공개)
 

@@ -4,6 +4,7 @@ import './login-sheet.css';
 import { isNativeBuild } from '../platform/api-base.js';
 import { googleSignIn } from '../social/google-signin.js';
 import { applyTheme, injectStyles } from '../../packages/tll-social/src/ui/styles.js';
+import { WITHDRAW_PAID_NOTICE } from './legal-links.js';
 import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, consumeLoginReturn, takeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
 
 // 모듈이 불러와지는 즉시(부팅 코드보다 먼저) 콜백 쿼리를 읽고 주소에서 지운다. ticket 이 주소창에 남지 않게 한다.
@@ -122,6 +123,8 @@ export async function openAccountMenu(app, { native = isNativeBuild() } = {}) {
       const ask = button('회원 탈퇴', 'ls-danger-btn', () => {
         danger.replaceChildren(
           node('p', 'ls-note', '서버에 저장된 계정과 진행이 삭제돼요. 되돌릴 수 없어요. 정말 탈퇴할까요?'),
+          // 약관 제4조의2: 남은 유료 재화 소멸을 탈퇴 전에 고지한다.
+          node('p', 'ls-note', WITHDRAW_PAID_NOTICE),
           button('네, 탈퇴합니다', 'ls-danger-btn', async () => {
             const out = await deleteAccount(app);
             if (out.ok) { toast('탈퇴했어요. 새로 시작합니다.'); d.close(); }
