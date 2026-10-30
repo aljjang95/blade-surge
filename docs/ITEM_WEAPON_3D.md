@@ -68,3 +68,5 @@ bun run check
 - 2차(기본 드롭 11: w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) 등록 완료. 1차 4자루와 합쳐 매니페스트 15자루. 3차(U 테마 9) 전부 등록(w_storm·w_blood·w_gravity·w_phoenix·w_rime·w_plague·w_sigil·w_chain·w_void, 총 24자루). 4차 도감·마을 15 + 5차 원정 3 등록(총 42자루), w_blood는 검붉은 날로 재생성(2026-10-30, Tripo heartytn 계정).
 - 나머지 검성 무기(1·2차 제외)의 우선순위·참조 아이콘: `art-src/gear-icons/weapon-3d-queue.json`(2차 기본 드롭 11 → 3차 U 테마 9 → 4차 도감·마을 15 → 5차 원정 3). 병기고 6종은 병기고 GLB 경로, 소환 2종은 검 형태가 아니라 제외.
 - 다른 직업 형태(광전사 도끼, 마법사 지팡이, 도적 단검, 궁수 활): 런타임·등록 도구는 8형태를 받도록 넓혔다(매니페스트 키 `(id, form)`). 형태별 원화를 같은 아이콘 정체성으로 만들어 등록한다. 그때 `public/img/item-renders/forms/` 215장(옛 그림)도 같은 톤으로 다시 그린다.
+
+- 활은 prep 뒤 `blender_bow_align.py`로 손잡이→활 끝 벡터를 +X 로 맞추고 prep(`--grip-ratio 0.5`, 회전 플래그 없이)을 다시 돌린다. `--face-x`의 무게중심 판정은 활에서 방향이 반반 갈렸다(2026-10-30 2차, 1차 w_hunter·w_rusty 활 반대 방향 수정).
