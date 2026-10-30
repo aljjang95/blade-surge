@@ -1,5 +1,6 @@
 import { ROOM_TYPE } from '../game/world.js';
 import { battleObjectiveView, discoveredMapView, discoveredPoint } from './battle-objective-view.js';
+import { bossRoutePath, routePolyline } from '../game/dungeon-route.js';
 
 /** 두 지도 크기가 발견한 지형만 공유하며 숨겨진 전체 경계는 읽지 않는다. */
 export class Minimap {
@@ -28,7 +29,7 @@ export class Minimap {
   }
   measureSize() { this.cacheSize(this.c.clientWidth, this.c.clientHeight); }
   setFloor(floor) {
-    if (this.floor !== floor) this.terrainView = null;
+    if (this.floor !== floor) { this.terrainView = null; this.routeKey = null; this.routeLine = null; }
     this.floor = floor;
     if (!this.sizeMeasured || !this.resizeObserver) this.measureSize();
   }
@@ -76,6 +77,21 @@ export class Minimap {
       this.roomMinZ = Math.min(this.roomMinZ, room.z - room.h / 2); this.roomMaxZ = Math.max(this.roomMaxZ, room.z + room.h / 2);
     }
   }
+  /** 보스 방 공개·경로 선 캐시. 방 정화·현재 방·표시 설정이 바뀔 때만 다시 계산한다(20Hz 그리기에서 할당 없음). */
+  refreshRoute(battle, currentRoomId) {
+    const floor = this.floor, guide = battle.routePrefs?.guide !== false, revealed = !!floor.bossRevealed;
+    let cleared = 0; for (const room of floor.rooms) if (room.cleared) cleared++;
+    const key = `${revealed ? 1 : 0}${guide ? 1 : 0}${floor.sealed ? 1 : 0}:${currentRoomId}:${cleared}:${floor.bossRoom?.cleared ? 1 : 0}`;
+    if (this.routeKey === key && this.routeLine) return;
+    this.routeKey = key; this.terrainDirty = true;
+    const boss = floor.bossRoom, from = currentRoomId ?? floor.startRoom?.id ?? 0;
+    this.routeLine = revealed && guide && boss && !boss.cleared && from !== boss.id ? routePolyline(floor, bossRoutePath(floor, from)) : [];
+    this.routeMinX = this.routeMinZ = Infinity; this.routeMaxX = this.routeMaxZ = -Infinity;
+    if (revealed && boss) {
+      this.routeMinX = boss.x - boss.w / 2; this.routeMaxX = boss.x + boss.w / 2; this.routeMinZ = boss.z - boss.h / 2; this.routeMaxZ = boss.z + boss.h / 2;
+      for (const [x, z] of this.routeLine) { this.routeMinX = Math.min(this.routeMinX, x); this.routeMaxX = Math.max(this.routeMaxX, x); this.routeMinZ = Math.min(this.routeMinZ, z); this.routeMaxZ = Math.max(this.routeMaxZ, z); }
+    }
+  }
   drawTerrain(currentRoomId, objectiveRoomId) {
     const view = this.terrainView, rooms = view.rooms, width = this.width, height = this.height, g = this.terrainContext;
     if (this.terrainCanvas.width !== this.c.width || this.terrainCanvas.height !== this.c.height) {
@@ -106,6 +122,21 @@ export class Minimap {
         g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y + h); g.stroke(); }
     }
     const objectiveRoom = rooms.find(room => room.id === objectiveRoomId);
+    // 보스 방은 입장 즉시 공개(동선 선택): 미발견이어도 위치·크기·아이콘을 은은하게, 최단 경로는 점선으로.
+    const boss = this.floor.bossRoom;
+    if (this.floor.bossRevealed && boss && !boss.discovered) {
+      const [x, y] = this.px(boss.x - boss.w / 2, boss.z - boss.h / 2), w = Math.max(4, boss.w * this.scale), h = Math.max(4, boss.h * this.scale);
+      g.fillStyle = '#c86f7655'; g.strokeStyle = '#f0a0a8'; g.lineWidth = 1.5; g.setLineDash([3, 2]);
+      if (boss.shape === 'disk') { g.beginPath(); g.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2); g.fill(); g.stroke(); }
+      else { g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h); }
+      g.setLineDash([]);
+      const [cx, cy] = this.px(boss.x, boss.z); g.fillStyle = '#ffe3e6';
+      g.font = `700 ${width > 160 ? 15 : 11}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('♜', cx, cy);
+    }
+    if (this.routeLine.length > 1) {
+      g.save(); g.globalAlpha = .7; g.strokeStyle = '#f6d58e'; g.lineWidth = width > 160 ? 2.5 : 1.5; g.setLineDash(width > 160 ? [6, 4] : [3, 3]);
+      g.beginPath(); this.routeLine.forEach(([x, z], index) => { const point = this.px(x, z); index ? g.lineTo(...point) : g.moveTo(...point); }); g.stroke(); g.restore();
+    }
     if (objectiveRoom) { const [x, y] = this.px(objectiveRoom.x - objectiveRoom.w / 2, objectiveRoom.z - objectiveRoom.h / 2);
       g.strokeStyle = '#e6c88c'; g.lineWidth = 2; g.setLineDash([3, 2]);
       g.strokeRect(x - 2, y - 2, objectiveRoom.w * this.scale + 4, objectiveRoom.h * this.scale + 4); g.setLineDash([]); }
@@ -123,10 +154,11 @@ export class Minimap {
       this.g.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     const p = battle.player;
-    // 현재 위치의 여유 6m를 그대로 포함하며 숨겨진 전체 맵 경계는 사용하지 않는다.
-    const minX = Math.min(p.pos.x - 6, this.roomMinX), maxX = Math.max(p.pos.x + 6, this.roomMaxX);
-    const minZ = Math.min(p.pos.z - 6, this.roomMinZ), maxZ = Math.max(p.pos.z + 6, this.roomMaxZ);
     const currentRoomId = battle.curRoom?.id ?? null, objectiveRoomId = battleObjectiveView(battle).roomId;
+    this.refreshRoute(battle, currentRoomId);
+    // 현재 위치의 여유 6m를 그대로 포함하며 숨겨진 전체 맵 경계는 사용하지 않는다(공개된 보스 방·경로만 더한다).
+    const minX = Math.min(p.pos.x - 6, this.roomMinX, this.routeMinX), maxX = Math.max(p.pos.x + 6, this.roomMaxX, this.routeMaxX);
+    const minZ = Math.min(p.pos.z - 6, this.roomMinZ, this.routeMinZ), maxZ = Math.max(p.pos.z + 6, this.roomMaxZ, this.routeMaxZ);
     if (this.minX !== minX || this.maxX !== maxX || this.minZ !== minZ || this.maxZ !== maxZ
       || this.currentRoomId !== currentRoomId || this.objectiveRoomId !== objectiveRoomId) this.terrainDirty = true;
     this.minX = minX; this.maxX = maxX; this.minZ = minZ; this.maxZ = maxZ;
@@ -167,7 +199,7 @@ export class Minimap {
     g.beginPath(); g.moveTo(0, -6); g.lineTo(4, 5); g.lineTo(-4, 5); g.closePath(); g.fill(); g.stroke(); g.restore();
     // 기존 보스 기척은 방향 단서로만 유지하며 미발견 방의 형태는 표시하지 않는다.
     const boss = this.floor.bossRoom;
-    if (boss && !boss.discovered && !boss.cleared) {
+    if (boss && !boss.discovered && !boss.cleared && !this.floor.bossRevealed) {
       const angle = Math.atan2(boss.z - p.pos.z, boss.x - p.pos.x);
       const cx = width / 2 + Math.cos(angle) * (width / 2 - 10), cy = height / 2 + Math.sin(angle) * (height / 2 - 10);
       g.fillStyle = this.floor.sealed ? '#c4a98b' : '#ef9c9c'; g.font = '700 12px sans-serif';

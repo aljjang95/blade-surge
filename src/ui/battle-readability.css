@@ -69,6 +69,14 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .battle-atlas-canvas{width:100%;height:calc(min(420px,var(--app-height,100dvh)) - 150px);min-height:140px;background:#0d211e;border:1px solid #b6b89e33;border-radius:8px}
 .battle-atlas-aside{min-width:0}
 .battle-atlas-goal{margin:0 0 10px;padding-left:9px;border-left:2px solid #a6f0d4;color:#e8ecd4;font-size:12px;line-height:1.6}
+.battle-atlas-route{margin:0 0 10px;display:grid;gap:6px}
+.battle-atlas-route[hidden]{display:none}
+.battle-atlas-route-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.battle-atlas-route-mode,.battle-atlas-route-guide{min-height:44px;padding:6px 8px;border:1px solid #b6b89e55;border-radius:6px;background:#1d342b;color:#d9e2c9;font:700 12px var(--font-ui,system-ui,sans-serif);cursor:pointer;touch-action:manipulation}
+.battle-atlas-route-mode[aria-pressed="true"]{border-color:#f6d58e;background:#4a3a1c;color:#ffe9b8}
+.battle-atlas-route-guide{font-weight:600;font-size:11px;min-height:44px}
+.battle-atlas-route-guide[aria-pressed="false"]{color:#9fb09c}
+.battle-atlas-route-info{margin:0;font-size:11px;line-height:1.5;color:#e6d9b3}
 .battle-atlas-legend{font-size:11px;color:#b7c7b5;line-height:1.5}
 .battle-atlas-rooms{padding:0;margin:10px 0 0;list-style:none;display:grid;gap:6px}
 .battle-atlas-rooms>li{padding:7px 8px;border-left:2px solid #526b60;background:#1d342b;font-size:12px;line-height:1.4}

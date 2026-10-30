@@ -33,7 +33,7 @@ export class BattleReadability {
     this.introTitle = node('strong', ''); this.introDetail = node('span', ''); this.intro.append(this.introTitle, this.introDetail);
     this.intro.addEventListener('animationend', () => { this.intro.hidden = true; this.intro.classList.remove('on'); });
     this.hud.append(this.intro);
-    this.mapButton.setAttribute('aria-label', '발견한 구역 지도 열기 · ?는 보스 기척의 방향');
+    this.mapButton.setAttribute('aria-label', '구역 지도 열기 · 보스 위치와 동선 선택');
     this.dialog = node('dialog', 'battle-atlas'); this.dialog.id = 'battle-atlas';
     this.dialog.setAttribute('aria-labelledby', 'battle-atlas-title');
     const header = node('header', 'battle-atlas-header'), title = node('div', '');
@@ -44,10 +44,21 @@ export class BattleReadability {
     const body = node('div', 'battle-atlas-body'); this.canvas = node('canvas', 'battle-atlas-canvas');
     this.canvas.setAttribute('aria-hidden', 'true'); this.map = new Minimap(this.canvas);
     const aside = node('aside', 'battle-atlas-aside'); this.goal = node('p', 'battle-atlas-goal');
-    this.legend = node('p', 'battle-atlas-legend', '△ 나 · ◇ 보물 · ! 정예 · ♜ 보스 · ? 보스 기척(방향)');
+    this.legend = node('p', 'battle-atlas-legend', '△ 나 · ◇ 보물 · ! 정예 · ♜ 보스 · 점선 보스까지 최단 경로');
     this.rooms = node('ul', 'battle-atlas-rooms'); this.rooms.setAttribute('aria-label', '발견한 구역');
-    aside.append(this.goal, this.legend, this.rooms); body.append(this.canvas, aside);
-    this.dialog.append(header, body, node('p', 'battle-atlas-footnote', '지형은 발견한 구역만 표시합니다. ?는 미발견 보스의 방향 단서입니다. 지도에서는 이동·장치 발동을 하지 않습니다.'));
+    // 동선 선택: 보스 직행(보스 문까지 최소 구역) / 전부 사냥(전부 정화 보너스). AUTO 가 이 선택을 따른다.
+    this.route = node('section', 'battle-atlas-route'); this.route.setAttribute('aria-label', '동선'); this.route.hidden = true;
+    this.routeFull = node('button', 'battle-atlas-route-mode', '전부 사냥'); this.routeFull.type = 'button'; this.routeFull.id = 'btn-route-full';
+    this.routeDirect = node('button', 'battle-atlas-route-mode', '보스 직행'); this.routeDirect.type = 'button'; this.routeDirect.id = 'btn-route-direct';
+    this.routeGuide = node('button', 'battle-atlas-route-guide', ''); this.routeGuide.type = 'button'; this.routeGuide.id = 'btn-route-guide';
+    this.routeInfo = node('p', 'battle-atlas-route-info');
+    const modes = node('div', 'battle-atlas-route-modes'); modes.setAttribute('role', 'group'); modes.append(this.routeFull, this.routeDirect);
+    this.route.append(modes, this.routeInfo, this.routeGuide);
+    this.routeFull.addEventListener('click', () => this.setRoute({ mode: 'full' }));
+    this.routeDirect.addEventListener('click', () => this.setRoute({ mode: 'direct' }));
+    this.routeGuide.addEventListener('click', () => this.setRoute({ guide: !(this.mapBattle?.routePrefs?.guide !== false) }));
+    aside.append(this.goal, this.route, this.legend, this.rooms); body.append(this.canvas, aside);
+    this.dialog.append(header, body, node('p', 'battle-atlas-footnote', '지형은 발견한 구역과 보스 방만 표시합니다. 보스 문은 정화한 구역으로 문 앞까지 이어지면 열립니다. 지도에서는 이동·장치 발동을 하지 않습니다.'));
     document.body.append(this.dialog);
     this.mapButton.addEventListener('click', () => this.openMap());
     this.closeButton.addEventListener('click', () => this.closeMap());
@@ -149,7 +160,7 @@ export class BattleReadability {
   refreshMap(battle, view = battleObjectiveView(battle)) {
     if (battle !== this.mapBattle || battle.world !== this.mapWorld) { this.closeMap(false); return; }
     if (this.map.floor !== battle.world) this.map.setFloor(battle.world);
-    this.map.draw(battle);
+    this.map.draw(battle); this.renderRoute(battle);
     this.goal.textContent = `${view.title}${view.total ? ` ${view.progress}/${view.total}` : ''} · ${view.action}${view.challenge ? ` · ${view.challenge}` : ''}`;
     const known = discoveredMapView(battle.world), key = JSON.stringify([known.rooms, battle.curRoom?.id, view.roomId, known.sealed]);
     if (key === this.roomsKey) return;
@@ -169,6 +180,19 @@ export class BattleReadability {
       }
       this.rooms.append(li);
     }
+  }
+  setRoute(next) {
+    const battle = this.mapBattle; if (!battle?.setRoutePrefs) return;
+    battle.setRoutePrefs(next); this.goalKey = null; this.refreshMap(battle);
+  }
+  renderRoute(battle) {
+    const route = battle.routeView?.();
+    this.route.hidden = !route?.early; if (!route?.early) return;
+    const direct = route.mode === 'direct';
+    this.routeFull.setAttribute('aria-pressed', String(!direct)); this.routeDirect.setAttribute('aria-pressed', String(direct));
+    this.routeGuide.setAttribute('aria-pressed', String(route.guide)); this.routeGuide.textContent = route.guide ? '경로 표시 켜짐' : '경로 표시 꺼짐';
+    const bonus = route.optionalLeft ? `전부 정화까지 ${route.optionalLeft}곳 · 경험치 +50% · 골드 +40% · 정예 장비` : '전부 정화 보너스 확보';
+    this.routeInfo.textContent = `${route.pathLeft ? `보스 문까지 ${route.pathLeft}곳` : '보스 문 열림'} · ${bonus}${direct ? ' · AUTO는 보스로 직행' : ' · AUTO는 모든 구역을 돈 뒤 보스'}`;
   }
   releaseMap() {
     const battle = this.mapBattle; this.mapBattle = null; this.mapWorld = null;
