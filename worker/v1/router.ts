@@ -11,6 +11,7 @@ import { importLegacy, settleLegacyCompensation, shadowSnapshot } from './import
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
 import { handleRtdn } from './rtdn';
+import { handlePortoneWebhook } from './portone-webhook';
 import { webBillingOn, webComplete, webIntent, webPayMethods, type PortoneDeps, type PortoneEnv } from './portone';
 import { ingestFunnel } from './funnel';
 
@@ -53,6 +54,16 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       const rc: Ctx = { env, db: rtdnDb, deps, now: deps.now(), request };
       await rateLimit(rc, 'rtdn', 'global');
       const r = await handleRtdn(rc);
+      return json({ outcome: r.outcome }, r.status);
+    }
+    // 포트원 웹훅은 포트원 서버가 부른다(Origin 없음). Standard Webhooks 서명으로 따로 인증하고, 본문은 paymentId만 쓴다(portone-webhook.ts).
+    if (path === '/iap/web/webhook') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      const whDb = env.COMMERCE_DB as D1Database | undefined;
+      if (!whDb || !await schemaReady(whDb)) return json({ error: 'unavailable' }, 503);
+      const wc: Ctx = { env, db: whDb, deps, now: deps.now(), request };
+      await rateLimit(wc, 'portoneWebhook', 'global');
+      const r = await handlePortoneWebhook(wc);
       return json({ outcome: r.outcome }, r.status);
     }
     // 리다이렉트 로그인 콜백은 제공자 페이지에서 오는 최상위 이동이다(cross-site, Origin 없음). state(1회용)로 인증한다.

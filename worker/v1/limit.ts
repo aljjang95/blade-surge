@@ -23,6 +23,7 @@ export const LIMITS = {
   funnel: [30, MINUTE],            // 계정: /funnel
   iapRead: [60, MINUTE],           // 계정: /iap/catalog·/iap/state
   rtdn: [600, MINUTE],             // 전체: /iap/rtdn (인증 전, 위조 요청 폭주 차단)
+  portoneWebhook: [600, MINUTE],   // 전체: /iap/web/webhook (서명 확인 전, 위조 요청 폭주 차단)
 } as const satisfies Record<string, readonly [number, number]>;
 export type LimitName = keyof typeof LIMITS;
 
