@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { normalizeBounty, availableBounties, bountyDef, bountyId, parseBountyId, judgeBounty, completeBounty, grantHunterXp, buyBountyItem, boardOpen } from '../src/game/bounty-board.js';
 import { HUNTER_RANK, HUNTER_TITLES, BOUNTY_SHOP, rankReward } from '../src/data/bounties.js';
+import { CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/stages.js';
 
 const save = (stars: Record<string, number> = {}, peak: Record<string, number> = {}) => ({ progress: { stars }, endgame: { peak } });
 const open = () => { const s: Record<string, number> = {}; for (let i = 1; i <= 10; i++) s[`1-${i}`] = 3; return s; };
@@ -94,4 +95,12 @@ test('조작된 사냥꾼 경험치는 다음 등급 직전으로 잘린다', ()
   const s = normalizeBounty({ rank: 3, xp: 1e9, owned: ['banner_crimson', 'hack', 'banner_crimson'] });
   expect(s.xp).toBeLessThan(40 + 5 * 3);
   expect(s.owned).toEqual(['banner_crimson']);
+});
+
+test('유한한 의뢰 전부로 최고 등급에 도달한다', () => {
+  const stars: any = {}, peak: any = {};
+  for (const c of CHAPTERS) for (let s = 1; s <= STAGES_PER_CHAPTER; s++) { stars[`${c.id}-${s}`] = 3; peak[`${c.id}-${s}`] = 3; }
+  const sv: any = { progress: { stars }, endgame: { peak } }, st = normalizeBounty(null);
+  for (const d of availableBounties(st, sv)) expect(completeBounty(st, sv, d.id, { win: true, fullClear: true, time: 0, revives: 0, maxCombo: 999, stars: 3 }).ok).toBe(true);
+  expect(st.rank).toBe(HUNTER_RANK.max); expect(st.titles).toContain('bounty_apex');
 });

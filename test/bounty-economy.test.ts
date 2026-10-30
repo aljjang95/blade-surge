@@ -107,3 +107,9 @@ test('bounty shop buys through the economy with marks and weekly limit', () => {
   expect(eco.bountyShop().find((x: any) => x.id === 'stones_bundle')!.soldOut).toBe(true);
   expect(new Economy().s.bounty.owned).toContain('banner_crimson');
 });
+
+test('의뢰 스테이지는 지역 전투 명단(combatRosterFor)을 잃지 않는다', () => {
+  const eco: any = make();
+  const id = eco.bounties(1)[0].id, out = eco.startBounty(id);
+  expect(typeof out.stage.combatRosterFor).toBe('function');
+});
