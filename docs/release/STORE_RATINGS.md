@@ -50,6 +50,7 @@
 전송 중 암호화 예(usesCleartextTraffic=false), 삭제 요청 예(앱 설정 회원 탈퇴, support.html). 미확인: 빌드 산출물의 병합 권한(AD_ID 포함 여부, `aapt dump permissions`).
 
 ### 2.3 인앱 상품
+- 2026-10-31 재확인: `apex-cloud-play@…`의 블레이드 서지 권한 창에서 **'앱 정보 관리'(인앱 상품 관리 포함)가 계정 권한으로 부여돼 있음**(회색 체크 = 계정 권한 상속). 프록시는 블레이드 서지·등불·카롬·바둑 리뷰 GET이 모두 200(계정 수준 읽기 권한). 따라서 "앱 권한 부족" 가설은 약하고, ① 프록시 `PLAY_SA_JSON`이 다른 계정(예: `play-console-cli@apex-hub-501808`)이거나 ② 새 monetization API 쪽 다른 원인일 수 있다. 다음: PC에서 `PLAY_SA_JSON`의 client_email(공개 식별자)만 확인 → 그 계정 권한 비교. 세션 권한 정책이 실제 상품 생성 재시도를 막아 이 세션에서는 추가 시도하지 않음.
 - 서비스 계정 `apex-cloud-play@cloudtarot-android.iam.gserviceaccount.com`은 이 앱에 이미 11개 권한('주문 및 구독 관리' 포함, '앱 정보 관리'는 계정 수준 상속)이 있다. 그런데도 PATCH가 403이므로, 클라우드 Play 프록시(`PLAY_SA_JSON`)가 **다른 서비스 계정**일 가능성이 높다(사용자 및 권한의 다른 서비스 계정 6개는 열어보지 않음). 다음: 프록시 SA 이메일을 PC `admin.ps1`·Secrets Store 기록에서 확인 → 그 계정에 이 앱 한정 '스토어 등록정보 관리'+'주문 및 구독 관리'.
 - 권한이 생기면: `NODE_USE_ENV_PROXY=1 node tools/play-iap-register.mjs --apply --i-have-owner-approval --register-only` — 활성화 요청 없이 8개 생성(remove_ads 4,900 · starter 1,200 · monthly_card 5,900(기본 요금제 DRAFT) · season_pass_s1 9,900 · growth_pack 12,000 · 보석 300/980/1,980 = 3,900/12,000/22,000). 영웅·아바타·웹 전용은 제외. 판매 시작(활성화)은 대표님 금액 확인 뒤.
 
