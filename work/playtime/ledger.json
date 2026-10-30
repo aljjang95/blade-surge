@@ -58,10 +58,10 @@
    "track": "story",
    "minutes": 2,
    "cumMinutes": 2,
-   "source": "estimate",
+   "source": "telemetry:tools/qa/playtest-first-hour.mjs profile a (2026-10-30, 운영 blade.tllhouse.com 신규 게스트, 390x700 Threads 인앱 UA, CDP 터치 입력)",
    "status": "live",
-   "evidence": "src/ui/first-sortie.js:7",
-   "note": "근거: 타이틀→시작 영웅→1-1 조작 안내 화면 전환 합 약 2분(시뮬레이터는 온보딩 시간을 모델링하지 않음, 실측 없음)"
+   "evidence": "docs/playtest/2026-10-30-first-hour.md, tools/qa/playtest-first-hour.mjs, src/ui/first-sortie.js:7",
+   "note": "실측(컨테이너 SwiftShader 소프트웨어 GL, 실기기 아님): 앱 열기→게스트 시작→로비 도착 1:06~1:32(부팅·로딩 포함), 로비→1-1 입장→튜토리얼 직접 조작 완료 약 0:20~0:30. 합계 약 2분으로 기존 추정과 일치해 minutes 유지. 전투 구간은 AUTO를 app.step 으로 가속하므로 이 근거는 온보딩 구간에만 해당."
   },
   {
    "id": "story-1-1",
@@ -97,7 +97,8 @@
    "cumMinutes": 11,
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
-   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39"
+   "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
+   "note": " | 2026-10-30 운영 표본(AUTO만, 성장 개입 없음): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(부활창 표시) — docs/playtest/2026-10-30-first-hour.md"
   },
   {
    "id": "story-1-4",
