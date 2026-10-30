@@ -13,7 +13,10 @@ export const ROUTE_MODE = Object.freeze({ FULL: 'full', DIRECT: 'direct' });
 const PREF_KEY = 'bs.dungeonRoute.v1';
 
 /** 기기별 동선 선호(지도에서 고른 값). 저장이 막힌 브라우저에서도 기본값으로 동작한다. */
+/** @typedef {{mode:'full'|'direct', guide:boolean}} RoutePrefs */
+/** @param {Storage|undefined} [storage] @returns {RoutePrefs} */
 export function loadRoutePrefs(storage = globalThis.localStorage) {
+  /** @type {RoutePrefs} */
   const prefs = { mode: ROUTE_MODE.FULL, guide: true };
   try {
     const raw = JSON.parse(storage?.getItem?.(PREF_KEY) || 'null');
@@ -22,6 +25,7 @@ export function loadRoutePrefs(storage = globalThis.localStorage) {
   } catch { /* 저장소 없음·손상 — 기본값 */ }
   return prefs;
 }
+/** @param {Partial<RoutePrefs>} prefs @param {Storage|undefined} [storage] */
 export function saveRoutePrefs(prefs, storage = globalThis.localStorage) {
   try { storage?.setItem?.(PREF_KEY, JSON.stringify({ mode: prefs.mode === ROUTE_MODE.DIRECT ? ROUTE_MODE.DIRECT : ROUTE_MODE.FULL, guide: prefs.guide !== false })); }
   catch { /* 저장 실패는 이번 판 값만 유지 */ }
