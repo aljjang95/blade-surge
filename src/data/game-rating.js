@@ -3,23 +3,25 @@
 // age·number·date를 결정서 그대로 적는다. 부팅 화면(index.html #boot-rating)과 설정 화면이 이 값을 쓴다.
 
 /** @typedef {'preparing'|'reviewing'|'rated'} RatingStatus */
+/** @typedef {{ status: RatingStatus, age: null|'전체'|'12'|'15'|'청소년이용불가', number: null|string, date: null|string, descriptors: readonly string[] }} GameRating */
 
+/** @type {GameRating} */
 export const GAME_RATING = Object.freeze({
-  /** @type {RatingStatus} preparing=신청 전 · reviewing=게임위 심의 중 · rated=등급 결정 */
+  // preparing=신청 전 · reviewing=게임위 심의 중 · rated=등급 결정
   status: 'preparing',
-  /** @type {null|'전체'|'12'|'15'|'청소년이용불가'} 결정서의 이용 등급 */
+  // 결정서의 이용 등급
   age: null,
   /** 등급분류번호(결정서) */
   number: null,
   /** 등급분류일(YYYY-MM-DD) */
   date: null,
-  /** 내용정보(결정서 기재 항목만). 신청 예정 내용: 폭력성 · 사행성(확률형 아이템) */
+  /** 내용정보(결정서 기재 항목만). 신청 예정: 폭력성 */
   descriptors: Object.freeze([]),
 });
 
 const AGE_TEXT = Object.freeze({ '전체': '전체이용가', '12': '12세이용가', '15': '15세이용가', '청소년이용불가': '청소년이용불가' });
 
-/** 화면 한 줄 문구. 결정 전에는 진행 상태만 밝힌다. */
+/** 화면 한 줄 문구. 결정 전에는 진행 상태만 밝힌다. @param {GameRating} [rating] */
 export function ratingLabel(rating = GAME_RATING) {
   if (rating.status === 'rated' && rating.age && AGE_TEXT[rating.age]) {
     const parts = [AGE_TEXT[rating.age]];
