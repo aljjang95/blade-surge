@@ -9,11 +9,14 @@
     "published": false
   },
   "onestore": {
-    "consoleAppId": null,
+    "consoleAppId": "0001011685",
     "adMobAppId": "ca-app-pub-2682150499836559~3088230082",
     "interstitialId": "ca-app-pub-2682150499836559/8739267157",
     "adsApproval": "pending",
-    "published": false
+    "published": false,
+    "aid": "OA01011685",
+    "iapMode": "onestore-iap",
+    "licensePublicKey": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCdjJCy7SrJR6uc0yJiH56aUCwkLSQTwjGh4upPxUPN1v+/3VehRRMFniBEZ1jh/G/SblwGJoTS4zQ4WUOiYsjy7p4xUNsvp7oyN4b4k7rpJ1BWPKBMhPsW14l0BUL+detDX0Kr/irnfw22V9NqR2+VmRnzDVkevAEcIwg5sWWJawIDAQAB"
   },
   "apps-in-toss": {
     "workspaceId": 42391,

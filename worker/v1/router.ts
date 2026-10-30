@@ -111,7 +111,7 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
       const auth = await requireSession(c);
       await rateLimit(c, 'iapRead', auth.account.account_id);
-      return json(path === '/iap/catalog' ? await catalog(c, auth) : await iapState(c, auth));
+      return json(path === '/iap/catalog' ? await catalog(c, auth, new URL(request.url).searchParams.get('channel')) : await iapState(c, auth));
     }
     if (method === 'POST') {
       const auth = await requireSession(c);

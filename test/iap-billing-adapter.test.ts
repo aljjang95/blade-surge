@@ -50,3 +50,34 @@ test('보유 조회는 40개 상한과 토큰 형식을 강제한다', async () 
 test('네이티브·googleplay 빌드가 아니면 로더는 null', async () => {
   expect(await loadPlayCatalogAdapter()).toBeNull();
 });
+
+// ---- 원스토어 채널 ----
+const osOk = (extra = {}) => ({ channel: 'onestore', status: 'purchased', productId: 'starter_pack_v1', type: 'inapp', purchaseToken: 'tok', orderId: 'PID1', marketCode: 'MKT_ONE', acknowledged: false, ...extra });
+
+test('원스토어 어댑터는 billingChannel onestore이고 구독 타입·다른 채널 응답을 거부한다', async () => {
+  const product = { productId: 'starter_pack_v1', type: 'inapp', formattedPrice: '₩1,200', priceAmountMicros: '1200000000', currencyCode: 'KRW' };
+  const good = { channel: 'onestore', status: 'products', products: [product], unavailableProductIds: [] };
+  const adapter = createPlayCatalogAdapter({ listCatalog: async () => good } as any, 'onestore');
+  expect(adapter.billingChannel).toBe('onestore');
+  expect(createPlayCatalogAdapter({} as any).billingChannel).toBe('play');
+  expect((await adapter.list([{ productId: 'starter_pack_v1', type: 'inapp' }])).products).toHaveLength(1);
+  await expect(adapter.list([{ productId: 'monthly_card_v1', type: 'subs' }])).rejects.toThrow('store-unavailable');
+  const play = createPlayCatalogAdapter({ listCatalog: async () => ({ ...good, channel: 'googleplay' }) } as any, 'onestore');
+  await expect(play.list([{ productId: 'starter_pack_v1', type: 'inapp' }])).rejects.toThrow('store-unavailable');
+});
+
+test('원스토어 구매는 marketCode를 포함하고 없거나 subs면 거부한다', async () => {
+  const run = (r: any, c: any = buy) => createPlayCatalogAdapter({ purchaseCatalog: async () => r } as any, 'onestore').purchase(c);
+  expect(await run(osOk())).toEqual({ purchaseToken: 'tok', productId: 'starter_pack_v1', type: 'inapp', orderId: 'PID1', acknowledged: false, marketCode: 'MKT_ONE' });
+  await expect(run(osOk({ marketCode: undefined }))).rejects.toThrow('purchase-incomplete');
+  await expect(run(osOk({ channel: 'googleplay' }))).rejects.toThrow('purchase-incomplete');
+  await expect(run(osOk(), { productId: 'monthly_card_v1', type: 'subs', obfuscatedAccountId: 'a' })).rejects.toThrow('purchase-incomplete');
+  await expect(run({ channel: 'onestore', status: 'cancelled' })).rejects.toThrow('purchase-cancelled');
+});
+
+test('원스토어 보유 조회는 marketCode를 포함한다', async () => {
+  const p = { productId: 'starter_pack_v1', type: 'inapp', purchaseToken: 't', status: 'purchased', acknowledged: true, marketCode: 'MKT_ONE' };
+  const adapter = (purchases: any) => createPlayCatalogAdapter({ queryOwned: async () => ({ channel: 'onestore', status: 'owned', purchases }) } as any, 'onestore');
+  expect(await adapter([p]).owned()).toEqual([p]);
+  await expect(adapter([{ ...p, marketCode: undefined }]).owned()).rejects.toThrow('store-unavailable');
+});
