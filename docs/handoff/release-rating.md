@@ -3,7 +3,7 @@
 **예상 등급: 15세이용가(내용정보 폭력성).** 근거: 판타지 몬스터 대상 무기 전투가 주 내용 + '흡혈' 4세트 발동 때만 나오는 0.45초 붉은 섬광(제한적 선혈). 동종 사례 블소 PC가 "무기 지속 공격 + 제한적 선혈"로 15세. 일반 전투 화면에는 피가 없음(운영 화면 1280×720 캡처로 확인).
 
 ## 끝난 것 (브랜치 `claude/release-rating`)
-- 문서: `docs/release/RATING_DECISION.md`(판정·출처), `GRAC_APPLICATION.md`(신청 화면 입력값·내용설명서·내용정보·영상 계획·수수료 추정), `IARC_ANSWERS.md`(Play 설문 답), `ODDS_AUDIT.md`(확률 공개 — 충족), `RELEASE_CHECKLIST.md`(웹·Play 각각, 게이트 G1·G2).
+- 문서: `docs/release/RATING_DECISION.md`(판정·출처), `GCRB_APPLICATION.md`(신청 화면 입력값·내용설명서·내용정보·영상 계획·수수료 추정), `IARC_ANSWERS.md`(Play 설문 답), `ODDS_AUDIT.md`(확률 공개 — 충족), `RELEASE_CHECKLIST.md`(웹·Play 각각, 게이트 G1·G2).
 - 코드: `src/data/game-rating.js` 등급 표시 정본 → 부팅 화면 우측 상단 `#boot-rating`·설정 화면. **결정 전에는 연령 마크 없이 '게임물 등급분류 신청 준비 중'** (받지 않은 등급 표시는 허위). 채팅 게임 금칙어 36개(`src/social/config.js`, 일상어 오탐 제외 테스트). 고객센터에 게임시간 선택제 창구. Play 설명에 '확률형 아이템 포함' + odds 주소.
 - 검증: `bun run check` 통과(테스트 6,371, 실패 0, smoke 영웅별 전투 진입 errors 0).
 
@@ -22,7 +22,7 @@
 - PR #450 독립 리뷰(Sonnet) P1 2건 반영: 일상어·고유명사 오탐 금칙어 11개 제거, 같은 이름 재저장은 금칙어 재검사 생략(tll-social core). 재검사 `bun run check` 6,372 통과.
 
 ## 대표님 할 일
-1. 게임위 1377에 "웹 브라우저 게임 등급분류 담당 기관" 확인(전화 한 통).
-2. 게임위 업체 회원 로그인 → GRAC_APPLICATION.md 내용 입력, 사업자등록증·게임제작/배급업 등록증 첨부, 영상 첨부 → 수수료(추정 108만 원 감면 시, 모의 계산기로 확정) 납부 → 제출.
+1. (2026-10-31 정정) 웹 게임 담당은 게임위가 아니라 **GCRB**(gcrb.or.kr). 전화 확인 불필요.
+2. GCRB 회원가입·로그인 → GCRB_APPLICATION.md·gcrb-package/FORM_FILL.md 내용 입력, 사업자등록증·게임제작/배급업 등록증 첨부, 영상 첨부 → 수수료(추정 108만 원 감면 시, 모의 계산기로 확정) 납부 → 제출.
 3. Play Console → 콘텐츠 등급 → IARC_ANSWERS.md 대로 입력·제출(약 5분).
 4. 결정서가 나오면 등급분류번호를 알려 주시면 표시 반영·배포.

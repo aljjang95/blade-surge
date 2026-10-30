@@ -1,7 +1,7 @@
 # 블레이드 서지 등급 판정서
 
 > 작성 2026-10-30 · 레인 `3month-highend#release-rating` · 근거 날짜는 조사일 기준. **법률 자문이 아니다.** 실제 등급은 심의 결과로만 확정된다.
-> 신청서 작성본: [GRAC_APPLICATION.md](GRAC_APPLICATION.md) · Play 설문: [IARC_ANSWERS.md](IARC_ANSWERS.md) · 확률 공개 점검: [ODDS_AUDIT.md](ODDS_AUDIT.md) · 출시 체크리스트: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+> 신청서 작성본(GCRB): [GCRB_APPLICATION.md](GCRB_APPLICATION.md) · Play 설문: [IARC_ANSWERS.md](IARC_ANSWERS.md) · 확률 공개 점검: [ODDS_AUDIT.md](ODDS_AUDIT.md) · 출시 체크리스트: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
 
 ## 1. 결론 한 줄
 
@@ -52,9 +52,11 @@
 
 | 채널 | 경로 | 이유 |
 |---|---|---|
-| 웹 blade.tllhouse.com | **게임위(GRAC) 직접 신청, PC 온라인 게임물** | 직접 운영 웹은 자체등급분류 대상이 아님. 11-02 이관 대상은 '모바일'이고 PC 온라인 전체~15세는 게임위에 남는다(언론 기준). **접수 전 게임위 1377 또는 GCRB에 "웹 브라우저 게임 담당 기관" 한 번 문의** — 대표님 몫(전화) 또는 게임위 Q&A 게시판 |
-| Google Play | **Play Console IARC 설문** | 구글은 게임위 지정 자체등급분류사업자. 무료(수수료 없음). 웹 신청과 **같은 답**으로(IARC_ANSWERS.md) |
-| 원스토어·앱인토스 | 각 채널 자체 절차(원스토어도 자체등급분류사업자). 앱인토스는 게임위 등급증명서 요구 | 출시 시점에 따로 |
+| 웹 blade.tllhouse.com | **GCRB(게임콘텐츠등급분류위원회, gcrb.or.kr) 직접 신청, PC 온라인 게임물** | 직접 운영 웹은 자체등급분류 대상이 아님. 전체·12·15세(PC·온라인·콘솔)는 이미 민간 GCRB 몫이고, 청불은 2025 1단계, 모바일은 2026-11-02 2단계로 이관됐다. 게임위에는 아케이드·사행성 우려 게임물만 남는다. 근거: GCRB 메인 분류 탭('온라인'·'콘솔/PC'), 수수료표 기초가액 'PC/온라인'(2026-10-31 조회), 보도 [ZDNet 2026-10-29](https://zdnet.co.kr/view/?no=20261029164431)·[게임메카](https://www.gamemeca.com/en/view.php?gid=1782605). **접수 화면에서 플랫폼 선택지에 막히면 GCRB 민원센터에 "웹 브라우저 게임" 분류만 한 번 문의**(대표님 몫, 화면에서 막힐 때만) |
+| Google Play | **Play Console IARC 설문** | 구글은 지정 자체등급분류사업자. 무료. 웹 신청과 **같은 답**으로(IARC_ANSWERS.md) |
+| 원스토어·앱인토스 | 각 채널 자체 절차(원스토어도 자체등급분류사업자). 앱인토스는 등급증명서 요구 | 출시 시점에 따로 |
+
+(2026-10-30판은 "PC 온라인은 게임위에 남는다"고 썼으나 틀렸다. GCRB 사이트로 바로잡음.)
 
 ## 6. 지금 운영 중인 웹의 위험과 조치
 
@@ -63,9 +65,9 @@
 - **조치(게이트로 고정):** 등급분류 결정서(등급분류번호)를 받기 전에는 웹 결제·Play 프로덕션 결제·가격 공개를 열지 않는다(RELEASE_CHECKLIST G1). 공개 마케팅도 결정서 뒤.
 - 결정서를 받으면 `src/data/game-rating.js`의 `status:'rated'`, `age`, `number`, `date`, `descriptors`를 결정서 그대로 고치고 `index.html #boot-rating` 문구를 같게 맞춘다(테스트가 둘을 대조).
 
-## 7. 확인 못 한 것 (게임위 문의·후속)
+## 7. 확인 못 한 것 (GCRB 확인·후속)
 
-1. 웹 브라우저 게임의 담당 기관·플랫폼 분류(PC 온라인 vs 기타) — 수수료 기초가액이 달라진다.
-2. 현행(2026) 수수료표 원문 — GCRB 계산식 페이지 값으로 추정했다(GRAC_APPLICATION 3장).
+1. 웹 브라우저 게임의 플랫폼 분류(PC/온라인 vs 기타) — 수수료 기초가액이 달라진다. 신청 화면 선택지로 확정(담당 기관은 GCRB로 확정).
+2. 2026-11-02 이후 수수료표 개정 여부 — 조견표(2013-02-07 적용 표기)로 추정했다(GCRB_APPLICATION 4장).
 3. 플레이 영상 길이 요구 — 명문 없음. 내용정보 체크 항목이 모두 나오게 2~3분 본편 + 항목별 장면.
 4. 별표 3 등급 표시 규격의 현행판(웹/모바일 크기).
