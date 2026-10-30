@@ -45,7 +45,13 @@ async function shot(tag) {
   const f = `${String(shots.length + 1).padStart(2, '0')}-${tag}.png`;
   await page.screenshot({ path: path.join(OUT, f) }).catch(() => {}); shots.push({ at: fmt(clock()), f, tag });
 }
+// 세로 이용자는 로비·결과 뒤에도 가로 전환 안내가 탭을 가로막을 수 있다. 보이면 먼저 "세로로 계속하기"를 누른다.
+async function dismissRotate() {
+  const rot = page.locator('#btn-ignore-rotate');
+  if (await rot.isVisible().catch(() => false)) { ev('가로 전환 안내', '탭을 막아 세로로 계속하기 누름'); await rot.tap({ timeout: 3000 }).catch(() => {}); await sleep(HUMAN.tap); }
+}
 async function tap(sel, { optional = false, label = sel } = {}) {
+  await dismissRotate();
   const l = page.locator(sel).first();
   if (!(await l.isVisible().catch(() => false))) { if (!optional) defect('탭', `${label} 안 보임`); return false; }
   await l.tap({ timeout: 5000 }).catch(e => { defect('탭', `${label} 실패 ${String(e.message).split('\n')[0].slice(0, 80)}`); });
