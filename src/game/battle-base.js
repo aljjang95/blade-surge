@@ -541,7 +541,7 @@ export class Battle {
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
     if (room.type === ROOM_TYPE.BOSS) this.after(2.4, () => this.victory());
-    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && !this.world.bossRoom.cleared) {
+    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.bossRoom && !this.world.bossRoom.cleared) {
       // 남은 방을 모두 정화: 예전처럼 봉인 해제 + 보스방 포탈(이미 길로 풀렸으면 포탈만).
       if (this.world.remaining === 1) this.after(1.2, () => this.world?.sealed ? this.unsealBoss() : this.openPortalOnce());
       // 정화한 방만으로 보스 문까지 닿으면 봉인을 먼저 푼다. 남은 방은 선택(전부 정화 보너스)이다.

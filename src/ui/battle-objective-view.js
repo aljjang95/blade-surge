@@ -249,7 +249,7 @@ function mainObjectiveView(battle) {
   const atBoss = battle.curRoom?.id === boss.id;
   const bonusLeft = remaining > 0 && routeInfo?.early ? ` · 전부 정화 보너스까지 ${remaining}곳` : '';
   return step('보스 처치', atBoss ? battle.boss?.alive ? '공격 예고를 피하고 보스를 공격' : '보스 출현에 대비'
-    : `보스 구역으로 이동${bonusLeft}`, { roomId: boss.id });
+    : `${boss.discovered ? '발견한 ' : ''}보스 구역으로 이동${bonusLeft}`, { roomId: boss.id });
 }
 
 export function battleObjectiveView(battle) {
