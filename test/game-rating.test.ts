@@ -29,5 +29,5 @@ test('게임 금칙어가 채팅에서 가려지고 일상 문장은 건드리�
   expect(extra.length).toBeGreaterThan(20);
   expect(filterChat('야 ㅅ.ㅂ 지랄하네', extra)).not.toMatch(/ㅅ\.ㅂ|지랄/);
   expect(maskBanned('니애미', extra)).toBe('***');
-  for (const ok of ['보스 보지 말고 피해', '오늘 자지 말고 레이드 가자', '시바견 귀엽다', '미친 데미지네']) expect(maskBanned(ok, extra)).toBe(ok);
+  for (const ok of ['보스 보지 말고 피해', '오늘 자지 말고 레이드 가자', '시바견 귀엽다', '미친 데미지네', '애비게일', 'Dickens', '졸라맨', '불이 꺼져요', '닥쳐올 위기', '섹스턴', '개새싹', 'Scunthorpe']) expect(maskBanned(ok, extra)).toBe(ok);
 });
