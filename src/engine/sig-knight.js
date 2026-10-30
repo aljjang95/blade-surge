@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
+import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
 
 /**
  * knight 스킬 '모양 언어' 서명(h1b). skill-signatures.js 가 합친다. 규칙은 그 파일 머리 주석과 같다:
@@ -9,7 +9,8 @@ import { IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
  * 넓은 범위는 바닥에 눕는 얇은 선 표식(mark)으로 그린다.
  * 일섬=쓸고 가는 칼 궤적+날아가는 두 겹 초승달+잔광 파편 / 강타=전방 부채 충격 파동+균열 / 심판=하늘로 오르는 광선+표적 박자(knightJudgmentStrike) /
  * 용살검=예비(검에 모이는 빛)→거대 수직 참격→달려 나가는 균열 / 예비 표식은 PRELUDES /
- * 결박=사슬 가시 고리 / 성역=돔 경계 문양 / 태양파쇄=전진하는 태양 원반 / 신벌=하늘 낙하 성광 기둥.
+ * 각성: 결박=당겼다 사방으로 튀는 방사 / 성역=경계에서 정수리로 오르는 돔 갈빗대 / 태양파쇄=앞으로 뻗는 태양 길·원반과 되감기는 초승달 /
+ * 신벌=소용돌이 몰이 → 하늘 낙하 성광 기둥 → 솟는 파편. 각성 예비 표식도 PRELUDES 에 있다.
  * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
  */
 export const SIGNATURES = {};
@@ -17,8 +18,9 @@ export const SIGNATURES = {};
 // wide = 반경 4m 넘는 바닥 표식 전용 어두운 금. 가산 혼합이라 색 밝기가 곧 세기다: 넓은 선을 밝은 금으로 그으면 블룸과 겹쳐 복숭아빛 띠가 됐다.
 export const KNIGHT_SIG_COLOR = Object.freeze({ gold: 0xffb21e, amber: 0xff8a10, hot: 0xffd86a, wide: 0xb86a06, wideGold: 0xa87a12 });
 const GOLD = KNIGHT_SIG_COLOR.gold, AMBER = KNIGHT_SIG_COLOR.amber, HOT = KNIGHT_SIG_COLOR.hot, WIDE_GOLD = KNIGHT_SIG_COLOR.wideGold;
-/** 판정 시각(skills.js game.after 지연)과 맞춘 서명 박자. 테스트가 이 값으로 delay 칸을 검사한다. */
-export const KNIGHT_SIG_TIMING = Object.freeze({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
+/** 판정 시각(skills.js·awakening-iii.js game.after 지연)과 맞춘 서명 박자. 테스트가 이 값으로 delay 칸을 검사한다.
+ *  태양파쇄는 awakening-iii.js 의 태양 길(2.5m 간격 네 노드, .1초마다 전진 판정, .48초부터 되감기)이 실제 구현이다. */
+export const KNIGHT_SIG_TIMING = Object.freeze({ sunbreakerStep: .1, sunbreakerReturn: .48, sunbreakerNodes: 4, sunbreakerGap: 2.5, heavenfallHit: .28, chainBurst: 1.75 });
 /** 서명 한 번이 쓰는 칸 상한(IMPACT_FRAME_BUDGET 72 안에서 레시피 몫을 남긴다). */
 export const KNIGHT_SIG_MAX_SLOTS = 60;
 /** 지면 표식(mark) 반경 상한. 표식 선 굵기는 반경에 비례해, 2m 를 넘으면 굵은 복숭아빛 바퀴가 됐다. 더 넓은 경계는 groundPoly. */
@@ -85,7 +87,7 @@ function arcFront(impact, c, f, R, half, n, color, { delay = 0, life = .26, widt
  * 그대로 소비해 이후 전투·드랍 난수 진행을 바꾸지 않는다(fx.js contact 의 retiredRandomDraws 와 같은 방식).
  * 실제 FX(flipbook 보유)일 때만 소비한다: 모의 전투의 가짜 fx 에서는 원래도 난수를 쓰지 않았다.
  */
-export const KNIGHT_RETIRED_DRAWS = Object.freeze({ rune: 8, castCircle: 8, firePillar: 16, holyBurst: 9, shockTex: 8 });
+export const KNIGHT_RETIRED_DRAWS = Object.freeze({ rune: 8, castCircle: 8, firePillar: 16, holyBurst: 9, shockTex: 8, explosion: 8 });
 export function knightRetiredDraws(fx, n) {
   if (typeof fx?.flipbook !== 'function') return 0;
   for (let i = 0; i < n; i++) Math.random();
@@ -236,66 +238,184 @@ Object.assign(SIGNATURES, {
     for (const sgn of [-1, 1]) { turn(f, sgn * 1.13, _d); _b.copy(player.pos).setY(.07); impact.beam(_b, _d, 8.5 * scale, GOLD, { speed: 60, width: .06, fade: .5, delay: .04 }); }
     if (!lite) impact._streaks(hit.setY(.8), f, 10, 15, .32, HOT, { up: 2, spread: 1.1, size: .26 });
   },
-  // 결박: 시전자 둘레 사슬 가시 고리(묶는 경계) + 사슬 파열 순간(1.75초) 바깥으로 퍼지는 고리.
+  // 결박(각성 Lv.10): 실루엣 = 방사(바깥 → 안으로 당김, 1.75초 뒤 안 → 바깥으로 튐).
+  // ① 7.5m 결박 경계(어두운 금, 파열까지) ② 경계에서 시전자로 곧게 빨려 드는 바닥 줄기(사슬이 당긴다)
+  // ③ 파열(1.75초): 사슬 고리 파편이 사방으로 튀고 + 여덟 갈래 균열 + 팔각 별 + 작은 고리·별빛.
   chain_bind(ctx) {
-    const { impact, player, f, lite } = ctx; const T = KNIGHT_SIG_TIMING.chainBurst;
-    groundPoly(impact, player.pos, 7.5, lite ? 10 : 18, GOLD, { life: T, width: .045, phase: yawOf(f) });
-    if (!lite) groundPoly(impact, player.pos, 5.2, 9, AMBER, { life: .45, delay: T, width: .06, step: 4 });
-    impact._emit(IMPACT_KIND.ring, player.pos.x, .5, player.pos.z, 3, GOLD, .3, { grow: 1, delay: T });
-    impact._emit(IMPACT_KIND.star, player.pos.x, 1.2, player.pos.z, 1.6, AMBER, .12, { angle: .3, grow: .4, delay: T });
+    const { impact, player, f, lite } = ctx; const T = KNIGHT_SIG_TIMING.chainBurst, c = player.pos;
+    groundPoly(impact, c, 7.5, lite ? 8 : 10, WIDE_GOLD, { life: T, width: .045, phase: yawOf(f) });
+    // 당김: 5.5m 둘레에서 시전자 쪽으로 감겨 드는 굵은 사슬 줄기(머리 20m/s, 꼬리 2m) — 화면 안(반경 6m)에서 읽힌다.
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = yawOf(f) + (i / n) * Math.PI * 2 + .2;
+      _a.set(c.x + Math.cos(a) * 5.5, .4, c.z + Math.sin(a) * 5.5); _d.set(c.x - _a.x, .5, c.z - _a.z);
+      impact.beam(_a, _d, 4.6, i % 2 ? GOLD : AMBER, { speed: 20, tail: 2, width: .15, style: BEAM_STYLE.vine, delay: (i % 4) * .03 });
+    }
+    // 결박 문장: 발밑 가시 고리가 파열까지 남는다(묶여 있는 시간).
+    impact.mark(c, GOLD, { radius: 1.9, life: T, style: MARK_STYLE.thorn, angle: yawOf(f) });
+    shatter(impact, c, lite ? 5 : 10, .8, 10, HOT, GOLD, { delay: T, y: 1, up: 5, life: .55, phase: yawOf(f) });
+    if (!lite) {
+      cracks(impact, c, _e, 8, Math.PI * 2 * (7 / 8), 5.2, AMBER, { delay: T, width: .07, speed: 40, phase: .3 });
+      groundPoly(impact, c, 5.2, 9, AMBER, { life: .45, delay: T, width: .06, step: 4 });
+    }
+    impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3, GOLD, .3, { grow: 1, delay: T });
+    impact._emit(IMPACT_KIND.star, c.x, 1.2, c.z, 1.6, AMBER, .12, { angle: .3, grow: .4, delay: T });
   },
-  // 성역: 돔 경계 문양(가시 고리 = 벽, 나침 = 안쪽 문양) + 네 방위에서 솟는 가는 빛 광선. 경계·기둥 본체는 sanctum-vfx.
+  // 성역(각성 Lv.20): 실루엣 = 돔. 바닥 나침·팔각 별 문양 + 경계 여덟 점에서 정수리(4.2m, 화면 위 끝 안쪽)로 기울어 오르는 갈빗대 선(차례로 돈다)
+  // → 정수리 별빛 → 정수리에서 경계 쪽으로 내려앉는 축복 줄기 + 네 방위 빛 광선. 경계 원·기둥 본체는 sanctum-vfx.
   sanctuary(ctx) {
-    const { impact, player, f, lite } = ctx; const R = 8;
-    impact.mark(player.pos, AMBER, { radius: 1.8, life: 1.4, style: MARK_STYLE.compass, angle: yawOf(f) });
-    // 성역 문양: 경계 안쪽 반경 4.4m 의 얇은 팔각 별(홀리웨이브 원화가 빠진 자리를 선 문양으로 채운다).
-    groundPoly(impact, player.pos, 4.4, 8, WIDE_GOLD, { life: 1.6, width: .05, step: 3, phase: yawOf(f), delay: .05 });
+    const { impact, player, f, lite } = ctx; const R = 8, AP = 4.2, c = player.pos, yaw = yawOf(f);
+    impact.mark(c, AMBER, { radius: 1.8, life: 1.4, style: MARK_STYLE.compass, angle: yaw });
+    groundPoly(impact, c, 4.4, 8, WIDE_GOLD, { life: 1.6, width: .05, step: 3, phase: yaw, delay: .05 });
+    const ribs = lite ? 4 : 8;
+    for (let i = 0; i < ribs; i++) {
+      const ang = yaw + (i / ribs) * Math.PI * 2 + Math.PI / 8;
+      _a.set(c.x + Math.cos(ang) * (R - .2), .1, c.z + Math.sin(ang) * (R - .2));
+      _d.set(c.x - _a.x, AP - .1, c.z - _a.z);
+      impact.beam(_a, _d, _d.length(), i % 2 ? GOLD : AMBER, { speed: 48, width: .09, fade: .6, delay: .02 * i });
+    }
+    // 갈빗대 길이 ≈ 8.9m / 48m/s ≈ .19초 + 마지막 출발 .14초 → 정수리가 .33초쯤 닫힌다.
+    impact._emit(IMPACT_KIND.star, c.x, AP, c.z, 1.8, HOT, .24, { angle: .3, grow: .4, delay: .34 });
+    impact._emit(IMPACT_KIND.ring, c.x, AP, c.z, 2.4, GOLD, .3, { grow: .8, delay: .36 });
+    if (!lite) for (let i = 0; i < 8; i++) {
+      const ang = yaw + i * (Math.PI / 4);
+      impact._emit(IMPACT_KIND.streak, c.x, AP, c.z, .34, GOLD, .55, { vx: Math.cos(ang) * 8, vy: -7, vz: Math.sin(ang) * 8, stretch: 1, grow: 1, delay: .36 });
+    }
     const n = lite ? 2 : 4;
     for (let i = 0; i < n; i++) {
-      const ang = yawOf(f) + (i / n) * Math.PI * 2;
-      _a.set(player.pos.x + Math.cos(ang) * R, .1, player.pos.z + Math.sin(ang) * R);
+      const ang = yaw + (i / n) * Math.PI * 2;
+      _a.set(c.x + Math.cos(ang) * R, .1, c.z + Math.sin(ang) * R);
       impact.beam(_a, UP, 7, HOT, { speed: 30, tail: 5, width: .06, delay: .1 + i * .07 });
     }
   },
-  // 태양파쇄: 앞으로 굴러가는 태양 원반(고리 + 짧은 광채가 계단식으로 전진) → 0.18초 두 번째 판정에 큰 태양 고리와 햇살 나침.
+  // 태양파쇄(각성 Lv.30, awakening-iii 의 태양 길): 실루엣 = 앞으로 뻗는 길 + 굴러가는 태양 원반, 그리고 되감기는 초승달.
+  // 판정과 같은 박자: 2.5m 간격 네 노드를 .1초마다 전진 판정, .48초부터 끝에서 시전자 쪽으로 .1초마다 되감는다.
+  // ① 길 양쪽 가장자리 두 줄 + 가운데 넓은 띠(원반과 같은 25m/s) ② 노드마다 고리·별·바닥 태양 얼굴·앞으로 뻗는 햇살,
+  // 마지막 노드는 사방 햇살 + 파편 ③ 되감기: 끝에서 시전자로 돌아오는 밝은 심 + 노드마다 시전자 쪽으로 날아오는 초승달 ④ 귀환 섬광.
   sunbreaker(ctx) {
-    const { impact, player, f, lite, scale } = ctx; const T2 = KNIGHT_SIG_TIMING.sunbreakerSecond;
-    const steps = lite ? 3 : 5;
-    for (let i = 0; i < steps; i++) {
-      const d = 1 + i * (3 / (steps - 1)), dl = i * (T2 / steps);
-      _a.copy(player.pos).addScaledVector(f, d).setY(1.3);
-      impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.5 + i * .2, AMBER, .18, { grow: .7, delay: dl });
-      impact._emit(IMPACT_KIND.star, _a.x, _a.y, _a.z, 1.1 + i * .12, GOLD, .12, { angle: .4 + i * .3, grow: .5, delay: dl });
-      // 원반이 지나간 바닥에 돌아가는 작은 태양 얼굴(나침 표식).
-      _a.setY(0); impact.mark(_a, AMBER, { radius: 1 + i * .1, life: .3, style: MARK_STYLE.compass, angle: i * .7, delay: dl });
+    const { impact, player, f, lite, scale } = ctx; const c = player.pos;
+    const { sunbreakerStep: STEP, sunbreakerReturn: BACK, sunbreakerNodes: N, sunbreakerGap: GAP } = KNIGHT_SIG_TIMING;
+    const sx = -f.z, sz = f.x, L = GAP * N, lane = GAP / STEP;
+    for (const s of [-1, 1]) { _a.set(c.x + sx * s * 1.7, .08, c.z + sz * s * 1.7); impact.beam(_a, f, L + 1, GOLD, { speed: lane, width: .1, fade: .7 }); }
+    _a.copy(c).addScaledVector(f, .6).setY(.08); impact.beam(_a, f, L, AMBER, { speed: lane, tail: 3, width: .26 });
+    for (let i = 0; i < N; i++) {
+      const last = i === N - 1, dl = i * STEP, k = scale * (1 + i * .12);
+      _b.copy(c).addScaledVector(f, GAP * (i + 1));
+      impact._emit(IMPACT_KIND.ring, _b.x, 1.3, _b.z, Math.min(3.4, 2.4 * k), AMBER, .2, { grow: .8, delay: dl });
+      impact._emit(IMPACT_KIND.star, _b.x, 1.3, _b.z, 1.2 * k, i % 2 ? AMBER : GOLD, .13, { angle: .4 + i * .5, grow: .5, delay: dl });
+      _b.y = 0; impact.mark(_b, AMBER, { radius: Math.min(KNIGHT_MARK_MAX_RADIUS, 1.3 + i * .15), life: .4, style: MARK_STYLE.compass, angle: i * .8, delay: dl });
+      if (lite && !last) continue;
+      // 원반이 지나간 자리마다 햇빛 파편이 튄다(앞 세 노드 넷씩), 마지막 노드는 사방 햇살 균열 + 파편 여섯.
+      if (!last) { shatter(impact, _p.copy(_b), 4, .5, 6, HOT, GOLD, { delay: dl, y: 1.1, up: 5, life: .42, size: .3, phase: i * .7 }); continue; }
+      cracks(impact, _b, f, 8, Math.PI * 2 * .875, 3.4 * scale, GOLD, { delay: dl, width: .07, speed: 40, phase: i * 1.1 });
+      if (!lite) shatter(impact, _p.copy(_b), 6, .4, 7, HOT, GOLD, { delay: dl, y: 1, up: 6, life: .45, phase: .5 });
     }
-    // 굴러간 자취: 바닥을 따라 앞으로 나아가는 넓은 주황 금 띠.
-    _a.copy(player.pos).addScaledVector(f, .6).setY(.08);
-    impact.beam(_a, f, 5, AMBER, { speed: 4 / T2, tail: 2.6, width: .3 });
-    const at = _b.copy(player.pos).addScaledVector(f, 4);
-    impact._emit(IMPACT_KIND.ring, at.x, 1.2, at.z, 3 * scale, AMBER, .3, { grow: 1, delay: T2 });
-    impact._emit(IMPACT_KIND.star, at.x, 1.3, at.z, 2 * scale, GOLD, .14, { angle: .2, grow: .4, delay: T2 });
-    // 2타 태양: 얇은 원 + 사방으로 뻗는 햇살 열 줄(바닥).
-    groundPoly(impact, at, 5 * scale, lite ? 8 : 12, AMBER, { life: .45, delay: T2, width: .06 });
-    cracks(impact, at, f, lite ? 6 : 10, Math.PI * 2 * .9, 3.2 * scale, GOLD, { delay: T2, width: .07, speed: 40, phase: 1.1 });
-    if (!lite) impact._streaks(at.setY(1), f, 8, 13, .3, HOT, { up: 1.6, spread: 2.4, size: .24 });
+    _a.copy(c).addScaledVector(f, L).setY(.75); _d.copy(f).negate();
+    impact.beam(_a, _d, L - .6, HOT, { speed: lane, tail: 3, width: .08, delay: BACK });
+    const ang = bladeAngle(impact, f);
+    for (let i = 0; i < N; i++) {
+      _b.copy(c).addScaledVector(f, GAP * (N - i));
+      impact._emit(IMPACT_KIND.cut, _b.x, 1.2, _b.z, 2.6 * scale, i % 2 ? GOLD : AMBER, .22, { vx: -f.x * 18, vz: -f.z * 18, angle: ang, stretch: 1.6, grow: .85, delay: BACK + i * STEP });
+    }
+    const end = BACK + (N - 1) * STEP;
+    _b.copy(c).addScaledVector(f, .8);
+    impact._emit(IMPACT_KIND.ring, _b.x, 1, _b.z, 2.2 * scale, GOLD, .24, { grow: 1, delay: end });
+    impact._emit(IMPACT_KIND.star, _b.x, 1, _b.z, 1.5 * scale, HOT, .14, { angle: .2, grow: .4, delay: end });
   },
-  // 신벌: 조준 원(예고) → 하늘에서 성광 기둥 일곱 줄이 판정 순간(.28초)에 정확히 꽂힌다 + 큰 충격 고리.
+  // 신벌(각성 Lv.50): 실루엣 = 하늘에서 낙하. ① 판정 전 둘레 6.5m 에서 낙점으로 소용돌이쳐 빨려 드는 줄기(몰이) + 얇은 낙점 경계·조준 표식
+  // ② 하늘 별빛(어디서 떨어지나) ③ 성광 기둥 일곱 + 가운데 밝은 심이 판정 순간(.28초)에 정확히 꽂힌다 ④ 고리·별 + 여덟 갈래 균열 + 위로 솟는 파편 분수 + 바닥 십자 낙인(9m).
   heavenfall(ctx) {
     const { impact, at, lite, scale } = ctx; const T = KNIGHT_SIG_TIMING.heavenfallHit;
-    const SPEED = 110, H = 14;
-    groundPoly(impact, at, 5 * scale, lite ? 8 : 14, AMBER, { life: T + .35, width: .05 });
+    const SPEED = 110, H = 14, travel = H / SPEED;
+    gather(impact, _p.copy(at).setY(.3), lite ? 5 : 8, 5.5, AMBER, { life: .28, size: .36, spin: .5, y0: .2 });
+    groundPoly(impact, at, 5 * scale, 8, AMBER, { life: T + .35, width: .05 });
     impact.mark(at, GOLD, { radius: 1.6, life: T + .3, style: MARK_STYLE.reticle });
+    impact._emit(IMPACT_KIND.star, at.x, 7.5, at.z, 2 * scale, HOT, .2, { angle: .3, grow: .4, delay: Math.max(0, T - travel - .06) });
     const n = lite ? 4 : 7;
+    _d.set(0, -1, 0);
     for (let i = 0; i < n; i++) {
       const r = i === 0 ? 0 : 4.2, ang = i * (Math.PI * 2 / (n - 1));
-      _b.set(at.x + Math.cos(ang) * r, 0, at.z + Math.sin(ang) * r);
-      _a.set(_b.x, H, _b.z); _d.set(0, -1, 0);
-      const travel = H / SPEED;
+      _a.set(at.x + Math.cos(ang) * r, H, at.z + Math.sin(ang) * r);
       impact.beam(_a, _d, H, i === 0 ? AMBER : GOLD, { speed: SPEED, width: i === 0 ? .36 : .14, fade: .3, delay: Math.max(0, T - travel) });
     }
+    _a.set(at.x, H, at.z); impact.beam(_a, _d, H, HOT, { speed: SPEED, width: .1, fade: .26, delay: Math.max(0, T - travel) });
     impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 3 * scale, AMBER, .3, { grow: 1, delay: T });
     impact._emit(IMPACT_KIND.star, at.x, .8, at.z, 2 * scale, GOLD, .14, { angle: .3, grow: .4, delay: T });
-    if (!lite) { _p.copy(at); cracks(impact, _p, _e, 8, Math.PI * 2 * (7 / 8), 4 * scale, AMBER, { delay: T, width: .06, speed: 36, phase: .7 }); }
+    if (!lite) {
+      _p.copy(at); cracks(impact, _p, _e, 8, Math.PI * 2 * (7 / 8), 4 * scale, AMBER, { delay: T, width: .06, speed: 36, phase: .7 });
+      shatter(impact, at, 8, .6, 5, HOT, GOLD, { delay: T, y: .4, up: 10, life: .6, size: .42, phase: .2 });
+    }
+    // 십자 낙인: 착탄 순간 바닥에 새겨지는 금빛 십자(굵은 주황 + 밝은 심) — 신벌의 고유 실루엣.
+    for (let k = 0; k < 2; k++) {
+      _d.set(k, 0, 1 - k);
+      _a.copy(at).addScaledVector(_d, -4.5 * scale).setY(.08);
+      impact.beam(_a, _d, 9 * scale, AMBER, { width: .34, fade: .6, delay: T });
+      impact.beam(_a, _d, 9 * scale, HOT, { width: .1, fade: .5, delay: T });
+    }
+  },
+});
+
+/** 바깥으로 튀는 파편 n 개: 중심 c 둘레 반경 r0 에서 방사로 speed 만큼 튀어 중력에 떨어진다(사슬 고리·돌 조각). 결정적 각도. */
+function shatter(impact, c, n, r0, speed, colorA, colorB, { delay = 0, y = .8, up = 5, life = .5, size = .24, phase = 0 } = {}) {
+  for (let i = 0; i < n; i++) {
+    const a = phase + (i / n) * Math.PI * 2, cx = Math.cos(a), cz = Math.sin(a);
+    impact._emit(IMPACT_KIND.shard, c.x + cx * r0, y, c.z + cz * r0, size, i % 2 ? colorA : colorB, life,
+      { vx: cx * speed, vy: up, vz: cz * speed, angle: a, stretch: 1.8, grow: .8, gravity: 16, delay });
+  }
+}
+
+/**
+ * 각성 스킬 예비 표식(start 에서 바로, 시전 시각 전). SKILL_PRELUDES 로 합쳐진다.
+ * 결박 = 사방으로 던지는 사슬 / 성역 = 둘레에 차례로 솟는 작은 빛기둥 / 태양파쇄 = 검에 모이는 햇빛 + 길 예고 점선 / 신벌 = 나선으로 오르는 빛 + 하늘 신호.
+ */
+Object.assign(PRELUDES, {
+  // 결박 예비(.3초): 손에 감겨 드는 빛 + 발밑 가시 문장 + 사방으로 던져지는 사슬 여섯 줄(굵은 주황 + 밝은 심, 끝까지 뻗은 뒤 남는다).
+  chain_bind(ctx) {
+    const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a, 1.7);
+    gather(impact, h, lite ? 4 : 8, 2, GOLD, { life: .28, size: .26, spin: .6 });
+    impact.mark(player.pos, AMBER, { radius: 1.7, life: .45, style: MARK_STYLE.thorn, angle: yawOf(f) + .4 });
+    for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
+      turn(f, (i / n) * Math.PI * 2 + .26, _d); _b.copy(player.pos).addScaledVector(_d, .6).setY(.35);
+      const dl = .02 + (i % 2) * .05;
+      impact.beam(_b, _d, 5.5, AMBER, { speed: 32, width: .18, style: BEAM_STYLE.vine, fade: .26, delay: dl });
+      if (!lite) impact.beam(_b, _d, 5.5, HOT, { speed: 34, width: .05, fade: .2, delay: dl });
+    }
+    impact._emit(IMPACT_KIND.star, h.x, h.y, h.z, .9, HOT, .18, { angle: .4, grow: .3, delay: .14 });
+  },
+  // 성역 예비(.4초): 영웅 둘레 2.6m 에 작은 빛기둥 여덟이 차례로 솟고(성역 기둥의 축소판), 손에서 하늘로 기도 광선.
+  sanctuary(ctx) {
+    const { impact, player, f, lite } = ctx; const c = player.pos, yaw = yawOf(f), n = lite ? 4 : 8;
+    for (let i = 0; i < n; i++) {
+      const a = yaw + (i / n) * Math.PI * 2 + Math.PI / 8;
+      _b.set(c.x + Math.cos(a) * 2.6, .05, c.z + Math.sin(a) * 2.6);
+      impact.beam(_b, UP, 3.2, i % 2 ? GOLD : AMBER, { speed: 16, width: .12, fade: .3, delay: .03 * i });
+    }
+    const h = swordHand(player, f, _a, 1.8);
+    gather(impact, h, lite ? 4 : 8, 1.8, HOT, { life: .26, size: .22, spin: .5, delay: .08 });
+    impact.beam(h, UP, 8, GOLD, { speed: 40, tail: 4, width: .09, delay: .22 });
+  },
+  // 태양파쇄 예비(.4초): 검에 햇빛이 모여 작은 태양(고리·별)이 되고, 길의 네 노드 자리에 짧은 선(어디까지 베는지).
+  sunbreaker(ctx) {
+    const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a, 1.4);
+    gather(impact, h, lite ? 5 : 10, 2.6, AMBER, { life: .3, size: .3, spin: .4 });
+    impact._emit(IMPACT_KIND.ring, h.x, h.y, h.z, 1.4, GOLD, .3, { grow: .6, delay: .18 });
+    impact._emit(IMPACT_KIND.star, h.x, h.y, h.z, 1.1, HOT, .2, { angle: .4, grow: .3, delay: .22 });
+    const { sunbreakerNodes: N, sunbreakerGap: GAP } = KNIGHT_SIG_TIMING;
+    for (let i = 0; i < N; i++) {
+      _b.copy(player.pos).addScaledVector(f, GAP * (i + 1) - .6).setY(.07);
+      impact.beam(_b, f, 1.2, AMBER, { width: .12, fade: .45, delay: .05 + i * .04 });
+    }
+  },
+  // 신벌 예비(.5초): 발밑 육각 별 봉인 + 몸을 감고 나선으로 오르는 금빛 입자 + 치켜든 검에서 하늘로 쏘는 굵은 신호 광선 + 머리 위로 차례로 솟는 별 셋.
+  heavenfall(ctx) {
+    const { impact, player, f, lite } = ctx; const h = swordHand(player, f, _a, 1.9), yaw = yawOf(f);
+    for (let i = 0, n = lite ? 5 : 12; i < n; i++) {
+      const a = yaw + i * .9;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * 1.1, .2, player.pos.z + Math.sin(a) * 1.1, .45, i % 2 ? GOLD : AMBER, .5,
+        { vx: -Math.sin(a) * 3, vy: 14, vz: Math.cos(a) * 3, stretch: 1, grow: 1, delay: i * .025 });
+    }
+    if (!lite) groundPoly(impact, player.pos, 2.2, 6, AMBER, { life: .55, width: .07, step: 2, phase: yaw });
+    impact.beam(h, UP, 14, AMBER, { speed: 45, tail: 6, width: .2, delay: .12 });
+    impact.beam(h, UP, 14, HOT, { speed: 50, tail: 5, width: .07, delay: .14 });
+    for (let k = 0; k < 3; k++) impact._emit(IMPACT_KIND.star, h.x, h.y + 1.2 + k * 1.2, h.z, 1.1 - k * .15, k % 2 ? GOLD : HOT, .2, { angle: .3 + k, grow: .3, delay: .2 + k * .07 });
   },
 });

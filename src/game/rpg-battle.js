@@ -11,6 +11,7 @@ import { HitCrowd, hitWeight, weightedHitstop, flashFor } from './feel.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain } from './control-rewards.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
+import { slainOf, recordSlain } from './kill-ledger.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
 import { RpgView } from '../ui/rpg.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
@@ -38,6 +39,13 @@ export class Battle extends BaseBattle {
     if (this.rpgState !== this.app.eco.s) {
       this.rpgState = this.app.eco.s;
       this.rpgState.rpg = normalizeRpg(this.rpgState.rpg, Object.keys(ENEMIES));
+      // 처치 원장 도입 전 저장: 기기 도감의 처치 수를 한 번 옮긴다(로컬은 신뢰 경계 밖이라 상한 없음).
+      // 서버 권위 계정은 서버 문서의 slain 이 덮어쓴다(서버 병합은 가져오기의 trustedSlain, docs/SERVER_AUTHORITY_GATES.md 3절).
+      const slain = slainOf(this.rpgState);
+      if (!slain.seeded) {
+        for (const [id, r] of Object.entries(this.rpgState.rpg.bestiary)) if (r.kills > 0) recordSlain(this.rpgState, id, r.kills);
+        slain.seeded = true;
+      }
     }
     return this.rpgState.rpg;
   }
@@ -97,6 +105,7 @@ export class Battle extends BaseBattle {
     // 무리 졸개는 도감 처치·경험치에 넣지 않는다(기존 명단 보상만 유지).
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId) && !enemy.packFollower) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
+      if (!this.stage.party) recordSlain(this.app.eco.s, enemy.speciesId);
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
       this.combatXp = Math.min(1e9, this.combatXp + award.gained);
@@ -181,12 +190,13 @@ export class Battle extends BaseBattle {
     if (contact.stop > 0) {
       this.timeCtl.hitstop(weightedHitstop(contact.stop, weight));
       const flash = flashFor(weight);
-      if (weight > .05 && flash.sec > enemy.flashT) enemy.flash(crit ? 0xffd040 : 0xffffff, flash.sec, flash.gain);
+      if (weight > .05 && flash.sec > enemy.flashT) enemy.flash(crit ? 0xffd040 : opts.tint ?? 0xffffff, flash.sec, opts.tint && !crit ? flash.gain * .6 : flash.gain);
     }
     // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
-    const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
+    // tint(숲의 속박 화살): 다섯 발 관통이 겹쳐 맞히는 적을 크림 섬광이 덮지 않게 색·크기만 바꾼다(호출 수·난수 그대로, battle-base 와 같은 규칙).
+    const color = opts.tint && !crit ? opts.tint : opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0, tintK = opts.tint ? .6 : 1;
     if (!budget) {
       // 같은 60ms 창에 함께 맞은 다른 적도 접점 섬광을 받는다(정지·소리·진동은 창당 한 번 그대로).
       // 휘두르기 한 번에 여럿이 맞으면 첫 적만 번쩍여 군중 타격이 비어 보였다. 각도를 정해 난수 흐름은 건드리지 않는다.
@@ -196,7 +206,7 @@ export class Battle extends BaseBattle {
       for (let i = 0; i < n && !seen; i++) seen = sparked[i] === enemy;
       if (!seen && contact.particles > 0 && n < CROWD_SPARKS && this.feedbackCount++ < 6) {
         sparked[n] = enemy; this._crowdSparks = n + 1;
-        this.fx.flash?.(hitPos, color, { size: contact.size * .75, life: .09, angle: this._crowdSparks * 1.9 });
+        this.fx.flash?.(hitPos, color, { size: contact.size * .75 * tintK, life: .09, angle: this._crowdSparks * 1.9 });
       }
       return;
     }
@@ -204,7 +214,7 @@ export class Battle extends BaseBattle {
     if (budget.emit) { this._crowdSparks = 0; this._contactLast = enemy; }
     // The entire pack shares a small per-frame budget, rather than 30 stacked impacts.
     if (budget.emit && this.feedbackCount++ < 6) {
-      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier,crit});
+      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size*tintK,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier,crit});
     }
     {
       audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss, counter: !!opts.counter, weapon: p.def?.weapon, light: !opts.basic && !opts.finisher });

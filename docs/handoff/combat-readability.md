@@ -20,3 +20,16 @@
 ## 도구
 - `node tools/skill-vfx-gallery.mjs --dev --tag <tag> --heroes <hero> [--times ...] [--slots ...]`
 - `node tools/combat-readability-qa.mjs --tag <tag> [--dist <outDir>]`
+
+## 2차 다듬기 (blade-combat#vfx2, 2026-10-30, 브랜치 claude/combat-vfx2)
+- ① 대지붕괴(bloodquake)·그림자 표식(shadow_mark)·일식(eclipse_edge)의 영웅 둘레 크림 고리·흰 폭발 원화(castCircle·shockTex·explosion)를 `knightRetiredDraws`로 난수 소비만 남기고 뺐다(`KNIGHT_RETIRED_DRAWS.explosion = 8` 추가). 혈왕 1차 판정 테는 서명 가시 고리(4.5m 상한)가 맡는다.
+- ② 화면 가로 진행 공용 원시 `src/engine/sig-screen.js` `screenSweep` — 질풍·연속 관통이 정면 카메라에서 좁은 세로 띠로 몰리던 것을 경로 위 가로 빗장으로 보인다.
+- ③ 서명 ctx `targets(max, range, sorted)`(`skill-vfx.js` `sigTargets`, skills.js `targets`와 같은 규칙) — 그림자 표식은 실제 표적 위 표식·표적 평균 당김 중심, 공허 보법은 점멸 표적 순번대로 획.
+- ④ 숲의 속박 백화의 주 원인: 조준 고리(readability-view reticle)의 명중 맥박이 깊이 검사 없이 적 위에 흰 원판(r .3~1)을 그렸다 → 바깥 테만. 그 밖에 속박 화살 명중 섬광·몸 번쩍임 덩굴빛(battle-base·rpg-battle `tint`, 호출 수 그대로), 속박 매듭 적·시전당 1회, 조이는 고리 가운데만, 화살 심 연두, 가시 둘. 실측(3회 평균, 적 영역 흰 픽셀): .45초 15.6→9.0%, .55초 17.6→12.2%, .7초 14.1→5.2%.
+- 검사: `tools/skill-rng-parity.mjs`(5영웅 40스킬 × lite × 조준 160경우 main 대비 불일치 0), `bun run check` 6363 pass, `bun run qa:inapp` 통과.
+- 갤러리 도구: `--dump`(프레임별 fx 항목·반투명 물체 목록), `--probe "<식>"`(시전 직전 평가, 층 끄기로 원인 추적).
+
+### 남은 것
+- 광전사 혈왕 시전 순간 영웅 중심의 크림 원판은 흡인된 적 다수 동시 접촉 섬광(fx.contact) — 군중 접촉 섬광 상한 별도 검토.
+- 숲의 속박 .55초 잔여 밝기는 다섯 갈래 서명+화살 궤적의 가산 합(층을 모두 끄면 깨끗) — 더 줄이려면 갈래 수·심 밝기 조정.
+- 실기기 프레임·밝기 미확인(SwiftShader 갤러리로 "보이는지"만).

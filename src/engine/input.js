@@ -165,6 +165,8 @@ export class Input {
       e.preventDefault();
     };
     const move = (e) => {
+      // 조이스틱 영역의 터치 이동은 활성 여부와 상관없이 페이지 스크롤·당겨서 새로고침·인앱 브라우저 제스처로 넘기지 않는다.
+      if (e.changedTouches && e.cancelable) e.preventDefault();
       if (!this.joy.active || !this.enabled || (!e.changedTouches && this.joy.id !== 'mouse')) return;
       let t = null;
       if (e.changedTouches) { for (const c of e.changedTouches) if (c.identifier === this.joy.id) t = c; if (!t) return; } else t = e;
@@ -246,7 +248,10 @@ export class Input {
     window.addEventListener('blur', () => { this.held.fill(0); this.clear(); });
     window.addEventListener('pagehide', () => { this.held.fill(0); this.clear(); });
     window.addEventListener('orientationchange', () => this.clear());
-    window.addEventListener('resize', () => this.clear());
+    // 인앱 브라우저(Threads·Instagram·카카오톡 등)는 드래그 중 앱 바를 접었다 펴며 높이만 바뀌는 resize를 보낸다.
+    // 이때 입력을 지우면 조이스틱·공격 홀드가 끊기므로, 폭이 바뀐 경우(회전·창 크기 변경)에만 지운다.
+    let lastWidth = window.innerWidth;
+    window.addEventListener('resize', () => { if (window.innerWidth !== lastWidth) { lastWidth = window.innerWidth; this.clear(); } });
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.held.fill(0); this.clear(); } });
   }
   update() {

@@ -15,7 +15,7 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
-import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods, claimJourneyStep as claimJourneyStepCore } from './journey-core.js';
 import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
 import { freshMailbox, mailOpen } from '../data/mail.js';
 import { freshTownState } from '../data/towns.js';
@@ -206,7 +206,7 @@ export class Economy {
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: freshMailbox(),
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, slain: { seeded: true, kills: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
     };
   }
   load() {
@@ -1352,11 +1352,11 @@ export class Economy {
     // 결제가 연결돼도 현금 상품은 서버 검증(billing.buy → applyIapState)으로만 지급한다. 여기서 직접 주지 않는다.
     if (this.billing) return { ok: false, reason: 'use-billing' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
-    // cash (목업): 첫 결제 2배 보너스
+    // cash (목업): 서버 카탈로그와 같게 보석 팩은 표기 수량만 준다(보너스 없음)
     s.purchases.push(id); s.spentKRW += sku.price;
     const vipBefore = s.vip; s.vip = s.spentKRW >= 300000 ? 5 : s.spentKRW >= 100000 ? 4 : s.spentKRW >= 50000 ? 3 : s.spentKRW >= 20000 ? 2 : s.spentKRW > 0 ? 1 : 0;
     let got;
-    if (sku.gems) { const first = !s.firstPurchaseUsed[id]; s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems + (first ? sku.bonus : Math.floor(sku.gems * 0.1)) }); got.first = first; }
+    if (sku.gems) { s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems }); }
     else got = this.addRewards(sku.rewards);
     this.emit(); return { ok: true, got, vipUp: s.vip > vipBefore ? s.vip : 0 };
   }
@@ -1507,6 +1507,25 @@ export class Economy {
     if (!r.ok) return null;
     const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
     this.emit(); return got;
+  }
+  // ---------- 성장 여정 단계(서버 명령, docs/SERVER_AUTHORITY_GATES.md 4절) ----------
+  /** 여정 상태. 이미 정규화된 객체(JourneyService 가 쥔 참조)는 그대로 쓴다. */
+  journeyState() {
+    const j = this.s.journey;
+    if (!j || typeof j !== 'object' || Array.isArray(j) || !Array.isArray(j.claimedSteps)) this.s.journey = normalizeJourney(j);
+    return this.s.journey;
+  }
+  /**
+   * 단계 보상 수령(골드 + 강화석, VIP 배율 없음 — 이전 로컬 지급과 같다). 서버(/cmd)는 attest 로 판정한다:
+   * 갑옷·강화는 서버 문서로, 기기 전용 단계(서약·정원·제작·숙련)는 순서 + 서버 진행 바닥값으로.
+   */
+  claimJourneyStep(id, { attest = false } = {}) {
+    const r = claimJourneyStepCore(this.journeyState(), this.s, id, { attest });
+    if (!r.ok) return r;
+    const rw = r.rewards || {};
+    this.s.gold += rw.gold || 0;
+    for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.s[key] += rw[key] || 0;
+    this.emit(); return r;
   }
   // ---------- 우편 ----------
   // 우편(docs/RPG_ESSENTIALS.md E5). 본문·보상·기간은 제품 데이터(src/data/mail.js)가 소유하고 저장에는 수령 여부만 남는다.

@@ -17,11 +17,11 @@ test('눈보라 얼음 가시·소용돌이는 흰 심 없는 얼음 광선(BEAM
   v.dispose();
 });
 
-test('프리즘 시전은 삼각 프리즘 윤곽 + 스펙트럼 다섯 갈래를 분광 선으로 그리고 고리(옅은 원)를 내지 않는다', () => {
+test('프리즘 시전은 삼각 프리즘 윤곽 + 스펙트럼 다섯 갈래 + 분광 쓸기 일곱 줄을 분광 선으로 그리고 고리(옅은 원)를 내지 않는다', () => {
   const v = make();
   SKILL_SIGNATURES.arc_reflect({ fx: null, impact: v, player: { pos: new THREE.Vector3() }, at: new THREE.Vector3(), f: new THREE.Vector3(0, 0, 1), lite: false, scale: 1 } as any);
   const b = beams(v);
-  expect(b).toHaveLength(3 + 5);
+  expect(b).toHaveLength(3 + 5 + 7);
   for (const i of b) expect(v.ring.a.aShape[i * 4 + 2]).toBe(BEAM_STYLE.prism);
   const kinds = Array.from({ length: v.ring.high }, (_, i) => v.ring.a.aShape[i * 4]);
   expect(kinds).not.toContain(IMPACT_KIND.ring);

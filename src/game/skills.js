@@ -10,7 +10,7 @@ import { SKILL_VFX, castSkillVfx, impactReady } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { knightJudgmentStrike, knightRetiredDraws, KNIGHT_RETIRED_DRAWS } from '../engine/sig-knight.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
-import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
+import { mageBolt, mageCharge, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail, mageChronoRelease } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE, IMPACT_KIND } from '../engine/impact-vfx.js';
 import { rogueXCut } from '../engine/sig-rogue.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
@@ -259,6 +259,7 @@ export const SKILLS = {
   },
   ranger_quickshot: {
     dur: .8,
+    start(game, p) { skillPrelude(game, p, 'ranger_quickshot'); },
     cast(game, p, c) {
       rangerArrows(game, p, c.dmg, 1, { streak: 'quick' }); p.gainJobResource(1);
       for (const delay of [.12, .24]) game.after(delay, () => {
@@ -268,6 +269,7 @@ export const SKILLS = {
   },
   ranger_binding: {
     dur: .8,
+    start(game, p) { skillPrelude(game, p, 'ranger_binding'); },
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
@@ -670,6 +672,7 @@ export const SKILLS = {
     dur: 0.85,
     start(game, p, c) {
       knightRune(game, p.pos, 2, 0.85);
+      skillPrelude(game, p, 'chain_bind'); // 예비 표식(인스턴스 층, 난수 미사용): 사방으로 던지는 사슬
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -715,7 +718,7 @@ export const SKILLS = {
   sanctuary: {
     dur: 1.0,
     // 준비 마법진은 낮은 밝기(.55)로: 성역 경계가 나타나기 전부터 금빛이 바닥을 다 덮지 않게 한다.
-    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
+    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); skillPrelude(game, p, 'sanctuary'); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
     cast(game, p, c) {
       const center = p.pos.clone().setY(0); const R = 8.0, LIFE = 7.0;
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
@@ -934,7 +937,7 @@ export const SKILLS = {
   // ── 광전사 Lv.20 : 순차 분출 + 남는 균열 장판 ──
   magma_zone: {
     dur: 0.95,
-    start(game, p) { game.fx.castCircle(p.pos, 0xff6a20, { radius: 6, life: 0.95, demon: true }); audio.charge({ vol: 0.4, dur: 0.8 }); audio.fire({ vol: 0.4, dur: 0.9 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xff6a20, { radius: 6, life: 0.95, demon: true }); skillPrelude(game, p, 'magma_zone'); audio.charge({ vol: 0.4, dur: 0.8 }); audio.fire({ vol: 0.4, dur: 0.9 }); }, // 기둥 자리 예고는 서명 서곡(PRELUDES.magma_zone)
     cast(game, p, c) {
       const center = p.pos.clone().setY(0);
       // 1) 주변에 기둥이 차례로 솟는다 — 맞은 적은 뜬다
@@ -1083,6 +1086,7 @@ export const SKILLS = {
           const at = s.e.pos.clone();
           game.fx.explosion(at, { size: 4.2, color: 0x8a7cff, life: 0.5 });
           game.fx.impact?.burst?.(at.clone().setY(1), 0xa898ff, { size: 1.6 });
+          mageChronoRelease(game, at, i); // 시계 파편(인스턴스 층, Math.random 미사용)
           game.fx.burst(at.clone().setY(0.8), 0xa898ff, { n: 22, speed: 11, size: 0.4 });
           game.hitRadius(at, 3.8, c.dmg + taken * 0.75, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: at, quietStop: i > 1 });
           if (i < 3) game.fx.light(at, 0x9a8cff, 12, 12, 0.4);
@@ -1095,7 +1099,7 @@ export const SKILLS = {
   // ── 암살자 Lv.10 : 표식 + 분신 순간이동 참격 ──
   shadow_mark: {
     dur: 0.7,
-    start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7, demon: true }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
+    start(game, p) { knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.castCircle); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); }, // 영웅 둘레 4m 크림 시전진 대신 서명의 표적 위 표식(sig-rogue shadow_mark)
     cast(game, p, c) {
       const ts = targets(game, p, 8, 13);
       if (!ts.length) { shadowWave(game, p.pos, 5, 0.4); return; }
@@ -1131,7 +1135,7 @@ export const SKILLS = {
         game.after(0.18, () => {
           hitWithin(game, p, hub, 5.5, reach, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
           game.fx.texFlash(hub, 'singularity', 0xb26bff, { size: 9, life: 0.5, spin: 0.6, grow: 1.5, y: 0.6 });
-          game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
+          knightRetiredDraws(game.fx, KNIGHT_RETIRED_DRAWS.explosion); // 연보라 폭발 원화(7m)는 가산 흰 덩어리 — 서명 hub 가시 표식·파편이 맡는다
           shadowWave(game, hub, 6.5, 0.5);
           game.fx.burst(hub.clone().setY(0.8), 0xd0a0ff, { n: 40, speed: 12, size: 0.42 });
           game.renderer.shake(0.7); game.renderer.punch(0.9); game.renderer.flashScreen(0.3, 0xd0a0ff);
@@ -1195,18 +1199,18 @@ export const SKILLS = {
   },
   // ================= 고위 액티브 Lv.35 / Lv.50 =================
   sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xff9a20,{r1:4.5,life:.4}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
-  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
+  heavenfall: { dur:1, start(game,p){ skillPrelude(game,p,'heavenfall'); }, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
-  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.fx.shockTex(at,0xc81810,{r1:6.5,life:.4}); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});game.fx.shockTex(at,0xff4a1a,{r1:echo?10:8.5,life:.5});game.fx.scorch(at,{radius:5,life:5});}); } },
-  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
-  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x4a4cff,{radius:7,life:.8,demon:true}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
+  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); knightRetiredDraws(game.fx,KNIGHT_RETIRED_DRAWS.shockTex); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});knightRetiredDraws(game.fx,KNIGHT_RETIRED_DRAWS.shockTex);game.fx.scorch(at,{radius:5,life:5});}); } },
+  cataclysm: { dur:1.1, start(game,p){skillPrelude(game,p,'cataclysm');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
+  star_prison: { dur:.9, start(game,p){skillPrelude(game,p,'star_prison');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x4a4cff,{radius:7,life:.8,demon:true}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x2a8cff,{radius:8,life:.9,demon:true}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
+  absolute_zero: { dur:1.05, start(game,p){skillPrelude(game,p,'absolute_zero');}, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x2a8cff,{radius:8,life:.9,demon:true}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
-  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
-  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});game.fx.light?.(hit,0x9fffd8,5,7,.22);game.fx.impact?._streaks?.(hit,null,4,9,.3,i%2?0xeaff9a:0x52f0b4,{up:4,spread:3.1,size:.26});}); } },
+  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); knightRetiredDraws(game.fx,KNIGHT_RETIRED_DRAWS.castCircle); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});knightRetiredDraws(game.fx,KNIGHT_RETIRED_DRAWS.explosion);}); } }, // 시전진·폭발 원화(흰 덩어리) 대신 서명 일식 고리(sig-rogue eclipse_edge), 난수 소비는 그대로
+  gale_hunt: { dur:.9, start(game,p){ skillPrelude(game,p,'gale_hunt'); }, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
+  skyfall_arrows: { dur:1.05, start(game,p){ skillPrelude(game,p,'skyfall_arrows'); }, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});game.fx.light?.(hit,0x9fffd8,5,7,.22);game.fx.impact?._streaks?.(hit,null,4,9,.3,i%2?0xeaff9a:0x52f0b4,{up:4,spread:3.1,size:.26});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,
@@ -1223,4 +1227,10 @@ for (const id of Object.keys(SKILL_VFX)) {
     return cast?.call(this, game, p, c);
   };
   impl.vfxWrapped = true;
+}
+
+// 태양파쇄 예비 표식: awakening-iii.js 는 노드 도구(tools/sunbreaker-sim·metrics)가 엔진 없이 불러오므로 서명 연결은 여기서 제자리로 감싼다(SKILLS.sunbreaker 와 같은 객체 유지).
+{
+  const sun = AWAKENING_III.sunbreaker, baseStart = sun.start;
+  if (!sun.preludeWrapped) { sun.start = function (game, p, c) { skillPrelude(game, p, 'sunbreaker'); return baseStart?.call(this, game, p, c); }; sun.preludeWrapped = true; }
 }
