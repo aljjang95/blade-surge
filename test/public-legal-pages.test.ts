@@ -28,7 +28,8 @@ test('세 페이지 모두 사업자 정보 푸터 6항목이 있다', () => {
     const html = read(p);
     for (const l of labels) expect(html).toContain(`<li>${l}:`);
     // 사업자 정보는 Drive 정본(사업자 정보 — 더 럭셔리 로드)과 같아야 하고 빈칸이 남으면 안 된다.
-    expect(html).not.toContain('{{');
+    // 정책 본문의 `{{대표님 확인}}` 자리 표시는 허용하되, 사업자 정보 푸터에는 빈칸이 남으면 안 된다.
+    expect(html.slice(html.indexOf('<footer>'))).not.toContain('{{');
     expect(html).toContain('849-09-03410');
     expect(html).toContain('제2026-충남서산-0101호');
   }
