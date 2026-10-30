@@ -168,7 +168,10 @@ try {
     ev(`전투 ${battles} 끝`, `${r.title} · Lv.${s1.lv} · 진행 ${s1.unlocked} · 버튼 ${r.vis.join(',')}`);
     await shot(`result-${battles}`);
     mark();
-    if (!(await tap('#btn-result-lobby', { optional: true }))) { defect('결과', '로비 버튼 없음'); break; }
+    if (!(await tap('#btn-result-lobby', { optional: true }))) {
+      const seen = await page.evaluate(() => [...document.querySelectorAll('button')].filter(b => b.offsetParent).map(b => (b.id || '') + '|' + (b.innerText || '').slice(0, 10).replace(/\s+/g, ' ')).slice(0, 25));
+      defect('결과', `로비 버튼 없음 · 버튼 ${seen.join(' ')}`); await shot('result-no-lobby'); break;
+    }
     await page.waitForFunction(() => window.app.mode === 'lobby', null, { timeout: 60000 }).catch(() => defect('결과', '로비 복귀 60초 초과'));
     addMenu();
     if (battles >= 40) break;
