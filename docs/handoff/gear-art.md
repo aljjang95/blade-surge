@@ -15,9 +15,10 @@
 2. 다른 직업 형태(도끼·지팡이·쌍단검·활) 3D와 `forms/` 215장 재작화 — 매니페스트 키를 `{id, form}`으로 확장.
 
 ## 4·5차 결과 (2026-10-30, PR #445)
+- 배포 1ad55e4(version.json sha 일치, dirty=false), 19자루 GLB 200·빌드 산출물 크기 일치. 영웅 화면 844×390 +0/+10/+15 캡처 18장에서 화면 무기 삼각형 = 매니페스트(SwiftShader, 실기기 아님).
 - 대표님 지정 전용 Tripo 계정(heartytn 라벨, 로그인은 대표님이 클라우드 데스크톱에서 직접)으로 18자루 + w_blood 재생성. 공유 계정·`tripo` 금고는 쓰지 않음. 로그인 식별자는 저장소에 적지 않는다.
 - 브리프 `art-src/gear-icons/weapon-3d-brief-w4.json`, 원본 R2 `tripo-3d/weapons/<id>/`(w_blood는 `-v2`).
-- 흐름: Image(Nano Banana, 9:16, 무료 쿼터) → Model H3.1(2K·PBR·Triangle·Polycount 3000) 45크레딧, 리토폴로지 불필요. 모델 GLB는 meshopt 압축이라 gltf-transform으로 풀고 prep.
+- 흐름: Image(Nano Banana, 9:16, 무료 쿼터) → Model H3.1(2K·PBR·Triangle·Polycount 3000), 리토폴로지 불필요. 실측: 화면 표시 45, 첫 자루 직전·직후 45 차감, 19자루 전체는 23,895 → 22,255(1,640 = 원화 포함 자루당 약 86) — 화면 가격보다 크게 잡을 것. 모델 GLB는 meshopt 압축이라 gltf-transform으로 풀고 prep.
 - l_2·l_3 헤일로가 날 뒤에 떠서 `blender_weapon_center_islands.py`로 보정.
 
 ## Tripo 비용 실측 (화면 가격을 믿지 말 것)
