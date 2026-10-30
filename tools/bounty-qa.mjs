@@ -59,7 +59,7 @@ async function run(label, vp, mobile) {
   // 정산(승리 결과를 주입하는 대신 UI 가 부르는 경로를 그대로: 결과 객체로 showResult)
   const settled = await page.evaluate(() => {
     const b = window.app.battle; b.active = false;
-    b.result = { win: true, stars: 3, time: 90, maxCombo: 50, revives: 0, kills: 10, hpLost: 0, fullClear: false };
+    b.result = { win: true, stars: 3, time: 90, maxCombo: 50, revives: 0, kills: 10, hpLost: 0, fullClear: true };
     b.ui.showResult(b, true);
     return true;
   });

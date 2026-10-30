@@ -14,7 +14,7 @@ function make(cleared = 10) {
   eco.s.progress.unlocked = Math.max(eco.s.progress.unlocked, cleared + 1);
   return eco;
 }
-const winResult = (extra = {}) => ({ win: true, stars: 3, time: 100, maxCombo: 40, revives: 0, kills: 20, ...extra });
+const winResult = (extra = {}) => ({ win: true, fullClear: true, stars: 3, time: 100, maxCombo: 40, revives: 0, kills: 20, ...extra });
 
 test('trial facts are all exposed by the battle result', () => {
   const exposed = new Set(['time', 'revives', 'maxCombo', 'stars']);

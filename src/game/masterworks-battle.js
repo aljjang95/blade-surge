@@ -33,14 +33,16 @@ export class Battle extends RpgBattle {
       : this.masterworks.transact(s => { s.runSeq++; return {ok:true,id:s.runSeq}; }, {duringBattle:true});
     if (!ticket.ok) throw new Error(ticket.error);
     const s = this.masterworks.s;
-    const enabled=!this.stage.party && this.stage.expedition?.kind !== 'arena';
+    const runesOn=!this.stage.party && this.stage.expedition?.kind !== 'arena';
+    // 현상금 의뢰 판(docs/BOUNTY_BOARD.md)은 의뢰 보상만: 명성·룬 처치·개인 목표를 쌓지 않는다. 장착 룬 전투 효과는 그대로.
+    const enabled=runesOn && !this.stage.bounty;
     // 출격 중 각인 보상은 없다(2026-10-24 대표님). 각인은 출격 전에 setPreRunBoons 로 정해진 것만 한 번 소비해 적용한다.
     const preRunBoons=enabled ? seedRunBoons(this.preRunBoons) : [];this.preRunBoons=null;
     this.run = {id:ticket.id,picked:[...preRunBoons],preRunBoons,storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
       // 영구 효과 = 숙련 + 장착 장비 룬(전운 각인 1개는 가문 공명 수에만 +1). 출격 시작 때 한 번 계산해 캐시한다.
-      enabled, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),enabled?this.app?.eco?.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
+      enabled, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),runesOn?this.app?.eco?.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
       historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0,
-      personalGoal:!this.stage.party && this.stage.expedition?.kind !== 'arena' ? capturePersonalGoal(s) : null};
+      personalGoal:enabled ? capturePersonalGoal(s) : null};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;

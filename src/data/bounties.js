@@ -4,9 +4,9 @@
 
 /** 의뢰 종류. minutes 는 시뮬레이터 시간 모델(관문 한 판 MIN_STAGE 3분 기준 + 조건 재시도 여유). */
 export const BOUNTY_KINDS = Object.freeze({
-  hunt: { id: 'hunt', name: '수배 처치', bit: 1, xp: 10, marks: 1, goldShare: .4, minutes: 3, description: '이 관문의 수배 정예를 찾아 처치하세요.' },
+  hunt: { id: 'hunt', name: '수배 처치', bit: 1, xp: 10, marks: 1, goldShare: .4, minutes: 3, description: '모든 구역을 정화하고 수배 정예를 처치하세요.' },
   trial: { id: 'trial', name: '조건 의뢰', bit: 2, xp: 14, marks: 2, goldShare: .5, minutes: 4, description: '정해진 조건을 지키며 관문을 끝내세요.' },
-  wanted: { id: 'wanted', name: '지역 수배범', bit: 4, xp: 30, marks: 5, goldShare: 1, minutes: 6, description: '각성한 지역 수호자를 쓰러뜨리세요(정예 접두 1개).' },
+  wanted: { id: 'wanted', name: '지역 수배범', bit: 4, xp: 30, marks: 5, goldShare: 1, minutes: 6, description: '모든 구역을 정화하고 지역 수호자를 다시 쓰러뜨리세요.' },
 });
 export const BOUNTY_KIND_ORDER = Object.freeze(['hunt', 'trial', 'wanted']);
 

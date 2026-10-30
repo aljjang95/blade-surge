@@ -19,9 +19,10 @@ export function normalizeBounty(raw) {
   const rank = Math.max(1, Math.min(HUNTER_RANK.max, int(src.rank, HUNTER_RANK.max) || 1));
   const bought = {};
   if (src.shop?.bought && typeof src.shop.bought === 'object') for (const [id, n] of Object.entries(src.shop.bought)) if (BOUNTY_SHOP.some((x) => x.id === id)) bought[id] = int(n, 1e6);
-  return { v: 1, done, xp: int(src.xp), rank, marks: int(src.marks), completed: int(src.completed),
+  const xp = rank >= HUNTER_RANK.max ? 0 : Math.min(int(src.xp), HUNTER_RANK.need(rank) - 1);
+  return { v: 1, done, xp, rank, marks: int(src.marks), completed: int(src.completed),
     titles: Array.isArray(src.titles) ? src.titles.filter((t) => HUNTER_TITLES.some((x) => x.id === t)) : [],
-    owned: Array.isArray(src.owned) ? src.owned.filter((t) => typeof t === 'string' && t.length < 40).slice(0, 64) : [],
+    owned: Array.isArray(src.owned) ? [...new Set(src.owned.filter((t) => BOUNTY_SHOP.some((x) => x.grant.cosmetic === t)))] : [],
     shop: { week: Number.isSafeInteger(src.shop?.week) ? src.shop.week : -1, bought } };
 }
 
@@ -79,7 +80,8 @@ const normalizeBountyView = (state) => state && state.v === 1 && state.done ? st
 export function judgeBounty(def, result) {
   if (!def) return { ok: false, reason: 'unknown' };
   if (!result || result.win !== true) return { ok: false, reason: 'lost' };
-  if (!def.trial) return { ok: true };
+  // 수배 처치·지역 수배범: 모든 구역 정화(정예 방·보스 방 포함)가 목표다.
+  if (!def.trial) return result.fullClear === true ? { ok: true } : { ok: false, reason: 'objective' };
   const v = result[def.trial.fact];
   if (!Number.isFinite(v) || v < 0) return { ok: false, reason: 'no-fact' };
   const pass = def.trial.op === 'lte' ? v <= def.trial.n : v >= def.trial.n;

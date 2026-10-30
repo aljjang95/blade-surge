@@ -28,7 +28,7 @@ test('ids: build/parse round trip and rejects', () => {
 
 test('trial judge: pass, fail, no-fact, lost', () => {
   const def = bountyDef('story:1-1:trial')!; const t = def.trial;
-  const good: any = { win: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
+  const good: any = { win: true, fullClear: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
   expect(judgeBounty(def, good).ok).toBe(true);
   const bad: any = { win: true, time: 9999, revives: 9, maxCombo: 0, stars: 1 };
   expect(judgeBounty(def, bad)).toMatchObject({ ok: false, reason: 'trial' });
@@ -37,11 +37,11 @@ test('trial judge: pass, fail, no-fact, lost', () => {
   expect(judgeBounty(def, null)).toMatchObject({ ok: false, reason: 'lost' });
   expect(judgeBounty(null, good)).toMatchObject({ ok: false, reason: 'unknown' });
   expect(t!.fact).toBeTruthy();
-  const hunt = bountyDef('story:1-1:hunt')!; expect(judgeBounty(hunt, { win: true }).ok).toBe(true);
+  const hunt = bountyDef('story:1-1:hunt')!; expect(judgeBounty(hunt, { win: true, fullClear: true }).ok).toBe(true); expect(judgeBounty(hunt, { win: true }).ok).toBe(false);
 });
 
 test('completeBounty: rewards once, never twice, locked tiers refuse', () => {
-  const st = normalizeBounty(null), sv = save(open()), r: any = { win: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
+  const st = normalizeBounty(null), sv = save(open()), r: any = { win: true, fullClear: true, time: 0, revives: 0, maxCombo: 999, stars: 3 };
   const a = completeBounty(st, sv, 'story:1-1:hunt', r);
   expect(a.ok).toBe(true); expect(a.rewards!.gold).toBeGreaterThan(0); expect(st.marks).toBe(1); expect(st.completed).toBe(1);
   expect(completeBounty(st, sv, 'story:1-1:hunt', r)).toMatchObject({ ok: false, reason: 'done' }); expect(st.completed).toBe(1);
@@ -82,4 +82,16 @@ test('shop: weekly reset, minRank, once, marks', () => {
   expect(st.owned).toContain('banner_crimson');
   const poor = normalizeBounty(null); poor.marks = BOUNTY_SHOP[0].cost - 1; expect(buyBountyItem(poor, 'stones_bundle', 1)).toMatchObject({ ok: false, reason: 'marks' });
   expect(buyBountyItem(poor, 'nothing', 1)).toMatchObject({ ok: false, reason: 'unknown' });
+});
+
+test('수배 처치·지역 수배범은 모든 구역 정화가 필요하다', () => {
+  const def: any = bountyDef('story:1-10:wanted');
+  expect(judgeBounty(def, { win: true })).toMatchObject({ ok: false, reason: 'objective' });
+  expect(judgeBounty(def, { win: true, fullClear: true })).toMatchObject({ ok: true });
+});
+
+test('조작된 사냥꾼 경험치는 다음 등급 직전으로 잘린다', () => {
+  const s = normalizeBounty({ rank: 3, xp: 1e9, owned: ['banner_crimson', 'hack', 'banner_crimson'] });
+  expect(s.xp).toBeLessThan(40 + 5 * 3);
+  expect(s.owned).toEqual(['banner_crimson']);
 });
