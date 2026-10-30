@@ -102,7 +102,8 @@ export function buildRequests(catalog = IAP_PRODUCTS) {
       reqs.push({
         step: `${p.id} 생성/수정`,
         method: 'PATCH',
-        path: `/oneTimeProducts/${p.id}`,
+        // PATCH 경로만 소문자(onetimeproducts) — discovery 문서 기준(2026-10-30 실측: camelCase PATCH는 HTML 404).
+        path: `/onetimeproducts/${p.id}`,
         query: {
           allowMissing: 'true',
           'regionsVersion.version': REGIONS_VERSION,
