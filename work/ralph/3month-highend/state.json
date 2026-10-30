@@ -1,0 +1,43 @@
+{
+ "domain": "3개월 플레이타임(8h×90일=720h) 하이엔드 출시",
+ "slug": "3month-highend",
+ "threadId": "fa8e9051-5a5a-564a-887a-e3ba2373c88e",
+ "status": "running",
+ "cycles": 0,
+ "noProgressStreak": 0,
+ "reservePercent": 2,
+ "allowCredits": false,
+ "ownerQuotes": [],
+ "goalMode": "files",
+ "goalObjective": "[ralph:3month-highend] 720h 하이엔드 출시",
+ "heartbeatId": "trig_01BFz5L3h2VZQfmUtk6aCFQm",
+ "resumeAt": null,
+ "stopReason": null,
+ "lastQuota": null,
+ "lastCycleCost": null,
+ "costs": [],
+ "dod": "0/12",
+ "dodLock": {
+  "at": "2026-10-30T00:52:38.288Z",
+  "rows": {
+   "D1": "a90478aaa3629d87",
+   "D2": "95ca47d4ac7d62c7",
+   "D3": "55ab7172c7b2f678",
+   "D4": "ac53d1a6ccd0215c",
+   "D5": "550de3e99bb879c5",
+   "D6": "07d56df87de2e48c",
+   "D7": "b8cd932ef64acbb3",
+   "D8": "e4a036044565095b",
+   "D9": "58a405f718913262",
+   "D10": "ec47fbe8e859351a",
+   "D11": "4cfd48e53ab04b0e",
+   "D12": "83ea80df25f97d82"
+  }
+ },
+ "weakened": [],
+ "windDown": false,
+ "finalAudit": null,
+ "startedAt": "2026-10-30T00:52:13.226Z",
+ "lastCycleAt": null,
+ "updatedAt": "2026-10-30T00:52:55.395Z"
+}
