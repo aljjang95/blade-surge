@@ -19,6 +19,9 @@ export const LOOT_LABEL = Object.freeze({
 });
 export const RARITY_RANK = Object.freeze({ N: 0, S: 1, E: 2, U: 3, L: 4 });
 const _p = new THREE.Vector3();
+const UNLIMITED = Object.freeze({ max: Infinity, maxCommon: Infinity });
+/** @param {{ left: number, top: number, right: number, bottom: number }} r @param {Array<{ left: number, top: number, right: number, bottom: number }>} list */
+export const hitsAny = (r, list) => { for (let i = 0; i < list.length; i++) if (rectsOverlap(r, list[i])) return true; return false; };
 
 /** 글자 폭 추정(10px 굵은 서체): 한글 약 10.4px, 영문·숫자 약 5.8px. */
 export const estimateLabelWidth = text => {
@@ -97,9 +100,12 @@ export class LootLabels {
     const headY = (1 - _p.y) * .5 * h, bodyH = Math.max(8, footY - headY);
     const hero = this.hero; hero.top = headY; hero.bottom = footY; hero.left = cx - bodyH * .28; hero.right = cx + bodyH * .28;
 
-    const list = pickLootLabels(drops.items, player, this.picked);
-    let n = 0, stacked = 0, dimmed = 0;
+    // 한도(전체 · 노말)는 화면에 실제로 놓인 이름표에만 센다. 화면 밖 고등급 드랍이 보이는 장비의 자리를 먹지 않게 한다.
+    const list = pickLootLabels(drops.items, player, this.picked, UNLIMITED);
+    let n = 0, common = 0, stacked = 0, dimmed = 0;
     for (const it of list) {
+      const isCommon = (RARITY_RANK[it.rarity] ?? 0) === 0;
+      if (isCommon && common >= LOOT_LABEL.maxCommon) continue;
       const m = it.mesh;
       _p.set(m.position.x, (it.restY || .7) + LOOT_LABEL.lift, m.position.z).project(cam);
       if (_p.z > 1 || _p.x < -1.05 || _p.x > 1.05 || _p.y < -1.05 || _p.y > 1.05) continue;
@@ -109,7 +115,7 @@ export class LootLabels {
         const text = it._labelText ??= lootLabelText(it.payload);
         if (!text) { slot.serial = -1; continue; }
         el.textContent = text; it._labelWidth ??= estimateLabelWidth(text); el.style.width = it._labelWidth + 'px';
-        el.className = 'loot-label is-' + (RARITY_RANK[it.rarity] === undefined ? 'N' : it.rarity);
+        el.className = 'loot-label is-' + (RARITY_RANK[it.rarity] === undefined ? 'N' : it.rarity); slot.dim = false;
         el.style.setProperty('--rc', RARITY_COLOR[it.rarity] || RARITY_COLOR.N);
       }
       const x = (_p.x + 1) * .5 * w, y = (1 - _p.y) * .5 * h, half = it._labelWidth / 2;
@@ -119,14 +125,18 @@ export class LootLabels {
       r.left += placed.dx; r.right += placed.dx; r.top += placed.dy; r.bottom += placed.dy;
       const top0 = r.top;
       if (!stackUp(r, this.rects, n)) { slot.serial = -1; continue; }
-      if (r.top !== top0) stacked++;
+      if (r.top !== top0) {
+        // 쌓아 올린 자리가 HUD 나 화면 위 가장자리에 걸리면 이번 프레임은 숨긴다.
+        if (r.top < 0 || hitsAny(r, this.blockers)) { slot.serial = -1; continue; }
+        stacked++;
+      }
       const dim = rectsOverlap(r, hero) || it._labelDist > LOOT_LABEL.far || it.t > LOOT_LABEL.oldAfter;
       if (dim) dimmed++;
       if (dim !== slot.dim) { slot.dim = dim; el.classList.toggle('is-dim', dim); }
       const px = Math.round(r.left), py = Math.round(r.top);
       if (px !== slot.x || py !== slot.y) { slot.x = px; slot.y = py; el.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)'; }
       if (el.hidden) el.hidden = false;
-      n++;
+      n++; if (isCommon) common++;
       if (n >= this.slots.length) break;
     }
     this.hideFrom(n);
