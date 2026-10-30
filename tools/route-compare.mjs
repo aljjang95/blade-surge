@@ -25,10 +25,13 @@ const PREF_KEY = 'bs.dungeonRoute.v1';
 const PORT = 4800 + Math.floor(Math.random() * 150);
 mkdirSync(resolve(OUT, 'route-shots'), { recursive: true });
 
-const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
+// --origin <url>: 배포된 정식 호스트를 그대로 연다(운영 readback 캡처용). 없으면 dist 를 vite preview 로 띄운다.
+const ORIGIN = arg('origin', '');
+const srv = ORIGIN ? null : spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
+const BASE = ORIGIN || `http://localhost:${PORT}/`;
 let up = false;
-for (let i = 0; i < 80 && !up; i++) { try { up = (await fetch(`http://localhost:${PORT}/`)).ok; } catch { /* 기동 대기 */ } if (!up) await new Promise((r) => setTimeout(r, 500)); }
-if (!up) { srv.kill(); throw new Error('preview server did not start'); }
+for (let i = 0; i < 80 && !up; i++) { try { up = (await fetch(BASE)).ok; } catch { /* 기동 대기 */ } if (!up) await new Promise((r) => setTimeout(r, 500)); }
+if (!up) { srv?.kill(); throw new Error('server did not start'); }
 const browser = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const storyFirst = Object.fromEntries(STORY_EVENTS.map((ev) => [ev.id, ev.choices?.[0]?.id]));
 
@@ -41,7 +44,7 @@ async function openGame({ mode, viewport, mobile = false }) {
   await installAutoStarter(page);
   const errors = [];
   page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message.slice(0, 200)));
-  await page.goto(`http://localhost:${PORT}/`);
+  await page.goto(BASE);
   await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 180000 });
   await page.click('#boot-start', { force: true });
   await page.waitForFunction(() => window.app?.mode === 'lobby', null, { timeout: 180000 });
@@ -274,6 +277,6 @@ try {
 } catch (err) { result.error = String(err?.stack || err).slice(0, 600); process.exitCode = 1; }
 finally {
   writeFileSync(resolve(OUT, ONLY === 'screens' ? 'screens.json' : ONLY === 'compare' ? 'summary.json' : 'summary.json'), JSON.stringify(result, null, 1));
-  await browser.close(); srv.kill();
+  await browser.close(); srv?.kill();
 }
 console.log('done', OUT, result.error || '');
