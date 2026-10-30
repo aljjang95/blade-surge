@@ -154,6 +154,7 @@ describe('원스토어 IAP 서버 검증 → 지급', () => {
 
   test('Play 검증 본문에 marketCode를 섞으면 거부한다(채널 혼동 방지)', async () => {
     const { h, a } = await setup();
+    (h.deps as any).playApi = {};
     const r = await h.send('POST', '/iap/verify', { productId: 'remove_ads_v1', purchaseToken: TOK('q'), marketCode: 'MKT_ONE' }, a.token);
     expect(r.status).toBe(400);
   });

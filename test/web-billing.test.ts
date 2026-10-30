@@ -503,10 +503,10 @@ describe('Play 흐름 하위호환', () => {
     const a = await h.session();
     const cat = await h.send('GET', '/iap/catalog', undefined, a.token);
     const byId = Object.fromEntries(cat.body.products.map((p: any) => [p.id, p]));
-    expect(byId.hero_knight_v1.channels).toEqual(['web', 'play']);
+    expect(byId.hero_knight_v1.channels).toEqual(['web', 'play', 'onestore']);
     expect(byId.hero_knight_v1.priceKRW).toBe(30000);
     expect(byId.hero_all_v1.priceKRW).toBe(89000);
-    expect(byId.starter_pack_v1.channels).toEqual(['web', 'play']);
+    expect(byId.starter_pack_v1.channels).toEqual(['web', 'play', 'onestore']);
     expect(byId.gems_300_v1).toBeUndefined(); // 비활성 상품은 카탈로그에 나오지 않는다
     // 그림자 계정은 영웅 상품 Play intent가 거부되고 다른 상품은 기존대로 열린다.
     expect((await h.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, a.token)).body.error).toBe('server-authority-required');

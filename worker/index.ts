@@ -5,7 +5,7 @@ import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
 import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router';
-import { reconcileVoided } from './v1/iap';
+import { reconcileOneVoided, reconcileVoided } from './v1/iap';
 import { reconcileWebPayments } from './v1/portone';
 import { archiveIdleGuests } from './v1/archive';
 import { runRetention } from './v1/retention';
@@ -171,7 +171,13 @@ export async function reconcileIap(env: Env, now = Date.now()): Promise<void> {
   const db = v1.COMMERCE_DB as D1Database | undefined;
   // 판매(IAP_ENABLED)를 멈춰도 환불 대사는 계속한다. 커서는 D1 iap_meta(마지막 성공 시각, 최대 30일 창).
   if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
-  const r = await reconcileVoided({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') });
+  // 원스토어 취소 대사는 Play 대사 실패와 격리한다(한쪽 제공자 장애가 다른 쪽 회수를 막지 않게).
+  const ctx = { env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') };
+  try {
+    const one = await reconcileOneVoided(ctx);
+    if (one.failed) console.warn('iap one reconcile partial', one.failed);
+  } catch (error) { console.warn('iap one reconcile failed', error instanceof Error ? error.name : 'unknown'); }
+  const r = await reconcileVoided(ctx);
   if (r.failed) console.warn('iap reconcile partial', r.failed);
 }
 
