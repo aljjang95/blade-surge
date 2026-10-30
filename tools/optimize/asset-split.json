@@ -56,6 +56,10 @@
 
     { "class": "remote", "group": "weapons", "glob": "models/item-weapons/**", "reason": "장비 무기 Tripo GLB 102개(약 41.6MB, AAB 압축 후 약 37MB). 선택 사항 외형이라 부팅·1지역 플레이에 필요 없고, 없으면 절차적 무기로 폴백한다(item-weapon-glb). 와이파이 한가할 때 받고, 아이템이 화면에 나올 때 그 아이템 것만 먼저 받는다" },
 
+    { "class": "remote", "group": "item-icons", "glob": "img/item-renders/**", "reason": "장비 렌더 아이콘 77개(약 2.8MB, 영웅 문맥 무기 형태 포함). 이미지는 화면을 막지 않고 호스트·보관본에서 그려진다. 첫 로비에서 곧바로 받아 둔다(remote-prefetch EARLY_GROUPS)" },
+    { "class": "remote", "group": "ui-art", "glob": "img/ui-crafted/engraving/**", "reason": "각인(엔그레이빙) 일러스트(약 2.4MB). 각인 화면에서만 보인다" },
+    { "class": "remote", "group": "ui-art", "glob": "img/tll/avatars/**", "reason": "아바타 상점 초상(약 0.7MB). 상점에서만 보인다" },
+
     { "class": "core", "glob": "news/**", "reason": "소식 웹 읽기 페이지(/news, tools/build-news.mjs 산출물). 글 몇 편 분량의 정적 HTML 이라 크기가 작아 core 로 둔다(remote 로 두면 _headers CORS 규칙이 필요)" },
 
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },
