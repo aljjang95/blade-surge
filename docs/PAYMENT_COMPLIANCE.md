@@ -190,3 +190,5 @@
 - Kim & Chang 확률형 아이템: <https://www.kimchang.com/ko/insights/detail.kc?sch_section=4&idx=28428>
 - 넥슨 청약철회 안내: <https://cs.nexon.com/helpBoard/popuphelpview/12606>
 - 고형석 「디지털콘텐츠계약에서 청약철회의 효과」(표준약관 제23조 항별 분석): <http://itnlaw.knu.ac.kr/?task=json&cmd=board-file-download&fid=255&filename=002-%EA%B3%A0%ED%98%95%EC%84%9D.pdf>
+
+- 앱 안 결제 경로 조사·추천(Play 한국 대체결제, 원스토어 외부결제): [docs/APP_PAYMENT_ROUTE.md](APP_PAYMENT_ROUTE.md)
