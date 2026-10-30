@@ -7,7 +7,7 @@ export const LEGAL_PAGES = Object.freeze({
   privacy: Object.freeze({ href: '/privacy.html', label: '개인정보처리방침' }),
   support: Object.freeze({ href: '/support.html', label: '고객센터' }),
   odds: Object.freeze({ href: '/odds.html', label: '확률 정보' }),
-  gameInfo: Object.freeze({ href: '/game-info.html', label: '게임 정보·등급' }),
+  gameInfo: Object.freeze({ href: '/game-info.html', label: '게임 등급' }),
 });
 
 export const WITHDRAWAL_NOTICE = '구매 후 7일 이내 사용하지 않은 상품·보석은 청약철회할 수 있습니다. 사용했거나 즉시 지급되어 사용된 부분은 철회가 제한됩니다.';
