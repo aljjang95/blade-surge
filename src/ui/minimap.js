@@ -33,7 +33,7 @@ export class Minimap {
     this.floor = floor;
     if (!this.sizeMeasured || !this.resizeObserver) this.measureSize();
   }
-  px(x, z) { return [this.width / 2 + (x - this.ox) * this.scale, this.height / 2 + (z - this.oz) * this.scale]; }
+  px(x, z) { return [this.width / 2 + (x - this.ox) * this.scale, (this.height - (this.padBottom || 0)) / 2 + (z - this.oz) * this.scale]; }
   terrainChanged() {
     if (!this.terrainView || this.terrainSealed !== !!this.floor.sealed
       || this.terrainCorridorWidth !== (this.floor.layout?.width || 6)) return true;
@@ -164,7 +164,10 @@ export class Minimap {
     this.minX = minX; this.maxX = maxX; this.minZ = minZ; this.maxZ = maxZ;
     this.currentRoomId = currentRoomId; this.objectiveRoomId = objectiveRoomId;
     this.ox = (minX + maxX) / 2; this.oz = (minZ + maxZ) / 2;
-    this.scale = Math.min((width - 18) / Math.max(1, maxX - minX), (height - 18) / Math.max(1, maxZ - minZ));
+    // HUD 미니맵은 오른쪽 아래 '지도' 글자 띠만큼 비워 보스 ♜·경로가 글자에 가리지 않게 한다.
+    const padBottom = width <= 160 ? 12 : 0;
+    if (this.padBottom !== padBottom) { this.padBottom = padBottom; this.terrainDirty = true; }
+    this.scale = Math.min((width - 18) / Math.max(1, maxX - minX), (height - 18 - padBottom) / Math.max(1, maxZ - minZ));
     if (this.terrainDirty) this.drawTerrain(currentRoomId, objectiveRoomId);
     const g = this.g; g.clearRect(0, 0, width, height);
     g.drawImage(this.terrainCanvas, 0, 0, width, height); g.lineJoin = 'round'; g.lineCap = 'round';

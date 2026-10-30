@@ -28,7 +28,7 @@
 
 ## 제작 흐름
 
-Tripo 원화(아이콘 정체성) → H3.1 생성 → Retopo 3000 → `blender_weapon_prep` → `register-item-weapon` → `bun run check`.
+Tripo 원화(아이콘 정체성, Nano Banana 9:16) → H3.1 생성(2K·PBR·Polycount 3000이면 Retopo 생략, 실측 자루당 약 86크레딧) → `blender_weapon_prep` → `register-item-weapon` → `bun run check`.
 
 ```bash
 blender -b --python-exit-code 1 --python tools/asset-library/blender_weapon_prep.py -- \
@@ -39,12 +39,13 @@ bun run check
 ```
 
 - 정리 스크립트: 모든 메시 합치기(재질 1개) → 가장 긴 축을 +Y로 → `--flip`/`--grip-end top`으로 손잡이를 아래로 → 원점을 손잡이 끝에서 길이×grip-ratio 지점으로 → 삼각형 감축 → 정점색·스킨·애니 제거 → 텍스처 축소 → GLB와 JSON 보고(삼각형, bbox, 원점 검사). 규약 위반이면 종료 코드 1.
+- 장식(헤일로 등)이 날 뒤에 떠서 생성되면 `blender_weapon_center_islands.py`로 본체 두께 중심에 맞춘 뒤 prep을 다시 돌린다(4차 gear_weapon_l_2·l_3).
 - 날이 -Y로 나오면 `--flip`. 손잡이가 위에 있으면 `--grip-end top`.
 - 등록 도구: `public/models/item-weapons/<id>.glb` 복사, sha256·bytes·triangles 기록, 규약·예산 검사(위반이면 아무것도 쓰지 않고 실패).
 - 시험용 픽스처는 `test/fixtures/item-weapon-sword-prepped.glb`(forge-sword-v2를 눕혀 정리 스크립트로 복원한 것). 매니페스트에는 넣지 않는다.
 
 ## 다음 단계 (2026-10-30)
 
-- 2차(기본 드롭 11: w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) 등록 완료. 1차 4자루와 합쳐 매니페스트 15자루. 3차(U 테마 9) 전부 등록(w_storm·w_blood·w_gravity·w_phoenix·w_rime·w_plague·w_sigil·w_chain·w_void, 총 24자루). 남은 것은 4차 도감·마을 → 5차 원정.
+- 2차(기본 드롭 11: w_iron·w_wood·w_cleaver·w_steel·w_bronze·w_guard·w_flame·w_rune·w_knight·w_dragon·w_sun) 등록 완료. 1차 4자루와 합쳐 매니페스트 15자루. 3차(U 테마 9) 전부 등록(w_storm·w_blood·w_gravity·w_phoenix·w_rime·w_plague·w_sigil·w_chain·w_void, 총 24자루). 4차 도감·마을 15 + 5차 원정 3 등록(총 42자루), w_blood는 검붉은 날로 재생성(2026-10-30, Tripo heartytn 계정).
 - 나머지 검성 무기(1·2차 제외)의 우선순위·참조 아이콘: `art-src/gear-icons/weapon-3d-queue.json`(2차 기본 드롭 11 → 3차 U 테마 9 → 4차 도감·마을 15 → 5차 원정 3). 병기고 6종은 병기고 GLB 경로, 소환 2종은 검 형태가 아니라 제외.
 - 다른 직업 형태(광전사 도끼, 마법사 지팡이, 도적 쌍단검, 궁수 활) 후보: 대표님 요청 취지("아이콘 정체성대로 보이는 무기")상 다음 단계. 매니페스트 키를 `{id, form}`으로 넓히고 형태별 원화를 같은 아이콘 정체성으로 만든다. 그때 `public/img/item-renders/forms/` 215장(옛 그림)도 같은 톤으로 다시 그린다.

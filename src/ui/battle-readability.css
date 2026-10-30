@@ -71,7 +71,7 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .battle-atlas-goal{margin:0 0 10px;padding-left:9px;border-left:2px solid #a6f0d4;color:#e8ecd4;font-size:12px;line-height:1.6}
 .battle-atlas-route{margin:0 0 10px;display:grid;gap:6px}
 .battle-atlas-route[hidden]{display:none}
-.battle-atlas-route-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.battle-atlas-route-modes{display:grid;grid-template-columns:1fr 1fr minmax(64px,auto);gap:6px}
 .battle-atlas-route-mode,.battle-atlas-route-guide{min-height:44px;padding:6px 8px;border:1px solid #b6b89e55;border-radius:6px;background:#1d342b;color:#d9e2c9;font:700 12px var(--font-ui,system-ui,sans-serif);cursor:pointer;touch-action:manipulation}
 .battle-atlas-route-mode[aria-pressed="true"]{border-color:#f6d58e;background:#4a3a1c;color:#ffe9b8}
 .battle-atlas-route-guide{font-weight:600;font-size:11px;min-height:44px}

@@ -57,6 +57,18 @@ describe('프로필과 인증', () => {
     expect(pc.title).toBeNull();
     expect(pc.titles).toEqual([]);
   });
+  test('금칙어 목록이 나중에 늘어도 기존 이름 그대로 재저장은 막히지 않고, 새 이름으로 바꿀 때만 검사한다', async () => {
+    const words: string[] = [];
+    const h = setup({ bannedWords: words });
+    const key = newKey();
+    expect((await h.call('POST', '/profile', { key, body: { name: '늦은금칙' } })).status).toBe(201);
+    words.push('금칙');
+    expect(await h.call('POST', '/profile', { key, body: { name: '늦은금칙' } })).toMatchObject({ status: 200, body: { name: '늦은금칙' } });
+    h.advance(25 * 3600_000);
+    expect((await h.call('POST', '/profile', { key, body: { name: '새금칙' } })).status).toBe(400);
+    expect((await h.call('POST', '/profile', { key: newKey(), body: { name: '다른금칙' } })).status).toBe(400);
+  });
+
   test('이름 변경은 24시간에 한 번, 같은 키로 다시 POST하면 새 프로필이 생기지 않는다', async () => {
     const h = setup();
     const a = await h.player('처음이름');

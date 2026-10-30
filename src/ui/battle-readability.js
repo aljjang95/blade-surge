@@ -52,8 +52,9 @@ export class BattleReadability {
     this.routeDirect = node('button', 'battle-atlas-route-mode', '보스 직행'); this.routeDirect.type = 'button'; this.routeDirect.id = 'btn-route-direct';
     this.routeGuide = node('button', 'battle-atlas-route-guide', ''); this.routeGuide.type = 'button'; this.routeGuide.id = 'btn-route-guide';
     this.routeInfo = node('p', 'battle-atlas-route-info');
-    const modes = node('div', 'battle-atlas-route-modes'); modes.setAttribute('role', 'group'); modes.append(this.routeFull, this.routeDirect);
-    this.route.append(modes, this.routeInfo, this.routeGuide);
+    // 세 버튼을 한 줄에 둔다(360x640 세로에서 경로 표시 버튼이 아래 설명 띠에 가리던 결함).
+    const modes = node('div', 'battle-atlas-route-modes'); modes.setAttribute('role', 'group'); modes.append(this.routeFull, this.routeDirect, this.routeGuide);
+    this.route.append(modes, this.routeInfo);
     this.routeFull.addEventListener('click', () => this.setRoute({ mode: 'full' }));
     this.routeDirect.addEventListener('click', () => this.setRoute({ mode: 'direct' }));
     this.routeGuide.addEventListener('click', () => this.setRoute({ guide: !(this.mapBattle?.routePrefs?.guide !== false) }));
@@ -190,7 +191,7 @@ export class BattleReadability {
     this.route.hidden = !route?.early; if (!route?.early) return;
     const direct = route.mode === 'direct';
     this.routeFull.setAttribute('aria-pressed', String(!direct)); this.routeDirect.setAttribute('aria-pressed', String(direct));
-    this.routeGuide.setAttribute('aria-pressed', String(route.guide)); this.routeGuide.textContent = route.guide ? '경로 표시 켜짐' : '경로 표시 꺼짐';
+    this.routeGuide.setAttribute('aria-pressed', String(route.guide)); this.routeGuide.textContent = route.guide ? '경로 표시' : '경로 숨김'; this.routeGuide.setAttribute('aria-label', route.guide ? '보스까지 경로 표시 켜짐' : '보스까지 경로 표시 꺼짐');
     const bonus = route.optionalLeft ? `전부 정화까지 ${route.optionalLeft}곳 · 경험치 +50% · 골드 +40% · 정예 장비` : '전부 정화 보너스 확보';
     this.routeInfo.textContent = `${route.pathLeft ? `보스 문까지 ${route.pathLeft}곳` : '보스 문 열림'} · ${bonus}${direct ? ' · AUTO는 보스로 직행' : ' · AUTO는 모든 구역을 돈 뒤 보스'}`;
   }
