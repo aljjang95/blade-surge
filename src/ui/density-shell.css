@@ -20,7 +20,7 @@
   #modal .setting-panel > .setting-row:has(.setting-mix) input[type=range] { width: 100px; min-width: 0; }
   #modal .setting-panel > .setting-row.setting-description:has(#haptic-help) { order: 2; }
   #modal .setting-panel > #mix-notice, #modal .setting-panel > #pwa-notice { order: 3; margin: 2px 0; }
-  #modal .setting-panel > .setting-legal { order: 4; }
+  #modal .setting-panel > .setting-legal, #modal .setting-panel > .setting-biz { order: 4; }
   #modal .setting-panel > .danger-zone { order: 5; }
   #modal .modal-box:has(> .setting-tabs) { padding-top: 10px; padding-bottom: 10px; }
   #modal .modal-box:has(> .setting-tabs) > h2:first-child { margin-bottom: 6px; }

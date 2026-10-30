@@ -1,3 +1,5 @@
+> **구현 후 낡음 (2026-10-30 표시)**: 이 문서는 서버가 없던 시점(2026-09-23)의 후보 계약이다. 현행 구현은 `worker/v1/portone.ts`(웹 결제)와 `worker/v1/iap.ts`(지급·역분개)이며, 현행 판매 상품·가격은 `src/shared/iap-catalog.js`, 운영 절차는 `docs/PAYMENT_OPS.md`를 따른다. 아래 "현재 경계"·모의 가격 표는 역사 기록이다.
+
 # Blade Surge web/PWA commerce server contract — candidate
 
 Base: `aljjang95/blade-surge` main `73cd2fc0f647828336a7cba87a75681d08c85dbe`. This is a source-grounded implementation contract, not a connected payment system or an approved sales catalog. The 2026-09-23 cash-grant guard is a separate draft PR; neither candidate makes browser saves authoritative.

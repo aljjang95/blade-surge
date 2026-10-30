@@ -23,7 +23,7 @@ import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/b
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
-import { paymentNoticeHtml, legalLinksHtml, INSTANT_GRANT_CONSENT } from './legal-links.js';
+import { paymentNoticeHtml, legalLinksHtml, businessInfoHtml, INSTANT_GRANT_CONSENT } from './legal-links.js';
 import { cashOffer, payCash, PAY_VIA } from './cash-offer.js';
 import { ratingLabel } from '../data/game-rating.js';
 import './legal-links.css';
@@ -739,6 +739,7 @@ export class Meta {
     const tabs = $('shop-tabs'); tabs.innerHTML = visibleTabs.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
+    const bizBox = $('shop-bizinfo'); if (bizBox && !bizBox.firstChild) bizBox.innerHTML = businessInfoHtml();
     const notice = $('shop-notice');
     const gemSplit = (() => { const st = this.eco.s, paid = Math.min(Math.max(0, Math.floor(st.paidGems || 0)), st.gems); return `<b>보석 유료 ${fmt(paid)} · 무료 ${fmt(st.gems - paid)}</b> (무료부터 사용) · `; })();
     if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 외형 상품입니다.</b> 착용 시 풀셋 효과(이동속도·줍기 범위 편의)만 있고 전투력에는 영향이 없습니다.'
@@ -944,6 +945,7 @@ export class Meta {
       ${row('cameraAuto', '전투 카메라 자동(AUTO)')}${row('cameraInvertX', '카메라 좌우 반전')}${row('cameraInvertY', '카메라 상하 반전')}<div class="setting-row setting-description"><span class="setting-help">시점을 끌어 돌릴 때 기본은 손가락을 끄는 쪽으로 화면이 따라옵니다. 반대가 편하면 켜세요. 로비·마을·전투에 바로 적용됩니다.</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       ${legalLinksHtml(undefined, 'legal-links setting-legal')}
+      ${businessInfoHtml('biz-info setting-biz')}
       <p class="setting-rating">${ratingLabel()}</p>
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
       <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 진행(영웅·장비·재화·진행도·튜토리얼)을 지우고 시작 영웅 선택부터 다시 합니다. 이름·친구와 결제로 받은 권한(광고 제거·월정액·구매한 영웅/아바타)은 유지됩니다. 되돌릴 수 없으니 먼저 저장을 내보내 두세요.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>1단계 · 현재 저장 내보내기</b></p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-file">파일로 저장</button><button type="button" class="btn btn-ghost btn-sm" id="m-reset-copy">코드 복사</button></div><textarea id="m-reset-code" class="danger-input" readonly rows="3" aria-label="저장 내보내기 코드" hidden></textarea><p id="m-reset-export" role="status"></p><p><b>2단계 · 확인 문구</b><br>아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><label class="danger-check"><input type="checkbox" id="m-reset-full"> 이름·친구까지 새로 시작(완전 초기화) — 기기 계정이 바뀌어 옛 결제 권한은 이어지지 않습니다</label><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
