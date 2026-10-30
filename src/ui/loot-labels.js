@@ -32,6 +32,7 @@ export const lootLabelText = payload => { const def = ITEM_BY_ID[payload?.id]; r
 /**
  * 순수 판단: 보여 줄 드랍과 순서. 고등급 → 가까운 순. 노말은 maxCommon 개까지만.
  * items 는 DropSystem.items 와 같은 모양, out 은 재사용 배열.
+ * @param {any[]} items @param {any} player @param {any[]} [out] @param {{ max?: number, maxCommon?: number }} [options]
  */
 export function pickLootLabels(items, player, out = [], { max = LOOT_LABEL.max, maxCommon = LOOT_LABEL.maxCommon } = {}) {
   out.length = 0;
@@ -52,7 +53,9 @@ export function pickLootLabels(items, player, out = [], { max = LOOT_LABEL.max, 
   return out;
 }
 
-/** 이름표 사각형을 이미 놓인 것들과 겹치지 않게 위로 쌓는다. 쌓을 거리가 limit 를 넘으면 false. */
+/** 이름표 사각형을 이미 놓인 것들과 겹치지 않게 위로 쌓는다. 쌓을 거리가 limit 를 넘으면 false.
+ * @param {{ left: number, top: number, right: number, bottom: number }} rect @param {Array<{ left: number, top: number, right: number, bottom: number }>} placed
+ * @param {number} count @param {{ gap?: number, limit?: number }} [options] */
 export function stackUp(rect, placed, count, { gap = LOOT_LABEL.gap, limit = LOOT_LABEL.stackLimit } = {}) {
   const top0 = rect.top;
   for (let guard = 0; guard <= count; guard++) {

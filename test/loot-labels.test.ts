@@ -3,7 +3,9 @@ import { pickLootLabels, stackUp, lootLabelText, estimateLabelWidth, LOOT_LABEL 
 import { LOOT_MODEL_SIZE } from '../src/game/loot-models.js';
 import { LOOT_AURA } from '../src/game/loot-auras.js';
 import { FOE_RING_SCALE } from '../src/game/combat-readability.js';
-import { ITEM_BY_ID } from '../src/data/items.js';
+import { ITEM_BY_ID as ITEMS } from '../src/data/items.js';
+
+const ITEM_BY_ID = ITEMS as Record<string, any>;
 
 // 대표님 2026-10-30 피드백: 드랍 이름표 · 작은 식별 고리 · 작은 드랍 모델.
 const anyId = Object.keys(ITEM_BY_ID)[0];
