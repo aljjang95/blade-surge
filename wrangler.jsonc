@@ -49,8 +49,8 @@
     "PORTONE_CHANNEL_KEY": "",
     "PORTONE_TEST_CHANNEL_KEY": "channel-key-2ec7c4e8-ee17-4958-a205-4ab05d493677",
     // 원스토어 IAP(/api/v1/iap channel 'onestore'): 공개 식별자 2개 + 시크릿 바인딩 ONE_PUBLISHER가 모두 있어야 열린다(worker/v1/onestore.ts).
-    "BLADESURGE_ONE_API_CLIENT_ID": "",
-    "BLADESURGE_ONE_OAUTH_CLIENT_ID": "",
+    "BLADESURGE_ONE_API_CLIENT_ID": "0001011685",
+    "BLADESURGE_ONE_OAUTH_CLIENT_ID": "0001011685",
     "RTDN_AUDIENCE": "",
     "RTDN_PUSH_SUBJECT": "",
     "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com",

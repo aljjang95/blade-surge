@@ -1,6 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 import base from './capacitor.config.json';
 import path from 'node:path';
+import providers from './config/store-providers.json';
 
 // CLI에 없는 --web-dir 옵션 대신 설정에서 소유한 채널 산출물을 선택한다.
 const selected = process.env.BLADE_STORE_WEB_DIR;
@@ -12,7 +13,8 @@ const config: CapacitorConfig = { ...base, webDir: selected ?? base.webDir,
   plugins: { BladeStore: {
     googleWebClientId: process.env.BLADESURGE_GOOGLE_WEB_CLIENT_ID ?? '',
     oneStoreGoogleIdentityEnabled: process.env.BLADESURGE_ONESTORE_GOOGLE_IDENTITY_ENABLED === 'true',
-    oneStoreLicenseKey: process.env.BLADESURGE_ONESTORE_PUBLIC_LICENSE_KEY ?? '',
+    // 원스토어 라이선스 키는 공개키(비밀 아님)라 config/store-providers.json 에 둔다. env 가 있으면 env 우선.
+    oneStoreLicenseKey: process.env.BLADESURGE_ONESTORE_PUBLIC_LICENSE_KEY ?? providers.onestore.licensePublicKey ?? '',
   } },
 };
 export default config;
