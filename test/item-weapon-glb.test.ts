@@ -68,6 +68,10 @@ test('등록 도구: 픽스처 GLB 를 임시 위치에 등록하고 해시 · �
     await registerItemWeapon({ id: 'fixture-sword', form: 'axe', input: FIXTURE, taskId: 'task-4', manifestPath, outDir: join(dir, 'glb') });
     expect(JSON.parse(readFileSync(manifestPath, 'utf8')).items).toHaveLength(2);
     // 모르는 형태, 활이 아닌 손잡이 위치(활은 중앙 40~60%), 정점색 GLB 는 거부한다.
+    // 검·대검은 같은 <id>.glb 를 쓰므로 같은 id 의 다른 쪽 형태 등록은 파일을 덮어쓰기 전에 거부한다.
+    const swordBytes = readFileSync(join(dir, 'glb/fixture-sword.glb'));
+    await expect(registerItemWeapon({ id: 'fixture-sword', form: 'greatsword', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('fixture-sword.glb');
+    expect(readFileSync(join(dir, 'glb/fixture-sword.glb')).equals(swordBytes)).toBe(true);
     await expect(registerItemWeapon({ id: 'bad-form', form: 'spear', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('--form');
     await expect(registerItemWeapon({ id: 'bad-bow', form: 'bow', input: FIXTURE, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('40~60%');
     await expect(registerItemWeapon({ id: 'bad-color', form: 'sword', input: COLORED, taskId: 't', manifestPath, outDir: join(dir, 'glb') })).rejects.toThrow('정점색');

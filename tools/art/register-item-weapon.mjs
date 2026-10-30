@@ -94,13 +94,17 @@ export async function registerItemWeapon({ id, form, input, taskId, concept = ''
   const bytes = await readFile(input);
   const report = inspectWeaponGlb(bytes, form);
   if (!report.ok) throw new Error(`무기 GLB 규약 위반:\n- ${report.errors.join('\n- ')}`);
-  const target = resolve(outDir, weaponGlbFileName(id, form)), staged = `${target}.staged`;
+  const file = weaponGlbFileName(id, form);
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  // 검·대검은 둘 다 <id>.glb 라 같은 id 로 다른 형태를 등록하면 앞 모델을 덮어쓴다. 파일을 쓰기 전에 거부한다.
+  const clash = manifest.items.find(item => item.id === id && item.form !== form && weaponGlbFileName(item.id, item.form) === file);
+  if (clash) throw new Error(`같은 파일(${file})을 쓰는 다른 형태가 이미 있음: ${id}:${clash.form}`);
+  const target = resolve(outDir, file), staged = `${target}.staged`;
   await mkdir(outDir, { recursive: true });
   await copyFile(input, staged);
   try { await rename(staged, target); } finally { await rm(staged, { force: true }); }
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   const entry = {
-    id, form, file: `/models/item-weapons/${weaponGlbFileName(id, form)}`, sha256: sha256(bytes), bytes: bytes.length, triangles: report.triangles,
+    id, form, file: `/models/item-weapons/${file}`, sha256: sha256(bytes), bytes: bytes.length, triangles: report.triangles,
     source: { tripoTaskId: String(taskId), concept: String(concept) },
   };
   manifest.items = [...manifest.items.filter(item => !(item.id === id && item.form === form)), entry].sort((a, b) => a.id.localeCompare(b.id) || a.form.localeCompare(b.form));
