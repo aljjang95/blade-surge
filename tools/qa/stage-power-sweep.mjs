@@ -23,11 +23,13 @@ const maxGameS = Number(opt('max-s', 600));
 const outDir = path.join(root, 'work/qa/power-sweep');
 await fs.mkdir(outDir, { recursive: true });
 const storyEvents = STORY_EVENTS.map(({ id, choices }) => ({ id, choices: choices.map(({ id }) => ({ id })) }));
-const browser = await chromium.launch({ executablePath: opt('chromium', '/opt/pw-browsers/chromium'), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+// 판마다 브라우저를 새로 띄운다: 소프트웨어 GL 브라우저가 긴 스윕 중 죽어도 다음 판이 이어진다.
+const launch = () => chromium.launch({ executablePath: opt('chromium', '/opt/pw-browsers/chromium'), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 
 async function runOne(job) {
   const [ch, st] = job.code.split('-').map(Number);
   const row = { ...job, status: 'running', errors: [] };
+  const browser = await launch();
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce', serviceWorkers: 'block' });
   const page = await context.newPage();
   page.on('pageerror', (e) => row.errors.push(String(e).slice(0, 200)));
@@ -111,7 +113,7 @@ async function runOne(job) {
     row.sources = Object.entries(out.src).sort((a, b) => b[1].dmg - a[1].dmg).slice(0, 8)
       .map(([k, s]) => ({ src: k, pct: +(s.dmg / total * 100).toFixed(1), hits: s.hits, avg: Math.round(s.dmg / s.hits) }));
   } catch (err) { row.status = 'error'; row.error = String(err.message).slice(0, 300); }
-  finally { await context.close().catch(() => {}); }
+  finally { await context.close().catch(() => {}); await browser.close().catch(() => {}); }
   console.log(JSON.stringify({ code: row.code, lv: row.level, seed: row.seed, ratio: row.ratio, status: row.status, t: row.elapsed, rooms: row.rooms, minHp: row.minHp, boss: row.bossHpLeft, dmgX: row.dmgPerMaxHp, top: row.sources?.slice(0, 3).map((s) => s.src + ' ' + s.pct + '%'), err: row.error }));
   return row;
 }
@@ -121,7 +123,6 @@ for (const code of stages) for (const level of levels) for (let i = 0; i < seeds
 const rows = [];
 let next = 0;
 await Promise.all(Array.from({ length: concurrency }, async () => { while (next < jobs.length) rows.push(await runOne(jobs[next++])); }));
-await browser.close();
 const summary = {};
 for (const r of rows) {
   const k = r.code + ' lv' + r.level, s = summary[k] || (summary[k] = { code: r.code, level: r.level, ratio: r.ratio, win: 0, lost: 0, other: 0, t: [] });

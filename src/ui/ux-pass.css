@@ -205,7 +205,11 @@
 .is-actions .btn { min-height: 48px; }
 .is-actions #i-sell { flex: 0 0 auto; min-width: 72px; padding-inline: 14px; font-size: 14px; }
 .is-actions #i-eq { flex: 1 1 auto; font-size: 17px; }
-@media (max-width: 600px) { .is-body { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .is-body { grid-template-columns: minmax(0, 1fr); }
+  /* 한 줄 배치에서는 강화 칸(강화하기 버튼)을 비교 위로 올려, 스크롤 없이 첫 화면에서 보이고 하단 고정 버튼 줄에 가려지지 않게 한다. */
+  .is-body > .is-side, .is-body > .is-enh { order: -1; }
+}
 
 /* =====================================================================
    4) 출격 메뉴: 던전 게이트가 첫 화면. 정비 버튼은 자주 쓰는 3개 + 더보기.
