@@ -1,7 +1,7 @@
 // 드랍 이름표·식별 고리·드랍 크기 점검(대표님 2026-10-30 피드백): 고정 시드로 기사 1-1 을 열고 3초 자동 전투 뒤,
 // 영웅 주변(자석 반경 밖)에 등급별 장비 8개를 떨어뜨리는 '주입 픽스처'로 이름표를 띄워 화면 크기마다 찍는다.
 // 기록: 스크린샷, 이름표 사각형, 이름표끼리·HUD 와의 겹침 면적(0 이어야 함), 드랍 모델 크기, 고리 반경.
-// 사용: node tools/qa/loot-labels-qa.mjs [--tag before|after] [--dev] [--sizes 360x640,390x700,390x844,844x390]
+// 사용: node tools/qa/loot-labels-qa.mjs [--tag before|after] [--dev | --url https://blade.tllhouse.com] [--sizes 360x640,390x700,390x844,844x390]
 import { chromium } from 'playwright';
 import { preview, createServer } from 'vite';
 import fs from 'node:fs/promises';
@@ -19,9 +19,11 @@ await fs.mkdir(out, { recursive: true });
 
 let server, browser;
 try {
-  if (process.argv.includes('--dev')) { server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } }); await server.listen(); }
+  // --url: 배포된 운영 주소를 그대로 연다(빌드·미리보기 서버 없음).
+  if (arg('url', '')) server = null;
+  else if (process.argv.includes('--dev')) { server = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } }); await server.listen(); }
   else server = await preview({ root, logLevel: 'error', build: { outDir: arg('dist', 'dist') }, preview: { host: '127.0.0.1', port: 0 } });
-  const url = 'http://127.0.0.1:' + server.httpServer.address().port;
+  const url = arg('url', '') || 'http://127.0.0.1:' + server.httpServer.address().port;
   browser = await chromium.launch(launchOpts());
   for (const [W, H] of sizes) {
     const id = `${W}x${H}`;
@@ -37,6 +39,8 @@ try {
     if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').click();
     await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
     await page.locator('#boot-start').click();
+    // 운영 주소: 첫 화면 계정 시트가 뜨면 게스트로 시작한다(실제 이용자 흐름, 서버 게스트 행은 1-1 클리어 전에는 만들지 않음).
+    if (arg('url', '')) await page.getByRole('button', { name: '게스트로 시작' }).click({ timeout: 20000 }).catch(() => {});
     await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), null, { timeout: 180000 });
     const started = await page.evaluate(async () => {
       const app = window.app; app.ui.closeModal?.();

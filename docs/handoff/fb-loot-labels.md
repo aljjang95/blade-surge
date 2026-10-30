@@ -12,6 +12,11 @@
 - `node tools/qa/loot-labels-qa.mjs --tag before|after` (주입 픽스처: 영웅 주변 등급별 장비 8개, 자석 끔, 고정 시드). 4화면(360x640·390x700·390x844·844x390) 이름표 4~7개, 이름표끼리·HUD 겹침 0. 전·후 캡처 `work/loot-labels/{before,after}/` (로컬, 커밋 안 함).
 - 주의: 드랍 대기 높이가 낮아져 착지 시점이 조금 바뀐다(표시 전용, 시드 정산 드랍은 처치 순번 기준이라 영향 없음).
 
+## 배포·운영 확인
+- 운영 `https://blade.tllhouse.com/version.json` sha `e0a8367`(지도 레인 배포, 조상에 6ecd8c2 포함, dirty=false) — 지휘 확인. 이 레인의 PC 배포 시도(`D:\Work\tasks\blade-deploy-6ecd8c2`)는 설치 단계에서 멈춰 원격 변경 없음.
+- 운영 주소 1-1(게스트 시작, 같은 주입 픽스처) `--url https://blade.tllhouse.com`: 390x700 이름표 6 · 844x390 이름표 7, 겹침 0, 비컨 고리 .64/.6/.76. 전·후 비교 `work/loot-labels/compare-{390x700,844x390}.jpg`.
+
 ## 남은 것
+- 1-1 첫 안내 문구 상자(`환경 장치 · 잡든 공명종…`)가 HUD 가림 목록에 없어 그 아래 이름표가 일부 가려진다(390x700 '에메랄드 반지'). `HUD_BLOCKER_SELECTORS` 에 그 상자를 넣거나 이름표 층 z-index 조정.
 - 실기기(대표님 휴대폰)에서 이름표 크기(10px)·고리 크기 체감 확인.
 - 이름표 글자 폭은 추정값이다. 아주 긴 이름은 168px 에서 말줄임.
