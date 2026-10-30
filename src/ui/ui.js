@@ -794,7 +794,7 @@ export class UI {
     const levelUpEl = $('result-levelup'); if (levelUpEl) { levelUpEl.hidden = true; levelUpEl.classList.remove('in'); }
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
-    this.el.result.classList.toggle('is-defeat', !win);
+    this.el.result.classList.toggle('is-defeat', !win); this.el.result.classList.toggle('is-bounty', !!b.stage?.bounty);
     const growth = $('result-growth'); growth.hidden = true; growth.replaceChildren(); $('btn-result-use').hidden = true;
     this.paintEndlessStrip(null);
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
@@ -854,7 +854,7 @@ export class UI {
         parts.push(`증표 ${fmt(br.marks)}개 보유${br.need ? ` · 다음 등급까지 ${fmt(br.need - br.xp)}` : ''}`);
         line.innerHTML = parts.map((x) => `<div>${x}</div>`).join('');
       } else line.textContent = br.reason === 'trial' || br.reason === 'no-fact' ? '조건을 채우지 못했습니다. 보상은 없고 의뢰는 그대로 남아 있습니다.' : br.reason === 'done' ? '이미 끝낸 의뢰입니다.' : '의뢰를 정산하지 못했습니다.';
-      loot.parentNode.insertBefore(line, loot); this.bountyLine = line;
+      $('result-stats').before(line); this.bountyLine = line;
       if (br.ok) { later(() => this.toast(br.ups.length ? `사냥꾼 ${br.ups.at(-1).rank}등급!` : '현상금 완료!', 'gold'), 600); audio.play('ui_glass', { vol: 0.5 }); }
       later(() => { const h = eco.hero(b.heroId); $('result-exp-txt').textContent = `Lv.${h.level} · 의뢰 판은 전투 경험치 없음`; }, 600);
     } else if (win) {

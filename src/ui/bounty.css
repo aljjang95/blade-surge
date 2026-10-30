@@ -12,3 +12,7 @@
 .bounty-go{min-height:44px;width:100%;cursor:pointer}.bounty-go:disabled{opacity:.5;cursor:default}
 .bounty-result{margin:8px 0;padding:10px 12px;border:1px solid #e3c97a66;border-radius:10px;background:#1b2b1f;color:#ffe9a8;text-align:center;line-height:1.6}
 @media(max-width:620px){.bounty-dialog{width:96vw}.bounty-tabs{padding:7px}.bounty-tabs button{font-size:13px}}
+/* 의뢰 판의 결과 화면: 캠페인 성장·다음 출격 안내는 의뢰 판에 맞지 않아 숨기고 의뢰 보상 줄만 보여 준다. */
+#result.is-bounty #result-growth,#result.is-bounty #result-story,#result.is-bounty #result-story-details,#result.is-bounty #result-loot-details{display:none!important}
+.bounty-dialog .journey-close{min-height:44px;min-width:44px}
+.bounty-dialog button{min-height:44px}

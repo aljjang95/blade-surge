@@ -28,6 +28,8 @@ async function run(label, vp, mobile) {
   await page.locator('#boot-start').click();
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), undefined, { timeout: 180000 });
   await page.waitForTimeout(1500);
+  if (await page.locator('#btn-ignore-rotate').isVisible().catch(() => false)) await page.locator('#btn-ignore-rotate').click();
+  await page.evaluate(() => { const h = document.getElementById('rotate-hint'); if (h) h.style.display = 'none'; });
   for (let n = 0; n < 4; n++) { if (!await page.locator('#modal.show #m-cancel').isVisible().catch(() => false)) break; await page.locator('#modal.show #m-cancel').click(); await page.waitForTimeout(300); }
   const sum = await page.evaluate(() => window.app.eco.bountySummary());
   check(`${label} board open`, sum.open && sum.available >= 8, sum);
@@ -62,7 +64,7 @@ async function run(label, vp, mobile) {
     return true;
   });
   await page.waitForTimeout(1500);
-  const res = await page.evaluate(() => ({ line: document.querySelector('.bounty-result')?.textContent || null, completed: window.app.eco.bountySummary().completed, marks: window.app.eco.s.bounty.marks, retry: document.getElementById('btn-result-retry').textContent }));
+  const res = await page.evaluate(() => ({ line: document.querySelector('.bounty-result')?.textContent || null, completed: window.app.eco.bountySummary().completed, marks: window.app.eco.s.bounty.marks, retry: document.getElementById('btn-result-retry').textContent, rect: (() => { const r = document.querySelector('.bounty-result')?.getBoundingClientRect(); return r && [Math.round(r.top), Math.round(r.height)]; })() }));
   check(`${label} result settles once`, settled && res.completed === 1 && !!res.line, res);
   await shot(`result-${label}`);
   await context.close();
