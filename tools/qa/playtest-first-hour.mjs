@@ -60,7 +60,7 @@ async function tap(sel, { optional = false, label = sel } = {}) {
   await dismissRotate();
   const l = page.locator(sel).first();
   if (!(await l.isVisible().catch(() => false))) { if (!optional) defect('탭', `${label} 안 보임`); return false; }
-  await l.tap({ timeout: 5000 }).catch(e => { defect('탭', `${label} 실패 ${String(e.message).split('\n')[0].slice(0, 80)}`); });
+  await l.tap({ timeout: 15000 }).catch(e => { defect('탭', `${label} 실패 ${String(e.message).split('\n')[0].slice(0, 80)}`); });
   await sleep(HUMAN.tap); return true;
 }
 async function tapText(text, opts = {}) {
@@ -266,7 +266,8 @@ async function playBattle(first) {
   const t0 = (await state()).el; mark(); addMenu();
   const startClock = clock(); const base = battleSec;
   let lost = false;
-  const meta = await page.evaluate(() => { const st = window.app.battle.stage || {}; return { code: st.code || st.id || '?', rank: st.rank || '', st: st.st, bounty: st.bounty?.id || '', tower: !!st.tower }; });
+  const meta = await page.evaluate(() => { const st = window.app.battle.stage || {}; let power = null; try { power = window.app.eco.heroPower(window.app.eco.s.selected); } catch { /* 읽기용 조회 실패는 무시 */ }
+    return { code: st.code || st.id || '?', rank: st.rank || '', st: st.st, bounty: st.bounty?.id || '', tower: !!st.tower, power, recPower: st.recPower ?? null }; });
   if (['captain', 'warden', 'midboss', 'finalboss'].includes(meta.rank)) { const first = reach(`boss-first-attempt`, `${meta.code} ${meta.rank}`); if (first) ev('첫 보스 도전', `${meta.code} ${meta.rank}`); }
   const live = async () => { const s = await state(); battleSec = base + s.el; return s; };
   if (first) {
@@ -346,7 +347,7 @@ try {
       // AUTO 만으로 쓰러졌다: 이용자는 부활(보석 50) 또는 정비하기를 고른다. 봇은 정비하기(무료)를 눌러 막힘 시각을 남긴다.
       losses++; sameStageLosses = code === lastLossStage ? sameStageLosses + 1 : 1; lastLossStage = code;
       ev('쓰러짐·부활창', `${code} · Lv.${s1.lv} · 진행 ${s1.unlocked} · 전투 ${Math.round(s1.el)}초 · ${losses}번째(같은 단계 연속 ${sameStageLosses})`); await shot(`down-${losses}`);
-      stageLog.push({ code, win: false, at: fmt(clock()), battleSec: Math.round(s1.el), lv: s1.lv, enh: s1.enh, equipped: s1.equipped, skillSum: s1.skillSum });
+      stageLog.push({ code, win: false, at: fmt(clock()), battleSec: Math.round(s1.el), lv: s1.lv, enh: s1.enh, equipped: s1.equipped, skillSum: s1.skillSum, power: s1.meta?.power, recPower: s1.meta?.recPower });
       await tap('#r-no', { optional: true, label: '정비하기' });
       if (sameStageLosses >= 4) { ev('벽 도달', `${code}: 성장 행동 ${sameStageLosses}번 뒤에도 같은 단계에서 계속 쓰러짐`); wall = { code, attempts: sameStageLosses, lv: s1.lv, enh: s1.enh, equipped: s1.equipped, skillSum: s1.skillSum, gold: s1.gold }; await sleep(HUMAN.read); break; }
     } else { sameStageLosses = 0; }
@@ -355,7 +356,7 @@ try {
     ev(`전투 ${battles} 끝`, `${code} ${r.title} · Lv.${s1.lv} · 진행 ${s1.unlocked} · 버튼 ${r.vis.join(',')}`);
     if (win) {
       reach('first-win', `${code} Lv.${s1.lv}`); reach(`clear-${code}`, `Lv.${s1.lv} 강화합 ${s1.enh} 스킬합 ${s1.skillSum}`);
-      stageLog.push({ code, win: true, at: fmt(clock()), battleSec: Math.round(s1.el), lv: s1.lv, enh: s1.enh, equipped: s1.equipped, skillSum: s1.skillSum });
+      stageLog.push({ code, win: true, at: fmt(clock()), battleSec: Math.round(s1.el), lv: s1.lv, enh: s1.enh, equipped: s1.equipped, skillSum: s1.skillSum, power: s1.meta?.power, recPower: s1.meta?.recPower });
       if (s1.meta?.bounty) { reach('bounty-complete', `의뢰 ${s1.meta.bounty}`); ev('의뢰 완료', s1.meta.bounty); }
       if (['midboss', 'finalboss'].includes(s1.meta?.rank)) reach('boss-first-clear', `${code} ${s1.meta.rank}`);
       reach('victory-reward', `${r.title} · ${r.lvl || ''}`.trim());
