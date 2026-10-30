@@ -2,10 +2,14 @@
 
 사용: blender -b --python-exit-code 1 --python tools/asset-library/blender_weapon_prep.py -- \
   --input <tripo.glb> --output <prepped.glb> [--report <report.json>] [--target 3000] [--max 4000] \
-  [--grip-ratio 0.18] [--grip-end bottom|top] [--flip] [--texture-max 1024] [--image-format JPEG|PNG|WEBP]
+  [--grip-ratio 0.18] [--grip-end bottom|top] [--flip] [--texture-max 1024] [--image-format JPEG|PNG|WEBP] \
+  [--wide-x] [--face-x pos|neg] [--face-region top|all]
 
 순서: 모든 메시 합치기(재질 1개) → 가장 긴 축을 +Y(glTF)로 → --flip / --grip-end 로 손잡이를 아래로
 → 원점을 손잡이 끝에서 전체 길이 * grip-ratio 지점(손잡이 중간)으로 → 삼각형 감축 → 정점색·스킨·애니 제거 → 내보내기.
+선택 플래그(기본 꺼짐, 안 쓰면 출력이 이전과 바이트 동일): --wide-x 는 길이축 둘레로 돌려 수평 두 폭 중 큰 쪽을 glTF X 에 놓고,
+--face-x pos|neg 는 (--wide-x 뒤) 영역(--face-region top=길이 위쪽 40%, all=전체; 기본 top)의 중심 X 가 요청한 쪽에 오게
+필요하면 길이축 둘레로 180도 돌린다. 기준 X 는 원점 높이 ±5% 구간(손잡이)의 가로 중심이다. 선택한 회전은 보고 JSON 의 orient 에 남는다.
 Blender 는 Z-up 이라 내부에서는 길이축을 +Z 로 맞추고, glTF 내보내기(+Y up)에서 +Y 가 된다.
 보고 JSON 의 bbox 는 glTF 좌표(x, y, z)다. 규약 위반이면 ok=false 이고 종료 코드 1.
 """
@@ -24,8 +28,8 @@ def parse_args():
   argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
   args = {'--target': '3000', '--max': '4000', '--grip-ratio': '0.18', '--grip-end': 'bottom',
           '--texture-max': '1024', '--image-format': 'JPEG'}
-  flags = {'--flip'}
-  out = {'--flip': False}
+  flags = {'--flip', '--wide-x'}
+  out = {'--flip': False, '--wide-x': False}
   i = 0
   while i < len(argv):
     key = argv[i]
@@ -39,6 +43,10 @@ def parse_args():
       raise SystemExit(f'missing {required}')
   if args['--grip-end'] not in ('bottom', 'top'):
     raise SystemExit('--grip-end must be bottom|top')
+  if args.get('--face-x', 'pos') not in ('pos', 'neg'):
+    raise SystemExit('--face-x must be pos|neg')
+  if args.get('--face-region', 'top') not in ('top', 'all'):
+    raise SystemExit('--face-region must be top|all')
   return args
 
 
@@ -135,6 +143,33 @@ def move_origin(obj, ratio):
   return length
 
 
+def orient_sideways(obj, args, length):
+  """--wide-x / --face-x. 길이축(Z) 둘레 회전만 쓴다. 원점(손잡이)은 이미 맞춰진 뒤라 회전해도 손잡이 중심에 남는다."""
+  chosen = {'wideX': None, 'faceX': None}
+  if args['--wide-x']:
+    lo, hi = bounds([v.co for v in obj.data.vertices])
+    if (hi.y - lo.y) > (hi.x - lo.x):
+      apply_matrix(obj, Matrix.Rotation(math.pi / 2, 4, 'Z'))
+      chosen['wideX'] = 'rotate90'
+    else:
+      chosen['wideX'] = 'none'
+  if '--face-x' in args:
+    points = [v.co for v in obj.data.vertices]
+    lo, hi = bounds(points)
+    region = points if args.get('--face-region', 'top') == 'all' else [p for p in points if p.z >= hi.z - 0.40 * (hi.z - lo.z)]
+    slab = [p for p in points if abs(p.z) <= 0.05 * length] or points
+    slo, shi = bounds(slab)
+    centroid_x = sum(p.x for p in region) / len(region) - (slo.x + shi.x) / 2
+    want_pos = args['--face-x'] == 'pos'
+    if (centroid_x > 0) != want_pos:
+      apply_matrix(obj, Matrix.Rotation(math.pi, 4, 'Z'))
+      chosen['faceX'] = 'rotate180'
+    else:
+      chosen['faceX'] = 'none'
+    chosen['faceCentroidX'] = round(centroid_x, 5)
+  return chosen
+
+
 def triangulate(obj):
   mesh = bmesh.new()
   mesh.from_mesh(obj.data)
@@ -192,6 +227,7 @@ def main():
   obj, material_count = join_meshes()
   long_axis = orient(obj, args)
   length = move_origin(obj, ratio)
+  sideways = orient_sideways(obj, args, length) if args['--wide-x'] or '--face-x' in args else None
   triangles = decimate(obj, int(args['--target']), int(args['--max']))
   # 감축 뒤 형태가 바뀌었을 수 있어 원점을 한 번 더 같은 규칙으로 맞춘다.
   length = move_origin(obj, ratio)
@@ -216,6 +252,8 @@ def main():
     'lengthM': round(length, 5), 'gripFraction': None if grip_fraction is None else round(grip_fraction, 4),
     'originInside': lo.z < 0 < hi.z, 'textures': textures,
   }
+  if sideways is not None:
+    report['orient'] = sideways
   text = json.dumps(report, ensure_ascii=False)
   if '--report' in args:
     with open(args['--report'], 'w', encoding='utf8') as handle:

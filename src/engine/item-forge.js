@@ -292,7 +292,7 @@ function buildBoots(a, b) {
 }
 
 export function buildItemGeometry(form, item) {
-  // 검성 sword/greatsword 전용 Tripo GLB. 없거나 형태가 다르면 아래 절차적 생성으로 폴백한다.
+  // 형태별 Tripo GLB(8형태). 없거나 형태가 다르면 아래 절차적 생성으로 폴백한다.
   const glb = itemWeaponGlb(item.id, form);
   if (glb) return glb.geometry.clone();
   const look = gearLook(item), spec = look.weapon || look.ring || look.boots;
@@ -374,7 +374,7 @@ export function acquireItemGeometry(form, item, bounds = null) {
 }
 
 export function itemForgeCacheSize() { return cache.size; }
-/** @param {any} item @param {string|null} [form] 검성 GLB 형태(sword/greatsword). 생략하면 절차적 재질. */
+/** @param {any} item @param {string|null} [form] 무기 형태(GLB 가 있을 때만 GLB 재질). 생략하면 절차적 재질. */
 export function createItemMaterial(item, form = null) {
   const glb = form ? itemWeaponGlb(item.id, form) : null;
   if (glb) return [glb.material.clone()];
