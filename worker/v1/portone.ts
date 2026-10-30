@@ -68,7 +68,7 @@ export interface PortonePayment {
   method?: { type?: string | null; provider?: string | null } | null;
 }
 export interface PortoneApi { getPayment(paymentId: string): Promise<PortonePayment | null> }
-/** webRating: 웹(GRAC) 등급 주입(테스트용). 없으면 src/data/game-rating.js의 웹 등급 정본. */
+/** webRating: 웹(원스토어 IARC) 등급 주입(테스트용). 없으면 src/data/game-rating.js의 웹 등급 정본. */
 export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request: Request) => Promise<Response>; webRating?: GameRating }
 type WebCtx = Ctx & { deps: Ctx['deps'] & PortoneDeps };
 const penv = (c: Ctx) => c.env as unknown as PortoneEnv;
@@ -102,7 +102,7 @@ export function payMethodFields(method: WebPayMethod): { payMethod: string; easy
 }
 
 /**
- * 웹 판매 등급 게이트: 웹은 스토어 자체등급이 적용되지 않아 GRAC 등급분류번호가 있어야 실채널 판매를 연다.
+ * 웹 판매 등급 게이트: 웹 등급은 원스토어 IARC 대한민국 결과(IARC 인증 ID)이며, 그 값이 채워져야 실채널 판매를 연다.
  * 허용 테스터의 테스트 채널 결제(공개 판매 아님)는 막지 않는다.
  */
 export function webRatingReady(rating: GameRating | undefined): boolean {
@@ -198,7 +198,7 @@ export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unkno
   const env = penv(c);
   const channel = webChannel(env, auth.account.account_id, body.test === true);
   if (!env.PORTONE_STORE_ID || !channel) fail(503, 'web-not-configured');
-  // 웹 등급(GRAC) 번호가 없으면 실채널 판매를 열지 않는다(테스트 채널 허용 테스터만 예외).
+  // 웹 등급(IARC 인증 ID)이 없으면 실채널 판매를 열지 않는다(테스트 채널 허용 테스터만 예외).
   if (!channel.test && !webRatingReady((c as WebCtx).deps.webRating)) fail(503, 'rating-required');
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   // 서버가 roster를 강제하는 계정(authority=server)에만 현금 판매를 연다. 그림자·로컬은 저장 편집으로 소유를 늘릴 수 있다.

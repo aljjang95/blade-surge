@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { GAME_RATING, ratingLabel } from '../src/data/game-rating.js';
+import { GAME_RATING, WEB_ONESTORE_IARC, ratingLabel, ratingReady, webRatingFromOnestoreIarc } from '../src/data/game-rating.js';
+import { renderGameInfoPage } from '../tools/gen-game-info-page.mjs';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
 import { maskBanned, filterChat } from '../packages/tll-social/src/shared/filter';
 
@@ -47,4 +48,36 @@ test('채널별 등급: 웹=GRAC, Play=IARC 인증 ID, 원스토어=등급분류
   expect(ratingReady(GAME_RATING)).toBe(false);
   expect(ratingReady({ status: 'rated', age: '15', number: ' ', date: null, descriptors: [] })).toBe(false);
   expect(ratingReady({ status: 'rated', age: '15', number: 'CC-1', date: null, descriptors: [] })).toBe(true);
+});
+
+test('웹 등급은 원스토어 IARC 결과: 값이 없으면 게이트 닫힘·준비 중, 채우면 열림·표시 문구 일치', () => {
+  // 지금 정본은 비어 있다(원스토어 앱 등록·IARC 설문 대기)
+  expect(WEB_ONESTORE_IARC.certId).toBeNull();
+  expect(GAME_RATING.source).toBe('onestore-iarc');
+  expect(ratingReady(GAME_RATING)).toBe(false);
+  expect(ratingLabel(GAME_RATING)).toBe('게임물 등급분류 신청 준비 중');
+  // 연령만 있거나 인증 ID만 있어도 닫힌다(등급을 지어내지 않는다)
+  expect(ratingReady(webRatingFromOnestoreIarc({ age: '12', certId: null, date: null, descriptors: [] }))).toBe(false);
+  expect(ratingReady(webRatingFromOnestoreIarc({ age: null, certId: 'abc', date: null, descriptors: [] }))).toBe(false);
+  expect(ratingReady(webRatingFromOnestoreIarc({ age: '12', certId: '  ', date: null, descriptors: [] }))).toBe(false);
+  const filled = webRatingFromOnestoreIarc({ age: '12', certId: '7b6a5e95-a731-8010-8150-3f8dc1e042f7', date: '2026-11-20', descriptors: ['폭력성'] });
+  expect(ratingReady(filled)).toBe(true);
+  expect(ratingLabel(filled)).toBe('12세이용가 · 폭력성 · 원스토어 IARC 인증 ID 7b6a5e95-a731-8010-8150-3f8dc1e042f7');
+});
+
+test('game-info 페이지: 비어 있으면 대기 안내, 채우면 인증 ID·발급일이 그대로 나오고 GRAC 번호가 아님을 밝힌다', () => {
+  const empty = renderGameInfoPage();
+  expect(empty).toContain('data-rating-status="preparing"');
+  expect(empty).toContain('발급 후 기재');
+  expect(empty).not.toMatch(/\d+세이용가|전체이용가/);
+  const filled = renderGameInfoPage(webRatingFromOnestoreIarc({ age: '12', certId: 'CERT-1', date: '2026-11-20', descriptors: [] }));
+  expect(filled).toContain('12세이용가 — 원스토어 IARC 대한민국 결과');
+  expect(filled).toContain('CERT-1');
+  expect(filled).toContain('2026-11-20');
+  for (const h of [empty, filled]) { expect(h).toContain('직접 심사 번호가 아닙니다'); expect(h).toContain('href="/odds.html"'); }
+});
+
+test('공개 game-info.html 과 첫 화면 링크가 생성기·정본과 같다', () => {
+  expect(readFileSync(new URL('../public/game-info.html', import.meta.url), 'utf8')).toBe(renderGameInfoPage());
+  expect(readFileSync(new URL('../index.html', import.meta.url), 'utf8').split('href="/game-info.html"').length - 1).toBe(2);
 });
