@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { BURROW, Burrow, applyBurrowDepth } from '../src/game/burrow.js';
+import { BURROW, BURROW_AUTO, Burrow, applyBurrowDepth, burrowEscape } from '../src/game/burrow.js';
 import { validPartyWarning } from '../src/party/combat-effects.js';
 import { validPartySnapshot } from '../src/party/protocol.js';
 import { ENEMIES } from '../src/data/stages.js';
@@ -207,3 +207,20 @@ test('파티 스냅샷 검증은 0~1 범위의 숨은 깊이만 받는다', () =
   expect(validPartySnapshot(snap(-.1))).toBe(false);
 });
 
+
+test('AUTO 회피: 예고 원 안의 영웅에게 원 밖 지점과 남은 시간을 주고, 예고가 아니거나 원 밖이면 null', () => {
+  const f = fixture(1.5), out: any = { x: 0, z: 0 };
+  expect(burrowEscape(f.player, [f.enemy], out)).toBeNull();   // 숨기 전
+  f.enemy.burrow = f.burrow;
+  f.burrow.x = 0; f.burrow.z = 0; f.burrow.go('mark'); f.burrow.t = .25;
+  const r = burrowEscape(f.player, [f.enemy], out);
+  expect(r).toBe(out);
+  expect(Math.hypot(r.x, r.z)).toBeCloseTo(BURROW.radius + BURROW_AUTO.out, 5);
+  expect(r.x).toBeGreaterThan(0);                       // 영웅이 있던 쪽으로 빠진다
+  expect(r.left).toBeCloseTo(BURROW.mark - .25, 5);
+  expect(r.need).toBeCloseTo(BURROW.radius - 1.5 + BURROW_AUTO.margin, 5);
+  f.player.pos.x = BURROW.radius + BURROW_AUTO.margin + .1;
+  expect(burrowEscape(f.player, [f.enemy], out)).toBeNull();   // 원 밖
+  f.player.pos.x = 1; f.burrow.go('tunnel');
+  expect(burrowEscape(f.player, [f.enemy], out)).toBeNull();   // 땅속 이동 중은 아직 원이 없다
+});
