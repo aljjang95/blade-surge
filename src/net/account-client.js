@@ -72,8 +72,11 @@ export class AccountClient {
   settleRun(runId, facts) { return this.request('POST', `/runs/${runId}/settle`, facts); }
   // BM: 인앱 결제(서버가 검증·지급의 유일한 근거). 구매 토큰은 반환 경로로만 흐르고 기록하지 않는다.
   iapCatalog() { return this.request('GET', '/iap/catalog'); }
-  iapIntent(productId) { return this.request('POST', '/iap/intent', { productId }); }
-  iapVerify(productId, purchaseToken) { return this.request('POST', '/iap/verify', { productId, purchaseToken }); }
+  // channel이 'onestore'일 때만 본문에 채널을 싣는다(play는 기존 본문 그대로: 서버 onlyKeys가 엄격하다).
+  iapIntent(productId, channel) { return this.request('POST', '/iap/intent', channel === 'onestore' ? { productId, channel } : { productId }); }
+  iapVerify(productId, purchaseToken, { channel, marketCode } = {}) {
+    return this.request('POST', '/iap/verify', channel === 'onestore' ? { productId, purchaseToken, channel, ...(marketCode ? { marketCode } : {}) } : { productId, purchaseToken });
+  }
   iapState() { return this.request('GET', '/iap/state'); }
   funnel(events) { return this.request('POST', '/funnel', { events }); }
   /** 서버 시계 기준 현재 시각(표시용 오프셋만 보정한다). */
