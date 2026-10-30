@@ -13,6 +13,8 @@ export const WITHDRAWAL_NOTICE = '구매 후 7일 이내 사용하지 않은 상
 export const INSTANT_GRANT_CONSENT = '구매 즉시 지급되며 지급된 보상을 사용하면 그만큼 청약철회가 제한됩니다.';
 export const SUBSCRIPTION_NOTICE = '자동 갱신 상품입니다. Google Play 구독 관리에서 언제든 해지할 수 있습니다.';
 
+import { BUSINESS_INFO as B } from '../shared/business-info.js';
+
 const link = (page) => `<a href="${page.href}" target="_blank" rel="noopener">${page.label}</a>`;
 
 /** 화면 가장자리에 작게 놓는 링크 줄(새 탭). */
@@ -37,4 +39,12 @@ export function paymentNoticeHtml(sku, { subscription = false } = {}) {
   if (summonRelated(sku)) pages.push('odds');
   const links = pages.map((k) => link(LEGAL_PAGES[k])).join(' · ');
   return `<span class="pay-notice">${subscription ? `<span class="pay-notice-sub">${SUBSCRIPTION_NOTICE}</span>` : ''}<span>${WITHDRAWAL_NOTICE}</span><span class="pay-notice-links">${links}</span></span>`;
+}
+
+const bizEsc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** 사업자 정보(접이식, 작은 글씨). 상점 하단·설정 안쪽에만 둔다 — 전투·필드 화면 위에는 올리지 않는다. */
+export function businessInfoHtml(cls = 'biz-info') {
+  const rows = [['상호', B.name], ['대표자', B.representative], ['사업자등록번호', B.registrationNo], ['통신판매업 신고번호', B.mailOrderNo], ['주소', B.address], ['연락처', `${B.email} · 전화 ${B.phone}`], ['게임제작업 등록번호', B.gameProductionNo]];
+  return `<details class="${cls}"><summary>사업자 정보</summary><dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${bizEsc(v)}</dd>`).join('')}</dl></details>`;
 }
