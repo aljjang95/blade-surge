@@ -54,16 +54,18 @@ async function openGame({ mode, viewport, mobile = false }) {
 function install({ seed, storyFirst: story }) {
   const a = window.app, e = a.eco;
   let st = seed >>> 0;
+  const reseed = () => { st = seed >>> 0; };
+  a.testPause = true; // 설치 즉시 앱 자체 루프를 세운다: 실시간 프레임이 난수를 쓰면 같은 시드도 판마다 갈린다
   Math.random = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   setInterval(() => { document.querySelector('.lore-scene-skip')?.click(); }, 250);
-  const R = window.__R = { frames: 0, offers: [], abort: null };
+  const R = window.__R = { reseed, frames: 0, offers: [], abort: null };
   R.enter = async (code, level) => {
     const [ch, s] = code.split('-').map(Number);
     e.s.progress.unlocked = Math.max(e.s.progress.unlocked, (ch - 1) * 10 + s);
     if (level > 1) { e.hero().level = level; e.hero().exp = 0; }
     e.s.energy = e.energyMax; e.save?.();
     const def = window.__stageDef(ch, s);
-    a.testPause = false;
+    reseed(); // 입장 직전에 시드를 되감아 같은 관문이 같은 난수열로 시작하게 한다
     const ok = await a.startStage({ ch, st: s });
     for (let i = 0; i < 80 && !(a.battle?.active && a.battle.player); i++) await new Promise((r) => setTimeout(r, 100));
     const b = a.battle, p = b.player;
@@ -165,11 +167,22 @@ const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) 
 
 async function measure(page) {
   return page.evaluate((sels) => {
-    const vw = innerWidth, vh = innerHeight, dlg = document.getElementById('battle-atlas');
+    const vw = innerWidth, vh = innerHeight, dlg = document.getElementById('battle-atlas'), body = dlg?.querySelector('.battle-atlas-body');
     const rect = (el) => { const r = el.getBoundingClientRect(); return { left: +r.left.toFixed(1), top: +r.top.toFixed(1), right: +r.right.toFixed(1), bottom: +r.bottom.toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
-    const buttons = {};
-    for (const s of sels) { const el = document.querySelector(s); buttons[s] = el && el.getClientRects().length ? { ...rect(el), disabled: !!el.disabled } : null; }
-    return { vw, vh, open: !!dlg?.open, dialog: dlg ? rect(dlg) : null, buttons, scrollW: dlg ? dlg.scrollWidth : null, clientW: dlg ? dlg.clientWidth : null };
+    // 눈에 보이는가: 스크롤 영역 안에 들어오고, 중심점을 실제로 이 버튼이 받는가(푸터·헤더가 가리지 않음).
+    const seen = (el) => {
+      const r = el.getBoundingClientRect(), c = body?.getBoundingClientRect();
+      const inside = !c || !body.contains(el) || (r.top >= c.top - 0.5 && r.bottom <= c.bottom + 0.5 && r.left >= c.left - 0.5 && r.right <= c.right + 0.5);
+      const hit = document.elementFromPoint(Math.min(vw - 1, Math.max(0, r.left + r.width / 2)), Math.min(vh - 1, Math.max(0, r.top + r.height / 2)));
+      return inside && (hit === el || el.contains(hit));
+    };
+    const buttons = {}; const els = {};
+    for (const s of sels) { const el = document.querySelector(s); els[s] = el; buttons[s] = el && el.getClientRects().length ? { ...rect(el), disabled: !!el.disabled, visibleAtOpen: seen(el) } : null; }
+    const scrollable = body ? body.scrollHeight - body.clientHeight : 0;
+    if (body) body.scrollTop = body.scrollHeight;
+    for (const s of sels) if (buttons[s]) { buttons[s].visibleAfterScroll = seen(els[s]); buttons[s].afterScroll = rect(els[s]); }
+    if (body) body.scrollTop = 0;
+    return { vw, vh, open: !!dlg?.open, dialog: dlg ? rect(dlg) : null, buttons, bodyScrollable: scrollable, bodyH: body ? body.clientHeight : null };
   }, BUTTONS);
 }
 
@@ -180,7 +193,25 @@ function judge(m) {
   const outside = names.filter((n) => { const r = m.buttons[n]; return r.left < -0.5 || r.top < -0.5 || r.right > m.vw + 0.5 || r.bottom > m.vh + 0.5; });
   const low = names.filter((n) => m.buttons[n].h < 44).map((n) => `${n}=${m.buttons[n].h}`);
   const missing = Object.keys(m.buttons).filter((k) => !m.buttons[k]);
-  return { overlaps: overlaps.length, overlapPairs: overlaps, outsideViewport: outside, under44: low, missing, ok: !overlaps.length && !outside.length && !low.length && !missing.length };
+  const hiddenAtOpen = names.filter((n) => !m.buttons[n].visibleAtOpen), unreachable = names.filter((n) => !m.buttons[n].visibleAtOpen && !m.buttons[n].visibleAfterScroll);
+  return { hiddenAtOpen, unreachable, overlaps: overlaps.length, overlapPairs: overlaps, outsideViewport: outside, under44: low, missing, ok: !overlaps.length && !outside.length && !low.length && !missing.length && !hiddenAtOpen.length };
+}
+
+const dlgOpen = (page) => page.evaluate(() => !!document.getElementById('battle-atlas')?.open);
+/** 손가락 탭으로 연다. 탭이 안 먹으면 마우스 클릭으로 한 번 더 — 어느 쪽으로 열렸는지 기록한다. */
+async function openMap(page) {
+  await page.locator('#btn-map').tap({ timeout: 4000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  if (await dlgOpen(page)) return 'tap';
+  await page.locator('#btn-map').click({ force: true, timeout: 4000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  return (await dlgOpen(page)) ? 'click-after-tap-failed' : 'failed';
+}
+async function closeMap(page) {
+  await page.locator('#btn-map-close').tap({ timeout: 4000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  if (await dlgOpen(page)) await page.locator('#btn-map-close').click({ force: true, timeout: 4000 }).catch(() => {});
+  await page.waitForTimeout(300);
 }
 
 async function screens() {
@@ -192,22 +223,25 @@ async function screens() {
       await page.evaluate(install, { seed: SEED, storyFirst });
       const entered = await page.evaluate(() => window.__R.enter('1-1', 1));
       if (!entered.ok) { out.push({ viewport: tag, error: 'start failed' }); continue; }
+      // 세로 화면 안내(가로 권장)는 '세로로 계속하기'로 넘긴다 — 사람이 세로로 쓰는 경우와 같다.
+      await page.locator('#btn-ignore-rotate').click({ timeout: 2000, force: true }).catch(() => {});
+      await page.evaluate(() => document.body.classList.remove('force-landscape')); // 버튼의 동작과 같다(ui.js)
+      // 첫 전투 안내 카드는 '그만 보기'로 닫는다(사람이 하는 것과 같다).
+      await page.getByRole('button', { name: '그만 보기' }).click({ timeout: 1500, force: true }).catch(() => {});
       // 입장 직후 조금만 진행해 첫 장면이 그려지게 한다(렌더 1회).
       await page.evaluate(() => { window.__R.run(45); window.app.battle.player.auto = false; window.app.step(0, true); });
       await page.waitForTimeout(300);
       const row = { viewport: tag, entered };
       // (a) HUD 미니맵
-      const wrap = page.locator('#minimap-wrap');
+      const wrap = page.locator('#minimap');
       row.hudMinimapBox = await wrap.boundingBox().catch(() => null);
       await page.screenshot({ path: resolve(OUT, 'route-shots', `${tag}-a-hud.png`) });
       if (row.hudMinimapBox) await page.screenshot({ path: resolve(OUT, 'route-shots', `${tag}-a-minimap.png`), clip: { x: Math.max(0, row.hudMinimapBox.x - 6), y: Math.max(0, row.hudMinimapBox.y - 6), width: Math.min(w, row.hudMinimapBox.width + 12), height: Math.min(h, row.hudMinimapBox.height + 12) } });
       // (b) 지도 창
-      await page.locator('#btn-map').tap().catch(async () => { await page.locator('#btn-map').click({ force: true }); });
-      await page.waitForTimeout(500);
+      row.openEarly = await openMap(page);
       row.mapEarly = await measure(page); row.mapEarlyJudge = judge(row.mapEarly);
       await page.screenshot({ path: resolve(OUT, 'route-shots', `${tag}-b-map.png`) });
-      await page.locator('#btn-map-close').tap().catch(async () => { await page.locator('#btn-map-close').click({ force: true }); });
-      await page.waitForTimeout(300);
+      await closeMap(page);
       // (c) 직행 모드에서 경로 방 정화 후 봉인이 풀릴 때까지 AUTO 로 진행한 뒤 지도 창
       await page.evaluate(() => { window.app.battle.player.auto = true; });
       let unsealed = false;
@@ -220,8 +254,7 @@ async function screens() {
       row.unsealed = unsealed;
       await page.waitForTimeout(300);
       await page.screenshot({ path: resolve(OUT, 'route-shots', `${tag}-c-hud-unsealed.png`) });
-      await page.locator('#btn-map').tap().catch(async () => { await page.locator('#btn-map').click({ force: true }); });
-      await page.waitForTimeout(500);
+      row.openUnsealed = await openMap(page);
       row.mapUnsealed = await measure(page); row.mapUnsealedJudge = judge(row.mapUnsealed);
       row.routeView = await page.evaluate(() => { const v = window.app.battle.routeView?.(); return v && { mode: v.mode, pathLeft: v.pathLeft, optionalLeft: v.optionalLeft, optionalTotal: v.optionalTotal, revealed: v.revealed, early: v.early }; });
       await page.screenshot({ path: resolve(OUT, 'route-shots', `${tag}-c-map-unsealed.png`) });
