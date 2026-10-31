@@ -17,7 +17,7 @@ export const PERCENT_STEPS = [0, 5, 25, 100];
 export const EXPECTED_TABLES = Object.freeze([
   'abuse_tombstones', 'account_archive', 'account_docs', 'account_flags', 'account_keys', 'account_links', 'accounts', 'audit_flags',
   'funnel_active', 'funnel_milestones', 'iap_debt', 'iap_entitlements', 'iap_grants', 'iap_meta', 'iap_obf', 'iap_purchases',
-  'iap_refund_guard', 'iap_rtdn', 'iap_web_payments', 'legacy_saves', 'mail', 'oauth_states', 'parity_log', 'run_tickets', 'sanctions',
+  'iap_refund_guard', 'iap_rtdn', 'iap_web_pay_methods', 'iap_web_payments', 'legacy_saves', 'mail', 'oauth_states', 'parity_log', 'run_tickets', 'sanctions',
   'v1_rate', 'v1_schema', 'wallet_ledger',
 ]);
 

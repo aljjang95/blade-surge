@@ -55,7 +55,7 @@ test('롤백은 신규 컷오버 중지(percent 0) 다음에 SQL 순서이고 sh
   expect(text).toContain("SET status = 'shadow'");
 });
 
-test('기대 표 목록이 마이그레이션 파일(0001~0004)과 같고 문서에도 있다', () => {
+test('기대 표 목록이 마이그레이션 파일(0001~0008)과 같고 문서에도 있다', () => {
   expect([...EXPECTED_TABLES]).toEqual(migrationTables());
   const doc = readFileSync(new URL('../docs/V1_ROLLOUT.md', import.meta.url), 'utf8');
   for (const t of EXPECTED_TABLES) expect(doc).toContain(t);

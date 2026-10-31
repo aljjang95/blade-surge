@@ -13,8 +13,6 @@ const TIPS = {
 const STATE_STEP = { move: 'move', attack: 'attack', dodge: 'dodge', skill: 'skill', ult: 'skill' };
 // 첫 전투 안내가 펼쳐져 있는 시간(전투 시간 초). 행동을 하면 다음 단계가 다시 이 시간을 받는다.
 const GUIDED_SECONDS = 15, GUIDED_FINAL_SECONDS = 10, MANUAL_SECONDS = 8;
-/** 세로 화면에서 펼친 안내 카드가 피할 상단 HUD 묶음(+ 전투 안내 띠). */
-const CARD_CLEAR_SELECTORS = '#hud .hud-player, #hud .hud-right-top, #hud #objective, #hud .hud-center .stage-name, #hud .hud-center .wave, #toast-layer .toast';
 const TOGGLE_OPENED_KEY = 'blade-surge.tutorial-toggle-opened';
 const readToggleOpened = () => { try { return globalThis.localStorage?.getItem(TOGGLE_OPENED_KEY) === '1'; } catch { return false; } };
 const writeToggleOpened = () => { try { globalThis.localStorage?.setItem(TOGGLE_OPENED_KEY, '1'); } catch {} };
@@ -49,7 +47,6 @@ export class BattleTutorial {
     // 접힌 안내 버튼은 한 번 열어 보기 전까지 은은하게 맥동한다(기기 저장, 세이브와 무관).
     this.toggleOpened = readToggleOpened();
     this.expandUntil = 0;
-    this.toastLayer = null; this.placedNotices = -1; this.placeAt = 0;
     this.highlightTarget = null;
     this.healTipLevel = 0;
     this.healTipUntil = 0;
@@ -109,7 +106,7 @@ export class BattleTutorial {
     // 첫 전투에서는 단계가 바뀔 때마다 펼침 시간을 새로 준다(마지막 단계는 짧게).
     if (this.guided && this.expanded && this.battle) this.expandUntil = this.battle.elapsed + (phase === 'clear' ? GUIDED_FINAL_SECONDS : GUIDED_SECONDS);
     this.skip.textContent = '그만 보기';
-    this.syncVisibility(); this.renderHighlight(); this.placeCard();
+    this.syncVisibility(); this.renderHighlight();
   }
 
   // 이전 호출 경계도 입력을 초기화하거나 다른 화면의 정지를 해제하지 않는다.
@@ -135,23 +132,8 @@ export class BattleTutorial {
     this.renderExpansion(); this.renderHighlight();
   }
 
-  /** 세로 화면: 펼친 카드를 상단 HUD 묶음 바로 아래에 둔다. 단계가 바뀔 때만 레이아웃을 읽는다(프레임 루프 아님). */
-  placeCard() {
-    const card = this.card;
-    if (!card?.style || typeof document.querySelectorAll !== 'function') return;
-    if (!this.expanded || !globalThis.matchMedia?.('(orientation: portrait)').matches) { card.style.removeProperty?.('--tutorial-card-top'); return; }
-    const limit = (globalThis.innerHeight || 0) * .45;
-    let bottom = 0;
-    for (const el of document.querySelectorAll(CARD_CLEAR_SELECTORS)) {
-      const r = el.getBoundingClientRect?.();
-      if (r && r.width > 0 && r.height > 0 && r.top < limit) bottom = Math.max(bottom, r.bottom);
-    }
-    if (bottom > 0) card.style.setProperty('--tutorial-card-top', Math.round(bottom + 6) + 'px');
-  }
-
   renderExpansion() {
     if (this.card) this.card.hidden = !this.expanded;
-    this.placeCard();
     if (this.toggle) {
       this.toggle.textContent = this.expanded ? '안내 접기' : '조작 안내 보기';
       this.toggle.setAttribute('aria-expanded', String(!!this.expanded));
@@ -186,11 +168,6 @@ export class BattleTutorial {
     this.syncVisibility();
     if (!this.battle?.active || this.battle.paused) return;
     if (this.expanded && this.battle.elapsed >= this.expandUntil) { this.setExpanded(false); this.restorePlayFocus(); }
-    // 펼친 동안 전투 안내 띠가 생기거나 사라지면(1-1 목표 안내는 1.2초 뒤에 뜬다) 카드 자리를 다시 잰다. 그 밖에는 0.5초마다 한 번만.
-    if (this.expanded) {
-      const notices = this.toastLayer?.childElementCount ?? (this.toastLayer = document.getElementById?.('toast-layer'))?.childElementCount ?? 0;
-      if (notices !== this.placedNotices || this.battle.elapsed >= this.placeAt) { this.placedNotices = notices; this.placeAt = this.battle.elapsed + .5; this.placeCard(); }
-    }
     if (!this.phase) return;
     if (this.battle.roomsCleared > 0 && !this.reviewing) { this.finish(false); return; }
     const p = this.battle.player;

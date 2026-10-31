@@ -23,7 +23,8 @@ import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/b
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
-import { paymentNoticeHtml, legalLinksHtml, INSTANT_GRANT_CONSENT } from './legal-links.js';
+import { paymentNoticeHtml, legalLinksHtml, businessInfoHtml, PURCHASE_CHECKS } from './legal-links.js';
+import { cashOffer, payCash, PAY_VIA } from './cash-offer.js';
 import { ratingLabel } from '../data/game-rating.js';
 import './legal-links.css';
 import { revealPlan } from './reveal-plan.js';
@@ -144,22 +145,25 @@ export class Meta {
     this.eco.onChange(() => this.refreshTop());
     setInterval(() => this.tick(), 1000);
   }
-  /** 서버 검증 결제(Play 카탈로그)가 연결됐는지. 패스 프리미엄 줄처럼 "결제 가능" 자체를 묻는 곳에 쓴다. */
-  billingOn() { return this.eco.paymentAvailable?.() === true; }
+  /** 서버 검증 결제가 연결됐는지(Play 카탈로그 또는 웹 포트원). 패스 프리미엄 줄처럼 "결제 가능" 자체를 묻는 곳에 쓴다. */
+  billingOn() { return this.eco.paymentAvailable?.() === true || this.webPayOn(); }
+  /** 웹 채널에서 서버가 웹 결제를 켰는지(app.heroPurchase: 플래그·채널 키·서버 권위). 웹이 아니면 methods()가 비어 false. */
+  webPayOn() { try { const hp = this.app?.heroPurchase; return (hp?.methods?.()?.length ?? 0) > 0 && hp.available?.() === true; } catch { return false; } }
+  /** 상점 SKU의 채널별 판매 상태(cash-offer.js): play·web(구매 가능)·pending(웹 준비 중)·null(숨김). */
+  cashOfferFor(id) { return cashOffer(id, { billing: this.eco.billing, heroPurchase: this.app?.heroPurchase }); }
   /** 보석·패키지 같은 현금 상품 입구(보석 충전·초월 패키지 버튼)를 보일지. 카탈로그에서 실제 판매하는 상품이 그 탭에 있을 때만 true. */
   payOn() { return this.billingOn() && (this.shopSkus('gem').length > 0 || this.shopSkus('pack').length > 0); }
-  /** 현금 SKU는 서버 카탈로그에 매핑된(enabled·eligible) 상품이고 Play 가격이 있을 때만 판다. 카탈로그 밖·비활성 상품은 계속 숨긴다. */
+  /** 현금 SKU는 서버 카탈로그에 매핑된(enabled·eligible) 상품이고 확인된 가격(Play 문구 또는 웹 intent와 같은 카탈로그 금액)이 있을 때만 판다. */
   cashProduct(id) {
-    const billing = this.eco.billing;
-    if (!billing || !this.billingOn()) return null;
-    const p = billing.productForShopSku?.(id);
-    return p && p.sellable === true && typeof p.formattedPrice === 'string' ? p : null;
+    const o = this.cashOfferFor(id);
+    return o && o.mode !== 'pending' ? { id: o.productId, type: o.type, formattedPrice: o.formattedPrice, sellable: true, mode: o.mode } : null;
   }
   /** VIP 멤버십·누적 결제(spentKRW) 표시는 판매하지 않으므로 결제 연결과 무관하게 숨긴다. */
   vipShown() { return false; }
   /** 지금 상점 탭 id에 보여 줄 상품. 현금 상품은 카탈로그에서 판매 중인 것만(가격은 Play 값). */
   shopSkus(tab = this.shopTab) {
-    return SKUS.filter((x) => (x.kind !== 'cash' || this.cashProduct(x.id)) && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
+    // 웹에서 파는 상품은 웹 결제가 꺼져 있어도 '준비 중'으로 보인다(구매 버튼은 막고 서버를 부르지 않는다).
+    return SKUS.filter((x) => (x.kind !== 'cash' || this.cashOfferFor(x.id)) && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
   }
   /** 상품이 하나도 없는 탭(결제 없는 보석·패키지)은 감춘다. */
   shopTabs() { return SHOP_TABS.filter((t) => this.shopSkus(t.id).length); }
@@ -437,7 +441,7 @@ export class Meta {
     if (this._heroBuying) return;
     // 웹·Play 공통: 결제 전에 청약철회 고지 + 즉시 지급 동의 체크(기본 미체크)를 거친다.
     const price = (() => { try { return this.app.heroPurchase.price?.(productId) || ''; } catch { return ''; } })();
-    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
+    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
     if (!ok) return;
     this._heroBuying = true; this.trackFunnel('paysheet_open', { sku: productId });
     try {
@@ -735,6 +739,7 @@ export class Meta {
     const tabs = $('shop-tabs'); tabs.innerHTML = visibleTabs.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
+    const bizBox = $('shop-bizinfo'); if (bizBox && !bizBox.firstChild) bizBox.innerHTML = businessInfoHtml();
     const notice = $('shop-notice');
     const gemSplit = (() => { const st = this.eco.s, paid = Math.min(Math.max(0, Math.floor(st.paidGems || 0)), st.gems); return `<b>보석 유료 ${fmt(paid)} · 무료 ${fmt(st.gems - paid)}</b> (무료부터 사용) · `; })();
     if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 외형 상품입니다.</b> 착용 시 풀셋 효과(이동속도·줍기 범위 편의)만 있고 전투력에는 영향이 없습니다.'
@@ -746,8 +751,9 @@ export class Meta {
       // 보석 팩은 서버 카탈로그 grant만 지급한다(첫 결제·추가 보너스 없음) — 화면에도 보너스를 적지 않는다.
       const sold = sku.once && s.purchases.includes(sku.id);
       const cash = sku.kind === 'cash';
-      // 현금 상품 가격은 Play가 돌려준 문구만 쓴다(카탈로그 가격은 표시하지 않는다).
-      const priceText = cash ? this.cashProduct(sku.id)?.formattedPrice || '' : '';
+      // 현금 상품 가격은 확인된 문구만 쓴다(Play가 돌려준 값, 웹은 서버가 웹 결제를 켰을 때의 카탈로그 금액). 준비 중이면 가격 없이 막는다.
+      const offer = cash ? this.cashOfferFor(sku.id) : null, pending = offer?.mode === 'pending';
+      const priceText = offer && !pending ? offer.formattedPrice || '' : '';
       const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : esc(priceText);
       // 현금 상품은 결제가 연결됐을 때만 이 목록에 온다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
       const value = '';
@@ -755,6 +761,7 @@ export class Meta {
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
+      if (pending) { const btn = d.querySelector('button'); btn.disabled = true; btn.textContent = '준비 중'; btn.setAttribute('aria-label', sku.name + ' · 결제 준비 중'); d.classList.add('si-pending'); }
       // 진행도 잠금: 버튼은 막고 언제 열리는지 보여 준다(shop-gates.js).
       const gate = sku.kind === 'gem' ? skuGate(sku, s) : null;
       if (gate && !gate.ok) { const btn = d.querySelector('button'); btn.disabled = true; btn.textContent = gate.label; btn.setAttribute('aria-label', sku.name + ' · ' + gate.text); d.classList.add('si-locked'); d.dataset.lockLevel = String(gate.need); const why = document.createElement('div'); why.className = 'si-lock'; why.textContent = gate.text; d.querySelector('.si-desc').after(why); }
@@ -783,15 +790,16 @@ export class Meta {
    * @param {{ id: string, name: string, icon?: string, desc?: string }} sku @param {string} productId
    */
   async payWithBilling(sku, productId) {
-    const product = this.cashProduct(sku.id), billing = this.eco.billing;
-    if (!product || !billing) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
+    // Play 앱은 Play billing, 웹은 app.heroPurchase(포트원). 준비 중(웹 결제 꺼짐)이면 서버를 부르지 않는다.
+    const offer = this.cashOfferFor(sku.id), product = this.cashProduct(sku.id);
+    if (!product || offer?.productId !== productId) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
     // 청약철회 고지(PAYMENT_COMPLIANCE 4.2): 모든 현금 상품은 구매 즉시 지급되므로 제한 사실에 동의(기본 미체크)해야 구매 버튼이 켜진다. 구독은 자동 갱신·해지 문구를 더한다.
     const subscription = product.type === 'subscription' || sku.id === 'monthly';
     const notice = paymentNoticeHtml({ ...sku, rewards: this.eco.sku(sku.id)?.rewards ?? sku.rewards }, { subscription });
-    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · Google Play 결제${notice}`, { ok: '구매하기', cancel: '취소', check: INSTANT_GRANT_CONSENT });
+    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · ${PAY_VIA[offer.mode]}${notice}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
     if (!ok) return null;
-    const r = await billing.buy(productId);
-    if (r.reason === 'cancelled') return null;
+    const r = await payCash(offer, { billing: this.eco.billing, heroPurchase: this.app?.heroPurchase });
+    if (r.reason === 'cancelled' || r.reason === 'customer-cancelled') return null;
     if (r.ok) return r;
     if (r.reason === 'pending') this.ui.toast('결제 대기 중 — 승인되면 자동 지급', 'gold');
     else this.ui.toast(this.purchaseFailText(r), 'red');
@@ -825,7 +833,9 @@ export class Meta {
     if (sku.kind === 'gem') { const gate = skuGate(sku, s); if (!gate.ok) { audio.play('ui_error'); this.ui.toast(gate.text, 'red'); return; } if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.shopSkus('gem').length ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.shopSkus('gem').length) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
-    if (this.billingOn()) { await this.buyWithBilling(sku); return; }
+    if (this.cashProduct(id)) { await this.buyWithBilling(sku); return; }
+    // 웹 결제 준비 중 상품(프로모 등 다른 입구로 들어온 경우)은 가짜 결제창 없이 알린다.
+    if (this.cashOfferFor(id)?.mode === 'pending') { this.ui.toast('결제 준비 중입니다', 'gold'); return; }
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
     this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : '');
@@ -935,6 +945,7 @@ export class Meta {
       ${row('cameraAuto', '전투 카메라 자동(AUTO)')}${row('cameraInvertX', '카메라 좌우 반전')}${row('cameraInvertY', '카메라 상하 반전')}<div class="setting-row setting-description"><span class="setting-help">시점을 끌어 돌릴 때 기본은 손가락을 끄는 쪽으로 화면이 따라옵니다. 반대가 편하면 켜세요. 로비·마을·전투에 바로 적용됩니다.</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       ${legalLinksHtml(undefined, 'legal-links setting-legal')}
+      ${businessInfoHtml('biz-info setting-biz')}
       <p class="setting-rating">${ratingLabel()}</p>
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
       <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 진행(영웅·장비·재화·진행도·튜토리얼)을 지우고 시작 영웅 선택부터 다시 합니다. 이름·친구와 결제로 받은 권한(광고 제거·월정액·구매한 영웅/아바타)은 유지됩니다. 되돌릴 수 없으니 먼저 저장을 내보내 두세요.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>1단계 · 현재 저장 내보내기</b></p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-file">파일로 저장</button><button type="button" class="btn btn-ghost btn-sm" id="m-reset-copy">코드 복사</button></div><textarea id="m-reset-code" class="danger-input" readonly rows="3" aria-label="저장 내보내기 코드" hidden></textarea><p id="m-reset-export" role="status"></p><p><b>2단계 · 확인 문구</b><br>아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><label class="danger-check"><input type="checkbox" id="m-reset-full"> 이름·친구까지 새로 시작(완전 초기화) — 기기 계정이 바뀌어 옛 결제 권한은 이어지지 않습니다</label><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {

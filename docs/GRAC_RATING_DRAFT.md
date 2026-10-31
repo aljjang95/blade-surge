@@ -1,6 +1,6 @@
 # 게임물관리위원회 등급분류 신청서 초안 — Blade Surge
 
-> **2026-10-30 갱신: 판정·신청 작성본은 [release/RATING_DECISION.md](release/RATING_DECISION.md)·[release/GRAC_APPLICATION.md](release/GRAC_APPLICATION.md)가 정본이다.** 이 초안은 3~5장(과금·확률·환불 상세) 참고용으로 남긴다. 결정: 15세 신청, 웹=게임위 직접, Play=IARC, 2026-11-02 모바일 GCRB 이관 반영.
+> **2026-10-30 갱신: 판정·신청 작성본은 [release/RATING_DECISION.md](release/RATING_DECISION.md)·[release/GCRB_APPLICATION.md](release/GCRB_APPLICATION.md)가 정본이다.** 이 초안은 3~5장(과금·확률·환불 상세) 참고용으로 남긴다. 결정: 15세 신청, 웹=게임위 직접, Play=IARC, 2026-11-02 모바일 GCRB 이관 반영.
 
 > **초안이다. 제출하지 않았고 수수료도 내지 않았다.** 신청·납부·서명은 대표님이 직접 하거나 확인한 뒤에 한다.
 > 작성일 2026-10-24 · 근거 문서 `docs/BM_DESIGN.md` 2~4장·12장, `PRD.md`, 코드 `src/data/gacha-banners.js`·`src/shared/iap-catalog.js`·`src/data/shop.js`·`src/game/economy.js`.

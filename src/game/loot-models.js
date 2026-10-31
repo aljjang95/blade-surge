@@ -15,7 +15,7 @@ import { applyArmorAppearance } from './armor-appearance.js';
 import { itemRenderSource } from '../ui/item-presentation.js';
 import { resolveItemForm } from '../ui/item-visual-forms.js';
 import { createLootVisual } from './loot-visual.js';
-import { itemWeaponGlb } from '../engine/item-weapon-glb.js';
+import { itemWeaponGlb, loadItemWeaponGlbsFor } from '../engine/item-weapon-glb.js';
 
 /** 부위별 드랍 대각선 길이(월드 단위). 2026-10-30 대표님 "드랍이 너무 크다": 영웅 키(≈1.9) 대비 0.3~0.5 배로 줄인다.
  *  이름이 이름표로 읽히므로 실루엣을 크게 키울 필요가 줄었다. 줍기(자석·획득) 반경은 그대로다. */
@@ -156,6 +156,7 @@ export class LootModelLibrary {
     else if (info.kind === 'armory-glb') return null;
     else {
       // 인벤 3D 보기와 같은 공유 버퍼를 영구 임대한다(미리보기가 반환해도 드랍 쪽은 남는다).
+      void loadItemWeaponGlbsFor(def.id).catch(() => {});   // APK 밖 무기 GLB 는 뒤에서 받아 다음 드랍부터 쓴다
       const lease = acquireItemGeometry(info.form, def); this.leases.push(lease);
       parts = [{ geometry: lease.geometry, material: null }];
       if (info.count > 1) {

@@ -12,6 +12,7 @@ import { resultStoryHtml } from './campaign.js';
 import { bossLoreHtml } from './lore-scene.js';
 import { HEROES, levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
+import { nextLossStreak, lossStageKey, LOSS_STREAK_PUSH } from '../game/loss-streak.js';
 import { resultStrip } from '../game/torment-ui-model.js';
 import { tierName, tierTag, tierTone } from '../game/item-tier-label.js';
 import { compareLoot, compareText, markFresh, markFreshSince, clearFresh } from './loot-compare.js';
@@ -373,8 +374,10 @@ export class UI {
   /** 현재 모달의 수명이 끝날 때(닫힘 · 다른 모달로 교체) 한 번만 정리한다. */
   endModal() { const done = this._modalOnClose; this._modalOnClose = null; this.el.modalBox.onkeydown = null; try { done?.(); } catch (error) { console.error(error); } }
   /** check: 동의 문구를 주면 체크박스(기본 미체크)를 보이고, 체크해야 확인 버튼이 켜진다. */
+  /** check: 필수 동의 문구(문자열 하나 또는 여러 개). 모두 체크해야(기본 미체크) 확인 버튼이 켜진다. */
   confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold', check = '' } = {}) {
-    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p>${check ? `<label class="pay-consent"><input type="checkbox" id="m-consent"><span>${check}</span></label>` : ''}<div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { const okBtn = b.querySelector('#m-ok'), consent = b.querySelector('#m-consent'); if (consent) { okBtn.disabled = true; consent.onchange = () => { okBtn.disabled = !consent.checked; }; } okBtn.onclick = () => { if (okBtn.disabled) return; this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
+    const checks = (Array.isArray(check) ? check : [check]).filter(Boolean);
+    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p>${checks.map((c, i) => `<label class="pay-consent"><input type="checkbox" id="${i ? 'm-consent-' + i : 'm-consent'}" data-consent><span>${c}</span></label>`).join('')}<div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { const okBtn = b.querySelector('#m-ok'), boxes = [...b.querySelectorAll('[data-consent]')]; if (boxes.length) { okBtn.disabled = true; const sync = () => { okBtn.disabled = !boxes.every((x) => x.checked); }; for (const x of boxes) x.onchange = sync; } okBtn.onclick = () => { if (okBtn.disabled) return; this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
   }
   /** No store billing provider is connected. Never resolve a simulated purchase success. */
   paySheet(sku) {
@@ -713,6 +716,16 @@ export class UI {
   /** 승리 보상으로 지금 할 것 한 가지. 정산 저장 전에는 보여 주되 누를 수 없다. 상점·결제로는 가지 않는다. */
   refreshResultUse(result) {
     const button = $('btn-result-use'), b = this.app.battle;
+    // 같은 스테이지 2연패 뒤: 성장 카드 1순위(장착 → 강화 → 소환)를 주 버튼 자리에 올리고 '다시'는 보조로 내린다.
+    const streakCard = !result.win && (result.lossStreak || 0) >= LOSS_STREAK_PUSH ? $('result-growth').querySelector('.growth-action') : null;
+    $('btn-result-retry').classList.toggle('btn-ghost', !!streakCard); $('btn-result-retry').classList.toggle('btn-blue', !streakCard);
+    if (streakCard) {
+      button.hidden = false; button.dataset.action = 'growth-' + streakCard.dataset.growth;
+      $('result-use-label').textContent = streakCard.querySelector('strong')?.textContent.replace(/ ›$/, '') || '성장';
+      $('result-use-hint').textContent = streakCard.querySelector('.growth-action-copy span')?.textContent || '';
+      button.disabled = !canPrepareGrowth(this.app, result) || streakCard.disabled;
+      return;
+    }
     const action = result.win && result.reward?.ok !== false && !result.reward?.rejected
       ? currentRewardAction(this.app, b.stage?.tower ? 'tower' : 'campaign', result.reward?.got) : null;
     button.hidden = !action; button.dataset.action = action?.id || '';
@@ -723,7 +736,8 @@ export class UI {
   }
   useResultReward() {
     const result = this.resultData, app = this.app;
-    if (!canPrepareGrowth(app, result) || !result.win) return;
+    if (!canPrepareGrowth(app, result)) return;
+    if (!result.win) { $('result-growth').querySelector('.growth-action')?.click(); if (this.resultData === result) this.refreshResultUse(result); return; }   // 연패 뒤 1순위 성장 카드와 같은 동작
     const shown = $('btn-result-use').dataset.action;
     // 누르는 순간의 재화로 다시 고른다. 화면에 보인 행동과 달라졌으면 목적지로 가지 않고 다시 그린다.
     const live = currentRewardAction(app, app.battle.stage?.tower ? 'tower' : 'campaign', result.reward?.got);
@@ -789,6 +803,12 @@ export class UI {
     if (!r || b !== this.app.battle || b.active || this.app.stageStarting || r.win !== win
       || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
+    // 같은 스테이지 연속 패배(세션 메모리). 캠페인 결과 한 건을 한 번만 센다.
+    if (r.lossStreak === undefined) {
+      const counted = !b.stage?.bounty && !b.stage?.tower;
+      this._lossStreak = counted ? nextLossStreak(this._lossStreak, lossStageKey(b.stage), win) : this._lossStreak;
+      r.lossStreak = counted && !win ? this._lossStreak.n : 0;
+    }
     this.prepareResultLayout();
     this.clearLoopOf().reset();
     const levelUpEl = $('result-levelup'); if (levelUpEl) { levelUpEl.hidden = true; levelUpEl.classList.remove('in'); }
