@@ -757,6 +757,17 @@ export class Player extends Actor {
         return out;
       }
     }
+    // 3장 지연 기록 원판(1.7초 예고)도 같은 규칙으로 원판 밖으로 나간다.
+    const frostOut = this.game.hazards?.autoEscape?.(this);
+    if (frostOut && (this.state !== 'attack' || this.hitDone || this.canDodgeCancel())) {
+      const fx = frostOut.x - this.pos.x, fz = frostOut.z - this.pos.z, fl = Math.hypot(fx, fz);
+      if (fl > .3) {
+        out.x = fx / fl; out.y = fz / fl;
+        const walk = Math.max(0, frostOut.need) / Math.max(1, this.stats?.spd || 6);
+        if ((this.dodgeCd || 0) <= 0 && !(this.invuln > 0) && (this.state === 'attack' || walk + .12 > frostOut.left)) this.game.input.press('dodge');
+        return out;
+      }
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
