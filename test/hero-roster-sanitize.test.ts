@@ -3,6 +3,7 @@ import { sanitizeLegacySave, trustedRoster } from '../src/shared/legacy-sanitize
 import { EconomyCore } from '../src/game/economy-core.js';
 import { HEROES, HERO_ORDER } from '../src/data/heroes.js';
 import { IAP_BY_ID, IAP_PRODUCTS, entitlementKeys, summarizeEntitlements, soldOn } from '../src/shared/iap-catalog.js';
+import { ITEM_BY_ID } from '../src/data/items.js';
 import { heroEntitlementKey, heroIdFromEntitlement, HERO_LEGACY_IDS } from '../src/data/hero-roster.js';
 
 const NOW = Date.UTC(2026, 10, 3);
@@ -83,18 +84,19 @@ describe('영웅 상품 카탈로그', () => {
       const p = IAP_BY_ID[`hero_${id}_v1`];
       expect(Object.hasOwn(HEROES, id)).toBe(true);
       expect(p.type).toBe('non_consumable');
-      expect(p.priceKRW).toBe(5900);
-      expect(p.channels).toEqual(['web', 'play']);
+      expect(p.priceKRW).toBe(30000);
+      expect(p.channels).toEqual(['web', 'play', 'onestore']);
       expect(entitlementKeys(p)).toEqual([heroEntitlementKey(id)]);
       expect(heroIdFromEntitlement(entitlementKeys(p)[0])).toBe(id);
       expect(soldOn(p, 'web') && soldOn(p, 'play')).toBe(true);
     }
     const all = IAP_BY_ID.hero_all_v1;
-    expect(all.priceKRW).toBe(17900);
+    expect(all.priceKRW).toBe(89000);
     expect(entitlementKeys(all).sort()).toEqual(HERO_LEGACY_IDS.map((id) => 'hero:' + id).sort());
-    expect(all.priceKRW).toBeLessThan(5900 * 4); // 4명 개별 대비 할인
-    // 기존 상품은 Play 전용 그대로, 보석 팩 구조는 건드리지 않았다
-    expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(false);
+    expect(all.priceKRW).toBeLessThan(30000 * 4); // 4명 개별 대비 할인
+    // 즉시 지급형(스타터 등)은 웹·Play 둘 다, 보석 팩은 Play 단독(PAYMENT_COMPLIANCE 4.1)
+    expect(soldOn(IAP_BY_ID.starter_pack_v1, 'web')).toBe(true);
+    expect(soldOn(IAP_BY_ID.gems_300_v1, 'web')).toBe(false);
     expect(IAP_BY_ID.gems_300_v1.enabled).toBe(false);
     // 모든 상품의 권한 키와 보상 키가 유효(중복 id 없음)
     expect(new Set(IAP_PRODUCTS.map((p: any) => p.id)).size).toBe(IAP_PRODUCTS.length);
@@ -109,5 +111,17 @@ describe('영웅 상품 카탈로그', () => {
     expect([...e.heroes].sort()).toEqual(['knight', 'mage']);
     expect(e.adsRemoved).toBe(true);
     expect(summarizeEntitlements([], now).heroes).toEqual([]);
+  });
+});
+
+describe('고통 단계 장비 파워·전설 수련 정화', () => {
+  test('가져오기는 장비 tp와 전설 수련을 버린다(서버 명령 전, 조작 세이브 주입 방지)', () => {
+    const inventory = Object.keys(ITEM_BY_ID).slice(0, 3).map((id, i) => ({ uid: i + 1, id, enh: 0, tp: 50 }));
+    const forged = save({ inventory, invSeq: 4, legend: { version: 1, rank: 999, exp: 0, points: 999, nodes: {} } });
+    const r = run(forged);
+    expect(r.state.inventory.length).toBe(3);
+    for (const it of r.state.inventory) expect('tp' in it).toBe(false);
+    expect(r.state.legend.rank).toBe(0);
+    expect(r.state.legend.points).toBe(0);
   });
 });

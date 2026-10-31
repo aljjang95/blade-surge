@@ -7,7 +7,8 @@ import { EXPEDITION_DEPTHS, depthStage } from '../src/data/expedition-depths.js'
 test('lobby, gacha and all authored campaign regions resolve exact AudioSys paths', () => {
   expect(`/bgm/${musicForScene({scene:'lobby'})}.mp3`).toBe('/bgm/regions/lobby.mp3');
   expect(musicForScene({scene:'gacha'})).toBe('bgm_gacha');
-  const expected=['garden','forge','frost','tide','crown','homecoming'];
+  // 7장 종탑 도시는 전용 곡(REGION_CUE_PLAN)이 배송되기 전까지 서리 서고 곡을 대신 쓴다.
+  const expected=['garden','forge','frost','tide','crown','homecoming','frost'];
   for(const chapter of CHAPTERS) {
     expect(`/bgm/${musicForScene({stage:stageDef(chapter.id,1)})}.mp3`).toBe(`/bgm/regions/${expected[chapter.id-1]}.mp3`);
   }

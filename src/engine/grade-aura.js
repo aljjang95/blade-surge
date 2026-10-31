@@ -9,7 +9,9 @@ import { resolveHeroGrade, skillVfxKey } from './skill-vfx.js';
  */
 const RING_TEX = skillVfxKey('skill-rune-circle-gold'), AURA_TEX = skillVfxKey('aura-sssr');
 const GOLD = new THREE.Color(0xffd060);
-const SSR_OPACITY = 0.2, SSSR_RING_OPACITY = 0.5, SSSR_AURA_OPACITY = 0.55;
+const SSR_OPACITY = 0.2, SSSR_RING_OPACITY = 0.4, SSSR_AURA_OPACITY = 0.55;
+/** 발밑 등급 룬 원 지름. 2026-10-30 대표님 "식별 반경이 너무 커서 UI 가 보기 불편": 3.2(반지름 1.6, 몸 폭의 약 2배) → 2.1. */
+export const GRADE_RING_SIZE = 2.1;
 let sharedPlane = null, sharedPlaneUsers = 0;
 
 export class GradeAura {
@@ -24,7 +26,7 @@ export class GradeAura {
     sharedPlaneUsers++;
     const material = () => new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     this.group = new THREE.Group(); this.group.name = 'GradeAura'; this.group.visible = false;
-    this.ring = new THREE.Mesh(sharedPlane, material()); this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.09; this.ring.scale.set(3.2, 3.2, 1); this.ring.renderOrder = 7; this.ring.visible = false;
+    this.ring = new THREE.Mesh(sharedPlane, material()); this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.09; this.ring.scale.set(GRADE_RING_SIZE, GRADE_RING_SIZE, 1); this.ring.renderOrder = 7; this.ring.visible = false;
     // 몸 주변 오라는 카메라를 향하는 세로 판. 발밑에서 허리 높이까지만 올라 플레이 시야를 가리지 않는다.
     this.aura = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.aura.position.y = 1.15; this.aura.scale.set(2.4, 2.8, 1); this.aura.renderOrder = 6; this.aura.visible = false;

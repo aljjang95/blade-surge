@@ -10,6 +10,7 @@ import { readConquestOutcome } from './expedition-conquests.js';
 import { CITADEL_POTIONS } from '../data/citadel-shop.js';
 import { rosterOwns } from '../data/hero-roster.js';
 import { dungeonVisibility, regionDungeonState, visibleDungeonIds } from './region-dungeon-gate.js';
+import { recordTownRun } from './town-progress.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -178,6 +179,8 @@ export class ExpeditionEconomy {
       if (p.kind === 'dungeon') {
         refreshPeriods(this.eco.s.journey, Date.now());
         recordJourneyWin(this.eco.s.journey, { receiptId: `dungeon:${p.id}`, dungeonId: p.target, ...p.journeyPeriod });
+        // 마을 의뢰 · 이야기 진행. 정예 수는 결과 숫자가 아니라 전투 장부(ledger)에서 읽는다.
+        recordTownRun(this.eco.s.towns, { target: p.target, elites: ledger?.runeKills?.elite, treasureRooms: result.treasureRooms, kills: result.kills });
         if (p.riftId) {
           const bonus = this.reward(riftBonus(p.target)); rewards.gold += bonus.gold;
           for (const [key, count] of Object.entries(bonus.materials)) rewards.materials[key] = (rewards.materials[key] || 0) + count;
@@ -283,7 +286,8 @@ export class ExpeditionEconomy {
     return this.transact(() => {
       this.eco.s.gold -= r.gold; for (const [k, v] of Object.entries(r.materials)) this.s.materials[k] -= v;
       let item = null;
-      if (r.itemId) { const def = ITEM_BY_ID[r.itemId]; item = this.eco.addItem(def.rarity, def.slot); item.id = def.id; }
+      // 제작 장비는 il 을 생략해 가챠·보상처럼 지금까지 깬 관문의 장비 레벨을 받는다(economy.pushItem).
+      if (r.itemId) { const def = ITEM_BY_ID[r.itemId]; item = this.eco.addItem(def.rarity, def.slot, undefined, 0, this.eco.s.selected); item.id = def.id; }
       if (r.consumables) this.reward({ consumables: r.consumables });
       this.s.stats.crafts++; return { ok: true, item, consumables: r.consumables || {} };
     });

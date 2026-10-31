@@ -281,6 +281,8 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
   #tab-stage .campaign-sortie .sortie-info { flex-basis: 100%; }
   #tab-stage .campaign-sortie .row { flex: 1 1 100%; }
 }
+#tab-stage .campaign-sortie .sortie-info small.boss-shortcut-rule { color: #d9b8c0; }
+#tab-stage .campaign-sortie .sortie-info small.boss-shortcut-rule.ready { color: #ffd36a; font-weight: 800; text-shadow: 0 0 6px #ff9d2e66; }
 /* 낮은 가로 화면: 머리말·칩·소개를 줄여 스테이지와 출격 버튼이 첫 화면에 오게 한다 */
 @media (orientation: landscape) and (max-height: 500px) {
   #tab-stage .campaign-heading { padding: 4px 14px 4px; min-height: 0; }

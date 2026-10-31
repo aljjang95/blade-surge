@@ -22,7 +22,7 @@ test('빈 슬롯이나 더 약한 장비 대비: 높은 등급은 장착 추천,
   eco.equip(hero, low.uid);
   const up = compareLoot(eco, hero, high.uid)!;
   expect(up.verdict).toBe('better'); expect(up.powerDelta).toBeGreaterThan(0);
-  expect(compareText(up).short).toBe('▲ 장착 추천');
+  expect(compareText(up).short).toBe('▲ 더 좋음 +' + up.powerDelta.toLocaleString('ko-KR'));
   expect(compareText(up).long).toContain('전투력 +');
   eco.equip(hero, high.uid);
   expect(compareLoot(eco, hero, high.uid)!.verdict).toBe('equipped');

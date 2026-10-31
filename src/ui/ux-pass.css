@@ -205,7 +205,11 @@
 .is-actions .btn { min-height: 48px; }
 .is-actions #i-sell { flex: 0 0 auto; min-width: 72px; padding-inline: 14px; font-size: 14px; }
 .is-actions #i-eq { flex: 1 1 auto; font-size: 17px; }
-@media (max-width: 600px) { .is-body { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .is-body { grid-template-columns: minmax(0, 1fr); }
+  /* 한 줄 배치에서는 강화 칸(강화하기 버튼)을 비교 위로 올려, 스크롤 없이 첫 화면에서 보이고 하단 고정 버튼 줄에 가려지지 않게 한다. */
+  .is-body > .is-side, .is-body > .is-enh { order: -1; }
+}
 
 /* =====================================================================
    4) 출격 메뉴: 던전 게이트가 첫 화면. 정비 버튼은 자주 쓰는 3개 + 더보기.
@@ -363,3 +367,18 @@
   .citadel-hub-ui .citadel-hub-near-name { font-size: 14px; line-height: 1.25; }
   .citadel-hub-ui[data-near-collapsed="false"] .citadel-hub-near-detail { font-size: 11px; line-height: 1.4; }
 }
+
+/* 가방: 더 좋은 장비 표시·한 번에 장착·가방 정리 (2026-10-28) */
+.bag-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.bag-tools .btn { min-height: 44px; flex: 1 1 auto; }
+.bag-tools .btn small { font-size: 12px; opacity: .85; font-weight: 700; margin-left: 4px; }
+.bag-best-none { flex: 1 1 160px; min-width: 0; font-size: 12px; opacity: .75; }
+.bag-clean { display: grid; gap: 6px; margin-bottom: 8px; padding: 10px; border: 1px solid rgba(255, 216, 112, .45); border-radius: 10px; background: rgba(6, 30, 50, .72); font-size: 13px; line-height: 1.45; }
+.bag-clean p { margin: 0; }
+.bag-clean-e { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; }
+.bag-clean-e input { width: 20px; height: 20px; }
+.bag-clean-warn { color: #ffb4a8; font-weight: 800; }
+.bag-clean-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.bag-clean-btns .btn { flex: 1 1 120px; min-height: 44px; }
+.bag-item .bag-up { position: absolute; right: 3px; bottom: 3px; max-width: 70%; padding: 0 5px; border-radius: 6px; background: #3fdc7a; color: #052a14; font-style: normal; font-size: 12px; font-weight: 900; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+@media (max-width: 400px) { .bag-clean { padding: 8px; } }

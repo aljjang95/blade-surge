@@ -17,6 +17,8 @@ import { stageDef, ENEMIES, CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/sta
 import { HEROES, HERO_ORDER, levelGold } from '../src/data/heroes.js';
 import { Economy, gachaChances } from '../src/game/economy.js';
 import { Floor, ROOM_TYPE } from '../src/game/world.js';
+import { bossRoutePath } from '../src/game/dungeon-route.js';
+import { routeObjectiveForStage } from '../src/data/route-objectives.js';
 import { monsterXp } from '../src/game/rpg-core.js';
 
 export const TOTAL_STAGES = CHAPTERS.length * STAGES_PER_CHAPTER;
@@ -108,15 +110,20 @@ export function roomEntries(stage, room) {
 
 const stageCache = new Map();
 /** 스테이지(idx 1..60) 1회를 깼을 때의 기댓값. fullClear=true 면 선택 방을 모두 정리해 전체 정화 보너스를 받는다고 본다. */
-export function perRun(idx, { fullClear = true } = {}) {
-  const key = idx + (fullClear ? 'f' : 'n');
+export function perRun(idx, { fullClear = true, route = 'full' } = {}) {
+  const direct = route === 'direct';
+  const key = idx + (fullClear ? 'f' : 'n') + (direct ? 'd' : '');
   if (stageCache.has(key)) return stageCache.get(key);
   const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1;
   const stage = stageDef(ch, st), floor = new Floor(stage.idx, stage.chapter.theme, undefined, stage.dungeon?.layout);
   const out = { idx, code: stage.code, ch, st, energy: stage.energy, boss: stage.boss, bp: stage.rewards.bp, firstGems: stage.rewards.firstGems,
     milestoneTickets: st % 5 === 0 ? (st % 10 === 0 ? 2 : 1) : 0, bossTicket: stage.boss ? 0.3 : 0,
     kills: { normal: 0, elite: 0, boss: 0 }, combatExp: 0, stageGold: stage.rewards.gold + (fullClear ? Math.floor(stage.rewards.gold * 0.4) : 0), fieldGold: 0, heroShards: 0, transcendStones: 0 };
-  for (const room of floor.rooms) for (const { type, w } of roomEntries(stage, room)) {
+  // 보스 직행 동선(src/game/dungeon-route.js): 시작 방 → 최단 경로 위 방 → 보스 방만 정화한다.
+  // 장치 목표 관문(route-objectives)은 전부 정화가 계약이라 직행이 없다(battle-base routeEarlyAllowed).
+  const onRoute = direct && !routeObjectiveForStage(stage) ? new Set(bossRoutePath(floor, floor.startRoom.id)) : null;
+  out.rooms = onRoute ? onRoute.size - 1 : floor.rooms.length - 1; out.totalRooms = floor.rooms.length - 1;
+  for (const room of floor.rooms) if (!onRoute || onRoute.has(room.id)) for (const { type, w } of roomEntries(stage, room)) {
     const def = ENEMIES[type]; if (!def) throw new Error('알 수 없는 적 ' + type);
     const rank = rankOf(def), table = lootTable(ch, rank);
     out.kills[rank] += w;
@@ -193,7 +200,7 @@ export function simulate(options = {}) {
   for (const m of start.mail) addReward(w, m.rewards);                   // 환영 우편은 첫날 수령
   const sku = o.dayOneSku ? SKUS.find(s => s.id === o.dayOneSku) : null;
   if (o.dayOneSku && !sku) throw new RangeError('알 수 없는 상품 ' + o.dayOneSku);
-  const gift = o.dayOneRewards || (sku?.gems ? { gems: sku.gems + sku.bonus } : sku?.rewards) || {};
+  const gift = o.dayOneRewards || (sku?.gems ? { gems: sku.gems + (sku.bonus ?? 0) } : sku?.rewards) || {};
   addReward(w, gift);
   let grade = heroBaseGrade(def), bank = ENERGY.max, passXp = 0, passClaimed = 0, kills = 0, runsTotal = 0, cleared = 0, dailyIdx = 0;
   const claimedQuests = new Set(), frontierCap = o.strategy === 'ch1' ? o.ch1FarmIdx : TOTAL_STAGES;

@@ -1,0 +1,45 @@
+# 출시 체크리스트 — 웹·Google Play (2026-10-30)
+
+표기: ✅ 끝남(증거 있음) · 🟡 준비됨, 대표님 확인·집행 대기 · ⛔ 미완 · 🔒 게이트(앞 조건 전에는 열지 않음)
+
+## 공통 게이트
+- 🔒 **G1 등급 결정 전 결제·가격 공개 금지.** 웹 `WEB_BILLING_ENABLED`, Play `IAP_ENABLED`, Play 프로덕션 트랙, 가격 공개, 유료 광고는 등급분류번호(웹, GCRB 결정서)와 IARC 결과(Play)를 받은 뒤에만. 근거 [RATING_DECISION.md](RATING_DECISION.md) 6장(법 제32조).
+- 🔒 **G2 결제 개방 조건**은 [../BM_HANDOFF.md](../BM_HANDOFF.md) #1~#12 그대로(D1 0003·0004, 테스트 결제 왕복, RTDN, V1 보호).
+
+## 웹 (blade.tllhouse.com)
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 등급 판정(15세 신청) | ✅ | RATING_DECISION.md |
+| GCRB 신청서·내용설명서·내용정보 | 🟡 | GCRB_APPLICATION.md · 제출 패키지 gcrb-package/ — 로그인·실명확인·수수료(추정 72만~108만 원, 감면 시)·제출은 대표님 |
+| 담당 기관 확인 | ✅ | 웹 PC 온라인=GCRB (RATING_DECISION 5장) |
+| 플레이 영상 2~3분 | 🟡 | 1차 녹화본(인계 문서 경로). 흡혈 4세트 장면은 심사용 계정 실제 플레이로 보강 필요 |
+| 시작 화면 등급 표시(우측 상단) | ✅ 코드 | 결정 전엔 '게임물 등급분류 신청 준비 중', 원스토어 IARC 결과가 오면 `src/data/game-rating.js`의 `WEB_ONESTORE_IARC` 한 곳 수정(RATING_DECISION 9장); `/game-info.html` 재생성. 설정 화면에서도 확인(1시간 표시 대신 '요청 시 확인') |
+| 이용약관·청약철회·개인정보·고객센터·확률 | ✅ | `public/*.html`, 부팅·상점·설정·결제창 링크 |
+| 사업자 정보(상호·대표자·등록번호·주소·통신판매업·연락처) | ✅ | support·terms·odds 하단 |
+| 확률 공개 | ✅ | ODDS_AUDIT.md |
+| 게임시간 선택제 접수 창구 | ✅ 이번 추가 | support.html (이메일 접수) |
+| 법정대리인 취소권 안내 | ✅ | terms·refund |
+| 회원가입 본인인증·청소년 법정대리인 동의(법 제12조의3 1·2호) | ⛔ | 지금은 게스트·Google 연동만. **결제 개방 전 결정 필요**: ① 웹 결제를 성인 본인인증(포트원 본인인증) 뒤에만 허용 ② 2026 시행령 완화 여부 확인. 추천은 ① |
+| 채팅 금칙어·신고·차단 | ✅ | 이번에 게임 금칙어 36개 추가 |
+| 결제 개방 | 🔒 | G1·G2 |
+| 텔레메트리(퍼널) | ✅ | `worker` 퍼널 업로드·`tools/funnel-report.mjs`(BM_HANDOFF) |
+
+## Google Play (`com.theluxurylord.bladesurge`)
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| IARC 콘텐츠 등급 설문 | 🟡 | IARC_ANSWERS.md — 대표님 Play Console 입력·제출(약 5분) |
+| 스토어 설명 '확률형 아이템 포함' | ✅ | listing.ko-KR / en-US (Play 반영은 다음 리스팅 업로드 때) |
+| 스토어 미디어(아이콘·피처·스크린샷) | ✅ | `store/googleplay/` |
+| 개인정보처리방침 URL | ✅ | https://blade.tllhouse.com/privacy.html |
+| 데이터 보안 양식·광고 ID·타겟층(만 13세 이상) | ⛔ 확인 필요 | Play Console 앱 콘텐츠 — 대표님 세션 필요 |
+| 인앱 상품 등록 | 🔒 | BM_HANDOFF #3(대표님 확인 후) |
+| 내부 테스트 AAB(versionCode ≥3) | ⛔ | 클라우드 Gradle 429 막힘 이력, PC 빌드 대안(BM_HANDOFF) |
+| 프로덕션 출시 | 🔒 | G1 + 대표님 출시 요청 + PC 승인(75-cloud-session) |
+
+## 대표님 할 일 (순서)
+1. GCRB(gcrb.or.kr) 회원가입·로그인(실명확인·휴대폰 인증) — 클라우드 데스크톱에서 하면 이후 입력은 에이전트가 대행(gcrb-package/FORM_FILL.md).
+2. 중소기업 감면 확인(상시고용·매출 서류 2종) → 등급분류 신청: 등록증 3종 첨부, 패키지 PDF·영상 업로드 → 수수료 확인·납부 → 제출.
+3. Play Console → 콘텐츠 등급 → IARC_ANSWERS.md 대로 입력 → 제출.
+4. 결정서가 오면 등급분류번호를 알려 주시거나 문서를 Drive에 두면 에이전트가 표시 반영·배포.

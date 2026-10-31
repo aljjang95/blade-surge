@@ -4,7 +4,7 @@ import { HEROES } from '../data/heroes.js';
 import { monsterRosterEntry } from '../data/monster-roster.js';
 import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v6.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
-import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
+import FOX_BODY_REVISION from '../data/fox-body-revision-v2.json';
 import HIGHER_BODY_REVISIONS_V1 from '../data/higher-body-revisions-v1.json';
 import RANGER_T2_BODY_REVISION_V2 from '../data/ranger-t2-body-revision-v2.json';
 import RANGER_T3_BODY_REVISION_V2 from '../data/ranger-t3-body-revision-v2.json';
@@ -27,7 +27,7 @@ export { LIBRARY_SCHEMA, triangleLimit };
 export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v6';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
-export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
+export const FOX_BODY_REVISION_ID = 'fox-body-fit-v2';
 // 자산별 출력 이름을 코드에서 고정한다. 초안은 원본을 고르고 실제 생성·검증된 기록만 활성화한다.
 const HIGHER_BODY_TARGETS = Object.freeze([
   // 2·3단계 궁수는 v2(앞머리를 가른 Tripo 몸 재결합, ranger-t{2,3}-body-revision-v2.json)가 v1 을 대신한다. v1 기록·파일은 이력으로 남는다.
@@ -145,7 +145,7 @@ export function validateT4BodyRevisions(value) {
 // (t4-body-revisions-v1) 계약은 그대로 두고, 같은 검사(원본 SHA = manifest, 고정 출력 경로, GENERATED 실제 SHA, 재결합 base = 1단계
 // 클립 원본)를 별도 기록·목표로 얹는다.
 const T5_AVATAR_BODY_TARGETS = Object.freeze([
-  Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v1', prefix: '/models/heroes-next/rogue-vampire-body-fit-v1' }),
+  Object.freeze({ asset: 'avatar_rogue_vampire', id: 'rogue-vampire-body-fit-v2', prefix: '/models/heroes-next/rogue-vampire-body-fit-v2' }),
   Object.freeze({ asset: 'avatar_ranger_blackcat', id: 'ranger-blackcat-body-fit-v1', prefix: '/models/heroes-next/ranger-blackcat-body-fit-v1' }),
 ]);
 
@@ -338,6 +338,10 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
       cache.set(asset.id, promise);
       return promise;
     },
+    /** 캐시에 이미 받은(또는 받는 중인) 자산인지. */
+    has(assetId) { return cache.has(assetId); },
+    /** 캐시에서 뺀다. 다음 load 가 새로 받는다(호출부가 GPU 자원을 먼저 해제한다). */
+    forget(assetId) { return cache.delete(assetId); },
   };
 }
 

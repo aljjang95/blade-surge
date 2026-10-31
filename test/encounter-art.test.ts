@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {ENCOUNTER_ART,MOB_ART} from '../src/data/encounter-art.js';
+import {ENCOUNTER_ART,ENCOUNTER_ART_REGIONS,MOB_ART} from '../src/data/encounter-art.js';
 import {ENEMIES,CHAPTERS,stageDef} from '../src/data/stages.js';
 import {ARENA_RIVALS} from '../src/data/expansion.js';
 import {buildExpeditionStage} from '../src/game/expedition-combat.js';
@@ -10,7 +10,7 @@ const enemyById=ENEMIES as unknown as Record<string,{portrait:string}>;
 
 test('all campaign encounter and arena identities retain distinct portrait files',()=>{
   const paths=Object.values(ENCOUNTER_ART);
-  const expected=6+11+CHAPTERS.length*4;
+  const expected=6+11+ENCOUNTER_ART_REGIONS.length*4; // 초상이 아직 없는 지역(7장 종탑 도시)은 조우 초상 목록에 없다
   expect(paths).toHaveLength(expected);expect(new Set(paths).size).toBe(expected);
   const hashes=paths.map(path=>createHash('sha256').update(readFileSync(`public${path}`)).digest('hex'));
   expect(new Set(hashes).size).toBe(expected);

@@ -6,6 +6,7 @@ import { LootAuras, LOOT_IMPACT_TIME } from './loot-auras.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { lootTable, pickLootRarity } from '../data/loot-tables.js';
 import { killDrops, grantLootItem } from '../shared/settlement.js';
+import { tormentTierOf } from './difficulty.js';
 
 // 등급별 대기 반짝임(기존 glow 파티클 풀). [간격(초), 크기, 수명]. 저화질은 간격 2배 · S 생략.
 const LOOT_SPARKLE = Object.freeze({ S: [1.1, .2, .8], E: [.5, .24, .9], U: [.3, .27, 1], L: [.17, .3, 1.1] });
@@ -16,7 +17,7 @@ const LAND_SQUASH_TIME = .32;
 const hash01 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // Free AI practice pays its catalog reward only; it never creates field loot.
-export const fieldDropsAllowed = stage => !stage?.party && stage?.expedition?.kind !== 'arena';
+export const fieldDropsAllowed = stage => !stage?.party && !stage?.bounty && stage?.expedition?.kind !== 'arena';
 
 /**
  * 필드 드랍: 코인/장비/강화석이 3D 로 튀어나오고, 플레이어가 가까이 가면 자석처럼 빨려온다.
@@ -59,6 +60,8 @@ export class DropSystem {
   /** kind: 'gold' | 'stone' | 'item' */
   spawn(pos, kind, payload, { count = 1, spread = 1 } = {}) {
     if (!fieldDropsAllowed(this.game.stage)) return;
+    // 장비는 떨어지는 순간 이미 인벤토리에 들어 있다(fieldDrop·grantLootItem 은 emit 하지 않음). 전투 가방 배지·시트만 따로 갱신한다.
+    if (kind === 'item') this.game.ui?.bag?.schedule?.();
     for (let i = 0; i < count; i++) {
       let mesh;
       if (kind === 'gold') { mesh = new THREE.Mesh(this._geoCoin, this._matCoin); mesh.scale.setScalar(1.1); }
@@ -202,7 +205,7 @@ export class DropSystem {
     } else {
       this.loot.push(it.payload);
       const def = ITEM_BY_ID[it.payload.id];
-      g.ui.lootPopup(def, it.payload.rarity);
+      g.ui.lootPopup(def, it.payload.rarity, it.payload);
       audio.loot(it.payload.rarity);
       g.fx.burst(pos, RARITY_COLOR[it.payload.rarity], { n: 14, speed: 6, size: 0.35, life: 0.5 });
       this._pickupFx(pos, it.payload.rarity);
@@ -227,7 +230,8 @@ export class DropSystem {
   onKill(enemy, stage) {
     if (!fieldDropsAllowed(stage) || !fieldDropsAllowed(this.game.stage)) return;
     // 무리 졸개는 몰이 밀도만 더한다. 보상은 기존 명단·방 정화에서만 나온다.
-    if (enemy.packFollower) return;
+    // 잔향 부활·분열 분신(noLoot)도 같다: 서버 정산 처치 상한(plausibility)에 넣지 않는다.
+    if (enemy.packFollower || enemy.noLoot) return;
     this.fieldLedger();
     const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
     // 서버 런 티켓(MMO P1)이 있으면 서버가 정산 때 같은 lootSeed로 재생성할 드랍을 그대로 보여 준다.
@@ -265,10 +269,13 @@ export class DropSystem {
   onSeededKill(enemy, stage, rank) {
     const counts = enemy.summoned ? (this.summonedKills ||= { normal: 0, elite: 0, boss: 0 }) : (this.killCounts ||= { normal: 0, elite: 0, boss: 0 });
     const index = counts[rank]++, pos = enemy.pos.clone(), eco = this.game.app?.eco;
+    // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md): 정산 사실 species. 서버가 관문 종 풀·처치 합으로 다시 자른다.
+    const species = enemy.speciesId || enemy.def?.id;
+    if (typeof species === 'string') { const k = (this.speciesKills ||= Object.create(null)); k[species] = (k[species] || 0) + 1; }
     for (const d of killDrops(stage, this.game.v1Run.lootSeed, rank, index, { summoned: !!enemy.summoned })) {
       if (d.kind === 'gold') this.spawn(pos, 'gold', d.amount, { count: d.count, spread: rank === 'boss' ? 2 : 1 });
       else if (d.kind === 'material') this.spawn(pos, 'material', { id: d.id, n: d.n });
-      else if (d.kind === 'item') { if (!eco) continue; const inst = grantLootItem(eco, d); eco.save(); this.spawn(pos, 'item', { ...inst, rarity: d.rarity }, { count: 1, spread: 1.4 }); }
+      else if (d.kind === 'item') { if (!eco) continue; const inst = grantLootItem(eco, d, tormentTierOf(stage.difficultyId)); eco.save(); this.spawn(pos, 'item', { ...inst, rarity: d.rarity }, { count: 1, spread: 1.4 }); }
       else this.spawn(pos, d.kind, d.n, { count: 1, spread: d.kind === 'frag' ? 1.5 : 1 });
     }
   }
@@ -281,6 +288,6 @@ export class DropSystem {
     while (this.items.length) this._remove(this.items.length - 1);
     this.auras.update(0);
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
-    this.killCounts = null; this.summonedKills = null;
+    this.killCounts = null; this.summonedKills = null; this.speciesKills = null;
   }
 }

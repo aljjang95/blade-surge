@@ -13,11 +13,11 @@ export const DB = 'blade-surge-commerce-production';
 export const WORKER = 'blade-surge';
 export const PC_DIR = 'C:\\Work\\tasks\\blade-art-deploy';
 export const PERCENT_STEPS = [0, 5, 25, 100];
-/** 0001~0004 적용 뒤 D1에 있어야 하는 표(sqlite_master 기준). 마이그레이션 파일과의 일치는 test/v1-rollout.test.ts가 고정한다. */
+/** 0001~0005 적용 뒤 D1에 있어야 하는 표(sqlite_master 기준). 마이그레이션 파일과의 일치는 test/v1-rollout.test.ts가 고정한다. */
 export const EXPECTED_TABLES = Object.freeze([
-  'account_archive', 'account_docs', 'account_keys', 'account_links', 'accounts', 'audit_flags',
+  'abuse_tombstones', 'account_archive', 'account_docs', 'account_flags', 'account_keys', 'account_links', 'accounts', 'audit_flags',
   'funnel_active', 'funnel_milestones', 'iap_debt', 'iap_entitlements', 'iap_grants', 'iap_meta', 'iap_obf', 'iap_purchases',
-  'iap_refund_guard', 'iap_rtdn', 'iap_web_payments', 'legacy_saves', 'mail', 'parity_log', 'run_tickets', 'sanctions',
+  'iap_refund_guard', 'iap_rtdn', 'iap_web_pay_methods', 'iap_web_payments', 'legacy_saves', 'mail', 'oauth_states', 'parity_log', 'run_tickets', 'sanctions',
   'v1_rate', 'v1_schema', 'wallet_ledger',
 ]);
 
@@ -293,7 +293,8 @@ async function main(argv) {
 export function migrationTables(dir = fileURLToPath(new URL('../worker/v1/migrations/', import.meta.url))) {
   const names = new Set();
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.sql'))) {
-    for (const m of readFileSync(dir + f, 'utf8').matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)) names.add(m[1]);
+    // 표 재생성용 임시 표(<이름>_vN → RENAME)는 최종 표 목록에서 뺀다.
+    for (const m of readFileSync(dir + f, 'utf8').matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)) if (!/_v\d+$/.test(m[1])) names.add(m[1]);
   }
   return [...names].sort();
 }

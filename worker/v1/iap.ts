@@ -10,35 +10,43 @@ import { loadAccountDoc } from './cmd';
 import { docOf, loadEconomy } from './state';
 import { randomHex, sha256Hex } from './token';
 import { createPlayApi, type PlayApi, type PlayEnv } from './play';
+import { createOneApi, oneConfigured, ONE_MARKETS, type OneApi, type OneEnv } from './onestore';
 import { recordServerMilestone } from './funnel';
 import { heroIdFromEntitlement } from '../../src/data/hero-roster.js';
 import { HERO_ORDER } from '../../src/data/heroes.js';
+import { AVATAR_PREMIUM_BY_HERO } from '../../src/data/avatars.js';
 import {
-  IAP_BY_ID, IAP_CATALOG_VERSION, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
+  IAP_BY_ID, IAP_CATALOG_VERSION, heroIdFromAvatarKey, IAP_PRODUCTS, IAP_REWARD_FIELD, IAP_REWARD_KEYS, entitlementEnds, entitlementKeys, sellableProduct, verifiableProduct, summarizeEntitlements, soldOn,
   type IapProduct,
 } from '../../src/shared/iap-catalog.js';
 
 export const IAP_SCHEMA_VERSION = 3;
-/** 웹 결제(포트원) 표가 있는 스키마 버전(마이그레이션 0004). Play 흐름은 3이면 돈다. */
-export const WEB_SCHEMA_VERSION = 4;
+/** 웹 결제(포트원) 표가 있는 스키마 버전(0004 결제 원장 + 0008 결제수단 대조). Play 흐름은 3이면 돈다. */
+export const WEB_SCHEMA_VERSION = 8;
 const HERO_IDS: readonly string[] = HERO_ORDER;
 const TOKEN = /^[A-Za-z0-9._:-]{10,4096}$/;
 const DAY = 86400000;
 const ABUSE_WINDOW = 90 * DAY;
 const HOLD_MS = 30 * DAY;
 
-export interface IapEnv extends PlayEnv {
+export interface IapEnv extends PlayEnv, OneEnv {
   IAP_ENABLED?: string;
   /** 라이선스 테스터 구매(testPurchaseContext) 허용. 내부 테스트 트랙에서만 'true'. */
   IAP_ALLOW_TEST?: string;
   RTDN_AUDIENCE?: string;
   RTDN_PUSH_SUBJECT?: string;
 }
-export interface IapDeps { playApi?: PlayApi }
+/** avatarPremium: 풀셋 상품이 지급할 아바타 표(영웅 id → 아바타 id). 시험에서만 바꾼다(운영은 avatars.js 의 AVATAR_PREMIUM_BY_HERO). */
+export interface IapDeps { playApi?: PlayApi; oneApi?: OneApi; avatarPremium?: Readonly<Record<string, string>> }
+/** 앱 결제 채널. 'play' = Google Play Billing, 'onestore' = 원스토어 IAP(일회성 상품만). */
+export type AppChannel = 'play' | 'onestore';
+const appChannel = (v: unknown): AppChannel => { if (v === undefined || v === 'play') return 'play'; if (v === 'onestore') return 'onestore'; return fail(400, 'invalid-channel'); };
 type IapCtx = Ctx & { deps: Ctx['deps'] & IapDeps };
 
 const iapEnv = (c: Ctx) => c.env as unknown as IapEnv;
 export const tokenHash = (token: string) => sha256Hex('play:' + token);
+/** 원스토어 구매 토큰의 원장 키. Play·웹과 접두사가 달라 서로 충돌하지 않는다. */
+export const oneTokenHash = (token: string) => sha256Hex('onestore:' + token);
 /** 웹 결제(포트원) 지급의 원장 키. Play 토큰 해시와 접두사가 달라 서로 충돌하지 않는다. */
 export const webTokenHash = (paymentId: string) => sha256Hex('portone:' + paymentId);
 
@@ -50,16 +58,21 @@ export async function iapSchemaReady(db: D1Database): Promise<boolean> {
 }
 
 /** 결제 기능이 닫힌 이유(null = 열림). 설정·스키마·자격 증명 바인딩 순으로 fail-closed. */
-export async function billingReason(c: Ctx): Promise<string | null> {
+export async function billingReason(c: Ctx, channel: AppChannel = 'play'): Promise<string | null> {
   const env = iapEnv(c);
   if (env.IAP_ENABLED !== 'true') return 'billing-disabled';
   if (!await iapSchemaReady(c.db)) return 'iap-schema-missing';
+  if (channel === 'onestore') return oneConfigured(env) || (c as IapCtx).deps.oneApi ? null : 'credential-route-unavailable';
   if (!env.PLAY_SA_JSON && !(c as IapCtx).deps.playApi) return 'credential-route-unavailable';
   return null;
 }
 function play(c: Ctx): PlayApi {
   const deps = (c as IapCtx).deps;
   return deps.playApi ?? createPlayApi(iapEnv(c), undefined, () => c.now);
+}
+function one(c: Ctx): OneApi {
+  const deps = (c as IapCtx).deps;
+  return deps.oneApi ?? createOneApi(iapEnv(c), undefined, () => c.now);
 }
 
 // ── 권한 요약 ─────────────────────────────────────────────
@@ -97,19 +110,48 @@ export async function iapAllowance(db: D1Database, accountId: string): Promise<R
 }
 
 // ── 공개 API ─────────────────────────────────────────────
-export async function catalog(c: Ctx, auth: Authed) {
-  const reason = await billingReason(c);
+export async function catalog(c: Ctx, auth: Authed, channelParam?: string | null) {
+  const channel = appChannel(channelParam ?? undefined);
+  const reason = await billingReason(c, channel);
   const owned = reason ? new Set<string>() : await ownedProducts(c.db, auth.account.account_id);
   const activeKeys = reason ? new Set<string>() : await activeEntitlementKeys(c.db, auth.account.account_id, c.now);
+  // 월정액 권한('monthly')이 살아 있으면 월정액 계열(Play 구독·웹 30일 이용권)은 다시 살 수 없다(intent와 같은 기준).
+  const monthlyActive = activeKeys.has('monthly');
   return {
     version: IAP_CATALOG_VERSION, billing: !reason, ...(reason ? { reason } : {}),
     products: IAP_PRODUCTS.filter((p) => p.enabled).map((p) => ({
       id: p.id, type: p.type, playType: p.type === 'subscription' ? 'subs' : 'inapp', basePlanId: p.basePlanId ?? null,
       priceKRW: p.priceKRW, title: p.title, description: p.description, shopSku: p.shopSku, once: !!p.once, channels: p.channels ?? ['play'],
-      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys),
+      eligible: !reason && !(p.once && owned.has(p.id)) && !(p.type === 'non_consumable' && owned.has(p.id)) && !allKeysActive(p, activeKeys)
+        && !(monthlyActive && grantsMonthly(p)),
     })),
     serverTime: c.now,
   };
+}
+
+/**
+ * 아바타 풀셋 상품은 결제 전에 지급 가능 여부를 서버가 먼저 확인한다(자산 미준비·영웅 미소유면 팔지 않는다).
+ * 결제 뒤 지급 불가가 되면 grantOnce 가 확정 없이 'undeliverable'로 돌리므로, 돈이 나가기 전에 막는 것이 정상 경로다.
+ */
+export async function assertAvatarFullsetDeliverable(c: Ctx, accountId: string, product: IapProduct): Promise<void> {
+  const heroIds = entitlementKeys(product).map((k) => heroIdFromAvatarKey(k)).filter((h): h is string => !!h);
+  if (!heroIds.length) return;
+  const eco = loadEconomy((await loadAccountDoc(c.db, accountId)).state, { now: c.now });
+  const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+  // 보유 영웅 확인은 서버 권한을 얹은 뒤의 상태로 한다(영웅 소유의 정본은 권한 표).
+  setRosterPaid(eco.s, (await entitlementsOf(c.db, accountId, c.now)).heroes);
+  for (const heroId of heroIds) {
+    const avatarId = premium[heroId];
+    if (!avatarId) fail(409, 'not-eligible');
+    // 미리보기: 실제 문서는 저장하지 않는다(loadEconomy 결과는 버린다). 이미 소유한 아바타도 결제 전에 막는다.
+    const r = eco.grantAvatarFullset(heroId, { avatarId });
+    if (!r.ok || r.already) fail(409, 'not-eligible');
+  }
+}
+
+/** 월정액 권한을 주는 상품인가(Play 구독·웹 30일 이용권). 이용 중 중복 구매를 막는다. */
+export function grantsMonthly(product: IapProduct): boolean {
+  return entitlementKeys(product).includes('monthly');
 }
 
 /** 지금 유효한 권한 키 집합(철회·만료 제외). */
@@ -123,7 +165,7 @@ export function allKeysActive(product: IapProduct, active: Set<string>): boolean
   return product.type === 'non_consumable' && keys.length > 0 && keys.every((k) => active.has(k));
 }
 
-async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
+export async function ownedProducts(db: D1Database, accountId: string): Promise<Set<string>> {
   const rows = await db.prepare("SELECT DISTINCT product_id FROM iap_grants WHERE account_id = ? AND reversed_at IS NULL").bind(accountId).all<{ product_id: string }>();
   return new Set((rows.results ?? []).map((r) => r.product_id));
 }
@@ -138,24 +180,28 @@ async function obfuscatedId(db: D1Database, accountId: string, now: number, crea
 
 /** 결제 시작 전: 상품·자격 확인 후 Play 결제에 실을 obfuscatedAccountId를 준다. 이 값 없이 산 구매는 지급하지 않는다. */
 export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['productId']);
-  const reason = await billingReason(c);
+  onlyKeys(body, ['productId', 'channel'], ['productId']);
+  const channel = appChannel(body.channel);
+  const reason = await billingReason(c, channel);
   if (reason) fail(503, reason);
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
   // 영웅 상품(권한 hero:*)은 서버 권위 계정에게만 판다. 다른 상품은 기존 동작 그대로.
-  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k))) fail(403, 'server-authority-required');
+  if (auth.account.authority !== 'server' && entitlementKeys(product).some((k) => heroIdFromEntitlement(k) || heroIdFromAvatarKey(k))) fail(403, 'server-authority-required');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
   const owned = await ownedProducts(c.db, accountId);
   if ((product.once || product.type === 'non_consumable') && owned.has(product.id)) fail(409, 'not-eligible');
-  if (!soldOn(product, 'play')) fail(400, 'unknown-product');
+  if (!soldOn(product, channel)) fail(400, 'unknown-product');
+  // 원스토어는 일회성 상품만 판다(정기 결제는 Play 전용).
+  if (channel === 'onestore' && product.type === 'subscription') fail(400, 'unknown-product');
   if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
-  if (product.type === 'subscription') {
+  if (grantsMonthly(product)) {
     const e = await entitlementsOf(c.db, accountId, c.now);
     if (e.monthlyUntil > c.now) fail(409, 'already-subscribed');
   }
+  await assertAvatarFullsetDeliverable(c, accountId, product);
   const obf = await obfuscatedId(c.db, accountId, c.now, true);
   if (!obf) fail(503, 'unavailable');
   await recordServerMilestone(c.db, accountId, 'purchase_start', c.now);
@@ -164,14 +210,23 @@ export async function intent(c: Ctx, auth: Authed, body: Record<string, unknown>
 }
 
 export async function verify(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['productId', 'purchaseToken']);
-  const reason = await billingReason(c);
+  onlyKeys(body, ['productId', 'purchaseToken', 'channel', 'marketCode'], ['productId', 'purchaseToken']);
+  const channel = appChannel(body.channel);
+  const reason = await billingReason(c, channel);
   if (reason) fail(503, reason);
   // 판매를 내린 상품(gate gacha-only)도 이미 결제된 영수증은 검증·지급·acknowledge 한다(기존 구매 보존).
   const product = isId(body.productId, 64) ? verifiableProduct(body.productId) : null;
   if (!product) fail(400, 'unknown-product');
   if (typeof body.purchaseToken !== 'string' || !TOKEN.test(body.purchaseToken)) fail(400, 'purchase-token');
-  const result = await processPurchase(c, product, body.purchaseToken, { accountId: auth.account.account_id });
+  let result: Outcome;
+  if (channel === 'onestore') {
+    const market = body.marketCode ?? 'MKT_ONE';
+    if (typeof market !== 'string' || !ONE_MARKETS.includes(market)) fail(400, 'market-code');
+    result = await processOnePurchase(c, product, body.purchaseToken, market, { accountId: auth.account.account_id });
+  } else {
+    if (body.marketCode !== undefined) fail(400, 'unknown-field');
+    result = await processPurchase(c, product, body.purchaseToken, { accountId: auth.account.account_id });
+  }
   return { ...result, ...(await stateFor(c, auth.account.account_id)) };
 }
 
@@ -242,7 +297,7 @@ export async function processPurchase(c: Ctx, product: IapProduct, token: string
     purchase: { state: 'granted', test: p.test },
     entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
-  if (result === 'declined') return declinePurchase(c, hash, accountId, product, p.test);
+  if (result === 'declined' || result === 'undeliverable') return declinePurchase(c, hash, accountId, product, p.test);
   if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test: p.test };
   const granted = result === 'granted';
   // DB 지급이 확정된 뒤에만 Play에 소유를 확정한다. 실패하면 acked=false로 응답하고 다음 verify/RTDN이 재시도한다.
@@ -305,6 +360,54 @@ async function processSubscription(c: Ctx, api: PlayApi, env: IapEnv, product: I
   return { state: granted ? 'granted' : 'already', productId: product.id, granted: granted ? [grantId] : [], acked, test: s.test };
 }
 
+/**
+ * 원스토어 일회성 구매. 지급 근거는 원스토어 서버 API 조회 결과뿐이며 Play 경로와 같은 원장·멱등 규칙을 쓴다.
+ * 계정 결박은 결제 때 developerPayload에 실은 obfuscatedAccountId로 한다. 상세 응답은 상품·토큰을 돌려주지 않으므로
+ * 고정 상용 호스트 + 승인된 clientId·상품·토큰 경로로 결박한다. 'SANDBOX' 접두 토큰은 테스트 구매로 본다.
+ */
+export async function processOnePurchase(c: Ctx, product: IapProduct, token: string, market: string, who: { accountId?: string }): Promise<Outcome> {
+  if (product.type !== 'consumable' && product.type !== 'non_consumable') fail(400, 'unknown-product');
+  const hash = await oneTokenHash(token);
+  const prior = await c.db.prepare('SELECT account_id, product_id, state, acked, consumed, expires_at FROM iap_purchases WHERE token_hash = ?').bind(hash).first<PurchaseRow>();
+  if (prior && who.accountId && prior.account_id !== who.accountId) fail(409, 'purchase-owned-by-another-account');
+  if (prior && prior.product_id !== product.id) fail(409, 'purchase-mismatch');
+  // 상용 호스트만 쓰므로 원스토어 샌드박스(검증 호스트) 구매는 조회되지 않는다(422). 상용 응답에는 테스트 표시 필드가 없다.
+  const test = false;
+  const api = one(c);
+  const p = await api.purchase(product.id, token, market);
+  if (p.quantity !== 1 || (p.consumptionState !== 0 && p.consumptionState !== 1) || (p.acknowledgeState !== 0 && p.acknowledgeState !== 1)) fail(422, 'purchase-unverified');
+  const accountId = await bindAccount(c, p.developerPayload, prior, who);
+  if (p.purchaseState === 1) {
+    await upsertPurchase(c, hash, accountId, product, 'refunded', { test });
+    await reverseToken(c, accountId, hash, 'cancelled');
+    return { state: 'refunded', productId: product.id, granted: [], acked: false, test };
+  }
+  if (p.purchaseState !== 0) fail(422, 'purchase-unverified');
+  if (prior?.state === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test };
+  // 계정당 1회 상품의 두 번째 구매: 확정(ack/consume)하지 않는다. 원스토어가 3일 안에 자동 취소한다.
+  if (await onceTaken(c.db, accountId, product, hash)) return declinePurchase(c, hash, accountId, product, test);
+  const grantId = 'iap:' + hash;
+  const result = await grantOnce(c, accountId, product, hash, grantId, product.grant.rewards ?? {}, {
+    purchase: { state: 'granted', test },
+    entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
+  });
+  if (result === 'declined' || result === 'undeliverable') return declinePurchase(c, hash, accountId, product, test);
+  if (result === 'refunded') return { state: 'refunded', productId: product.id, granted: [], acked: false, test };
+  const granted = result === 'granted';
+  // DB 지급 확정 뒤에만 원스토어에 확정한다(consume은 acknowledge를 겸한다). 실패하면 다음 verify가 재시도한다.
+  let acked = product.type === 'consumable' ? p.consumptionState === 1 : p.acknowledgeState === 1;
+  if (!acked) {
+    try {
+      if (product.type === 'consumable') await api.consume(product.id, token, market, p.developerPayload!);
+      else await api.acknowledge(product.id, token, market, p.developerPayload!);
+      acked = true;
+    } catch (error) { if (!(error instanceof V1Error)) throw error; }
+  }
+  if (acked) await c.db.prepare('UPDATE iap_purchases SET acked = 1, consumed = ?, updated_at = ? WHERE token_hash = ?')
+    .bind(product.type === 'consumable' ? 1 : 0, c.now, hash).run();
+  return { state: granted ? 'granted' : 'already', productId: product.id, granted: granted ? [grantId] : [], acked, test };
+}
+
 /** 구매를 계정에 결박한다. obfuscatedAccountId가 요청 계정의 발급값과 다르면 거부(남의 영수증·변조 차단). */
 async function bindAccount(c: Ctx, obf: string | null, prior: PurchaseRow | null, who: { accountId?: string }): Promise<string> {
   const owner = await accountByObf(c.db, obf);
@@ -323,7 +426,8 @@ async function upsertPurchase(c: Ctx, hash: string, accountId: string, product: 
     .bind(hash, accountId, product.id, product.type, stateName, o.expiresAt ?? null, o.test ? 1 : 0, c.now, c.now).run();
 }
 
-type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded';
+/** 'undeliverable' = 결제는 검증됐지만 아바타 풀셋을 지급할 수 없음(지급·확정 없음, 환불 대상). */
+type GrantResult = 'granted' | 'duplicate' | 'declined' | 'refunded' | 'undeliverable';
 
 /** 미상환 부채를 이 문서(eco.s)에서 먼저 갚는다. 같은 배치에 실을 쓰기와 상환량을 돌려준다(서버 지급·서버 정산 공용). */
 export async function debtRepayment(db: D1Database, accountId: string, state: Record<string, any>, now: number): Promise<{ writes: GuardedWrite[]; repaid: Record<string, number> }> {
@@ -363,6 +467,28 @@ export async function grantOnce(c: Ctx, accountId: string, product: IapProduct, 
       const heroes = new Set((await entitlementsOf(c.db, accountId, c.now)).heroes);
       for (const e of o.entitlements) { const id = heroIdFromEntitlement(e.key); if (id && HERO_IDS.includes(id)) heroes.add(id); }
       setRosterPaid(eco.s, [...heroes]);
+    }
+    // 아바타 풀셋 권한은 같은 커밋에서 부위 전체(풀셋 아바타)를 지급한다. 서버 검증이 끝난 이 경로에서만 부른다.
+    // - 이미 소유(이벤트·부위·보석 출처)면 중복 지급 없이 통과하고 출처(avatars.paid)는 덮어쓰지 않는다 → 환불해도 회수하지 않는다.
+    //   (결제 전에는 이미 소유를 409로 막는다: assertAvatarFullsetDeliverable. 여기까지 온 이미 소유는 결제 사이 경합뿐이다.)
+    // - 지급할 수 없으면(not-ready·locked·storage 등) 지급·확정(ack)을 하지 않고 'undeliverable'로 돌린다.
+    //   Play 는 확정하지 않아 자동 환불되고, 웹은 환불 필요 큐(감사 플래그)로 남긴다. 사유는 감사 플래그에 남긴다.
+    const avatarHeroes = o.entitlements.map((e) => heroIdFromAvatarKey(e.key)).filter((h): h is string => !!h);
+    if (avatarHeroes.length) {
+      // 영웅 소유의 정본은 서버 권한이다: 풀셋 지급 판정(영웅 잠김)을 서버 권한 기준으로 맞춘 뒤 한다.
+      setRosterPaid(eco.s, [...(await entitlementsOf(c.db, accountId, c.now)).heroes]);
+      // deps.avatarPremium 은 시험 전용 주입점이다. 운영 deps 는 비어 있어 전역 상수(AVATAR_PREMIUM_BY_HERO)를 쓴다.
+      const premium: Readonly<Record<string, string>> = (c as IapCtx).deps.avatarPremium ?? AVATAR_PREMIUM_BY_HERO;
+      for (const heroId of avatarHeroes) {
+        const r = eco.grantAvatarFullset(heroId, { avatarId: premium[heroId], paidBy: grantId });
+        if (!r.ok) {
+          const reason = String((r as { reason?: unknown }).reason ?? 'unknown');
+          console.warn('avatar fullset undeliverable', { productId: product.id, heroId, reason });
+          await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
+            .bind(accountId, 'avatar-undeliverable', JSON.stringify({ productId: product.id, heroId, reason, grantId }).slice(0, 1000), c.now).run().catch(() => {});
+          return 'undeliverable';
+        }
+      }
     }
     const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
     // 클라이언트가 반영할 순 지급량 = 보상 - 상환분. 지급 기록도 순 지급량이고, 상환분은 repaid로 따로 남긴다.
@@ -434,6 +560,8 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
       const doc = await loadAccountDoc(c.db, accountId);
       const eco = loadEconomy(doc.state, { now: c.now });
       const rewards = JSON.parse(g.rewards) as Record<string, number>, debt: Record<string, number> = {};
+      // 이 지급(grant_id)으로 결제해 얻은 아바타만 같은 커밋에서 회수한다(소유·착용). 다른 출처의 아바타는 그대로.
+      const revokedAvatars: string[] = eco.revokePaidAvatars(g.grant_id);
       for (const [key, amount] of Object.entries(rewards)) {
         const field = IAP_REWARD_FIELD[key];
         if (!field) continue;
@@ -454,7 +582,7 @@ export async function reverseToken(c: Ctx, accountId: string, hash: string, why:
         values: [accountId, key, amount, c.now] });
       const next = docOf(eco);
       const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why }, receipt: { grantId: g.grant_id, debt } },
+        ledger: { opId: 'void:' + g.grant_id, kind: 'iap-void:' + g.product_id, delta: { rewards, debt, owed, why, revokedAvatars }, receipt: { grantId: g.grant_id, debt, revokedAvatars } },
         projection: next.projection, writes });
       if (outcome.ok) { reversed++; break; }
       if (outcome.reason === 'duplicate') break;
@@ -558,6 +686,28 @@ export async function reconcileVoided(c: Ctx, sinceMs?: number): Promise<{ seen:
     catch (error) { failed++; console.warn('iap voided item failed', error instanceof V1Error ? error.code : error instanceof Error ? error.name : 'unknown'); }
   }
   if (!failed) await c.db.prepare('INSERT INTO iap_meta(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = MAX(iap_meta.value, excluded.value)').bind(RECONCILE_KEY, c.now).run();
+  return { seen: voided.length, reversed, failed, since };
+}
+
+const ONE_RECONCILE_KEY = 'one_voided_reconciled_until';
+
+/** 원스토어 구매취소내역(최근 1개월 한도)을 읽어 아는 토큰만 역분개한다. 커서 규칙은 Play 대사와 같다. */
+export async function reconcileOneVoided(c: Ctx): Promise<{ seen: number; reversed: number; failed: number; since: number }> {
+  if (!await iapSchemaReady(c.db) || (!oneConfigured(iapEnv(c)) && !(c as IapCtx).deps.oneApi)) return { seen: 0, reversed: 0, failed: 0, since: 0 };
+  const cursor = await c.db.prepare('SELECT value FROM iap_meta WHERE key = ?').bind(ONE_RECONCILE_KEY).first<{ value: number }>();
+  const since = Math.max(c.now - 29 * DAY, cursor ? cursor.value - RECONCILE_OVERLAP_MS : 0);
+  // verify가 받는 시장(MKT_ONE·MKT_GLB) 모두를 본다. 한 시장이라도 실패하면 throw로 커서를 멈춘다.
+  const voided = [];
+  for (const market of ONE_MARKETS) voided.push(...await one(c).voided(since, market));
+  let reversed = 0, failed = 0;
+  for (const v of voided) {
+    try {
+      const hash = await oneTokenHash(v.purchaseToken);
+      const row = await c.db.prepare('SELECT account_id FROM iap_purchases WHERE token_hash = ?').bind(hash).first<{ account_id: string }>();
+      if (row) reversed += await reverseToken(c, row.account_id, hash, 'one-voided');
+    } catch (error) { failed++; console.warn('iap one voided item failed', error instanceof V1Error ? error.code : error instanceof Error ? error.name : 'unknown'); }
+  }
+  if (!failed) await c.db.prepare('INSERT INTO iap_meta(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = MAX(iap_meta.value, excluded.value)').bind(ONE_RECONCILE_KEY, c.now).run();
   return { seen: voided.length, reversed, failed, since };
 }
 

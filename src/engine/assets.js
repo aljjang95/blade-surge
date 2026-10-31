@@ -19,7 +19,9 @@ import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
 import { refitHeroBoots, removeHeroBoots } from './hero-boots.js';
 import { refitHeroGearParts, removeHeroGearParts } from './hero-gear-parts.js';
+import { removeWeaponHalo } from '../game/weapon-glow.js';
 import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
+import { installFootToeFix } from './hero-foot-fix.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
@@ -76,7 +78,7 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
     const p = libraryLoader.load(libraryAsset, async () => {
       const fallback = fallbackAsset && fallbackAsset !== libraryAsset.id ? libraryLoader.assetFor(fallbackAsset) : null;
       if (fallback) return libraryLoader.load(fallback, () => { throw new Error(`library fallback failed: ${fallback.id}`); }).then((gltf) => {
-        gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: fallback.id } : null;
+        gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: fallback.id, scale: roster.fallbackScale ?? roster.scale, weapon: undefined } : null;
         return gltf;
       });
       throw new Error(`library asset unavailable: ${libraryAsset.id}`);
@@ -129,6 +131,53 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
 // ---------- 라이브러리 영웅(갑옷 3단계) ----------
 const heroClipCache = new Map();
 const heroBodies = new Map();
+/** 몸체 자산 id → 지금 그 몸을 입은 살아 있는 인스턴스 수. 0인 아바타 몸만 캐시에서 해제할 수 있다. */
+const heroBodyUsers = new Map();
+function useHeroBody(id, delta) {
+  if (!id) return;
+  const next = (heroBodyUsers.get(id) || 0) + delta;
+  if (next > 0) heroBodyUsers.set(id, next); else heroBodyUsers.delete(id);
+}
+/** 몸체가 이미 받아져 있어 교체가 같은 프레임에 끝나는지(끊김 없는 교체 조건). */
+export function heroBodyReady(assetId) { return heroBodies.has(assetId); }
+/** 아바타 몸체가 받아져 있는지. 없는 아바타면 false. */
+export function avatarBodyReady(avatarId) {
+  const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  return !!asset && heroBodies.has(asset.id);
+}
+/** 받아 둔 아바타 몸체의 원본 장면(그리지 않는 원본). GPU 예열용. */
+export function avatarBodyScene(avatarId) {
+  const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  return (asset && heroBodies.get(asset.id)?.scene) || null;
+}
+/** 테스트·진단용: 지금 그 몸을 입은 인스턴스 수. */
+export function heroBodyUserCount(assetId) { return heroBodyUsers.get(assetId) || 0; }
+
+/**
+ * 미리 받아 둔 아바타 몸체를 캐시에서 해제한다(메모리 상한). 입은 인스턴스가 있거나, 영웅 기본 몸(늑대인간 족장)이거나,
+ * 영웅 공유 클립의 원본이면 해제하지 않고 false. 해제하면 몸 메시 지오메트리와 그 재질·텍스처를 dispose 한다.
+ */
+export function releaseAvatarBody(avatarId) {
+  const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  if (!asset || heroBodyUsers.get(asset.id)) return false;
+  // 기본 몸 영웅(늑대인간 족장 등)은 kit 영웅 id 로 몸 자산을 가지므로 모든 영웅의 bodyAvatar 를 본다.
+  if (Object.values(HEROES).some((hero) => hero.bodyAvatar === avatarId) || heroClipCache.get(asset.heroId)?.asset?.id === asset.id) return false;
+  const gltf = heroBodies.get(asset.id);
+  if (!gltf) return false;   // 받는 중이면 끝난 뒤 다음 해제 요청에서 정리한다
+  heroBodies.delete(asset.id); libraryLoader.forget(asset.id);
+  const geometries = new Set(), materials = new Set();
+  gltf.scene.traverse((node) => {
+    if (!node.isSkinnedMesh || !node.userData.libraryBody) return;
+    geometries.add(node.geometry);
+    for (const material of materialsOf(node)) materials.add(material);
+  });
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of materials) {
+    for (const value of Object.values(material)) if (value?.isTexture) value.dispose();
+    material.dispose();
+  }
+  return true;
+}
 
 /** 요청 단계 이하의 가장 높은 영웅 GLB 를 받는다. 없거나 실패하면 기존 KayKit 영웅으로 폴백한다. */
 export function loadHeroModel(heroId, tier = 1) {
@@ -439,9 +488,12 @@ function swapLibraryHeroBody(root, gltf, target) {
   if (!commitHeroBodyMotion(root, motionPlan)) {
     for (const { mesh } of built) { mesh.removeFromParent(); release(mesh); } return false;
   }
+  useHeroBody(root.userData.libraryBodyAssetId, -1); useHeroBody(target.id, 1);
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
   root.userData.libraryBodyMotionIdentity = identity;
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  // 전사 팔자걸음 보정은 몸체마다 바인드 발각이 달라 새 몸 기준으로 다시 건다.
+  installFootToeFix(root);
   // 등급 부츠는 새 몸의 본·역바인드로 다시 묶는다(부츠가 없으면 무동작).
   refitHeroBoots(root, createBootsMaterial);
   refitHeroGearParts(root, createBootsMaterial);   // 갑옷 외형 파츠도 같은 방식(파츠가 없으면 무동작)
@@ -558,6 +610,7 @@ export function spawnCharacter(gltf) {
     if (contract.role === 'hero') {
       root.userData.libraryBodyAssetId = rigRoot.userData.libraryAsset?.id || null;
       root.userData.libraryBodyMotionIdentity = rigRoot.userData.libraryBodyMotionIdentity;
+      useHeroBody(root.userData.libraryBodyAssetId, 1);
     }
   }
   const mixer = new THREE.AnimationMixer(rigRoot);
@@ -565,7 +618,7 @@ export function spawnCharacter(gltf) {
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
-  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); }
+  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); if (contract?.role === 'hero') installFootToeFix(root, contract.heroId); }
   catch (error) {
     // 아직 공유 재질을 쓰므로 실패한 clone의 skeleton·mixer만 정리한다.
     rigRoot.traverse(node => { if (node.isSkinnedMesh) node.skeleton.dispose(); });
@@ -595,10 +648,12 @@ function cloneCharacterMaterial(material, authored, oathKnight = false) {
 
 /** Release instance-owned skin textures/materials; preserve shared source geometry. */
 export function disposeCharacter(root, mixer) {
+  if (!root.userData.libraryDisposed && root.userData.authoredContract?.role === 'hero') useHeroBody(root.userData.libraryBodyAssetId, -1);
   root.userData.libraryDisposed = true;
   disposeHeroBodyMotion(root);
   removeHeroBoots(root);   // 부츠 지오메트리는 인스턴스 소유
   removeHeroGearParts(root);
+  removeWeaponHalo(root);   // 광륜은 Sprite 라 아래 메시 순회에 걸리지 않는다
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {

@@ -5,7 +5,8 @@ import { createDeviceKey, isDeviceKey } from '../../packages/tll-social/src/clie
 
 export const DEVICE_KEY_NAME = 'tll-social:blade-surge:key';
 export const INSTALL_ID_NAME = 'bladesurge_install_id';
-const DB = 'bladesurge-secure', STORE = 'kv';
+export const SECURE_DB_NAME = 'bladesurge-secure';
+const DB = SECURE_DB_NAME, STORE = 'kv';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function idb(mode, fn) {
@@ -44,5 +45,14 @@ async function durable(key, valid, create) {
   return value;
 }
 
-export function deviceKey() { return durable(DEVICE_KEY_NAME, isDeviceKey, () => createDeviceKey(globalThis.crypto)); }
+/** tll-social 클라이언트의 '프로필 없음이 확인된 키' 표지. 방금 만든 키는 소셜 프로필이 있을 수 없다. */
+export const NO_PROFILE_NAME = 'tll-social:blade-surge:noprofile';
+export function deviceKey() {
+  return durable(DEVICE_KEY_NAME, isDeviceKey, () => {
+    // 계정 모듈이 소셜 클라이언트보다 먼저 키를 만들면 소셜 쪽은 새 키인 줄 모르고 첫 방문에 /api/social/me 401을 낸다.
+    const key = createDeviceKey(globalThis.crypto);
+    local('set', NO_PROFILE_NAME, key);
+    return key;
+  });
+}
 export function installId() { return durable(INSTALL_ID_NAME, (v) => typeof v === 'string' && UUID.test(v), () => globalThis.crypto.randomUUID()); }

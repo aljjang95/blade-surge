@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID } from '../data/items.js';
-import { heroAppearance } from '../data/hero-library.js';
+import { heroBodyAppearance } from '../data/hero-library.js';
 import { libraryAssets, libraryAssetForAvatar, pickHeroLibraryAsset, resolveAssetSource } from '../engine/library-assets.js';
 import { spawnCharacter, disposeCharacter, preloadHeroBody } from '../engine/assets.js';
 import { applyLook } from '../game/look.js';
@@ -20,7 +20,7 @@ export function heroPortraitSnapshot(app, id) {
     return [slot, inst ? { ...inst } : null];
   }));
   const avatarId = (app.eco?.displayAvatar || app.eco?.equippedAvatar)?.call(app.eco, id) || def.bodyAvatar || null;
-  const look = heroAppearance(equipment, ITEM_BY_ID), tier = look.tier;
+  const look = heroBodyAppearance(equipment, ITEM_BY_ID), tier = look.tier;
   const body = libraryAssetForAvatar(avatarId) || pickHeroLibraryAsset(libraryAssets().filter(asset =>
     asset.role === 'hero' && !asset.avatar && asset.heroId === id), look);
   if (model && !modelIds.has(model)) modelIds.set(model, ++nextModelId);

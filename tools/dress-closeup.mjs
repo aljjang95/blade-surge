@@ -1,0 +1,165 @@
+/**
+ * 장 의상 근접 확인 — 한 장의 1관문에 들어가 그 장 종(species)을 영웅 앞에 한 줄로 세우고 대기 자세로 찍는다.
+ * 소품이 뼈에 맞게 붙었는지(위치·방향·크기)를 보는 도구다. 시계는 app.step 고정 dt.
+ *   node tools/dress-closeup.mjs [장=1] [출력폴더=work/qa/dress] [접두어=after]
+ *   DEEP=star_archive node tools/dress-closeup.mjs 6 … — 6장 심층 원정(dungeon 없음, 6-10 관문)처럼 전투 무대를 바꿔 원래 종 id로 소환한다(장 전용 몸 교체 확인).
+ * 전제: bun run build 산출물(dist). swiftshader 소프트웨어 렌더라 GPU 프레임·실기기 검증이 아니다.
+ */
+import { chromium } from 'playwright';
+import { CHROME } from './chrome.mjs';
+import { spawn } from 'child_process';
+import { resolve } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
+import { installAutoStarter } from './qa-starter.mjs';
+
+const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname));
+const CH = Number(process.argv[2] || 1), OUT = resolve(PROJ, process.argv[3] || 'work/qa/dress'), TAG = process.argv[4] || 'after', PORT = 4298;
+mkdirSync(OUT, { recursive: true });
+// 줄마다 4마리, 영웅 앞(+x) 줄을 세운다.
+const LINEUPS = {
+  1: [
+    ['skel_minion', 'skel_shield', 'skel_rogue', 'elite_skel_captain'],
+    ['skel_mage', 'skel_priest', 'bone_orc', 'elite_bone_lord'],
+    ['ghost', 'ghost_skull', 'elite_wraith', 'bomb_slime'],
+    ['grave_burrower', 'garden_midboss', 'garden_finalboss'],
+    // 1장 전용 Tripo 몸(stages.js CHAPTER_SPECIES)·세렌(tll_ch1_tombknight).
+    ['ch1_coffinbearer', 'ch1_mourner', 'garden_midboss'],
+    // 같은 Tripo 몸의 역할 갈래(일반 방 주력).
+    ['ch1_tombguard', 'ch1_hoodbearer', 'ch1_mourner_wail', 'ch1_mourner_dirge'],
+    ['ch1_gravewisp'],
+  ],
+  2: [
+    ['orc', 'orc_blob', 'tribal', 'cacto_wall'],
+    ['bomb_imp', 'imp', 'ash_burrower', 'hywirl'],
+    ['tribal_shaman', 'armabee', 'elite_orc_chief', 'elite_bluedemon'],
+    ['forge_midboss', 'forge_finalboss'],
+    // 2장 전용 Tripo 몸·이그란(tll_ch2_igran).
+    ['ch2_smith', 'ch2_emberimp', 'forge_midboss'],
+    ['ch2_smith_line', 'ch2_anvilguard', 'ch2_emberimp_line', 'ch2_emberimp_bomb'],
+    ['ch2_ashimp'],
+  ],
+  3: [
+    ['skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'],
+    ['ghost', 'ghost_skull', 'skel_mage', 'skel_priest'],
+    ['blob_green', 'frost_burrower', 'elite_yeti', 'elite_golem'],
+    ['elite_wraith', 'frost_midboss', 'frost_finalboss'],
+    // 3장 전용 Tripo 몸(서리 해골 사서·망령 검열관)·오르딘(tll_ch3_ordin).
+    ['ch3_librarian', 'ch3_shelfguard', 'ch3_keykeeper', 'ch3_icecrawler'],
+    ['ch3_censor', 'ch3_censor_slip', 'ch3_censor_tome', 'ch3_censor_quill'],
+    ['ch3_moldkeeper', 'frost_midboss'],
+  ],
+  4: [
+    ['squidle', 'glub', 'abyss_seer', 'blob_pink'],
+    ['bomb_abyss', 'alien', 'mushnub', 'golem_guard'],
+    ['elite_golem', 'elite_mushroom_king', 'elite_dragonling', 'armabee_evo'],
+    ['tide_midboss', 'tide_finalboss', 'skel_minion'],
+    // 4장 전용 Tripo 몸(따개비 수부·미끼등 아귀)·마렌(tll_ch4_maren).
+    ['ch4_drowned', 'ch4_drowned_line', 'ch4_drowned_anchor', 'ch4_drowned_coral'],
+    ['ch4_plankguard', 'ch4_deckhand', 'ch4_drowned_drift', 'tide_midboss'],
+    ['ch4_lurer', 'ch4_lurer_bomb', 'ch4_lurer_seer', 'ch4_lurer_glim'],
+  ],
+  5: [
+    ['ninja', 'alien', 'skel_shield', 'bone_orc'],
+    ['imp', 'bomb_abyss', 'abyss_seer', 'tribal_shaman'],
+    ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain', 'skel_priest'],
+    ['crown_midboss', 'crown_finalboss', 'ghost'],
+    // 5장 전용 Tripo 몸(새벽 가면 닌자·왕관 병사·왕관 고리 주술사)·아스텔(tll_ch5_astel).
+    ['ch5_dawnninja', 'ch5_dawnninja_squire', 'ch5_dawnninja_flare', 'crown_midboss'],
+    ['ch5_crownsoldier', 'ch5_crownsoldier_chain', 'ch5_swordwall'],
+    ['ch5_seer', 'ch5_seer_ember', 'ch5_seer_herald'],
+    // 소환 전용 5장 갈래(던전 대장·주술사의 졸병).
+    ['ch5_dawnninja_mirage', 'ch5_dawnninja_called', 'ch5_crownsoldier_levy', 'ch5_crownsoldier_watch'],
+    ['ch5_dawnninja_wisp', 'ch5_dawnninja_spark', 'ch5_dawnninja'],
+  ],
+  6: [
+    ['skel_minion', 'orc', 'ghost', 'ninja'],
+    ['squidle', 'golem_guard', 'skel_mage', 'imp'],
+    ['homecoming_midboss', 'homecoming_finalboss'],
+    // 6장 전용 Tripo 몸(귀환 열차 승객 잔향)·증인(tll_ch6_witness), 고향 장 몸의 잔향.
+    ['ch6_passenger', 'ch6_passenger_drift', 'ch6_passenger_hurry', 'ch6_passenger_child'],
+    ['ch6_passenger_porter', 'ch6_passenger_trunk', 'ch6_passenger_gate', 'homecoming_midboss'],
+    ['ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger_lost', 'ch1_mourner_wail'],
+    // 가독성 2차: 같은 맨손 몸의 승객 갈래 비교.
+    ['ch6_passenger_hurry', 'ch6_passenger_tide', 'ch6_passenger_moss', 'ch6_passenger'],
+    ['ch4_lurer_bomb', 'ch2_ashimp', 'ch3_moldkeeper', 'ch1_tombguard'],
+  ],
+  7: [
+    ['skel_minion', 'skel_shield', 'skel_rogue', 'bone_orc'],
+    ['ghost', 'ghost_skull', 'blob_green', 'skel_mage'],
+    ['skel_priest', 'elite_skel_captain', 'elite_wraith', 'elite_bone_lord'],
+    // 7장 전용 Tripo 몸(해골 시민·굽쇠 주술사), 종지기와 비교.
+    ['ch7_citizen', 'ch7_citizen_late', 'ch7_citizen_ledger', 'bell_ringer'],
+    ['ch7_citizen_hauler', 'ch7_citizen_fuse', 'blob_green'],
+    ['ch7_tuner', 'ch7_tuner_cantor', 'ch7_tuner_echo', 'ch7_tuner_drift'],
+    // 가독성 2차: 같은 맨손 몸의 시민 갈래 비교.
+    ['ch7_citizen_late', 'ch7_citizen_hauler', 'ch7_citizen_fuse', 'ch7_citizen'],
+  ],
+};
+// 심층 원정 확인: 원래 종 id를 소환하면 spawnEnemy 가 장 전용 몸으로 바꾼다.
+const DEEP = process.env.DEEP || '';
+const DEEP_STAGE = { star_archive: 10, comet_bastion: 7 };
+if (DEEP) LINEUPS[CH] = [['squidle', 'glub', 'abyss_seer', 'ghost'], ['alien', 'mushnub', 'bomb_abyss', 'ghost_skull']];
+const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort'], { cwd: PROJ, stdio: 'ignore' });
+let up = false;
+for (let i = 0; i < 80 && !up; i++) { try { up = (await fetch(`http://localhost:${PORT}/`)).ok; } catch {} if (!up) await new Promise((r) => setTimeout(r, 500)); }
+if (!up) { srv.kill(); throw new Error('preview server did not start'); }
+const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const page = await (await br.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 })).newPage();
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+const errors = [];
+page.on('pageerror', (e) => errors.push('PAGEERR ' + e.message.slice(0, 240)));
+const report = { tag: TAG, chapter: CH, rows: [] };
+try {
+  await installAutoStarter(page);
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 120000 });
+  await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.save(); });
+  await page.click('#boot-start', { force: true }); await page.waitForTimeout(1500);
+  await page.evaluate(() => window.app.ui.closeModal?.());
+  for (const [row, species] of (LINEUPS[CH] || []).entries()) {
+    const info = await page.evaluate(async ([ch, species, deep, deepSt]) => {
+      const a = window.app, e = a.eco; a.testPause = false; e.s.energy = 9999; e.s.progress.unlocked = (ch - 1) * 10 + 1; e.save();
+      a.battle?.stop?.();
+      await a.startStage(e.nextStage()); a.testPause = true;
+      const b = a.battle, p = b.player;
+      if (deep) b.stage = { ...b.stage, st: deepSt, dungeon: null, expedition: { kind: 'dungeon', id: deep, depth: 'deep' } }; p.auto = false; p.hp = p.maxHp; p.invuln = 999;
+      for (const en of b.enemies) { en.hp = 0; en.alive = false; en.root.visible = false; }
+      const spawned = species.map((id, i) => {
+        const at = p.pos.clone().add(new p.pos.constructor(4.2, 0, (i - (species.length - 1) / 2) * 2.3));
+        const en = b.spawnEnemy(id, null, b.curRoom, at);
+        return en && { id, at, en };
+      }).filter(Boolean);
+      for (let k = 0; k < 240; k++) { for (const s of spawned) { s.en.pos.copy(s.at); s.en.vel.set(0, 0, 0); s.en.atkCd = 999; s.en.face?.(p.pos.x, p.pos.z); } a.step(1 / 60, k === 239); }
+      const st = b.stage;
+      return { stage: { code: st.code, chapter: st.chapter?.id ?? null, ch: st.ch, expedition: !!st.expedition, keys: Object.keys(st).slice(0, 12) }, enemies: spawned.map((s) => ({ id: s.id, asset: s.en.libraryAsset?.id || null, dress: s.en.dress?.props || null })) };
+    }, [CH, species, DEEP, DEEP_STAGE[DEEP] || 10]);
+    await page.waitForTimeout(300);
+    // 근접 초상: 각 적을 앞 3/4·뒤 3/4 두 방향에서 게임 카메라를 잠시 옮겨 렌더하고 캔버스만 받는다(HUD 제외).
+    const portraits = await page.evaluate(() => {
+      const a = window.app, b = a.battle, r = a.renderer, cam = r.camera, saved = { p: cam.position.clone(), q: cam.quaternion.clone() };
+      const out = [];
+      for (const en of b.enemies.filter((x) => x.alive)) {
+        const h = Math.max(1.4, (en.libraryAsset?.heightM || 2) * en.model.scale.x * (en.model.parent?.scale?.x || 1));
+        const yaw = en.yaw ?? 0, shots = [];
+        for (const side of [0.6, Math.PI - 0.6]) {
+          const ang = yaw + side, d = h * 1.9;
+          cam.position.set(en.pos.x + Math.sin(ang) * d, en.pos.y + h * 0.9, en.pos.z + Math.cos(ang) * d);
+          cam.lookAt(en.pos.x, en.pos.y + h * 0.5, en.pos.z); cam.updateMatrixWorld();
+          r.render(); shots.push(r.r.domElement.toDataURL('image/png'));
+        }
+        out.push({ id: en.runtimeSpeciesId, shots });
+      }
+      cam.position.copy(saved.p); cam.quaternion.copy(saved.q);
+      return out;
+    });
+    for (const pt of portraits) pt.shots.forEach((data, k) => writeFileSync(`${OUT}/${TAG}-ch${CH}-${pt.id}-${k ? 'back' : 'front'}.png`, Buffer.from(data.split(',')[1], 'base64')));
+    const file = `${OUT}/${TAG}-ch${CH}-row${row + 1}.png`;
+    await page.screenshot({ path: file });
+    report.rows.push({ file, ...info });
+  }
+} finally {
+  report.errors = errors;
+  writeFileSync(resolve(OUT, `${TAG}-ch${CH}-report.json`), JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report, null, 2));
+  await br.close(); srv.kill();
+}

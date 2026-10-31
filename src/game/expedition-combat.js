@@ -190,11 +190,14 @@ export function expeditionRoster(stage, room) {
   return [R.ranged[0],R.ranged[1],R.ranged[2],R.trash[1],R.trash[5],...(room.type === 'elite' ? [R.elite[0]] : [])];
 }
 
+const OVERDRIVE_MP_RATIO = 0.4;
+
 export function canApplyBattleConsumable(game, id) {
   const p = game.player;
   if (!game.active || game.paused || !p?.alive || game.bossDefeated) return false;
   if (id === 'hp_tonic') return p.hp < p.maxHp;
-  if (id === 'overdrive') return !(p.tonicAtkT > 0);
+  // 과충전 물약은 MP도 채운다. 버프가 이미 켜져 있어도 MP가 모자라면 쓸 수 있다.
+  if (id === 'overdrive') return !(p.tonicAtkT > 0) || (Number.isFinite(p.mp) && Number.isFinite(p.maxMp) && p.mp < p.maxMp);
   if (id === 'aegis') return !(p.tonicGuardT > 0);
   return false;
 }
@@ -208,8 +211,12 @@ export function applyBattleConsumable(game, id) {
     const healMultiplier = effect?.kind === 'potionHealMultiplier' ? effect.value : 1;
     p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * .35 * healMultiplier));
   } else if (id === 'overdrive') {
-    if ((p.tonicAtkT || 0) > 0) return false;
-    p.tonicAtkT = 12;
+    // 버프 시간은 겹쳐 늘리지 않고, MP는 최대치까지만 채운다(Player.addMp가 클램프).
+    if (!((p.tonicAtkT || 0) > 0)) p.tonicAtkT = 12;
+    if (Number.isFinite(p.maxMp)) {
+      if (typeof p.addMp === 'function') p.addMp(Math.round(p.maxMp * OVERDRIVE_MP_RATIO));
+      else p.mp = Math.min(p.maxMp, (Number.isFinite(p.mp) ? p.mp : 0) + Math.round(p.maxMp * OVERDRIVE_MP_RATIO));
+    }
   } else if (id === 'aegis') {
     if ((p.tonicGuardT || 0) > 0) return false;
     p.tonicGuardT = 12;

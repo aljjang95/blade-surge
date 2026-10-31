@@ -9,6 +9,7 @@ import './journey.css';
 import { itemVisual } from './item-presentation.js';
 import { eventCalendar } from '../game/endgame-core.js';
 import { TOWER } from '../data/content-90d.js';
+import { journeyClaimable, towerChestReady } from '../game/reward-badges.js';
 
 const node=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const button=(text,fn,key,cls='journey-action')=>{const e=node('button',cls,text);e.type='button';e.dataset.control=key;e.addEventListener('click',fn);return e;};
@@ -17,7 +18,7 @@ const name=id=>MATERIALS.find(m=>m.id===id)?.name||CONSUMABLES.find(c=>c.id===id
 const illustration=id=>{const e=node('img','journey-illustration');e.src=`/img/ui-crafted/${id}.webp`;e.alt='';e.loading='lazy';return e;};
 const detail=(text,label='자세히')=>{const e=node('details','journey-details');e.append(node('summary','',label),node('p','',text));return e;};
 const resourceArt={gold:'gold',stones:'material-stone',stones2:'material-guard-stone',stones3:'material-essence',gems:'gems',transcendStones:'material-essence',xp:'hero-xp',glass_leaf:'material-leaf',ember_core:'material-ember',star_dust:'material-stardust',hp_tonic:'potion-health',overdrive:'potion-power',aegis:'potion-guard'};
-function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','stones2','stones3','gems','transcendStones','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',stones2:'상급 강화석',stones3:'전설 강화석',gems:'보석',transcendStones:'초월석',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
+function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','stones2','stones3','gems','transcendStones','lineageSigil','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',stones2:'상급 강화석',stones3:'전설 강화석',gems:'보석',transcendStones:'초월석',lineageSigil:'계승 문장',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
 const errors={server:'서버 계정에서는 아직 받을 수 없습니다.',claimed:'이미 받은 보상입니다.',incomplete:'목표를 먼저 완료해 주세요.',prerequisite:'앞 단계 보상을 먼저 받아 주세요.',unknown:'선택을 다시 확인해 주세요.'};
 const tabs=[['journey','성장 여정'],['contracts','오늘의 의뢰'],['tower','무한의 성'],['target','목표 장비'],['supply','빠른 보급']];
 
@@ -34,6 +35,8 @@ export class JourneyView {
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();this.close();});
     this.dialog.addEventListener('close',()=>this.releasePause());
     this.lobby=button('성장 여정',()=>this.open('journey'),'lobby','sq-btn journey-lobby');document.querySelector('.lobby-left')?.append(this.lobby);
+    // 받을 보상이 있으면 입구에 점(docs/RPG_ESSENTIALS.md E1). 메뉴 점은 meta.refreshMenuBadge 가 합산한다.
+    this.lobbyDot=node('em','dot');this.lobbyDot.id='dot-journey';this.lobbyDot.setAttribute('aria-hidden','true');this.lobby.append(this.lobbyDot);
     this.strip=button('',()=>this.open(this.nextTab||'journey'),'next-goal','journey-strip');document.querySelector('.lobby-bottom')?.prepend(this.strip);
     app.eco.onChange(()=>this.refresh());this.refresh();
   }
@@ -91,6 +94,9 @@ export class JourneyView {
     const snap=this.app.journey.snapshot(),next=snap.steps.find(s=>!s.claimed);
     this.strip.textContent=next?`${next.ready?'보상 받기':'다음 목표'} · ${next.name}`:'성장 여정 완주 · 오늘의 의뢰 확인';
     this.nextTab=next?'journey':'contracts';
+    const chest=towerChestReady(this.app.eco.towerSummary?.());this.lobbyDot?.classList.toggle('on',journeyClaimable(snap)+(chest?1:0)>0);
+    const tower=typeof document==='object'?document.getElementById('menu-tower'):null;if(tower){let dot=tower.querySelector('.dot');if(!dot){dot=node('em','dot');dot.id='dot-tower';dot.setAttribute('aria-hidden','true');tower.append(dot);}dot.classList.toggle('on',chest);}
+    this.app.meta?.refreshMenuBadge?.();
     const signature=JSON.stringify([snap,this.app.eco.s.endgame,this.app.eco.s.gold,this.app.eco.s.energy,this.app.eco.s.sweep,this.blocked,this.app.eco.s.expedition.stats,frontierSnapshot(this.frontier())]);
     if(this.dialog.open&&(force||signature!==this.signature))this.render(snap);
     this.signature=signature;

@@ -205,7 +205,8 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
   expect(nextRegionGroup({ unlocked: 8 })).toBe('region-2');
   expect(nextRegionGroup({ unlocked: 18 })).toBe('region-3');
   expect(nextRegionGroup({ unlocked: 28 })).toBe('region-4');
-  expect(nextRegionGroup({ unlocked: 58 })).toBe(null);   // 6지역 다음은 없다
+  expect(nextRegionGroup({ unlocked: 58 })).toBe('region-7');   // 6지역 다음은 7지역(아직 묶음 파일이 없어도 이름은 만든다)
+  expect(nextRegionGroup({ unlocked: 68 })).toBe(null);   // 7지역 다음은 없다
   const run = async (connection: any, unlocked: number) => {
     const { assets } = setup(); await assets.init();
     const asked: string[] = [];
@@ -215,10 +216,10 @@ test('사전 내려받기 정책: X-8 에서 다음 지역을, 와이파이에�
     await new Promise(resolve => setTimeout(resolve, 10));
     return asked;
   };
-  expect(await run({ type: 'cellular' }, 8)).toEqual(['early-music', 'starter-village', 'region-2']);   // 셀룰러: 첫 보스 곡·초보자 마을 소품 묶음 + X-8 에서 다음 지역만
-  expect(await run({ type: 'cellular' }, 3)).toEqual(['early-music', 'starter-village']);               // 아직 X-8 전이면 첫 보스 곡·마을 소품만
-  expect((await run({ type: 'wifi' }, 3)).slice(0, 3)).toEqual(['early-music', 'starter-village', 'region-2']);   // 와이파이: 한가할 때 다음 지역부터 순서대로
-  expect((await run({ type: 'wifi' }, 3)).length).toBeGreaterThan(3);
+  expect(await run({ type: 'cellular' }, 8)).toEqual(['early-music', 'starter-village', 'item-icons', 'region-2']);   // 셀룰러: 첫 보스 곡·초보자 마을 소품·장비 아이콘 묶음 + X-8 에서 다음 지역만
+  expect(await run({ type: 'cellular' }, 3)).toEqual(['early-music', 'starter-village', 'item-icons']);               // 아직 X-8 전이면 첫 보스 곡·마을 소품·장비 아이콘만
+  expect((await run({ type: 'wifi' }, 3)).slice(0, 4)).toEqual(['early-music', 'starter-village', 'item-icons', 'region-2']);   // 와이파이: 한가할 때 다음 지역부터 순서대로
+  expect((await run({ type: 'wifi' }, 3)).length).toBeGreaterThan(4);
   expect(await run({ type: 'wifi', saveData: true }, 8)).toEqual([]);   // 데이터 절약 모드는 첫 보스 곡·마을 소품도 받지 않는다
 });
 
@@ -231,13 +232,13 @@ test('assetUrl({ prefetch: false }) 는 호스트 주소만 돌려주고 보관�
 });
 
 test('사전 내려받기: 실패한 묶음은 쉬었다가(30초, 60초, …) 다시 받고 그 사이 로비 재진입은 두드리지 않는다', async () => {
-  let clock = 0, asked = 0;   // 로비 진입마다 바로 받는 묶음이 둘(early-music, starter-village)이라 시도 횟수는 2의 배수로 센다
+  let clock = 0, asked = 0;   // 로비 진입마다 바로 받는 묶음이 셋(early-music, starter-village, item-icons)이라 시도 횟수는 3의 배수로 센다
   const fake = { enabled: true, groupCached: () => false, prefetchGroup: async () => { asked += 1; return { requested: 1, failed: ['x'] }; } };
   const prefetcher = createPrefetcher(fake as any, { nav: { connection: { type: 'cellular' } } as any, idle: fn => { void fn(); }, now: () => clock });
   const lobby = async () => { prefetcher.onLobby({ unlocked: 3 }); await new Promise(resolve => setTimeout(resolve, 5)); };
-  await lobby(); expect(asked).toBe(2);
-  await lobby(); expect(asked).toBe(2);          // 쉬는 중
-  clock = 31000; await lobby(); expect(asked).toBe(4);
-  clock = 31000 + 59000; await lobby(); expect(asked).toBe(4);   // 두 번째 실패 뒤 60초 쉼
-  clock = 31000 + 61000; await lobby(); expect(asked).toBe(6);
+  await lobby(); expect(asked).toBe(3);
+  await lobby(); expect(asked).toBe(3);          // 쉬는 중
+  clock = 31000; await lobby(); expect(asked).toBe(6);
+  clock = 31000 + 59000; await lobby(); expect(asked).toBe(6);   // 두 번째 실패 뒤 60초 쉼
+  clock = 31000 + 61000; await lobby(); expect(asked).toBe(9);
 });

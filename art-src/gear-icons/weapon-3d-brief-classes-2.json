@@ -1,0 +1,358 @@
+{
+ "purpose": "다른 직업 무기 3D 2차: 2차 기본 드롭 11종(1~3장 자주 나옴) × 광전사·마법사·도적·궁수. 형태는 src/game/look.js (kit, 등급) 표.",
+ "targetTriangles": 3000,
+ "weapons": [
+  {
+   "id": "w_iron",
+   "form": "axe",
+   "key": "w_iron@axe",
+   "rarity": "N",
+   "iconKey": "tripo-image/A/w_iron.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_iron",
+   "form": "wand",
+   "key": "w_iron@wand",
+   "rarity": "N",
+   "iconKey": "tripo-image/A/w_iron.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short magic wand (about forearm length) with a small ornamental tip. The wand stands perfectly vertical, tip pointing straight up, handle at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_iron",
+   "form": "dagger",
+   "key": "w_iron@dagger",
+   "rarity": "N",
+   "iconKey": "tripo-image/A/w_iron.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_iron",
+   "form": "bow",
+   "key": "w_iron@bow",
+   "rarity": "N",
+   "iconKey": "tripo-image/A/w_iron.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_wood",
+   "form": "axe",
+   "key": "w_wood@axe",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_wood.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel."
+  },
+  {
+   "id": "w_wood",
+   "form": "wand",
+   "key": "w_wood@wand",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_wood.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short magic wand (about forearm length) with a small ornamental tip. The wand stands perfectly vertical, tip pointing straight up, handle at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel."
+  },
+  {
+   "id": "w_wood",
+   "form": "dagger",
+   "key": "w_wood@dagger",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_wood.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel."
+  },
+  {
+   "id": "w_wood",
+   "form": "bow",
+   "key": "w_wood@bow",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_wood.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel."
+  },
+  {
+   "id": "w_cleaver",
+   "form": "axe",
+   "key": "w_cleaver@axe",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_cleaver.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top."
+  },
+  {
+   "id": "w_cleaver",
+   "form": "wand",
+   "key": "w_cleaver@wand",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_cleaver.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short magic wand (about forearm length) with a small ornamental tip. The wand stands perfectly vertical, tip pointing straight up, handle at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top."
+  },
+  {
+   "id": "w_cleaver",
+   "form": "dagger",
+   "key": "w_cleaver@dagger",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_cleaver.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top."
+  },
+  {
+   "id": "w_cleaver",
+   "form": "bow",
+   "key": "w_cleaver@bow",
+   "rarity": "N",
+   "iconKey": "tripo-image/C/w_cleaver.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top."
+  },
+  {
+   "id": "w_steel",
+   "form": "axe",
+   "key": "w_steel@axe",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_steel.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_steel",
+   "form": "staff",
+   "key": "w_steel@staff",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_steel.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_steel",
+   "form": "dagger",
+   "key": "w_steel@dagger",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_steel.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_steel",
+   "form": "bow",
+   "key": "w_steel@bow",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_steel.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel."
+  },
+  {
+   "id": "w_bronze",
+   "form": "axe",
+   "key": "w_bronze@axe",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_bronze.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel."
+  },
+  {
+   "id": "w_bronze",
+   "form": "staff",
+   "key": "w_bronze@staff",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_bronze.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel."
+  },
+  {
+   "id": "w_bronze",
+   "form": "dagger",
+   "key": "w_bronze@dagger",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_bronze.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel."
+  },
+  {
+   "id": "w_bronze",
+   "form": "bow",
+   "key": "w_bronze@bow",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_bronze.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel."
+  },
+  {
+   "id": "w_guard",
+   "form": "axe",
+   "key": "w_guard@axe",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_guard.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it."
+  },
+  {
+   "id": "w_guard",
+   "form": "staff",
+   "key": "w_guard@staff",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_guard.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it."
+  },
+  {
+   "id": "w_guard",
+   "form": "dagger",
+   "key": "w_guard@dagger",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_guard.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it."
+  },
+  {
+   "id": "w_guard",
+   "form": "bow",
+   "key": "w_guard@bow",
+   "rarity": "S",
+   "iconKey": "tripo-image/C/w_guard.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it."
+  },
+  {
+   "id": "w_flame",
+   "form": "axe",
+   "key": "w_flame@axe",
+   "rarity": "E",
+   "iconKey": "tripo-image/A/w_flame.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_flame",
+   "form": "staff",
+   "key": "w_flame@staff",
+   "rarity": "E",
+   "iconKey": "tripo-image/A/w_flame.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_flame",
+   "form": "dagger",
+   "key": "w_flame@dagger",
+   "rarity": "E",
+   "iconKey": "tripo-image/A/w_flame.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_flame",
+   "form": "bow",
+   "key": "w_flame@bow",
+   "rarity": "E",
+   "iconKey": "tripo-image/A/w_flame.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_rune",
+   "form": "axe",
+   "key": "w_rune@axe",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_rune.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_rune",
+   "form": "staff",
+   "key": "w_rune@staff",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_rune.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_rune",
+   "form": "dagger",
+   "key": "w_rune@dagger",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_rune.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_rune",
+   "form": "bow",
+   "key": "w_rune@bow",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_rune.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_knight",
+   "form": "axe",
+   "key": "w_knight@axe",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_knight.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a one-handed battle axe: a haft with a single wide axe head mounted sideways at the top (clearly an axe, not a sword). The axe stands vertical, haft pointing straight down, the axe head at the top with the cutting edge facing LEFT, side view of the blade. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_knight",
+   "form": "staff",
+   "key": "w_knight@staff",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_knight.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_knight",
+   "form": "dagger",
+   "key": "w_knight@dagger",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_knight.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_knight",
+   "form": "bow",
+   "key": "w_knight@bow",
+   "rarity": "E",
+   "iconKey": "tripo-image/C/w_knight.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel."
+  },
+  {
+   "id": "w_dragon",
+   "form": "greataxe",
+   "key": "w_dragon@greataxe",
+   "rarity": "L",
+   "iconKey": "tripo-image/A/w_dragon.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a two-handed double-bladed great axe on a long haft. The great axe stands vertical, haft pointing straight down, the axe heads at the top, side view of the blades. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_dragon",
+   "form": "staff",
+   "key": "w_dragon@staff",
+   "rarity": "L",
+   "iconKey": "tripo-image/A/w_dragon.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_dragon",
+   "form": "dagger",
+   "key": "w_dragon@dagger",
+   "rarity": "L",
+   "iconKey": "tripo-image/A/w_dragon.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_dragon",
+   "form": "bow",
+   "key": "w_dragon@bow",
+   "rarity": "L",
+   "iconKey": "tripo-image/A/w_dragon.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_sun",
+   "form": "greataxe",
+   "key": "w_sun@greataxe",
+   "rarity": "L",
+   "iconKey": "tripo-image/C/w_sun.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a two-handed double-bladed great axe on a long haft. The great axe stands vertical, haft pointing straight down, the axe heads at the top, side view of the blades. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_sun",
+   "form": "staff",
+   "key": "w_sun@staff",
+   "rarity": "L",
+   "iconKey": "tripo-image/C/w_sun.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a long two-handed magic staff with an ornate head. The staff stands perfectly vertical, ornate head at the top, butt end at the bottom. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_sun",
+   "form": "dagger",
+   "key": "w_sun@dagger",
+   "rarity": "L",
+   "iconKey": "tripo-image/C/w_sun.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a short dagger. The dagger stands perfectly vertical with the blade pointing straight up and the hilt at the bottom, flat-on view of the blade face. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  },
+  {
+   "id": "w_sun",
+   "form": "bow",
+   "key": "w_sun@bow",
+   "rarity": "L",
+   "iconKey": "tripo-image/C/w_sun.png",
+   "prompt": "Orthographic concept art of a game weapon inspired by the exact same item shown in the reference image: keep its identical colors, materials, gems and ornament style, but the weapon type is a recurve longbow with a taut string. The bow stands perfectly vertical, limbs pointing up and down, the bow string on the RIGHT side as a straight vertical line, grip in the middle, side view. The entire weapon visible with empty margin around it, on a flat pure white background, no shadow, no perspective distortion, no hands, no text. Stylized hand-painted low-poly game asset with chunky readable shapes, every ornament solidly attached to the weapon (nothing floating). Colors, materials and ornaments taken from the reference sword: sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel."
+  }
+ ]
+}

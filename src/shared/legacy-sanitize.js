@@ -8,7 +8,20 @@ import { GACHA_BANNERS } from '../data/gacha-banners.js';
 import { EconomyCore } from '../game/economy-core.js';
 import { HEROES } from '../data/heroes.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE } from '../data/hero-roster.js';
+import { normalizeGearDex, seedGearDex, setGearDex } from '../game/gear-dex.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
+import { normalizeLegend } from '../game/legend-rank.js';
+import { normalizeIdle, importedIdle } from '../game/idle-rewards.js';
+import { normalizeNewbie } from '../game/newbie-event.js';
+import { normalizeAchievements } from '../game/achievements.js';
+import { trustedSlain } from '../game/kill-ledger.js';
+import { periodAt, normalizeJourney, journeySteps } from '../game/journey-core.js';
+import { CHAPTERS } from '../data/stages.js';
+import { progressItemLevel } from '../data/loot-tables.js';
+import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
+import { isChapterOpen } from '../data/chapter-open.js';
+import { DIFFICULTY_ORDER } from '../game/difficulty.js';
+import { resolveCampaignTown } from '../data/campaign-towns.js';
 
 export const LEGACY_EPOCH = Date.UTC(2026, 6, 1);
 const DAY = 86400000;
@@ -17,16 +30,93 @@ export const INVENTORY_CAP = 3000;
 /** 재화별 일 최대 획득률(가정). */
 export const DAILY_MAX = Object.freeze({
   gold: 3000000, gems: 5000, tickets: 40, ssrTickets: 2, sweep: 30, stones: 600, stones2: 200, stones3: 80,
-  fragments: 500, protect: 10, bless: 10, transcendStones: 40, skillResets: 3, heroShards: 200, material: 500,
+  fragments: 500, protect: 10, bless: 10, transferScroll: 5, transcendStones: 40, skillResets: 3, heroShards: 200, material: 500,
+  // 처치 수(quests.kills): 8시간 연속 사냥(판당 최대 수백 마리)보다 넉넉히. docs/SERVER_AUTHORITY_GATES.md 3절.
+  kills: 20000,
 });
 /** 일회성 원천 합(환영 우편·임무·첫 클리어·패스 무료 트랙 등, 가정). */
 export const ONE_TIME = Object.freeze({
   gold: 2000000, gems: 40000, tickets: 200, ssrTickets: 10, sweep: 30, stones: 2000, stones2: 500, stones3: 200,
-  fragments: 2000, protect: 20, bless: 20, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
+  fragments: 2000, protect: 20, bless: 20, transferScroll: 5, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
+  kills: 3000,
 });
-const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transcendStones', 'skillResets'];
+const CURRENCIES = ['gold', 'gems', 'tickets', 'ssrTickets', 'sweep', 'stones', 'stones2', 'stones3', 'fragments', 'protect', 'bless', 'transferScroll', 'transcendStones', 'skillResets'];
 
 const isRecord = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * 캠페인 진행 속도 상한(가정): 인정하는 마지막 관문 번호 = 일회성 + 일당 × 경과일. 7장 70관문을 이틀 안에 끝낸 기록까지 깎지 않게 넉넉히 잡았다.
+ * 베타 지표(실제 클리어 속도)로 보정한다.
+ */
+export const PROGRESS_PACE = Object.freeze({ oneTime: 40, daily: 20 });
+const STAGE_KEY = /^(\d+)-(\d+)$/;
+const floorOf = (key) => { const m = STAGE_KEY.exec(key); return m ? (+m[1] - 1) * STAGES_PER_CHAPTER + +m[2] : 0; };
+const NIGHTMARE_RANK = DIFFICULTY_ORDER.indexOf('nightmare');
+const chapterOf = (key) => { const m = STAGE_KEY.exec(key); return m ? +m[1] : 0; };
+
+/**
+ * 진행도 정화(가져오기·그림자 스냅샷 공통). 클라이언트가 보낸 progress.unlocked·stars·endgame(peak·고통 단계)를 그대로 믿지 않는다.
+ * 1) 개방 시각(CHAPTER_OPEN)이 지나지 않은 장의 기록은 버린다(서버 시계 now 기준).
+ * 2) 클라이언트 별점은 1번 관문부터 끊김 없이 이어진 구간만, 관문 번호가 속도 상한(PROGRESS_PACE × 경과일) 이하인 곳까지 인정한다.
+ * 3) unlocked 는 저장값이 아니라 남은 별점 기록에서 다시 계산한다(마지막 클리어 관문 + 1). 별점 없는 unlocked 만 올린 조작은 잘린다.
+ * 4) 서버 문서가 이미 가진 진행(서버 정산·이전 정화를 거친 값)은 깎지 않는다(바닥값).
+ * 5) endgame.peak 는 남은 관문만(악몽 이상은 3별 관문만), 고통 단계 best 는 서버 문서 값까지만.
+ * @returns {{ clamped: Record<string, { from: number, to: number }>, tampered: boolean }} 절삭 기록과 조작 표시(열리지 않은 장·건너뛴 관문 뒤의 기록)
+ */
+export function trustedProgress(s, { now, days, serverProgress, serverEndgame }) {
+  const clamped = {};
+  let tampered = false;
+  const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
+  const sp = isRecord(serverProgress) ? serverProgress : {};
+  const serverStars = isRecord(sp.stars) ? sp.stars : {};
+  const stars = isRecord(s.progress?.stars) ? s.progress.stars : {};
+  const cap = PROGRESS_PACE.oneTime + PROGRESS_PACE.daily * days;
+  const before = { unlocked: Number(s.progress?.unlocked) || 1, cleared: Object.values(stars).filter((v) => v > 0).length };
+  // 서버가 이미 아는 관문은 항상 남긴다(바닥값).
+  const keep = {};
+  for (const [key, v] of Object.entries(serverStars)) if (STAGE_KEY.test(key) && Number.isInteger(v) && v > 0) keep[key] = Math.min(3, v);
+  const serverTop = Math.max(Object.keys(keep).reduce((m, key) => Math.max(m, floorOf(key)), 0), (Number.isSafeInteger(sp.unlocked) ? sp.unlocked : 1) - 1);
+  // 클라이언트 관문은 1번부터 끊김 없이 이어진 구간만 인정한다(관문 N은 N-1을 깬 뒤에만 들어갈 수 있다).
+  // 열리지 않은 장에서 멈추고, 그 구간의 끝은 속도 상한(관문 번호 ≤ cap)을 넘지 않는다. 서버가 아는 진행까지는 이어진 것으로 본다.
+  const byFloor = new Map(Object.entries(stars).filter(([key, v]) => v > 0 && STAGE_KEY.test(key)).map(([key, v]) => [floorOf(key), [key, v]]));
+  let top = serverTop;
+  for (let f = 1; f <= floors; f++) {
+    const hit = byFloor.get(f);
+    const known = f <= serverTop;
+    if (!hit) { if (known) continue; break; }
+    const [key, v] = hit;
+    if (!known && (!isChapterOpen(chapterOf(key), now) || f > cap)) break;
+    keep[key] = Math.max(keep[key] ?? 0, v);
+    top = Math.max(top, f);
+  }
+  // 이어진 구간 밖에 남은 별점: 열리지 않은 장의 기록이나 건너뛴 관문 뒤의 기록은 정상 플레이로 생길 수 없다(조작 표시).
+  for (const [f, [key]] of byFloor) if (!(key in keep) && (!isChapterOpen(chapterOf(key), now) || (f > top + 1 && f <= cap))) tampered = true;
+  const unlocked = Math.max(1, Math.min(floors, top + 1));
+  s.progress = { ...s.progress, stars: keep, unlocked };
+  // 마을 상태는 정화된 진행에서 다시 정한다(잘린 지역의 마을이 현재 마을로 남지 않게).
+  if (isRecord(s.campaignTown)) { const town = resolveCampaignTown(s.progress, s.campaignTown); s.campaignTown = { current: town.current, celebrated: town.celebrated }; }
+  const after = Object.keys(keep).length;
+  if (after < before.cleared) clamped['progress.stars'] = { from: before.cleared, to: after };
+  if (unlocked < before.unlocked) clamped['progress.unlocked'] = { from: before.unlocked, to: unlocked };
+  if (isRecord(s.endgame)) {
+    const se = isRecord(serverEndgame) ? serverEndgame : {};
+    const sPeak = isRecord(se.peak) ? se.peak : {};
+    const peak = {};
+    const clientPeak = isRecord(s.endgame.peak) ? s.endgame.peak : {};
+    // 남은 관문의 난이도 기록만, 악몽 이상은 그 관문이 3별일 때만(악몽은 3별 관문에서 열린다) 인정한다.
+    for (const [key, rank] of Object.entries(clientPeak)) if (key in keep) peak[key] = keep[key] >= 3 ? rank : Math.min(rank, NIGHTMARE_RANK - 1);
+    for (const [key, rank] of Object.entries(sPeak)) if (Number.isInteger(rank)) peak[key] = Math.max(peak[key] ?? -1, rank);
+    const keptClient = Object.keys(clientPeak).filter((key) => key in keep).length;
+    if (keptClient < Object.keys(clientPeak).length) clamped['endgame.peak'] = { from: Object.keys(clientPeak).length, to: keptClient };
+    // 고통 단계 최고 기록은 서버 문서 값까지만 인정한다(가져오기·스냅샷으로 올릴 수 없음). 단계는 서버 정산으로만 오른다.
+    const serverBest = Number.isSafeInteger(se.torment?.best) ? se.torment.best : 0;
+    const best = Number(s.endgame.torment?.best) || 0;
+    const nextBest = Math.min(best, serverBest);
+    if (nextBest < best) clamped['endgame.torment.best'] = { from: best, to: nextBest };
+    s.endgame = { ...s.endgame, peak, torment: { ...s.endgame.torment, best: nextBest } };
+  }
+  return { clamped, tampered };
+}
 
 /**
  * 영웅 소유 정본 정화. 클라이언트가 보낸 roster.paid·owned는 버리고 서버가 아는 값으로 만든다.
@@ -70,13 +160,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, serverJourney?: any, snapshot?: boolean }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, serverJourney, snapshot = false }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -104,6 +194,11 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   for (const key of Object.keys(s.expedition?.materials || {})) {
     s.expedition.materials[key] = clamp(`materials.${key}`, Number(s.expedition.materials[key]) || 0, ONE_TIME.material + DAILY_MAX.material * days);
   }
+  // 진행도(unlocked·별점·엔드게임)는 개방 시각·속도 상한·서버 기록으로 정화한다(조작 저장으로 지역·영웅 합류·고통 단계 건너뛰기 차단).
+  const progress = trustedProgress(s, { now, days, serverProgress, serverEndgame });
+  Object.assign(clamped, progress.clamped);
+  // 정상 플레이로 생길 수 없는 진행 기록(열리지 않은 장, 건너뛴 관문 뒤)은 severe(감사·보상 보류).
+  if (progress.tampered) severe = true;
   if (s.inventory.length > INVENTORY_CAP) {
     const equipped = new Set(Object.values(s.heroes).flatMap((h) => Object.values(h.equip)).filter(Boolean));
     const keep = s.inventory.filter((x) => equipped.has(x.uid));
@@ -114,6 +209,65 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 룬·전운은 서버 소유 명령이 생기기 전까지 가져오지 않는다(조작 세이브로 룬·가루·보관 각인 주입 방지). 첫 개방 선물만 남는 기본값.
   s.runes = normalizeRunes(undefined); s.blessing = normalizeBlessing(undefined);
   for (const item of s.inventory) delete item.sockets;
+  // 고통 단계 장비 파워(tp)·전설 수련도 서버 명령이 생기기 전까지 가져오지 않는다(조작 세이브로 tp 50 장비·전설 단계 주입 방지).
+  for (const item of s.inventory) { delete item.tp; delete item.il; }   // il(스테이지 장비 레벨)도 같은 이유로 가져오지 않는다.
+  // 가져온 il 대신 서버가 정화한 진행도의 장비 레벨을 모든 장비에 다시 준다(저장 정화의 il 이월과 같은 규칙). 없으면 il 이 붙은 새 필드 드랍이
+  // 가져온 유니크·레전드리를 앞섰다(2026-10-29 신고). 정화된 진행도라 조작 세이브로 il 을 부풀릴 수 없다.
+  { const il = progressItemLevel(s.progress); if (il > 1) for (const item of s.inventory) item.il = il; }
+  s.legend = normalizeLegend(undefined);
+  // 계승 문장은 가져오지 않는다(외부 저장으로 재화 주입 금지). 도감은 가져온 장비로 다시 만든 드랍 도감 + 서버 문서 값(수령 기록 포함)만 인정한다:
+  // 가져온 kin·claimed 는 버린다(마일스톤 보상 주입·재수령 방지).
+  // 그림자 스냅샷(snapshot)은 외부 가져오기가 아니라 같은 계정의 반복 동기화다: 문장 잔액·도감은 서버 문서 값을 그대로 유지하고(소급·삭제 없음),
+  // 로컬이 보낸 값은 쓰지 않는다. 문장·도감은 서버 명령(vaultRitual·gearDexClaim·claimJourneySigil)으로만 바뀐다.
+  delete s.lineageSigil; delete s.sigilClaims;
+  // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 정산(completeStage)만 만든다. 가져온 카드 보상은 버린다(조작 세이브로 보상 주입 방지, 보안 리뷰 P2).
+  delete s.clearCard;
+  if (snapshot) {
+    const claims = (Array.isArray(serverSigilClaims) ? serverSigilClaims : []).filter((k) => typeof k === 'string');   // 의뢰 문장 수령 기록도 서버 값 그대로(재수령 차단)
+    if (claims.length) s.sigilClaims = claims.slice(-16);
+    const sigil = Number.isSafeInteger(serverLineageSigil) && serverLineageSigil > 0 ? serverLineageSigil : 0;
+    if (sigil > 0) s.lineageSigil = sigil;
+    // 드랍 도감만 클라이언트가 실제 드랍 때 기록한 항목(원본 gearDex.drop)을 더하되, 지금 그 영웅이 가진 장비로 뒷받침되는 것만 인정한다.
+    // 소유만으로 채우는 소급(seedGearDex)은 하지 않으므로 이동·꺼내기로는 도감이 늘지 않는다. kin·claimed 는 서버 문서 값만.
+    const sv = normalizeGearDex(serverGearDex), own = normalizeGearDex(raw?.gearDex)?.drop || {}, held = {};
+    for (const x of s.inventory) if (x.owner) (held[x.owner] ||= new Set()).add(x.id);
+    const drop = {};
+    for (const h of Object.keys(HEROES)) { const l = [...new Set([...(sv?.drop?.[h] || []), ...(own[h] || []).filter((id) => held[h]?.has(id))])]; if (l.length) drop[h] = l; }
+    setGearDex(s, normalizeGearDex({ drop, kin: sv?.kin, claimed: sv?.claimed }));
+  } else {
+    const sv = normalizeGearDex(serverGearDex), mine = seedGearDex(s), merge = (a, b) => { const o = {}; for (const h of Object.keys(HEROES)) { const l = [...new Set([...(a?.[h] || []), ...(b?.[h] || [])])]; if (l.length) o[h] = l; } return o; };
+    setGearDex(s, normalizeGearDex({ drop: merge(sv?.drop, mine?.drop), kin: sv?.kin, claimed: sv?.claimed }));
+  }
+  // 방치 보급·7일 여정·업적(docs/RPG_ESSENTIALS.md)은 수령 기록이다. 반복 스냅샷은 서버 문서 값을 그대로 쓴다(편집 저장으로 재수령 방지).
+  // 외부 가져오기(계정당 1회)는 방치 시각만 서버 지금으로 다시 시작하고, 여정·업적 수령 기록은 원본을 정규화해 이어받는다
+  // (정직한 이용자의 진행을 지우지 않고 그림자 명령이 같은 상태에서 판정되게. 재화 주입은 기존 일일 한도가 막는다).
+  if (snapshot) {
+    s.idle = normalizeIdle(serverIdle, importedIdle(now));
+    s.newbie = normalizeNewbie(serverNewbie, { start: periodAt(now).day });
+    s.achievements = normalizeAchievements(serverAchievements);
+    // 여정 단계 수령 기록도 서버 명령(claimJourneyStep)이 소유한다: 반복 스냅샷으로 비워 재수령하지 못하게 서버 값만(docs/SERVER_AUTHORITY_GATES.md 4절).
+    if (s.journey && typeof s.journey === 'object') s.journey.claimedSteps = normalizeJourney(serverJourney).claimedSteps;
+  } else {
+    // 외부 가져오기의 여정 단계 기록은 서버 판정(attest)으로도 받을 수 있는 단계만 순서대로 남긴다(파생 보상 wayfarer·d3c·7일 최종 상자 위조 차단, 교차 리뷰).
+    if (s.journey && typeof s.journey === 'object') {
+      const device = new Set(normalizeJourney(raw?.journey).claimedSteps), kept = new Set(normalizeJourney(serverJourney).claimedSteps);
+      for (const step of journeySteps({ ...s, journey: { claimedSteps: [] } }, { attest: true })) {
+        if (kept.has(step.id)) continue;
+        if (!device.has(step.id) || !step.complete) break;
+        kept.add(step.id);
+      }
+      s.journey.claimedSteps = [...kept];
+    }
+    s.idle = importedIdle(now);
+    s.newbie = normalizeNewbie(raw?.newbie, { start: periodAt(now).day });
+    s.achievements = normalizeAchievements(raw?.achievements);
+  }
+  // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md 3절): 처치 수는 경과일 상한으로 자르고 서버 값을 바닥으로 둔다.
+  // 종 원장은 서버 문서가 이미 병합했으면(seeded) 서버 값만, 아니면 기기 기록을 정화된 진행 범위 종 풀·처치 수 상한으로 한 번 옮긴다.
+  const killsFloor = Number.isSafeInteger(serverKills) && serverKills > 0 ? serverKills : 0;
+  s.quests.kills = Math.max(killsFloor, clamp('quests.kills', Number(s.quests?.kills) || 0, ONE_TIME.kills + DAILY_MAX.kills * days));
+  // 외부 가져오기는 계정당 1회라 서버 문서의 seeded 와 무관하게 한 번 병합한다(새 계정 문서는 seeded:true 로 만들어진다). 스냅샷은 서버가 아직 병합 전일 때만.
+  s.slain = trustedSlain(raw, { server: snapshot ? serverSlain : { ...(serverSlain && typeof serverSlain === 'object' ? serverSlain : {}), seeded: false }, floor: Math.max(1, Number(s.progress?.unlocked) || 1), killsCap: s.quests.kills });
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).
   const droppedPaid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };

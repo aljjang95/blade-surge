@@ -31,9 +31,10 @@ const REGION1 = ['glass_garden', 'bellfall_crypt', 'rootbound_grotto', 'hollowbe
 const run = (id: string, outcome = 'defeat') => ({ runId: 1, floor: 1, outcome, boonIds: [], details: { route: { kind: 'dungeon', id, depth: 'standard', conquestId: null, riftId: null } } });
 
 describe('던전 → 지역 배정표', () => {
-  test('모든 던전이 지역 1~6 중 하나에 배정되고 지역마다 하나 이상이다', () => {
+  test('모든 던전이 지역 1~6 중 하나에 배정되고 지역마다 하나 이상이다(7장 종탑 도시는 원정 던전 없이 캠페인만)', () => {
     expect(Object.keys(DUNGEON_REGION).sort()).toEqual(ALL_DUNGEONS.map((d: any) => d.id).sort());
-    for (const town of CAMPAIGN_TOWNS) expect(regionDungeonIds(town.chapter).length).toBeGreaterThan(0);
+    for (const town of CAMPAIGN_TOWNS.filter((t: any) => t.chapter <= 6)) expect(regionDungeonIds(town.chapter).length).toBeGreaterThan(0);
+    expect(regionDungeonIds(7)).toEqual([]);   // 종탑 도시 원정 던전은 후속 덩어리
     expect(regionDungeonIds(1)).toEqual(REGION1);
     expect(dungeonRegion('windmeadow')).toBe(0); // 야외 필드는 지역 잠금이 없다
   });
@@ -85,6 +86,20 @@ describe('새 저장 · 진행 저장의 노출', () => {
     expect(new Set(state.visibleIds)).toEqual(new Set([...regionDungeonIds(1), ...regionDungeonIds(2), ...regionDungeonIds(3)]));
     expect(state.teaser?.region).toBe(4);
     expect(state.gateIds).toEqual(regionDungeonIds(3));
+  });
+
+  test('귀환로(6지역): 고유 관문 하나에 앞 지역마다 대표 관문 하나씩을 함께 세운다(docs/TOWN_AUDIT.md)', () => {
+    const s = load({ ...fresh(), progress: { unlocked: 51, stars: { ...stars(1), ...stars(2), ...stars(3), ...stars(4), ...stars(5) }, difficulty: 'story' } });
+    const state = regionDungeonState(s);
+    expect(state.current).toBe(6);
+    expect(state.gateIds[0]).toBe('comet_bastion');
+    expect(state.gateIds).toHaveLength(6);
+    expect(state.gateIds.slice(1).map((id: string) => dungeonRegion(id))).toEqual([5, 4, 3, 2, 1]);
+    for (const id of state.gateIds) expect(state.visibleIds).toContain(id);
+    // 5지역 마을로 돌아가면 그 지역 관문만 선다.
+    const back = regionDungeonState({ ...s, campaignTown: { current: 5, celebrated: 6 } });
+    expect(back.current).toBe(5);
+    expect(back.gateIds.every((id: string) => dungeonRegion(id) === 5)).toBe(true);
   });
 
   test('별 기록만 있는 옛 저장(unlocked·campaignTown·regionGate 없음): 별에서 진행을 복원해 마을과 던전을 연다', () => {

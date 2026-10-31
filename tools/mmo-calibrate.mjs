@@ -213,7 +213,8 @@ try {
     const table = JSON.parse(await fs.readFile(tablePath, 'utf8'));
     const byKey = new Map();
     for (const r of rows) if (r.facts && !r.invalid) { const k = `${r.code}:${r.difficulty}`; (byKey.get(k) || byKey.set(k, []).get(k)).push(r); }
-    const stages = {}, observed = {};
+    // 이번 실행에서 측정한 행만 갈아 끼운다. 이번에 돌리지 않은 기존 행(예: 7장만 돌릴 때의 1~6장)은 그대로 보존한다.
+    const stages = { ...(table.stages || {}) }, observed = {};
     let maxDps = 0;
     for (const [key, list] of [...byKey].sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))) {
       const wins = list.filter((r) => r.facts.win);
@@ -224,9 +225,16 @@ try {
       const maxRooms = max((r) => r.facts.roomsCleared) + 4;
       // 엘리트는 일반 방마다 35% 확률로 추가되므로 표본 최댓값이 아니라 방 수로 묶는다(방당 최대 2).
       kills.elite = Math.max(kills.elite, maxRooms * 2);
-      stages[key] = {
+      const measured = {
         minClearMs: Math.max(10000, Math.floor(Math.min(...wins.map((r) => r.facts.elapsedMs)) * 0.5)),
         kills, summonedKills: Math.ceil(summonedMax * 1.5) + 10, maxRooms,
+      };
+      // 재보정은 기존 행보다 엄격해지지 않는다: 표본이 적은 재측정 한 번이 이미 통과하던 정상 판을 거절하지 않게 필드별로 더 관대한 값을 둔다.
+      const prev = stages[key];
+      stages[key] = !prev ? measured : {
+        minClearMs: Math.min(prev.minClearMs, measured.minClearMs),
+        kills: Object.fromEntries(KILL_RANKS.map((k) => [k, Math.max(prev.kills?.[k] || 0, measured.kills[k])])),
+        summonedKills: Math.max(prev.summonedKills || 0, measured.summonedKills), maxRooms: Math.max(prev.maxRooms || 0, measured.maxRooms),
       };
       observed[key] = { runs: list.length, wins: wins.length, elapsedMs: [Math.min(...wins.map((r) => r.facts.elapsedMs)), Math.max(...wins.map((r) => r.facts.elapsedMs))],
         kills: Object.fromEntries(KILL_RANKS.map((k) => [k, [Math.min(...list.map((r) => r.facts.kills[k] || 0)), max((r) => r.facts.kills[k] || 0)]])),
@@ -244,7 +252,7 @@ try {
     const dpsPerAtk = Math.max(table.dpsPerAtk, dpsNeed);
     const next = { version: 'p1-calibrated-' + new Date().toISOString().slice(0, 10).replaceAll('-', ''), note: table.note,
       dpsPerAtk, damageSlack: table.damageSlack, maxRevives: table.maxRevives, wallClockSlack: table.wallClockSlack, defaults, stages };
-    next.note = 'MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다.';
+    next.note = 'MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs --calibrate가 권장 레벨 AUTO 클리어 관측값으로 스테이지·난이도별 값을 채운다(처치 ×1.5, 엘리트는 방 수×2 이상, 소환 ×1.5+10, 방 +4, 최소 시간 ×0.5). 표에 없는 스테이지는 defaults를 쓴다. 재보정은 기존 행보다 엄격해지지 않게 필드별로 더 관대한 값을 유지한다(표본이 적은 재측정이 정상 판을 거절하지 않게).';
     await fs.writeFile(tablePath, JSON.stringify(next, null, 2) + '\n');
     report = { mode, runs: rows.length, wins: rows.filter((r) => r.status === 'win').length, statuses: countBy(rows, 'status'), maxDpsObserved: +maxDps.toFixed(3), dpsNeed, dpsPerAtk,
       observed, table: next, rows: rows.map(slim), runtimeS: Math.round((Date.now() - t0) / 1000) };

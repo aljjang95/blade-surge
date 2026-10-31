@@ -1,4 +1,5 @@
-import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJourneyStep, claimContract, setTargetRecipe } from './journey-core.js';
+import { heroItems } from './gear-vault.js';
+import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimContract, setTargetRecipe } from './journey-core.js';
 import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { contractBonus } from './rune-economy.js';
@@ -19,14 +20,25 @@ export class JourneyService {
     if (this.app.stageStarting || (!duringBattle && (this.app.battle?.active || this.app.expeditionUI?.result?.saveError))) return { ok: false, error: '전투와 전리품 정산을 마친 뒤 이용해 주세요.' };
     return this.app.expedition.transact(() => fn(this.s));
   }
-  grant(result) {
+  /**
+   * 보상 지급. 계승 문장은 서버 명령(eco.claimJourneySigil)으로만 올린다: 로컬에서 직접 더하면 서버 권위 계정에서
+   * 서버 문서가 다음 응답에 덮어써 잔액이 어긋나거나 사라진다. 서버가 거부하면 수령 전체를 거부한다(transact 가 되돌린다).
+   * 골드·강화석 등 나머지는 아직 서버 명령이 없는 여정 경로(로컬) 그대로다.
+   * @param {any} result @param {{ kind: string, id: string } | null} [source] 의뢰 수령 출처(계승 문장 보상에 필요)
+   */
+  grant(result, source = null) {
     if (!result.ok) return result;
     const r = result.rewards || {};
+    if (r.lineageSigil > 0) {
+      const sigil = source ? this.app.eco.claimJourneySigil(source.kind, source.id) : { ok: false };
+      if (!sigil?.ok) return { ok: false, error: sigil?.reason === 'claimed' ? '이미 받은 보상입니다.' : '계승 문장 보상을 받지 못했습니다.' };
+    }
     this.app.expedition.reward(r);
     for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.app.eco.s[key] += r[key] || 0;
     return result;
   }
-  claimStep(id) { return this.transact(s => this.grant(claimJourneyStep(s, this.app.eco.s, id))); }
+  /** 단계 수령은 Economy 명령(claimJourneyStep)이라 서버 권위 계정에서는 서버가 같은 판정·지급을 한다(docs/SERVER_AUTHORITY_GATES.md 4절). */
+  claimStep(id) { return this.transact(() => this.app.eco.claimJourneyStep(id)); }
   /** 무한의 성이 이번 주 상한에 닿았으면 탑 임무는 채울 방법이 없으므로 달성으로 본다. */
   waivers() { const t = this.app.eco.towerSummary?.(); return { waived: t?.unlocked && t.capped ? ['towerFloors'] : [] }; }
   /** 의뢰 표시·수령이 같은 옵션을 쓴다: 탑 상한 면제 + 이 저장에서 열린 던전(오늘의 원정지는 잠긴 곳을 가리키지 않는다). */
@@ -35,7 +47,7 @@ export class JourneyService {
   claim(kind, id) {
     const options = this.contractOptions();
     return this.transact(s => {
-      const result = this.grant(claimContract(s, kind, id, options));
+      const result = this.grant(claimContract(s, kind, id, options), { kind, id });
       if (result.ok && s[kind]?.claimed?.length === 1) result.bonus = this.app.eco.addRewards(contractBonus(kind), { silent: true, applyVip: false });
       return result;
     });
@@ -46,7 +58,8 @@ export class JourneyService {
     const recipe = RECIPES.find(r => r.id === this.s.targetRecipeId && r.itemId);
     if (!recipe) return null;
     const eco = this.app.eco, item = ITEM_BY_ID[recipe.itemId], open = visibleDungeonIds(eco.s);
-    const owned = eco.s.inventory.filter(i => i.id === item.id).sort((a, b) => b.enh - a.enh)[0];
+    // 장비 귀속(docs/GEAR_OWNERSHIP_VAULT.md): 목표 장비도 지금 영웅 소유분만 본다. 다른 영웅·금고 장비를 여기서 장착하면 금고 이전 비용·횟수를 우회한다.
+    const owned = heroItems(eco.s, eco.s.selected).filter(i => i.id === item.id).sort((a, b) => b.enh - a.enh)[0];
     const owner = owned && Object.keys(eco.s.heroes).find(id => Object.values(eco.s.heroes[id].equip).includes(owned.uid));
     const materials = Object.entries(recipe.materials).map(([id, need]) => {
       // 재료를 주는 던전 중 이 저장에서 열린 곳만 안내한다. 전부 잠겼으면 던전 이름을 숨기고 locked 로만 알린다.
@@ -62,6 +75,8 @@ export class JourneyService {
     if (!target?.owned) return { ok: false, error: '목표 장비를 먼저 제작해 주세요.' };
     return this.transact(() => {
       const eco = this.app.eco, slot = target.item.slot, uid = target.owned.uid;
+      const inst = eco.s.inventory.find(i => i.uid === uid);
+      if (!inst || (inst.owner ?? eco.s.selected) !== eco.s.selected) return { ok: false, error: '이 영웅의 장비가 아닙니다. 금고에서 꺼내 주세요.' };
       for (const h of Object.values(eco.s.heroes)) if (h.equip[slot] === uid) h.equip[slot] = null;
       eco.s.heroes[eco.s.selected].equip[slot] = uid; return { ok: true, uid };
     });

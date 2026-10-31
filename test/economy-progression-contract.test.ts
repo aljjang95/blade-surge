@@ -44,7 +44,9 @@ test('습득 오류·SP 부족·최대 레벨·저장 실패는 화폐/스킬/�
   expect(eco.learnSkill('knight', 4)).toMatchObject({ ok: false, reason: 'level', need: 10 });
   h.skills[0] = 10;
   expect(eco.learnSkill('knight', 0)).toEqual({ ok: false, reason: 'max' });
-  expect(eco.learnSkill('knight', 1)).toMatchObject({ ok: false, reason: 'sp' });
+  // 둘째 기본 스킬은 Lv2 단계 해금 전에는 SP를 쓰지 못한다(skill-tree.js BASIC_SKILL_GATES).
+  expect(eco.learnSkill('knight', 1)).toMatchObject({ ok: false, reason: 'level', need: 2 });
+  h.level = 2; expect(eco.learnSkill('knight', 1)).toMatchObject({ ok: false, reason: 'sp' }); h.level = 1;
   h.skills = baselineSkillLevels(HEROES.knight);
   const before = structuredClone(eco.s); fail = true;
   expect(eco.upgradeSkill('knight', 0)).toEqual({ ok: false, reason: 'storage' });

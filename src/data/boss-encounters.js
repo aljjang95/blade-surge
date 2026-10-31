@@ -30,6 +30,28 @@ export const BOSS_ENCOUNTERS = {
     tactic: '잔향과 자신을 잇는 선 옆으로 피하세요. 귀환의 빈 원이 옮겨 가면 다음 쉼터로 이동하고, 마지막 공명 뒤 반격하세요.',
     phaseHints: ['발밑까지 이어진 명령의 선을 끊으세요.', '빈 원을 따라 다음 귀환 쉼터로 이동하세요.', '세 번째 쉼터까지 이동해야 합니다.'],
   },
+  belltower_finalboss: {
+    phases: [['bell_threefold','slam','bell_crack','spin'], ['bell_crack','bell_threefold','summon','slam'], ['bell_threefold','bell_crack','bell_threefold']],
+    tactic: '세 박자 종소리의 고리가 퍼진 뒤, 고리 안쪽이 겹치는 한가운데만 마지막 울림을 피합니다. 균열이 갈라지면 세 종을 잇는 선 밖이나 한가운데로 이동하세요.',
+    phaseHints: ['세 번 울린 뒤 한가운데 작은 원만 안전합니다.', '갈라진 균열선과 세 박자가 번갈아 옵니다.', '박자가 빨라집니다. 한가운데로 돌아오는 길을 먼저 정하세요.'],
+  },
+};
+
+/**
+ * 지역 최종 보스가 아닌 계급(수문장·중간 보스)이 가진 고유 페이즈. 최종 보스의 '고유기 둘 + 페이즈 셋' 계약(BOSS_ENCOUNTERS)과 별개로 둔다.
+ * 7장 종탑 도시: 수문장(시청 종루의 종지기)과 중간 보스(종탑 수문 기사)는 두 종의 교대 타종(bell_pair)이 핵심이다.
+ */
+export const BOSS_RANK_ENCOUNTERS = {
+  belltower_warden: {
+    phases: [['bell_pair','slam','spin'], ['bell_pair','spin','bell_pair'], ['bell_pair','slam','bell_pair']],
+    tactic: '좌우 종이 번갈아 고리를 퍼뜨립니다. 두 종 사이 한가운데에서 박자를 세고, 마지막 울림 뒤에 반격하세요.',
+    phaseHints: ['왼쪽 종 → 오른쪽 종 순서를 읽으세요.', '교대 타종이 이어집니다.', '마지막 박자까지 한가운데를 지키세요.'],
+  },
+  belltower_midboss: {
+    phases: [['bell_pair','slam','bell_pair','spin'], ['bell_pair','summon','bell_pair','slam'], ['bell_pair','spin','bell_pair']],
+    tactic: '수문의 두 종이 교대로 울립니다. 두 고리가 모두 닿지 않는 한가운데에 서서 박자를 세고, 마지막 울림 뒤 반격하세요.',
+    phaseHints: ['왼쪽 종이 먼저 울립니다.', '소환된 병사를 정리하며 교대 타종을 이어 피하세요.', '울림이 한 번 더 이어집니다. 한가운데를 지키세요.'],
+  },
 };
 
 export const BOSS_SIGNATURES = {
@@ -45,6 +67,10 @@ export const BOSS_SIGNATURES = {
   crown_verdict: { name:'갈라진 낙인', cue:'두 낙인 뒤 가운데 절단선을 피하세요', color:0xe9c785, anim:'cast' },
   oath_tethers: { name:'끊어진 명령', cue:'잔향과 나를 잇는 선 옆으로 이동', color:0x87cbb0, anim:'cast' },
   oath_shelter: { name:'함께 잇는 귀환', cue:'공명 속 빈 원을 따라 다음 쉼터로', color:0x87cbb0, anim:'raise' },
+  // 7장 종탑 도시의 종 기술. 종 위치(좌우 두 개 / 삼각 세 개)와 고리 폭이 판정 도형이다.
+  bell_pair: { name:'교대 타종', cue:'왼쪽 종 → 오른쪽 종 · 두 고리가 닿지 않는 한가운데로', color:0xe0c68c, anim:'raise' },
+  bell_threefold: { name:'세 박자 종소리', cue:'세 고리가 겹치는 한가운데만 안전 · 세 번 울린 뒤 반격', color:0xe0c68c, anim:'raise' },
+  bell_crack: { name:'금 간 대종', cue:'세 종을 잇는 균열선 밖이나 한가운데로', color:0xe0c68c, anim:'attackJump' },
   // 컨셉 던전 2곳의 전용 보스 기술. 맵 기믹(조수 범람 · 도르래 낙석)을 보스 무대로 옮긴 것이며 다른 보스는 쓰지 않는다.
   tidegate_flood: { name:'수문 범람', cue:'먼 쪽 수문 → 내 쪽 수문 · 거신이 선 마른 수로로', color:0x8ff7ff, anim:'attackHeavy' },
   tidegate_ring_gap: { name:'물결 고리 틈', cue:'바깥 물결과 소용돌이 사이 빈 고리 → 다음엔 안쪽으로', color:0x8ff7ff, anim:'cast' },

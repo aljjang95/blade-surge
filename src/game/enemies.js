@@ -6,6 +6,8 @@ import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
 import { Burrow, BURROW } from './burrow.js';
+import { Bellringer, BELL } from './bellringer.js';
+import { attachMonsterWeapon } from './monster-weapon.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
@@ -16,6 +18,10 @@ import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
 import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
+import { EliteAffixes } from './elite-affixes.js';
+import { sizeBandMul } from '../data/size-bands.js';
+import { campaignAtkMul, campaignHpMul } from './squads.js';
+import { dressEnemy } from './chapter-dress.js';
 const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
@@ -25,6 +31,7 @@ const _route = { x: 0, z: 0, pace: 1, los: true };
 // 원거리 적이 근접 영웅에게서 연속으로 물러설 수 있는 최대 시간. 끝없는 뒷걸음 추격을 막는다.
 const RANGED_RETREAT_SEC = 2.4;
 // 적 탄환과 자폭의 실제 타이밍 값. 공격 코드와 AUTO 위협 계산(enemyImpactIn)이 같은 값을 쓴다.
+export const GHOST_OPACITY = .85;        // 원령 몸 불투명도(깊이 기록과 함께 — 겹친 원령끼리 비쳐 보이지 않게)
 export const ENEMY_BOLT = { speed: 11, radius: 0.7 };
 export const ENEMY_FAN_BOLT = { speed: 13, radius: 0.75 };
 const ENEMY_MUZZLE = 0.8;                 // 탄환은 적 앞 0.8 지점에서 생긴다
@@ -41,6 +48,8 @@ export function enemyImpactIn(enemy, target) {
   // 지원 치유·소환 시전은 영웅에게 피해를 주지 않는다. 예고 링은 보이지만 피할 타격이 없다.
   if (enemy.supportCastKind) return Infinity;
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0) return Math.max(0, BOMBER_FUSE_SEC - enemy.fuse);
+  // 종소리 고리는 예고가 끝난 뒤에도 퍼져 나오는 시간이 있어, 대상에게 닿기까지의 시간으로 회피 타이밍을 준다.
+  if (enemy.bellringer) { const ring = enemy.bellringer.impactIn(target); if (ring !== null) return ring; }
   if (enemy.state !== 'attack' || enemy.attackDone) return enemy.telegraph;
   const plan = enemy.signatures?.plan;
   if (plan) {
@@ -62,7 +71,7 @@ export function enemySkillLabel(enemy) {
   const key = enemy?.special || enemy?.mobRole?.key || (enemy?.def?.ranged ? 'magic' : 'melee');
   return ({
     melee: '적의 공격', magic: '적의 주문', spin: '회전 강타', slam: '지면 강타', dash: '돌진',
-    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고', burrow: '잠행 습격',
+    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고', burrow: '잠행 습격', bell: '종소리 고리',
     support_heal: '치유 준비', support_summon: '소환 준비',
     crusher: '분쇄 강타', charger: '돌진', flanker: '측면 습격', 'role:crusher': '분쇄 강타',
     'role:charger': '돌진', 'role:flanker': '측면 습격',
@@ -78,12 +87,12 @@ export function nextBossPattern(def, turn, phase = 0) {
 }
 
 export class Enemy extends Actor {
-  constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
+  constructor(game, gltf, weaponsGltf, def, scaleMult, pos, species = null) {
     const rig = rigOf(def.model, gltf.scene.userData.libraryAsset);
     // visualScale 은 모델 크기만 줄인다. 반경·피격 높이·자폭 범위는 def.scale 기준으로 그대로다(큰 슬라임이 뒤의 적을 가리던 문제).
-    super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
+    super(game, gltf, { scale: def.scale * (def.visualScale ?? 1) * (rig === 'library' && gltf.scene.userData.libraryAsset?.id === monsterRosterEntry(def.model)?.asset ? sizeBandMul(def) : 1) * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
     this.def = def; this.type = def.name; this.isBoss = !!def.boss; this.isElite = !!def.elite;
-    this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7);
+    this.maxHp = Math.floor(def.hp * scaleMult * campaignHpMul(game.stage)); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7) * campaignAtkMul(game.stage);
     this.pos.copy(pos); this.face(0, 0);
     this.libraryRoster = monsterRosterEntry(def.model) || this.libraryRoster;
     this.libraryAsset = gltf.scene.userData.libraryAsset || this.libraryAsset;
@@ -93,11 +102,31 @@ export class Enemy extends Actor {
       this.root.traverse((o) => { if (o.isMesh) { const n = o.geometry?.attributes?.position?.count || 0; if (!body || n > body.n) body = { o, n }; } });
       this.root.traverse((o) => { if (o.isMesh) o.castShadow = body && o === body.o; });
     }
+    // 분리 무기(종지기 곤봉·수문 기사 쌍종 플레일): 로스터의 weapon 항목을 Tripo 몸(대체 실루엣이 아닌)의 오른손 본에 붙인다.
+    // 애도의 기사처럼 왼손 소품(묘비 방패)이 있으면 offhand 항목을 같은 방식으로 왼손 본에 붙인다.
+    const weaponSpecs = [this.libraryRoster?.weapon, this.libraryRoster?.offhand].filter(Boolean);
+    if (weaponSpecs.length && this.libraryAsset?.id === this.libraryRoster.asset) for (const weaponSpec of weaponSpecs) {
+      const held = attachMonsterWeapon(this.model, weaponSpec, game.app?.models);
+      const weaponTint = def.tint || (def.boss ? '#ffb0b0' : null), tintColor = weaponTint ? new THREE.Color(weaponTint) : null;
+      if (held) held.weapon.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = !!(def.boss || def.elite);
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          // 몸과 같은 라이브러리 색조 보정(Actor 생성자의 lerp 0.32)을 무기 재질에도 적용한다.
+          if (tintColor) m.color?.lerp(tintColor, 0.32);
+          if (m.emissive) this.mats.push(m);
+        }
+      });
+    }
     // 눈 발광
     this.model.traverse((o) => { if (o.isMesh && /Eyes/.test(o.name)) { o.material.emissive = new THREE.Color(def.boss ? 0xff2020 : def.elite ? 0xffc040 : 0x40ff80); o.material.emissiveIntensity = 2.5; this.eyeMat = o.material; } });
     this.mats = this.mats.filter((m) => m !== this.eyeMat);
     if (def.elite) this.tintEmissive = new THREE.Color(0.06, 0.04, 0.0);
-    if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = 0.8; m.depthWrite = false; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
+    // 원령은 반투명 몸을 유지하되 깊이를 써서, 뭉쳤을 때 서로의 몸·뒤의 적이 비쳐 보이지 않게 한다(밀집 시 '투명해져 타격감이 사라짐').
+    if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = GHOST_OPACITY; m.depthWrite = true; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
+    // 장별 의상(docs/MONSTER_ART_BIBLE.md): 같은 Tripo 몸이라도 그 지역에 묶인 이유가 보이게 색·발광·뼈 소품을 입힌다.
+    // 애니메이션 재생 전(휴식 자세)에 붙여야 소품이 뼈 축에 맞는다.
+    this.dress = species ? dressEnemy(this, game.stage, species) : null;
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */
@@ -109,6 +138,8 @@ export class Enemy extends Actor {
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
     // 잠복형(burrower): 땅속 잠행 → 예고 원 → 솟구침 → 무방비. 보스·정예에는 붙이지 않는다.
     this.burrow = def.behavior === 'burrower' && !def.boss && !def.elite ? new Burrow(this) : null;
+    // 종지기(bellringer): 매단 종을 쳐 고리 충격파를 퍼뜨린다. 종이 먼저 피해를 받고 깨지면 주변 적이 기절한다. 보스·정예에는 붙이지 않는다.
+    this.bellringer = def.behavior === 'bellringer' && !def.boss && !def.elite ? new Bellringer(this) : null;
     this.packId = game._packSpawnSeq = (game._packSpawnSeq || 0) + 1;
     this.packSide = (this.packId & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
@@ -122,11 +153,11 @@ export class Enemy extends Actor {
     else if (def.elite) game.fx.groundTex(pos, 'shockwave', 0xffc040, { r0: 0.3, r1: 3.5, life: 0.6 });
     else game.fx.ring(pos, 0x40ff80, { r0: 0.2, r1: 2, life: 0.4 });
     audio.spawnRise({ vol: def.boss ? 0.5 : def.elite ? 0.35 : 0.14, boss: !!def.boss });
-    // 엘리트/보스는 발밑 마커로 난전 중에도 식별
+    // 엘리트/보스는 발밑 마커로 난전 중에도 식별. 2026-10-30 몸 폭에 맞게 줄이고 선을 가늘게(화면 붐빔 감소).
     if (def.elite || def.boss || def.behavior === 'shield' || def.behavior === 'shaman') {
       const col = def.boss ? 0xff3040 : def.elite ? 0xffc040 : def.behavior === 'shield' ? 0x60a0ff : 0x80ff90;
-      const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.5 : 0.95, def.boss ? 1.9 : 1.25, 28),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.25 : 0.62, def.boss ? 1.45 : 0.74, 28),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       mk.rotation.x = -Math.PI / 2; mk.position.y = 0.07; mk.renderOrder = 3;
       this.root.add(mk); this.marker = mk;
     }
@@ -145,6 +176,7 @@ export class Enemy extends Actor {
     this.signatures?.dispose();
     this.mobRole?.dispose();
     this.burrow?.dispose();
+    this.bellringer?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
     if (this.telegraphRing) { this.telegraphRing.geometry.dispose(); this.telegraphRing.material.dispose(); this.telegraphRing = null; }
     super.dispose();
@@ -263,14 +295,15 @@ export class Enemy extends Actor {
     ring.visible = active;
     if (!active) { if (this.supportCastKind) this.clearSupportCue(); return; }
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
-    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' || kind === 'burrow' ? 0xffb04c : 0xff4b63;
+    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' || kind === 'burrow' || kind === 'bell' ? 0xffb04c : 0xff4b63;
     ring.material.color.set(danger);
     // 잠행 습격은 링 하나가 실제 솟구침 반경을 그대로 보여 준다(바닥 예고 원과 크기를 맞춘다).
-    const burrowing = kind === 'burrow';
-    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : burrowing ? BURROW.mark : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
+    const burrowing = kind === 'burrow', tolling = kind === 'bell';
+    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : burrowing ? BURROW.mark : tolling ? BELL.windup : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
     const remaining = Math.max(0, Math.min(1, this.telegraph / max));
     const pulse = Math.abs(Math.sin((this.game.elapsed || 0) * 18));
-    ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
+    // 종소리 고리는 예고 동안 고리가 닿을 가장 바깥 반지름을 그대로 보여 준다.
+    ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : tolling ? BELL.maxRadius / .9 * (1 + pulse * .015) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
   /** 걷기·달리기 클립의 재생 배율(보폭 표에 있으면). 표 조회만 하고 할당하지 않는다. */
@@ -278,7 +311,8 @@ export class Enemy extends Actor {
     const stride = MONSTER_STRIDE[this.def.model]?.[clip];
     return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
   }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null, tint = null } = {}) {
+    this.absorbed = 0;   // 이번 타격에서 종지기의 종이 받아 낸 양. 몸 체력 피해(반환값)와 별개로 '적중 성공' 판정에 쓴다
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
     packNoise(this.game, this);
@@ -300,14 +334,21 @@ export class Enemy extends Actor {
       }
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
+    // 정예 접두사 방패막: 막이 켜진 정예 곁의 무리는 피해를 덜 받고, 정예가 받은 피해는 막을 깎는다.
+    const leader = this.pack?.leader; if (leader?.affixes?.has.warding) dmg = leader.affixes.wardFilter(this, dmg);
+    if (this.pack?.herald) dmg = this.game.regionTraits?.filter(this, dmg) ?? dmg;
     if (this.burrow) dmg *= this.burrow.damageMul();
+    // 종지기: 매단 종이 피해를 먼저 받아 낸다. 종이 깨진 뒤 무방비 동안은 받는 피해가 늘어난다.
+    // 종이 전부 흡수하면 반환값(몸 체력 피해)은 0 이지만 타격은 맞은 것이다 — 호출부는 absorbed 로 적중(콤보·궁극 게이지·세트 on-hit·연출)을 처리한다.
+    if (this.bellringer) { const before = dmg; dmg = this.bellringer.absorb(dmg); this.absorbed = Math.max(0, before - dmg); }
     // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 공격자(Battle.damageEnemy 의 영웅)의 위치로 등 뒤·정면을 가른다.
     // 광역기·세트 효과의 dirx·dirz 는 폭발 중심 → 적 방향이라 영웅 위치와 다를 수 있다(BUNDLE-14 리뷰 P1).
     if (this.damageVeil) dmg = this.damageVeil.filter(dmg, attacker);
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
-    this.flash(crit ? 0xffd040 : 0xffffff, crit ? 0.18 : 0.12);
+    // tint: 겹쳐 맞는 다단 화살(숲의 속박)은 흰 몸 번쩍임 대신 어두운 색·낮은 세기로 실루엣을 남긴다.
+    this.flash(crit ? 0xffd040 : tint ?? 0xffffff, crit ? 0.18 : 0.12, tint && !crit ? .6 : 1);
     this.receiveImpact(dirx, dirz, Math.min(1, .35 + kb * .08));
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
@@ -316,6 +357,7 @@ export class Enemy extends Actor {
     if (stun > 0 && !guarded) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
     // 예고 중 기절은 피격 순간 바로 솟구치기를 끊는다(한 프레임보다 짧은 기절도 놓치지 않는다).
     if (stun > 0) this.burrow?.interrupt();
+    if (stun > 0) this.bellringer?.interrupt();
     if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
@@ -341,6 +383,7 @@ export class Enemy extends Actor {
     this.signatures?.clear();
     this.mobRole?.clear();
     this.burrow?.dispose();
+    this.bellringer?.dispose();
     // 사망 변주: 시체는 공격자를 향해 돌아선 뒤 넘어져 맞은 방향으로 쓰러지고, 처치 등급마다 쓰러지는 박자가 다르다(난수 없음).
     const style = deathStyle({ dirx, dirz, kb, crit: !!flair?.crit, finisher: !!flair?.finisher, elite: this.isElite, boss: this.isBoss });
     if (style.faceYaw !== null) {
@@ -358,6 +401,9 @@ export class Enemy extends Actor {
     this.killFlair = !!flair && !this.isBoss && !this.isElite;
     // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
     if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(_warnColor.set(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0).multiplyScalar(.55).getHex(), 0.26); }   // .55 배: 몸 전체 발광이 덩어리로 보이지 않게
+    this.affixes?.onDeath();
+    this.game.regionTraits?.onDeath(this, flair);
+    const leader = this.pack?.leader; if (leader && leader !== this) leader.affixes?.allyDied(this);
     this.game.onEnemyDeath(this);
   }
   update(dt) {
@@ -394,11 +440,13 @@ export class Enemy extends Actor {
     this.updateSkillTelegraph();
     if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const raw = this.maxHp * 0.02 + 8, d = this.damageVeil ? this.damageVeil.filter(raw) : raw; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
+    // 정예 접두사: 쓰러진 뒤에도 불길·시한 폭발은 흐른다.
+    if (this.affixes && !this.alive) this.affixes.update(dt, 0);
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;
     // 벽 속에 박힌 중심은 어떤 이동도 거부돼 방 정화를 막는다. 가장 가까운 바닥으로 보정한다(잠행 중 제외).
     if (!this.burrow?.phase) escapeWall(this.game.world, this.pos);
-    const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1);
+    const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1) * (this.affixes ? this.affixes.speedMul : 1);
     if (this.state === 'spawn') {
       if (this.popIn !== undefined) { const k = Math.min(1, this.stateT / this.spawnLen); const e = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.25; this.model.scale.setScalar(this.modelScale * (k < 1 ? k * e : 1)); }
       // 등장은 80% 지점에서 끝나므로 팝인 배율도 그때 원래 크기로 확정한다(남겨 두면 0.94배로 굳는다).
@@ -407,6 +455,10 @@ export class Enemy extends Actor {
     }
     // 경계 중인 잠복형은 발각 전에는 파고들지 않는다. 이미 시작한 잠행은 끝까지 진행한다.
     if (this.burrow && (this.burrow.phase || this.pack?.aggro !== false) && this.burrow.update(dt, d)) return;
+    // 종지기는 발각 전에는 치지 않는다. 이미 퍼지는 고리는 발각과 무관하게 계속 진행한다.
+    if (this.bellringer && (this.bellringer.busy || this.pack?.aggro !== false) && this.bellringer.update(dt, d)) return;
+    // 정예 접두사(사슬 구속·그림자 도약 같은 자기 동작)는 그 동작 동안 일반 추격·공격을 멈춘다.
+    if (this.affixes?.update(dt, d)) return;
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
@@ -466,7 +518,7 @@ export class Enemy extends Actor {
         } else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.2 });
         return;
       }
-      this.atkCd -= dt;
+      this.atkCd -= dt * (this.affixes ? this.affixes.speedMul : 1) * EliteAffixes.commandMul(this);
       if (this.mobRole && this.atkCd <= 0 && p.alive && _route.los && this.mobRole.available(d)) { this.mobRole.start(); return; }
       const range = this.def.range;
       const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
@@ -586,6 +638,7 @@ export class Enemy extends Actor {
   }
   playerHit(target, damage, options, point = target.pos) {
     if (!target?.hurt || !target.hurt(damage, options)) return false;
+    this.game.regionTraits?.onPlayerHit(this, target);
     const size = Math.min(1.7, Math.max(.65, this.def.scale * (this.libraryAsset?.heightM || 1) * .45));
     const hit = _impactPoint.copy(point).setY(Math.max(.8, this.def.scale * .9));
     const g = this.game;
@@ -666,6 +719,8 @@ export function enemyPartyWarnings(enemy) {
   const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}${enemy.isBoss ? ':boss' : ''}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:enemy.isBoss ? 0xff3030 : 0xff6040};
   const burrowWarning = enemy.burrow?.partyWarning(enemy.partyId);
   if (burrowWarning) return [burrowWarning];
+  const bellWarning = enemy.bellringer?.partyWarning(enemy.partyId);
+  if (bellWarning) return [bellWarning];
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0 && enemy.fuse < .7) return [{...base,id:`${enemy.partyId}:fuse`,radius:3.4,duration:.7,remaining:.7-enemy.fuse}];
   if (enemy.state !== 'attack' || enemy.attackDone) return [];
   const duration = enemy.attackDur * enemy.hitAt, remaining = Math.max(0,duration-enemy.stateT);

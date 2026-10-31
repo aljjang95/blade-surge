@@ -7,6 +7,8 @@ import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 import { mountBlessingSlot } from './blessing-reel.js';
 import { StarterVillageUI } from './starter-village-ui.js';
+import { townLine } from '../data/town-lines.js';
+import { activeCampaignTownChapter } from '../data/campaign-towns.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용',
@@ -68,6 +70,7 @@ export class CitadelHubUI {
       <div class="citadel-hub-near"><div class="citadel-hub-near-copy"><small>가까운 입구</small><strong class="citadel-hub-near-name">성채의 길</strong><span class="citadel-hub-near-detail" id="citadel-hub-near-detail">던전과 안내관에게 다가가세요</span></div><button type="button" class="citadel-hub-near-toggle" aria-controls="citadel-hub-near-detail"><span class="citadel-hub-near-toggle-text">안내</span><span class="citadel-hub-near-toggle-caret" aria-hidden="true"></span></button><button type="button" class="citadel-hub-interact" disabled><kbd>E</kbd><span>대화 · 입장</span></button></div>
       <div class="citadel-hub-stick" role="group" aria-label="성채 이동 조이스틱"><span class="citadel-hub-stick-cross" aria-hidden="true"></span><span class="citadel-hub-knob" aria-hidden="true"></span><span class="citadel-hub-stick-label" aria-hidden="true">이동</span></div>`;
     document.body.append(this.root);
+    this.eyebrow = this.root.querySelector('.citadel-hub-near-copy small');
     this.name = this.root.querySelector('.citadel-hub-near-name');
     this.detail = this.root.querySelector('.citadel-hub-near-detail');
     this.interactButton = this.root.querySelector('.citadel-hub-interact');
@@ -146,6 +149,9 @@ export class CitadelHubUI {
     this.nearest = spot || null;
     this.root.dataset.nearby = spot ? 'true' : 'false';
     this.name.textContent = spot?.label || this.app.townUI?.placeName() || '성채의 길';
+    // NPC 앞에서는 머리 줄이 그 지역 마을 사람의 한 줄 대사가 된다(src/data/town-lines.js).
+    const line = spot && townLine(activeCampaignTownChapter(), spot.kind);
+    if (this.eyebrow) { this.eyebrow.textContent = line ? `“${line}”` : '가까운 입구'; this.eyebrow.toggleAttribute('data-line', !!line); }
     this.detail.textContent = spot ? spot.kind === 'dungeon'
       ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.kind === 'waystone' && this.app.townUI
         ? `${spot.description} ${this.app.townUI.waystoneSummary()}` : spot.description : '던전과 안내관에게 다가가세요';
@@ -161,7 +167,15 @@ export class CitadelHubUI {
       const handled = this.onDestination(canonical, trigger);
       if (handled !== undefined) return handled;
     }
-    if (canonical.kind === 'dungeon') return this.openDestination(canonical, trigger);
+    if (canonical.kind === 'dungeon') {
+      if (this.openDestination(canonical, trigger)) return true;
+      // 출격 준비창은 옛 12관문만 안다. 지역 마을이 세운 그 밖의 관문(뿌리 동굴 등)은 스테이지 선택의 그 던전으로 연다.
+      if (CITADEL_HUB_HOTSPOTS.some(item => item.id === canonical.id) || !this.app.stageSelect || this.opened) return false;
+      // 잠긴 던전은 선택창이 다른 곳(다음 관문)을 고르므로, 관문 앞에서 잠긴 이유를 바로 알린다.
+      const access = this.app.expedition?.dungeonAccess?.(canonical.route);
+      if (access && !access.ok) { this.app.ui?.toast?.(`${canonical.label} · ${access.error || '입장 조건을 확인하세요.'}`, 'red'); return true; }
+      return this.app.stageSelect.open({ trigger, prefer: { tab: 'dungeon', id: canonical.route, depth: 'standard' } });
+    }
     if (canonical.kind === 'merchant') {
       // 마을 상점에 물건이 있으면 마을 상인 패널, 없으면 기존 물약 상점.
       if (this.app.townUI?.hasMerchant()) return !!this.app.townUI.openMerchant(trigger);
@@ -178,6 +192,8 @@ export class CitadelHubUI {
       if (activeTownHub().starter) return this.app.commandUI?.openPreparation(trigger) !== false;
       this.app.meta.openTab('stage'); return true;
     }
+    // 2지역 이후 · 다른 서비스 마을의 의뢰 게시판 · 대장장이는 마을 일 창의 그 탭을 연다.
+    if (!activeTownHub().starter && ['board', 'smith'].includes(canonical.kind) && this.app.townUI) return !!this.app.townUI.openContent(canonical.kind === 'board' ? 'quests' : 'forge', trigger);
     if (activeTownHub().starter && ['guide', 'training', 'board', 'smith', 'story'].includes(canonical.kind)) {
       this.starter ??= new StarterVillageUI(this.app, this);
       return this.starter.interact(canonical, trigger);

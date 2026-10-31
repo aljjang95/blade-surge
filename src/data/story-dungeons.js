@@ -46,6 +46,16 @@ export const STORY_DUNGEONS = {
   addresses: make('addresses', '생존자의 주소 갈림길', '작은 접수 고리에서 네 주소 분관으로 갈라져 기록을 확인하고 북쪽 귀향 접수문으로 모인다.', 'archive', [36,38], [20,24],
     [[0,0],[1,0],[1,1],[0,1],[2,0],[3,0],[2,1],[2,2],[0,2],[-1,2],[1,2],[1,3]],
     [[0,1],[1,2],[2,3],[3,0],[1,4],[4,5],[2,6],[6,7],[3,8],[8,9],[2,10],[10,11]], ['생존자 접수처','돌아갈 주소 보관실','내일의 주소 접수문']),
+  // ---- 7장 종탑 도시(2026-10-27). 랜드마크 belltower: 벽 쪽에 매달린 금 간 종 구조물과 흐린 청동·석회 팔레트를 쓴다.
+  bellstreet: make('bellstreet', '어긋난 종소리의 거리', '박자를 잃은 종이 울리는 긴 거리를 지나 갈라진 골목 예배당을 정화하고 시청 종루 앞 광장으로 간다.', 'belltower', [36,36], [22,24],
+    [[0,0],[1,0],[2,0],[3,0],[3,1],[2,1],[1,1],[1,2],[2,2],[2,3],[2,4]],
+    [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[1,6]], ['어긋난 첫 종소리','종지기 숙소','시청 종루 광장']),
+  belfry: make('belfry', '석회빛 종루 계단', '종탑 중앙 계단에서 좌우 종실을 돌아 꼭대기 아래의 종 보관실로 오른다.', 'belltower', [36,38], [20,26],
+    [[1,0],[1,1],[0,1],[2,1],[1,2],[1,3],[0,3],[2,3],[1,4],[1,5],[1,6]],
+    [[0,1],[1,2],[1,3],[1,4],[4,5],[5,6],[5,7],[5,8],[8,9],[9,10]], ['종탑 정문','추를 모아 둔 종실','금 간 대종 아래']),
+  crackedNave: make('crackedNave', '금 간 대예배당', '십자 모양 회랑의 가로 예배석을 정화하고 갈라진 대종이 매달린 중앙 제단으로 모인다.', 'belltower', [38,38], [24,24],
+    [[1,0],[1,1],[1,2],[0,2],[2,2],[1,3],[1,4],[0,4],[2,4],[1,5],[1,6]],
+    [[0,1],[1,2],[2,3],[2,4],[2,5],[5,6],[6,7],[6,8],[6,9],[9,10]], ['빛바랜 문턱','깨진 종 파편실','금 간 대종의 제단']),
 };
 const CHAPTER_ROUTES = [
   ['procession','procession','tribunal','greenhouse','tribunal','confluence','procession','archive','tribunal','procession'],
@@ -54,6 +64,7 @@ const CHAPTER_ROUTES = [
   ['beacon','confluence','beacon','archive','beacon','confluence','tribunal','lostShip','confluence','beacon'],
   ['tribunal','procession','tribunal','emptyThrones','tribunal','beacon','confluence','tribunal','confluence','tribunal'],
   ['procession','kiln','addresses','beacon','tribunal','confluence','kiln','archive','beacon','confluence'],
+  ['bellstreet','bellstreet','belfry','crackedNave','belfry','bellstreet','crackedNave','bellstreet','belfry','crackedNave'],
 ];
 export function dungeonForStage(ch, st) {
   return STORY_DUNGEONS[CHAPTER_ROUTES[ch - 1]?.[st - 1]];

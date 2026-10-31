@@ -1,0 +1,2903 @@
+{
+ "generatedAt": "2026-10-27",
+ "provider": "Fish Audio",
+ "model": "s2.1-pro-free",
+ "endpoint": "Cloud TLL proxy /p/fish/v1/tts (ICL references, format=mp3)",
+ "postProcessing": "none",
+ "billing": "무료 티어(s2.1-pro-free). 유료 s2.1-pro 는 API 크레딧 0 으로 402",
+ "fishCalls": 172,
+ "voices": {
+  "knight": {
+   "id": "fish-icl:hero-knight",
+   "ref": "public/sfx/voice/hero_knight_select.mp3",
+   "refSha256": "58a9ce37754833a1ed955be6cc57896d2a2745309acc237bbd64b2e4f226b430",
+   "refText": "나는 검성 아르카다. 모두를 지키기 위해, 이 성검과 함께 끝까지 싸우겠다."
+  },
+  "barbarian": {
+   "id": "fish-icl:hero-barbarian",
+   "ref": "public/sfx/voice/hero_barbarian_select.mp3",
+   "refSha256": "a6d847c0535bf6af9c4a2f8fed9d27f0ec748c690c68308119dfff7b94594d53",
+   "refText": "나는 광전사 드라칸이다. 피가 끓는구나. 오늘 이 전장을 전부 부숴 버리겠다."
+  },
+  "mage": {
+   "id": "fish-icl:hero-mage",
+   "ref": "public/sfx/voice/hero_mage_select.mp3",
+   "refSha256": "742bd38226e52f4ee21be0ea351558a7300850c6c781db0beb325bfc3a8769ed",
+   "refText": "나는 대마도사 리아. 별의 흐름은 이미 정해졌다. 이제 조용히, 내 마법을 지켜봐."
+  },
+  "rogue": {
+   "id": "fish-icl:hero-rogue",
+   "ref": "public/sfx/voice/hero_rogue_select.mp3",
+   "refSha256": "79517886e545f5da65de05939cd5d9a9a240d3f9797c04186093c1c7681a5c55",
+   "refText": "나는 암살자 카인. 조용히 다가가, 한 번에 끝내겠어."
+  },
+  "ranger": {
+   "id": "fish-icl:hero-ranger",
+   "ref": "public/sfx/voice/hero_ranger_select.mp3",
+   "refSha256": "34eb293da546855c77199a699da7e509d2850fef3c9518f28496a352f4bf54ec",
+   "refText": "나는 바람추적자 실바. 숲의 바람이 길을 알려 주는 한, 내 화살은 한 번도 빗나가지 않아."
+  },
+  "announcer": {
+   "id": "fish-icl:announcer",
+   "ref": "tools/voice/refs/narrator.mp3",
+   "refSha256": "6f131f8eed164591d65969f978584e1fc4e576b89712e3d627cef751a44f85d0",
+   "refText": "Welcome, warrior! The Endless Castle awaits — let's climb!"
+  },
+  "boss_warlord": {
+   "id": "fish-icl:boss-warlord",
+   "ref": "tools/voice/refs/boss_warlord.mp3",
+   "refSha256": "665a216098b4bd36cdd8907157c9b5eb652c3f18ef5157647ec66962922bf497",
+   "refText": "Kekeke… flesh! Warm flesh! You will join my legion, little knight!"
+  },
+  "boss_demon": {
+   "id": "fish-icl:boss-demon",
+   "ref": "tools/voice/refs/boss_demon.mp3",
+   "refSha256": "2df1ddf6ad0f3ef0ab71f0e18f5ee0f40528f46b0c75fd50a35f26f42602105a",
+   "refText": "Ahh… your soul smells delicious. Come closer. Let me taste your fear."
+  },
+  "boss_dragon": {
+   "id": "fish-icl:boss-dragon",
+   "ref": "tools/voice/refs/boss_dragon.mp3",
+   "refSha256": "36998872b9d9bb4307ce8a8beaa651177ee5bd6a3a93c627cb8a949c1e6354d3",
+   "refText": "A thousand years I have slept… and you wake me for THIS?"
+  },
+  "boss_c1_mid": {
+   "id": "fish-lib:a9574d6184714eac96a0a892b719289f",
+   "referenceId": "a9574d6184714eac96a0a892b719289f",
+   "label": "세렌 세렌(남)"
+  },
+  "boss_c1_fin": {
+   "id": "fish-lib:bb07cfc53e0f4e3d91ee823a825c35d4",
+   "referenceId": "bb07cfc53e0f4e3d91ee823a825c35d4",
+   "label": "에일른 에일른(남·노년)"
+  },
+  "boss_c2_mid": {
+   "id": "fish-lib:7b0e100da67d49ad81bd63a407d2f964",
+   "referenceId": "7b0e100da67d49ad81bd63a407d2f964",
+   "label": "이그란 이그란(남·노년)"
+  },
+  "boss_c2_fin": {
+   "id": "fish-lib:fa7d528141974d3ba794e4482b153dc6",
+   "referenceId": "fa7d528141974d3ba794e4482b153dc6",
+   "label": "발드 발드(남)"
+  },
+  "boss_c3_mid": {
+   "id": "fish-lib:73da877014f349c0ad3eb136c7f1a0c7",
+   "referenceId": "73da877014f349c0ad3eb136c7f1a0c7",
+   "label": "오르딘 오르딘(남)"
+  },
+  "boss_c3_fin": {
+   "id": "fish-lib:2f06c7a428e9431fadd60af4dfe91763",
+   "referenceId": "2f06c7a428e9431fadd60af4dfe91763",
+   "label": "이셀 이셀(여)"
+  },
+  "boss_c4_mid": {
+   "id": "fish-lib:ff2945cbfd274c85b440bd39d8cb3729",
+   "referenceId": "ff2945cbfd274c85b440bd39d8cb3729",
+   "label": "마렌 마렌(여)"
+  },
+  "boss_c4_fin": {
+   "id": "fish-lib:d4c65d5860504eb197b6943c3ff0f289",
+   "referenceId": "d4c65d5860504eb197b6943c3ff0f289",
+   "label": "네레이스 네레이스(남)"
+  },
+  "boss_c5_mid": {
+   "id": "fish-lib:29da56534ac84ccd81092be4359a1639",
+   "referenceId": "29da56534ac84ccd81092be4359a1639",
+   "label": "아스텔 아스텔(남)"
+  },
+  "boss_c5_fin": {
+   "id": "fish-lib:d5a885f492854e068d8a72e14c851771",
+   "referenceId": "d5a885f492854e068d8a72e14c851771",
+   "label": "빈 왕관 빈 왕관(무성·낮게)"
+  },
+  "boss_c6_mid": {
+   "id": "fish-lib:ddda1d00f3684054a7e971b2dde89b5f",
+   "referenceId": "ddda1d00f3684054a7e971b2dde89b5f",
+   "label": "빈 의자의 증인 빈 의자의 증인(중성)"
+  },
+  "boss_c6_fin": {
+   "id": "fish-lib:9aae54921dd944948ee08d35f6b5f984",
+   "referenceId": "9aae54921dd944948ee08d35f6b5f984",
+   "label": "고립의 잔향 고립의 잔향(중성)"
+  },
+  "boss_c7_mid": {
+   "id": "fish-lib:061a013646d04f0297560d4354d595fd",
+   "referenceId": "061a013646d04f0297560d4354d595fd",
+   "label": "오르벤 오르벤(남)"
+  },
+  "boss_c7_fin": {
+   "id": "fish-lib:35856f20bd4a4896af91cee863519e6a",
+   "referenceId": "35856f20bd4a4896af91cee863519e6a",
+   "label": "카델 카델(남·거인)"
+  }
+ },
+ "files": [
+  {
+   "file": "hero_knight_select",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "나는 검성 아르카다. 모두를 지키기 위해, 이 성검과 함께 끝까지 싸우겠다.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "58a9ce37754833a1ed955be6cc57896d2a2745309acc237bbd64b2e4f226b430",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "나는 검성 아르카다 모두를 지키기 위해 이 선검과 함께 끝까지 싸우겠다",
+    "durationSec": 6.41
+   }
+  },
+  {
+   "file": "hero_knight_atk0",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "하!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1043577b9f9519cb4b822a86962ee49ee792c32a4c82153a2ddd6c0a8d9d0403",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.36,
+    "text": "흐흐흐 (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_knight_atk1",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "타앗!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "6734dac50bb0c158592652e730d2e9ad5501a3454cdf08f6be956de321e792cb",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.35,
+    "text": "하! (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_knight_atk2",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "흐읍!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0db5026415051c1fb6fe01706f85f8bc08aaf4200126b395b484d124f2e9dd2d",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.31,
+    "text": "흐흐.. (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_knight_atk3",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "하아앗!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "82a4fb584ad5571dd6be56aea29d97e1f1406ee8105a532738980c5c14988a00",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.35,
+    "text": "하... (ko강제)",
+    "durationSec": 1.31
+   }
+  },
+  {
+   "file": "hero_knight_fin0",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "하앗!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1d1b0b983f259fc979c9f41bd78a7955e38018732ed4cd148ff2f83a94961bfc",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.67,
+    "text": "하아앟 (ko강제)",
+    "durationSec": 0.71
+   }
+  },
+  {
+   "file": "hero_knight_fin1",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "쓰러져라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "538c8ec2f3d59e1a07269cdd4e3afadb582d14046fba8f316af39ead3e76d017",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.89,
+    "text": "쓰러져라",
+    "durationSec": 0.86
+   }
+  },
+  {
+   "file": "hero_knight_skill0",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "성검 일섬!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "728aa6ef6cb96fc9838ff5db0d757447ca1e7ac138f81bd55489743970b481a2",
+   "emotion": "determined",
+   "attempt": 2,
+   "temperature": 0.85,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "성검 1섬",
+    "durationSec": 1.31
+   }
+  },
+  {
+   "file": "hero_knight_skill1",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "철벽 강타!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "41ff89284e6293a767401817d48af0473228051920b0374a4adee045f5f06c50",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "철벽 강타!",
+    "durationSec": 1.07
+   }
+  },
+  {
+   "file": "hero_knight_skill2",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "심판의 빛!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "e9e27a32eed175537a7ca498543579d7c6d01ffcc9f04cdc2beaaa89b30756a5",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.72,
+    "text": "심판의 빛!",
+    "durationSec": 0.84
+   }
+  },
+  {
+   "file": "hero_knight_skill6",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "성검, 태양파쇄!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "e0e24cc3d1aaef7db6ad39182d0354ed2c4ffd51c7af4037ce2cc763a149d10a",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "성검 태양파쇠",
+    "durationSec": 2.09
+   }
+  },
+  {
+   "file": "hero_knight_ult",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "용살검, 천공!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "cff040588a1cc51a4b357afa177a06b0babd3787b580d3702be52669be3ba63f",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "용살검 천공",
+    "durationSec": 1.59
+   }
+  },
+  {
+   "file": "hero_knight_hurt0",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "윽!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "131f40ac713034062409b9f24b74293070e82d0ba7a3df066459db96cfd0a991",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.3,
+    "text": "으흐... (ko강제)",
+    "durationSec": 0.68
+   }
+  },
+  {
+   "file": "hero_knight_hurt1",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "큭!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c518ac2d221b0ad316106a4a3bbf1289ff9a0c1c9a3b63e824b280b5f2c88605",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.66,
+    "text": "크 (ko강제)",
+    "durationSec": 0.71
+   }
+  },
+  {
+   "file": "hero_knight_hurt2",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "흣!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1ccb97f9ebf63a4f3c8380337cc430ce081231f3ae26b25c966de21230d98df3",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.57,
+    "text": "흐! (ko강제)",
+    "durationSec": 0.44
+   }
+  },
+  {
+   "file": "hero_knight_low_hp",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "아직… 쓰러질 수 없어. 모두를 지켜야 해.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "a4867fa447ea78121ad917bfb0e6cb182818572d1b1041c830e399521263677c",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "아직 쓰러질 수 없어 모두를 지켜야 해",
+    "durationSec": 3.85
+   }
+  },
+  {
+   "file": "hero_knight_perfect",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "bark",
+   "text": "느려!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "be27911a5f39878474304f8ba3306886a094af8e91f9e94d158551c5650fd9c8",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.72,
+    "text": "느려!",
+    "durationSec": 0.51
+   }
+  },
+  {
+   "file": "hero_knight_win",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "빛은 꺼지지 않는다. 다음 전장으로 가자.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "0d88594fedc0c47561da7e80fee019a3ea5b7c9c9213a6d0564de5116b7a2f4c",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "빛은 꺼지지 않는다. 다음 전장으로 가자!",
+    "durationSec": 3.2
+   }
+  },
+  {
+   "file": "hero_knight_death",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "미안해… 여기까지인가…",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "cd49f06e349c6a9048cf7f80a3ea58249c60cddd52908093f01ce31d6878cb90",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.95,
+    "text": "미안해... 여기까지인가...",
+    "durationSec": 2.51
+   }
+  },
+  {
+   "file": "hero_knight_revive",
+   "owner": "knight",
+   "voice": "fish-icl:hero-knight",
+   "kind": "line",
+   "text": "다시 일어선다! 아직 끝나지 않았어!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "47a0ab031acebebf44954789936fbb219bb4b4492dd268aeddd1dffdf750c9c0",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "다시 일어선다! 아직 끝나지 않았어!",
+    "durationSec": 2.93
+   }
+  },
+  {
+   "file": "hero_barbarian_select",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "나는 광전사 드라칸이다. 피가 끓는구나. 오늘 이 전장을 전부 부숴 버리겠다.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "a6d847c0535bf6af9c4a2f8fed9d27f0ec748c690c68308119dfff7b94594d53",
+   "asr": {
+    "lang": "ko",
+    "langProb": 1,
+    "text": "나는 광전사 드라칸이다! 피가 끓는구나! 오늘 이 전장을 전부 부숴버리겠다!",
+    "durationSec": 3.81
+   }
+  },
+  {
+   "file": "hero_barbarian_atk0",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "라아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "21b4784e2157c6be227ec6c3edef6b784986b58a2941d41321cfc540e9d8218e",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "fr",
+    "langProb": 0.61,
+    "text": "나! (ko강제)",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_barbarian_atk1",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "흐읏!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "f17da6cb84936f79db0225c4dbc830b8861c66acedb0800918bf8274569507e3",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.35,
+    "text": "흐! (ko강제)",
+    "durationSec": 0.52
+   }
+  },
+  {
+   "file": "hero_barbarian_atk2",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "그라아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "140bdb9c7679d4d50a9b46ed2823f8013f6b3b833223a9655ff20855480b6a8e",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.4,
+    "text": "그래 (ko강제)",
+    "durationSec": 0.86
+   }
+  },
+  {
+   "file": "hero_barbarian_atk3",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "으랴아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ab9e2dc43d4ebd5315bc7c90f73271cbe35b3733aed614bea54e7e92a16c2726",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.61,
+    "text": "우려! (ko강제)",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_barbarian_fin0",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "박살이다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "481c7aa6aecea81c59b0cfbb430989787ed6893a3153e7b1ad930c93d877d090",
+   "emotion": "excited",
+   "attempt": 2,
+   "temperature": 0.85,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.86,
+    "text": "박살이다! (ko강제)",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_barbarian_fin1",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "부숴라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "091c190554081460c13e0eebcb64fa008b03324c24d7fe1f666ffce5202720db",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.5,
+    "text": "푸셔라!",
+    "durationSec": 0.71
+   }
+  },
+  {
+   "file": "hero_barbarian_skill0",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "회오리 참격!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "69353d9ec543a838ce301ccce06294db732a4677d5fa2b13d768b79fc1f09b60",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "회오리 참격!",
+    "durationSec": 0.84
+   }
+  },
+  {
+   "file": "hero_barbarian_skill1",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "대지 분쇄!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "3248b6769dd257dce0dda0a744b11092efcc2ccf71bfbae0c9fa3ba0678bab08",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.92,
+    "text": "돼지 분쇄!",
+    "durationSec": 0.98
+   }
+  },
+  {
+   "file": "hero_barbarian_skill2",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "광폭화!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "8fbf793846a28b9f65eea0501113d6ca4e7c30fba6fc15143459c8f074cdd8d7",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "zh",
+    "langProb": 0.34,
+    "text": "광포과! (ko강제)",
+    "durationSec": 0.94
+   }
+  },
+  {
+   "file": "hero_barbarian_skill6",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "혈왕, 대지붕괴!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "eb42c377d1884f6c103cbb87b269bce39fe04dcfb0063c45ebe67bdee3ae2e13",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "혈왕! 대지 붕괴!",
+    "durationSec": 1.35
+   }
+  },
+  {
+   "file": "hero_barbarian_ult",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "지옥의 도끼다!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "dacdbe4e56c537fa8c549ccc1101f1f84c83c8abc5d89aabcd5187debc53b045",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.69,
+    "text": "지옥의 토끼다!",
+    "durationSec": 0.84
+   }
+  },
+  {
+   "file": "hero_barbarian_hurt0",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "크윽!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c4e50fc0ab3bccb066c5f9e614437f255e7124f5f5ce93ffcd70b36bd3324bd0",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.62,
+    "text": "크 (ko강제)",
+    "durationSec": 1.04
+   }
+  },
+  {
+   "file": "hero_barbarian_hurt1",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "그흑!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "b54cb979904c55c51d141cbc3a762a8536de5bf39eff2c622e39b868916e56c6",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.49,
+    "text": "크흐! (ko강제)",
+    "durationSec": 0.99
+   }
+  },
+  {
+   "file": "hero_barbarian_hurt2",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "아악!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "b348c248697f846b658688774ecf317a9c07a754e56918a1560aec0ea84c2540",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.44,
+    "text": "어?! (ko강제)",
+    "durationSec": 0.86
+   }
+  },
+  {
+   "file": "hero_barbarian_low_hp",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "피가 더 필요해… 좋아, 이제 진짜 화가 났다!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "46b879df7747675e072030959fa968627843a5e0a62d9236a5a68a7651aa44ce",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "피가 더 필요해 좋아 이제 진짜 화가 났다",
+    "durationSec": 3.02
+   }
+  },
+  {
+   "file": "hero_barbarian_perfect",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "bark",
+   "text": "하! 그게 전부냐?",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "2446355903c1a453611148b40813566c1fa78f6f9cd5d490515da54c5883c6f8",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "그게 전부냐?",
+    "durationSec": 1.44
+   }
+  },
+  {
+   "file": "hero_barbarian_win",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "하하하! 이 정도로는 배가 안 차는군. 다음은 누구냐!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "ad6c457aa457836d9b5cb1082b087bc008c9ff2e49d29b8e65c3553b3a63dc79",
+   "asr": {
+    "lang": "ko",
+    "langProb": 1,
+    "text": "하하하! 이 정도는 배가 안 차는군! 다음은 누구냐!",
+    "durationSec": 3.39
+   }
+  },
+  {
+   "file": "hero_barbarian_death",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "이런… 아직… 더 부술 수 있는데…",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "28b668e6738ed54c48d99299b3809e3ce7efa6e4b664e62f091ddf6ca3ae4fd8",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "이런.. 아직.. 더 부술 수 있는데",
+    "durationSec": 2.83
+   }
+  },
+  {
+   "file": "hero_barbarian_revive",
+   "owner": "barbarian",
+   "voice": "fish-icl:hero-barbarian",
+   "kind": "line",
+   "text": "아직 안 끝났다! 다시 간다!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "aff72c633c2075ff2ce2ad7e98b2b0a77bd66017d5cfa26307335fd12b826cf6",
+   "asr": {
+    "lang": "ko",
+    "langProb": 1,
+    "text": "아직 안 끝났다! 다시 간다!",
+    "durationSec": 2.14
+   }
+  },
+  {
+   "file": "hero_mage_select",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "나는 대마도사 리아. 별의 흐름은 이미 정해졌다. 이제 조용히, 내 마법을 지켜봐.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "742bd38226e52f4ee21be0ea351558a7300850c6c781db0beb325bfc3a8769ed",
+   "asr": {
+    "lang": "ko",
+    "langProb": 1,
+    "text": "나는 대마도사 리아 별의 흐름은 이미 정해졌다 이제 조용히 내 마법을 지켜봐",
+    "durationSec": 4.74
+   }
+  },
+  {
+   "file": "hero_mage_atk0",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "하!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1e79311954e13a8717b1ea949ff1ce28c15ea68dd9894385a31a6142767d9b6d",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.62,
+    "text": "하.. (ko강제)",
+    "durationSec": 0.63
+   }
+  },
+  {
+   "file": "hero_mage_atk1",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "흐읍!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "e97b0c7205653d3889a031f7b05abe6f73cc966f8e8e7311ab5be4fca759a7ce",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.51,
+    "text": "하.. (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_mage_atk2",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "가라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "57163bfad8e0778d9062c265921be03e3f4258720a7b18c169bcb48861006b47",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.62,
+    "text": "카라 (ko강제)",
+    "durationSec": 0.44
+   }
+  },
+  {
+   "file": "hero_mage_atk3",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "지금이야!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1f7e0587b1d3974c55e815019a624d14e077a19974ffdcc1d520a514d9703bc5",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.87,
+    "text": "지금이야.",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_mage_fin0",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "끝내!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "631835a431394b3295650333bead86472582c38f1ed483167685222679c6d06e",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.53,
+    "text": "끝내",
+    "durationSec": 0.81
+   }
+  },
+  {
+   "file": "hero_mage_fin1",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "부서져!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "fab84ea3d6b04403742e3eb631a8a5e587622c660e82acbb827db005c29a8d6e",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.77,
+    "text": "불사자",
+    "durationSec": 0.52
+   }
+  },
+  {
+   "file": "hero_mage_skill0",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "화염구!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "25f8293a779f099ded4f03b717516acd967153afdff45b81c7c6e31424e02fd5",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.71,
+    "text": "화염고",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_mage_skill1",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "번개 사슬!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "8565bb4b959e87465a06964b8d014de8caabee7f6f0818edffc4fd29fd6c8a0c",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "번개 사슬",
+    "durationSec": 0.93
+   }
+  },
+  {
+   "file": "hero_mage_skill2",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "빙결 폭풍!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "937cc2a041da0431f58276c3b85b983151c5e008bfa4b9da145110c3a8fcfc34",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "빈결 폭풍",
+    "durationSec": 1.16
+   }
+  },
+  {
+   "file": "hero_mage_skill6",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "성좌, 별감옥!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "a2e1c0e2e4a2e1d91956292de1d303cb5912191e11c305b37bed10d7a44d6e8b",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.8,
+    "text": "성자 별감옥",
+    "durationSec": 1.41
+   }
+  },
+  {
+   "file": "hero_mage_ult",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "메테오 스톰!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "0cbdfe59d12afdc6eb6f5eadb9260f8a5ff9fcc214bfaedbbe671e66080f2cec",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.42,
+    "text": "메테오 스톰",
+    "durationSec": 1.11
+   }
+  },
+  {
+   "file": "hero_mage_hurt0",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "8c729c74f7de8e6dc1158916767388d17531b96f5b967828942864b0f17410a7",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.54,
+    "text": "아.. (ko강제)",
+    "durationSec": 0.47
+   }
+  },
+  {
+   "file": "hero_mage_hurt1",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "큭!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "01103934cded91d64f5561eac3f29a0acc91a2e71242b818705866431a2cd462",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.65,
+    "text": "그.. (ko강제)",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_mage_hurt2",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "흣!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "7e3f8f15ab40c7cc472130b9c56fcbb06822cb3f52b35179e1124f1ca457741b",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "nn",
+    "langProb": 0.28,
+    "text": " (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_mage_low_hp",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "마력이… 아직 남아 있어. 조금만 더 버티면 돼.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "30fc7ae477b3445fa1cfbb033e29a169d13cc97bfc6298010355a6e3bc57f12c",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "마력이 아직 남아있어 조금만 더 버티면 돼",
+    "durationSec": 3.34
+   }
+  },
+  {
+   "file": "hero_mage_perfect",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "bark",
+   "text": "예측했어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "b3138b05711fd5fac08a4d554b1b37c02dffb79ffb79ac9e380953deba2c55a6",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.94,
+    "text": "예측했어",
+    "durationSec": 0.84
+   }
+  },
+  {
+   "file": "hero_mage_win",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "계산대로야. 별들이 조용해졌네.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "61e045f7e053ecf8d7f88dc4f246ccf8a0d3a57692f6171ba99ff8f70f889e63",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "계산대로야. 별들이 조용해졌네.",
+    "durationSec": 2.6
+   }
+  },
+  {
+   "file": "hero_mage_death",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "별빛이… 보이지 않아…",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "f2c3f7824b42d2ae71999de2964070f1a546827717dfa6fb9d6867e94b875805",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "별빛이 보이지 않아",
+    "durationSec": 2.04
+   }
+  },
+  {
+   "file": "hero_mage_revive",
+   "owner": "mage",
+   "voice": "fish-icl:hero-mage",
+   "kind": "line",
+   "text": "아직 내 마법은 끝나지 않았어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "1a0380a8a7d0663bad5c08ac680096bf07694a4a130bb80c5616f6b5daea640b",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "아직 내 마법은 끝나지 않았어",
+    "durationSec": 2
+   }
+  },
+  {
+   "file": "hero_rogue_select",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "나는 암살자 카인. 조용히 다가가, 한 번에 끝내겠어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "79517886e545f5da65de05939cd5d9a9a240d3f9797c04186093c1c7681a5c55",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "나는 암살자 카인! 조용히 다가가 한 번에 끝내겠어?",
+    "durationSec": 4.13
+   }
+  },
+  {
+   "file": "hero_rogue_atk0",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "쳇!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "6c94a2c26308f5b47477e4d37f0b957b701da5720d3389e55911e381c2762e0b",
+   "emotion": "playful",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "zh",
+    "langProb": 0.6,
+    "text": "찰 (ko강제)",
+    "durationSec": 0.47
+   }
+  },
+  {
+   "file": "hero_rogue_atk1",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "흣!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "e473fe24620111cd91794e4b0c523268a0655d807abb4a575ba10132cd214539",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.52,
+    "text": "흐흐 (ko강제)",
+    "durationSec": 0.52
+   }
+  },
+  {
+   "file": "hero_rogue_atk2",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "하!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "704474e4ad9713ac1241e11e23ade469bb8faed8878deb88a94311f0f45e942d",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.28,
+    "text": "ㅋㅋ (ko강제)",
+    "durationSec": 0.63
+   }
+  },
+  {
+   "file": "hero_rogue_atk3",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "쉿!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "eac490c3bf13056ffc3d1c355d695bd568cdaeb58b12ebd8e12395529140ee5c",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "zh",
+    "langProb": 0.49,
+    "text": "슈이 (ko강제)",
+    "durationSec": 0.39
+   }
+  },
+  {
+   "file": "hero_rogue_fin0",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "끝이야.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "8a3a1d48fda96a7fdda5c7a6a1979104b5e7a05d9c11f319739622350ba895cb",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "zh",
+    "langProb": 0.47,
+    "text": "좋지 (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_rogue_fin1",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "사라져.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "988df39f641c98d229e31f27f1585c37151b2ea468d689782de09924e83b7c7f",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "사라져",
+    "durationSec": 0.71
+   }
+  },
+  {
+   "file": "hero_rogue_skill0",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "그림자 질주!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "427e68a80debb3cabe0faacbafc0e542df253667db3ec92c0f305b4ca7e6e532",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.94,
+    "text": "그림자 질주",
+    "durationSec": 1.21
+   }
+  },
+  {
+   "file": "hero_rogue_skill1",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "독무 폭탄!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "6cb691e4ff8b39d1ac56afd803a20c4da867e64bbd6c0a2c2ccc8bac27560a86",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.89,
+    "text": "동무 폭탄",
+    "durationSec": 1.07
+   }
+  },
+  {
+   "file": "hero_rogue_skill2",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "환영 난무!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "4590e989c852af771645b7cf565e9fc15c1f1c8287e3158d5f7cfda9bfbfa035",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "환영 난 모",
+    "durationSec": 0.98
+   }
+  },
+  {
+   "file": "hero_rogue_skill6",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "야행, 그림자연무!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "a27abd96b98b50495f829ed964e938f6e4c1e07d405c82a4e3a6bd7d3b97ecb5",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "여행, 그림자 연모",
+    "durationSec": 1.67
+   }
+  },
+  {
+   "file": "hero_rogue_ult",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "천 개의 칼날!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "d16fb85ea4e541c79274cf68adb64f23b5ed6197dd3e3e33d6f4f8dfdeb42d85",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "전개의 칼날",
+    "durationSec": 1.12
+   }
+  },
+  {
+   "file": "hero_rogue_hurt0",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "큭!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "147dc054b87de3f74c67bf56cfc288e2eebfad5d80aea5eddfa1800be246c2f0",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.61,
+    "text": "크 (ko강제)",
+    "durationSec": 0.47
+   }
+  },
+  {
+   "file": "hero_rogue_hurt1",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "칫!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "b64574228e2f232320bc050ff235effaa00113fc998653da829d5f2b2651ef2e",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.44,
+    "text": "쯧!",
+    "durationSec": 0.39
+   }
+  },
+  {
+   "file": "hero_rogue_hurt2",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "f19aaa88f188ba272bb6a2e006170888c86ef7d6c6e0510eb2af06e28bca47da",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "en",
+    "langProb": 0.42,
+    "text": "어? (ko강제)",
+    "durationSec": 0.52
+   }
+  },
+  {
+   "file": "hero_rogue_low_hp",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "방심했어… 하지만 아직 내 그림자는 살아 있어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "8073ee8a1ba6895dc33ce6ae21321b49e384556f5accd8e1e5fce3d1a1079900",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.93,
+    "text": "당심했어. 하지만 아직 내 그림자는 살아 있어.",
+    "durationSec": 3.39
+   }
+  },
+  {
+   "file": "hero_rogue_perfect",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "bark",
+   "text": "아쉽네.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "46eeaf591594157e065e7ca434c98fb70d28a203afabd10f91f2a1e610b4129e",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "아쉽네",
+    "durationSec": 0.93
+   }
+  },
+  {
+   "file": "hero_rogue_win",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "깔끔하네. 다음 목표로 가자.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "043b3c3dbb820648fb3b6671b44c67474b991f31e4677ef9446fee9d51f2ca73",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "깔끔하네. 다음 목표로 가자",
+    "durationSec": 2.32
+   }
+  },
+  {
+   "file": "hero_rogue_death",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "이게… 마지막 그림자인가…",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "3782a7ddb2a4c0bab5966ba61b4944039b90e0203541835a839866ee8d102114",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "이게 마지막 그림자인가",
+    "durationSec": 2.6
+   }
+  },
+  {
+   "file": "hero_rogue_revive",
+   "owner": "rogue",
+   "voice": "fish-icl:hero-rogue",
+   "kind": "line",
+   "text": "죽음아, 조금만 기다려.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "6bf5d962f664fe9fcc5325bf22efcaea2cfa3f1490f9a40240c4f6df1dcb64b3",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "죽음아 조금만 기다려",
+    "durationSec": 2.18
+   }
+  },
+  {
+   "file": "hero_ranger_select",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "나는 바람추적자 실바. 숲의 바람이 길을 알려 주는 한, 내 화살은 한 번도 빗나가지 않아.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "34eb293da546855c77199a699da7e509d2850fef3c9518f28496a352f4bf54ec",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "나는 바람추적자 실패바라 수폐바람이 길을 알려주는 한 내 화살은 한 번도 빗나가지 않아",
+    "durationSec": 4.69
+   }
+  },
+  {
+   "file": "hero_ranger_atk0",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "하!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "21a03e5f687735a214b64ff7749a8a3e8daaf2fbd44ff5b0526668709ccbcba9",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.48,
+    "text": "흐흐... (ko강제)",
+    "durationSec": 0.57
+   }
+  },
+  {
+   "file": "hero_ranger_atk1",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "타앗!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "3cb52b7ff56cf219adef3a7a0cf3ab211121a966f8a218a205d0bee124366330",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.36,
+    "text": " (ko강제)",
+    "durationSec": 0.89
+   }
+  },
+  {
+   "file": "hero_ranger_atk2",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "흐읍!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "28208086c2c15287c184efd64009c3d51c3f100cb4e55456a7ea3fd9b2732896",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.45,
+    "text": " (ko강제)",
+    "durationSec": 1.1
+   }
+  },
+  {
+   "file": "hero_ranger_atk3",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "놓치지 않아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "6bfdc3a0ade85531a318e7a505c18d1f3c7e0a1c4fd396ffed6e0d1e209d1532",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.91,
+    "text": "놓치지 않아",
+    "durationSec": 1.04
+   }
+  },
+  {
+   "file": "hero_ranger_fin0",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "받아라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "72325ae9459d6ed3a39bb69aa278d0177bb2e405d2aaa7a4d2cc8484602a5a01",
+   "emotion": "excited",
+   "attempt": 2,
+   "temperature": 0.85,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.87,
+    "text": "받아라",
+    "durationSec": 0.71
+   }
+  },
+  {
+   "file": "hero_ranger_fin1",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "바람과 함께!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0354db6add075443d2f4c2666b89ffd05b598903c6d09a1a3d85e52a4f4ce6aa",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.92,
+    "text": "바람과 함께",
+    "durationSec": 1.04
+   }
+  },
+  {
+   "file": "hero_ranger_skill0",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "바람 관통화살!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "c61442eeca6617c3b3bfbb07d0eec6077c409b2d6ad565f9f31de0469518ad8a",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.89,
+    "text": "바람 권통화살",
+    "durationSec": 1.16
+   }
+  },
+  {
+   "file": "hero_ranger_skill1",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "삼중 추적화살!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "05e80a7f1eba31de49cb49b458e1caf1028c698c2095f7ba0929ed559a17d0f3",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "3중 추적 화살",
+    "durationSec": 1.21
+   }
+  },
+  {
+   "file": "hero_ranger_skill2",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "바람의 이탈!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "2831737780b034b78f57f0c159f30c2145ee7d20cc71779e036a3c4aa2c0021e",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "바람의 이탈",
+    "durationSec": 1.02
+   }
+  },
+  {
+   "file": "hero_ranger_skill6",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "질풍, 사냥각인!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "b251a6098f7b46ece7c5e84476889bba5886d30017facaf767fd1b2d8a4acc1b",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "질품 사냥각인",
+    "durationSec": 1.52
+   }
+  },
+  {
+   "file": "hero_ranger_ult",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "폭풍의 일곱 화살!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "36c8e117253162a0399e754cc9d6be72378c2f44960ca326e9b3993c4d9f57cd",
+   "emotion": "excited",
+   "attempt": 2,
+   "temperature": 0.85,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.95,
+    "text": "폭풍의 7파살",
+    "durationSec": 1.18
+   }
+  },
+  {
+   "file": "hero_ranger_hurt0",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "37ec319f3eed08fe85b50f48bdc6805d42ec021713ae023d718575eddfc02d4d",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.32,
+    "text": " (ko강제)",
+    "durationSec": 0.68
+   }
+  },
+  {
+   "file": "hero_ranger_hurt1",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "큭!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "3cc729198df4a0b3345c340aa7fd61551c9e18253788186f26e9698eadb7cedc",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.63,
+    "text": "크 (ko강제)",
+    "durationSec": 0.76
+   }
+  },
+  {
+   "file": "hero_ranger_hurt2",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "흣!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "63efeff0458f2978617611605745e7399a5b2e145d0ccf90dce6aeb07502ad95",
+   "emotion": "pain",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.4,
+    "text": "아! (ko강제)",
+    "durationSec": 0.47
+   }
+  },
+  {
+   "file": "hero_ranger_low_hp",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "바람이 흔들려… 그래도 내 활은 아직 멈추지 않아.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "344dfea46467be06ab985e56f9c03107f1ba4b20ef60bc2a6852daaa62dfff6a",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "바람이 흔들려 그래도 내 화른 아직 멈추지 않아",
+    "durationSec": 2.69
+   }
+  },
+  {
+   "file": "hero_ranger_perfect",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "bark",
+   "text": "바람이 먼저 알려 줬어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "4e5cb5e428e205348fda663877e5413574227bc4efc26bd6da6af5d4665ea731",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "바람이 먼저 알려줬어",
+    "durationSec": 1.3
+   }
+  },
+  {
+   "file": "hero_ranger_win",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "숲의 바람이 다시 고요해졌네. 잘했어.",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "66d828c9e5132a016882c4e083200ab30d0c466dccce7e417c147c98e77e3a90",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "숲의 바람이 다시 고요해졌네. 잘했어.",
+    "durationSec": 3.07
+   }
+  },
+  {
+   "file": "hero_ranger_death",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "숲이… 멀어져…",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "9547350d75013fa8fed1f0b3cc2b787b72a3fdf577571d07a02093a91f050b20",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.93,
+    "text": "숲이 멀어져",
+    "durationSec": 1.63
+   }
+  },
+  {
+   "file": "hero_ranger_revive",
+   "owner": "ranger",
+   "voice": "fish-icl:hero-ranger",
+   "kind": "line",
+   "text": "바람이 다시 불어. 이번엔 내가 길을 열게!",
+   "lang": "ko",
+   "source": "kept",
+   "sha256": "57497a60da9aea97968e78b1726b74882048b1c4f2198d5b28bf5c4e122dff23",
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "바람이 다시 불어 이번에는 내가 길을 열게",
+    "durationSec": 2.41
+   }
+  },
+  {
+   "file": "welcome",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "돌아왔군, 전사여. 끝없는 성이 기다린다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "3898ad1419bddfdd2c481f691e8c301c19590092e6171baa16a05a8310a95fae",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "돌아왔군, 전사여! 끝없는 성이 기다린다!",
+    "durationSec": 3.63
+   }
+  },
+  {
+   "file": "floor_start",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "성이 깨어난다. 모든 구역을 정화하라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "cf924c43d044ae5db4eb51dc5ed315f558f79535be194f4cfc6ab50bca03990c",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "성이 깨어난다. 모든 구역을 청화하라.",
+    "durationSec": 3.45
+   }
+  },
+  {
+   "file": "floor_clear",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "층 돌파! 훌륭하다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "b725d44b8a9253b96a8d66f47b9744019bfcb77fc5d4b6bdc2a9c8bc95ea1923",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "정돌파! 훌륭하다!",
+    "durationSec": 2.19
+   }
+  },
+  {
+   "file": "boss_found",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보스가 가깝다. 정신 차려라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "e09cd71e9f4d3100af3d9465043a17f3c92a9f19dc4128a356354566765ec875",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "포스가 가깝다 정신 차려라",
+    "durationSec": 2.53
+   }
+  },
+  {
+   "file": "boss_kill",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보스 처치! 영광은 네 것이다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "3bd8172c5eaa13171a29e445446e59b272e660f22c68412161b9b853f3283d35",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.89,
+    "text": "포스 철치! 영광은 내 것이다!",
+    "durationSec": 2.72
+   }
+  },
+  {
+   "file": "elite",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "정예가 다가온다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "a4a090a9ce1f0c19f10d04675abefeeaf0681b845153450bc212d825f12420be",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.87,
+    "text": "정의가 다가온다!",
+    "durationSec": 1.65
+   }
+  },
+  {
+   "file": "treasure",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보물방이다! 전부 챙겨라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1a567afd0518a4010749699b1a117c71ec0ef5a0427d2ed5a82555ffc7290d77",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "보물빵이다! 전부 챙겨라!",
+    "durationSec": 2.77
+   }
+  },
+  {
+   "file": "reinforce",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "증원이다! 전열을 지켜라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "09b28c39d4d3596738353dcfd34962b2bd024fa2db6ba923e3abc3a809b46e89",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "증언이다! 전여를 지켜라!",
+    "durationSec": 2.56
+   }
+  },
+  {
+   "file": "legend_drop",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "전설이다! 전설 장비 획득!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0f56dbbb4b30b3d2009976e34d9991ec66127e9daf91d7c7651d6951cbae1c40",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "천설이다! 천설 장비 획득!",
+    "durationSec": 2.9
+   }
+  },
+  {
+   "file": "unique_drop",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "유니크 장비! 행운이 함께한다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "fe59bd0a641f6bfdbaad39bc3bccece5316f5e9f1f46062f5131f3ec4005164b",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.92,
+    "text": "유니크 장비! 행운이 함께 한다!",
+    "durationSec": 3.45
+   }
+  },
+  {
+   "file": "low_hp",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "위험하다! 물러서라, 지금!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "82047c527f2841f71bcba03cbb9cc735ec20e41f4d2bc20cefe258d8eeebb2f5",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "위험하다! 물러서라! 지금!",
+    "durationSec": 3.03
+   }
+  },
+  {
+   "file": "perfect",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "완벽한 회피!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "7f1cd85af80a4c26c189af51f94d2ebf3c9883d6edb3b2b88e09c657c63990ea",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.37,
+    "text": "완벽한 회피!",
+    "durationSec": 1.46
+   }
+  },
+  {
+   "file": "defeat",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "쓰러졌다… 하지만 성은 네 이름을 기억한다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "15788f20ce757540e203ffe296bcf1dd8e36d119d2f6a077374cb41cfce6c92d",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "쓰러졌다. 하지만 성은 네 이름을 기억한다.",
+    "durationSec": 3.97
+   }
+  },
+  {
+   "file": "rebirth",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "불사조가 일어선다! 오늘은 아니다, 죽음아!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "68e91ca6ed927d83f55d1565d076e02d2ed668449598089061f5fbc20b04bb0d",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "풀사조가 일어선다! 오늘은 아니다! 죽으면!",
+    "durationSec": 3.74
+   }
+  },
+  {
+   "file": "ult",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "궁극기!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "a61ff26e9a3075bf35ac4972db554e9ef2a3d306fa7c96c4850476466c36e5c0",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.47,
+    "text": "공급기!",
+    "durationSec": 1.1
+   }
+  },
+  {
+   "file": "enh_success",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "강화 성공!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "7b6247848a8f01060235171a9bd787382ab3a1f11c959eac770e94f096e5244e",
+   "emotion": "excited",
+   "attempt": 2,
+   "temperature": 0.85,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.68,
+    "text": "강화 성공!",
+    "durationSec": 1.41
+   }
+  },
+  {
+   "file": "enh_fail",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "강화 실패. 강화석이 부서진다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "6a7fd96709ea10a919aaa141c45d421636db9764f8cbaf2c867651c6101c9f57",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "강화 실패! 강화석이 부서진다!",
+    "durationSec": 3.08
+   }
+  },
+  {
+   "file": "enh_destroy",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "산산조각… 무기가 사라졌다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "34d4b6134f0c3c9c95f9ce767f228dc21a6145050d6d40a4d6520d2789b8c88d",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.58,
+    "text": "산산조각 무기가 사라졌다 (ko강제)",
+    "durationSec": 2.77
+   }
+  },
+  {
+   "file": "set_blood",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "흡혈 세트 각성. 피를 마셔라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "09b70abf2ae2ab18ae47328595fefbde961f9417d7433e83dee0290693bbee2e",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "별세트 각성! 피를 마셔라!",
+    "durationSec": 3.19
+   }
+  },
+  {
+   "file": "set_gravity",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "중력 세트 각성. 아무것도 벗어날 수 없다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "e8b5d7ab13a6b7ac0f508038bd00a0b82fb54278a1f3717999afa2d820471b39",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "중력 세트 각성 아무것도 벗어날 수 없다",
+    "durationSec": 3.97
+   }
+  },
+  {
+   "file": "set_phoenix",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "불사조 세트 각성. 타올라 다시 태어나라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "aa4a83dbb03f63653b750bcdf4f2a33a7b113c913082d6a93fd3c6b480cfa621",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "불사조 세트 각성! 타올라 다시 태어나라!",
+    "durationSec": 3.87
+   }
+  },
+  {
+   "file": "set_storm",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "폭풍 세트 각성. 번개를 타라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "95f6b09e681599d5ca8ac9a81f1c99bfe8bf79e984c150318e6d271ade9cd094",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "폭풍 세트 각성. 번개를 타라!",
+    "durationSec": 2.66
+   }
+  },
+  {
+   "file": "boss_appear",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보스가 나타났다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "6d7cd0d5516d5cf9eb965d23dc367bebedbf76061561581355cdcec237d37115",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ja",
+    "langProb": 0.93,
+    "text": "호스가 나타났다! (ko강제)",
+    "durationSec": 1.59
+   }
+  },
+  {
+   "file": "boss_phase",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보스가 강해진다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "eeaa9a36456e41b616d27a963bffae5e09b380b36a802ebde0eb7eae35783919",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.86,
+    "text": "보스가 강해진다!",
+    "durationSec": 1.59
+   }
+  },
+  {
+   "file": "boss_enrage",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "보스가 폭주한다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "2db2440dcf102e63a99bec98fc37749766be9f7f3c38d582ab401b80f791f70f",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.9,
+    "text": "포스가 폭주한다!",
+    "durationSec": 1.59
+   }
+  },
+  {
+   "file": "seal_break",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "모든 구역 정화 완료. 봉인이 깨진다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "71c4b11208a0b370cfea3d54a1acd1ec6682bc55392163b5c4944dabc191a2a8",
+   "emotion": "excited",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "모든 구역청화 완료! 봉인이 깨진다!",
+    "durationSec": 3.6
+   }
+  },
+  {
+   "file": "portal",
+   "owner": "announcer",
+   "voice": "fish-icl:announcer",
+   "kind": "line",
+   "text": "포탈이 열렸다. 준비되면 들어가라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "917ff549e5bb4fd4d582bf62a0c6394cf19a5f4f2ab3fbc4312db1c55e9908fe",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "포탈이 열렸다. 준비되면 들어가라!",
+    "durationSec": 2.35
+   }
+  },
+  {
+   "file": "boss_warlord_appear",
+   "owner": "boss_warlord",
+   "voice": "fish-icl:boss-warlord",
+   "kind": "line",
+   "text": "내 왕좌에 바칠 해골이 또 왔구나!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ee425d4e580ef7b902187dacc0930cde6291bd297e41b37f484d3033d6901957",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "내 왕자에 바칠 해골이 또 왔구나!",
+    "durationSec": 2.95
+   }
+  },
+  {
+   "file": "boss_warlord_phase",
+   "owner": "boss_warlord",
+   "voice": "fish-icl:boss-warlord",
+   "kind": "line",
+   "text": "감히 나를 베다니!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "2ce747ba40a54ba885473ba327b5fb075173b868741d3eff2ea983dbbbd444fa",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.94,
+    "text": "감히 나를 배다니",
+    "durationSec": 1.7
+   }
+  },
+  {
+   "file": "boss_warlord_enrage",
+   "owner": "boss_warlord",
+   "voice": "fish-icl:boss-warlord",
+   "kind": "line",
+   "text": "충분하다! 군단이여, 일어나라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "4c064195ae4f7515eacedff080f5b4f020344bd0a29d6781f70d5b881e576ae2",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.85,
+    "text": "충분하다! 군단이여! 일어나라!",
+    "durationSec": 3.21
+   }
+  },
+  {
+   "file": "boss_warlord_death",
+   "owner": "boss_warlord",
+   "voice": "fish-icl:boss-warlord",
+   "kind": "line",
+   "text": "말도 안 돼… 내 군단이… 무너진다…",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "bf7c687a90de4bf32705789633eecbfa5fca35d4d0ba0cd27af4f3c44af5b6de",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.95,
+    "text": "말도 안 돼 내 군단이 무너진다",
+    "durationSec": 4.21
+   }
+  },
+  {
+   "file": "boss_demon_appear",
+   "owner": "boss_demon",
+   "voice": "fish-icl:boss-demon",
+   "kind": "line",
+   "text": "아아… 싱싱한 영혼이로군. 가까이 오너라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "9a34f2a5a343ed82d4914896c6e520dc16d74b7cb654b8a12b566e26129171d5",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.49,
+    "text": "아, 싱싱한 영혼이로군. 가까이 오너라.",
+    "durationSec": 4.62
+   }
+  },
+  {
+   "file": "boss_demon_phase",
+   "owner": "boss_demon",
+   "voice": "fish-icl:boss-demon",
+   "kind": "line",
+   "text": "이제야 나의 관심을 끄는군.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "e9261f587dd9afcc7e1173c155c7c4572c42b00bb1056c0c15c5b98d7faea313",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "이제야 나의 관심을 끄는군",
+    "durationSec": 2.53
+   }
+  },
+  {
+   "file": "boss_demon_enrage",
+   "owner": "boss_demon",
+   "voice": "fish-icl:boss-demon",
+   "kind": "line",
+   "text": "통째로 삼켜 주마!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "5453c257407bf3ec3c44b2f961200228bbe37b51b366e56ab4c72398334e3f52",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.95,
+    "text": "통째로 삼켜주마",
+    "durationSec": 1.88
+   }
+  },
+  {
+   "file": "boss_demon_death",
+   "owner": "boss_demon",
+   "voice": "fish-icl:boss-demon",
+   "kind": "line",
+   "text": "안 돼… 심연으로 돌아가다니… 안 돼!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ff56b46185d114bccf0135f3b9ad8d442aedab83dcba205244282f83c1ce2b82",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.72,
+    "text": "안돼...시면으로 돌아가다니... 안돼...",
+    "durationSec": 4.62
+   }
+  },
+  {
+   "file": "boss_dragon_appear",
+   "owner": "boss_dragon",
+   "voice": "fish-icl:boss-dragon",
+   "kind": "line",
+   "text": "천 년의 잠을… 고작 이것 때문에 깨우느냐?",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "4daedc5e3e98ea38e7182e87169eeb1e899a4b5df8bda714adb7c3c785f71ead",
+   "emotion": "confident",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.96,
+    "text": "천 년의 잠을 고작 이것 때문에 깨우느냐?",
+    "durationSec": 3.68
+   }
+  },
+  {
+   "file": "boss_dragon_phase",
+   "owner": "boss_dragon",
+   "voice": "fish-icl:boss-dragon",
+   "kind": "line",
+   "text": "하찮은 것. 불타라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ea35187b840ba8a8eff02a5a1ad06f350cb3c6bf2ea1876d54c1b258bbc933be",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.89,
+    "text": "하찮은 것 불타라",
+    "durationSec": 2.19
+   }
+  },
+  {
+   "file": "boss_dragon_enrage",
+   "owner": "boss_dragon",
+   "voice": "fish-icl:boss-dragon",
+   "kind": "line",
+   "text": "하늘이 네놈 위로 무너지리라!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "074ae7e63d51c2685c521bfe56b3358e78bab4830d5d60763365a702eec0dae4",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.95,
+    "text": "하늘이 내 놈 위로 무너지리라",
+    "durationSec": 2.77
+   }
+  },
+  {
+   "file": "boss_dragon_death",
+   "owner": "boss_dragon",
+   "voice": "fish-icl:boss-dragon",
+   "kind": "line",
+   "text": "천 년이… 네놈 손에… 끝나는구나…",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "1d1a8d077b883f962d099270415723b0d08d0e74a5342f9ce3682d8add002faa",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "천 년이 네 놈 손에 끝나는구나",
+    "durationSec": 4.15
+   }
+  },
+  {
+   "file": "boss_c1_mid_appear",
+   "owner": "boss_c1_mid",
+   "voice": "fish-lib:a9574d6184714eac96a0a892b719289f",
+   "kind": "line",
+   "text": "다시는 보내지 않는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "97e272395f9c1d7b495f41cd37ad1377b5845dce26bcf3baf47067337892f437",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "다시는 보내지 않는다.",
+    "durationSec": 1.46
+   }
+  },
+  {
+   "file": "boss_c1_fin_appear",
+   "owner": "boss_c1_fin",
+   "voice": "fish-lib:bb07cfc53e0f4e3d91ee823a825c35d4",
+   "kind": "line",
+   "text": "아무도 잊지 않게, 가둔다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "4b03235ec3962b43c7f27e99785e014e403a0282109d92235e880ed6d58611c6",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "아무도 있지 않게 가둔다",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c2_mid_appear",
+   "owner": "boss_c2_mid",
+   "voice": "fish-lib:7b0e100da67d49ad81bd63a407d2f964",
+   "kind": "line",
+   "text": "살아 돌아와라…!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "9e59ea49a4d2070e987e3e67ca6421e31e6db471c20795c369feda1106c1bfa4",
+   "emotion": "sad",
+   "attempt": 1,
+   "temperature": 0.55,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "살아 돌아와라",
+    "durationSec": 1.88
+   }
+  },
+  {
+   "file": "boss_c2_fin_appear",
+   "owner": "boss_c2_fin",
+   "voice": "fish-lib:fa7d528141974d3ba794e4482b153dc6",
+   "kind": "line",
+   "text": "불이 꺼지면 다 죽는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0627aba70c47ed08d433b9cabea3413c8febcf4562ed3a3cd2b90aeba4ea803b",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "불이 꺼지면 다 죽는다",
+    "durationSec": 1.54
+   }
+  },
+  {
+   "file": "boss_c3_mid_appear",
+   "owner": "boss_c3_mid",
+   "voice": "fish-lib:73da877014f349c0ad3eb136c7f1a0c7",
+   "kind": "line",
+   "text": "읽히지 않으면 안전하다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "35df371f57fbf27b158554ec66186d0c667a775f5c85730435940bcded82c557",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "읽히지 않으면 안전하다.",
+    "durationSec": 1.96
+   }
+  },
+  {
+   "file": "boss_c3_fin_appear",
+   "owner": "boss_c3_fin",
+   "voice": "fish-lib:2f06c7a428e9431fadd60af4dfe91763",
+   "kind": "line",
+   "text": "쓰지 않은 내일도 지킨다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0e60fe7fbdb0a90fb1744ea97738ce8c0cdda834e1a5fcb95f697662751e660e",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "쓰지 않은 내일도 지킨다",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c4_mid_appear",
+   "owner": "boss_c4_mid",
+   "voice": "fish-lib:ff2945cbfd274c85b440bd39d8cb3729",
+   "kind": "line",
+   "text": "불빛을 따라와… 제발.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "20e783580877aeff333cdd157934ab97a6b45031f192c0046074c2f019a5a913",
+   "emotion": "sad",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "불빛을 따라와 제발",
+    "durationSec": 2.9
+   }
+  },
+  {
+   "file": "boss_c4_fin_appear",
+   "owner": "boss_c4_fin",
+   "voice": "fish-lib:d4c65d5860504eb197b6943c3ff0f289",
+   "kind": "line",
+   "text": "다시는 잃지 않는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "cfda4448b82f726d788d6f2c31e1490ca480ea84ba7ce62f0e4c7fb397911bbb",
+   "emotion": "angry",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.98,
+    "text": "다시는 잃지 않는다!",
+    "durationSec": 1.23
+   }
+  },
+  {
+   "file": "boss_c5_mid_appear",
+   "owner": "boss_c5_mid",
+   "voice": "fish-lib:29da56534ac84ccd81092be4359a1639",
+   "kind": "line",
+   "text": "한 사람이면 모두가 산다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "0df3335454811405625b91973fe4ec64db5734f5d863043cc134c6d46a051ee4",
+   "emotion": "tired",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "한 사람이면 모두가 산다",
+    "durationSec": 2.14
+   }
+  },
+  {
+   "file": "boss_c5_fin_appear",
+   "owner": "boss_c5_fin",
+   "voice": "fish-lib:d5a885f492854e068d8a72e14c851771",
+   "kind": "line",
+   "text": "바쳐라. 그러면 끝난다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "254027436ba7168e064262cee7c6269f4591d3167cadbe623dc3e5d1c9e9803a",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "바쳐라. 그러면 끝난다.",
+    "durationSec": 2.9
+   }
+  },
+  {
+   "file": "boss_c6_mid_appear",
+   "owner": "boss_c6_mid",
+   "voice": "fish-lib:ddda1d00f3684054a7e971b2dde89b5f",
+   "kind": "line",
+   "text": "누구를 앉히겠는가?",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "214d2b24f2a26787953292e3813f92bc7511b01b252f86b151ef4a9b72afed30",
+   "emotion": "calm",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "누구를 안 치겠는가",
+    "durationSec": 1.78
+   }
+  },
+  {
+   "file": "boss_c6_fin_appear",
+   "owner": "boss_c6_fin",
+   "voice": "fish-lib:9aae54921dd944948ee08d35f6b5f984",
+   "kind": "line",
+   "text": "혼자 남아라. 그게 명령이다.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "ff5dde3e567027967173c22544270c26d674b7bf685dda35a231a19c5a7f3782",
+   "emotion": "whispering",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "혼자 남아라. 그게 명령이다.",
+    "durationSec": 2.25
+   }
+  },
+  {
+   "file": "boss_c7_mid_appear",
+   "owner": "boss_c7_mid",
+   "voice": "fish-lib:061a013646d04f0297560d4354d595fd",
+   "kind": "line",
+   "text": "이 문은 내가 닫는다!",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c5eb72de276f0cc9d75e61d032d85d585cd6383c9e0e3bf6c7376100005eccae",
+   "emotion": "determined",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.99,
+    "text": "이문은 내가 닿는다",
+    "durationSec": 1.65
+   }
+  },
+  {
+   "file": "boss_c7_fin_appear",
+   "owner": "boss_c7_fin",
+   "voice": "fish-lib:35856f20bd4a4896af91cee863519e6a",
+   "kind": "line",
+   "text": "모두 같은 박자로 울려라.",
+   "lang": "ko",
+   "source": "regenerated",
+   "sha256": "c1daa2c3022d0f43620982f8e45c2821f68a6d76915238b57dee305ca992ecad",
+   "emotion": "serious",
+   "attempt": 0,
+   "temperature": 0.7,
+   "asr": {
+    "lang": "ko",
+    "langProb": 0.97,
+    "text": "모두 같은 박자로 올려라",
+    "durationSec": 2.14
+   }
+  }
+ ]
+}

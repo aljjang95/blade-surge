@@ -11,6 +11,7 @@ import { applySettlement, campaignStage, heroCombatProfile, parseStageCode, plau
 import { applyDifficulty, DIFFICULTIES } from '../../src/game/difficulty.js';
 import { stageDef } from '../../src/data/stages.js';
 import { hashValue, parityHash } from '../../src/shared/state-hash.js';
+import { isChapterOpen } from '../../src/data/chapter-open.js';
 
 export const TICKET_TTL_MS = 2 * 3600 * 1000;
 export const MAX_OPEN_TICKETS = 5;
@@ -41,6 +42,8 @@ export async function startRun(c: Ctx, auth: Authed, body: Record<string, unknow
   const eco = loadEconomy(doc.state, { now: c.now });
   const stage = campaignStage(eco.s, body.contentId, (body.difficulty as string) ?? 'story');
   if (!stage || !eco.isUnlocked(stage.ch, stage.st)) fail(403, 'locked');
+  // 시간 개방 지역은 진행도를 채워도 개방 시각 전에는 티켓을 주지 않는다(서버 시계만 쓴다).
+  if (!isChapterOpen(stage.ch, c.now)) fail(403, 'chapter-closed');
   const heroId = body.heroId as string, profile = heroCombatProfile(eco, heroId);
   if (!profile) fail(403, 'hero');
   // 미소유 영웅으로는 티켓을 발급하지 않는다(해금 전 영웅으로 보상 판을 돌리는 우회 차단).
@@ -100,15 +103,19 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   const eco = loadEconomy(doc.state, { now: c.now });
   const at = parseStageCode(ticket.content_id)!;
   const stage = applyDifficulty(stageDef(at.ch, at.st), (DIFFICULTIES as Record<string, unknown>)[ticket.difficulty] ?? DIFFICULTIES.story);
+  if (!isChapterOpen(at.ch, c.now)) fail(403, 'chapter-closed');
   const profile = heroCombatProfile(eco, ticket.hero_id) ?? { atk: 1, maxHp: 1, level: 1 };
   const check = plausibility(stage, facts, { heroAtk: profile.atk, maxHp: profile.maxHp, wallMs: c.now - ticket.started_at });
-  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed }, facts, check.verdict);
+  const outcome = applySettlement(eco, stage, { heroId: ticket.hero_id, lootSeed: ticket.loot_seed, wallMs: c.now - ticket.started_at,
+    // 처치 원장은 서버 권위 계정만: 그림자 계정은 클라이언트가 티켓을 쓰지 않아 정산이 직접 API 호출뿐이고, 그 값이 컷오버까지 남는다(Codex 보안 리뷰 PR #435).
+    killLedger: auth.account.authority === 'server' }, facts, check.verdict);
   // 결제 환불로 생긴 미상환 부채는 서버 정산 획득분에서 먼저 갚는다(같은 배치, 영수증에 상환량 표시).
   const debt = await debtRepayment(c.db, accountId, eco.s, c.now);
   const next = docOf(eco);
   const state = check.verdict === 'rejected' ? 'rejected' : 'settled';
   const receipt = { receiptId: runId, verdict: check.verdict, issues: check.issues, win: !!facts.win && check.verdict !== 'rejected',
     got: outcome.got, loot: outcome.loot, levelUps: outcome.ups, first: outcome.first, stars: outcome.stars ?? null, fullClear: outcome.fullClear ?? false, exp: outcome.exp, combatExp: outcome.combatExp,
+    killLedger: outcome.killLedger ?? { kills: 0, species: 0, dropped: 0 },
     rev: doc.rev + 1, stateHash: parityHash(eco.s), serverTime: c.now, rulesVersion: RULES_VERSION,
     ...(Object.keys(debt.repaid).length ? { debtRepaid: debt.repaid } : {}) };
   const writes: GuardedWrite[] = [
@@ -119,7 +126,7 @@ export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Recor
   if (check.verdict !== 'ok') writes.push({ sql: `INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) SELECT ?, ?, ?, ?, ?, ? WHERE ${REV_GUARD}`,
     values: [accountId, runId, 'settle-' + check.verdict, check.verdict === 'rejected' ? 2 : 1, JSON.stringify(check.issues), c.now] });
   const result = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,
-    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot }, receipt },
+    ledger: { opId: 'run:' + runId, kind: 'run-settle', delta: { verdict: check.verdict, got: outcome.got, loot: outcome.loot, killLedger: outcome.killLedger ?? null }, receipt },
     projection: next.projection, writes });
   if (!result.ok) {
     if (result.reason === 'duplicate') {

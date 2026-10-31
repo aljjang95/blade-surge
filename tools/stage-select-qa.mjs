@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+import { installAutoStarter } from './qa-starter.mjs';
 
 const args = process.argv.slice(2);
 const positional = args.filter((a) => !a.startsWith('--'));
@@ -85,7 +86,7 @@ try {
       return { nodeOverlaps, minDisc, guideCoversBar, mapAspect, enter, dialog, enterInView: inView(enter), dialogInView: inView(dialog), enterHit: !!hit && (hit.id === 'stage-select-enter' || !!hit.closest?.('#stage-select-enter')), nodesInView, introOverlapsSheet, smallTargets: [...document.querySelectorAll('#stage-select button')].filter((b) => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.height < 32 || r.width < 32); }).map((b) => b.getAttribute('aria-label') || b.textContent) };
     });
     try {
-      await page.goto(origin);
+      await installAutoStarter(page); await page.goto(origin);
       await settle(400); await dismissRotate();
       await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 240000 });
       await dismissRotate(); await act('#boot-start');

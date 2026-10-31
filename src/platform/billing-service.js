@@ -7,7 +7,8 @@ import { funnelSkuFor } from '../game/funnel-events.js';
 import { askCustomerInfo } from '../ui/customer-info.js';
 import { createHeroPurchase } from './hero-purchase.js';
 
-const validProduct = (p) => p && typeof p.id === 'string' && soldOn(p, 'play') && ['inapp', 'subs'].includes(p.playType);
+// 어댑터가 정한 결제 채널(play|onestore)에서 파는 상품만. 원스토어는 inapp만.
+const validProduct = (p, channel = 'play') => p && typeof p.id === 'string' && soldOn(p, channel) && (channel === 'onestore' ? ['inapp'] : ['inapp', 'subs']).includes(p.playType);
 
 // 서버 /iap/* 한도(계정당 10분 30회)를 아끼려고 sync가 verify하는 대상을 줄인다.
 // 미승인(acknowledged=false) 토큰은 항상, 승인된 구독은 상품별 6시간에 한 번만 확인한다(승인된 일회성 상품은 서버가 이미 처리).
@@ -24,6 +25,7 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
   /** @type {any} */ let adapter = null;
   /** @type {any[]} */ let catalog = [];
   const prices = new Map();
+  const channel = () => adapter?.billingChannel || 'play';
   let ready = false, busy = false, syncing = false, initPromise = null, permanentOff = false, lastInitAt = 0, lastSyncAt = 0;
 
   /** 서버 응답을 세이브에 적용한다. 저장 실패는 null. */
@@ -31,8 +33,8 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
 
   async function refreshCatalog() {
     try {
-      const cat = await account.iapCatalog();
-      if (cat?.billing === true && Array.isArray(cat.products)) catalog = cat.products.filter(validProduct).map((p) => ({ ...p }));
+      const cat = await account.iapCatalog(adapter?.billingChannel);
+      if (cat?.billing === true && Array.isArray(cat.products)) catalog = cat.products.filter((p) => validProduct(p, channel())).map((p) => ({ ...p }));
     } catch { /* 다음 기회에 */ }
   }
 
@@ -42,9 +44,9 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
     if (!adapter) { permanentOff = true; return false; }
     const me = await account.me();
     if (me?.flags?.iap !== true) return false;
-    const cat = await account.iapCatalog();
+    const cat = await account.iapCatalog(adapter?.billingChannel);
     if (cat?.billing !== true || !Array.isArray(cat.products)) return false;
-    const list = cat.products.filter(validProduct).map((p) => ({ ...p }));
+    const list = cat.products.filter((p) => validProduct(p, channel())).map((p) => ({ ...p }));
     if (!list.length) return false;
     const r = await adapter.list(list.map((p) => ({ productId: p.id, type: p.playType })));
     prices.clear();
@@ -53,6 +55,9 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
     ready = prices.size > 0;
     return ready;
   }
+
+  /** verify 본문의 채널·마켓 코드. play는 빈 객체(기존 본문 유지). */
+  const verifyMeta = (r) => (channel() === 'onestore' ? { channel: 'onestore', marketCode: r?.marketCode } : {});
 
   // 구독 마지막 확인 시각(productId별). 구매 토큰은 저장하지 않는다.
   const readChecks = () => { try { const v = JSON.parse(storage?.getItem(SUB_CHECK_KEY) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
@@ -98,7 +103,7 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
       busy = true;
       try {
         let intent;
-        try { intent = await account.iapIntent(productId); }
+        try { intent = await account.iapIntent(productId, channel()); }
         catch (error) {
           const code = error?.body?.error;
           return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'already-subscribed' ? code : 'intent-failed' };
@@ -108,11 +113,11 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
         catch (error) { return { ok: false, reason: error?.message === 'purchase-cancelled' ? 'cancelled' : 'purchase-failed' }; }
         if (result?.pending) {
           // 승인 대기: 서버에 기록만 남기고(지급 없음) 승인되면 sync()가 지급한다.
-          try { await account.iapVerify(productId, result.purchaseToken); } catch { /* 다음 sync */ }
+          try { await account.iapVerify(productId, result.purchaseToken, verifyMeta(result)); } catch { /* 다음 sync */ }
           return { ok: false, reason: 'pending' };
         }
         let verified;
-        try { verified = await account.iapVerify(productId, result.purchaseToken); }
+        try { verified = await account.iapVerify(productId, result.purchaseToken, verifyMeta(result)); }
         catch { return { ok: false, reason: 'verify-failed' }; } // 토큰은 Play에 남아 있어 sync()가 다시 검증한다
         const state = verified?.state;
         if (state === 'pending') return { ok: false, reason: 'pending' };
@@ -137,7 +142,7 @@ export function createBillingService({ account, loadAdapter = loadPlayCatalogAda
         try { owned = await adapter.owned(); } catch { owned = []; }
         for (const o of owned) {
           if (!shouldVerify(o)) continue;
-          try { await account.iapVerify(o.productId, o.purchaseToken); if (o.type === 'subs') writeCheck(o.productId, now()); } catch { /* 다음 기회 */ }
+          try { await account.iapVerify(o.productId, o.purchaseToken, verifyMeta(o)); if (o.type === 'subs') writeCheck(o.productId, now()); } catch { /* 다음 기회 */ }
         }
         const state = await account.iapState();
         apply(state);
@@ -161,7 +166,7 @@ export function setupBilling(app) {
   app.eco.setBilling(billing); app.billing = billing;
   // 영웅 해금 구매 트리거(UI는 app.heroPurchase만 안다). 웹 채널은 포트원, Play 채널은 위 billing으로 위임한다.
   const heroPurchase = createHeroPurchase({ api: client, eco: app.eco, billing, authority: () => app.account?.authority ?? null,
-    askCustomer: () => askCustomerInfo(app.ui) });
+    askCustomer: (methods) => askCustomerInfo(app.ui, methods) });
   app.heroPurchase = heroPurchase;
   const start = (tries = 0) => {
     const status = app.account?.status;

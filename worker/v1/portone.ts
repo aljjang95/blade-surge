@@ -9,9 +9,10 @@ import type { Authed, Ctx } from './auth';
 import { randomHex } from './token';
 import { recordServerMilestone } from './funnel';
 import {
-  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, grantOnce, payoutHeld, reverseToken, stateFor, webTokenHash,
+  WEB_SCHEMA_VERSION, activeEntitlementKeys, allKeysActive, assertAvatarFullsetDeliverable, grantOnce, grantsMonthly, ownedProducts, payoutHeld, reverseToken, stateFor, webTokenHash,
 } from './iap';
-import { IAP_BY_ID, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
+import { GAME_RATINGS, ratingReady, type GameRating } from '../../src/data/game-rating.js';
+import { IAP_BY_ID, IAP_PRODUCTS, entitlementEnds, entitlementKeys, sellableProduct, soldOn, type IapProduct } from '../../src/shared/iap-catalog.js';
 
 const API_BASE = 'https://api.portone.io';
 const TIMEOUT_MS = 6000;
@@ -28,6 +29,10 @@ export const WEB_RECONCILE_MAX = 25;
 const INTENT_RECHECK_MS = 10 * 60000;
 const INTENT_WINDOW_MS = 2 * DAY;
 const OPEN_INTENT_CAP = 10;
+/** 결제창이 열려 있다고 보는 시간. 이 안의 같은 1회성 상품 의도는 새 의도를 막는다. */
+const OPEN_WINDOW_MS = 10 * 60000;
+/** 월정액 권한을 주는 웹 상품 id(이용 중 중복 결제 판정용). */
+const IAP_PRODUCTS_MONTHLY_IDS = IAP_PRODUCTS.filter((p) => grantsMonthly(p)).map((p) => p.id);
 
 export interface PortoneEnv {
   /** 'true'일 때만 /iap/web/*가 열린다(기본 꺼짐). */
@@ -40,8 +45,15 @@ export interface PortoneEnv {
   IAP_ALLOW_TEST?: string;
   /** 테스트 채널을 쓸 수 있는 account_id 허용 목록(쉼표 구분, 기본 비어 있음). IAP_ALLOW_TEST=true여도 여기에 든 계정만 테스트 결제를 받는다. */
   IAP_TEST_ACCOUNTS?: string;
+  /**
+   * 웹 결제창에서 고를 수 있는 결제수단(쉼표 구분, 기본 'CARD'). KAKAOPAY·NAVERPAY·TOSSPAY는 KG이니시스 간편결제(포트원 EASY_PAY)로,
+   * KG 가맹 계약에 그 간편결제가 추가된 뒤에만 켠다.
+   */
+  WEB_PAY_METHODS?: string;
   /** 포트원 API 시크릿(Secrets Store 바인딩). 값은 어디에도 출력하지 않는다. */
   PORTONE_API_SECRET?: string | { get(): Promise<string> };
+  /** 포트원 웹훅 서명 시크릿(Standard Webhooks, whsec_…). 바인딩 이름만 정해 두었다 — 비어 있으면 웹훅은 503으로 닫힌다. */
+  PORTONE_WEBHOOK_SECRET?: string | { get(): Promise<string> };
 }
 
 /** 포트원 결제 단건(필요한 필드만). status: READY | PENDING | VIRTUAL_ACCOUNT_ISSUED | PAY_PENDING | PAID | FAILED | PARTIAL_CANCELLED | CANCELLED */
@@ -52,9 +64,12 @@ export interface PortonePayment {
   amount?: { total?: number; paid?: number; cancelled?: number } | null;
   channel?: { key?: string | null } | null;
   customData?: string | null;
+  /** 실제 결제수단. type: PaymentMethodCard | PaymentMethodEasyPay(provider: KAKAOPAY…) | PaymentMethodTransfer 등. */
+  method?: { type?: string | null; provider?: string | null } | null;
 }
 export interface PortoneApi { getPayment(paymentId: string): Promise<PortonePayment | null> }
-export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request: Request) => Promise<Response> }
+/** webRating: 웹(원스토어 IARC) 등급 주입(테스트용). 없으면 src/data/game-rating.js의 웹 등급 정본. */
+export interface PortoneDeps { portoneApi?: PortoneApi; portoneFetch?: (request: Request) => Promise<Response>; webRating?: GameRating }
 type WebCtx = Ctx & { deps: Ctx['deps'] & PortoneDeps };
 const penv = (c: Ctx) => c.env as unknown as PortoneEnv;
 
@@ -73,9 +88,31 @@ export function webChannel(env: PortoneEnv, accountId?: string | null, wantTest 
   if (tester) return { key: env.PORTONE_TEST_CHANNEL_KEY as string, test: true };
   return null;
 }
-/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
-export function webBillingOn(env: PortoneEnv, accountId?: string | null): boolean {
-  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!webChannel(env, accountId);
+/** 웹 결제수단: CARD(신용·체크카드 일반결제) + KG이니시스 간편결제 공급자(포트원 V2 easyPayProvider 값). */
+export const WEB_PAY_METHODS = Object.freeze(['CARD', 'KAKAOPAY', 'NAVERPAY', 'TOSSPAY'] as const);
+export type WebPayMethod = typeof WEB_PAY_METHODS[number];
+/** 설정이 켠 결제수단(알 수 없는 값은 버림). 카드는 항상 맨 앞이고, 설정이 비면 카드만. */
+export function webPayMethods(env: PortoneEnv): WebPayMethod[] {
+  const on = new Set((env.WEB_PAY_METHODS ?? 'CARD').split(',').map((v) => v.trim().toUpperCase()));
+  return WEB_PAY_METHODS.filter((m) => m === 'CARD' || on.has(m));
+}
+/** 결제창 요청에 넣을 결제수단 필드. 간편결제는 payMethod EASY_PAY + easyPay.easyPayProvider. */
+export function payMethodFields(method: WebPayMethod): { payMethod: string; easyPay?: { easyPayProvider: string } } {
+  return method === 'CARD' ? { payMethod: 'CARD' } : { payMethod: 'EASY_PAY', easyPay: { easyPayProvider: method } };
+}
+
+/**
+ * 웹 판매 등급 게이트: 웹 등급은 원스토어 IARC 대한민국 결과(IARC 인증 ID)이며, 그 값이 채워져야 실채널 판매를 연다.
+ * 허용 테스터의 테스트 채널 결제(공개 판매 아님)는 막지 않는다.
+ */
+export function webRatingReady(rating: GameRating | undefined): boolean {
+  return ratingReady(rating ?? GAME_RATINGS.web);
+}
+
+/** 클라이언트에 알리는 웹 결제 켜짐 표시(설정·등급만 본다. 스키마·시크릿은 호출 시 503으로 닫힌다). 테스트 채널만 있는 환경은 허용 테스터 계정에게만 true. */
+export function webBillingOn(env: PortoneEnv, accountId?: string | null, rating?: GameRating): boolean {
+  const channel = webChannel(env, accountId);
+  return env.WEB_BILLING_ENABLED === 'true' && !!env.PORTONE_STORE_ID && !!channel && (channel.test || webRatingReady(rating));
 }
 
 async function webSchemaReady(db: D1Database): Promise<boolean> {
@@ -108,7 +145,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const text = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 
 /** 포트원 단건 조회(읽기 전용). 시크릿·응답 원문·오류 원문은 로그·응답에 싣지 않는다. */
-function portoneApi(c: Ctx): PortoneApi {
+export function webPortoneApi(c: Ctx): PortoneApi {
   const deps = (c as WebCtx).deps;
   if (deps.portoneApi) return deps.portoneApi;
   return {
@@ -128,54 +165,84 @@ function portoneApi(c: Ctx): PortoneApi {
       if (!res.ok) throw new V1Error(502, 'portone-unavailable');
       let body: Record<string, unknown>;
       try { body = asObj(await res.json()); } catch { throw new V1Error(502, 'portone-unavailable'); }
-      const amount = asObj(body.amount);
+      const amount = asObj(body.amount), method = asObj(body.method);
       return {
         status: text(body.status) ?? 'UNKNOWN', storeId: text(body.storeId), currency: text(body.currency),
         amount: { total: num(amount.total), paid: num(amount.paid), cancelled: num(amount.cancelled) },
         channel: { key: text(asObj(body.channel).key) }, customData: text(body.customData),
+        method: { type: text(method.type), provider: text(method.provider) },
       };
     },
   };
 }
 
-interface WebRow {
+export interface WebRow {
   payment_id: string; account_id: string; product_id: string; amount_krw: number; store_id: string; channel_key: string;
   test: number; state: 'intent' | 'granted' | 'cancelled' | 'failed'; token_hash: string | null; created_at: number;
+  /** intent 때 서버가 허락한 결제수단(0008). 그 전에 만든 의도는 null. */
+  pay_method?: string | null;
 }
-const ROW_COLUMNS = 'payment_id, account_id, product_id, amount_krw, store_id, channel_key, test, state, token_hash, created_at';
+/** 결제 원장 행 + 의도 결제수단(없으면 NULL). 별칭 w·m을 쓰는 FROM 절과 함께 쓴다. */
+export const ROW_COLUMNS = 'w.payment_id, w.account_id, w.product_id, w.amount_krw, w.store_id, w.channel_key, w.test, w.state, w.token_hash, w.created_at, m.pay_method';
+export const ROW_FROM = 'iap_web_payments w LEFT JOIN iap_web_pay_methods m ON m.payment_id = w.payment_id';
 
 // ── 의도: 서버가 paymentId·금액을 정한다 ─────────────────────────
 export async function webIntent(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['productId', 'test'], ['productId']);
+  onlyKeys(body, ['productId', 'test', 'method'], ['productId']);
   if (body.test !== undefined && typeof body.test !== 'boolean') fail(400, 'test');
+  // 결제수단은 설정이 켠 것만(기본 카드). 고른 수단은 저장했다가 지급 전 포트원 method와 대조한다(mismatchCode).
+  const method = (body.method ?? 'CARD') as WebPayMethod;
+  if (typeof body.method !== 'undefined' && (typeof body.method !== 'string' || !webPayMethods(penv(c)).includes(method))) fail(400, 'pay-method');
   const reason = await webReason(c);
   if (reason) fail(503, reason);
   const env = penv(c);
   const channel = webChannel(env, auth.account.account_id, body.test === true);
   if (!env.PORTONE_STORE_ID || !channel) fail(503, 'web-not-configured');
+  // 웹 등급(IARC 인증 ID)이 없으면 실채널 판매를 열지 않는다(테스트 채널 허용 테스터만 예외).
+  if (!channel.test && !webRatingReady((c as WebCtx).deps.webRating)) fail(503, 'rating-required');
   if (auth.account.status !== 'active' && auth.account.status !== 'muted') fail(403, 'account-inactive');
   // 서버가 roster를 강제하는 계정(authority=server)에만 현금 판매를 연다. 그림자·로컬은 저장 편집으로 소유를 늘릴 수 있다.
   if (auth.account.authority !== 'server') fail(403, 'server-authority-required');
   const product = isId(body.productId, 64) ? sellableProduct(body.productId) : null;
-  if (!product || !soldOn(product, 'web') || product.type === 'subscription' || product.type === 'consumable' && !product.once) fail(400, 'unknown-product');
+  // 웹은 즉시 지급형(B형)만: 영구 권한(non_consumable), 계정당 1회 패키지(once), 기간 이용권(periodDays). 자동 갱신 구독·반복 충전형은 거부.
+  if (!product || !soldOn(product, 'web') || product.type === 'subscription' || product.type === 'consumable' && !product.once && !((product.periodDays ?? 0) > 0)) fail(400, 'unknown-product');
   const accountId = auth.account.account_id;
   if (await payoutHeld(c.db, accountId, c.now)) fail(403, 'payout-hold');
+  // 계정당 1회·영구 상품을 이미 받았으면 결제 전에 거부한다(결제 뒤 지급 거절로 돈만 나가지 않게).
+  if ((product.once || product.type === 'non_consumable') && (await ownedProducts(c.db, accountId)).has(product.id)) fail(409, 'not-eligible');
   // 영구 권한 상품은 이미 가진 권한이면 거부한다(영웅 개별 + 전원 해금의 중복 결제 방지).
-  if (allKeysActive(product, await activeEntitlementKeys(c.db, accountId, c.now))) fail(409, 'not-eligible');
+  const activeKeys = await activeEntitlementKeys(c.db, accountId, c.now);
+  if (allKeysActive(product, activeKeys)) fail(409, 'not-eligible');
+  await assertAvatarFullsetDeliverable(c, auth.account.account_id, product);
+  // 월정액 이용 중(Play 구독 또는 웹 30일권)에는 웹 30일권을 또 팔지 않는다.
+  if (grantsMonthly(product) && activeKeys.has('monthly')) fail(409, 'already-subscribed');
+  // 한 번만 받을 수 있는 상품(계정당 1회·영구·월정액)은 결제창이 열려 있을 시간(10분) 안의 같은 계열 의도가 있으면 새 의도를 막는다.
+  // 두 창을 동시에 결제해 하나는 지급 거절(돈만 나감)·하나는 이중 지급이 되는 것을 줄인다. 그보다 오래된 의도는 취소된 창으로 보고 막지 않는다(뒤늦게 PAID면 settle이 감사 플래그를 남긴다).
+  if (product.once || product.type === 'non_consumable' || grantsMonthly(product)) {
+    const same = grantsMonthly(product) ? IAP_PRODUCTS_MONTHLY_IDS : [product.id];
+    const recent = await c.db.prepare(`SELECT COUNT(*) AS n FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ? AND product_id IN (${same.map(() => '?').join(',')})`)
+      .bind(accountId, c.now - OPEN_WINDOW_MS, ...same).first<{ n: number }>();
+    if ((recent?.n ?? 0) > 0) fail(409, 'payment-in-progress');
+  }
   const open = await c.db.prepare("SELECT COUNT(*) AS n FROM iap_web_payments WHERE account_id = ? AND state = 'intent' AND created_at > ?").bind(accountId, c.now - 3600000).first<{ n: number }>();
   if ((open?.n ?? 0) >= OPEN_INTENT_CAP) fail(429, 'too-many-intents');
   const paymentId = 'bsw_' + randomHex(16);
-  await c.db.prepare(`INSERT INTO iap_web_payments(payment_id, account_id, product_id, amount_krw, store_id, channel_key, test, state, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'intent', ?, ?)`).bind(paymentId, accountId, product.id, product.priceKRW, env.PORTONE_STORE_ID, channel.key, channel.test ? 1 : 0, c.now, c.now).run();
+  await c.db.batch([
+    c.db.prepare(`INSERT INTO iap_web_payments(payment_id, account_id, product_id, amount_krw, store_id, channel_key, test, state, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'intent', ?, ?)`).bind(paymentId, accountId, product.id, product.priceKRW, env.PORTONE_STORE_ID, channel.key, channel.test ? 1 : 0, c.now, c.now),
+    // 지급 전 실제 결제수단(포트원 method)과 대조할 기준.
+    c.db.prepare('INSERT INTO iap_web_pay_methods(payment_id, pay_method, created_at) VALUES (?, ?, ?)').bind(paymentId, method, c.now),
+  ]);
   await recordServerMilestone(c.db, accountId, 'purchase_start', c.now);
   return {
     paymentId, productId: product.id, storeId: env.PORTONE_STORE_ID, channelKey: channel.key, orderName: product.title,
-    totalAmount: product.priceKRW, currency: 'KRW', payMethod: 'CARD', customData: JSON.stringify({ productId: product.id }), test: channel.test, serverTime: c.now,
+    totalAmount: product.priceKRW, currency: 'KRW', ...payMethodFields(method), customData: JSON.stringify({ productId: product.id }), test: channel.test, serverTime: c.now,
   };
 }
 
 // ── 완료: 포트원 조회 → 검증 → 멱등 지급 ──────────────────────────
-type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed'; productId: string; paymentId: string; granted: string[] };
+/** 'refund-pending' = 결제됨 · 환불 처리 중(아바타 지급 불가). 포트원 취소는 운영자가 한다(자동 취소 호출 없음). */
+type Settled = { state: 'granted' | 'already' | 'pending' | 'cancelled' | 'failed' | 'refund-pending'; productId: string; paymentId: string; granted: string[] };
 
 async function audit(c: Ctx, accountId: string, kind: string, detail: unknown) {
   await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, NULL, ?, 2, ?, ?)')
@@ -214,20 +281,46 @@ export async function settleWebPayment(c: Ctx, row: WebRow, payment: PortonePaym
   // PAID: 서버가 낸 의도와 한 글자도 다르면 지급하지 않는다. 돈은 나갔으므로 감사 플래그를 남겨 사람이 취소하게 한다.
   const bad = mismatchCode(payment, row, product);
   if (bad) {
-    await audit(c, row.account_id, 'web-payment-mismatch', { code: bad, paymentId: row.payment_id, productId: product.id });
+    // 같은 결제를 웹훅·complete·대사가 다시 봐도 플래그는 한 번만(이미 failed면 남기지 않는다).
+    if (row.state !== 'failed') await audit(c, row.account_id, 'web-payment-mismatch', { code: bad, paymentId: row.payment_id, productId: product.id });
     await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', updated_at = ?, checked_at = ? WHERE payment_id = ? AND state = 'intent'").bind(c.now, c.now, row.payment_id).run();
     fail(422, bad);
   }
+  // 결제수단은 지급을 막지 않는다(금액·상점·채널·상품은 위에서 대조했으므로 돈 차이가 없다. 오탐으로 결제만 되고 지급이 막히는 손해가 더 크다).
+  // 의도와 다르거나 알 수 없는 수단이면 감사 플래그만 남겨 수단별 정산·감사에서 사람이 본다(지급 전 한 번만).
+  const methodNote = methodMismatch(payment, row.pay_method ?? null);
+  if (methodNote && row.state === 'intent') {
+    const actual = paidMethod(payment);
+    await audit(c, row.account_id, actual ? 'web-method-mismatch' : 'web-method-unknown', { paymentId: row.payment_id, productId: product.id, expected: row.pay_method ?? null, actual, type: payment.method?.type ?? null });
+  }
   const test = row.test === 1;
   const before = await activeEntitlementKeys(c.db, row.account_id, c.now);
-  const duplicate = allKeysActive(product, before);
+  // 이미 가진 권한을 또 결제했는가: 영구 권한 전부 보유, 또는 월정액 이용 중 월정액 계열 결제.
+  const duplicate = allKeysActive(product, before) || (grantsMonthly(product) && before.has('monthly'));
   const grantId = 'iap:' + hash;
   const result = await grantOnce(c, row.account_id, product, hash, grantId, product.grant.rewards ?? {}, {
     purchase: { state: 'granted', test, priceKRW: row.amount_krw },
+    // 기간 이용권(30일권)은 지급(settle) 시각부터 센다. 리다이렉트·대사로 늦게 확정돼도 이용자가 덜 받지 않는다.
     entitlements: entitlementKeys(product).map((key) => ({ key, expiresAt: entitlementEnds(product, c.now) })),
   });
-  if (result === 'refunded' || result === 'declined') return { ...base, state: 'cancelled', granted: [] };
-  await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted')")
+  if (result === 'declined') {
+    // 계정당 1회 상품을 이미 받은 뒤의 결제(동시 의도 두 건 결제 등): 돈은 나갔고 지급은 하지 않으므로 사람이 취소하도록 표시하고 행을 닫는다.
+    await audit(c, row.account_id, 'web-once-declined', { paymentId: row.payment_id, productId: product.id });
+    await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state = 'intent'")
+      .bind(hash, c.now, c.now, row.payment_id).run();
+    return { ...base, state: 'cancelled', granted: [] };
+  }
+  if (result === 'undeliverable') {
+    // 결제는 검증됐지만 아바타 풀셋을 줄 수 없다(자산 미준비·영웅 미소유 등, 사유는 grantOnce 의 avatar-undeliverable 감사 플래그).
+    // 돈이 나갔으므로 운영자 환불 큐로 남긴다: 감사 플래그 web-avatar-undeliverable + 행 failed(스키마 CHECK 에 별도 상태가 없다).
+    // 포트원 취소는 실제 돈이 움직이므로 자동 호출하지 않는다. 같은 결제를 다시 확인해도 플래그는 한 번만 남긴다.
+    if (row.state !== 'failed') await audit(c, row.account_id, 'web-avatar-undeliverable', { paymentId: row.payment_id, productId: product.id, action: 'refund-required' });
+    await c.db.prepare("UPDATE iap_web_payments SET state = 'failed', token_hash = ?, updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','failed')")
+      .bind(hash, c.now, c.now, row.payment_id).run();
+    return { ...base, state: 'refund-pending', granted: [] };
+  }
+  if (result === 'refunded') return { ...base, state: 'cancelled', granted: [] };
+  await c.db.prepare("UPDATE iap_web_payments SET state = 'granted', token_hash = ?, granted_at = COALESCE(granted_at, ?), updated_at = ?, checked_at = ? WHERE payment_id = ? AND state IN ('intent','granted','failed')")
     .bind(hash, c.now, c.now, c.now, row.payment_id).run();
   // 이미 가진 권한을 또 결제한 경우(동시 의도 두 건 결제): 지급·환불 회수는 정상 동작하지만 중복 결제이므로 사람이 취소하도록 표시한다.
   if (result === 'granted' && duplicate) await audit(c, row.account_id, 'web-duplicate-payment', { paymentId: row.payment_id, productId: product.id });
@@ -249,16 +342,33 @@ function mismatchCode(payment: PortonePayment, row: WebRow, product: IapProduct)
   return null;
 }
 
+/** 포트원 method → 우리 결제수단 이름(CARD·KAKAOPAY…). 모르는 수단(계좌이체·가상계좌·휴대폰 등)은 null. */
+export function paidMethod(payment: PortonePayment): WebPayMethod | null {
+  const type = payment.method?.type, provider = (payment.method?.provider ?? '').toUpperCase();
+  if (type === 'PaymentMethodCard') return 'CARD';
+  if (type === 'PaymentMethodEasyPay') return (WEB_PAY_METHODS as readonly string[]).includes(provider) && provider !== 'CARD' ? provider as WebPayMethod : null;
+  return null;
+}
+/**
+ * 실제 결제수단이 의도와 다른가(감사 플래그용, 지급은 막지 않는다). 수단 정보가 없거나 웹에서 팔지 않는 수단이면 다르다고 본다.
+ * 의도에 기록된 수단이 없는 옛 행(0008 이전)은 허용 수단 목록 안이면 같다고 본다.
+ */
+export function methodMismatch(payment: PortonePayment, expected: string | null): boolean {
+  const actual = paidMethod(payment);
+  if (!actual) return true;
+  return expected !== null && actual !== expected;
+}
+
 export async function webComplete(c: Ctx, auth: Authed, body: Record<string, unknown>) {
   onlyKeys(body, ['paymentId']);
   const reason = await webReason(c);
   if (reason) fail(503, reason);
   if (typeof body.paymentId !== 'string' || !PAYMENT_ID.test(body.paymentId)) fail(400, 'payment-id');
   const accountId = auth.account.account_id;
-  const row = await c.db.prepare(`SELECT ${ROW_COLUMNS} FROM iap_web_payments WHERE payment_id = ?`).bind(body.paymentId).first<WebRow>();
+  const row = await c.db.prepare(`SELECT ${ROW_COLUMNS} FROM ${ROW_FROM} WHERE w.payment_id = ?`).bind(body.paymentId).first<WebRow>();
   // 남의 paymentId·서버가 발급하지 않은 paymentId는 같은 응답으로 숨긴다.
   if (!row || row.account_id !== accountId) fail(404, 'payment-unknown');
-  const payment = await portoneApi(c).getPayment(row.payment_id);
+  const payment = await webPortoneApi(c).getPayment(row.payment_id);
   if (!payment) fail(404, 'payment-not-found');
   const settled = await settleWebPayment(c, row, payment);
   return { ...settled, ...(await stateFor(c, accountId)) };
@@ -271,11 +381,11 @@ export async function webComplete(c: Ctx, auth: Authed, body: Record<string, unk
 export async function reconcileWebPayments(c: Ctx): Promise<{ checked: number; granted: number; reversed: number; failed: number }> {
   const out = { checked: 0, granted: 0, reversed: 0, failed: 0 };
   if (await webReconcileReason(c)) return out;
-  const rows = await c.db.prepare(`SELECT ${ROW_COLUMNS} FROM iap_web_payments
-    WHERE (state = 'granted' AND granted_at > ? AND COALESCE(checked_at, 0) < CASE WHEN granted_at > ? THEN ? ELSE ? END) OR (state = 'intent' AND created_at > ? AND created_at < ? AND COALESCE(checked_at, 0) < ?)
-    ORDER BY COALESCE(checked_at, 0) ASC LIMIT ?`)
+  const rows = await c.db.prepare(`SELECT ${ROW_COLUMNS} FROM ${ROW_FROM}
+    WHERE (w.state = 'granted' AND w.granted_at > ? AND COALESCE(w.checked_at, 0) < CASE WHEN w.granted_at > ? THEN ? ELSE ? END) OR (w.state = 'intent' AND w.created_at > ? AND w.created_at < ? AND COALESCE(w.checked_at, 0) < ?)
+    ORDER BY COALESCE(w.checked_at, 0) ASC LIMIT ?`)
     .bind(c.now - RECONCILE_WINDOW_MS, c.now - RECENT_GRANT_MS, c.now - RECENT_RECHECK_MS, c.now - OLD_RECHECK_MS, c.now - INTENT_WINDOW_MS, c.now - 120000, c.now - INTENT_RECHECK_MS, WEB_RECONCILE_MAX).all<WebRow>();
-  const api = portoneApi(c);
+  const api = webPortoneApi(c);
   for (const row of rows.results ?? []) {
     out.checked++;
     try {

@@ -1,4 +1,11 @@
 import './style.css';
+import { setupLogin } from './ui/login-sheet.js'; // 콜백 쿼리(ticket)를 다른 부팅 코드보다 먼저 지우려고 앞쪽에서 불러온다
+import { autoSalvageNormal } from './game/gear-advice.js';
+import { ratingLabel } from './data/game-rating.js';
+import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
+import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
+import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
+const dungeonLabel = (kind, id) => [...__ALL_DUNGEONS, ...__FIELD_DUNGEONS].find((d) => d.id === id)?.name || (kind === 'arena' ? '결투장' : '던전');
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { FrameGovernor, canRenderFrame } from './engine/frame-governor.js';
@@ -26,6 +33,8 @@ import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
 import { HEROES, kitOf } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
+import { chapterOpenLabel, ecoClock, isChapterOpen } from './data/chapter-open.js';
+import { playSceneBeforeSortie } from './ui/lore-scene.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 import { runStarterSelect } from './ui/starter-select.js';
@@ -37,11 +46,14 @@ import { playExpeditionIntro } from './expansion/cinematic.js';
 import { LazyWardrobe } from './expansion/lazy-wardrobe.js';
 import { JourneyService } from './game/journey-service.js';
 import { JourneyView } from './ui/journey.js';
+import { BountyView } from './ui/bounty.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
+import { EndgameHubView } from './ui/endgame-hub.js';
 import { PartySession } from './party/session.js';
 import { setupCommunity } from './social/integration.js';
+import { NewsView } from './ui/news.js';
 import { setupAccount } from './net/account.js';
 import { setupBilling } from './platform/billing-service.js';
 import { setupFunnelUpload } from './net/funnel-upload.js';
@@ -52,7 +64,8 @@ import './ui/oath-visual.css';
 import { OathShell } from './ui/oath-shell.js';
 import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
-import { applyDifficulty } from './game/difficulty.js';
+import { applyDifficulty, tormentTierOf } from './game/difficulty.js';
+import { SERVER_HELL_LOCK } from './game/torment-ui-model.js';
 import { CITADEL_HUB } from './data/citadel-hub.js';
 import { activeCampaignTownChapter, setActiveCampaignTownChapter } from './data/campaign-towns.js';
 import { preloadCitadelHubAssets } from './game/citadel-hub-scene.js';
@@ -88,9 +101,17 @@ const BOOT_TIPS = [
 ];
 
 import { applyLook, LOOKS } from './game/look.js';
+import { emitWeaponSparks } from './game/weapon-glow.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { startPersonalExpedition } from './ui/blessing-launch.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
+import './ui/density.css';
+import './ui/density-hero.css';
+import './ui/density-result.css';
+import './ui/clear-loop.css';
+import './ui/density-panels.css';
+import './ui/density-shell.css';
+import './ui/density-hud.css';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
 const startup = { stage: 'renderer', failed: false };
@@ -192,6 +213,7 @@ class App {
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
     // 팁 로테이션 — 로딩 중에도 손이 배운다
+    const ratingEl = $('boot-rating'); if (ratingEl) ratingEl.textContent = ratingLabel();
     const tipEl = $('boot-tip'); let tipI = Math.floor(Math.random() * BOOT_TIPS.length);
     const showTip = () => { tipEl.classList.remove('on'); setTimeout(() => { tipEl.innerHTML = BOOT_TIPS[tipI++ % BOOT_TIPS.length]; tipEl.classList.add('on'); }, 450); };
     showTip(); this._tipTimer = setInterval(showTip, 3600);
@@ -215,7 +237,9 @@ class App {
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks, this.models);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
+    this.bountyView = new BountyView(this);
     this.arsenalView = new ArsenalView(this);
+    this.endgameHub = new EndgameHubView(this);
     await this.showcaseHero(this.eco.s.selected, true);
     startup.stage = 'shaders';
     setP(0.95, '게임 화면 준비 중…');
@@ -231,6 +255,10 @@ class App {
       await audio.init(); audio.resume(); await screenReady; res();
     }; start.addEventListener('click', go, { once: true }); });
     startup.stage = 'lobby';
+    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
+    // 첫 실행 로그인 시트는 시작 영웅 선택보다 먼저 띄운다(다른 기기 진행 복원 → 복원된 저장이면 영웅 선택을 건너뛴다).
+    await setupAccount(this).catch(() => null);
+    await setupLogin(this).catch(() => null); // 콜백 복귀 처리·첫 로그인 시트·설정 계정 진입점
     // 새 저장(정책 2)은 튜토리얼·로비보다 먼저 시작 영웅을 하나 고른다. 기존 저장(정책 1)과 이미 고른 저장은 건너뛴다.
     await runStarterSelect(this).catch((error) => console.error(error));
     clearInterval(this._tipTimer);
@@ -245,16 +273,17 @@ class App {
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
-    // MMO 계정(P1): 서버가 열려 있을 때만 연결한다. 기기 키 복구가 소셜 클라이언트보다 먼저 끝나야 한다.
-    await setupAccount(this).catch(() => null);
     setupBilling(this); setupFunnelUpload(this); // 서버 검증 결제·가입 퍼널 업로드(v1이 닫혀 있으면 아무 것도 바뀌지 않는다)
     setupCommunity(this);
+    this.news = new NewsView(this); // 공지·패치노트·개발 노트(content/news). 로비 메뉴의 '소식'
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
     const suspend = () => { this.input.clear(); this.citadel.clearInput(); if (this.mode === 'battle') this.ui.pause(true); };
     document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden) suspend(); if (!document.hidden) { this.last = performance.now(); audio.resume(); } });
     window.addEventListener('pagehide', suspend);
     window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
+    // 인앱 브라우저(WebView)는 앱 전환 뒤 제스처 없는 resume()을 막아 소리가 멈춘 채 남는다. 다음 터치·키 입력에서 다시 켠다(켜져 있으면 아무 일도 안 함).
+    for (const type of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(type, () => audio.resume(), { capture: true, passive: true });
     requestAnimationFrame((t) => this.loop(t));
   }
   /** 화면 흔들림: 직접 고른 값이 우선이고, 미선택이면 동작 줄이기 선호일 때만 기본 OFF 다. */
@@ -312,6 +341,7 @@ class App {
       if (this.showcase) this.showcase.root.rotation.y = Math.PI * .15;
     }
     this.syncHub();
+    if (this.hubWalkMode) this.townUI?.syncAttention?.();
     (this.hubWalkMode ? this.canvas : this.commandUI.explore).focus({ preventScroll: true });
     return true;
   }
@@ -367,6 +397,16 @@ class App {
     this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.copy(root.position);
     this.renderer.lobbyNavigation = this.hubWalkMode;
   }
+  /**
+   * 아바타 입기/벗기·장비 외형 표시 전환: 로비 쇼케이스를 새로 만들지 않고 같은 인스턴스에서 몸만 바꾼다(포즈·대기 동작 시간 유지,
+   * 기둥·폭발 연출 없음). 다른 영웅이 서 있거나 쇼케이스가 없으면 기존 showcaseHero 로 새로 세운다.
+   */
+  refreshShowcaseAvatar(id) {
+    const s = this.showcase;
+    if (!s || s.def?.id !== id || s.root.userData.libraryDisposed) return this.showcaseHero(id);
+    s.look = applyLook(s.root, s.def, this.eco.heroEquipInsts(id), { avatarId: this.eco.displayAvatar(id) });
+    return Promise.resolve();
+  }
   setLobbyVisible(v) {
     this.lobbyVisible = v;
     if (!v) {
@@ -406,6 +446,24 @@ class App {
     if (fromCombatResult) this.meta.combatResultSeen = true;
     if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
+  /**
+   * 처음부터 다시 시작. 기본(fullReset=false)은 진행·저장만 지우고 소셜 게스트 신원(이름·친구)과 결제 권한은 유지한다.
+   * fullReset=true는 기기 신원까지 지워 새 게스트 계정을 받는다(옛 결제 권한은 새 계정에 이어지지 않는다).
+   * 성공하면 호출부가 새로고침해 시작 영웅 선택부터 간다.
+   */
+  async resetAccount({ fullReset = false } = {}) {
+    if (this.stageStarting || this.mode === 'battle') return { ok: false, reason: 'busy' };
+    // 서버 권한 계정은 같은 기기 신원으로 다시 접속하면 서버 문서가 진행을 되살린다. 신원까지 새로 받는 완전 초기화만 가능하다.
+    if (!fullReset && this.account?.authority === 'server') return { ok: false, reason: 'server' };
+    const seed = fullReset ? null : this.eco.entitlementSeed();
+    // 신원·저장 삭제가 모두 검증된 뒤에만 메모리 상태를 비운다(실패하면 지금 상태 그대로).
+    const r = await resetAccountFromScratch({ keepIdentity: !fullReset, seed });
+    if (r.ok) {
+      this.companionAgent?.reset(); this.eco.reset(); // reset()은 저장 키를 다시 지우므로 결제 권한 저장은 그 뒤에 한 번 더 쓴다.
+      if (seed) { try { globalThis.localStorage.setItem(SAVE_STORAGE_KEY, seed); r.seedWritten = true; } catch { r.seedWritten = false; } }
+    }
+    return r;
+  }
   resetProgress() {
     if (this.stageStarting) return false;
     const companionReset = this.companionAgent?.reset() ?? true;
@@ -425,32 +483,52 @@ class App {
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     // 무한의 성: 넘겨받은 층이 지금 도전할 다음 층일 때만, 저장 상태로 다시 만든 정의로 출격한다(에너지 없음).
     const tower = stage?.tower ? this.eco.nextTowerStage() : null;
-    if (stage?.tower) {
+    // 현상금 의뢰: 저장에서 열림·미완료를 다시 확인해 만든 스테이지(에너지 0)로만 출격한다.
+    const bountyStart = stage?.bounty ? this.eco.startBounty(stage.bounty.id) : null;
+    if (stage?.bounty) {
+      if (this.account?.authority === 'server') { this.ui.toast('서버 계정의 현상금 의뢰는 준비 중입니다.', 'red'); return false; }
+      if (!bountyStart?.ok) { this.ui.toast('지금 받을 수 없는 의뢰입니다.', 'red'); return false; }
+      stage = bountyStart.stage;
+    } else if (stage?.tower) {
       if (!tower || tower.tower.floor !== stage.tower.floor || this.account?.authority === 'server') { this.ui.toast('지금 도전할 수 있는 층이 아닙니다.', 'red'); return false; }
       stage = tower;
     } else {
       if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
+      // 시간 개방 지역: 진행도를 채워도 개방 시각(서버·신뢰 시계) 전에는 들어갈 수 없다.
+      if (!isChapterOpen(stage.ch, ecoClock(this.eco))) { this.ui.toast(`아직 열리지 않은 지역입니다. ${chapterOpenLabel(stage.ch)}에 열립니다.`, 'red'); return false; }
       // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
       stage = stageDef(stage.ch, stage.st);
       const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');
       stage = applyDifficulty(stage, difficulty);
       // 지옥 해금 기록(endgame)은 아직 서버 문서에 없어 서버 정산이 다른 난이도로 계산한다. 서버 이관 전까지 막는다.
-      if (stage.difficultyId === 'hell' && this.account?.authority === 'server') { this.ui.toast('서버 계정의 지옥 난이도 정산을 준비 중입니다.', 'red'); return false; }
+      if ((stage.difficultyId === 'hell' || tormentTierOf(stage.difficultyId)) && this.account?.authority === 'server') { this.ui.toast(SERVER_HELL_LOCK, 'red'); return false; }
     }
     this.stageStarting = true;
+    // 그 지역에 처음 들어가는 출격이면 입장 장면을 먼저 보여 준다(어느 진입 경로든 한 번, 건너뛰기 가능, docs/WORLD_BIBLE.md 5장).
+    if (!tower && !bountyStart) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
     this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
     try {
       // 무한의 성은 에너지를 쓰지 않으므로 실패 시 되돌릴 것도 없다(spent=false).
-      if (!tower) {
+      if (!tower && !bountyStart) {
         spent = this.eco.spendEnergy(stage.energy);
         if (!spent) {
           audio.play('ui_error');
+          // 현상금 의뢰판이 열려 있으면 에너지 0 활동으로 먼저 안내한다(리텐션 순간). 충전은 상점 메뉴에 그대로 있다.
+          const board = this.eco.bountySummary();
+          if (board.open && board.available > 0) {
+            const go = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 에너지 없이 받을 수 있는 현상금 의뢰가 ${board.available}건 있습니다. (충전은 상점에서)`, { ok: '의뢰판 열기', cancel: '닫기' });
+            if (go) { if (this.mode === 'battle') this.toLobby(); setTimeout(() => this.bountyView?.open(), 0); }
+            return false;
+          }
           const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
           if (ok) this.meta.openTab('shop', 'energy');
           return false;
         }
+        // 설정 "노말 장비 자동 분해": 출격이 확정된 뒤(에너지 지불 뒤)에만 착용 중보다 약한 노말을 정리한다(거부된 출격에서 되돌릴 수 없는 분해가 일어나지 않게).
+        const swept = autoSalvageNormal(this.eco);
+        if (swept) this.ui.toast(`노말 장비 ${swept.count}개 자동 분해 · 골드 +${swept.gold.toLocaleString('ko-KR')} · 강화석 +${swept.stones.toLocaleString('ko-KR')}`, 'gold');
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
@@ -523,8 +601,10 @@ class App {
       if (refund.ok) this.expeditionTicket = null;
       this.expeditionRefundPending = !refund.ok;
       this.toLobby();
-      this.ui.toast(refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.', 'red');
-      console.warn('expedition preparation failed', error?.message);
+      this.ui.toast((refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.') + ` (${dungeonLabel(kind, id)}${options.depth === 'deep' ? ' 심층' : ''})`, 'red');
+      // 원인을 남겨 둔다: 어느 던전·단계에서 어떤 예외였는지(제보 재현용). 화면에는 짧은 코드만 덧붙인다.
+      this.lastExpeditionError = { kind, id, depth: options.depth || 'standard', message: String(error?.message || error).slice(0, 200), at: Date.now() };
+      console.warn('expedition preparation failed', kind, id, options.depth || 'standard', error?.stack || error?.message);
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
@@ -590,6 +670,7 @@ class App {
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
         if (s.look?.aura && !this.reducedMotion.matches) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
+        if (!this.reducedMotion.matches) emitWeaponSparks(this.fx, s.root, s.look, realDt, s.weaponSpark ||= { t: 0 });
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);
@@ -643,5 +724,7 @@ try {
   window.__skillAimShape = playerSkillAimShape;
   // 전투 자세 QA(tools/combat-pose-qa.mjs)가 정식 빌드에서도 무기·방어구 노드 이름을 읽도록 읽기 전용 표만 노출한다.
   window.__LOOKS = LOOKS;
+  // 인앱 터치 QA(tools/qa/inapp-touch.mjs)가 첫 터치 뒤 소리 재개를 확인하도록 상태 문자열만 노출한다.
+  window.__audioState = () => audio.ctx?.state ?? 'none';
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));

@@ -29,8 +29,8 @@ test('캠페인 최종 보스·중간 보스·수문장은 서로 다른 보스�
 });
 
 test('지역별 보스곡 생성 대기 칸은 배송된 대체 곡으로 풀리고, 모든 곡 파일이 실제로 있다', () => {
-  expect(BOSS_CUE_PLAN.length).toBe(12);
-  expect(new Set(BOSS_CUE_PLAN.map(c => c.id)).size).toBe(12);
+  expect(BOSS_CUE_PLAN.length).toBe(14);   // 7지역 × (최종·중간)
+  expect(new Set(BOSS_CUE_PLAN.map(c => c.id)).size).toBe(14);
   for (const cue of BOSS_CUE_PLAN) expect(cue.status).toBe('external-gui-pending');
   for (const name of MUSIC_TRACKS) expect(existsSync(join(root, 'public/bgm', name + '.mp3')), name).toBe(true);
   for (const chapter of CHAPTERS) for (let st = 1; st <= 10; st++) for (const boss of [false, true]) {
@@ -284,8 +284,8 @@ test('궁극기·보스 등장은 음악과 별도로 타격 버스를 잠깐 �
 // ---------- 캠페인 마을·X-1..X-10 곡 지도 ----------
 import { TOWN_CUE_PLAN, campaignMusicMap, townMusic } from '../src/data/music.js';
 
-test('캠페인 마을 6곳은 마을 레인(c3)과 같은 대체 곡을 쓰고, 생성 대기 칸도 실제 파일로 풀린다', () => {
-  expect(TOWN_CUE_PLAN.map(c => c.town)).toEqual(['bellgarden', 'emberforge', 'frostarchive', 'tidelight', 'dawncrown', 'homeward']);
+test('캠페인 마을 7곳은 마을 레인(c3)과 같은 대체 곡을 쓰고, 생성 대기 칸도 실제 파일로 풀린다', () => {
+  expect(TOWN_CUE_PLAN.map(c => c.town)).toEqual(['bellgarden', 'emberforge', 'frostarchive', 'tidelight', 'dawncrown', 'homeward', 'bellspire']);
   expect(townMusic(1)).toBe('regions/lobby');
   expect(townMusic(2)).toBe('regions/forge');
   expect(townMusic(6)).toBe('regions/homecoming');

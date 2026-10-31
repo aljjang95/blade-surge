@@ -19,9 +19,9 @@ export const MATERIALS = [
   { id: 'star_dust', name: '별가루', description: '별빛 서고의 얼음 결정' },
 ];
 export const CONSUMABLES = [
-  { id: 'hp_tonic', name: '회복 물약', description: '최대 체력 35% 회복', effect: { heal: 0.35 } },
-  { id: 'overdrive', name: '과충전 물약', description: '12초 동안 공격력 25% 증가', effect: { atk: 0.25, duration: 12 } },
-  { id: 'aegis', name: '수호 물약', description: '12초 동안 받는 피해 30% 감소', effect: { reduction: 0.3, duration: 12 } },
+  { id: 'hp_tonic', name: '회복 물약', target: 'HP', description: '체력(HP) 최대치의 35% 회복 · MP는 오르지 않음', effect: { heal: 0.35 } },
+  { id: 'overdrive', name: '과충전 물약', target: 'MP', description: 'MP(마나) 최대치의 40% 회복 + 12초 동안 공격력 25% 증가', effect: { atk: 0.25, duration: 12, mp: 0.4 } },
+  { id: 'aegis', name: '수호 물약', target: '방어', description: '12초 동안 받는 피해 30% 감소', effect: { reduction: 0.3, duration: 12 } },
 ];
 // Uses the existing enhancement inventory keys (STONE_KEY tiers 1/2/3).
 export const MATERIAL_REFINING = [

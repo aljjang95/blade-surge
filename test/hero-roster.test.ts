@@ -1,3 +1,5 @@
+import { HERO_CAMPAIGN_JOIN } from '../src/data/hero-roster.js';
+import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'bun:test';
 import { Economy, heroPickup } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
@@ -15,6 +17,9 @@ import { Meta } from '../src/ui/meta.js';
 import { starterChoices, needsStarterSelect } from '../src/ui/starter-select.js';
 import { audio } from '../src/engine/audio.js';
 
+// 규칙 시계: 실제 시각이 아니라 고정 시각을 주입한다. 픽업 교대(2026-10-26 KST)·시즌 이벤트가 테스트에 끼어들지 않게 한다.
+const PRE_ROTATION = Date.UTC(2026, 9, 20, 3);  // 10-20: 교대 전(회차 -1) 픽업 = 광전사
+const POST_ROTATION = Date.UTC(2026, 9, 27, 3); // 10-27: 회차 0 픽업 = 늑대인간 족장
 const IDS = Object.keys(HEROES);
 // 정책 1 이 소유하는 영웅은 원래 다섯뿐이다(소환 전용 영웅 늑대인간 족장은 소환으로만 해금).
 const LEGACY = [...HERO_LEGACY_IDS];
@@ -123,12 +128,12 @@ describe('무료 해금', () => {
     const eco = fresh(); eco.s.gems = 99999; eco.s.progress.unlocked = 60;
     expect(eco.unlockHeroFree('mage')).toEqual({ ok: false, reason: 'starter-pending' });
   });
-  test('보석 해금 사다리는 닫혔다: 진행·보석이 충분해도 사유 gacha이고 상태는 그대로다(영웅은 소환으로만)', () => {
-    const eco = chosen('knight', { unlocked: 60, gems: 99999 });
+  test('보석 해금 사다리는 닫혔다: 원래 다섯 영웅은 캠페인 합류(campaign) 견적이고 보석으로 열 수 없다', () => {
+    const eco = chosen('knight', { unlocked: 70, gems: 99999 });
     const before = JSON.stringify(eco.s);
     for (const id of ['mage', 'rogue', 'ranger', 'barbarian']) {
-      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'gacha', canFree: false, owned: false });
-      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'gacha' });
+      expect(eco.heroUnlockQuote(id)).toMatchObject({ reason: 'campaign-pending', canFree: false, owned: false, need: (HERO_CAMPAIGN_JOIN as Record<string, number>)[id] });
+      expect(eco.unlockHeroFree(id)).toEqual({ ok: false, reason: 'campaign-pending' });
     }
     expect(JSON.stringify(eco.s)).toBe(before);
     expect(eco.heroUnlockQuote('knight').reason).toBe('owned'); expect(eco.heroUnlockQuote('ghost').reason).toBe('unknown');
@@ -147,16 +152,45 @@ describe('무료 해금', () => {
     const eco = chosen('knight', { unlocked: 60 });
     eco.applyIapState({ entitlements: { heroes: ['mage'] } });
     expect(eco.ownHero('mage')).toBe(true); expect(eco.heroUnlockQuote('mage').reason).toBe('owned');
-    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'gacha', step: 0 });
+    expect(eco.heroUnlockQuote('rogue')).toMatchObject({ reason: 'campaign-pending', needLabel: '3-10' });
+  });
+  test('성장형 합류: 방금 클리어한 관문이 합류 관문 이상일 때만, 시작 영웅·소환 전용·시작 전은 건드리지 않는다', () => {
+    const eco = chosen('rogue', { unlocked: 20 });
+    expect(eco.grantCampaignHeroes(19)).toEqual([]);
+    expect(eco.grantCampaignHeroes(20)).toEqual(['mage']);            // 2-10(idx 20) 클리어
+    expect(eco.grantCampaignHeroes(40)).toEqual(['ranger']);          // rogue 는 시작 영웅이라 건너뜀
+    expect(eco.grantCampaignHeroes(69)).toEqual(['knight', 'barbarian']);
+    expect(eco.grantCampaignHeroes(69)).toEqual([]);
+    expect(eco.ownHero('werewolf')).toBe(false); expect(eco.ownHero('blackcat')).toBe(false);
+    const fresh = new Economy({ storage: createMemoryStorage(), now: () => PRE_ROTATION });
+    expect(fresh.grantCampaignHeroes(69)).toEqual([]);   // 시작 영웅을 고르기 전
+  });
+  test('성장형 합류: 동료는 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 합류하고, 이미 더 높으면 그대로', () => {
+    const eco = chosen('knight', { unlocked: 20 });
+    eco.s.heroes.knight.level = 36;
+    expect(eco.grantCampaignHeroes(20)).toEqual(['mage']);   // 2-10 클리어 → max(36−3, 3-1 권장 30)
+    expect(eco.s.heroes.mage.level).toBe(33); expect(eco.s.heroes.mage.exp).toBe(0);
+    eco.s.heroes.knight.level = 12;                         // 출전 영웅이 낮아도 다음 관문(4-1) 권장까지는 온다
+    expect(eco.grantCampaignHeroes(30)).toEqual(['rogue']);
+    expect(eco.s.heroes.rogue.level).toBe(35);
+    const high = chosen('knight', { unlocked: 20 }); high.s.heroes.knight.level = 40; high.s.heroes.mage.level = 45;
+    high.grantCampaignHeroes(20); expect(high.s.heroes.mage.level).toBe(45);
+  });
+  test('성장형 합류: 부풀린 저장 진행만으로는 합류하지 않는다(가져오기·그림자 스냅샷 방어), 합류 대기 견적은 결제 대상이 아니다', () => {
+    const eco = chosen('knight', { unlocked: 70 });
+    expect(eco.grantCampaignHeroes(1)).toEqual([]);   // 1-1 만 깨면 아무도 오지 않는다
+    expect(eco.heroUnlockQuote('mage')).toMatchObject({ reason: 'campaign-pending' });
+    const early = chosen('knight', { unlocked: 5 });
+    expect(early.heroUnlockQuote('mage')).toMatchObject({ reason: 'campaign', needLabel: '2-10' });
   });
   test('저장이 실패하면 소환·마일리지 교환의 소유·보석·조각이 되돌아간다', () => {
-    const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0 });
+    const storage = createMemoryStorage(); const eco = new Economy({ storage, gachaRng: () => 0, now: () => PRE_ROTATION });
     eco.chooseStarter('mage'); eco.s.gems = 5000; eco.gachaState().mileage = GACHA_MILEAGE.cost;
     const before = JSON.stringify(eco.s);
     storage.setItem = () => { throw new Error('quota'); };
     expect(eco.exchangeMileage()).toBeNull(); expect(eco.lastGachaError).toBe('storage');
     expect(eco.pull(10)).toBeNull(); expect(eco.lastGachaError).toBe('storage');
-    expect(JSON.stringify(eco.s)).toBe(before); expect(eco.s.roster.owned).toEqual(['mage']); expect(eco.ownHero(heroPickup())).toBe(false);
+    expect(JSON.stringify(eco.s)).toBe(before); expect(eco.s.roster.owned).toEqual(['mage']); expect(eco.ownHero(heroPickup(PRE_ROTATION))).toBe(false);
   });
   test('정책 1 은 무료 해금 대상이 없다', () => {
     expect(withStore(legacyRaw()).heroUnlockQuote('mage').reason).toBe('owned');
@@ -173,17 +207,21 @@ describe('가챠', () => {
     expect(eco.s.heroes[target].shards).toBe(before + GACHA.dupShards);
     expect(eco.ownHero(target)).toBe(false); expect(eco.s.roster.owned).toEqual(['knight']);
   });
-  test('시작 영웅을 고른 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0)이다', () => {
-    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter('mage'); const target = heroPickup(); expect(eco.ownHero(target)).toBe(false);
+  // 픽업 교대 전(광전사)과 교대 뒤(늑대인간 족장) 모두 같은 계약: 시작 영웅 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0).
+  test.each([['교대 전', PRE_ROTATION, 'barbarian'], ['교대 뒤', POST_ROTATION, 'werewolf']] as const)('시작 영웅을 고른 뒤 미보유 픽업 SSR 첫 획득은 해금(조각 0)이다 (%s)', (_name, at, pickup) => {
+    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0, now: () => at });
+    eco.chooseStarter('mage'); const target = heroPickup(at); expect(target).toBe(pickup); expect(eco.ownHero(target)).toBe(false);
     const res = eco.rollResult('SSR');
     expect(res).toMatchObject({ type: 'hero', id: target, dup: false, unlocked: true, shards: 0, featured: true }); expect('locked' in res).toBe(false);
     expect(eco.ownHero(target)).toBe(true); expect(eco.s.roster.owned).toEqual(['mage', target]);
     expect(eco.s.heroes[target].shards).toBe(0);
   });
-  test('보유 영웅은 중복 조각이고 locked 표시가 없다', () => {
-    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0 });
-    eco.chooseStarter(heroPickup());
+  test.each([['교대 전', PRE_ROTATION], ['교대 뒤', POST_ROTATION]] as const)('보유 영웅은 중복 조각이고 locked 표시가 없다 (%s)', (_name, at) => {
+    const eco = new Economy({ storage: createMemoryStorage(), gachaRng: () => 0, now: () => at });
+    // 교대 뒤 픽업(늑대인간 족장)은 소환 전용이라 시작 영웅으로 못 고른다 → 한 번 뽑아 해금한 뒤 다시 뽑으면 중복이다.
+    const pickup = heroPickup(at);
+    if ((HEROES as any)[pickup].gachaOnly) { eco.chooseStarter('mage'); eco.rollResult('SSR'); } else eco.chooseStarter(pickup);
+    expect(eco.ownHero(pickup)).toBe(true);
     const res = eco.rollResult('SSR');
     expect(res).toMatchObject({ dup: true, shards: GACHA.dupShards }); expect('locked' in res).toBe(false); expect('unlocked' in res).toBe(false);
   });
@@ -328,7 +366,8 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
   test('소환 해금 직후에는 같은 명령이 허용된다', () => {
     const eco = chosen('knight'); eco.gachaRng = () => 0; eco.s.heroes.mage.level = 30; eco.s.gold = 99999999; eco.s.heroes.mage.shards = 9999;
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
-    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    // 장비는 얻은 영웅 소유다(docs/GEAR_OWNERSHIP_VAULT.md): 마법사 장비로 만든다.
+    const uid = eco.addItem('N', 'weapon', undefined, 0, 'mage').uid; eco.s.avatars.owned.push('avatar_mage_astral');
     expect(eco.levelUpHero('mage')).toBe(false); expect(eco.equipAvatar('mage', 'avatar_mage_astral').ok).toBe(false);
     expect(eco.unlockHeroFree('mage').ok).toBe(false); // 보석 해금은 닫혔다
     expect(eco.rollResult('SR')).toMatchObject({ id: 'mage', unlocked: true }); expect(eco.s.heroes.mage.shards).toBe(9999);
@@ -355,7 +394,7 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
     const out: Record<string, boolean[]> = {};
     for (const id of LEGACY) {
       const h = eco.s.heroes[id]; h.level = 20; h.exp = Math.ceil(levelExp(20) / 2); h.shards = 9999;
-      const uid = eco.addItem('N', 'weapon').uid;
+      const uid = eco.addItem('N', 'weapon', undefined, 0, id).uid;
       out[id] = [eco.levelUpHero(id) === true, eco.promoteHero(id) === true, eco.equip(id, uid) !== false && h.equip.weapon === uid,
         eco.unequip(id, 'weapon') !== false && h.equip.weapon === null, eco.setShowGear(id, true).ok === true, eco.learnSkill(id, 1).reason !== 'locked'];
     }
@@ -383,7 +422,7 @@ describe('미소유 영웅 성장·장비·외형 명령 차단', () => {
 
   test('v1-ops 영웅 지정 명령은 미소유에 실패하고 해금 뒤에는 성공한다', () => {
     const eco = chosen('knight'); eco.s.gold = 99999999; eco.s.heroes.mage.level = 30; eco.s.heroes.mage.shards = 9999;
-    const uid = eco.addItem('N', 'weapon').uid; eco.s.avatars.owned.push('avatar_mage_astral');
+    const uid = eco.addItem('N', 'weapon', undefined, 0, 'mage').uid; eco.s.avatars.owned.push('avatar_mage_astral');
     eco.s.heroes.mage.exp = Math.ceil(levelExp(30) / 2);
     const calls: [string, unknown[]][] = [['levelUpHero', ['mage']], ['promoteHero', ['mage']], ['transcend', ['mage']], ['learnSkill', ['mage', 1]],
       ['resetSkills', ['mage', true]], ['setSkillLoadout', ['mage', 0, 4]], ['selectHero', ['mage']], ['equip', ['mage', uid]], ['unequip', ['mage', 'weapon']],
@@ -421,4 +460,11 @@ describe('v1-ops 새 명령', () => {
     const r2 = OPS.pull.run(eco, 1, 'hero'); expect(OPS.pull.ok(r2)).toBe(true); expect(eco.s.tickets).toBe(9);
     expect(OPS.pull.ok(OPS.pull.run(eco, 5, 'hero'))).toBe(false);
   });
+});
+
+test('동료 합류 알림이 쓰는 HEROES 를 결과 화면 UI 가 실제로 가져온다', () => {
+  // 1-1→3-10 연속 플레이에서 합류 순간 'HEROES is not defined' 로 알림이 통째로 사라졌다(#340 회귀).
+  const src = readFileSync(new URL('../src/ui/ui.js', import.meta.url), 'utf8');
+  expect(src).toContain('rw.heroJoin.map((id) => HEROES[id]');
+  expect(/import\s*\{[^}]*\bHEROES\b[^}]*\}\s*from\s*'\.\.\/data\/heroes\.js'/.test(src)).toBe(true);
 });

@@ -49,35 +49,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 21,
-      "days": 5
-    },
-    "boss_pack": {
-      "key": "boss_pack",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 17,
-      "days": 9
-    },
-    "transcend_pack": {
-      "key": "transcend_pack",
-      "target": "SSR 영웅 SSR→SSSR",
-      "hero": "barbarian",
-      "grade": "SSSR",
-      "freeDays": 31,
-      "withDays": 20,
-      "days": 11
-    },
-    "vip_pass": {
-      "key": "vip_pass",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 23,
-      "days": 3
+      "withDays": 25,
+      "days": 1
     },
     "gem1": {
       "key": "gem1",
@@ -85,8 +58,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 25,
-      "days": 1
+      "withDays": 26,
+      "days": 0
     },
     "gem2": {
       "key": "gem2",
@@ -94,8 +67,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 25,
-      "days": 1
+      "withDays": 26,
+      "days": 0
     },
     "gem3": {
       "key": "gem3",
@@ -103,35 +76,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 24,
-      "days": 2
-    },
-    "gem4": {
-      "key": "gem4",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 23,
-      "days": 3
-    },
-    "gem5": {
-      "key": "gem5",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 21,
-      "days": 5
-    },
-    "gem6": {
-      "key": "gem6",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 16,
-      "days": 10
+      "withDays": 25,
+      "days": 1
     },
     "skill_reset1": {
       "key": "skill_reset1",
@@ -214,6 +160,15 @@ export const ECONOMY_PACE = {
       "withDays": 26,
       "days": 0
     },
+    "transfer1": {
+      "key": "transfer1",
+      "target": "마법사 SR→SSR",
+      "hero": "mage",
+      "grade": "SSR",
+      "freeDays": 26,
+      "withDays": 26,
+      "days": 0
+    },
     "bless1": {
       "key": "bless1",
       "target": "마법사 SR→SSR",
@@ -222,15 +177,6 @@ export const ECONOMY_PACE = {
       "freeDays": 26,
       "withDays": 26,
       "days": 0
-    },
-    "enh_pack": {
-      "key": "enh_pack",
-      "target": "마법사 SR→SSR",
-      "hero": "mage",
-      "grade": "SSR",
-      "freeDays": 26,
-      "withDays": 24,
-      "days": 2
     },
     "gold1": {
       "key": "gold1",

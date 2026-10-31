@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { monsterRosterScale } from '../data/monster-roster.js';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { removeHeroBoots } from '../engine/hero-boots.js';
 import { removeHeroGearParts } from '../engine/hero-gear-parts.js';
@@ -50,11 +51,12 @@ export class Actor {
     this.motionRoot = new THREE.Group(); this.root.add(this.motionRoot); this.motionRoot.add(root); root.scale.multiplyScalar(scale);
     this._attackMotion = null; this._impact = null;
     this.scale = scale;
-    if (this.libraryRoster?.scale) this.model.scale.multiplyScalar(this.libraryRoster.scale);
+    this.rosterScale = this.libraryRoster ? monsterRosterScale(this.libraryRoster, this.libraryAsset) : 1;
+    if (this.rosterScale !== 1) this.model.scale.multiplyScalar(this.rosterScale);
     // 등장·자폭 연출이 배율을 다시 쓸 때 로스터 보정을 잃지 않도록 최종 모델 배율을 기준으로 남긴다.
     this.modelScale = this.model.scale.x;
     // 비행 클립(사망·내려찍기)은 모델 단위로 hover 만큼 내려와 착지한다. 실제 적용 배율을 곱해야 지면에 맞는다.
-    const hover = (this.libraryAsset?.hover ?? 0) * scale * (this.libraryRoster?.scale || 1);
+    const hover = (this.libraryAsset?.hover ?? 0) * scale * this.rosterScale;
     if (hover > 0) this.rig = { ...this.rig, hover };
     this.pos = this.root.position; this.yaw = 0;
     this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
@@ -294,7 +296,8 @@ export class Actor {
     });
     // spawnCharacter가 복제한 스켈레톤의 전용 boneTexture만 정리한다.
     for (const skeleton of skeletons) skeleton.dispose();
-    for (const material of materials) material.dispose();
+    // 장 의상 소품의 재질은 모든 적이 공유한다(chapter-dress.js).
+    for (const material of materials) if (!material.userData.sharedDress) material.dispose();
   }
   /** 무기 트레일용: 손 위치와 무기 끝 */
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */

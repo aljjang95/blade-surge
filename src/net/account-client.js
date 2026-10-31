@@ -38,15 +38,45 @@ export class AccountClient {
     }
   }
   me() { return this.request('GET', '/me'); }
+  // 계정 로그인: 제공자 목록은 인증이 필요 없다(서버가 키 유무로 판단, V1이 꺼져 있으면 503).
+  providers() { return this.raw('GET', '/auth/providers', undefined, null); }
+  /** 카카오·ChatGPT 로그인 시작. link 는 세션이 필요하고 recover 는 세션 없이 기기 키를 보낸다. 응답 { url } 로 location.assign 한다. */
+  oauthStart(provider, mode) {
+    if (mode === 'recover') return this.raw('POST', '/auth/oauth/start', { provider, mode, deviceKey: this.deviceKey, channel: this.channel }, null);
+    return this.request('POST', '/auth/oauth/start', { provider, mode });
+  }
+  /** 구글 id_token 으로 현재 계정에 연동(세션 필요). 이미 다른 진행에 묶였으면 409 linked-elsewhere { mine, other }. */
+  link(provider, idToken) { return this.request('POST', '/auth/link', { provider, idToken }); }
+  /** 구글 id_token 으로 기존 진행을 이 기기로 복원(세션 불필요). 연동이 없으면 404 no-link. */
+  async recover(provider, idToken) {
+    const data = await this.raw('POST', '/auth/recover', { provider, idToken, deviceKey: this.deviceKey, channel: this.channel }, null);
+    this.token = null; this.account = null; // 기기 키가 다른 계정으로 옮겨졌으니 이전 세션은 버린다
+    return data;
+  }
+  /**
+   * OAuth 콜백 뒤 일회용 ticket 을 확정한다(CSRF 방지: 콜백 자체는 연동·복구를 하지 않는다).
+   * link: Bearer 세션 필요 → { mode, provider, linked }. recover: 세션 불필요, 응답이 곧 새 세션이라 토큰을 바로 갈아 끼운다.
+   */
+  async oauthFinish(ticket, mode) {
+    if (mode !== 'recover') return this.request('POST', '/auth/oauth/finish', { ticket });
+    const data = await this.raw('POST', '/auth/oauth/finish', { ticket, deviceKey: this.deviceKey }, null);
+    if (data?.token) { this.token = data.token; this.account = data; }
+    return data;
+  }
+  /** 회원 탈퇴(세션 필요). */
+  deleteAccount() { return this.request('POST', '/auth/delete', { confirm: 'DELETE' }); }
   cmd(command) { return this.request('POST', '/cmd', command); }
   importSave(installId, save, clientHash) { return this.request('POST', '/import', { installId, save, clientHash }); }
   shadowSnapshot(cid, save, clientHash) { return this.request('POST', '/shadow/snapshot', { cid, save, clientHash }); }
   startRun(body) { return this.request('POST', '/runs/start', body); }
   settleRun(runId, facts) { return this.request('POST', `/runs/${runId}/settle`, facts); }
   // BM: 인앱 결제(서버가 검증·지급의 유일한 근거). 구매 토큰은 반환 경로로만 흐르고 기록하지 않는다.
-  iapCatalog() { return this.request('GET', '/iap/catalog'); }
-  iapIntent(productId) { return this.request('POST', '/iap/intent', { productId }); }
-  iapVerify(productId, purchaseToken) { return this.request('POST', '/iap/verify', { productId, purchaseToken }); }
+  iapCatalog(channel) { return this.request('GET', channel === 'onestore' ? '/iap/catalog?channel=onestore' : '/iap/catalog'); }
+  // channel이 'onestore'일 때만 본문에 채널을 싣는다(play는 기존 본문 그대로: 서버 onlyKeys가 엄격하다).
+  iapIntent(productId, channel) { return this.request('POST', '/iap/intent', channel === 'onestore' ? { productId, channel } : { productId }); }
+  iapVerify(productId, purchaseToken, { channel, marketCode } = {}) {
+    return this.request('POST', '/iap/verify', channel === 'onestore' ? { productId, purchaseToken, channel, ...(marketCode ? { marketCode } : {}) } : { productId, purchaseToken });
+  }
   iapState() { return this.request('GET', '/iap/state'); }
   funnel(events) { return this.request('POST', '/funnel', { events }); }
   /** 서버 시계 기준 현재 시각(표시용 오프셋만 보정한다). */

@@ -180,7 +180,7 @@ async function completeInheritedGoal(metric:'time'|'perfects'|'breaks'|null,seco
     const persisted=JSON.parse(localStorage.getItem('bladesurge_save_v1')!);
     expect(persisted.masterworks.history).toEqual(battle.masterworks.s.history);
     expect(persisted.expedition.pending).toBeNull();
-    const projection=structuredClone(f.eco.s);delete projection.created;delete projection.energyT;delete projection.limitedStart;delete projection.masterworks.personalGoal;
+    const projection=structuredClone(f.eco.s);delete projection.created;delete projection.energyT;delete projection.limitedStart;delete projection.idle;delete projection.masterworks.personalGoal;
     return {result:frozenResult,history:historyBefore,initialHistory:f.initialHistory,projection,captured,next:capturePersonalGoal(battle.masterworks.s),settlementWrites:readWrites()-writesBeforeStart};
   }finally{f.assetStart.mockRestore();}
 }

@@ -4,7 +4,7 @@ import { growthOptions, growthSummary } from '../src/game/growth-options.js';
 import { HEROES, levelExp } from '../src/data/heroes.js';
 import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
-import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
+import { ITEM_BY_ID, ENH_MAX, ENH_SAFE_MAX, STONE_KEY, enhanceCost, enhanceStones, enhanceChance, destroyChance, enhanceStoneTier } from '../src/data/items.js';
 import { grandfather } from './helpers/legacy-roster';
 
 const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -23,7 +23,7 @@ function fixture() {
   save.selected = 'mage'; save.heroes.mage.level = 20;
   save.masterworks = normalizeMasterworks({ earnedRenown: 6, renown: 6 });
   const weapon = Object.values(ITEM_BY_ID).find(item => item.slot === 'weapon')!;
-  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: 3 });
+  save.inventory.push({ uid: 'growth-weapon', id: weapon.id, enh: ENH_SAFE_MAX - 1 });   // 확정(100%) 구간의 마지막 단계
   save.heroes.mage.equip.weapon = 'growth-weapon';
   return eco;
 }
@@ -50,16 +50,22 @@ test('viewing growth options does not mutate the save, and every quoted action u
   }
 });
 
-test('equipment suggestions require the actual gold and stone cost and never enter a chance-based step', () => {
+test('equipment suggestions require the actual gold and the right-tier stone cost; steps beyond the safe range show the live odds (2026-10-28)', () => {
   const eco = fixture(); const save: any = eco.s, item = save.inventory[0];
-  for (let level = 0; level <= 20; level++) {
-    item.enh = level; save.gold = enhanceCost(level); save.stones = enhanceStones(level);
-    expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(level < 8);
+  for (let level = 0; level < ENH_MAX; level++) {
+    const key = STONE_KEY[enhanceStoneTier(level)];
+    item.enh = level; save.gold = enhanceCost(level); for (const k of ['stones', 'stones2', 'stones3']) save[k] = 0; save[key] = enhanceStones(level);
+    const option: any = growthOptions(save).find(o => o.kind === 'equipment');
+    expect(!!option).toBe(true);
+    // 확정 구간(+ENH_SAFE_MAX 미만)은 기존 그대로, 그 위는 위험 구간 표시(성공률·파괴·하락을 규칙 함수에서 읽음)
+    if (level < ENH_SAFE_MAX) expect(option.mode).toBeUndefined(); else { expect(option.mode).toBe('risk'); expect(option.chance).toBe(enhanceChance(level)); expect(option.destroy).toBe(destroyChance(level)); }
     save.gold--;
     expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
-    save.gold++; if (enhanceStones(level)) save.stones--;
+    save.gold++; if (enhanceStones(level)) save[key]--;
     if (enhanceStones(level)) expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
   }
+  item.enh = ENH_MAX; save.gold = 1e9; save.stones = save.stones2 = save.stones3 = 1e9;
+  expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);   // 최대 강화는 더 안내하지 않는다
 });
 
 test('only the selected hero equipped item is suggested; removed items and foreign slots are ignored', () => {
@@ -139,4 +145,27 @@ test('summary never invents gains for missing or foreign snapshots, unknown XP o
   input.after = { level: NaN, exp: 0 }; expect(growthSummary(input)).toBeNull();
   input.after = { level: 1, exp: 0 }; input.before = { heroId: 'mage', level: 1 }; input.combatXp = 0;
   expect(growthSummary(input)).toMatchObject({ levels: 0, combatXp: 0, unlocked: [] });
+});
+
+test('gems get a visible use: summon quotes pity and affordable pulls, scrolls are offered only where they help, nothing is mutated', () => {
+  const eco = fixture(), save: any = eco.s;
+  save.gems = 6430; save.tickets = 0; save.gacha = { ...(save.gacha || {}), beginner: 20, pity: 25 };
+  save.protect = 0; save.bless = 0;
+  const scrolls = () => (growthOptions(save, eco) as any[]).filter(o => o.kind === 'scroll').map(o => o.item).sort();
+  // 확정 강화 구간(+3~+10)에서는 주문서가 쓸모없어 안내하지 않는다.
+  save.inventory[0].enh = ENH_SAFE_MAX; expect(scrolls()).toEqual([]);
+  // +11: 확정이 끝난 확률 단계 → 축복만. +12: 파괴 가능 → 보호(축복은 파괴 구간에서 함께 안내하지 않음).
+  save.inventory[0].enh = 11; expect(scrolls()).toEqual(['bless']);
+  save.inventory[0].enh = 12;
+  const before = JSON.stringify(save);
+  const options: any[] = growthOptions(save, eco);
+  expect(JSON.stringify(save)).toBe(before);
+  expect(options.find(o => o.kind === 'summon')).toMatchObject({ banner: 'hero', currency: 'gems', cost: 2700, pulls: 2, pityLeft: 55 });
+  expect(options.find(o => o.kind === 'scroll')).toMatchObject({ item: 'protect', have: 0, gems: eco.sku('protect1')!.price });
+  save.protect = 3; expect(scrolls()).toEqual([]);
+  // 초보자 배너는 계정당 20회 한도: 10회 썼으면 보석이 넉넉해도 1번만 안내한다(리뷰 P2).
+  save.gacha.beginner = 10;
+  expect((growthOptions(save, eco) as any[]).find(o => o.kind === 'summon')).toMatchObject({ banner: 'beginner', pulls: 1 });
+  save.gacha.beginner = 20;
+  save.protect = 0; save.gems = 100; expect(growthOptions(save, eco).some(o => o.kind === 'summon' || o.kind === 'scroll')).toBe(false);
 });

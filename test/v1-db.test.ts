@@ -17,9 +17,9 @@ describe('MMO P1-A D1 기반', () => {
   test('마이그레이션은 재적용해도 무해하고 스키마 버전을 남긴다', async () => {
     const db = createD1(); dbs.push(db);
     expect(await schemaReady(db)).toBe(false);
-    expect(await applyMigrations(db, migrationTexts(), 100)).toBe(4);
+    expect(await applyMigrations(db, migrationTexts(), 100)).toBe(8);
     db.sqlite.query("INSERT INTO accounts(account_id, created_at, last_seen, channel_first) VALUES (?, 1, 1, 'web')").run(ACCOUNT);
-    expect(await applyMigrations(db, migrationTexts(), 200)).toBe(4);
+    expect(await applyMigrations(db, migrationTexts(), 200)).toBe(8);
     expect(db.sqlite.query('SELECT COUNT(*) AS n FROM accounts').get()).toEqual({ n: 1 });
     expect(db.sqlite.query('SELECT applied_at FROM v1_schema').get()).toEqual({ applied_at: 100 });
     expect(await schemaReady(db)).toBe(true);

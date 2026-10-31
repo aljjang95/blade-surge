@@ -50,9 +50,16 @@
     { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{ranger-t2-body-fit-v2,rogue-t2-body-fit-v1}.glb", "reason": "궁수·도적 2단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "heroes-t3", "glob": "models/heroes-next/{ranger-t3-body-fit-v2,rogue-t3-body-fit-v1}.glb", "reason": "궁수·도적 3단계 몸체(궁수 v1 은 이력 전용이라 산출물에서 뺀다, dist-excludes)" },
     { "class": "remote", "group": "heroes-t2", "glob": "models/heroes-next/{rogue,ranger}-{t1s,t2u}-body-fit-v1.glb", "reason": "도적·궁수 S등급(1.5)·U등급 테마(2.5) 몸체(t4-body-revisions)" },
-    { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow,rogue-vampire,ranger-blackcat}-body-fit-v1.glb", "reason": "여우·까마귀·흡혈 백작·검은 고양이 아바타 몸체(할로윈 t5 는 t5-avatar-body-revisions)" },
+    { "class": "remote", "group": "avatars", "glob": "models/heroes-next/{ranger-fox,rogue-crow,rogue-vampire,ranger-blackcat}-body-fit-v{1,2}.glb", "reason": "여우·까마귀·흡혈 백작·검은 고양이 아바타 몸체(할로윈 t5 는 t5-avatar-body-revisions). 여우·흡혈 백작 v2(2026-10-29 가중치 교정)도 같은 원격 묶음이다(core 로 떨어지면 AAB 여유를 넘는다)" },
 
     { "class": "remote", "group": "starter-village", "glob": "models/starter-village-v1/*.glb", "reason": "초보자 마을 Tripo 소품 8종(약 4.1MB). AAB 60MB 여유 0.49MB 라 core 금지. 로비 진입 때 바로 받고(EARLY), 못 받으면 절차 모델 폴백" },
+
+    { "class": "remote", "group": "weapons", "glob": "models/item-weapons/**", "reason": "장비 무기 Tripo GLB 102개(약 41.6MB, AAB 압축 후 약 37MB). 선택 사항 외형이라 부팅·1지역 플레이에 필요 없고, 없으면 절차적 무기로 폴백한다(item-weapon-glb). 와이파이 한가할 때 받고, 아이템이 화면에 나올 때 그 아이템 것만 먼저 받는다" },
+
+    { "class": "remote", "group": "item-icons", "glob": "img/item-renders/**", "reason": "장비 렌더 아이콘 77개(약 2.8MB, 영웅 문맥 무기 형태 포함). 이미지는 화면을 막지 않고 호스트·보관본에서 그려진다. 첫 로비에서 곧바로 받아 둔다(remote-prefetch EARLY_GROUPS)" },
+    { "class": "remote", "group": "ui-art", "glob": "img/ui-crafted/engraving/**", "reason": "각인(엔그레이빙) 일러스트(약 2.4MB). 각인 화면에서만 보인다" },
+
+    { "class": "core", "glob": "news/**", "reason": "소식 웹 읽기 페이지(/news, tools/build-news.mjs 산출물). 글 몇 편 분량의 정적 HTML 이라 크기가 작아 core 로 둔다(remote 로 두면 _headers CORS 규칙이 필요)" },
 
     { "class": "core", "glob": "assets/**", "reason": "스크립트·스타일·몬스터 모델·1단계 영웅(번들 해시 이름)" },
     { "class": "core", "glob": "models/**", "reason": "영웅 1단계·로비·성채·무기·환경 모델" },

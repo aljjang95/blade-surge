@@ -3,12 +3,14 @@ export interface Sql {
 }
 
 // 이후 추가 컬럼·인덱스는 이 목록을 갱신하고 버전만 올린다. 모든 버전이 같은 보정 함수를 사용한다.
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const EXPECTED_COLUMNS: Record<string, Record<string, string>> = {
   // 기존 프로필의 생성 IP·기록 요약은 추측하지 않는다.
   players: { created_ip_hash: 'TEXT', hero: 'TEXT' },
   clears: { summary: 'TEXT', rank_summary: 'TEXT', subject_hash: 'TEXT', last_at: 'INTEGER' },
   ws_tickets: { key_hash: 'TEXT' },
+  // 반영 완료 글이 가리키는 패치노트 글 id(선택). 기존 글은 null.
+  posts: { patch_note_slug: 'TEXT' },
 };
 const EXPECTED_INDEXES = [
   'CREATE INDEX IF NOT EXISTS player_keys_player ON player_keys(player_id, last_seen)',

@@ -185,7 +185,9 @@ export class RpgView {
   }
   levelUp(level, count) {
     this.announcement.textContent = `LEVEL UP · Lv.${level}${count > 1 ? ` (+${count})` : ''}`;
-    clearTimeout(this.noticeTimer); this.noticeTimer = setTimeout(() => { this.announcement.textContent = ''; }, 2400);
+    // 짧은 팝(1.6초): 다시 오르면 애니메이션을 처음부터 다시 튼다.
+    this.announcement.classList.remove('levelup-pop-in'); void this.announcement.offsetWidth; this.announcement.classList.add('levelup-pop-in');
+    clearTimeout(this.noticeTimer); this.noticeTimer = setTimeout(() => { this.announcement.textContent = ''; this.announcement.classList.remove('levelup-pop-in'); }, 1600);
     this.refresh();
   }
   refresh() {

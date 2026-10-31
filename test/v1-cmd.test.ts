@@ -23,6 +23,54 @@ async function withDoc(h: Awaited<ReturnType<typeof v1Harness>>, accountId: stri
   h.db.sqlite.query("UPDATE account_docs SET doc = ?, bytes = ? WHERE account_id = ?").run(text, Math.min(text.length, 262144), accountId);
 }
 
+describe('계승 의식·도감 서버 명령', () => {
+  test('vaultRitual·gearDexClaim: 형식 검증, 서버 결과와 클라이언트 stateHash 일치, 중복 수령 거부', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    const seed = EconomyCore.fromState(null, { now: () => h.now(), rng: createSeededRng(11) }) as any;
+    seed.s.gold = 5_000_000; seed.s.lineageSigil = 3; seed.s.roster.owned.push('mage'); seed.s.roster.starterChosen = true;
+    const w = seed.addItem('L', 'weapon', undefined, 0, 'knight');
+    const start = seed.snapshot();
+    await withDoc(h, a.accountId, start);
+    const client = EconomyCore.fromState(structuredClone(start), { now: () => h.now(), rng: () => .5 }) as any;
+    expect(validateOp('vaultRitual', [w.uid, 'mage'])).not.toBeNull();
+    expect(validateOp('vaultRitual', ['x', 'mage'])).toBeNull();
+    expect(validateOp('gearDexClaim', ['mage'])).toBeNull();
+    const run = async (op: string, args: unknown[]) => {
+      const def = validateOp(op, args)!; const localOk = def.ok(def.run(client, ...args));
+      const r = await h.cmd(a.token, op, args, { clientHash: parityHash(client.s) });
+      return { localOk, r };
+    };
+    let x = await run('vaultRitual', [w.uid, 'mage']); expect([x.localOk, x.r.status]).toEqual([false, 422]);   // 금고 밖
+    x = await run('vaultDeposit', [w.uid]); expect([x.localOk, x.r.status, x.r.body.match]).toEqual([true, 200, true]);
+    x = await run('vaultWithdraw', [w.uid, 'mage']); expect([x.localOk, x.r.status]).toEqual([false, 422]);   // L bound
+    x = await run('vaultRitual', [w.uid, 'mage']); expect([x.localOk, x.r.status, x.r.body.match]).toEqual([true, 200, true]);
+    expect(client.s.lineageSigil).toBe(2); expect(client.s.gearDex.kin.mage).toEqual([w.id]);
+    x = await run('gearDexClaim', ['mage', 'kin5']); expect([x.localOk, x.r.status]).toEqual([false, 422]);
+    const me = await h.send('GET', '/me', undefined, a.token);
+    expect(me.body.stateHash).toBe(parityHash(client.s));
+  });
+
+  test('녹화 명령 패리티에 의식·도감 수령을 섞어도 일치', async () => {
+    const h = await v1Harness();
+    const a = await h.session();
+    const start = richState(h.now());
+    await withDoc(h, a.accountId, start);
+    const client = EconomyCore.fromState(structuredClone(start), { now: () => h.now(), rng: () => 0.5 }) as any;
+    const rng = createSeededRng(77);
+    let mism = 0;
+    for (let i = 0; i < 40; i++) {
+      const hero = HERO_ORDER[Math.floor(rng() * HERO_ORDER.length)], uid = client.s.inventory[Math.floor(rng() * client.s.inventory.length)]?.uid ?? 1;
+      const [op, args]: [string, unknown[]] = i % 3 === 0 ? ['vaultDeposit', [uid]] : i % 3 === 1 ? ['vaultRitual', [uid, hero]] : ['gearDexClaim', [hero, 'drop25']];
+      const def = validateOp(op, args)!; const ok = def.ok(def.run(client, ...args));
+      const r = await h.cmd(a.token, op, args, { clientHash: parityHash(client.s) });
+      expect(r.status === 200).toBe(ok);
+      if (r.status === 200 && !r.body.match) mism++;
+    }
+    expect(mism).toBe(0);
+  });
+});
+
 describe('MMO P1-D 서버 규칙 엔진', () => {
   test('/cmd 멱등: 같은 cid 2회 → 효과 1회', async () => {
     const h = await v1Harness();
@@ -135,6 +183,8 @@ describe('MMO P1-D 서버 규칙 엔진', () => {
         ['sellItem', [uid]], ['salvage', [[uid]]], ['craftSetItem', [pick(Object.keys(HEROES).length ? ['dragon', 'shadow', 'holy'] : []), pick(['weapon', 'armor'])]],
         ['claimPass', [1 + Math.floor(rng() * 16), false]], ['claimQuest', [pick(['k30', 'k100', 's3', 's10', 'p10'])]], ['claimMail', [1]],
         ['claimDaily', []], ['setDifficulty', [pick(['story', 'adept', 'nightmare']), 1, 1]], ['equipAvatar', [hero, null]],
+        // 금고(docs/GEAR_OWNERSHIP_VAULT.md): 서버 시계·같은 규칙으로 맡기기·꺼내기·확장
+        ['vaultDeposit', [uid]], ['vaultWithdraw', [uid, hero]], ['vaultExpand', []],
       ];
       recorded.push(pick(choices));
     }

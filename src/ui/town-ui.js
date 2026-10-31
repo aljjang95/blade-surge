@@ -1,8 +1,9 @@
 import './town-ui.css';
+import './town-hud.css';
 import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
-import { activeCampaignSkin } from '../data/campaign-towns.js';
+import { activeCampaignSkin, activeCampaignTownChapter, campaignTown } from '../data/campaign-towns.js';
 import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds, markEmergingGates } from '../data/citadel-hub.js';
 import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
@@ -145,8 +146,16 @@ export class TownUI {
     node.innerHTML = '<span aria-hidden="true">★</span><strong>' + safe(event.title) + '</strong><small>' + safe(event.text) + '</small>';
     document.body.append(node); setTimeout(() => node.remove(), 3400);
   }
+  /** 3D 광장의 들를 곳 표시('!'): 받을 보상이 있거나 아직 받지 않은 일일 의뢰가 있으면 의뢰 게시판 위에 띄운다. */
+  syncAttention() {
+    const scene = this.app.arena?.lobbyHall?.userData; if (typeof scene?.setAttention !== 'function') return;
+    const quests = attempt(() => this.content.quests(this.activeId), null) || [];
+    const due = this.content.claimable() > 0 || quests.some(quest => quest.status === 'available' && quest.kind === 'daily');
+    scene.setAttention(due ? [townHub(this.activeId).starter ? 'board:quests' : 'board:town'] : []);
+  }
   /** 걷기 HUD의 '마을 일' 칩에 받을 보상 수를 표시한다(버튼을 새로 만들지 않아 초점을 잃지 않는다). */
   updateBadge(root = this.placeRoot || this.app.hubUI?.root) {
+    this.syncAttention();
     const chip = root?.querySelector('.town-work-chip'); if (!chip) return;
     const ready = this.content.claimable(), badge = chip.querySelector('.town-work-badge');
     chip.dataset.ready = String(ready);
@@ -171,7 +180,7 @@ export class TownUI {
     this.updateBadge(root);
   }
   /** 이동석 앞에서 보이는 한 줄 안내. */
-  placeName() { return (activeCampaignSkin()?.name || (TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold).name) + ' 광장'; }
+  placeName() { return (campaignTown(activeCampaignTownChapter())?.name || (TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold).name) + ' 광장'; }
   waystoneSummary() {
     const towns = this.towns(), next = towns.find(town => !town.unlocked);
     if (!next) return '세 마을이 모두 열렸습니다. 이동석으로 오가세요.';
@@ -288,8 +297,10 @@ export class TownUI {
   render(focusId, focusKind) {
     const body = this.dialog.querySelector('.town-body'), scroll = body?.scrollTop || 0;
     const town = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold;
-    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [town.name + ' 상인', 'MERCHANT'], trainer: [town.name + ' 스킬 교관', 'TRAINER'],
-      ...Object.fromEntries(CONTENT_TABS.map(tab => [tab.id, [tab.title(town.name), tab.eyebrow]])) };
+    // 창 제목은 지금 서 있는 지역 마을 이름을 따른다(2~6지역에서도 '서약의 성채'로 뜨던 것, docs/TOWN_AUDIT.md). 이동석 마을은 머리 줄 부제로 둔다.
+    const region = campaignTown(activeCampaignTownChapter()), placeName = region?.name || town.name;
+    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [placeName + ' 상인', 'MERCHANT'], trainer: [placeName + ' 스킬 교관', 'TRAINER'],
+      ...Object.fromEntries(CONTENT_TABS.map(tab => [tab.id, [tab.title(placeName), tab.eyebrow]])) };
     const [title, eyebrow] = titles[this.view] || titles.map;
     this.dialog.dataset.view = this.view; this.dialog.dataset.town = this.activeId;
     const art = TOWN_ART[this.activeId] || TOWN_ART.oathhold;
@@ -299,7 +310,7 @@ export class TownUI {
       : this.view === 'merchant' ? '<button type="button" data-town-act="potions">전투 물약 보급소</button>'
         : this.view === 'trainer' ? '<button type="button" data-town-act="build">전투 방식 · 스킬 강화</button>'
           : '<span class="town-foot-hint">던전을 클리어하면 다음 마을이 열립니다</span><button type="button" data-town-act="view" data-view="dungeons">마을 일 보기</button>';
-    this.dialog.innerHTML = '<div class="town-shell"><header class="town-head"><div><small class="town-eyebrow">' + safe(town.subtitle) + ' · ' + eyebrow + '</small><h2 id="town-dialog-title">' + safe(title) + '</h2></div>' +
+    this.dialog.innerHTML = '<div class="town-shell"><header class="town-head"><div><small class="town-eyebrow">' + safe(region ? region.subtitle + ' · ' + town.name : town.subtitle) + ' · ' + eyebrow + '</small><h2 id="town-dialog-title">' + safe(title) + '</h2></div>' +
       '<button type="button" class="town-close" data-town-act="close">닫기</button></header>' +
       '<div class="town-body" tabindex="-1">' + content + '</div>' +
       '<footer class="town-foot"><p class="town-status" role="status" aria-live="polite" data-tone="' + safe(this.tone) + '">' + safe(this.message) + '</p>' + footer + '</footer></div>';

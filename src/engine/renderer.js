@@ -425,7 +425,8 @@ export class Renderer {
       off.set(fitted.x, fitted.y, fitted.z);
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
+      // 고정 쿼터뷰: 위치는 이미 부드럽게 따라온 목표점에 단단히 붙인다. 위치만 따로 늦게 따라오면 시선 방향이 이동마다 흔들린다(전후 계측 2026-10-28).
+      rig.pos.copy(desired);
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);
@@ -483,9 +484,10 @@ export class Renderer {
   }
   /** 지역 색 보정 목표를 정하고, 아레나가 깐 안개를 지역 하늘의 지평선 색 쪽으로 밝힌다(대기 원근). */
   _applyRegionLook(visual) {
-    this._gradeKey = visual?.key || 'default';
+    // 캠페인 장 보정(chapter-scenery.js chapterVisual)이 있으면 경로 대신 장의 색 보정·지평선을 쓴다.
+    this._gradeKey = visual?.grade || visual?.key || 'default';
     this._gradeTarget = gradeFor(this._gradeKey);
-    const fog = this.scene?.fog, horizon = visual?.sky?.horizon;
+    const fog = this.scene?.fog, horizon = visual?.fogHorizon ?? visual?.sky?.horizon;
     if (fog && horizon != null && this._gradeTarget.fog > 0) fog.color.lerp(_tintTarget.set(horizon), this._gradeTarget.fog);
   }
   /** 보정 값을 목표로 부드럽게 끌어간다(지역 전환 시 색이 튀지 않게). 유니폼이 없는 테스트 고정물에서는 건너뛴다. */

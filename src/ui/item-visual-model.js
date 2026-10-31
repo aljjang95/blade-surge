@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { buildGearModel } from '../engine/item-forge.js';
+import { loadItemWeaponGlbsFor, preloadItemWeaponGlbs } from '../engine/item-weapon-glb.js';
 import { forgeHeroWeapons } from '../engine/forged-weapons.js';
 import { applyArmoryAppearance, preloadArmory } from '../engine/armory-assets.js';
 import { heroModelPaths } from '../engine/hero-model-paths.js';
@@ -189,6 +190,8 @@ export async function buildItemVisualModel(item, form = resolveItemForm(item), o
       add(await armorModel(item, loader));
       disposers.push(() => disposeTree(holder));
     } else if (item.slot === 'weapon') {
+      await preloadItemWeaponGlbs();
+      await loadItemWeaponGlbsFor(item.id);
       const count = Math.max(1, form.count || 1), shape = form.variant === 'armory-own' || form.form === 'armory' ? 'sword' : form.form;
       const meshes = Array.from({ length: count }, () => add(buildGearModel(item, shape)));
       if (meshes.length > 1) {

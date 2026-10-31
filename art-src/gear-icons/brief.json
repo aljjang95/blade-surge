@@ -1,0 +1,1291 @@
+{
+  "generatedFor": "blade-surge gear icon tone (approved 2026-10-29 sheet_C)",
+  "style": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects.",
+  "total": 139,
+  "sheetCount": 31,
+  "sheets": [
+    {
+      "id": "set-storm",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_storm",
+          "slot": "weapon",
+          "name": "뇌명검",
+          "rarity": "U",
+          "set": "storm"
+        },
+        {
+          "id": "a_storm",
+          "slot": "armor",
+          "name": "뇌운 갑주",
+          "rarity": "U",
+          "set": "storm"
+        },
+        {
+          "id": "r_storm",
+          "slot": "ring",
+          "name": "뇌전의 고리",
+          "rarity": "U",
+          "set": "storm"
+        },
+        {
+          "id": "b_storm",
+          "slot": "boots",
+          "name": "번개 걸음",
+          "rarity": "U",
+          "set": "storm"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Storm set: steel-blue metal with crackling cyan #7fd9ff lightning bolts, jagged thunder-cloud edges.\n1. (top-left) weapon: a broad longsword whose blade is a lightning bolt — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a thunder-cloud shoulder chest plate — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a ring with a lightning gem — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: lightning-step boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-blood",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_blood",
+          "slot": "weapon",
+          "name": "흡혈귀의 송곳니",
+          "rarity": "U",
+          "set": "blood"
+        },
+        {
+          "id": "a_blood",
+          "slot": "armor",
+          "name": "핏빛 흉갑",
+          "rarity": "U",
+          "set": "blood"
+        },
+        {
+          "id": "r_blood",
+          "slot": "ring",
+          "name": "피의 서약 반지",
+          "rarity": "U",
+          "set": "blood"
+        },
+        {
+          "id": "b_blood",
+          "slot": "boots",
+          "name": "피 웅덩이 장화",
+          "rarity": "U",
+          "set": "blood"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Vampire blood set: dark crimson #ff3a5a and black iron, fang and bat-wing motifs, dripping blood-gem.\n1. (top-left) weapon: a curved dagger-sword shaped like a vampire fang — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a bat-wing collared crimson breastplate — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a blood-oath ring with a crimson drop gem — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: blood-pool crimson boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-gravity",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_gravity",
+          "slot": "weapon",
+          "name": "특이점 대검",
+          "rarity": "U",
+          "set": "gravity"
+        },
+        {
+          "id": "a_gravity",
+          "slot": "armor",
+          "name": "암흑 물질 갑옷",
+          "rarity": "U",
+          "set": "gravity"
+        },
+        {
+          "id": "r_gravity",
+          "slot": "ring",
+          "name": "사건의 지평선",
+          "rarity": "U",
+          "set": "gravity"
+        },
+        {
+          "id": "b_gravity",
+          "slot": "boots",
+          "name": "무중력 장화",
+          "rarity": "U",
+          "set": "gravity"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Gravity set: dark-matter black metal with violet #b26bff swirling singularity orb and orbiting rings.\n1. (top-left) weapon: a huge greatsword with a black-hole orb in the guard — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a black armor with a violet singularity core on the chest — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a ring holding a tiny black hole with an orbit ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: floating antigravity boots with violet rings — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-phoenix",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_phoenix",
+          "slot": "weapon",
+          "name": "불사조의 검",
+          "rarity": "U",
+          "set": "phoenix"
+        },
+        {
+          "id": "a_phoenix",
+          "slot": "armor",
+          "name": "불사조 깃털 갑옷",
+          "rarity": "U",
+          "set": "phoenix"
+        },
+        {
+          "id": "r_phoenix",
+          "slot": "ring",
+          "name": "잿불 반지",
+          "rarity": "U",
+          "set": "phoenix"
+        },
+        {
+          "id": "b_phoenix",
+          "slot": "boots",
+          "name": "불새의 발톱",
+          "rarity": "U",
+          "set": "phoenix"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Phoenix set: flame-orange #ffa040 and gold feathers, ember sparks, rising fire-bird shapes.\n1. (top-left) weapon: a sword with a flaming feather blade and phoenix-head guard — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a feather-layered fire armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: an ember ring with a flame gem — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: phoenix-talon fire boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-frost",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_rime",
+          "slot": "weapon",
+          "name": "한설검",
+          "rarity": "U",
+          "set": "frost"
+        },
+        {
+          "id": "a_rime",
+          "slot": "armor",
+          "name": "결정 갑주",
+          "rarity": "U",
+          "set": "frost"
+        },
+        {
+          "id": "r_rime",
+          "slot": "ring",
+          "name": "설화의 반지",
+          "rarity": "U",
+          "set": "frost"
+        },
+        {
+          "id": "b_rime",
+          "slot": "boots",
+          "name": "빙결 각반",
+          "rarity": "U",
+          "set": "frost"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Frost crystal set: pale ice-blue #8fd8e8 translucent crystal shards, snowflake inlay, silver.\n1. (top-left) weapon: a slender sword of layered ice crystal — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: an ice-crystal plated armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a snowflake crystal ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: frozen crystal greaves — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-plague",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_plague",
+          "slot": "weapon",
+          "name": "역병의 낫",
+          "rarity": "U",
+          "set": "plague"
+        },
+        {
+          "id": "a_plague",
+          "slot": "armor",
+          "name": "포자 외피",
+          "rarity": "U",
+          "set": "plague"
+        },
+        {
+          "id": "r_plague",
+          "slot": "ring",
+          "name": "창궐의 인장",
+          "rarity": "U",
+          "set": "plague"
+        },
+        {
+          "id": "b_plague",
+          "slot": "boots",
+          "name": "균사 장화",
+          "rarity": "U",
+          "set": "plague"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Plague spore set: sickly green #9ade5a mushroom caps, spore puffs, organic fungal growth on dark leather.\n1. (top-left) weapon: a scythe with a mushroom-spored blade — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a fungal leather husk armor with mushroom shoulders — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a plague signet with a spore cluster — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: mycelium fungal boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-rune",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_sigil",
+          "slot": "weapon",
+          "name": "각인 대검",
+          "rarity": "U",
+          "set": "rune"
+        },
+        {
+          "id": "a_sigil",
+          "slot": "armor",
+          "name": "룬각인 흉갑",
+          "rarity": "U",
+          "set": "rune"
+        },
+        {
+          "id": "r_sigil",
+          "slot": "ring",
+          "name": "장전의 고리",
+          "rarity": "U",
+          "set": "rune"
+        },
+        {
+          "id": "b_sigil",
+          "slot": "boots",
+          "name": "주문 새김 장화",
+          "rarity": "U",
+          "set": "rune"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Rune set: dark stone and bronze engraved with glowing gold #ffc94a runes.\n1. (top-left) weapon: a rune-carved greatsword — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a rune-engraved stone breastplate — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a rune-loaded ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: rune-engraved boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-tether",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_chain",
+          "slot": "weapon",
+          "name": "심연의 사슬검",
+          "rarity": "U",
+          "set": "tether"
+        },
+        {
+          "id": "a_bind",
+          "slot": "armor",
+          "name": "결속 갑주",
+          "rarity": "U",
+          "set": "tether"
+        },
+        {
+          "id": "r_chain",
+          "slot": "ring",
+          "name": "심연의 고리",
+          "rarity": "U",
+          "set": "tether"
+        },
+        {
+          "id": "b_bind",
+          "slot": "boots",
+          "name": "결속 각반",
+          "rarity": "U",
+          "set": "tether"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Abyss chain set: deep teal #50f0d0 abyssal metal wrapped with heavy chain links.\n1. (top-left) weapon: a sword whose blade is wrapped in chain, chain trailing from the pommel — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a chain-bound teal armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a ring made of abyss chain links — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: chain-bound greaves — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_anchor",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_anchor_weapon",
+          "slot": "weapon",
+          "name": "계류검",
+          "rarity": "U",
+          "set": "arm_anchor"
+        },
+        {
+          "id": "arm_anchor_armor",
+          "slot": "armor",
+          "name": "항만 흉갑",
+          "rarity": "U",
+          "set": "arm_anchor"
+        },
+        {
+          "id": "arm_anchor_ring",
+          "slot": "ring",
+          "name": "닻고리",
+          "rarity": "U",
+          "set": "arm_anchor"
+        },
+        {
+          "id": "arm_anchor_boots",
+          "slot": "boots",
+          "name": "잠수 장화",
+          "rarity": "U",
+          "set": "arm_anchor"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Harbor oath set: sea-teal #56c8bf and brass, ship anchor and rope motifs.\n1. (top-left) weapon: a leaf-shaped sword with an anchor-shaped guard — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a harbor breastplate with anchor emblem — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: an anchor-loop ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: brass diving boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_echo",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_echo_weapon",
+          "slot": "weapon",
+          "name": "소리굽쇠 검",
+          "rarity": "U",
+          "set": "arm_echo"
+        },
+        {
+          "id": "arm_echo_armor",
+          "slot": "armor",
+          "name": "공명 갑주",
+          "rarity": "U",
+          "set": "arm_echo"
+        },
+        {
+          "id": "arm_echo_ring",
+          "slot": "ring",
+          "name": "여운의 반지",
+          "rarity": "U",
+          "set": "arm_echo"
+        },
+        {
+          "id": "arm_echo_boots",
+          "slot": "boots",
+          "name": "잔음 각반",
+          "rarity": "U",
+          "set": "arm_echo"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Echo duel set: lavender #b3a0ef silver, tuning-fork and sound-ripple rings.\n1. (top-left) weapon: a sword whose blade splits like a tuning fork — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a lavender duelist armor with ripple rings — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a resonance ring with ripple halo — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: lavender echo greaves — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_mercy",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_mercy_weapon",
+          "slot": "weapon",
+          "name": "등대 지팡이",
+          "rarity": "U",
+          "set": "arm_mercy"
+        },
+        {
+          "id": "arm_mercy_armor",
+          "slot": "armor",
+          "name": "순례 외투",
+          "rarity": "U",
+          "set": "arm_mercy"
+        },
+        {
+          "id": "arm_mercy_ring",
+          "slot": "ring",
+          "name": "불씨 고리",
+          "rarity": "U",
+          "set": "arm_mercy"
+        },
+        {
+          "id": "arm_mercy_boots",
+          "slot": "boots",
+          "name": "길잡이 장화",
+          "rarity": "U",
+          "set": "arm_mercy"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Lantern pilgrim set: warm cream-gold #f2c77f, lighthouse lantern and candle-flame motifs, pilgrim cloth.\n1. (top-left) weapon: a pilgrim staff topped with a lighthouse lantern — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a pilgrim long coat with lantern buckle — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: an ember-flame candle ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: pilgrim guide boots with lantern charm — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_lance",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_lance_weapon",
+          "slot": "weapon",
+          "name": "날개 창",
+          "rarity": "U",
+          "set": "arm_lance"
+        },
+        {
+          "id": "arm_lance_armor",
+          "slot": "armor",
+          "name": "깃털 흉갑",
+          "rarity": "U",
+          "set": "arm_lance"
+        },
+        {
+          "id": "arm_lance_ring",
+          "slot": "ring",
+          "name": "매눈 인장",
+          "rarity": "U",
+          "set": "arm_lance"
+        },
+        {
+          "id": "arm_lance_boots",
+          "slot": "boots",
+          "name": "비상 각반",
+          "rarity": "U",
+          "set": "arm_lance"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Hawk hunt set: leaf green #90c87b and white feathers, hawk wing and talon motifs.\n1. (top-left) weapon: a spear with a feathered wing blade — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a feathered hawk breastplate — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a hawk-eye signet ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: winged soaring greaves — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_relay",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_relay_weapon",
+          "slot": "weapon",
+          "name": "북실 단검",
+          "rarity": "U",
+          "set": "arm_relay"
+        },
+        {
+          "id": "arm_relay_armor",
+          "slot": "armor",
+          "name": "직조 갑옷",
+          "rarity": "U",
+          "set": "arm_relay"
+        },
+        {
+          "id": "arm_relay_ring",
+          "slot": "ring",
+          "name": "실타래 고리",
+          "rarity": "U",
+          "set": "arm_relay"
+        },
+        {
+          "id": "arm_relay_boots",
+          "slot": "boots",
+          "name": "교차 장화",
+          "rarity": "U",
+          "set": "arm_relay"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Weaver set: coral #eb9b8f woven threads, spindle and thread-spool motifs.\n1. (top-left) weapon: a short dagger shaped like a weaving shuttle with thread — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a woven-thread armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a thread-spool ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: cross-laced woven boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-arm_aegis",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "arm_aegis_weapon",
+          "slot": "weapon",
+          "name": "성문 대검",
+          "rarity": "U",
+          "set": "arm_aegis"
+        },
+        {
+          "id": "arm_aegis_armor",
+          "slot": "armor",
+          "name": "보루 판금",
+          "rarity": "U",
+          "set": "arm_aegis"
+        },
+        {
+          "id": "arm_aegis_ring",
+          "slot": "ring",
+          "name": "성벽 인장",
+          "rarity": "U",
+          "set": "arm_aegis"
+        },
+        {
+          "id": "arm_aegis_boots",
+          "slot": "boots",
+          "name": "수비대 철화",
+          "rarity": "U",
+          "set": "arm_aegis"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Bastion set: steel blue #94b6e6 heavy plate, castle battlement and tower-shield motifs.\n1. (top-left) weapon: a heavy gate greatsword shaped like a castle tower — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a heavy bastion plate armor with battlement shoulders — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a castle-wall signet ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: heavy bastion iron boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-glasswarden",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "exp_glasswarden_weapon",
+          "slot": "weapon",
+          "name": "유리 파수꾼의 검",
+          "rarity": "U",
+          "set": "glasswarden"
+        },
+        {
+          "id": "exp_glasswarden_armor",
+          "slot": "armor",
+          "name": "유리 파수꾼의 갑옷",
+          "rarity": "U",
+          "set": "glasswarden"
+        },
+        {
+          "id": "exp_glasswarden_ring",
+          "slot": "ring",
+          "name": "유리 파수꾼의 반지",
+          "rarity": "U",
+          "set": "glasswarden"
+        },
+        {
+          "id": "exp_glasswarden_boots",
+          "slot": "boots",
+          "name": "유리 파수꾼의 장화",
+          "rarity": "U",
+          "set": "glasswarden"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Glass warden set: clear glass-leaf panels with cyan #7fd9ff lightning veins, silver frame.\n1. (top-left) weapon: a serrated glass sword with a crescent guard and tassel — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a glass-paneled warden armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a glass-leaf ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: glass warden boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-emberknight",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "exp_emberknight_weapon",
+          "slot": "weapon",
+          "name": "잿불 기사의 검",
+          "rarity": "U",
+          "set": "emberknight"
+        },
+        {
+          "id": "exp_emberknight_armor",
+          "slot": "armor",
+          "name": "잿불 기사의 갑옷",
+          "rarity": "U",
+          "set": "emberknight"
+        },
+        {
+          "id": "exp_emberknight_ring",
+          "slot": "ring",
+          "name": "잿불 기사의 반지",
+          "rarity": "U",
+          "set": "emberknight"
+        },
+        {
+          "id": "exp_emberknight_boots",
+          "slot": "boots",
+          "name": "잿불 기사의 장화",
+          "rarity": "U",
+          "set": "emberknight"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Ember knight set: blackened steel with glowing orange #ffa040 ember cores and cracks.\n1. (top-left) weapon: a knight sword with glowing ember cracks along the blade — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a blackened knight armor with ember cores — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: an ember-core knight ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: ember knight boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-starreader",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "exp_starreader_weapon",
+          "slot": "weapon",
+          "name": "별빛 기록자의 검",
+          "rarity": "U",
+          "set": "starreader"
+        },
+        {
+          "id": "exp_starreader_armor",
+          "slot": "armor",
+          "name": "별빛 기록자의 갑옷",
+          "rarity": "U",
+          "set": "starreader"
+        },
+        {
+          "id": "exp_starreader_ring",
+          "slot": "ring",
+          "name": "별빛 기록자의 반지",
+          "rarity": "U",
+          "set": "starreader"
+        },
+        {
+          "id": "exp_starreader_boots",
+          "slot": "boots",
+          "name": "별빛 기록자의 장화",
+          "rarity": "U",
+          "set": "starreader"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Star reader set: midnight blue cloth and silver, star-dust sparkles, ice-blue #8fd8e8 constellation lines.\n1. (top-left) weapon: a slim star-tipped sword with constellation engraving — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a midnight star-reader robe armor — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a star-dust ring — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: star reader boots — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "set-void",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_void",
+          "slot": "weapon",
+          "name": "공허의 조각검",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "a_void",
+          "slot": "armor",
+          "name": "공허의 갑주",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "r_void",
+          "slot": "ring",
+          "name": "공허의 인장",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "b_void",
+          "slot": "boots",
+          "name": "공허의 장화",
+          "rarity": "U",
+          "set": null
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order: All 4 items belong to one matching set and must read as one family: Void relics: cracked obsidian-black material with floating purple #c07cff shards and a faint void glow.\n1. (top-left) weapon: a shattered-glass blade floating in fragments, void purple #c07cff core (no set) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a cracked void armor with floating purple #c07cff shards (no set) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a void signet with a purple #c07cff shard gem (no set) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: void boots with floating purple #c07cff shards (no set) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "summon-u",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "sg_ember_lantern",
+          "slot": "weapon",
+          "name": "잿불 소환등",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "sg_moonward_aegis",
+          "slot": "armor",
+          "name": "월영 수호갑",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "sg_astral_prism",
+          "slot": "ring",
+          "name": "성운 공명석",
+          "rarity": "U",
+          "set": null
+        },
+        {
+          "id": "sg_stormstep_treads",
+          "slot": "boots",
+          "name": "폭풍 소환각",
+          "rarity": "U",
+          "set": null
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order:\n1. (top-left) weapon: a summoning lantern on a short rod with a little ember fox flame inside, orange #ff8030 (unique summon item) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n2. (top-right) armor: a moonlit silver guardian armor with a crescent moon chest emblem, pale blue #8fd8e8 (unique summon item) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n3. (bottom-left) ring: a ring holding a floating nebula prism crystal, blue #70b8ff (unique summon item) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color\n4. (bottom-right) boots: storm treads with little wind spirits swirling at the ankles, mint #7affe0 (unique summon item) — unique set item: the set theme drives the whole shape and color, with a small magical aura of the theme color"
+    },
+    {
+      "id": "summon-l",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "sg_solar_grimoire",
+          "slot": "weapon",
+          "name": "태양의 소환서",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "sg_abyss_husk",
+          "slot": "armor",
+          "name": "심연의 공생갑",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "sg_orbit_crown",
+          "slot": "ring",
+          "name": "궤도의 왕관",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "sg_comet_stride",
+          "slot": "boots",
+          "name": "혜성의 행군화",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 2 by 2 grid sheet of 4 different items, in this exact order:\n1. (top-left) weapon: a golden sun grimoire book with a radiant sun clasp and a tiny golden hawk emblem (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n2. (top-right) armor: a living symbiotic abyss armor, violet #b26bff carapace with golden legendary trim and a halo of tendrils (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n3. (bottom-left) ring: a ring shaped like a tiny crown with small orbiting golden spheres (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n4. (bottom-right) boots: comet marching boots trailing pink #ff9ad8 comet tails with golden wings (legendary summon item) — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "fix-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "b_mithril",
+          "slot": "boots",
+          "name": "미스릴 장화",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "b_wind",
+          "slot": "boots",
+          "name": "바람의 장화",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "r_jade",
+          "slot": "ring",
+          "name": "옥 반지",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "r_amber",
+          "slot": "ring",
+          "name": "호박 반지",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "r_pearl",
+          "slot": "ring",
+          "name": "진주 반지",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. A 3 by 2 grid sheet of 5 different items, in this exact order:\n1. (top-left) boots: mithril greaves: bright silver-blue chain-mail texture with sharp angular plate cuffs, clearly different silhouette from winged white knight boots (no wings) — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n2. (top-center) boots: wind boots: low ankle boots with swirling teal wind ribbons wrapping around them and a feather tuft, light green-teal, clearly lower and rounder than sky boots — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) ring: a polished SILVER ring band (not copper) with a jade green gem on top — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n4. (bottom-left) ring: a polished SILVER ring band (not copper) with an amber orange gem on top and a tiny green leaf engraving on the band — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) ring: a polished SILVER ring band (not copper) with a white pearl on top and a tiny green leaf engraving on the band — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
+    },
+    {
+      "id": "weapon-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_weapon_n_1",
+          "slot": "weapon",
+          "name": "초소의 직검",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_weapon_n_2",
+          "slot": "weapon",
+          "name": "산길의 넓은날",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_weapon_n_3",
+          "slot": "weapon",
+          "name": "나그네 곡검",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_weapon_s_1",
+          "slot": "weapon",
+          "name": "톱날 전투검",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_weapon_s_2",
+          "slot": "weapon",
+          "name": "잎새 수호검",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_weapon_s_3",
+          "slot": "weapon",
+          "name": "물결 장검",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) weapon: a sword with a straight double-edged blade, cross guard, ring pommel, metal #aebbc8, accent #cfd8e3, grip #344457 — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n2. (top-center) weapon: a sword with a broad wide blade, no guard, round pommel, metal #909da9, accent #bac6d0, grip #453226 — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n3. (top-right) weapon: a sword with a curved saber blade, cross guard, round pommel, an orb set in the guard, metal #ba8746, accent #d99a52, grip #493022 — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n4. (bottom-left) weapon: a sword with a saw-toothed blade, no guard, round pommel, metal #aebbc8, accent #cfd8e3, grip #344457 — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) weapon: a sword with a leaf-shaped blade, cross guard, ring pommel, a crescent ornament, metal #a7b7a7, accent #9bdc6a, grip #354730 — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n6. (bottom-right) weapon: a sword with a wavy flamberge blade, round disc guard, round pommel, a crystal inset, metal #a5d8ed, accent #8fe3ff, grip #315778 — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
+    },
+    {
+      "id": "weapon-02",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "w_town_oath",
+          "slot": "weapon",
+          "name": "서약 수비대검",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_weapon_e_1",
+          "slot": "weapon",
+          "name": "파쇄 도살검",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_weapon_e_2",
+          "slot": "weapon",
+          "name": "은빛 세검",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_weapon_e_3",
+          "slot": "weapon",
+          "name": "성문 수호검",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "w_town_ember",
+          "slot": "weapon",
+          "name": "잿불 항해검",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_weapon_l_1",
+          "slot": "weapon",
+          "name": "별의 대검",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) weapon: a sword with a straight double-edged blade, winged guard, gem pommel, a crescent ornament, metal #c6d3df, accent #7fb8ff, grip #263f77 — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n2. (top-center) weapon: a sword with a heavy cleaver blade, cross guard, spiked pommel, a caged core, metal #6d7680, accent #c9d2da, grip #2e2420 — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) weapon: a sword with a thin needle rapier blade, crescent guard, gem pommel, a star ornament, metal #e4e9ef, accent #bcd7ff, grip #3a4a5c — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n4. (bottom-left) weapon: a sword with a straight double-edged blade, basket hilt, gem pommel, an orb set in the guard, metal #c6d3df, accent #7fb8ff, grip #263f77 — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n5. (bottom-center) weapon: a sword with a wavy flamberge blade, winged guard, spiked pommel, a crescent ornament, metal #bf3619, accent #ff6a2a, grip #35221d — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n6. (bottom-right) weapon: a sword with a broad wide blade, winged guard, spiked pommel, a star ornament, metal #c8d6f0, accent #fff6b0, grip #2a3a6a — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "weapon-03",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_weapon_l_2",
+          "slot": "weapon",
+          "name": "용비늘 검",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_weapon_l_3",
+          "slot": "weapon",
+          "name": "황혼 성검",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "w_town_star",
+          "slot": "weapon",
+          "name": "별마루 성검",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every weapon is drawn diagonally at 45 degrees, hilt at the lower left and tip at the upper right, blade at least 18% of the cell width. A 2 by 2 grid sheet of 3 different items, in this exact order:\n1. (top-left) weapon: a sword with a saw-toothed blade, crescent guard, spiked pommel, a flame ornament, metal #402b2c, accent #d6a344, grip #5b201b — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n2. (top-right) weapon: a sword with a wavy flamberge blade, basket hilt, tassel pommel, a crescent ornament, metal #8a6a8a, accent #ff9a6a, grip #3a2440 — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n3. (bottom-left) weapon: a sword with a broad wide blade, round disc guard, ring pommel, a crystal inset, metal #e3e0d8, accent #fff0a8, grip #493364 — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "armor-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_armor_n_1",
+          "slot": "armor",
+          "name": "여행자 가죽옷",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_armor_n_2",
+          "slot": "armor",
+          "name": "견습생 로브",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_armor_n_3",
+          "slot": "armor",
+          "name": "초소 누빔옷",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "a_town_oath",
+          "slot": "armor",
+          "name": "서약 수비대 갑주",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_armor_s_1",
+          "slot": "armor",
+          "name": "강철 초병갑",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_armor_s_2",
+          "slot": "armor",
+          "name": "은사슬 전투복",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) armor: a plain brown leather traveler tunic — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n2. (top-center) armor: a simple apprentice robe — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n3. (top-right) armor: a padded quilted outpost jacket — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n4. (bottom-left) armor: an oath guard armor with blue tabard — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) armor: a steel sentry breastplate — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n6. (bottom-right) armor: a silver chain battle vest — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
+    },
+    {
+      "id": "armor-02",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_armor_s_3",
+          "slot": "armor",
+          "name": "산악 비늘갑",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "a_town_ember",
+          "slot": "armor",
+          "name": "잿불 항해 갑주",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_armor_e_1",
+          "slot": "armor",
+          "name": "빛결정 흉갑",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_armor_e_2",
+          "slot": "armor",
+          "name": "수비대 조각갑",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_armor_e_3",
+          "slot": "armor",
+          "name": "그늘 가죽옷",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "a_town_star",
+          "slot": "armor",
+          "name": "별마루 설원 갑주",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) armor: a mountain scale armor — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n2. (top-center) armor: an ember sailor armor with red-orange trim — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) armor: a light-crystal breastplate — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n4. (bottom-left) armor: a garrison plate armor — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n5. (bottom-center) armor: a shadow leather coat — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n6. (bottom-right) armor: a starlit snowfield armor, white and gold — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "armor-03",
+      "grid": [
+        2,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_armor_l_1",
+          "slot": "armor",
+          "name": "새벽 예복",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_armor_l_2",
+          "slot": "armor",
+          "name": "용골 누빔갑",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_armor_l_3",
+          "slot": "armor",
+          "name": "황금 성문갑",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every armor is a front-facing chest piece seen slightly from above, shoulders wider than the torso, visible neck opening and belt. A 2 by 2 grid sheet of 3 different items, in this exact order:\n1. (top-left) armor: a dawn ceremonial robe-armor — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n2. (top-right) armor: a dragon-bone quilted armor — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n3. (bottom-left) armor: a golden gate plate armor — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "ring-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_ring_n_1",
+          "slot": "ring",
+          "name": "초소 고리",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_ring_n_2",
+          "slot": "ring",
+          "name": "꼬인 은선",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_ring_n_3",
+          "slot": "ring",
+          "name": "발톱 고리",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_ring_s_1",
+          "slot": "ring",
+          "name": "이중 서약",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_ring_s_2",
+          "slot": "ring",
+          "name": "수비대 인장",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_ring_s_3",
+          "slot": "ring",
+          "name": "솔빛 반지",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) ring: a plain iron band — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n2. (top-center) ring: a twisted silver wire ring — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n3. (top-right) ring: a claw ring holding a dull stone — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n4. (bottom-left) ring: a double oath ring (two linked bands) — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) ring: a garrison signet ring — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n6. (bottom-right) ring: a pine-light ring — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
+    },
+    {
+      "id": "ring-02",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_ring_e_1",
+          "slot": "ring",
+          "name": "붉은 광석환",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_ring_e_2",
+          "slot": "ring",
+          "name": "푸른 매듭환",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_ring_e_3",
+          "slot": "ring",
+          "name": "별빛 이중환",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_ring_l_1",
+          "slot": "ring",
+          "name": "성문 보석인",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_ring_l_2",
+          "slot": "ring",
+          "name": "왕관 고리",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_ring_l_3",
+          "slot": "ring",
+          "name": "용안 반지",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every ring is a thick band tilted toward the viewer with its gem or crest on top; the gem is the color hero of the icon. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) ring: a red ore ring — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n2. (top-center) ring: a blue knot ring — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) ring: a starlight double ring — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n4. (bottom-left) ring: a gate jewel signet — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n5. (bottom-center) ring: a crown ring — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n6. (bottom-right) ring: a dragon-eye ring — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    },
+    {
+      "id": "boots-01",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_boots_n_1",
+          "slot": "boots",
+          "name": "여행자 단화",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_boots_n_2",
+          "slot": "boots",
+          "name": "초소 장화",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_boots_n_3",
+          "slot": "boots",
+          "name": "수비대 각반",
+          "rarity": "N",
+          "set": "recruit"
+        },
+        {
+          "id": "gear_boots_s_1",
+          "slot": "boots",
+          "name": "모래길 샌들",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_boots_s_2",
+          "slot": "boots",
+          "name": "철판 전투화",
+          "rarity": "S",
+          "set": "merc"
+        },
+        {
+          "id": "gear_boots_s_3",
+          "slot": "boots",
+          "name": "산길 털신",
+          "rarity": "S",
+          "set": "merc"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) boots: simple traveler shoes — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n2. (top-center) boots: outpost boots — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n3. (top-right) boots: garrison greaves — common: muted plain materials (iron, leather, cloth, wood), single simple silhouette, no glow, no gems\n4. (bottom-left) boots: sand-road sandals with ankle wraps — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n5. (bottom-center) boots: iron-plated battle boots — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal\n6. (bottom-right) boots: mountain fur boots — uncommon: one decorative accent (a green #5ce07a gem or leaf motif), cleaner metal"
+    },
+    {
+      "id": "boots-02",
+      "grid": [
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "id": "gear_boots_e_1",
+          "slot": "boots",
+          "name": "순찰 장화",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_boots_e_2",
+          "slot": "boots",
+          "name": "빛결정 각반",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_boots_e_3",
+          "slot": "boots",
+          "name": "바람 샌들",
+          "rarity": "E",
+          "set": "knight"
+        },
+        {
+          "id": "gear_boots_l_1",
+          "slot": "boots",
+          "name": "왕관 철화",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_boots_l_2",
+          "slot": "boots",
+          "name": "새벽 비단화",
+          "rarity": "L",
+          "set": "dragon"
+        },
+        {
+          "id": "gear_boots_l_3",
+          "slot": "boots",
+          "name": "용골 장화",
+          "rarity": "L",
+          "set": "dragon"
+        }
+      ],
+      "prompt": "Stylized hand-painted fantasy RPG game item icons, chunky low-poly forms with soft cel shading, warm key light from the upper left, thick dark navy outline (#0b1424) around every object, rich but not neon colors, each object centered in its own cell, three-quarter view, isolated on a flat pure white background (#ffffff), no ground shadow, no text, no labels, no frames, no cell borders, generous empty white space between objects. Every boots item is a matching pair standing side by side, angled three-quarter, shaft reaching at least half the cell height. A 3 by 2 grid sheet of 6 different items, in this exact order:\n1. (top-left) boots: patrol boots — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n2. (top-center) boots: light-crystal greaves — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n3. (top-right) boots: wind sandals with feather wings — rare: two decorative accents in blue #4cc3ff (gems, inlay), polished metal with a subtle edge glint\n4. (bottom-left) boots: crown iron boots — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n5. (bottom-center) boots: dawn silk shoes — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow\n6. (bottom-right) boots: dragon-bone boots — legendary: orange-gold #ff9a2e and gold trim with a big crowning element (halo, wings, crown or radiant spikes), soft golden glow"
+    }
+  ]
+}

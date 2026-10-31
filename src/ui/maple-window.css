@@ -42,6 +42,14 @@
 .mpl-cell.is-empty { background: var(--mpl-slot); border-color: #22314f; box-shadow: inset 0 1px 3px #000c; }
 .mpl-cell img, .mpl-slot img { width: 80%; height: 80%; object-fit: contain; pointer-events: none; }
 .mpl-cell.has-gear, .mpl-slot.has-gear { border-color: var(--mpl-rar, var(--mpl-line)); box-shadow: inset 0 0 0 1px #000a, inset 0 0 8px color-mix(in srgb, var(--mpl-rar, #fff) 45%, transparent); }
+/* 아이콘 톤 정리(docs/ICON_TONE.md 5절): 등급 광도를 N<S<E<U<L 순으로 맞추고, 칸 바탕에 위쪽 왼쪽에서 오는 등급색 빛을 깐다. */
+.mpl-cell.has-gear, .mpl-slot.has-gear { background: radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--mpl-rar, #fff) 30%, var(--mpl-slot-hi)), var(--mpl-slot) 72%); }
+.mpl-cell.has-gear img, .mpl-slot.has-gear img { width: 88%; height: 88%; }
+.mpl-cell.rar-N, .mpl-slot.rar-N { --mpl-rar: #9aa3b2; border-color: #9aa3b2 !important; box-shadow: inset 0 0 0 1px #000a !important; }
+.mpl-cell.rar-S, .mpl-slot.rar-S { box-shadow: inset 0 0 0 1px #000a, inset 0 0 6px color-mix(in srgb, var(--mpl-rar) 30%, transparent) !important; }
+.mpl-cell.rar-E, .mpl-slot.rar-E { box-shadow: inset 0 0 0 1px #000a, inset 0 0 8px color-mix(in srgb, var(--mpl-rar) 42%, transparent) !important; }
+.mpl-cell.rar-U, .mpl-slot.rar-U { box-shadow: inset 0 0 0 1px #000a, inset 0 0 10px color-mix(in srgb, var(--mpl-rar) 55%, transparent) !important; }
+.mpl-cell.rar-L, .mpl-slot.rar-L { box-shadow: inset 0 0 0 1px #000a, inset 0 0 12px color-mix(in srgb, var(--mpl-rar) 70%, transparent), 0 0 6px color-mix(in srgb, var(--mpl-rar) 45%, transparent) !important; }
 .mpl-cell:is(button):hover, .mpl-slot:hover { filter: brightness(1.2); }
 .mpl-cell.is-selected { outline: 2px solid var(--mpl-accent); outline-offset: -2px; }
 .mpl-badge { position: absolute; font: 800 10px/1 var(--font); text-shadow: 0 1px 1px #000, 0 0 2px #000; pointer-events: none; }
@@ -155,6 +163,7 @@
 .danger-zone { margin: 18px 0 4px; padding: 0; border: 1px dashed #d26a6a99; border-radius: 10px; background: #3a1b2218; }
 .danger-zone > summary { min-height: 44px; display: flex; align-items: center; padding: 0 14px; color: #f0a3a3; font-size: 12px; font-weight: 800; cursor: pointer; }
 .danger-zone .danger-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.danger-zone .danger-input { min-height: 44px; padding: 0 12px; border: 1px solid #d26a6a99; border-radius: 8px; background: #1a0f13; color: #fff; font-size: 16px; }
 .danger-zone .danger-body > p, .danger-zone .danger-confirm > p { margin: 0; color: #e8c3c3; font-size: 12px; line-height: 1.6; }
 .danger-zone .danger-body .btn { min-height: 44px; }
 .danger-zone .danger-confirm { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #d26a6a; border-radius: 8px; background: #4a1c24; }
@@ -167,3 +176,12 @@
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-copy small { display: inline; font-size: 12px; color: #dbeaf5; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #pause-overlay .pause-btns .companion-launcher .companion-launcher-mark { flex: none; width: 28px; height: 28px; font-size: 16px; }
 #pause-overlay .pause-btns .companion-launcher > .companion-link-dot { display: inline-block; }
+.danger-zone .danger-confirm textarea.danger-input { width: 100%; box-sizing: border-box; }
+.danger-zone .danger-confirm textarea[hidden] { display: none; }
+.danger-zone .danger-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.4; color: #e8c3c3; min-height: 44px; }
+.danger-zone .danger-check input { margin-top: 2px; width: 20px; height: 20px; flex: none; }
+.mpl-up { right: 2px; top: 2px; padding: 1px 4px; border-radius: 2px; background: #3fdc7a; color: #052a14; font-size: 11px; font-weight: 900; text-shadow: none; }
+.mpl-cell.is-better:not(.is-selected) { outline: 2px solid #3fdc7a; outline-offset: -2px; }
+
+/* 기간이 끝난 입구(7일 여정 등)는 hidden 으로 숨긴다. 위 display:flex 가 UA [hidden] 을 이기므로 명시한다(docs/RPG_ESSENTIALS.md). */
+:root:root:root:root .oath-menu-list > button[hidden] { display: none !important; }

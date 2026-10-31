@@ -14,7 +14,8 @@ export const JOURNEY_STEPS = [
  * pulls = gacha pulls resolved (10-pull counts 10), upgrades = paid equipment
  * enhance attempts (success or failure), bossAttempts = boss fights started (retries count).
  */
-export const JOURNEY_ACTION_STATS = ['pulls', 'upgrades', 'bossAttempts', 'towerFloors', 'hardClears'];
+export const JOURNEY_ACTION_STATS = ['pulls', 'upgrades', 'bossAttempts', 'towerFloors', 'hardClears', 'vaultRelay'];
+// vaultRelay = 계승 의식으로 받은 장비(hops>=1)를 착용한 채 캠페인 승리(같은 uid 하루 1회, docs/GEAR_VAULT_INHERIT.md 4.5). 정산 트랜잭션(Economy.completeStage)에서만 센다.
 // towerFloors = 무한의 성 새 층 돌파(첫 돌파만), hardClears = 숙련·악몽·지옥 캠페인 승리. 둘 다 Economy 정산 트랜잭션에서 센다.
 
 export const DAILY_CONTRACTS = [
@@ -26,6 +27,7 @@ export const DAILY_CONTRACTS = [
   {id:'daily_boss',name:'수호자에게 다시',description:'보스전 1회 도전',stat:'bossAttempts',target:1,rewards:{gold:400,consumables:{aegis:1}}},
   {id:'daily_tower',name:'성의 다음 층',description:'무한의 성 새 층 1개 돌파',stat:'towerFloors',target:1,rewards:{gold:900,stones:6}},
   {id:'daily_hard',name:'더 거친 길',description:'숙련 이상 캠페인 2회 승리',stat:'hardClears',target:2,rewards:{gold:800,stones:4}},
+  {id:'daily_relay',name:'물려받은 장비로',description:'계승 의식으로 받은 장비를 끼고 캠페인 1회 승리',stat:'vaultRelay',target:1,rewards:{lineageSigil:1}},
 ];
 export const WEEKLY_CONTRACTS = [
   {id:'seven_dungeons',name:'한 주의 발자취',description:'이번 주 실전 재료 던전 7회 완료',stat:'wins',target:7,rewards:{gold:3000,materials:{glass_leaf:3,ember_core:3,star_dust:3}}},
@@ -35,4 +37,5 @@ export const WEEKLY_CONTRACTS = [
   {id:'weekly_boss',name:'꺾이지 않는 도전',description:'이번 주 보스전 5회 도전',stat:'bossAttempts',target:5,rewards:{gold:1500,consumables:{overdrive:2,hp_tonic:2}}},
   {id:'weekly_tower',name:'성을 오르는 한 주',description:'이번 주 무한의 성 새 층 5개 돌파',stat:'towerFloors',target:5,rewards:{gold:4000,stones:20}},
   {id:'weekly_hard',name:'시련의 한 주',description:'이번 주 숙련 이상 캠페인 10회 승리',stat:'hardClears',target:10,rewards:{gold:3500,stones:25}},
+  {id:'weekly_relay',name:'이어받은 한 주',description:'이번 주 계승 의식으로 받은 장비를 끼고 캠페인 3회 승리',stat:'vaultRelay',target:3,rewards:{lineageSigil:3}},
 ];

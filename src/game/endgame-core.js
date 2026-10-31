@@ -1,9 +1,10 @@
 // 엔드게임 상태(무한의 성·난이도 최고 기록·시즌 이벤트)의 순수 규칙. 시계는 호출자가 넘긴다(nowMs).
 // 저장 트랜잭션은 호출자(Economy)가 맡고, 여기서는 상태를 검사·갱신하고 지급할 보상만 돌려준다.
 import { SEASON, TOWER, EVENT_WEEKS, EVENT_EFFECT_KINDS } from '../data/content-90d.js';
-import { stageDef, CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
+import { stageDef, CHAPTERS, STAGES_PER_CHAPTER, recommendedPowerFor } from '../data/stages.js';
 import { DIFFICULTY_ORDER } from './difficulty.js';
 import { recommendedLevel } from '../data/loot-tables.js';
+import { TORMENT } from '../data/content-90d.js';   // 고통 단계 저장 정화용(규칙은 torment-core.js)
 
 const DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS, KST_RESET = 4 * 3600000, VERSION = 1, MAX_FLOOR = 100000;
 const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -24,8 +25,11 @@ export function normalizeEndgame(raw) {
     if (value >= 0) peak[key] = value;
   }
   const best = integer(t.best, 0, MAX_FLOOR, 0);
+  const tm = object(r.torment) ? r.torment : {}, today = object(tm.today) ? tm.today : {};
   return {
     version: VERSION, peak,
+    // 고통 단계(SPEC_720H 3.2, 규칙은 torment-core.js): best = 최고 클리어 단계, today = 오늘(05:00 KST 경계) 완료한 판 수. 일차는 앞으로만 간다.
+    torment: { best: integer(tm.best, 0, TORMENT.maxTier, 0), today: { day: integer(today.day, 0, MAX_FLOOR, 0), runs: integer(today.runs, 0, MAX_FLOOR, 0) } },
     // week·chestWeek 는 towerWeekId(0 = 기록 없음). 음수 표식은 저장 정규화를 두 번 거치면 바뀌어 쓰지 않는다.
     tower: { best, week: integer(t.week, 0, MAX_FLOOR, 0), weekCleared: integer(t.weekCleared, 0, MAX_FLOOR, 0),
       chestWeek: integer(t.chestWeek, 0, MAX_FLOOR, 0) },
@@ -122,9 +126,15 @@ export function towerCap(nowMs, best = 0) {
   return Math.max(seasonCap, integer(best, 0, MAX_FLOOR, 0));
 }
 /** 층이 빌려 쓰는 캠페인 관문(지역 순환, 5층 중간 보스·10층 최종 보스). */
+/**
+ * 무한의 성이 순환하는 지역 수. 탑은 시간 개방과 무관한 상설 콘텐츠이고 층 번호별 난이도·보상·시뮬레이터 밴드가
+ * 이 순환(1~6지역)을 전제로 조정돼 있어, 시간 개방 지역(7장~)이 늘어도 순환 길이는 그대로 둔다.
+ * 새 지역을 탑에 넣을 때는 이 값을 올리고 content-90d 의 탑 밴드를 함께 다시 잰다.
+ */
+export const TOWER_CYCLE_CHAPTERS = 6;
 export function towerFloorSource(floor) {
   const f = integer(floor, 1, MAX_FLOOR, 1), block = Math.floor((f - 1) / STAGES_PER_CHAPTER);
-  return { ch: (block % CHAPTERS.length) + 1, st: ((f - 1) % STAGES_PER_CHAPTER) + 1, cycle: Math.floor(block / CHAPTERS.length) };
+  return { ch: (block % TOWER_CYCLE_CHAPTERS) + 1, st: ((f - 1) % STAGES_PER_CHAPTER) + 1, cycle: Math.floor(block / TOWER_CYCLE_CHAPTERS) };
 }
 export const towerScale = (floor) => TOWER.baseScale * Math.pow(integer(floor, 1, MAX_FLOOR, 1), TOWER.exponent);
 
@@ -147,7 +157,7 @@ export function towerStage(floor) {
   const f = integer(floor, 1, MAX_FLOOR, 1), src = towerFloorSource(f), base = stageDef(src.ch, src.st);
   const scale = towerScale(f), recLevel = Math.min(80, recommendedLevel(src.ch, src.st) + Math.floor(f / 4));
   const stage = { ...base, code: `T${f}`, name: `무한의 성 ${f}층 · ${base.title}`, title: `${f}층 · ${base.title}`,
-    scale, recPower: Math.floor(2600 * scale), energy: 0, finale: false, epilogueFinale: false,
+    scale, recPower: recommendedPowerFor(scale), energy: 0, finale: false, epilogueFinale: false,
     objective: `무한의 성 ${f}층: ${base.objective}`,
     rewards: { ...base.rewards, gold: 0, exp: Math.floor(110 * scale), bp: 40, firstGems: 0, dropChance: base.boss ? 1 : 0.6, stones: 0 },
     tower: { floor: f, sourceCode: base.code } };
@@ -208,5 +218,5 @@ export function towerSummary(state, progress, nowMs) {
   const src = towerFloorSource(next);
   return { unlocked: towerUnlocked(progress), best: view.tower.best, next, cap, capped: next > cap,
     source: `${src.ch}-${src.st}`, boss: src.st === 10 ? 'final' : src.st === 5 ? 'mid' : null,
-    recPower: Math.floor(2600 * towerScale(next)), chest: towerChest(view, nowMs) };
+    recPower: recommendedPowerFor(towerScale(next)), chest: towerChest(view, nowMs) };
 }

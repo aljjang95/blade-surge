@@ -1,9 +1,12 @@
 import { $, fmt } from './ui.js';
 import { resourceArt, uiArt } from './illustrated.js';
 import { audio } from '../engine/audio.js';
+import { playEnhanceStage } from './enhance-stage.js';
 import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
-import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown, ENH_SAFE_MAX } from '../data/items.js';
+import { itemStats } from '../data/item-tier.js';
+import { enhanceSureCost } from '../data/enhance.js';
 import { weaponLook } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { GACHA } from '../data/shop.js';
@@ -13,8 +16,15 @@ import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { isFresh, clearFresh } from './loot-compare.js';
+import { betterItems, planBestEquip, applyBestEquip, junkItems, salvagePreview, salvageItems, transferUpgrades } from '../game/gear-advice.js';
+import { tierName, tierTag, tierTone, tierNote } from '../game/item-tier-label.js';
+import { legendPaneHtml, bindLegendPane } from './legend-pane.js';
 import { runeAwarePreview, hasSockets } from './rune-view.js';
 import { runePaneHtml, bindRunePane, openRuneOverview, disposeRuneStage } from './rune-socket.js';
+import { openVault } from './vault-panel.js';
+import { gearDexClaimable } from '../game/reward-badges.js';
+import { durabilityLineHtml } from './clear-loop.js';
+import { canTransfer } from './enhance-transfer-panel.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -27,13 +37,18 @@ export const HERO_PANES = Object.freeze([
   { id: 'growth', label: '성장' },
   { id: 'skills', label: '스킬' },
   { id: 'sets', label: '세트' },
+  { id: 'legend', label: '전설', aria: '전설 수련' },
 ]);
 const BAG_SORTS = Object.freeze([
   { id: 'rarity', label: '등급순' },
   { id: 'enh', label: '강화순' },
   { id: 'recent', label: '최근순' },
+  { id: 'better', label: '더 좋은 순' },
 ]);
 const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+/** 고통 단계 장비 표시: 칸 모서리의 단계 표기와 색 구분 클래스(고대·태고). tp 가 없으면 아무것도 붙지 않는다. */
+const tierClass = (inst) => (tierTone(inst) ? ' tier-' + tierTone(inst) : '');
+const tierBadge = (inst) => (tierTag(inst) ? '<em class="tier-tag" aria-hidden="true">' + tierTag(inst) + '</em>' : '');
 const signed = (value) => (value > 0 ? '▲ ' : value < 0 ? '▼ ' : '') + fmt(Math.abs(value));
 const trendClass = (value) => (value > 0 ? 'stat-up' : value < 0 ? 'stat-down' : '');
 /** 아이템 표현 단일 규칙(item-presentation). 그림을 못 읽으면 다른 장비 그림이 아니라 중립 부위 실루엣으로 바꾼다. */
@@ -64,7 +79,7 @@ export function renderOwnedHero(meta, id, det) {
     const inst = eco.s.inventory.find((x) => x.uid === h.equip[slot]);
     if (!inst) return '<button type="button" class="equip-slot hs-slot is-empty" data-slot="' + slot + '" aria-label="' + SLOT_NAME[slot] + ' 비어 있음, 가방에서 고르기"><img class="empty-equip-art" src="' + uiArt('slot-' + slot) + '" alt=""><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
     const it = ITEM_BY_ID[inst.id];
-    return '<button type="button" class="equip-slot has hs-slot rar-' + it.rarity + '" data-slot="' + slot + '" data-uid="' + inst.uid + '" aria-label="' + SLOT_NAME[slot] + ': ' + esc(it.name) + ' +' + inst.enh + ', 비교와 강화 열기" title="' + esc(it.name) + '">' + iconImg(it, '', id) + '<span class="plus">+' + inst.enh + '</span><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
+    return '<button type="button" class="equip-slot has hs-slot rar-' + it.rarity + tierClass(inst) + '" data-slot="' + slot + '" data-uid="' + inst.uid + '" aria-label="' + SLOT_NAME[slot] + ': ' + esc(tierName(it.name, inst)) + ' +' + inst.enh + (tierNote(inst) ? ', ' + tierNote(inst) : '') + ', 비교와 강화 열기" title="' + esc(tierName(it.name, inst)) + '">' + iconImg(it, '', id) + tierBadge(inst) + '<span class="plus">+' + inst.enh + '</span><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
   }).join('');
   // 영웅마다 아바타가 여럿일 수 있다(1차 + 할로윈 2차). 줄에는 하나씩 보이고 '다음'으로 넘긴다:
   // 고른 것(meta.avatarPick) → 착용 중 → 첫 상품 순서. 시착 중에 넘기면 새 아바타로 시착을 이어 간다.
@@ -81,12 +96,12 @@ export function renderOwnedHero(meta, id, det) {
       ? '<button type="button" class="btn btn-ghost btn-sm hero-avatar-gear" data-avatar-gear role="switch" aria-checked="' + gearShown + '" title="아바타를 입은 채로 장비 외형을 보여 줍니다">장비 외형 ' + (gearShown ? '켬' : '끔') + '</button>'
       : '<button type="button" class="btn btn-ghost btn-sm hero-avatar-try" data-avatar-try aria-pressed="' + trying + '">' + (trying ? '미리보기 끝' : '미리보기') + '</button>')
       + '<button type="button" class="btn ' + (avatarOwned ? 'btn-ghost' : 'btn-gold') + ' btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '">' + (avatarOwned ? (avatarEquipped ? '해제' : '착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') + '</button>';
-  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타' + (avatarEquipped ? ' · 착용 중' : avatarOwned ? ' · 보유' : '') + '</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><span class="hero-avatar-buttons">' + avatarNext + avatarButtons + '</span></section>' : '';
+  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타' + (avatarEquipped ? ' · 착용 중' : avatarOwned ? ' · 보유' : '') + '</b><small>' + esc(avatar.name) + ' · 풀셋 효과 이동속도 +5% · 줍기 범위 +30%</small></div><span class="hero-avatar-buttons">' + avatarNext + avatarButtons + '</span></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
     '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small class="hs-grade" data-grade="' + heroGrade(def, h) + '" style="color:' + RC[heroGrade(def, h)] + '">' + heroGrade(def, h) + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
     // 가로 화면의 hero-detail 은 display:contents 격자라 새 형제 요소가 엉뚱한 칸에 앉는다. 아바타 줄은 본문 안에 둔다.
-    '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
+    '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '"' + (entry.aria ? ' aria-label="' + entry.aria + '"' : '') + ' aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
     '<div class="hs-panel" id="hs-panel" role="tabpanel" tabindex="-1"></div></div>';
   renderPane(meta, id);
   const avatarButton = det.querySelector('[data-avatar-action]');
@@ -99,7 +114,7 @@ export function renderOwnedHero(meta, id, det) {
       const bought = eco.buyAvatar(avatar.id); if (!bought.ok) { meta.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
     }
     if (!eco.equipAvatar(id, equippedNow ? null : avatar.id).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const tryButton = det.querySelector('[data-avatar-try]');
@@ -124,7 +139,7 @@ export function renderOwnedHero(meta, id, det) {
   const gearButton = det.querySelector('[data-avatar-gear]');
   if (gearButton) gearButton.onclick = () => {
     if (!eco.setShowGear(id, !eco.s.avatars.showGear?.[id]).ok) return;
-    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    if (eco.s.selected === id) (meta.app.refreshShowcaseAvatar || meta.app.showcaseHero).call(meta.app, id);
     meta.renderHeroes();
   };
   const sortieButton = $('h-next'); if (sortieButton) sortieButton.onclick = () => meta.app.commandUI?.openPreparation();
@@ -196,6 +211,7 @@ export function renderPane(meta, id) {
     });
     return;
   }
+  if (pane === 'legend') { panel.innerHTML = legendPaneHtml(meta); bindLegendPane(meta, panel); return; }
   panel.innerHTML = '<h3 class="hs-sub">세트 효과</h3>' + meta.setListHtml(id);
   const craft = $('h-craft'); if (craft) craft.onclick = () => meta.showCraft(id);
 }
@@ -209,27 +225,69 @@ export function renderBag(meta, heroId) {
   const rarity = RARITIES.includes(meta.bagRarity) ? meta.bagRarity : 'all';
   const sort = BAG_SORTS.some((entry) => entry.id === meta.bagSort) ? meta.bagSort : 'rarity';
   const owners = equippedOwners(eco);
-  const all = eco.s.inventory.filter((x) => ITEM_BY_ID[x.id]);
+  // 가방은 그 영웅 소유 장비만(docs/GEAR_OWNERSHIP_VAULT.md). 다른 영웅으로 옮기려면 금고를 거친다.
+  const all = eco.heroBag(heroId), vault = eco.vaultState();
+  // 더 좋은 장비 표시: 이 영웅이 지금 끼는 장비보다 전투력이 오르는 것만(세트·룬 반영, 다른 영웅이 끼고 있는 장비는 제외).
+  const better = betterItems(eco, heroId), plan = planBestEquip(eco, heroId);
+  const clean = meta.bagClean && meta.bagClean.open ? meta.bagClean : null;
+  const junk = junkItems(eco, { heroId, rarities: !clean || clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), sum = salvagePreview(eco, junk);
+  const cleanHtml = clean ? '<div class="bag-clean" role="group" aria-label="가방 정리"><b>가방 정리</b>' + (junk.length
+      ? '<p>착용 중인 장비보다 약해 쓸 일이 없는 장비 <b>' + junk.length + '개</b>를 분해합니다 (노말 ' + (sum.byRarity.N || 0) + ' · 스페셜 ' + (sum.byRarity.S || 0) + (clean.includeE ? ' · 에픽 ' + (sum.byRarity.E || 0) : '') + ').<br>받는 것: 골드 +' + fmt(sum.gold) + ' · 강화석 +' + fmt(sum.stones) + (sum.stones2 ? ' · 상급 강화석 +' + fmt(sum.stones2) : '') + '</p>'
+      : '<p>지금 정리할 장비가 없습니다. 장착 중인 장비보다 약한 장비가 쌓이면 여기에 나타납니다.</p>') +
+    '<label class="bag-clean-e"><input type="checkbox" data-clean-e' + (clean.includeE ? ' checked' : '') + '> 에픽도 포함</label>' +
+    (junk.length ? (clean.step === 1
+      ? '<p class="bag-clean-warn" role="alert">되돌릴 수 없습니다. 장착 중인 장비와 유니크·레전드리는 건드리지 않습니다. 정말 분해할까요?</p><div class="bag-clean-btns"><button type="button" class="btn btn-red btn-sm" data-clean-confirm>예, ' + junk.length + '개 분해</button><button type="button" class="btn btn-ghost btn-sm" data-clean-back>아니요</button></div>'
+      : '<div class="bag-clean-btns"><button type="button" class="btn btn-blue btn-sm" data-clean-go>분해하기</button><button type="button" class="btn btn-ghost btn-sm" data-clean-close>닫기</button></div>')
+      : '<div class="bag-clean-btns"><button type="button" class="btn btn-ghost btn-sm" data-clean-close>닫기</button></div>') + '</div>' : '';
+  const toolsHtml = '<div class="bag-tools">' +
+    (plan.length ? '<button type="button" class="btn btn-gold btn-sm bag-best" data-bag-best>▲ 더 좋은 장비 장착 <small>' + plan.length + '곳 · 전투력 +' + fmt(plan.reduce((a, x) => a + x.delta, 0)) + '</small></button>' : '<span class="bag-best-none">장착 중인 장비가 가장 좋습니다</span>') +
+    '<button type="button" class="btn btn-ghost btn-sm bag-clean-open" data-bag-clean aria-expanded="' + !!clean + '">가방 정리' + (junk.length && !clean ? ' <small>' + junk.length + '</small>' : '') + '</button></div>' + cleanHtml;
   const items = all.filter((x) => (slot === 'all' || ITEM_BY_ID[x.id].slot === slot) && (rarity === 'all' || ITEM_BY_ID[x.id].rarity === rarity)).slice().sort((a, b) => {
     if (sort === 'recent') return b.uid - a.uid;
+    if (sort === 'better') return (better.get(b.uid) || 0) - (better.get(a.uid) || 0) || rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0);
     if (sort === 'enh') return (b.enh || 0) - (a.enh || 0) || rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity);
     return rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0);
   });
-  bag.innerHTML = '<div class="bag-bar"><div class="bag-filters" role="group" aria-label="장비 부위 필터">' + ['all', ...SLOTS].map((s) => '<button type="button" data-bag-slot="' + s + '" aria-pressed="' + (s === slot) + '">' + (s === 'all' ? '전체' : SLOT_NAME[s]) + '</button>').join('') + '</div>' +
+  bag.innerHTML = toolsHtml + '<div class="bag-bar"><div class="bag-filters" role="group" aria-label="장비 부위 필터">' + ['all', ...SLOTS].map((s) => '<button type="button" data-bag-slot="' + s + '" aria-pressed="' + (s === slot) + '">' + (s === 'all' ? '전체' : SLOT_NAME[s]) + '</button>').join('') + '</div>' +
     '<select class="bag-select" data-bag-rarity aria-label="등급 필터"><option value="all">등급</option>' + RARITIES.map((r) => '<option value="' + r + '"' + (r === rarity ? ' selected' : '') + '>' + RARITY_INFO[r].name + '</option>').join('') + '</select>' +
     '<select class="bag-select" data-bag-sort aria-label="정렬 기준">' + BAG_SORTS.map((entry) => '<option value="' + entry.id + '"' + (entry.id === sort ? ' selected' : '') + '>' + entry.label + '</option>').join('') + '</select>' +
-    '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span></div>' +
+    '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span>' +
+    '<button type="button" class="bag-vault" data-bag-vault aria-label="금고 열기, ' + vault.used + '/' + vault.slots + '칸 사용 중"><img src="' + uiArt('treasure-chest') + '" alt="" onerror="this.remove()">금고 <b>' + vault.used + '/' + vault.slots + '</b>' + (gearDexClaimable(eco.s, eco.ownedHeroIds()) > 0 ? '<em class="dot on" aria-hidden="true"></em>' : '') + '</button></div>' +
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
       const isNew = isFresh(inst.uid);
-      const mark = (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
-      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + '" data-inv="' + inst.uid + '" aria-label="' + esc(it.name) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + '" title="' + esc(it.name) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + '</span><span class="inventory-name">' + esc(it.name) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
+      const up = better.get(inst.uid);
+      const mark = (up ? '<em class="bag-up" title="착용 중보다 전투력 +' + fmt(up) + '">▲ +' + fmt(up) + '</em>' : '') + (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
+      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + tierClass(inst) + '" data-inv="' + inst.uid + '" aria-label="' + esc(tierName(it.name, inst)) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (tierNote(inst) ? ', ' + tierNote(inst) : '') + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + (up ? ', 더 좋음 전투력 +' + up : '') + '" title="' + esc(tierName(it.name, inst)) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + tierBadge(inst) + '</span><span class="inventory-name">' + esc(tierName(it.name, inst)) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
     }).join('') || '<p class="bag-empty">' + (all.length ? '조건에 맞는 장비가 없습니다. 필터를 바꿔 보세요.' : '가방이 비어 있습니다. 던전에서 전리품을 모으거나 제작 공방에서 만들어 보세요.') + '</p>') + '</div>';
   const rerender = (focus) => { renderBag(meta, heroId); if (focus) $('hero-bag')?.querySelector(focus)?.focus({ preventScroll: true }); };
   bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => { meta.bagSlot = button.dataset.bagSlot; rerender('[data-bag-slot="' + meta.bagSlot + '"]'); });
   bag.querySelector('[data-bag-rarity]').onchange = (event) => { meta.bagRarity = event.target.value; rerender('[data-bag-rarity]'); };
   bag.querySelector('[data-bag-sort]').onchange = (event) => { meta.bagSort = event.target.value; rerender('[data-bag-sort]'); };
+  const refreshHero = () => { meta._sheetDirty = false; meta.renderHeroes?.(); };
+  bag.querySelector('[data-bag-best]')?.addEventListener('click', () => {
+    const done = applyBestEquip(eco, heroId);
+    meta.ui.toast(done.swaps.length ? '더 좋은 장비 ' + done.swaps.length + '곳 장착 · 전투력 ' + fmt(done.powerBefore) + ' → ' + fmt(done.powerAfter) : '바꿀 장비가 없습니다', done.swaps.length ? 'gold' : undefined);
+    if (done.swaps.length) audio.play('ui_confirm', { vol: 0.5 });
+    refreshHero();
+    if (done.swaps.length && heroId === eco.s.selected) meta.app.showcaseHero?.(heroId);   // 로비 캐릭터 외형도 바로 반영
+  });
+  bag.querySelector('[data-bag-clean]')?.addEventListener('click', () => { meta.bagClean = clean ? null : { open: true, step: 0, includeE: true }; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-clean-e]')?.addEventListener('change', (event) => { meta.bagClean = { open: true, step: 0, includeE: event.target.checked }; rerender('[data-clean-e]'); });
+  bag.querySelector('[data-clean-go]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 1 }; rerender('[data-clean-confirm]'); });
+  bag.querySelector('[data-clean-back]')?.addEventListener('click', () => { meta.bagClean = { ...clean, step: 0 }; rerender('[data-clean-go]'); });
+  bag.querySelector('[data-clean-close]')?.addEventListener('click', () => { meta.bagClean = null; rerender('[data-bag-clean]'); });
+  bag.querySelector('[data-clean-confirm]')?.addEventListener('click', () => {
+    // 누르는 순간 목록을 다시 계산한다(그사이 장착이 바뀌었을 수 있다). 화면에 보인 것과 개수가 달라도 지금 기준 후보만 분해한다.
+    const live = junkItems(eco, { heroId, rarities: clean.includeE ? ['N', 'S', 'E'] : ['N', 'S'] }), preview = salvagePreview(eco, live);
+    const out = salvageItems(eco, live.map((x) => x.uid));
+    meta.bagClean = null;
+    meta.ui.toast(out.ok ? '장비 ' + out.count + '개 분해 · 골드 +' + fmt(preview.gold) + ' · 강화석 +' + fmt(preview.stones + preview.stones2) : '분해하지 못했습니다 (저장 공간 확인)', out.ok ? 'gold' : 'red');
+    if (out.ok && out.count) audio.pick('coin', 2);
+    refreshHero();
+  });
   bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => { clearFresh(+button.dataset.inv); meta.showItem(+button.dataset.inv, heroId); });
+  bag.querySelector('[data-bag-vault]').onclick = () => { audio.play('ui_click', { vol: 0.4 }); openVault(meta, heroId); };
 }
 
 // ------------------------------------------------------------------ 비교 · 장착 · 강화 시트
@@ -243,7 +301,7 @@ const itemStatLine = (inst) => { const s = itemStats(inst); return [s.atk ? '공
 function itemCardHtml(inst, label, equippedHere, heroId = null) {
   if (!inst) return '<div class="is-card is-card-empty"><small>' + label + '</small><span class="is-card-art"></span><b>비어 있음</b></div>';
   const it = ITEM_BY_ID[inst.id];
-  return '<div class="is-card rar-' + it.rarity + '"><small>' + label + (equippedHere ? ' · 착용 중' : '') + '</small><span class="is-card-art">' + iconImg(it, '', heroId) + '</span><b style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + '</b><span class="is-card-meta">+' + inst.enh + ' · ' + RARITY_INFO[it.rarity].name + '</span>' + (itemStatLine(inst) ? '<span class="is-card-stat">' + itemStatLine(inst) + '</span>' : '') + '</div>';
+  return '<div class="is-card rar-' + it.rarity + tierClass(inst) + '"><small>' + label + (equippedHere ? ' · 착용 중' : '') + '</small><span class="is-card-art">' + iconImg(it, '', heroId) + '</span><b style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(tierName(it.name, inst)) + '</b><span class="is-card-meta">+' + inst.enh + ' · ' + RARITY_INFO[it.rarity].name + (tierTag(inst) ? ' · <span class="tier-tag">' + tierTag(inst) + '</span>' : '') + '</span>' + (itemStatLine(inst) ? '<span class="is-card-stat">' + itemStatLine(inst) + '</span>' : '') + '</div>';
 }
 
 function setChangesHtml(p) {
@@ -259,22 +317,32 @@ function setChangesHtml(p) {
   return rows ? '<ul class="is-sets">' + rows + '</ul>' : '';
 }
 
+/** 강화 전승 버튼: 이 장비가 원본이나 대상으로 짝이 하나라도 있을 때만(enhance-transfer-panel canTransfer). */
+// 착용 고강 장비의 강화를 옮기면 전투력이 오르는 조합(gear-advice transferUpgrades)이면 추천 표시를 붙인다.
+const transferHtml = (meta, inst) => {
+  if (!canTransfer(meta.eco, inst.uid)) return '';
+  const tip = transferUpgrades(meta.eco, inst.owner ?? meta.eco.s.selected).find((x) => x.srcUid === inst.uid || x.dstUid === inst.uid);
+  return '<button type="button" class="btn btn-ghost btn-sm is-transfer" id="e-transfer" title="강화 단계를 같은 부위의 다른 장비로 옮깁니다">강화 전승' + (tip ? ' <b class="stat-up">추천 ▲' + fmt(tip.delta) + '</b>' : '') + '</button>';
+};
+
 /** 강화 영역: 같은 시트 안에서 확률 · 비용을 보고 바로 강화한다. */
 function enhanceHtml(meta, inst) {
   const s = meta.eco.s, it = ITEM_BY_ID[inst.id], lv = inst.enh, maxed = lv >= ENH_MAX;
-  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p></section>';
+  if (maxed) return '<section class="is-enh" aria-label="장비 강화"><h3>강화</h3><p class="is-maxed">최대 강화 달성!</p>' + transferHtml(meta, inst) + '</section>';
   const cur = itemStats(inst), nxt = itemStats({ ...inst, enh: Math.min(ENH_MAX, lv + 1) });
   const cost = enhanceCost(lv), stones = enhanceStones(lv), tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
-  const chance = enhanceChance(lv), destroy = destroyChance(lv);
+  const chance = enhanceChance(lv), destroy = destroyChance(lv), sureGold = enhanceSureCost(lv);
   const rows = [['공격력', cur.atk, nxt.atk], ['HP', cur.hp, nxt.hp], ['방어', cur.def, nxt.def]].filter((row) => row[1] || row[2]);
   return '<section class="is-enh" aria-label="장비 강화"><h3>강화 <small class="is-lv">+' + lv + ' → <b>+' + (lv + 1) + '</b></small></h3>' +
     '<div class="enh-stats">' + rows.map((row) => '<div><span>' + row[0] + '</span><span>' + fmt(row[1]) + ' → <b>' + fmt(row[2]) + '</b></span></div>').join('') + '</div>' +
     '<div class="enh-rate">성공 <b id="e-rate">' + Math.round(chance * 100) + '%</b>' + (destroy > 0 ? ' · <span class="warn" id="e-destroy">파괴 ' + Math.round(destroy * 100) + '%</span>' : '') + (enhanceDown(lv) ? ' · 실패 시 <b>-1</b>' : '') + '</div>' +
     '<div class="enh-opts"><button type="button" class="enh-opt" data-opt="bless" aria-pressed="false"><img src="' + resourceArt('bless') + '" alt="" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×' + s.bless + '</span></button>' +
-    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') + '</div>' +
-    '<div class="enh-cost"><span class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
-    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' +
-    '<p class="is-enh-note">+8까지 성공 100% · +10부터 실패 시 하락 · +12부터 파괴 위험</p></section>';
+    (destroy > 0 ? '<button type="button" class="enh-opt" data-opt="protect" aria-pressed="false"><img src="' + resourceArt('protect') + '" alt="" onerror="this.remove()"><span>파괴 방지</span><span class="cnt">×' + s.protect + '</span></button>' : '') +
+    // 확정 강화(골드 웃돈): +3 → +11 구간. 축복과 함께 쓰지 않는다(규칙은 enhance.js enhanceSureCost).
+    (sureGold ? '<button type="button" class="enh-opt" data-opt="sure" data-sure-gold="' + sureGold + '" aria-pressed="false" aria-label="확정 강화, 골드 ' + fmt(sureGold) + ' 추가"><i class="ic ic-gold"></i><span>확정 강화</span><span class="cnt">+' + fmt(sureGold) + '</span></button>' : '') + '</div>' +
+    '<div class="enh-cost"><span id="e-gold" class="' + (s.gold < cost ? 'lack' : '') + '"><i class="ic ic-gold"></i> ' + fmt(cost) + '</span>' + (stones ? '<span class="' + ((s[skey] || 0) < stones ? 'lack' : '') + '"><img src="' + resourceArt(skey) + '" alt="" onerror="this.remove()"> ' + STONE_NAME[tier] + ' ' + stones + ' <small>(보유 ' + (s[skey] || 0) + ')</small></span>' : '') + '</div>' +
+    '<button type="button" class="btn btn-blue" id="e-go">강화하기</button>' + transferHtml(meta, inst) +
+    '<p class="is-enh-note">+' + ENH_SAFE_MAX + '까지 성공 100% · +' + (ENH_SAFE_MAX + 1) + '부터 확률 하락 · +10부터 실패 시 하락 · +12부터 파괴 위험' + (sureGold ? ' · +11까지는 골드를 더 내고 확정 강화할 수 있습니다' : '') + '</p></section>';
 }
 
 /** 가방 장비를 눌렀을 때 열리는 시트. 현재 장비와 나란히 비교하고 주 버튼 하나로 장착한다. */
@@ -305,22 +373,24 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
     const powerDelta = p.after.power - p.before.power;
     const label = p.remove ? '해제 후' : '장착 후';
     const owner = p.owner && p.owner !== heroId ? p.owner : null;
-    const primary = equipped ? '해제하기' : owner ? HEROES[owner].name.split(' ').pop() + '에게서 옮겨 장착' : '장착하기';
+    // 다른 영웅·금고 소유 장비는 장착할 수 없다(옮기려면 금고). 이 영웅 소유면 장착/해제.
+    const foreign = (inst.owner ?? eco.s.selected) !== heroId;
+    const primary = equipped ? '해제하기' : foreign ? (inst.owner === 'vault' ? '금고 보관 중' : esc(HEROES[inst.owner]?.name.split(' ').pop() || '다른 영웅') + ' 소유') : '장착하기';
     const look = it.slot === 'weapon' ? weaponLook(heroId, inst, LOOKS) : null;
     const visual = itemVisual(it, { heroId });
     ui.modal('<div class="item-sheet rar-line-' + it.rarity + '" data-slot="' + it.slot + '">' +
-      '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it, '', heroId) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (set ? ' · ' + esc(set.name) : '') + (it.slot === 'weapon' ? ' · <span class="is-form" data-variant="' + visual.variant + '">' + esc(visual.formLabel) + '</span>' : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm is-3d-toggle" id="i-3d" aria-controls="is-preview" aria-pressed="' + previewOpen + '">3D로 보기</button><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
+      '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it, '', heroId) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(tierName(it.name, inst)) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (tierTag(inst) ? ' · <span class="tier-tag tier-' + tierTone(inst) + '" title="' + esc(tierNote(inst)) + '">고통 ' + tierTag(inst) + '</span>' : '') + (set ? ' · ' + esc(set.name) : '') + (it.slot === 'weapon' ? ' · <span class="is-form" data-variant="' + visual.variant + '">' + esc(visual.formLabel) + '</span>' : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm is-3d-toggle" id="i-3d" aria-controls="is-preview" aria-pressed="' + previewOpen + '">3D로 보기</button><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
       '<section class="is-preview" id="is-preview" style="--rar:' + RARITY_COLOR[it.rarity] + '" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
       '<div class="is-body"><div class="is-compare" aria-label="현재 장비와 비교">' +
       '<div class="is-power ' + trendClass(powerDelta) + '"><span>' + HEROES[heroId].name + ' · ' + label + ' 전투력</span><b>' + fmt(p.before.power) + ' → ' + fmt(p.after.power) + '</b><em>' + (powerDelta === 0 ? '변화 없음' : signed(powerDelta)) + '</em></div>' +
       (equipped ? '<div class="is-cards single">' + itemCardHtml(inst, '현재 장비', true, heroId) + '</div>' : '<div class="is-cards">' + itemCardHtml(p.current, '현재 ' + SLOT_NAME[it.slot], p.current && p.current.uid === uid, heroId) + '<span class="is-vs" aria-hidden="true">→</span>' + itemCardHtml(inst, '선택한 장비', false, heroId) + '</div>') +
       '<div class="is-rows" role="group" aria-label="' + HEROES[heroId].name + ' 능력치 ' + label + ' 변화"><small class="is-rows-title">' + label + ' 영웅 능력치 · 세트 효과 포함</small>' + statRows + '</div>' +
-      (owner ? '<p class="is-note stat-down">' + esc(HEROES[owner].name) + '에게 장착 중입니다. 장착하면 그 영웅에게서 옮겨옵니다.</p>' : '') +
+      (foreign ? '<p class="is-note stat-down">' + (inst.owner === 'vault' ? '금고에 보관 중인 장비입니다. 금고에서 이 영웅에게 꺼내야 장착할 수 있습니다.' : esc(HEROES[inst.owner]?.name || '다른 영웅') + ' 소유 장비입니다. 그 영웅이 금고에 맡긴 뒤 꺼내야 장착할 수 있습니다.') + '</p>' : '') +
       (look ? '<div class="item-look" style="--wl:' + look.color + '">착용 모습 · ' + esc([visual.formLabel, look.glow > 0 ? look.element + ' 발광' : '발광 없음', look.tier ? '+' + look.enh + ' ' + look.tier : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
       (it.summon ? '<p class="is-note" style="color:' + RARITY_COLOR[it.rarity] + '">✦ ' + esc(it.summon.name) + ' 소환 · ' + it.summon.interval + '초마다 ' + Math.round(it.summon.ratio * 100) + '% 공격</p>' : '') +
-      setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
+      durabilityLineHtml(eco, inst, it) + setChangesHtml(p) + '</div>' + (runes ? '<div class="is-side" data-side="' + side + '"><div class="is-side-tabs" role="tablist" aria-label="강화 · 룬 소켓"><button type="button" role="tab" data-side-tab="enhance" aria-selected="' + (side === 'enhance') + '">강화</button><button type="button" role="tab" data-side-tab="rune" aria-selected="' + (side === 'rune') + '">룬 소켓</button></div>' +
         (side === 'rune' ? '<div class="is-side-body">' + runePaneHtml(meta, uid, heroId, runeState.socket) + '</div>' : enhanceHtml(meta, inst)) + '</div>' : enhanceHtml(meta, inst)) + '</div>' +
-      '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button><button type="button" class="btn btn-gold" id="i-eq">' + primary + '</button></footer></div>',
+      '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button>' + (foreign ? '' : '<button type="button" class="btn btn-ghost btn-sm" id="i-vault" title="금고에 맡기면 다른 영웅이 꺼내 쓸 수 있습니다">금고에 맡기기</button>') + '<button type="button" class="btn btn-gold" id="i-eq"' + (foreign ? ' disabled' : '') + '>' + primary + '</button></footer></div>',
     { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); disposeRuneStage(); },
       onOpen: (b) => {
       // 강화 연출 뒤 다시 그리기는 이 시트가 아직 열린 현재 모달일 때만 한다(판매 확인 등으로 바뀌면 취소).
@@ -365,21 +435,51 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         if (heroId === eco.s.selected) meta.app.showcaseHero(heroId);   // 장착 즉시 외형 반영
         meta.focusInventory(uid, it.slot);
       };
+      const toVault = b.querySelector('#i-vault');
+      if (toVault) toVault.onclick = () => {
+        const r = eco.vaultDeposit(uid);
+        if (!r.ok) { ui.toast(r.reason === 'full' ? '금고가 가득 찼습니다 — 금고에서 칸을 늘려 주세요' : '맡길 수 없습니다', 'red'); audio.play('ui_error'); return; }
+        audio.play('ui_confirm', { vol: 0.5 }); ui.toast(esc(it.name) + ' 금고에 맡김'); ui.closeModal(); meta._sheetDirty = false; meta.renderHeroes();
+        if (heroId === eco.s.selected && equipped) meta.app.showcaseHero(heroId);
+      };
+      // 무기 내구도 수리(클리어 루프): 닳은 만큼 골드를 내고 100으로.
+      const repairBtn = b.querySelector('#i-repair');
+      if (repairBtn) repairBtn.onclick = () => {
+        const r = eco.repairItem(uid);
+        if (!r?.ok && !r?.saveError) { ui.toast(r?.reason === 'gold' ? '골드가 부족합니다' : '수리할 수 없습니다', 'red'); audio.play('ui_error'); return; }
+        audio.pick('hit_metal', 3, { vol: 0.6, rate: 0.9 }); ui.toast('무기 정비 완료 · 골드 -' + fmt(r.cost), 'gold');
+        meta._sheetDirty = true; meta.refreshTop(); render();
+      };
       b.querySelector('#i-sell').onclick = async () => {
         if (await ui.confirm('판매', esc(it.name) + ' +' + inst.enh + ' 을(를) 판매할까요?')) { const g = eco.sellItem(uid); ui.toast('골드 +' + fmt(g), 'gold'); audio.pick('coin', 2); meta._sheetDirty = false; meta.renderHeroes(); meta.focusInventory(uid, it.slot); }
         else showItemSheet(meta, uid, heroId);
       };
       // 강화
-      const opts = { bless: false, protect: false };
+      const opts = { bless: false, protect: false, sure: false };
+      const setOpt = (key, on) => { opts[key] = on; const el = b.querySelector('.enh-opt[data-opt="' + key + '"]'); if (el) { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); } };
       b.querySelectorAll('.enh-opt').forEach((el) => el.onclick = () => {
-        const key = el.dataset.opt; if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
-        opts[key] = !opts[key]; el.classList.toggle('on', opts[key]); el.setAttribute('aria-pressed', String(opts[key]));
-        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100) + '%';
+        const key = el.dataset.opt;
+        if (key === 'sure') {
+          // 확정 강화는 골드만 쓴다. 켜면 축복을 끈다(함께 쓰지 않음).
+          const total = enhanceCost(inst.enh) + (enhanceSureCost(inst.enh) || 0);
+          if (!opts.sure && eco.s.gold < total) { ui.toast('골드 부족 — 확정 강화에는 ' + fmt(total) + ' 골드가 필요합니다', 'red'); audio.play('ui_error'); return; }
+          setOpt('sure', !opts.sure); if (opts.sure) setOpt('bless', false);
+        } else {
+          if (eco.s[key] <= 0) { ui.toast((key === 'bless' ? '축복' : '보호') + ' 주문서가 없습니다', 'red'); meta.offerScroll(key); return; }
+          setOpt(key, !opts[key]); if (key === 'bless' && opts.bless) setOpt('sure', false);
+        }
+        const goldNeed = enhanceCost(inst.enh) + (opts.sure ? enhanceSureCost(inst.enh) || 0 : 0);
+        const gold = b.querySelector('#e-gold'); if (gold) { gold.innerHTML = '<i class="ic ic-gold"></i> ' + fmt(goldNeed); gold.classList.toggle('lack', eco.s.gold < goldNeed); }
+        const rate = b.querySelector('#e-rate'); if (rate) rate.textContent = (opts.sure ? 100 : Math.round(Math.min(1, enhanceChance(inst.enh) + (opts.bless ? 0.2 : 0)) * 100)) + '%';
         const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : '파괴 ' + Math.round(destroyChance(inst.enh) * 100) + '%';
         audio.play('ui_click', { vol: 0.4 });
       });
+      const transfer = b.querySelector('#e-transfer');
+      if (transfer) transfer.onclick = () => { audio.play('ui_click', { vol: 0.4 }); meta.openTransfer(uid, heroId); };
       const go = b.querySelector('#e-go');
-      if (go) go.onclick = () => {
+      let staging = false;
+      if (go) go.onclick = async () => {
+        if (staging) return;
         const lv = inst.enh, r = eco.enhance(uid, opts);
         if (!r.ok) {
           if (r.reason === 'gold') { ui.toast('골드 부족', 'red'); meta.offerGold(); }
@@ -389,11 +489,19 @@ export function showItemSheet(meta, uid, heroId, { focus, socket = null } = {}) 
         }
         meta.trackFunnel('upgrade', { kind: 'item_enhance', level: r.enh, success: r.success });
         meta._sheetDirty = true;
-        const art = b.querySelector('.is-head-art');
-        if (r.destroyed) { audio.shatter({ vol: 0.75 }); audio.voice('enh_destroy'); audio.vibe([120, 60, 120]); ui.toast('장비가 파괴되었습니다…', 'red'); later(350); }
-        else if (r.success) { audio.levelUp({ vol: 0.4, base: 440 + r.enh * 18 }); if (r.enh >= 8) audio.voice('enh_success', { min: 3 }); if (r.enh >= 12) audio.play('jingle_legend', { vol: 0.55 }); audio.vibe([20, 20, 50]); art?.classList.add('enh-flash'); ui.toast('강화 성공! +' + r.enh, 'gold'); later(380); }
-        else { audio.fail({ vol: 0.55 }); audio.vibe(60); if (lv >= 8) audio.voice('enh_fail', { min: 3 }); art?.classList.add('enh-fail'); ui.toast(r.down ? '강화 실패… +' + r.enh + '로 하락' : '강화 실패…', 'red'); later(380); }
         meta.refreshTop();
+        // 결과는 이미 저장됐다. 긴장 → 결과 연출이 끝난 뒤에만 문구를 띄우고 시트를 다시 그린다(탭하면 건너뜀).
+        staging = true; go.disabled = true;
+        // 공유 모달 상자에 기준 위치를 잠깐만 준다(다른 모달에 남지 않게 원래 값으로 되돌림).
+        const position = b.style.position;
+        if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+        await playEnhanceStage(b, b.querySelector('.is-head-art'), { from: lv, result: r });
+        b.style.position = position;
+        staging = false;
+        if (ui.modalSeq !== seq) return;
+        if (r.destroyed) { ui.toast('장비가 파괴되었습니다…', 'red'); later(0); }
+        else if (r.success) { ui.toast('강화 성공! +' + r.enh, 'gold'); later(0); }
+        else { ui.toast(r.down ? '강화 실패… +' + r.enh + '로 하락' : '강화 실패…', 'red'); later(0); }
       };
       // 키보드: 시트 안에서 Tab이 순환하고 Esc로 닫힌다. 처리기는 ui.endModal() 이 모달 교체 · 닫힘 때 해제한다.
       b.onkeydown = (event) => {

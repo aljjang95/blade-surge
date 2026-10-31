@@ -244,14 +244,16 @@ export class StarterVillageUI {
     }) }));
     const body = `<ul class="starter-cards">${cards.map((card) => `<li data-done="${card.done}"><div><b>${safe(card.title)}</b><span>${safe(card.body)}</span></div>
       <em>${card.done ? '완료' : card.progress || '진행 전'}</em>${card.action && !card.done ? `<button type="button" data-starter-card-action="${safe(card.id)}">${safe(card.actionLabel)}</button>` : ''}</li>`).join('')}</ul>`;
-    // 의뢰 버튼은 카드 안에만 둔다(푸터에는 '돌아가기'만).
-    return this.show(spot, trigger, { eyebrow: '오늘의 의뢰', title: spot.label, description: '마을 사람들이 남긴 첫 의뢰예요. 하나씩 해결해 보세요.', body, cardActions });
+    // 첫 의뢰 버튼은 카드 안에, 매일 받는 마을 의뢰(보상 있음)는 푸터 하나로 연다(docs/TOWN_AUDIT.md).
+    const actions = this.app.townUI ? [{ id: 'town-quests', label: '마을 의뢰', run: () => this.leave((from) => this.app.townUI.openContent('quests', from)) }] : [];
+    return this.show(spot, trigger, { eyebrow: '오늘의 의뢰', title: spot.label, description: '마을 사람들이 남긴 첫 의뢰예요. 하나씩 해결해 보세요.', body, actions, cardActions });
   }
 
   openSmith(spot, trigger) {
     this.remember({ smithVisited: true });
     const body = `<p class="starter-tip">장비는 강화할수록 강해지지만 실패할 수도 있어요. 룬은 장비 소켓에 박아 가문 공명을 맞추면 효과가 더 커집니다.</p>`;
     return this.show(spot, trigger, { eyebrow: '대장간', title: spot.label, description: '"장비를 손보고 룬을 박고 싶다면 언제든 오게."', body, actions: [
+      ...(this.app.townUI ? [{ id: 'forge', label: '제작 · 강화', run: () => this.leave((from) => this.app.townUI.openContent('forge', from)) }] : []),
       { id: 'enhance', label: '장비 강화', run: () => this.leave(() => this.app.meta?.openTab('heroes')) },
       { id: 'rune', label: '룬 소켓', run: () => this.leave(() => this.app.meta && openRuneOverview(this.app.meta, this.app.eco.s.selected)) },
     ] });

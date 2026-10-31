@@ -4,7 +4,9 @@ import { gatherEnemies, gatherWarriorWindup } from './crowd-gather.js';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
+import { skillGateLevel } from '../data/skill-tree.js';
 import { applyLook } from './look.js';
+import { emitWeaponSparks } from './weapon-glow.js';
 import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
 import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
@@ -356,10 +358,10 @@ export class Player extends Actor {
     if (this.game.app?.reducedMotion?.matches) { this.trail = null; return; }
     const hand = 'handslot.r', heavy = this.def.weapon === '2h', dual = this.def.weapon === 'dual';
     const len = heavy ? 1.6 : dual ? .95 : 1.2;
-    const combo = this.current;
+    const combo = this.current, glow = this.look.weapon?.glowTier?.trail || 1;   // 강화 +10 이상은 궤적이 넓고 길게 남는다(잔광)
     this.trail = this.game.fx.trail(points => this.weaponPoints(hand, len, points), this.look.trailColor, {
-      segs: this.game.fx.lite ? 10 : 22, life: this.game.fx.lite ? .14 : heavy ? .29 : dual ? .18 : .24,
-      width: heavy ? .88 : dual ? .66 : .76,
+      segs: this.game.fx.lite ? 10 : 22, life: (this.game.fx.lite ? .14 : heavy ? .29 : dual ? .18 : .24) * glow,
+      width: (heavy ? .88 : dual ? .66 : .76) * Math.min(1.15, glow),
       getGain: () => this.current === combo && this.state === 'attack' && !this.game.app?.reducedMotion?.matches
         ? weaponTrailGain(this.attackProgress(), combo.hitAt, combo.move === 'spin') : 0,
     });
@@ -522,12 +524,12 @@ export class Player extends Actor {
     }
   }
   /** 각성 스킬 해금 여부 — 레벨 구간(unlock)을 넘겼는가 */
-  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || (this.heroLevel >= sk.unlock && (this.skillLevels?.[i] ?? 1) >= 1)); }
+  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (sk.unlock ? (this.heroLevel >= sk.unlock && (this.skillLevels?.[i] ?? 1) >= 1) : this.heroLevel >= skillGateLevel(this.def, i)); }
 
   // ---------------- 스킬 ----------------
   tryCastSkill(i, aim = null) {
     const sk = this.def.skills[i]; if (!sk) return false;
-    if (!this.unlocked(i)) { this.game.ui.toast(this.heroLevel < sk.unlock ? `Lv.${sk.unlock} 각성으로 해금됩니다` : 'SP로 스킬을 먼저 습득하세요', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    if (!this.unlocked(i)) { this.game.ui.toast(this.heroLevel < skillGateLevel(this.def, i) ? `Lv.${skillGateLevel(this.def, i)}${sk.unlock ? ' 각성으로' : '에'} 해금됩니다` : 'SP로 스킬을 먼저 습득하세요', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
     else if (this.cds[i] > 0) return false;
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;
@@ -732,6 +734,16 @@ export class Player extends Actor {
       if (hl > .3) { out.x = hx / hl; out.y = hz / hl; }
       return out;
     }
+    // 쇳물(2장 용융 잔해) 위에 서 있으면 공격보다 먼저 밖으로 한 걸음 나간다. 공격 동작 중이면 타격 뒤 이동으로 넘어간다.
+    const slag = this.game.regionTraits?.autoEscape?.(this);
+    if (slag && (this.state !== 'attack' || this.hitDone)) {
+      const sx = slag.x - this.pos.x, sz = slag.z - this.pos.z, sl = Math.hypot(sx, sz);
+      if (sl > .3) {
+        out.x = sx / sl; out.y = sz / sl;
+        if (this.state === 'attack' && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+        return out;
+      }
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
@@ -820,7 +832,9 @@ export class Player extends Actor {
       const clock = this.game.timeCtl, frameDt = clock?.scale > 0 ? dt / clock.scale : dt;
       let threat = null, lead = Infinity;
       for (const x of list) {
-        if (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4)) continue;
+        // 종지기는 고리를 친 뒤 telegraph 가 0 이어도 고리가 퍼져 오는 동안 위협이다. 근접 거리 대신 고리 도달 시간(impactIn)으로 판단한다.
+        const bellRing = x.alive && x.bellringer?.busy;
+        if (!bellRing && (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4))) continue;
         // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다.
         if (x === this._autoDodgeFrom && now < this._autoDodgeUntil) continue;
         const t = enemyImpactIn(x, this);
@@ -860,17 +874,22 @@ export class Player extends Actor {
       return out;
     }
     let target = g.conquest?.autoRoom() || g.autoTarget;
+    // 보스 직행 동선: 보스 문까지 남은 경로의 첫 방 → 봉인이 풀리면 보스방(지도에서 고른 동선).
+    const direct = !g.conquest && g.directAutoRoom?.();
+    if (direct) { target = direct; g.autoTarget = direct; }
     if (!target || target.cleared || !W.rooms.includes(target)) {
+      // 전부 사냥(기본): 길로 봉인이 먼저 풀려도 남은 구역을 다 돈 뒤에 보스로 간다(직행 버튼으로 바꾼 판은 제외).
+      const holdBoss = W.sealed || (!g.bossRush && W.rooms.some((room) => !room.cleared && room !== W.bossRoom && room.type !== 'start'));
       let nearest = null, distance = Infinity;   // 봉인된 보스방은 못 들어간다
       for (const room of W.rooms) {
-        if (room.cleared || (W.sealed && room === W.bossRoom)) continue;
+        if (room.cleared || (holdBoss && room === W.bossRoom)) continue;
         const d = Math.hypot(room.x - this.pos.x, room.z - this.pos.z);
         if (d < distance) { distance = d; nearest = room; }
       }
       if (!nearest) return out;
       // 봉인이 풀린 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
       const boss = W.bossRoom;
-      target = (boss && !boss.cleared && boss.discovered && !W.sealed) ? boss
+      target = (boss && !boss.cleared && boss.discovered && !holdBoss) ? boss
         : nearest;
       g.autoTarget = target;
     }
@@ -943,7 +962,8 @@ export class Player extends Actor {
     if (this.perfectCd > 0) this.perfectCd -= dt;
     if (this.drT > 0) { this.drT -= dt; if (this.drT <= 0) { this.dr = 0; this.sanctum = null; } }
     if (this.comboResume) { this.comboResume.t -= dt; if (this.comboResume.t <= 0) this.comboResume = null; }
-    if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 15 ? 0.12 : 0.22; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // +10 이상 강화: 잔불 오라
+    if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 20 ? 0.1 : 0.14; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // 무기 +15 이상: 발밑 고유 오라
+    if (this.alive && !this.game.app?.reducedMotion?.matches) emitWeaponSparks(this.game.fx, this.model, this.look, dt, this._weaponSpark ||= { t: 0 });   // 무기 +10 이상: 칼날 불씨·잔광
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
     for (let i = 0; i < this.cds.length; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);   // 4로 박아두면 각성 슬롯(4·5)이 영원히 안 돌아온다

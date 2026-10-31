@@ -63,7 +63,7 @@ export function monsterXp(def, scale = 1, summoned = false) {
 
 /** Mutates the existing hero record, never creates a parallel character/account level. */
 export function grantCombatXp(hero, amount, levelExp) {
-  if (!object(hero) || !Number.isSafeInteger(amount) || amount < 0 || typeof levelExp !== 'function') return { gained: 0, levels: 0 };
+  if (!object(hero) || !Number.isSafeInteger(amount) || amount < 0 || typeof levelExp !== 'function') return { gained: 0, levels: 0, overflow: 0 };
   const beforeLevel = boundedInt(hero.level, 1, 1, HERO_LEVEL_CAP);
   let level = beforeLevel, exp = add(boundedInt(hero.exp), Math.min(amount, MAX_COUNTER));
   const gained = level === HERO_LEVEL_CAP ? 0 : Math.min(amount, MAX_COUNTER);
@@ -74,8 +74,10 @@ export function grantCombatXp(hero, amount, levelExp) {
     if (exp < need) break;
     exp -= need; level++;
   }
+  // Lv.80 을 넘긴 EXP(이미 80 이면 받은 만큼 전부)는 영웅 레벨이 아니라 전설 수련으로 흘러간다(호출자가 eco.grantLegend 로 넘긴다).
+  const overflow = level === HERO_LEVEL_CAP ? (beforeLevel === HERO_LEVEL_CAP ? Math.min(amount, MAX_COUNTER) : exp) : 0;
   hero.level = level; hero.exp = level === HERO_LEVEL_CAP ? 0 : exp;
-  return { gained, levels: level - beforeLevel, beforeLevel, level, exp: hero.exp };
+  return { gained, levels: level - beforeLevel, beforeLevel, level, exp: hero.exp, overflow };
 }
 
 export function masteryLabel(entry) {

@@ -48,12 +48,14 @@
 - chat_log(channel, id, at, payload) 광장 채널별 최근 history개.
 - recent_messages(id PK, author_id, at) 신고 검증 전용 최근 200개 메시지 작성자 인덱스, 24시간 보관. 광장·파티 채팅과 귓속말을 포함하며 본문은 복제하지 않는다. 신규 메시지·신고 처리 때 만료분을 정리한다.
 - listings(id, host_id UNIQUE, party_code, content_id, note, slots, members, created_at, expires_at) 파티 모집, TTL 10분(호스트가 다시 POST하면 갱신).
-- posts(id autoinc, author_id, category, title, body, diag JSON, status, votes, comments, created_at, updated_at, dev_reply, hidden). category: bug | idea | request | question | notice(notice는 관리자만). status: open | reviewing | planned | done | wontfix.
+- posts(id autoinc, author_id, category, title, body, diag JSON, status, votes, comments, created_at, updated_at, dev_reply, hidden, patch_note_slug). category: bug | idea | request | question | notice(notice는 관리자만). status: open | reviewing | planned | done | wontfix.
 - votes(post_id, player_id), comments(id autoinc, post_id, author_id, body, created_at, dev 0/1).
 - reports(id, reporter, target, kind, ref, reason, created_at). chat 신고의 ref는 필수다. chat_log 또는 24시간 이내 recent_messages에 그 ref가 있고 실제 작성자가 target이어야 저장한다. chat_log는 기존 채널 history 보관 정책을 그대로 따른다. 자동 음소거는 최근 1시간 내 서로 다른 신고자 3명 이상, 각자의 신고 시점 가입 24시간 이상, 서로 다른 최초 생성 IP 해시 3개 이상을 모두 충족할 때만 10분 적용한다. 신규·동일 IP·IP 미상 프로필의 유효 신고는 검토 대상으로만 저장한다. 중복 신고자는 한 명으로 센다.
 - 속도 제한 중 소켓 초당 제한·채팅 묶음 제한은 메모리 맵(DO 인스턴스 수명), 채팅 간격·반복과 글·신고·프로필·런 시작·모집 방송·초대·티켓 발급 제한은 SQLite다.
 
 schema_version=2 마이그레이션은 SocialCore 생성 시 동기 트랜잭션으로 적용한다. 기존 순위·칭호·기록은 보존하고, 기존 프로필의 생성 IP와 기존 summary는 추측하지 않고 null로 둔다. 기존 순위의 subject_hash는 클리어 이전부터 유지된 구글 연동이 확인될 때만 채운다. 발급 키를 알 수 없는 v1 미사용 티켓은 삭제해 재발급하게 하며, key_hash 없는 기존 소켓은 다음 메시지에서 종료한다. 스키마 변경 실패는 전체 롤백하며 재시도할 수 있다. 이전 코드로 되돌려도 추가 열·테이블을 삭제하지 않는다.
+
+schema_version=5는 같은 방식으로 posts.patch_note_slug TEXT를 보정한다(기존 글은 null, 하위 호환: 필드를 모르는 클라이언트는 그대로 동작). UI 훅 `hooks.patchNoteUrl(slug)`가 http(s) 주소를 돌려주면 반영 완료 글 상세에 '패치노트 보기' 링크가 보이고, 훅이 없으면 안내 문구만 보인다(게임 비종속).
 
 현행 schema_version=4는 v3의 기대 컬럼 목록·누락 시 추가 방식을 재사용해 players.hero TEXT를 보정한다. 기존 데이터와 발급 티켓은 유지하고, 기존 영웅은 추측하지 않아 null로 둔다.
 
@@ -105,7 +107,7 @@ schema_version=2 마이그레이션은 SocialCore 생성 시 동기 트랜잭션
 | POST /board {category, title 2~40, body 1~1000, diag?} | 키 | 시간당 3개. diag는 문자열·숫자 값만 있는 평면 객체 1KB 이하 |
 | POST /board/:id/vote | 키 | 토글 |
 | POST /board/:id/comment {body 1~300} | 키 | 시간당 20개. 관리자면 dev=1 |
-| POST /board/:id/moderate {status?, devReply?, hidden?} | 관리자 | env.SOCIAL_ADMIN_IDS(쉼표 구분 playerId) |
+| POST /board/:id/moderate {status?, devReply?, hidden?, patchNoteSlug?} | 관리자 | env.SOCIAL_ADMIN_IDS(쉼표 구분 playerId). patchNoteSlug는 소식 글 id(`^[a-z0-9][a-z0-9-]{0,79}$`) 또는 null이고 결과 상태가 done일 때만 둘 수 있다(아니면 400 `patch-note-status`, 형식 오류는 400 `patch-note-slug`). 상태가 done이 아니게 되면 연결은 자동으로 지워지고, 응답의 `patchNoteSlug`는 done 글에서만 값이 있다(다른 상태·연결 없는 기존 글은 null) |
 | POST /report {kind: chat or post or player, target, ref?, reason ≤ 100} | 키 | 시간당 10개. chat이면 ref 필수·실제 작성자 확인, 불일치 400 ref |
 | POST /admin/mute {playerId, minutes}, /admin/ban {playerId, banned}, /admin/revoke-clear {playerId, contentId} | 관리자 | revoke는 그 사람 기록을 revoked=1로 숨기고 해당 칭호를 회수(다른 사람 rank는 그대로) |
 

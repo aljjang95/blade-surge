@@ -13,15 +13,17 @@ import { DropSystem, fieldDropsAllowed } from './drops.js';
 import { TreasureChests } from './treasure-chest.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ExitCue, exitCueTarget } from './exit-cue.js';
-import { ENEMIES } from '../data/stages.js';
+import { ENEMIES, chapterSpeciesId } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel, preloadHeroBody } from '../engine/assets.js';
-import { heroAppearance } from '../data/hero-library.js';
+import { heroBodyAppearance } from '../data/hero-library.js';
+import { withAvatarSpeed } from '../data/avatars.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
 import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
+import { bossAppearVoiceName } from '../engine/boss-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
 import { contactFeedback } from './apex-combat.js';
@@ -34,11 +36,22 @@ import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
+import { campaignCombat, composeRoom, ROLE_FORMATION, ROLE_SIDE, SQUADS, stageCurve } from './squads.js';
+import { EliteAffixes, ELITE_AFFIXES, pickAffixes } from './elite-affixes.js';
+import { RoomProps, roomPropsAllowed } from './room-props.js';
+import { RegionTraits, regionTheme } from './region-traits.js';
+import { bossShortcutRule } from './boss-shortcut.js';
+import { ROUTE_MODE, bossApproachOpen, directRouteNext, loadRoutePrefs, routeSummary, saveRoutePrefs } from './dungeon-route.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
+import { chapterVisual } from './chapter-scenery.js';
+import { prewarmChapterDress } from './chapter-dress.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
+import { CombatReadability } from './combat-readability.js';
+/** 숲의 속박 화살 명중 색(어두운 덩굴빛): 접촉 섬광·몸 번쩍임이 흰빛으로 적 실루엣을 덮지 않게. */
+const BIND_HIT_TINT = 0x2f9a52;
 
 const _v = new THREE.Vector3();
 const _ultColor = new THREE.Color();
@@ -78,11 +91,12 @@ export class Battle {
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
-    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0;
+    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0; this.treasureRooms = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
     this.killChain = new KillChain(); this.lastSlowAt = -1e9;
+    this.readability = new CombatReadability(this);
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
@@ -110,9 +124,9 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.portalOpened = false; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
-    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
+    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = withAvatarSpeed(heroStats(def, heroState, equipBonus), equipBonus, { party: !!stage.party });
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
     this.holes = []; this.rebirthUsed = false;
@@ -124,13 +138,14 @@ export class Battle {
     this.routeObjectives = createRouteObjectives(stage, this.world);
     this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
-    this.visual = dungeonVisualFor(stage);
+    this.visual = chapterVisual(dungeonVisualFor(stage), stage);
     if (stage.field) await preloadFieldSurface();
     if (this.world.expeditionRouteId === 'glass_garden') await preloadGlassGardenKit();
     if (this._startGeneration !== startGeneration) return;
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
     this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
-    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual, stage.expedition ? null : stage.chapter?.id);
+    prewarmChapterDress(stage, this.app.models, ENEMIES);
     this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
@@ -142,9 +157,11 @@ export class Battle {
     const gltf = await loadModel(def.model);
     const avatar = stage.party ? avatarId : this.app.eco.displayAvatar(heroId);
     const equip = stage.party ? {} : this.app.eco.heroEquipInsts(heroId);
-    await preloadHeroBody(heroId, heroAppearance(equip, ITEM_BY_ID), avatar);
+    await preloadHeroBody(heroId, heroBodyAppearance(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
+    this.readability?.reset(def);
+    this.player.magnetMul = 1 + (!stage.party && equipBonus.avatar?.pickupPct || 0);   // 아바타 풀셋: 줍기 범위
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
@@ -154,6 +171,16 @@ export class Battle {
     if (cueTarget) this.exitCue = new ExitCue(this.scene, sr, cueTarget);
     // 실제 경고·드랍 재질을 출격 준비에 포함해 첫 처치/예고 때의 컴파일을 막는다.
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
+    this.roomProps?.dispose(); this.roomProps = roomPropsAllowed(stage) ? new RoomProps(this) : null;
+    this.regionTraits = regionTheme(stage) ? new RegionTraits(this) : null;
+    // 보스 직행은 출격 시점의 별·전투력으로 한 번 정한다(전투 중 별이 바뀌어도 이번 판 조건은 같다).
+    { const eco = this.app?.eco, key = `${stage.ch}-${stage.st}`;
+      this.bossShortcut = bossShortcutRule({ power: eco?.heroPower?.(eco.s?.selected) || 0, recPower: stage.recPower || 0, stars: eco?.s?.progress?.stars?.[key] || 0 });
+      // 동선(보스 직행/전부 사냥): 보스 방은 입장 즉시 지도에 보이고, 정화한 방으로 보스 문까지 이어지면 봉인이 풀린다.
+      this.routePrefs = loadRoutePrefs(); this._routeWorldGen = (this._routeWorldGen || 0) + 1; this._directKey = this._routeViewKey = null;
+      this.routeOpenEarly = routeEarlyAllowed(stage, this);
+      this.world.bossRevealed = this.routeOpenEarly;
+      this.underPowered = (eco?.heroPower?.(eco.s?.selected) || 0) < (stage.recPower || 0); }
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
@@ -296,24 +323,39 @@ export class Battle {
   }
   roomRoster(room) {
     if (this.stage.expedition) return expeditionRoster(this.stage, room);
-    const R = this.stage.rosterFor(room.type);
+    const R = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type);
     // 증원으로 이미 달려나간 만큼은 정원에서 뺀다 (총량 보존)
     const n = Math.max(0, this.rosterSize(room) - (room.reinforced || 0));
     const list = [];
     // Step 3 in a six-entry pool visits only two species; ranged slots were also constant.
-    let meleeTurn=0,rangedTurn=0;
-    for (let i = 0; i < n; i++) {
-      const ranged=i%6===5,pool=ranged?R.ranged:R.trash,turn=ranged?rangedTurn++:meleeTurn++;
-      list.push(pool[(turn+room.id+this.stage.idx)%pool.length]);
+    // 캠페인 방은 분대 편성(squads.js): 단계 곡선으로 고른 종을 역할 조합 분대로 짠다. 그 밖(정의 없는 단계)은 기존 순환.
+    const st = this.stage.st, squads = campaignCombat(this.stage) && R.trash?.length && n > 0;
+    room.squadPlan = null;
+    if (squads) {
+      const featuredRoom = !this._featuredRoomDone && room.type !== ROOM_TYPE.TREASURE;
+      const plan = composeRoom(R, st, room.id, this.stage.idx, n, { featuredRoom });
+      if (featuredRoom && plan.featured) this._featuredRoomDone = true;
+      list.push(...plan.list); room.squadPlan = plan;
+    } else {
+      let meleeTurn=0,rangedTurn=0;
+      for (let i = 0; i < n; i++) {
+        const ranged=i%6===5,pool=ranged?R.ranged:R.trash,turn=ranged?rangedTurn++:meleeTurn++;
+        list.push(pool[(turn+room.id+this.stage.idx)%pool.length]);
+      }
     }
     if (room.type === ROOM_TYPE.ELITE) { list.push(R.elite[room.id % R.elite.length]); if (this.stage.idx > 8) list.push(R.elite[(room.id + 1) % R.elite.length]); }
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
-    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
+    // 정예는 첫 분대(방 테마)의 대장으로 앞줄에 선다.
+    if (room.squadPlan) for (let i = room.squadPlan.list.length; i < list.length; i++) { room.squadPlan.squadOf.push(0); room.squadPlan.roles.push('elite'); }
+    // 보스방 호위와 증원도 이번 단계까지 소개된 종만 쓴다.
+    const C = squads ? stageCurve(R, st) : R;
+    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, C.trash[0], C.trash[1], C.trash[0], C.trash[2 % C.trash.length], C.ranged[0], C.trash[1]);
     return list;
   }
   /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
   callReinforcements(room) {
-    const R = this.stage.rosterFor(room.type); let wave = 0;
+    const R0 = this.stage.combatRosterFor?.() || this.stage.rosterFor(room.type); let wave = 0;
+    const R = campaignCombat(this.stage) ? stageCurve(R0, this.stage.st) : R0;
     for (const nid of room.links || []) {
       const nb = this.world.rooms[nid];
       if (!nb || nb.cleared || nb.spawned || nb.type === ROOM_TYPE.BOSS || nb.type === ROOM_TYPE.START) continue;
@@ -372,10 +414,14 @@ export class Battle {
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     // 방 명단을 진입 반대편의 무리로 나눠 경계시킨다. 보스방·증원·소환은 기존처럼 바로 교전한다.
-    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
+    const squadCount = room.squadPlan ? Math.max(...room.squadPlan.squadOf) + 1 : 0;
+    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z, squadCount);
+    room.entryX = this.player.pos.x; room.entryZ = this.player.pos.z;
+    if (room.squadPlan && !isBoss) this.announceSquad(room);
+    if (!isBoss && room.type !== ROOM_TYPE.TREASURE) this.roomProps?.placeFor(room);
     room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
-      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.ui.bossIntro?.(this.stage, this.stage.encounter?.name); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(bossAppearVoiceName(this.stage, this.bossKey), { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       audio.bossIntro(this.stage); // 등급별 등장 스팅어 + BGM 덕킹(최종/중간·수문장/그 밖)
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
@@ -397,6 +443,31 @@ export class Battle {
     for (const t of list.slice(initial)) this.pending.push({ t, room });   // 덮어쓰면 이전 방 잔여가 증발해 그 방이 영영 안 닫힌다
     room.pendingCount = list.length;
     if (!isBoss && !this.stage.expedition) this.callReinforcements(room);
+  }
+  /** 방 테마(주 분대) 안내. 같은 판에서 같은 테마는 한 번만, 새로 소개되는 적이 있으면 그 이름을 앞세운다. */
+  announceSquad(room) {
+    const plan = room.squadPlan, squad = SQUADS[plan.theme];
+    // 분대 깃발: 무리마다 앵커에 고리와 분대 이름을 띄워 화면 밖 대형도 어디에 무엇이 있는지 보이게 한다(월드 위 표시, 플레이 영역 팝업 아님).
+    room.packs?.forEach((pk, i) => {
+      const tpl = SQUADS[i % 2 === 0 ? plan.theme : plan.secondary] || squad;
+      const at = new THREE.Vector3(pk.x, 0, pk.z);
+      this.fx.castCircle(at, i % 2 === 0 ? 0xffc060 : 0x9fd0ff, { radius: 2.6, life: 1.8, telegraph: false });
+      if (tpl?.name && (this.fx.dmgLayer?.children.length ?? 0) < 30) this.fx.damage(at.clone().setY(1.6), 0, { text: tpl.name });
+    });
+    if (!squad?.hint) return;
+    const seen = this._squadSeen || (this._squadSeen = new Set());
+    const fresh = plan.featured && plan.list.includes(plan.featured) && !seen.has('new:' + plan.featured);
+    if (!fresh && seen.has(plan.theme)) return;
+    seen.add(plan.theme); if (fresh) seen.add('new:' + plan.featured);
+    const name = fresh ? ENEMIES[chapterSpeciesId(this.stage, plan.featured)]?.name : null;
+    this.ui.toast(fresh ? `새 적 · ${name} — ${squad.name}: ${squad.hint}` : `${squad.name} — ${squad.hint}`, fresh ? 'gold' : '');
+  }
+  /** 정예 접두사 안내: 처음 보는 접두사만 한 줄로 알린다. */
+  announceAffixes(e) {
+    const seen = this._affixSeen || (this._affixSeen = new Set());
+    const fresh = e.affixes.keys.filter((k) => !seen.has(k)); fresh.forEach((k) => seen.add(k));
+    const tips = fresh.map((k) => `${ELITE_AFFIXES[k].name}: ${ELITE_AFFIXES[k].hint}`).join(' ');
+    this.ui.toast(`정예 · ${e.affixes.label} ${e.def.name}${tips ? ' — ' + tips : ''}`, 'gold');
   }
   /** 예약 생성 하나가 끝났다. 생성이 취소돼 처치 이벤트가 없더라도 남은 적이 없으면 방을 닫는다. */
   settleRoomSpawn(room) {
@@ -444,7 +515,7 @@ export class Battle {
     }
     // Valve operation becomes available only AFTER all authored reinforcements.
     if (this.routeObjectives?.beforeClear(this, room)) return;
-    room.cleared = true; this.roomsCleared++;
+    room.cleared = true; this.roomsCleared++; this.roomProps?.clearRoom(room);
     this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {
       this.ui.toast(`${room.type === ROOM_TYPE.BOSS ? '보스방' : room.type === ROOM_TYPE.ELITE ? '엘리트 구역' : room.type === ROOM_TYPE.TREASURE ? '보물방' : '구역'} 클리어!`, 'gold');
@@ -470,24 +541,73 @@ export class Battle {
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
     if (room.type === ROOM_TYPE.BOSS) this.after(2.4, () => this.victory());
-    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.remaining === 1 && !this.world.bossRoom.cleared) this.after(1.2, () => this.unsealBoss());
+    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.bossRoom && !this.world.bossRoom.cleared) {
+      // 남은 방을 모두 정화: 예전처럼 봉인 해제 + 보스방 포탈(이미 길로 풀렸으면 포탈만).
+      if (this.world.remaining === 1) this.after(1.2, () => this.world?.sealed ? this.unsealBoss() : this.openPortalOnce());
+      // 정화한 방만으로 보스 문까지 닿으면 봉인을 먼저 푼다. 남은 방은 선택(전부 정화 보너스)이다.
+      else if (this.routeOpenEarly && this.world.sealed && bossApproachOpen(this.world)) this.after(1.2, () => this.unsealBoss({ early: true }));
+    }
+  }
+  /** 동선 모드 — 지도에서 고른다. AUTO 가 따르고 기기에 남는다. */
+  get routeMode() { return this.routePrefs?.mode || ROUTE_MODE.FULL; }
+  setRoutePrefs(next) {
+    this.routePrefs = { ...(this.routePrefs || loadRoutePrefs()), ...next }; saveRoutePrefs(this.routePrefs);
+    // 이미 정한 AUTO 목표는 새 동선으로 다시 고른다.
+    if (!this.routeObjectives && !this.conquest) this.autoTarget = null;
+    this._directKey = this._routeViewKey = null;
+    return this.routePrefs;
+  }
+  /** AUTO 직행 목표(직행 모드가 아니거나 경로 목표가 있는 모드면 null). */
+  directAutoRoom() {
+    if (!this.routeOpenEarly || this.routeMode !== ROUTE_MODE.DIRECT || !this.world) return null;
+    // AUTO 는 매 프레임 묻는다. 경로 탐색(Map·배열 할당)은 현재 방·정화 수·봉인이 바뀔 때만 다시 한다.
+    const key = this.routeStateKey();
+    if (this._directKey !== key) { this._directKey = key; this._directRoom = directRouteNext(this.world, this.curRoom?.id ?? this.world.startRoom.id); }
+    return this._directRoom;
+  }
+  routeView() {
+    if (!this.world) return null;
+    const key = `${this.routeStateKey()}:${this.routeMode}:${this.routePrefs?.guide !== false ? 1 : 0}`;
+    if (this._routeViewKey !== key) {
+      this._routeViewKey = key;
+      this._routeView = { ...routeSummary(this.world, this.curRoom?.id ?? this.world.startRoom?.id ?? 0), mode: this.routeMode, guide: this.routePrefs?.guide !== false, revealed: !!this.world.bossRevealed, early: !!this.routeOpenEarly };
+    }
+    return this._routeView;
+  }
+  /** 동선 캐시 열쇠(숫자만, 할당 없음): 월드 세대 · 현재 방 · 정화한 방 수 · 봉인 · 보스 정화. */
+  routeStateKey() {
+    const W = this.world; let cleared = 0;
+    for (const room of W.rooms) if (room.cleared) cleared++;
+    return (((this._routeWorldGen || 0) * 64 + (this.curRoom?.id ?? 63)) * 64 + cleared) * 4 + (W.sealed ? 2 : 0) + (W.bossRoom?.cleared ? 1 : 0);
   }
   /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
-  unsealBoss() {
+  unsealBoss({ early = false } = {}) {
     if (!this.active || !this.world || !this.world.sealed) return;
     if (this.routeObjectives && (this.paused || !this.routeObjectives.canUnseal())) return;
     this.world.unseal(); this.arena.openSeal(this.fx);
     this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
     audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('seal_break', { min: 30 });
     this.ui.setObjective(this.world);
+    if (early) {
+      // 길로 푼 봉인: 보스 문이 바로 옆이라 포탈은 열지 않는다. 남은 방 수와 (전투력 미달이면) 위험 안내만 가장자리 토스트로.
+      const left = this.world.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS).length;
+      this.after(1.4, () => { if (this.active) this.ui.toast(`보스 문 열림 · 남은 구역 ${left}곳은 선택 — 전부 정화하면 경험치·골드 보너스`, 'gold'); });
+      if (this.underPowered) this.after(3.2, () => { if (this.active && !this.bossDefeated) this.ui.toast('권장 전투력 미달 — 남은 구역을 돌며 성장하면 보스가 쉬워집니다', 'red'); });
+      return;
+    }
     this.openPortal();
   }
+  /** 길로 먼저 연 뒤 마지막 구역을 정화하면 예전과 같은 보스방 포탈을 한 번 연다(보스방에 이미 있으면 생략). */
+  openPortalOnce() {
+    if (!this.active || !this.world || this.portal || this.portalOpened || this.world.bossRoom.cleared || this.curRoom === this.world.bossRoom) return;
+    this.portalOpened = true; this.openPortal();
+  }
   canBossShortcut() {
-    return !!(this.active && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
+    return !!(this.active && this.bossShortcut?.ok && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
   }
   shortcutBoss() {
     if (!this.canBossShortcut()) return false;
-    this.bossRush = true;
+    this.bossRush = true; this.portalOpened = true;
     this.autoTarget = this.world.bossRoom;
     this.world.bossRoom.discovered = true;
     this.world.unseal(); this.arena.openSeal(this.fx); this.ui.setObjective(this.world); this.openPortal();
@@ -496,7 +616,7 @@ export class Battle {
   }
   /** 봉인 해제 포탈 — 마지막 구역에서 보스방 문 앞까지. 가장 먼 방까지 20초 넘게 걷는 동안 보상이 끊겼다 (longestDryStreakSec 40~44 실측) */
   openPortal() {
-    const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return;
+    const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return; this.portalOpened = true;
     const p = this.player.pos; const f = this.player.forward(new THREE.Vector3());
     let [px, pz] = W.resolve(p.x, p.z, p.x + f.x * 3, p.z + f.z * 3, 0.8);
     if (Math.hypot(px - p.x, pz - p.z) < 1.5) { px = p.x; pz = p.z; }   // 벽 앞이면 제자리
@@ -528,9 +648,10 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.roomProps?.dispose(); this.roomProps = null; this.exitCue?.dispose(); this.exitCue = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.readability?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
+    type = chapterSpeciesId(this.stage, type);
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
     let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[runtimeType]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;
@@ -539,7 +660,7 @@ export class Battle {
       const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
     }
     if (this._spawningFollower) def = packFollowerDef(def);
-    let pos, pack = null, rushing = false;
+    let pos, pack = null, rushing = false, squadRole = null;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
     else if (near) {
       const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3));
@@ -547,8 +668,20 @@ export class Battle {
       if (this.world) { const [x, z] = this.world.resolve(near.x, near.z, pos.x, pos.z, 0.6); pos.x = x; pos.z = z; }
     }
     else if (this.world && rm) {
-      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? this.roomPackFor(rm) : null;
-      if (pack) { rm.packAssigned++; packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); }
+      const squadIdx = rm.squadPlan && rm.packAssigned < rm.packQuota ? rm.squadPlan.squadOf[rm.packAssigned] : undefined;
+      squadRole = squadIdx !== undefined ? rm.squadPlan.roles[rm.packAssigned] : null;
+      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? (squadIdx !== undefined ? rm.packs[squadIdx % rm.packs.length] : this.roomPackFor(rm)) : null;
+      if (pack) {
+        rm.packAssigned++; packSlot(this.world, pack, _slot);
+        // 분대 대형: 방패·분쇄는 진입한 영웅 쪽 앞줄, 원거리·주술사는 뒷줄, 측면 침투는 옆으로 벌린다.
+        if (squadRole && Number.isFinite(rm.entryX)) {
+          const fx = rm.entryX - pack.x, fz = rm.entryZ - pack.z, fl = Math.hypot(fx, fz) || 1;
+          const front = squadRole === 'elite' ? 1.4 : ROLE_FORMATION[squadRole] || 0, side = (ROLE_SIDE[squadRole] || 0) * ((rm.packAssigned & 1) ? 1 : -1);
+          const tx = _slot.x + fx / fl * front - fz / fl * side, tz = _slot.z + fz / fl * front + fx / fl * side;
+          [_slot.x, _slot.z] = this.world.resolve(_slot.x, _slot.z, tx, tz, .6);
+        }
+        pos = new THREE.Vector3(_slot.x, 0, _slot.z);
+      }
       else if (!def.boss && rm.packs?.length) {
         // 명단 뒤의 증원 물결은 한 앵커에서 무리로 들어와 바로 교전한다(흩어진 한 마리씩 대신).
         pack = this.roomPackFor(rm); packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); rushing = true;
@@ -564,10 +697,20 @@ export class Battle {
         pos = new THREE.Vector3(best.x, 0, best.z);
       }
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
-    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
+    const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos, runtimeType);
     e.homeRoom = rm;
     if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
+    // 캠페인 정예는 행동형 접두사 1~2개를 달고 자기 분대의 대장이 된다.
+    if (def.elite && !def.boss && campaignCombat(this.stage) && rm) {
+      const ordinal = this._eliteOrdinal = (this._eliteOrdinal || 0) + 1;
+      e.affixes = new EliteAffixes(e, pickAffixes(rm.id, this.stage.idx, this.stage.st, ordinal, rm.type === ROOM_TYPE.ELITE));
+      // 무리의 대장은 먼저 선 정예다(두 번째 정예가 대장 자리를 덮어써 앞 정예의 방패막·지휘가 끊기지 않게).
+      if (pack && !pack.leader?.alive) pack.leader = e;
+      this.announceAffixes(e);
+    }
     e.runtimeSpeciesId = runtimeType;
+    if (squadRole) e.formFront = squadRole === 'elite' ? 1.4 : ROLE_FORMATION[squadRole] || 0;
+    this.regionTraits?.attach(e, squadRole);
     // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
     if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
     this.enemies.push(e);
@@ -713,6 +856,8 @@ export class Battle {
 
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
+    // 영웅의 타격은 지역 환경 장치에도 닿는다(room-props.js).
+    if (src === this.player) this.roomProps?.strike(pos, yaw, range, arcDeg);
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
     const reachPad = opts.basic ? 1.5 : opts.precision ? .35 : 1.5;
     const r2 = (range + reachPad) * (range + reachPad);
@@ -734,6 +879,8 @@ export class Battle {
     }
     // 흑사막 가짜 왕좌처럼 적이 아닌 공격 대상. 한 판정에 왕좌 하나 최대 1타.
     if (this.routeObjectives?.strike?.(this, pos.x, pos.z, range)) n++;
+    // 헛스윙(평타 첫 타, 연타 틱 제외): 칼끝 자리에 회색 먼지 — 맞았을 때의 영웅색 불꽃·숫자와 구분된다.
+    if (!n && opts.basic && !opts.quietStop && src === this.player) { _v.set(pos.x + Math.sin(yaw) * range * .8, .9, pos.z + Math.cos(yaw) * range * .8); this.readability?.whiff(_v, src, .8); }
     return n;
   }
   hitRadius(center, radius, dmg, opts = {}) {
@@ -765,9 +912,10 @@ export class Battle {
     if (e.omenBy === p && e.omenUntil > this.elapsed) amount *= BLACKCAT_OMEN.taken;
     // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
     const dealt = e.hurt(amount, { ...opts, crit, attacker: p });
-    if (dealt <= 0) return;
+    if (dealt <= 0 && !(e.absorbed > 0)) return;   // 종지기의 종이 전부 받아 낸 타격(dealt 0)도 맞은 것이다
     if (opts.omen && e.alive) { e.omenBy = p; e.omenUntil = this.elapsed + BLACKCAT_OMEN.time; }
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
+    this.readability?.hit(e, dealt, crit, p);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });
@@ -778,19 +926,20 @@ export class Battle {
     }
     const hitPos = e.pos.clone().setY(1.1 * e.def.scale);
     // 다수 타격 시 데미지 숫자 솎아내기 (성능)
-    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, {
+    if (dealt > 0 && (this.fx.dmgLayer.children.length < 26 || crit)) this.fx.damage(hitPos, dealt, {
       crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!e.isBoss,
       heavy: contactProfile(opts, crit, e.isBoss, true)?.heavy,
     });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
-    const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
+    // tint(숲의 속박 화살): 다섯 발 관통이 같은 적을 겹쳐 맞히면 크림 접촉 섬광이 쌓여 적 실루엣이 흰빛에 묻혔다 — 색·크기만 바꾼다(호출 수·난수 그대로).
+    const color = opts.tint && !crit ? opts.tint : opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches, p.def?.weapon);
     if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
     // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
-      if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
+      if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size * (opts.tint ? .6 : 1), life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss, weapon: p.def?.weapon });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
@@ -815,6 +964,7 @@ export class Battle {
     // 아군 화살은 같은 속도로 그어지는 비취 궤적을 남긴다(스킬마다 모양이 다르다). 판정·난수와 무관한 표시 층이다.
     const streakStyle = !hostile && visual === 'arrow' ? (streak || (basic ? (finisher ? 'finisher' : 'basic') : 'volley')) : null;
     const beam = streakStyle ? this.fx.arrowStreak?.(pos, dir, speed, life, streakStyle) ?? null : null;
+    if (!hostile && basic) this.readability?.shot(owner);
     this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle, omen });
   }
   updateProjectiles(dt) {
@@ -832,14 +982,16 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen });
-            if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic, omen:p.omen, tint: p.streak === 'bind' ? BIND_HIT_TINT : undefined });
+            // 속박 매듭은 적 하나에 시전당 한 번만(다섯 발 관통이 같은 적에 가산 가시 고리를 다섯 겹 쌓아 흰빛으로 실루엣을 덮었다), 어두운 덩굴빛.
+            if (p.streak === 'bind' && !(e._bindMarkAt > this.elapsed - .4)) { e._bindMarkAt = this.elapsed; this.fx.impact?.mark(e.pos, BIND_HIT_TINT, { radius: 1.1, life: .9, style: 2 }); }
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
         if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
-      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
+      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p);
+        else if (p.basic && !p.hostile && !p.hit.size && p.t >= p.life) this.readability?.whiff(p.pos, p.owner, .9); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {
@@ -907,7 +1059,6 @@ export class Battle {
     const dt = this.timeCtl.step(realDt);
     if (this.slowAccent) this.driveSlowAccent();
     this.elapsed += dt;
-    this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     this.input.update();
     this.routeObjectives?.observePlayer?.(this.player);
@@ -919,6 +1070,8 @@ export class Battle {
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);
+    this.roomProps?.update(dt);
+    this.regionTraits?.update(dt);
     this.exitCue?.update(dt, this.player.alive, !!this.app.reducedMotion?.matches);
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
@@ -927,6 +1080,7 @@ export class Battle {
     if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
+    this.readability?.update(dt);
     this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
@@ -935,26 +1089,24 @@ export class Battle {
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.killStreakT > 0) { this.killStreakT -= dt; if (this.killStreakT <= 0) { this.killStreak = 0; this.ui?.setKillStreak?.(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
-    // Local threat framing preserves readable heroes and explicit user presets.
+    // 고정 쿼터뷰: 화면 중심은 영웅을 바짝 따라가고, 거리·FOV 는 보스 구도에서만 천천히 바뀐다(무리 밀도·타격으로 움직이지 않는다).
     const rig = this.renderer.rig;
-    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, impactTarget: this.impactTarget, impactWeight: this.impactT > 0 ? this.impactT / .16 : 0, preset: rig.preset, presets: CAMERA_PRESETS });
+    const framing = battleFraming({ player: this.player, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
     _v.set(framing.target.x, framing.target.y, framing.target.z);
-    rig.target.lerp(_v, framingBlend(realDt, 7));
+    rig.target.lerp(_v, framingBlend(realDt, 8));
     if (rig.preset === 'auto') {
       const k = framingBlend(realDt, 1.2);
       const profile = this.visual?.camera;
       for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) {
-        // Preserve the threat/boss framing blend, then add the dungeon's own
-        // composition delta relative to the action baseline.
+        // 보스 구도 블렌드 위에 던전 고유 구도 차이(액션 기준)를 더한다.
         const delta = profile && Number.isFinite(profile[key]) ? profile[key] - CAMERA_PRESETS.action[key] : 0;
         rig.base[key] += (framing.desired[key] + delta - rig.base[key]) * k;
       }
     }
     const b = rig.base;
-    rig.offset.y += (b.y + framing.extraY - rig.offset.y) * framingBlend(realDt, 2);
-    rig.offset.z += (b.z + framing.extraZ - rig.offset.z) * framingBlend(realDt, 2);
-    rig.fov = b.fov + framing.extraFov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
-    // Anticipation lives in the bounded target; no additional direction-dependent sway.
+    rig.offset.y += (b.y - rig.offset.y) * framingBlend(realDt, 2);
+    rig.offset.z += (b.z - rig.offset.z) * framingBlend(realDt, 2);
+    rig.fov = b.fov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
     rig.side += (0 - rig.side) * framingBlend(realDt, 1.5);
     // 전투 카메라 AUTO: 손대지 않는 동안 위협·무리·벽에 맞춰 사용자 시점 값을 천천히 옮긴다(흔들림 없음).
     this.app.cameraControls?.updateAuto?.(realDt, this);
@@ -968,4 +1120,7 @@ export class Battle {
   }
 }
 
-
+/** 길로 봉인을 먼저 여는 판: 일반 캠페인 던전만. 무한의 성·원정·파티·전술 원정·경로 목표(장치) 판은 기존 계약(전부 정화)을 유지한다. */
+function routeEarlyAllowed(stage, battle) {
+  return !stage?.expedition && !stage?.party && !stage?.field && !stage?.tower && !battle.conquest && !battle.routeObjectives;
+}

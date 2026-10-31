@@ -67,6 +67,27 @@ export function planBossSignature(key, {room,origin,target,history=[],phase=0,tu
     const points=[anchor,targetInRoom({x:anchor.x+direction*6.4,z:anchor.z},r)];
     if(phase===2)points.push(targetInRoom({x:points[1].x,z:anchor.z+(anchor.z>=r.z?-1:1)*6.4},r));
     points.forEach((q,i)=>disk(q,short*.7,1.8+i*1.6,{safeRadius:2.6,warnAt:Math.max(0,i*1.6),damage:1.2}));
+  } else if(key==='bell_pair') {
+    // 수문의 두 종: 방 좌우의 종이 번갈아 고리를 퍼뜨린다. 두 종 사이 한가운데는 어느 고리 띠(.78R~R)에도 닿지 않는다.
+    const centre={x:r.x,z:r.z},d=Math.min(short*.26,6.4),R=d*1.9,sign=turn%2?-1:1;
+    const bells=[{x:centre.x-d*sign,z:centre.z},{x:centre.x+d*sign,z:centre.z}];
+    const beats=phase===0?[0,1,0]:phase===1?[0,1,0,1]:[0,1,0,1,0],gap=phase===2?.75:.95;
+    beats.forEach((bell,i)=>ring(bells[bell],R,1.35+i*gap,{push:5}));
+  } else if(key==='bell_threefold') {
+    // 세 박자 종소리: 방 가운데를 둘러싼 세 종이 차례로 고리를 퍼뜨리고, 마지막에 방 전체가 울린다.
+    // 세 고리 띠 안쪽(.78R)이 겹치는 한가운데(반경 .36d)만 마지막 울림까지 모두 비껴 간다. 종 위치는 시전마다 돌아가지만 안전 지대는 한가운데로 같다.
+    const centre={x:r.x,z:r.z},d=Math.min(short*.22,6.4),R=d*1.75,start=turn%2?Math.PI/6:-Math.PI/2;
+    const bells=[0,1,2].map(i=>({x:centre.x+Math.cos(start+i*Math.PI*2/3)*d,z:centre.z+Math.sin(start+i*Math.PI*2/3)*d}));
+    const order=phase===2?[2,1,0]:[0,1,2],gap=phase===2?.8:.95;
+    order.forEach((bell,i)=>ring(bells[bell],R,1.35+i*gap,{push:5}));
+    disk(centre,short*.62,1.35+3*gap+.15,{safeRadius:d*.36,damage:1.25,push:6});
+  } else if(key==='bell_crack') {
+    // 금 간 대종: 세 종을 잇는 삼각 균열선이 차례로 갈라진다. 삼각형 한가운데와 바깥은 비어 있고, 후반에는 한가운데도 마지막에 울린다.
+    const centre={x:r.x,z:r.z},d=Math.min(short*.3,8.2),start=(turn%2?Math.PI/6:-Math.PI/2)+phase*.2;
+    const bells=[0,1,2].map(i=>targetInRoom({x:centre.x+Math.cos(start+i*Math.PI*2/3)*d,z:centre.z+Math.sin(start+i*Math.PI*2/3)*d},r));
+    const order=phase===2?[2,0,1]:[0,1,2];
+    order.forEach((k,i)=>{const a=bells[k],b=bells[(k+1)%3],dx=b.x-a.x,dz=b.z-a.z;lane({x:(a.x+b.x)/2,z:(a.z+b.z)/2},Math.hypot(dx,dz)+3,2.6,Math.atan2(dz,dx),1.35+i*.8,{push:4});});
+    if(phase>0)disk(centre,d*.55,3.9,{damage:1.2,push:4});
   } else if(key==='tidegate_flood') {
     // 빙하 수문 범람: 거신이 선 마른 수로를 사이에 두고 먼 쪽 수문이 먼저, 플레이어 쪽 수문이 나중에 잠긴다.
     // 먼저 잠긴 쪽은 다음 물결 때 이미 빠진 물이라 안전하다. 마지막 페이즈는 수로가 좁아지고 먼 쪽이 한 번 더 잠긴다.

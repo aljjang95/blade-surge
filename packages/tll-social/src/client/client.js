@@ -116,12 +116,19 @@ export function createSocialClient(options) {
   const keyName = 'tll-social:' + gameId + ':key';
   const prevKeyName = 'tll-social:' + gameId + ':key:prev';
   const runQueueName = 'tll-social:' + gameId + ':runq';
+  /** 프로필이 없다고 확인된 deviceKey 값. 같은 키면 /me를 서버에 묻지 않는다. */
+  const noProfileName = 'tll-social:' + gameId + ':noprofile';
 
   let deviceKey = storage.getItem(keyName);
   if (!isDeviceKey(deviceKey)) {
     deviceKey = createDeviceKey(cryptoImpl);
     storage.setItem(keyName, deviceKey);
+    // 방금 만든 키에는 서버 프로필이 있을 수 없다.
+    storage.setItem(noProfileName, deviceKey);
   }
+  function markNoProfile() { storage.setItem(noProfileName, /** @type {string} */ (deviceKey)); }
+  function clearNoProfile() { storage.removeItem(noProfileName); }
+  function knownNoProfile() { return storage.getItem(noProfileName) === deviceKey; }
 
   const rawRequest = createRequester({ baseUrl, fetchImpl, timers, now, getKey: () => /** @type {string} */ (deviceKey) });
   let unreachableFails = 0;
@@ -398,6 +405,7 @@ export function createSocialClient(options) {
   function applyProfile(data) {
     const profile = data && isMini(data.profile) ? data.profile : data && isMini(data.me) ? data.me : isMini(data) ? data : null;
     if (!profile) return false;
+    clearNoProfile();
     state.me = { ...profile };
     if (typeof data.isAdmin === 'boolean') state.isAdmin = data.isAdmin;
     return true;
@@ -647,20 +655,26 @@ export function createSocialClient(options) {
     if (deviceKey && deviceKey !== nextKey) storage.setItem(prevKeyName, deviceKey);
     deviceKey = nextKey;
     storage.setItem(keyName, nextKey);
+    // 바뀐 키의 프로필 유무는 서버만 안다.
+    clearNoProfile();
     resetState();
     changed();
   }
 
   /**
-   * @param {{ manual?: boolean }} [options] manual이 아니면 서버가 없는 것으로 확인된 동안 요청을 보내지 않는다.
+   * @param {{ manual?: boolean, force?: boolean }} [options] manual이 아니면 서버가 없는 것으로 확인된 동안 요청을 보내지 않는다.
+   *   force가 아니면 프로필 없음이 확인된 키는 네트워크 없이 no-profile을 돌려준다.
    */
   async function refreshMe(options) {
+    const force = !!options && options.force === true;
+    if (!force && knownNoProfile()) return fail('no-profile', 401);
     if (!(options && options.manual === true) && backedOff()) return fail('offline');
     const result = await request('GET', '/me');
     if (result.ok) {
+      clearNoProfile();
       applyMe(result.data);
       changed();
-    }
+    } else if (result.status === 401 && result.error === 'no-profile') markNoProfile();
     return result;
   }
 
@@ -782,6 +796,7 @@ export function createSocialClient(options) {
     async profile(name, hero) {
       const result = await request('POST', '/profile', { body: { name, hero } });
       if (result.ok) {
+        clearNoProfile();
         applyProfile(result.data);
         changed();
         if (stopReason === 'no-profile') restart();
@@ -917,11 +932,11 @@ export function createSocialClient(options) {
     vote(id) { return request('POST', '/board/' + encodeURIComponent(String(id)) + '/vote', { body: {} }); },
     /** @param {number | string} id @param {string} body */
     comment(id, body) { return request('POST', '/board/' + encodeURIComponent(String(id)) + '/comment', { body: { body } }); },
-    /** @param {number | string} id @param {{ status?: string, devReply?: string, hidden?: boolean }} changes */
+    /** @param {number | string} id @param {{ status?: string, devReply?: string | null, hidden?: boolean, patchNoteSlug?: string | null }} changes */
     moderate(id, changes) {
       /** @type {Record<string, any>} */
       const body = {};
-      for (const key of ['status', 'devReply', 'hidden']) if (changes && changes[key] !== undefined) body[key] = changes[key];
+      for (const key of ['status', 'devReply', 'hidden', 'patchNoteSlug']) if (changes && changes[key] !== undefined) body[key] = changes[key];
       return request('POST', '/board/' + encodeURIComponent(String(id)) + '/moderate', { body });
     },
     /** @param {{ kind: 'chat' | 'post' | 'player', target: string, ref?: string, reason?: string }} input */

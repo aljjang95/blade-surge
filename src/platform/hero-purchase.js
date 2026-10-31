@@ -1,15 +1,23 @@
-// 영웅 해금 구매 트리거(수익화 1단계). UI는 app.heroPurchase = { available(), buy(productId) }만 안다.
+// 현금 구매 트리거(수익화 1단계 영웅 해금 → 웹 즉시 지급형 상품 전체). UI는 app.heroPurchase = { available(), buy(productId) }만 안다.
 // - 웹 채널: 서버 intent(paymentId·금액 발급) → 포트원 V2 브라우저 SDK 결제창 → 서버 complete(포트원 조회 검증) → eco.applyIapState(서버 응답).
 //   성공 표시(ok:true)는 서버가 granted/already를 돌려줬고 로컬 반영이 저장된 뒤에만 낸다. 결제창 결과·SDK 응답은 지급 근거가 아니다.
 // - Play 채널(안드로이드): 같은 productId를 기존 billing-service(Play 결제 → 서버 verify)로 넘긴다.
 // - 모바일 리다이렉트 결제: 결제 전에 보류 paymentId를 localStorage에 남기고, 복귀한 페이지에서 resume()이 complete를 다시 보낸다.
 import { STORE_CHANNEL } from './store-channel.js';
-import { IAP_BY_ID } from '../shared/iap-catalog.js';
+import { IAP_BY_ID, soldOn } from '../shared/iap-catalog.js';
 
 export const PORTONE_SDK_URL = 'https://cdn.portone.io/v2/browser-sdk.js';
 export const PENDING_KEY = 'bladesurge_web_pay_pending_v1';
 const PENDING_MAX_AGE_MS = 48 * 3600000;
-const PRODUCT_ID = /^hero_[a-z0-9]+_v1$/;
+const PRODUCT_ID = /^[a-z0-9_]{3,64}$/;
+/**
+ * 이 트리거로 살 수 있는 카탈로그 상품인가. 웹 채널은 웹에서 파는(즉시 지급형) 상품만, Play 채널은 카탈로그 상품이면 billing에 넘긴다.
+ * 판매 여부(enabled)·자격은 서버 intent가 최종 판정한다.
+ */
+export function purchasableProduct(productId, channel = STORE_CHANNEL) {
+  if (typeof productId !== 'string' || !PRODUCT_ID.test(productId) || !Object.hasOwn(IAP_BY_ID, productId)) return false;
+  return channel === 'web' ? soldOn(IAP_BY_ID[productId], 'web') : true;
+}
 const PAYMENT_ID = /^[A-Za-z0-9_-]{16,64}$/;
 
 function defaultStorage() {
@@ -36,6 +44,8 @@ export function loadPortOneSdk(doc = globalThis.document) {
 export function createHeroPurchase({ api, eco, billing = null, authority = () => null, channel = STORE_CHANNEL, loadSdk = loadPortOneSdk, askCustomer = null, storage = defaultStorage(), now = () => Date.now(),
   location = globalThis.location, history = globalThis.history }) {
   let webOn = false, busy = false, syncing = false, lastSyncAt = 0;
+  // 웹 결제창 결제수단(서버 플래그). 카드는 항상, 간편결제는 서버가 켠 것만.
+  let payMethods = ['CARD'];
   // 상태 적용 순서: 요청을 시작할 때 단조 증가 번호를 받고, 더 최근에 시작한 요청의 결과가 이미 적용됐으면 오래된 응답은 버린다.
   // (지연된 권한 목록이 방금 산 영웅을 다시 잠그지 않게.) 서버 응답에 serverTime이 있으면 그것도 되돌아가지 않게 비교한다.
   let seq = 0, appliedSeq = 0, appliedServerTime = 0;
@@ -46,7 +56,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
   const readPending = () => {
     try {
       const v = JSON.parse(storage?.getItem(PENDING_KEY) || 'null');
-      if (v && PAYMENT_ID.test(v.paymentId) && PRODUCT_ID.test(v.productId) && now() - Number(v.at) < PENDING_MAX_AGE_MS) return v;
+      if (v && PAYMENT_ID.test(v.paymentId) && purchasableProduct(v.productId, 'web') && now() - Number(v.at) < PENDING_MAX_AGE_MS) return v;
     } catch { /* 저장소 불가·손상은 보류 없음 */ }
     return null;
   };
@@ -81,7 +91,11 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
     /** 서버가 웹 결제 켜짐을 알렸는지 확인한다(웹 채널만). 실패는 조용히 false. */
     async init() {
       if (channel !== 'web') return service.available();
-      try { const me = await api.me(); webOn = me?.flags?.webBilling === true; } catch { webOn = false; }
+      try {
+        const me = await api.me(); const f = me?.flags || {};
+        webOn = f.webBilling === true;
+        payMethods = ['CARD', ...(f.webKakaoPay === true ? ['KAKAOPAY'] : []), ...(f.webNaverPay === true ? ['NAVERPAY'] : []), ...(f.webTossPay === true ? ['TOSSPAY'] : [])];
+      } catch { webOn = false; payMethods = ['CARD']; }
       return webOn;
     },
     /**
@@ -103,6 +117,8 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
       } catch { return false; }
       finally { syncing = false; }
     },
+    /** 웹 결제창에서 고를 수 있는 결제수단(CARD·KAKAOPAY·NAVERPAY·TOSSPAY). 웹 채널이 아니면 빈 목록. */
+    methods() { return channel === 'web' && webOn ? [...payMethods] : []; },
     available() {
       // 서버 권위 계정에서만 연다(그림자·로컬은 저장 편집으로 소유를 늘릴 수 있어 현금 판매 대상이 아니다).
       if (authority() !== 'server') return false;
@@ -121,24 +137,26 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
       return p && p.sellable === true && typeof p.formattedPrice === 'string' && p.formattedPrice ? p.formattedPrice : null;
     },
     async buy(productId) {
-      if (typeof productId !== 'string' || !PRODUCT_ID.test(productId)) return { ok: false, reason: 'unknown-product' };
+      if (!purchasableProduct(productId, channel)) return { ok: false, reason: 'unknown-product' };
       if (!service.available()) return { ok: false, reason: 'unavailable' };
       if (channel !== 'web') return billing.buy(productId);
       if (busy) return { ok: false, reason: 'busy' };
       busy = true;
       try {
         // KG이니시스 결제창은 구매자 이름·연락처·이메일이 필수다. 서버 intent 전에 받고, 취소하면 서버를 부르지 않는다. 저장하지 않는다.
-        let customer = null;
+        let customer = null, method = 'CARD';
         if (typeof askCustomer === 'function') {
-          try { customer = await askCustomer(); } catch { customer = null; }
-          if (!customer?.fullName || !customer?.phoneNumber || !customer?.email) return { ok: false, reason: 'customer-cancelled' };
-          customer = { fullName: customer.fullName, phoneNumber: customer.phoneNumber, email: customer.email };
+          let answer = null;
+          try { answer = await askCustomer([...payMethods]); } catch { answer = null; }
+          if (!answer?.fullName || !answer?.phoneNumber || !answer?.email) return { ok: false, reason: 'customer-cancelled' };
+          customer = { fullName: answer.fullName, phoneNumber: answer.phoneNumber, email: answer.email };
+          if (typeof answer.method === 'string' && payMethods.includes(answer.method)) method = answer.method;
         }
         let intent;
-        try { intent = await api.request('POST', '/iap/web/intent', { productId }); }
+        try { intent = await api.request('POST', '/iap/web/intent', method === 'CARD' ? { productId } : { productId, method }); }
         catch (error) {
           const code = error?.body?.error;
-          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'payout-hold' || code === 'too-many-intents' ? code : 'intent-failed' };
+          return { ok: false, reason: error?.status === 503 ? 'billing-disabled' : code === 'not-eligible' || code === 'already-subscribed' || code === 'payout-hold' || code === 'too-many-intents' || code === 'pay-method' ? code : 'intent-failed' };
         }
         if (!intent || !PAYMENT_ID.test(intent.paymentId) || intent.productId !== productId) return { ok: false, reason: 'intent-failed' };
         writePending({ paymentId: intent.paymentId, productId, at: now() });
@@ -150,6 +168,7 @@ export function createHeroPurchase({ api, eco, billing = null, authority = () =>
           result = await sdk.requestPayment({
             storeId: intent.storeId, channelKey: intent.channelKey, paymentId: intent.paymentId, orderName: intent.orderName,
             totalAmount: intent.totalAmount, currency: intent.currency, payMethod: intent.payMethod, customData: intent.customData,
+            ...(intent.easyPay?.easyPayProvider ? { easyPay: { easyPayProvider: intent.easyPay.easyPayProvider } } : {}),
             ...(customer ? { customer } : {}),
             // 모바일은 결제 앱·PG 페이지로 나갔다가 이 주소로 돌아온다(복귀 시 resume()이 complete를 다시 보낸다).
             redirectUrl: `${origin}/?bs_pay=${encodeURIComponent(intent.paymentId)}`,

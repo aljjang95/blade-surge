@@ -35,7 +35,7 @@ test('catalog routes distinguish basic, deep, conquest, rift and campaign withou
 });
 
 test('unknown and impossible route combinations are missing, never reclassified as a campaign', () => {
-  for (const route of [null, [], {}, { kind: 'campaign', id: '01-1' }, { kind: 'campaign', id: '7-1' },
+  for (const route of [null, [], {}, { kind: 'campaign', id: '01-1' }, { kind: 'campaign', id: '8-1' },
     { kind: 'dungeon', id: '__proto__', depth: 'standard' }, { kind: 'dungeon', id: 'glass_garden', depth: 'unknown' },
     { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: 'garden_dawn' },
     { kind: 'dungeon', id: 'ember_vault', depth: 'deep', conquestId: 'garden_dawn' },

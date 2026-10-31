@@ -138,11 +138,12 @@ test('existing bloom blend receives only RGB attenuation and preserves alpha, te
   expect(focus.bindBloom(bloom)).toBe(bloom); const hook = material.onBeforeCompile;
   focus.bindBloom(bloom); expect(material.onBeforeCompile).toBe(hook);
   const value = compile(material);
-  expect(value.fragmentShader).toContain('gl_FragColor.rgb *= heroEffectFactor(vUv);');
+  expect(value.fragmentShader).toContain('gl_FragColor.rgb *= heroBloomFactor(vUv);');
+  expect(value.fragmentShader).toContain('mix(.7, 1.0');
   expect(value.fragmentShader).not.toContain('gl_FragColor.a *=');
   expect(value.fragmentShader).not.toContain('heroCosmeticMask');
   expect(value.uniforms).not.toHaveProperty('heroCosmeticMask');
-  expect(material.customProgramCacheKey()).toContain('|hero-effect-focus-v3:bloom-rgb');
+  expect(material.customProgramCacheKey()).toContain('|hero-effect-focus-v4:bloom-rgb');
   expect((uniforms as any).heroFocus).toBe(focus.area); expect(material.uniforms.heroFocus).toBe(focus.area);
   expect(uniforms.tDiffuse.value).toBe(texture); expect(uniforms.opacity.value).toBe(1);
   expect(() => focus.bindBloom({})).toThrow('blendMaterial/copyUniforms');

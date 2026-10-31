@@ -5,7 +5,7 @@ import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import { DropSystem } from '../src/game/drops.js';
 import { CHAPTERS as CHAPTER_DATA, stageDef } from '../src/data/stages.js';
 import { lootTable, levelExperienceMultiplier, pickLootRarity } from '../src/data/loot-tables.js';
-import { HEROES, heroStats, levelExp } from '../src/data/heroes.js';
+import { HEROES, heroStats, levelExp, baseLevelExp, EARLY_LEVEL_EXP_FLOOR } from '../src/data/heroes.js';
 import { grandfather } from './helpers/legacy-roster';
 const CHAPTERS: any[] = CHAPTER_DATA;
 
@@ -51,7 +51,8 @@ test('수집과 처치 장부는 영웅/재화를 즉시 바꾸지 않고 캠페
   expect(eco.s).toEqual(before);
   const receipt = eco.completeStage(stage, 3);
   expect(receipt.combatExp).toBe(40); expect(receipt.totalExp).toBe(stage.rewards.exp + 40);
-  expect(eco.hero().level).toBe(2); expect(eco.hero().exp).toBe(50);
+  // 1-1 클리어 EXP 110 + 처치 40 = 150 은 입문 곡선 Lv1 필요치(180) 아래라 Lv1 에 쌓인다(heroes.js EARLY_LEVEL_EXP).
+  expect(levelExp(1)).toBe(180); expect(eco.hero().level).toBe(1); expect(eco.hero().exp).toBe(stage.rewards.exp + 40);
   expect(eco.hero().shards).toBe(1); expect(eco.s.transcendStones).toBe(1); expect((eco.s.expedition.materials as any).glass_leaf).toBe(2);
   expect(ledger.settled).toBe(true); expect(eco.queueCombatXp(stage, 'knight', 50).gained).toBe(0);
   const after = structuredClone(eco.s);
@@ -131,10 +132,10 @@ test('장비 비교는 강화·세트 포함 실전 능력치 기준이며 가�
 
 test('분해는 중복 UID를 한 번만 처리하고 장착·희귀 장비를 보호하며 저장 실패 시 원복한다', () => {
   const eco = grandfather(new Economy()), n = eco.addItem('N', 'weapon'), s = eco.addItem('S', 'armor'), e = eco.addItem('E', 'boots'), rare = eco.addItem('U', 'ring');
-  eco.equip('mage', n.uid);
+  eco.equip('knight', n.uid);
   expect(eco.salvage([n.uid])).toEqual({ ok: false, reason: 'equipped' });
   for (const uids of [[], [-1], [s.uid, -1], [rare.uid]]) expect(eco.salvage(uids)).toEqual({ ok: false, reason: 'items' });
-  eco.unequip('mage', 'weapon'); const before = structuredClone(eco.s); const save = eco.save; eco.save = () => false;
+  eco.unequip('knight', 'weapon'); const before = structuredClone(eco.s); const save = eco.save; eco.save = () => false;
   expect(eco.salvage([n.uid, s.uid, e.uid])).toEqual({ ok: false, reason: 'storage' }); expect(eco.s).toEqual(before); eco.save = save;
   expect(eco.salvage([n.uid, s.uid, s.uid, e.uid])).toEqual({ ok: true, count: 3, got: [{ k: 'gold', n: 2550 }, { k: 'stones', n: 4 }, { k: 'stones2', n: 2 }] });
   expect(eco.s.inventory).toEqual([rare]); expect(new Economy().s.inventory).toEqual([rare]);
@@ -144,5 +145,6 @@ test('경험치 보정은 기존 저장 레벨과 곡선을 바꾸지 않고 ±5
   const eco = new Economy(); eco.hero().level = 20; eco.hero().exp = 10;
   const h = structuredClone(eco.hero()); const migrated = eco.migrate(structuredClone(eco.s)); expect(migrated.heroes.knight.level).toBe(20);
   const stage = stageDef(1, 1); expect(eco.queueCombatXp(stage, 'knight', 100).gained).toBe(50); expect(eco.hero()).toEqual(h);
-  expect(levelExp(20)).toBe(2321); expect(heroStats(HEROES.knight, h, eco.heroEquipBonus('knight')).power).toBeGreaterThan(0);
+  // 기본 곡선은 그대로이고 입문 바닥(Lv10~23 은 4000)만 그 위에 깔린다.
+  expect(baseLevelExp(20)).toBe(2321); expect(levelExp(20)).toBe(Math.max(2321, EARLY_LEVEL_EXP_FLOOR)); expect(heroStats(HEROES.knight, h, eco.heroEquipBonus('knight')).power).toBeGreaterThan(0);
 });

@@ -1,6 +1,11 @@
 // Independent portrait originals and provenance: docs/region-media.md plus
 // docs/media/seasonal-encounter-art.json. These illustrations identify
 // encounters; animated 3D actors use the rig catalog.
+/**
+ * 조우 초상(관문 대장·수문장·중간·최종 4장)이 실제 파일로 있는 지역 접두사. 7장 종탑 도시(belltower)는 초상 일러스트가 아직 없어
+ * 여기 넣지 않는다 — 아트 레인이 4장을 public/img/encounters/belltower_*.webp 로 넣고 이 목록에 'belltower'를 더한다.
+ */
+export const ENCOUNTER_ART_REGIONS = Object.freeze(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
 const ids = [
   'arena_rookie', 'arena_duelist', 'arena_champion',
   'arena_thunder_lancer', 'arena_sunwarden', 'arena_void_oracle',
@@ -8,7 +13,7 @@ const ids = [
   'boss_obsidian_hydra', 'boss_ash_colossus', 'boss_astral_leviathan',
   'boss_verdigris_sentinel', 'boss_sable_mirage_empress', 'boss_comet_bastion',
   'boss_cinder_chain_executor', 'boss_nightglass_archivist',
-  ...['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming'].flatMap(region =>
+  ...ENCOUNTER_ART_REGIONS.flatMap(region =>
     ['captain', 'warden', 'midboss', 'finalboss'].map(rank => `${region}_${rank}`)),
 ];
 export const ENCOUNTER_ART = Object.freeze(Object.fromEntries(ids.map(id => [id, `/img/encounters/${id}.webp`])));

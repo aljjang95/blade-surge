@@ -1,33 +1,52 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
+import { isAccountResetting } from './reset-lock.js';
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
-import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
+import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
+import { itemStats, validItemLevel } from '../data/item-tier.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt, heroReleased } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { reconcileSelectedHero } from './save-base.js';
 import { dropUnownedJob } from './expedition-economy.js';
-import { HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_CAMPAIGN_JOIN, HERO_POLICY, HERO_POLICY_CURRENT, HERO_STARTER_DEFAULT, HERO_FREE_UNLOCK, HERO_UNLOCK_VIA_GACHA, rosterOwns, stageLabelFromUnlocked } from '../data/hero-roster.js';
+import { HERO_DIRECT_PURCHASE } from '../data/hero-direct-purchase.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
-import { resolveDifficulty } from './difficulty.js';
+import { resolveDifficulty, tormentTierOf } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
-import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods, claimJourneyStep as claimJourneyStepCore } from './journey-core.js';
+import { DAILY_CONTRACTS, WEEKLY_CONTRACTS } from '../data/journey.js';
+import { freshMailbox, mailOpen } from '../data/mail.js';
 import { freshTownState } from '../data/towns.js';
 import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
-import { AVATAR_BY_ID } from '../data/avatars.js';
+import { AVATAR_BY_ID, AVATAR_PARTS, AVATAR_PREMIUM_BY_HERO, avatarFullsetEffect } from '../data/avatars.js';
 import { skuGate } from '../data/shop-gates.js';
 import { THEMED_SETS } from '../data/items.js';
+import { enhanceSureCost } from '../data/enhance.js';
+import { transferQuote } from '../data/enhance-transfer.js';
 import { createSeededRng } from '../shared/rng.js';
 import { IAP_BY_ID, IAP_REWARD_KEYS, IAP_REWARD_FIELD } from '../shared/iap-catalog.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
-import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
+import { levelExperienceMultiplier, recommendedLevel, stageRecommendedLevel, dropItemLevel, progressItemLevel } from '../data/loot-tables.js';
 import * as Runes from './rune-economy.js';
+import * as Bounty from './bounty-service.js';
 import { applyBuildStats } from './masterworks-combat.js';
 import { normalizeEndgame, recordDifficultyClear, activeEvents, applyEventRewards, recordTowerClear, claimTowerChest, towerSummary, towerUnlocked, towerStage } from './endgame-core.js';
+import { recordTormentRun, tormentStatus } from './torment-core.js';
+import { HERO_LEVEL_CAP } from './rpg-core.js';
+import { TORMENT } from '../data/content-90d.js';
+import { recordGearDex, milestoneOf, milestoneReached, milestoneClaimed } from './gear-dex.js';
+import { normalizeIdle, idleQuote, claimIdle as claimIdleCore, markSeen as markSeenCore } from './idle-rewards.js';
+import { normalizeAchievements, achievementStats, achievementRows, claimAchievement as claimAchievementCore } from './achievements.js';
+import { normalizeNewbie, newbieView, claimNewbie as claimNewbieCore } from './newbie-event.js';
+import { VAULT, VAULT_OWNER, heroItems, vaultItems, vaultSlots, vaultDay, withdrawQuote, ritualQuote, expandGold, normalizeVault, relayToday, VAULT_INHERIT } from './gear-vault.js';
+import { rollClearCards, decayCard, repairCost, durOf, wornDur, DUR_MAX } from './clear-loop.js';
+import { normalizeLegend, grantLegendExp, legendStats, allocate as allocateLegendNode, respec as respecLegendNodes, respecCost as legendRespecCost } from './legend-rank.js';
 
 const KEY = 'bladesurge_save_v1';
+export const SAVE_STORAGE_KEY = KEY;
 const IAP_APPLIED_MAX = 300;
 // 서버가 준 opId만 받는다(길이·문자 제한). 이 밖의 값은 무시한다.
 const validOpId = (v) => typeof v === 'string' && v.length >= 1 && v.length <= 200;
@@ -174,12 +193,12 @@ export class Economy {
   }
   fresh() {
     return {
-      expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), actionSequence: 0,
-      schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      expedition: normalizeExpedition(), journey: normalizeJourney(), endgame: normalizeEndgame(), legend: normalizeLegend(), actionSequence: 0,
+      schemaVersion: 1, gearIl: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, paidGems: 0, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1, transferScroll: 0,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: HERO_STARTER_DEFAULT, roster: { policy: HERO_POLICY_CURRENT, owned: [HERO_STARTER_DEFAULT], starter: HERO_STARTER_DEFAULT, starterChosen: false, paid: [] },
-      inventory: [], invSeq: 1, avatars: { owned: [], equipped: {}, showGear: {} },
+      inventory: [], invSeq: 1, vault: { v: 1, expansions: 0, day: 0, used: 0 }, gearDex: { v: 1, drop: {}, kin: {}, claimed: {} }, avatars: { owned: [], equipped: {}, showGear: {}, parts: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
@@ -187,8 +206,8 @@ export class Economy {
       pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
-      daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false, cameraAuto: true }, limitedStart: nowOf(this),
+      daily: { day: 0, last: 0 }, mail: freshMailbox(),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, idle: { since: endgameNow(this), seen: endgameNow(this), comebackAt: 0 }, newbie: { start: periodAt(endgameNow(this)).day, claimed: [], final: false }, achievements: { claimed: {} }, slain: { seeded: true, kills: {} }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, autoSalvageN: false, cameraInvertX: false, cameraInvertY: false, cameraAuto: true, companionIntroSeen: false }, limitedStart: nowOf(this),
     };
   }
   load() {
@@ -218,6 +237,7 @@ export class Economy {
     return out;
   }
   save() {
+    if (isAccountResetting()) return false; // 계정 초기화 중에는 저장이 지운 키를 되살리지 않는다.
     // 유료 몫 클램프는 저장이 성공할 때만 확정한다(실패하면 되돌려 호출부의 부분 롤백이 어긋나지 않게).
     const paidBefore = this.s.paidGems;
     try {
@@ -235,6 +255,25 @@ export class Economy {
     catch { cleared = false; }
     this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
     return cleared && this.storageStatus === 'ready';
+  }
+  /**
+   * 진행 초기화 뒤 다시 쓸 새 저장(JSON). 영수증·결제로 얻은 권한만 현재 상태에서 옮기고 진행·재화는 새 시작값이다.
+   * 옮기는 것: 결제 원장(iapApplied·purchases·spentKRW), 광고 제거, VIP·월정액, 첫 구매 기록, 배틀패스 프리미엄 권한,
+   * 결제 영웅(roster.paid), 결제로 받은 아바타(avatars.paid와 그 소유). 유료 보석 몫은 새 시작값(0)이다.
+   */
+  entitlementSeed() {
+    const prev = this.s, next = this.fresh();
+    for (const field of ['iapApplied', 'adsRemoved', 'purchases', 'spentKRW', 'vip', 'vipUntil', 'monthlyUntil', 'monthlyClaimed', 'firstPurchaseUsed']) {
+      if (prev[field] !== undefined) next[field] = structuredClone(prev[field]);
+    }
+    if (Array.isArray(prev.roster?.paid)) next.roster.paid = [...prev.roster.paid];
+    if (prev.pass?.premium === true) next.pass.premium = true;
+    const paidAvatars = prev.avatars?.paid && typeof prev.avatars.paid === 'object' ? prev.avatars.paid : null;
+    if (paidAvatars) {
+      next.avatars.paid = structuredClone(paidAvatars);
+      next.avatars.owned = [...new Set([...(next.avatars.owned || []), ...Object.keys(paidAvatars).filter((id) => (prev.avatars.owned || []).includes(id))])];
+    }
+    return JSON.stringify(next);
   }
   rollbackEnergy(snapshot) {
     Object.assign(this.s, { energy: snapshot.energy, energyT: snapshot.energyT });
@@ -275,13 +314,15 @@ export class Economy {
     if (r.fragments) { s.fragments = (s.fragments || 0) + r.fragments; got.push({ k: 'fragments', n: r.fragments }); }
     if (r.protect) { s.protect += r.protect; got.push({ k: 'protect', n: r.protect }); }
     if (r.bless) { s.bless += r.bless; got.push({ k: 'bless', n: r.bless }); }
+    if (r.transferScroll) { s.transferScroll = (s.transferScroll || 0) + r.transferScroll; got.push({ k: 'transferScroll', n: r.transferScroll }); }
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
     if (r.runeDust) { const runes = Runes.runesOf(this); runes.dust += r.runeDust; got.push({ k: 'runeDust', n: r.runeDust }); }
     if (r.blessingCharm) { const n = Runes.grantCharms(this, r.blessingCharm); if (n) got.push({ k: 'blessingCharm', n }); }
+    if (r.lineageSigil) { s.lineageSigil = (s.lineageSigil || 0) + r.lineageSigil; got.push({ k: 'lineageSigil', n: r.lineageSigil }); }
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
-    if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR'); got.push({ k: 'item', item: it }); } }
+    if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR', null, rngOf(this), 0, this.s.selected); got.push({ k: 'item', item: it }); } }
     if (!opts.silent) this.emit();
     return got;
   }
@@ -325,6 +366,10 @@ export class Economy {
     if (HEROES[id].gachaOnly) return { ...base, reason: r && r.policy === HERO_POLICY.STARTER && !r.starterChosen ? 'starter-pending' : 'gacha' };
     if (!r || r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
     if (!r.starterChosen) return { ...base, reason: 'starter-pending' };
+    // 원래 다섯 영웅은 캠페인 지역 끝을 넘기면 합류한다(HERO_CAMPAIGN_JOIN). 그 전에는 소환·상품으로도 얻는다.
+    const join = HERO_CAMPAIGN_JOIN[id];
+    // 진행이 이미 합류 관문을 지났으면 '합류 대기'(다음 관문 클리어 때 합류) — 곧 무료로 올 영웅에 결제하지 않게 화면이 결제를 닫는다.
+    if (join) return { ...base, need: join, needLabel: stageLabelFromUnlocked(join, STAGES_PER_CHAPTER), reason: base.progress >= join ? 'campaign-pending' : 'campaign' };
     // 영웅은 소환으로 얻는다(BM 12장). 보석 해금 사다리(HERO_FREE_UNLOCK)는 초보자 배너·진행 소환권으로 대체해 닫았다.
     if (HERO_UNLOCK_VIA_GACHA) return { ...base, reason: 'gacha' };
     const step = Math.max(0, r.owned.length - 1), tier = HERO_FREE_UNLOCK[step];
@@ -343,6 +388,92 @@ export class Economy {
     if (!this._commit(before)) return { ok: false, reason: 'storage' };
     return { ok: true, id, gems: q.gems };
   }
+  /**
+   * 보석 직접 영입 견적(UI·서버 공통). HERO_DIRECT_PURCHASE.enabled 가 꺼져 있으면 항상 reason 'disabled'.
+   * reason: disabled | unknown | owned | policy | starter-pending | unreleased | no-price | campaign-pending | paid-gems | null(영입 가능).
+   * 유료 보석 전용(대표님 결정 2026-10-29): 무료 보석은 영입에 쓰지 않으므로 have 는 유료 보석 잔액(paidGems, 총 잔액 이하)이다.
+   * campaign-pending = 진행이 이미 합류 관문을 지나 다음 클리어에 무료로 합류할 영웅(보석을 쓰지 않게 막는다, heroUnlockQuote 와 같은 규칙).
+   */
+  heroBuyQuote(id) {
+    const s = this.s, r = s.roster, have = Math.max(0, Math.min(Math.floor(Number(s.paidGems) || 0), Math.floor(Number(s.gems) || 0))), base = { id, ok: false, price: 0, have, reason: null };
+    if (!HERO_DIRECT_PURCHASE.enabled) return { ...base, reason: 'disabled' };
+    if (typeof id !== 'string' || !Object.hasOwn(HEROES, id) || !s.heroes[id]) return { ...base, reason: 'unknown' };
+    if (this.ownHero(id)) return { ...base, reason: 'owned' };
+    // grantHero 와 같은 조건: 정책 1 이거나 시작 영웅을 고른 정책 2 만 소유를 늘릴 수 있다.
+    if (!r || !Array.isArray(r.owned)) return { ...base, reason: 'policy' };
+    if (r.policy === HERO_POLICY.STARTER && !r.starterChosen) return { ...base, reason: 'starter-pending' };
+    if (r.policy !== HERO_POLICY.LEGACY && r.policy !== HERO_POLICY.STARTER) return { ...base, reason: 'policy' };
+    if (!heroReleased(id, nowOf(this))) return { ...base, reason: 'unreleased' };
+    const price = HERO_DIRECT_PURCHASE.prices[HEROES[id].rarity];
+    if (!Number.isSafeInteger(price) || price <= 0) return { ...base, reason: 'no-price' };
+    const join = HERO_CAMPAIGN_JOIN[id];
+    if (join && (s.progress?.unlocked || 1) >= join) return { ...base, price, reason: 'campaign-pending' };
+    if (have < price) return { ...base, price, reason: 'paid-gems' };
+    return { ...base, price, ok: true };
+  }
+  /**
+   * 보석 직접 영입: 아직 소유하지 않은 영웅을 보석으로 바로 연다. 보석 차감·소유 추가·시작 레벨/장비는 저장이 성공해야 확정(실패하면 전부 되돌린다).
+   * 시작 레벨·장비는 캠페인 합류와 같은 규칙(_startCompanion). 나중에 캠페인 합류 관문에 닿아도 이미 소유라 grantCampaignHeroes 가 건너뛰므로
+   * 중복 지급·레벨/경험치 덮어쓰기가 없다. 소비는 유료 보석만(gems 와 paidGems 를 같이 줄여 무료 몫은 그대로).
+   * 최초 1회 기본 해금만 준다: 중복 조각·각성·별 재료는 주지 않는다(그것들은 소환에서만 나온다).
+   * @param {string} id @returns {{ ok: boolean, reason?: string, id?: string, gems?: number }}
+   */
+  buyHero(id) {
+    const q = this.heroBuyQuote(id);
+    if (!q.ok) return { ok: false, reason: q.reason };
+    const before = structuredClone(this.s), r = this.s.roster;
+    this.s.gems -= q.price; this.s.paidGems -= q.price;   // 유료 몫만 차감(save 의 clampPaidGems 와 일관)
+    r.owned = [...r.owned, id];
+    this._startCompanion(id, Math.max(1, this.s.progress?.unlocked || 1));
+    if (!this._commit(before)) return { ok: false, reason: 'storage' };
+    return { ok: true, id, gems: q.price };
+  }
+  /**
+   * 성장형 합류: 방금 클리어한 관문(clearedIdx)이 합류 관문 이상이면 그 영웅을 소유에 더한다(정책 2·시작 영웅 고른 뒤만).
+   * 저장된 progress 가 아니라 이번에 실제로 깬 관문으로 판정한다: 가져오기·그림자 스냅샷이 부풀린 progress 만으로 영웅을
+   * 받지 못하게 한다(독립 리뷰 P1). 진행이 이미 지난 이용자는 그 관문 이상을 다시 깰 때 한꺼번에 합류한다. 저장은 호출자가 한다.
+   * @param {number} clearedIdx 이번에 클리어한 관문 번호(stageDef idx, 1부터)
+   */
+  grantCampaignHeroes(clearedIdx) {
+    const r = this.s.roster, progress = Number.isSafeInteger(clearedIdx) ? clearedIdx + 1 : 0, joined = [];
+    if (!r || r.policy !== HERO_POLICY.STARTER || !r.starterChosen || !Array.isArray(r.owned)) return joined;
+    for (const [id, need] of Object.entries(HERO_CAMPAIGN_JOIN)) {
+      if (progress < need || !this.s.heroes[id] || rosterOwns(r, id)) continue;
+      r.owned = [...r.owned, id]; joined.push(id);
+      this._startCompanion(id, Math.max(1, progress));
+    }
+    return joined;
+  }
+  /**
+   * 합류·직접 영입 동료의 시작 상태(레벨·장비). 합류와 영입이 같은 규칙을 쓰므로 한곳에 둔다.
+   * 레벨은 낮추지 않는다(미소유 상태로 보존된 레벨이 더 높으면 그대로). 이미 낀 장비 부위는 건드리지 않는다. 난수 없음. 저장은 호출자가 한다.
+   * @param {string} id @param {number} nextIdx 다음에 도전할 관문 번호(진행 progress.unlocked)
+   */
+  _startCompanion(id, nextIdx) {
+    // 합류 동료는 Lv1이 아니라 출전 영웅 레벨 −3(최소 다음 관문 권장 레벨)으로 온다. Lv1 마법사가 3-1에서 바로 쓰러져 합류가 보상이 되지 못했다.
+    // 따라잡기 경험치 가속 대신 즉시 레벨을 고른 이유: 합류 직후 첫 출전이 바로 쓸 만해야 하고, 경험치 배율은 서버 정산 경험치를 바꾼다.
+    const h = this.s.heroes[id], lead = this.s.heroes[this.s.selected]?.level || 1;
+    const joinLevel = Math.max(1, lead - 3, recommendedLevel(Math.floor((nextIdx - 1) / 10) + 1, (nextIdx - 1) % 10 + 1));
+    if ((h.level || 1) < joinLevel) { h.level = joinLevel; h.exp = 0; }
+    this.grantCompanionKit(id, nextIdx);
+  }
+  /**
+   * 합류 동료 시작 장비: 부위마다 에픽(E)·강화 0·il = 다음 관문의 드랍 장비 레벨 한 점씩, 그 영웅 소유로 만들어 바로 착용시킨다.
+   * 맨몸으로 합류한 마법사가 3-1에서 전투력 0.67배로 쓰러졌다(가방은 영웅 소유라 동료 가방이 비어 있다). 난수 없음 —
+   * 부위별 ITEM_POOL 의 첫 E 장비를 고정 규칙으로 고른다(장비에 무기 종류가 없다). 캠페인 합류에서만 부르고 서버 정산도 같은 completeStage 를 지난다.
+   * 이미 낀 부위는 건드리지 않는다. 저장은 호출자가 한다.
+   */
+  grantCompanionKit(heroId, nextIdx) {
+    const h = this.s.heroes[heroId]; if (!h) return [];
+    const n = Math.max(1, nextIdx), il = dropItemLevel({ ch: Math.floor((n - 1) / STAGES_PER_CHAPTER) + 1, st: (n - 1) % STAGES_PER_CHAPTER + 1 });
+    const given = [];
+    for (const slot of SLOTS) {
+      if (h.equip[slot]) continue;
+      const def = ITEM_POOL[slot].find((x) => x.rarity === 'E'); if (!def) continue;
+      const inst = this.pushItem(def.id, { owner: heroId, il }); h.equip[slot] = inst.uid; given.push(inst.uid);
+    }
+    return given;
+  }
   /** 환불·회수·정화 뒤 출전 영웅과 직업이 소유 영웅 안에 있게 맞춘다. */
   reconcileOwnership() { reconcileSelectedHero(this.s); dropUnownedJob(this.s); }
   heroEquipBonus(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
@@ -353,6 +484,16 @@ export class Economy {
       const n = b.sets[sid]; const S = SETS[sid]; if (!S) continue;
       const apply = (o, tier) => { b.atkPct += o.atk || 0; b.hpPct += o.hp || 0; b.crit += o.crit || 0; b.critDmg += o.critDmg || 0; b.ultGain += o.ultGain || 0; for (const pr of o.procs || []) if (!b.procs.includes(pr)) b.procs.push(pr); b.active.push({ set: S, tier, n }); };
       if (n >= 4) apply(S.four, 4); else if (n >= 2) apply(S.two, 2);
+    }
+    // 아바타 풀셋 효과: 착용(장비 외형 표시와 무관)한 영웅만. 이동속도·줍기 범위 편의만이라 전투력 계산에는 들어가지 않는다.
+    b.avatar = avatarFullsetEffect(this.equippedAvatar(id));
+    // 전설 수련 판(계정 공통): 공격·체력·방어·치명 몫은 모든 영웅에게 더한다. 키스톤 플래그는 b.legend.flags 로 전투가 읽는다.
+    const leg = this.s.legend;
+    if (leg && leg.rank > 0) {
+      const ls = legendStats(leg);
+      b.atkPct += ls.atkPct; b.hpPct += ls.hpPct; b.def += ls.def; b.crit += ls.crit; b.critDmg += ls.critDmg; b.ultGain += ls.ultGain;
+      b.legend = { rank: ls.rank, flags: ls.flags, radiusPct: ls.radiusPct, vacuumPct: ls.vacuumPct, cdr: ls.cdr, speedPct: ls.speedPct, bossDmgPct: ls.bossDmgPct,
+        regenPct: ls.regenPct, dodgeRecoverPct: ls.dodgeRecoverPct, openShieldPct: ls.openShieldPct, pickupPct: ls.pickupPct, dropPct: ls.dropPct, rarityPct: ls.rarityPct };
     }
     return b;
   }
@@ -375,7 +516,7 @@ export class Economy {
     const def = THEMED_SETS.includes(setId) ? craftable(setId, slot) : null; if (!def) return { ok: false, reason: 'none' };
     if ((this.s.fragments || 0) < CRAFT_COST) return { ok: false, reason: 'fragments' };
     this.s.fragments -= CRAFT_COST;
-    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
+    const inst = this.pushItem(def.id); this.emit(); return { ok: true, inst };
   }
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
@@ -404,7 +545,45 @@ export class Economy {
   blessingPick(index) { return Runes.blessingPick(this, index); }
   blessingConsume() { return Runes.blessingConsume(this); }
   blessingRestore(held) { return Runes.blessingRestore(this, held); }
-  addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
+  addHeroExp(id, exp, { silent = false } = {}) {
+    const h = this.hero(id), wasCap = h.level >= HERO_LEVEL_CAP; h.exp += exp; let ups = 0;
+    while (h.exp >= levelExp(h.level) && h.level < HERO_LEVEL_CAP) { h.exp -= levelExp(h.level); h.level++; ups++; }
+    // Lv.80 이후 EXP 는 영웅 레벨이 아니라 계정 공통 전설 수련으로 흘러간다(docs/SPEC_720H.md 3.1). 옛 저장의 80 레벨 잔여 EXP 는 받지 않는다.
+    if (h.level >= HERO_LEVEL_CAP) { const over = wasCap ? exp : h.exp; h.exp = 0; if (over > 0) this.grantLegend(over); }
+    if (!silent) this.emit();
+    return ups;
+  }
+  /** 전설 수련 EXP 지급. 정산 트랜잭션 안에서만 부른다. 결과는 takeLegendGrant 로 영수증에 한 번 옮긴다. */
+  grantLegend(exp) {
+    this.s.legend = normalizeLegend(this.s.legend);
+    const grant = grantLegendExp(this.s.legend, exp), prev = this._legendGrant;
+    this._legendGrant = prev ? { ...grant, gained: prev.gained + grant.gained, ranks: prev.ranks + grant.ranks, keystones: [...prev.keystones, ...grant.keystones] } : grant;
+    return grant;
+  }
+  takeLegendGrant() { const grant = this._legendGrant || null; this._legendGrant = null; return grant && grant.gained > 0 ? grant : null; }
+  // ---------- 전설 수련 (규칙은 legend-rank.js) ----------
+  legendState() { return this.s.legend = normalizeLegend(this.s.legend); }
+  legendEffects() { return legendStats(this.legendState()); }
+  legendRespecCost() { return legendRespecCost(this.legendState()); }
+  /** 점수를 노드에 넣는다. 저장에 실패하면 되돌린다. */
+  legendAllocate(nodeId, n = 1) {
+    const before = structuredClone(this.s); this.legendState();
+    const res = allocateLegendNode(this.s.legend, nodeId, n);
+    if (!res.ok) return res;
+    if (!this._commit(before)) return { ok: false, error: 'storage' };
+    return res;
+  }
+  /** 점수 재분배(골드 비용). 골드가 부족하면 아무것도 바꾸지 않는다. */
+  legendRespec() {
+    const before = structuredClone(this.s); this.legendState();
+    const res = respecLegendNodes(this.s.legend, this.s.gold);
+    if (!res.ok) return res;
+    this.s.gold -= res.cost;
+    if (!this._commit(before)) return { ok: false, error: 'storage', cost: res.cost };
+    return res;
+  }
+  /** 고통 단계 상태(최고 단계·오늘 판 수·풀 보상 남은 판). */
+  tormentStatus() { this.s.endgame = normalizeEndgame(this.s.endgame); return tormentStatus(this.s.endgame, endgameNow(this)); }
   /** 미소유 영웅은 성장·장비·외형 명령을 모두 거절한다(미리 키워 두는 우회 차단). 로컬과 서버 /cmd가 같은 Economy 메서드를 부르므로 한 곳에서 막는다. */
   trainingQuote(id) { if (this.heroLocked(id)) return { ...heroTrainingQuote(null, 0), reason: 'locked' }; return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
   levelUpHero(id) {
@@ -506,27 +685,157 @@ export class Economy {
     h.shards += GACHA.dupShards; return { dup: false, locked: true, shards: GACHA.dupShards };
   }
   // ---------- 장비 ----------
-  /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = rngOf(this)) {
+  /** @param {string} rarity @param {string|null} slot @param {number|null} [il] */
+  addItem(rarity, slot = null, rng = rngOf(this), tp = 0, owner = this.gearOwnerDefault(), il = null) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
     const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
-    const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return inst;
+    // tp: 고통 단계 장비 파워(드랍된 단계). 0 이면 필드를 두지 않아 기존 장비와 같은 모양이다.
+    // il: 스테이지 장비 레벨(필드 드랍이 나온 스테이지의 권장 레벨). 0 이면 필드를 두지 않는다. 고통 단계(tp) 장비에는 붙이지 않는다.
+    // 생략(null)하면 지금 진행 단계의 장비 레벨(가챠·제작·보상) — pushItem 참고.
+    return this.pushItem(def.id, { tp, owner, il });
   }
-  equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
+  // ---------- 장비 귀속 · 금고 (docs/GEAR_OWNERSHIP_VAULT.md) ----------
+  /** 새 장비의 주인: 진행 중인 전투 장부의 영웅, 없으면 지금 고른 영웅. */
+  gearOwnerDefault() { const led = this._fieldRewards; return led && !led.settled && this.s.heroes[led.heroId] ? led.heroId : this.s.selected; }
+  /** 장비 인스턴스 하나를 인벤토리에 넣는다(모든 획득 경로의 단일 형태). */
+  /** @param {string} id @param {{ tp?: number, owner?: string, il?: number|null }} [opts] */
+  pushItem(id, { tp = 0, owner = this.gearOwnerDefault(), il = null } = {}) {
+    // il = 스테이지 장비 레벨(item-tier.js). 필드 드랍은 그 스테이지 값을 명시하고(0 이면 필드 없음), 생략한 경로(가챠·제작·상점·보상)는
+    // 지금까지 깬 가장 깊은 관문의 장비 레벨을 받는다. 생략 경로가 il 없이 나오면 같은 진행의 필드 드랍 하위 등급이 유니크·레전드리를 이겼다(2026-10-29 신고).
+    const lv = tp > 0 ? 0 : validItemLevel(il === null || il === undefined ? progressItemLevel(this.s.progress) : il);
+    const inst = { uid: this.s.invSeq++, id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(lv ? { il: lv } : {}), owner: owner === VAULT_OWNER || this.s.heroes[owner] ? owner : this.s.selected };
+    this.s.inventory.push(inst);
+    if (inst.owner !== VAULT_OWNER) recordGearDex(this.s, 'drop', inst.owner, id);   // 직접 얻은 장비만 드랍 도감에(일반 꺼내기·장착은 등재하지 않는다)
+    return inst;
+  }
+  /** 그 영웅 소유 장비(가방에 보이는 것). */
+  heroBag(heroId = this.s.selected) { return heroItems(this.s, heroId); }
+  /** 금고 요약: 칸·사용·확장 비용·오늘 남은 유료 꺼내기. */
+  vaultState() {
+    const v = this.s.vault = normalizeVault(this.s.vault), items = vaultItems(this.s), day = vaultDay(v, nowOf(this));
+    return { items, used: items.length, slots: vaultSlots(v), expansions: v.expansions, maxExpansions: VAULT.maxExpansions,
+      expandGold: v.expansions >= VAULT.maxExpansions ? null : expandGold(v), dailyLeft: Math.max(0, VAULT.dailyPaidWithdrawals - day.used), dailyMax: VAULT.dailyPaidWithdrawals };
+  }
+  vaultWithdrawQuote(uid, heroId = this.s.selected) { return withdrawQuote(this.s, uid, heroId, nowOf(this), { ownsHero: (id) => this.ownHero(id) }); }
+  /** 영웅 → 금고. 무료, 장착 중이면 해제. 금고가 가득 차면 거부. */
+  vaultDeposit(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    if (!inst || !ITEM_BY_ID[inst.id] || inst.owner === VAULT_OWNER) return { ok: false, reason: 'item' };
+    const v = this.vaultState(); if (v.used >= v.slots) return { ok: false, reason: 'full' };
+    const from = this.s.heroes[inst.owner] ? inst.owner : this.s.selected;
+    for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; }
+    inst.owner = VAULT_OWNER; inst.from = from;
+    this.emit(); return { ok: true, from };
+  }
+  /** 금고 → 영웅. 맡긴 영웅·같은 계열·공유 시절 장비는 무료, 그 밖에는 골드와 하루 유료 횟수. */
+  vaultWithdraw(uid, heroId = this.s.selected) {
+    const q = this.vaultWithdrawQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    this.s.gold -= q.gold;
+    if (!q.free) this.s.vault = { ...normalizeVault(this.s.vault), day: q.daily.day, used: q.daily.used + 1 };
+    inst.owner = heroId; delete inst.from; delete inst.legacy;
+    this.emit(); return { ok: true, gold: q.gold, free: q.free, heroId };
+  }
+  vaultRitualQuote(uid, heroId) { return ritualQuote(this.s, uid, heroId, nowOf(this), { ownsHero: (id) => this.ownHero(id) }); }
+  /** 계승 의식(docs/GEAR_VAULT_INHERIT.md 3.4): 금고 장비를 소유 영웅에게. 골드+계승 문장, 하루 2회(일반 꺼내기와 별도), 확정. */
+  vaultRitual(uid, heroId) {
+    const q = this.vaultRitualQuote(uid, heroId); if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, sigil: q.sigil };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    const before = { gold: this.s.gold, sigil: this.s.lineageSigil, vault: this.s.vault, inst: { ...inst }, dex: this.s.gearDex === undefined ? undefined : structuredClone(this.s.gearDex) };
+    try {
+      const from = inst.from, hops = Math.min(VAULT_INHERIT.hopsMax, (inst.hops || 0) + 1);
+      this.s.gold -= q.gold;
+      const left = (this.s.lineageSigil || 0) - q.sigil;
+      if (left > 0) this.s.lineageSigil = left; else delete this.s.lineageSigil;
+      this.s.vault = { ...normalizeVault(this.s.vault), rday: q.daily.day, rused: q.daily.used + 1 };
+      inst.owner = heroId; delete inst.from; delete inst.legacy;
+      inst.hops = hops;
+      recordGearDex(this.s, 'kin', heroId, inst.id);
+      const lin = [...(inst.lin || []), ...(from ? [from] : [])].slice(-Math.min(hops, VAULT_INHERIT.linMax));  // hops>=1 이라 keep>=1
+      if (lin.length) inst.lin = lin; else delete inst.lin;
+    } catch (e) {
+      this.s.gold = before.gold; this.s.vault = before.vault;
+      if (before.sigil === undefined) delete this.s.lineageSigil; else this.s.lineageSigil = before.sigil;
+      if (before.dex === undefined) delete this.s.gearDex; else this.s.gearDex = before.dex;
+      for (const k of Object.keys(inst)) delete inst[k]; Object.assign(inst, before.inst);
+      return { ok: false, reason: 'error', gold: q.gold, sigil: q.sigil };
+    }
+    this.emit(); return { ok: true, gold: q.gold, sigil: q.sigil, heroId, hops: inst.hops };
+  }
+  /**
+   * vaultRelay(docs/GEAR_VAULT_INHERIT.md 4.5): heroId 가 계승 의식으로 받은 장비(hops>=1)를 끼고 이겼으면, 오늘 아직 안 센 장비 하나를 세고 `vaultRelay` 임무 카운터를 올린다.
+   * 같은 uid 는 하루 1회(왕복 이동·재장착으로 오르지 않는다). 서버 정산(applySettlement → completeStage)에서만 불리고 클라이언트 보고 값은 쓰지 않는다.
+   */
+  recordVaultRelay(heroId) {
+    const at = nowOf(this), today = relayToday(this.s.vault, at), equip = Object.values(this.hero(heroId)?.equip || {});
+    const inst = equip.map((uid) => this.s.inventory.find((x) => x.uid === uid)).find((x) => x && x.owner === heroId && (x.hops || 0) >= 1 && !today.uids.includes(x.uid));
+    if (!inst) return false;
+    if (!this.recordJourneyAction('vaultRelay').ok) return false;
+    this.s.vault = { ...normalizeVault(this.s.vault), rl: { day: today.day, uids: [...today.uids, inst.uid].slice(-VAULT_INHERIT.relayUidsMax) } };
+    return true;
+  }
+  /**
+   * 일일·주간 의뢰의 계승 문장 보상(서버 명령). 의뢰 달성은 로컬 여정 기록이 정본이라 서버가 검증할 수 없으므로,
+   * 서버는 (종류, 의뢰, 서버 기준 기간)당 한 번만 의뢰 표의 문장 수만큼 지급해 상한을 지킨다(재수령·반복 지급 차단).
+   * 클라이언트는 같은 메서드를 불러 서버와 잔액이 같게 한다. 골드·강화석 등 나머지 의뢰 보상은 기존 로컬 경로 그대로.
+   */
+  claimJourneySigil(kind, id) {
+    const list = kind === 'daily' ? DAILY_CONTRACTS : kind === 'weekly' ? WEEKLY_CONTRACTS : null;
+    const def = list?.find((c) => c.id === id);
+    if (!def) return { ok: false, reason: 'unknown' };
+    const sigil = Number(def.rewards?.lineageSigil) || 0;
+    if (!(sigil > 0)) return { ok: false, reason: 'unknown' };
+    const p = periodAt(endgameNow(this)), no = kind === 'daily' ? p.day : p.week, key = kind + ':' + id + ':' + no;
+    const keep = (Array.isArray(this.s.sigilClaims) ? this.s.sigilClaims : []).filter((k) => typeof k === 'string' && k.endsWith(':' + (k.startsWith('daily:') ? p.day : p.week)) && (k.startsWith('daily:') || k.startsWith('weekly:')));
+    if (keep.includes(key)) return { ok: false, reason: 'claimed' };
+    keep.push(key); this.s.sigilClaims = keep.slice(-16);
+    this.s.lineageSigil = (this.s.lineageSigil || 0) + sigil;
+    this.emit(); return { ok: true, sigil };
+  }
+  /** 도감 마일스톤 수령(중복 수령 불가, 달성은 gearDex 로 재계산). 보상 수치는 gear-dex.js 표. */
+  gearDexClaim(heroId, milestoneId) {
+    const m = milestoneOf(milestoneId);
+    if (!m) return { ok: false, reason: 'milestone' };
+    if (!this.ownHero(heroId)) return { ok: false, reason: 'hero' };
+    if (milestoneClaimed(this.s, heroId, milestoneId)) return { ok: false, reason: 'claimed' };
+    if (!milestoneReached(this.s, heroId, milestoneId)) return { ok: false, reason: 'locked' };
+    const dex = this.s.gearDex; (dex.claimed[heroId] ||= []).push(milestoneId);
+    const got = this.addRewards({ ...m.rewards }, { silent: true, applyVip: false });
+    this.emit(); return { ok: true, got };
+  }
+  /** 금고 칸 확장(골드). */
+  vaultExpand() {
+    const v = normalizeVault(this.s.vault); if (v.expansions >= VAULT.maxExpansions) return { ok: false, reason: 'max' };
+    const gold = expandGold(v); if (this.s.gold < gold) return { ok: false, reason: 'gold', gold };
+    this.s.gold -= gold; this.s.vault = { ...v, expansions: v.expansions + 1 };
+    this.emit(); return { ok: true, gold, slots: vaultSlots(this.s.vault) };
+  }
+  equip(heroId, uid) { if (this.heroLocked(heroId)) return false; const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; if ((inst.owner ?? this.s.selected) !== heroId) return false; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
   unequip(heroId, slot) { if (this.heroLocked(heroId)) return false; this.hero(heroId).equip[slot] = null; this.emit(); }
-  /** 강화: +8까지 100%, 이후 확률/파괴. protect=보호주문서(파괴 방지), bless=축복(성공률 +20%) */
-  enhance(uid, { protect = false, bless = false } = {}) {
+  /** 강화 견적(읽기 전용): 일반 비용·강화석과 확정 강화 웃돈(범위 밖이면 null). UI·성장 안내·서버가 같은 값을 쓴다. */
+  enhanceQuote(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return null;
+    const lv = inst.enh, tier = enhanceStoneTier(lv);
+    return { lv, gold: enhanceCost(lv), stones: enhanceStones(lv), tier, stoneKey: STONE_KEY[tier], chance: enhanceChance(lv), sureGold: enhanceSureCost(lv) };
+  }
+  /** 강화: +3까지 100%, +4부터 확률이 단계마다 떨어지고 +10부터 하락·+12부터 파괴(items.js ENHANCE_CHANCE). protect=보호주문서(파괴 방지), bless=축복(성공률 +20%),
+   *  sure=확정 강화(골드 웃돈 enhanceSureCost, +3 → +11 구간만, 축복과 같이 쓰지 않음). 서버 /cmd enhance 가 같은 메서드를 부른다(성공이 확정이라 난수 결과와 무관). */
+  enhance(uid, { protect = false, bless = false, sure = false } = {}) {
     const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst || inst.enh >= ENH_MAX) return { ok: false, reason: 'max' };
     const lv = inst.enh; const cost = enhanceCost(lv), stones = enhanceStones(lv);
-    if (this.s.gold < cost) return { ok: false, reason: 'gold' };
+    const sureGold = sure ? enhanceSureCost(lv) : 0;   // 결과에 늘 싣는다(0 = 확정 강화 안 씀)
+    if (sure && sureGold === null) return { ok: false, reason: 'sure' };
+    if (sure && (bless || protect)) return { ok: false, reason: 'stack' };   // 확정이면 축복·보호 주문서가 쓸모없이 차감된다
+    if (this.s.gold < cost + sureGold) return { ok: false, reason: 'gold' };
     const sk = STONE_KEY[enhanceStoneTier(lv)];
     if ((this.s[sk] || 0) < stones) return { ok: false, reason: 'stones', tier: enhanceStoneTier(lv) };
     if (protect && this.s.protect <= 0) return { ok: false, reason: 'protect' };
     if (bless && this.s.bless <= 0) return { ok: false, reason: 'bless' };
-    this.s.gold -= cost; this.s[sk] -= stones; if (protect) this.s.protect--; if (bless) this.s.bless--;
-    let chance = enhanceChance(lv) + (bless ? 0.2 : 0); const success = rngOf(this)() < chance;
+    this.s.gold -= cost + sureGold; this.s[sk] -= stones; if (protect) this.s.protect--; if (bless) this.s.bless--;
+    // 확정 강화도 난수 하나를 똑같이 뽑는다(서버·클라이언트 난수 소비 순서를 일반 강화와 같게 유지).
+    let chance = sure ? 1 : enhanceChance(lv) + (bless ? 0.2 : 0); const roll = rngOf(this)(); const success = sure || roll < chance;
     let destroyed = false, down = 0;
     if (success) inst.enh++;
     else {
@@ -535,12 +844,30 @@ export class Economy {
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.recordJourneyAction('upgrades');
-    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
+    this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance, sureGold };
+  }
+  /** 강화 전승 견적(읽기 전용). 규칙·비용은 data/enhance-transfer.js. UI 미리보기와 서버가 같은 값을 쓴다. */
+  enhanceTransferQuote(srcUid, dstUid, { scroll = false } = {}) { return transferQuote(this, srcUid, dstUid, { scroll }); }
+  /** 강화 전승: 원본의 강화 단계를 같은 부위·같은 주인의 다른 장비로 옮긴다. 대상 = 원본 − 1(전승 보호 주문서면 손실 없음), 원본은 +0.
+   *  골드·강화석·(선택)주문서만 차감한다. 원본이 착용 중이면 대상이 그 자리를 이어 낀다. 룬·내구도·il·tp 는 각 장비에 남는다. 난수 없음.
+   *  서버 /cmd enhanceTransfer 가 같은 메서드를 부른다. */
+  enhanceTransfer(srcUid, dstUid, { scroll = false } = {}) {
+    const q = transferQuote(this, srcUid, dstUid, { scroll });
+    if (!q.ok) return { ok: false, reason: q.reason, gold: q.gold, stones: q.stones, stoneKey: q.stoneKey };
+    const src = this.s.inventory.find((x) => x.uid === srcUid), dst = this.s.inventory.find((x) => x.uid === dstUid);
+    this.s.gold -= q.gold; this.s[q.stoneKey] -= q.stones; if (scroll) this.s.transferScroll--;
+    const prevTarget = q.targetEnh;
+    dst.enh = q.to; src.enh = 0;
+    if (q.swapEquip) this.s.heroes[src.owner ?? this.s.selected].equip[ITEM_BY_ID[dst.id].slot] = dstUid;
+    // 강화 시도 임무(quests.enh)는 세지 않는다: 전승은 강화 시도가 아니고, 서버 문서도 이 명령으로 임무 수치를 바꾸지 않게 둔다.
+    this.emit();
+    return { ok: true, from: q.from, to: q.to, loss: q.loss, prevTarget, gold: q.gold, stones: q.stones, stoneKey: q.stoneKey, scroll: q.scroll, equipped: q.swapEquip };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } Runes.recoverItemRunes(this, inst, 'sell'); this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   isUpgrade(heroId, inst) {
     const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
     if (!h || !item || h.equip[item.slot] === inst.uid) return false;
+    if (inst.owner && inst.owner !== heroId) return false; // 다른 영웅·금고 장비는 이 영웅의 강화 후보가 아니다
     const before = this.heroBuildStats(heroId);
     // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
     const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
@@ -562,7 +889,11 @@ export class Economy {
     return { ok: true, count: items.length, got };
   }
   /** 필드 드랍 아이템 (즉시 인벤토리) */
-  fieldDrop(rarity) { const it = this.addItem(rarity); this.save(); return it; }
+  fieldDrop(rarity) {
+    // 지금 도는 고통 단계 판의 장비는 그 단계의 파워 배율을 달고 나온다(docs/SPEC_720H.md 7절).
+    const led = this._fieldRewards, tp = led && !led.settled ? tormentTierOf(led.stage?.difficultyId) : 0;
+    const it = this.addItem(rarity, null, rngOf(this), tp, this.gearOwnerDefault(), dropItemLevel(led && !led.settled ? led.stage : null)); this.save(); return it;
+  }
   /** 전투 수집 장부는 저장하지 않는다. 정산 경로만 영웅·계정에 지급한다. */
   beginFieldRewards(stage, heroId = this.s.selected) {
     if (!stage || stage.party || stage.expedition?.kind === 'arena' || !this.hero(heroId)) return null;
@@ -584,6 +915,12 @@ export class Economy {
   fieldRewardsFor(stage, ticket) {
     const ledger = this._fieldRewards;
     return ledger && !ledger.settled && (ticket ? ledger.ticketId === ticket.id : ledger.stage === stage) ? ledger : null;
+  }
+  /** 고통 단계 감쇠: 영웅 조각·초월석·지역 재료를 mul 배로(작은 수는 기댓값이 같도록 확률 올림). 원본 장부는 바꾸지 않는다. */
+  decayedExtras(field, mul) {
+    const rng = rngOf(this), part = (n) => { const q = (Number.isSafeInteger(n) && n > 0 ? n : 0) * mul, base = Math.floor(q); return base + (rng() < q - base ? 1 : 0); };
+    return { ...field, heroShards: part(field.heroShards), transcendStones: part(field.transcendStones),
+      materials: Object.fromEntries(Object.entries(field.materials || {}).map(([key, n]) => [key, part(n)])) };
   }
   applyFieldExtras(field, heroId) {
     const count = (n, cap) => Number.isSafeInteger(n) && n > 0 ? Math.min(n, cap) : 0;
@@ -641,7 +978,7 @@ export class Economy {
   }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
-  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false } = {}) {
+  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false, clearCards = true } = {}) {
     const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || this.s.selected;
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];
     const townBefore = this.campaignTownState();
@@ -649,24 +986,41 @@ export class Economy {
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
     // 지역 마지막 관문(X-10)을 처음 클리어해 다음 지역이 열리면 로비 마을도 그 지역 마을로 바뀐다(저장됨). 축하는 한 번만 보여 준다.
     const regionUnlock = this.unlockRegionTown(stage, townBefore);
+    // 지역 끝을 넘기면 이야기 속 동료가 합류한다(성장형 영웅 해금).
+    const heroJoin = this.grantCampaignHeroes(stage.idx);
     // 난이도 최고 기록(지옥 해금)과 숙련 이상 승리 임무. 시즌 이벤트는 완료 보상(골드·EXP·강화석)에만 붙는다(서버 정산도 같은 시계).
     s.endgame = normalizeEndgame(s.endgame);
     const difficultyId = stage.difficultyId || 'story';
     recordDifficultyClear(s.endgame, stage.ch, stage.st, difficultyId);
     if (difficultyId !== 'story') this.recordJourneyAction('hardClears');
+    this.recordVaultRelay(heroId);   // 받은(계승 의식) 장비를 끼고 이긴 판: 같은 uid 하루 1회
+    // 고통 단계(에너지 0): 하루 첫 fullRuns 판은 보상 100%, 그 뒤는 골드·재료 decayMul 이고 EXP 는 100%. 판 수는 이 트랜잭션 안에서 센다.
+    // 전설 수련 약탈 갈래는 골드·강화석·조각 몫을 더한다(서버 정산도 이 함수를 지나 같은 값이다).
+    const tormentTier = tormentTierOf(difficultyId);
+    const tormentRun = tormentTier ? recordTormentRun(s.endgame, { tier: tormentTier, st: stage.st, nowMs: endgameNow(this) }) : null;
+    const decay = tormentRun && !tormentRun.full ? TORMENT.decayMul : 1;
+    const leg = s.legend && s.legend.rank > 0 ? legendStats(s.legend) : null;
+    const mulGold = decay * (1 + (leg?.goldPct || 0)), mulStone = decay * (1 + (leg?.stonePct || 0)), mulFrag = decay * (1 + (leg?.fragmentPct || 0));
+    const scaled = (n, mul) => mul === 1 ? n : Math.floor(n * mul);
     const m = double ? 2 : 1; const r = applyEventRewards(stage.rewards, activeEvents(endgameNow(this)), 'campaign'); const loot = [];
-    const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
+    r.gold = scaled(r.gold, mulGold); r.stones = scaled(r.stones || 0, mulStone);
+    fieldGold = scaled(fieldGold, mulGold); fieldStones = scaled(fieldStones, mulStone); fieldStones2 = scaled(fieldStones2, mulStone); fieldStones3 = scaled(fieldStones3, mulStone); fieldFragments = scaled(fieldFragments, mulFrag);
+    const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: scaled(10, mulFrag), eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
-    const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
+    const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? scaled(5, mulFrag) : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
-    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this))));
-    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this)), null, rngOf(this), tormentTier, heroId, dropItemLevel(stage)));
+    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)), null, rngOf(this), tormentTier, heroId, dropItemLevel(stage))); }
     if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
-    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell', first }));
+    if (ledger) got.push(...this.applyFieldExtras(decay < 1 ? this.decayedExtras(ledger, decay) : ledger, heroId), ...this.settleRuneDrops(ledger, { hell: difficultyId === 'hell' || !!tormentTier, first }));
+    // 고통 단계 새 최고 기록이 5의 배수면 계승 문장(콘텐츠 보상, 한 단계에 한 번만 — 최고 단계는 앞으로만 오른다).
+    if (tormentRun?.newBest && tormentRun.best % VAULT_INHERIT.tormentEvery === 0) got.push(...this.addRewards({ lineageSigil: VAULT_INHERIT.tormentSigil }, { silent: true, applyVip: false }));
     const prevLv = this.hero(heroId).level;
-    const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
+    // 고통 단계는 처치 EXP 도 단계마다 늘어난다(지옥 × (expBase + expStep×n)). EXP 는 판 수 감쇠를 받지 않는다.
+    const combatBase = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
+    const combatExp = Math.min(100000000, Math.floor(combatBase * (stage.campaignDifficulty?.combatExpMul || 1)));
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));
     const ups = this.addHeroExp(heroId, stageExp + combatExp, { silent: true });
     const nowLv = this.hero(heroId).level;
@@ -674,11 +1028,80 @@ export class Economy {
     // 이번 판에 넘긴 각성 구간
     const awakened = (HEROES[heroId].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
+    // 클리어 루프(docs/CLEAR_LOOP.md): 착용 무기 마모 → 지난 판의 고르지 않은 카드는 첫 장으로 정산 → 이번 판 카드 3장. 난수를 쓰지 않는다(서버와 같은 카드).
+    const wear = this.wearWeapon(heroId, !!stage.boss);
+    const autoCard = clearCards ? this.settlePendingCard() : null;
+    if (clearCards) this.dealClearCards(stage, heroId, first, key, decay);
     s.quests.stages++; const saved = this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock,
-      ok: saved, saveError: !saved };
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock, heroJoin,
+      wear, autoCard, clearCard: clearCards ? s.clearCard : null,
+      torment: tormentRun ? { tier: tormentTier, full: tormentRun.full, runs: tormentRun.runs, best: tormentRun.best, newBest: tormentRun.newBest, fullLeft: Math.max(0, TORMENT.fullRuns - tormentRun.runs) } : null,
+      legend: this.takeLegendGrant(), ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;
+  }
+  // ---------- 클리어 루프: 카드 보상 · 무기 내구도 (docs/CLEAR_LOOP.md) ----------
+  /** 출전 영웅의 착용 무기를 한 판만큼 닳게 한다. 무기가 없으면 null. */
+  wearWeapon(heroId, boss) {
+    const uid = this.hero(heroId)?.equip?.weapon, inst = uid && this.s.inventory.find((x) => x.uid === uid);
+    if (!inst) return null;
+    const before = durOf(inst), after = wornDur(inst, boss);
+    if (after < DUR_MAX) inst.dur = after; else delete inst.dur;
+    return { uid, before, dur: after };
+  }
+  /** 이번 판 카드 3장을 저장 상태의 해시로 만든다(같은 상태 = 같은 카드, 클라이언트·서버 공통). */
+  dealClearCards(stage, heroId, first, key = this.stageKey(stage.ch, stage.st), decay = 1) {
+    const s = this.s, wid = this.hero(heroId)?.equip?.weapon, weapon = wid && s.inventory.find((x) => x.uid === wid);
+    const seed = `${key}|${stage.difficultyId || 'story'}|${s.quests.stages}|${heroId}|${s.invSeq}`;
+    const cards = rollClearCards({ seed, gold: stage.rewards?.gold || 0, ch: stage.ch, first, boss: !!stage.boss, il: dropItemLevel(stage), weaponWorn: !!weapon && durOf(weapon) < DUR_MAX });
+    s.clearCard = { id: `${key}:${s.quests.stages}`, heroId, cards: decay < 1 ? cards.map((c) => decayCard(c, decay)) : cards, picked: null };
+    return s.clearCard;
+  }
+  /** 고르지 않고 지나간 카드는 첫 장으로 정산한다(보상을 잃지 않게). 없으면 null. */
+  settlePendingCard() {
+    const cc = this.s.clearCard;
+    if (!cc || cc.picked !== null) return null;
+    const got = this.applyClearCard(cc.cards[0], cc.heroId);
+    cc.picked = 0;
+    return { card: cc.cards[0], got };
+  }
+  /** 카드 한 장의 보상을 준다(저장·알림은 호출자). */
+  applyClearCard(card, heroId) {
+    const owner = this.s.heroes[heroId] ? heroId : this.s.selected;
+    if (card.kind === 'gold') return this.addRewards({ gold: card.gold }, { silent: true, applyVip: false });
+    if (card.kind === 'stones' || card.kind === 'fragments' || card.kind === 'scroll') return this.addRewards({ [card.kind === 'fragments' ? 'fragments' : card.key]: card.n }, { silent: true, applyVip: false });
+    if (card.kind === 'gear') { const item = this.pushItem(card.id, { owner, il: card.il || 0 }); return [{ k: 'item', item }]; }
+    // repair: 착용 무기 무료 완전 수리 + 골드
+    const wid = this.hero(owner)?.equip?.weapon, weapon = wid && this.s.inventory.find((x) => x.uid === wid);
+    if (weapon) delete weapon.dur;
+    return [...(weapon ? [{ k: 'repair', uid: weapon.uid }] : []), ...this.addRewards({ gold: card.gold }, { silent: true, applyVip: false })];
+  }
+  /** 결과 화면에서 카드 한 장 고르기(서버 /cmd pickClearCard 가 같은 메서드를 부른다). */
+  pickClearCard(index) {
+    const cc = this.s.clearCard;
+    if (!cc || cc.picked !== null) return { ok: false, reason: 'none' };
+    if (!Number.isInteger(index) || index < 0 || index >= cc.cards.length) return { ok: false, reason: 'index' };
+    const card = cc.cards[index], got = this.applyClearCard(card, cc.heroId);
+    cc.picked = index;
+    const saved = this.emit();
+    return { ok: saved, card, got, index, saveError: !saved };
+  }
+  /** 수리 견적(읽기 전용). 무기가 아니거나 없으면 null. */
+  repairQuote(uid) {
+    const inst = this.s.inventory.find((x) => x.uid === uid), def = inst && ITEM_BY_ID[inst.id];
+    if (!def || def.slot !== 'weapon') return null;
+    return { uid, dur: durOf(inst), cost: repairCost(inst, def.rarity) };
+  }
+  /** 무기 수리: 닳은 만큼 골드를 내고 100으로. 서버 /cmd repairItem 이 같은 메서드를 부른다. */
+  repairItem(uid) {
+    const q = this.repairQuote(uid);
+    if (!q) return { ok: false, reason: 'item' };
+    if (q.cost <= 0) return { ok: false, reason: 'full' };
+    if (this.s.gold < q.cost) return { ok: false, reason: 'gold', cost: q.cost };
+    const inst = this.s.inventory.find((x) => x.uid === uid);
+    this.s.gold -= q.cost; delete inst.dur;
+    const saved = this.emit();
+    return { ok: saved, cost: q.cost, before: q.dur, saveError: !saved };
   }
   /** 결과에 표시된 골드·재료의 실지급량만 한 번 더 준다. 첫 클리어 보석/경험치는 제외. */
   doubleStageRewards(receipt) {
@@ -725,7 +1148,7 @@ export class Economy {
     const got = this.addRewards(claim.rewards, { silent: true });
     return { ok: true, got, saveError: !this.emit() };
   }
-  sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
+  sweep(stage) { const s = this.s; if (tormentTierOf(stage?.difficultyId) || s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3, { clearCards: false }); }
   // ---------- 가챠 ----------
   /** 배너 상태(천장·픽업 확정·초보자 사용 횟수). 저장 정화(save-base)와 같은 모양. */
   gachaState() {
@@ -825,7 +1248,7 @@ export class Economy {
   rollResult(rar, { banner = GACHA_BANNERS.hero, now = nowOf(this), featured = bannerPickup(banner.id, now), freshSr = false } = {}) {
     const rng = this.gachaRng, g = this.gachaState(), pick = (list) => list[Math.floor(rng() * list.length)];
     const hero = (id, extra = {}) => { const got = this.grantHero(id); return { type: 'hero', rar, id, dup: got.dup, ...(got.locked ? { locked: true } : {}), ...(got.unlocked ? { unlocked: true } : {}), shards: got.shards, name: HEROES[id].name, img: HEROES[id].portrait, ...extra }; };
-    const item = (def, extra = {}) => { const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return { type: 'item', rar, item: inst, ...extra }; };
+    const item = (def, extra = {}) => { const inst = this.pushItem(def.id, { owner: this.s.selected }); return { type: 'item', rar, item: inst, ...extra }; };
     const split = rar === 'SSR' ? banner.ssr : rar === 'SR' ? banner.sr : banner.r;
     if (rar === 'SSR' && split.hero) {
       const others = otherSsrHeroes(featured, now);
@@ -930,11 +1353,11 @@ export class Economy {
     // 결제가 연결돼도 현금 상품은 서버 검증(billing.buy → applyIapState)으로만 지급한다. 여기서 직접 주지 않는다.
     if (this.billing) return { ok: false, reason: 'use-billing' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
-    // cash (목업): 첫 결제 2배 보너스
+    // cash (목업): 서버 카탈로그와 같게 보석 팩은 표기 수량만 준다(보너스 없음)
     s.purchases.push(id); s.spentKRW += sku.price;
     const vipBefore = s.vip; s.vip = s.spentKRW >= 300000 ? 5 : s.spentKRW >= 100000 ? 4 : s.spentKRW >= 50000 ? 3 : s.spentKRW >= 20000 ? 2 : s.spentKRW > 0 ? 1 : 0;
     let got;
-    if (sku.gems) { const first = !s.firstPurchaseUsed[id]; s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems + (first ? sku.bonus : Math.floor(sku.gems * 0.1)) }); got.first = first; }
+    if (sku.gems) { s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems }); }
     else got = this.addRewards(sku.rewards);
     this.emit(); return { ok: true, got, vipUp: s.vip > vipBefore ? s.vip : 0 };
   }
@@ -949,6 +1372,68 @@ export class Economy {
     if (!this.save()) { s.gems += avatar.price; s.avatars.owned.pop(); return { ok: false, reason: 'storage' }; }
     for (const f of this.listeners) f(this.s);
     return { ok: true };
+  }
+  /**
+   * 유료 풀셋 상품(avatar_fullset_<heroId>_v1) 지급 계약. BM 레인의 결제 확인 뒤 이 함수만 부른다.
+   * 반환 { ok, avatarId, already }. already 면 이미 소유(중복 지급 없음, 보상 처리는 BM 레인 몫).
+   * paidBy(결제 지급 id)를 주면 새로 얻은 경우에만 avatars.paid[avatarId]=paidBy 로 출처를 남긴다(환불 때 결제로 얻은 것만 회수).
+   * 이미 가진 아바타(이벤트·부위·보석 출처)에는 출처를 덮어쓰지 않는다.
+   * @param {string} heroId @param {{ avatarId?: string, paidBy?: string }} [opts]
+   */
+  grantAvatarFullset(heroId, { avatarId = AVATAR_PREMIUM_BY_HERO[heroId], paidBy } = {}) {
+    const avatar = AVATAR_BY_ID[avatarId];
+    if (!avatar || avatar.heroId !== heroId) return { ok: false, reason: 'not-ready' };
+    // 결제 전 선검증용: 영웅을 소유하지 않았으면 입을 수 없으므로 지급하지 않는다(BM 이 결제 전에 같은 값을 확인).
+    if (this.heroLocked(heroId)) return { ok: false, reason: 'locked' };
+    const s = this.s;
+    if (s.avatars.owned.includes(avatarId)) return { ok: true, avatarId, already: true };
+    const before = structuredClone(s.avatars);
+    s.avatars.owned.push(avatarId);
+    if (s.avatars.parts) delete s.avatars.parts[avatarId];
+    if (typeof paidBy === 'string' && paidBy) (s.avatars.paid || (s.avatars.paid = {}))[avatarId] = paidBy;
+    if (!this.save()) { s.avatars = before; return { ok: false, reason: 'storage' }; }
+    this.emit(); return { ok: true, avatarId, already: false };
+  }
+  /**
+   * 환불·역분개: 그 결제 지급(paidBy)으로 얻은 아바타만 소유·착용에서 뺀다. 이벤트·부위·보석 출처는 건드리지 않는다.
+   * @param {string} paidBy @returns {string[]} 회수한 아바타 id
+   */
+  revokePaidAvatars(paidBy) {
+    const a = this.s.avatars, paid = a.paid;
+    if (!paid || typeof paidBy !== 'string') return [];
+    const ids = Object.keys(paid).filter((id) => paid[id] === paidBy);
+    if (!ids.length) return [];
+    const before = structuredClone(a);
+    for (const id of ids) {
+      a.owned = a.owned.filter((x) => x !== id);
+      for (const [heroId, eq] of Object.entries(a.equipped)) if (eq === id) delete a.equipped[heroId];
+      delete paid[id];
+    }
+    if (!Object.keys(paid).length) delete a.paid;
+    if (!this.save()) { this.s.avatars = before; return []; }
+    this.emit(); return ids;
+  }
+  /**
+   * 이벤트·업적이 주는 아바타 부위 하나. 네 부위가 모이면 풀셋으로 바뀌어 소유된다.
+   * @param {string} avatarId @param {string} part
+   */
+  grantAvatarPart(avatarId, part) {
+    if (!AVATAR_BY_ID[avatarId] || !AVATAR_PARTS.includes(part)) return { ok: false, reason: 'avatar' };
+    const s = this.s;
+    if (s.avatars.owned.includes(avatarId)) return { ok: true, avatarId, complete: true, already: true };
+    const before = structuredClone(s.avatars);
+    const parts = s.avatars.parts || (s.avatars.parts = {});
+    const have = new Set(parts[avatarId] || []); have.add(part);
+    const complete = AVATAR_PARTS.every((p) => have.has(p));
+    if (complete) { delete parts[avatarId]; s.avatars.owned.push(avatarId); }
+    else parts[avatarId] = AVATAR_PARTS.filter((p) => have.has(p));
+    if (!this.save()) { s.avatars = before; return { ok: false, reason: 'storage' }; }
+    this.emit(); return { ok: true, avatarId, complete };
+  }
+  /** 모은 부위(풀셋 소유면 네 부위 전부). */
+  avatarParts(avatarId) {
+    if (this.s.avatars.owned.includes(avatarId)) return [...AVATAR_PARTS];
+    return [...(this.s.avatars.parts?.[avatarId] || [])];
   }
   /** @param {string} heroId @param {string|null} [id] */
   equipAvatar(heroId, id = null) {
@@ -985,11 +1470,77 @@ export class Economy {
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(prem ? r : { ...r, blessingCharm: Runes.passCharms(lv) }); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
-  dailyAvailable() { const d = Math.floor(nowOf(this) / 86400000); return this.s.daily.last !== d; }
-  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = Math.floor(nowOf(this) / 86400000); s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  // 하루 경계는 의뢰·금고와 같은 05:00 KST(periodAt). 옛 저장의 UTC 자정 일 번호와 같은 눈금이라 그대로 비교한다
+  // (전환 전에 KST 05~09시에 받은 기록만 전환 뒤 같은 시간대에 한 번 더 열릴 수 있다 — 출석 1칸, docs/RPG_ESSENTIALS.md E1).
+  dailyAvailable() { return this.s.daily.last !== periodAt(nowOf(this)).day; }
+  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = periodAt(nowOf(this)).day; s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  // ---------- 방치 보급·복귀 보상(docs/RPG_ESSENTIALS.md E2) ----------
+  // 읽기 경로는 저장을 바꾸지 않는다(정규화 결과를 대입하지 않음). 변경 함수만 대입한다.
+  idleQuote() { return idleQuote(normalizeIdle(this.s.idle, { since: endgameNow(this) }), this.s.progress, endgameNow(this)); }
+  claimIdle() {
+    this.s.idle = normalizeIdle(this.s.idle, { since: endgameNow(this) });
+    const r = claimIdleCore(this.s.idle, this.s.progress, endgameNow(this));
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return { got, minutes: r.minutes, comeback: r.comeback, awayDays: r.awayDays };
+  }
+  /** 로비 접속 표시(30분 간격). 복귀 보상 판정의 기준. */
+  markSeen() {
+    const st = normalizeIdle(this.s.idle, { since: endgameNow(this) });
+    if (!markSeenCore(st, this.s.progress, endgameNow(this))) return false;
+    this.s.idle = st; this.emit(); return true;
+  }
+  // ---------- 신규 7일 여정(docs/RPG_ESSENTIALS.md E3) ----------
+  newbieState() { return this.s.newbie = normalizeNewbie(this.s.newbie, { start: periodAt(endgameNow(this)).day }); }
+  newbieView() { return newbieView(normalizeNewbie(this.s.newbie, { start: periodAt(endgameNow(this)).day }), this.s, endgameNow(this)); }
+  claimNewbie(id) {
+    const r = claimNewbieCore(this.newbieState(), this.s, endgameNow(this), id);
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return got;
+  }
+  // ---------- 업적(docs/RPG_ESSENTIALS.md E4) ----------
+  achievementRows() { return achievementRows(this.s.achievements, achievementStats(this.s, this.ownedHeroIds().length)); }
+  achievementClaimable() { return this.achievementRows().filter((r) => r.ready).length; }
+  claimAchievement(id) {
+    this.s.achievements = normalizeAchievements(this.s.achievements);
+    const r = claimAchievementCore(this.s.achievements, achievementStats(this.s, this.ownedHeroIds().length), id);
+    if (!r.ok) return null;
+    const got = this.addRewards(r.rewards, { silent: true, applyVip: false });
+    this.emit(); return got;
+  }
+  // ---------- 성장 여정 단계(서버 명령, docs/SERVER_AUTHORITY_GATES.md 4절) ----------
+  /** 여정 상태. 이미 정규화된 객체(JourneyService 가 쥔 참조)는 그대로 쓴다. */
+  // 현상금 의뢰판(docs/BOUNTY_BOARD.md): 에너지 0, 캠페인 진행·필드 전리품·전투 경험치 없음.
+  bountySummary() { return Bounty.bountySummaryOf(this); }
+  bounties(limit = 8) { return Bounty.bountyList(this, limit); }
+  startBounty(id) { return Bounty.startBounty(this, id); }
+  settleBounty(result, stage) { return Bounty.settleBounty(this, result, stage); }
+  bountyShop() { return Bounty.bountyShop(this); }
+  buyBounty(itemId) { return Bounty.buyBounty(this, itemId); }
+  journeyState() {
+    const j = this.s.journey;
+    if (!j || typeof j !== 'object' || Array.isArray(j) || !Array.isArray(j.claimedSteps)) this.s.journey = normalizeJourney(j);
+    return this.s.journey;
+  }
+  /**
+   * 단계 보상 수령(골드 + 강화석, VIP 배율 없음 — 이전 로컬 지급과 같다). 서버(/cmd)는 attest 로 판정한다:
+   * 갑옷·강화는 서버 문서로, 기기 전용 단계(서약·정원·제작·숙련)는 순서 + 서버 진행 바닥값으로.
+   */
+  claimJourneyStep(id, { attest = false } = {}) {
+    const r = claimJourneyStepCore(this.journeyState(), this.s, id, { attest });
+    if (!r.ok) return r;
+    const rw = r.rewards || {};
+    this.s.gold += rw.gold || 0;
+    for (const key of ['stones', 'stones2', 'stones3', 'sweep']) this.s[key] += rw[key] || 0;
+    this.emit(); return r;
+  }
   // ---------- 우편 ----------
-  claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read) return null; m.read = true; return this.addRewards(m.rewards); }
-  unreadMail() { return this.s.mail.filter((m) => !m.read).length; }
+  // 우편(docs/RPG_ESSENTIALS.md E5). 본문·보상·기간은 제품 데이터(src/data/mail.js)가 소유하고 저장에는 수령 여부만 남는다.
+  // 기간(from~until)은 서버 시각 우선(endgameNow). 기간 밖 우편은 보이지 않고 받을 수 없다.
+  mailbox() { const now = endgameNow(this); return this.s.mail.filter((m) => mailOpen(m, now)); }
+  claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read || !mailOpen(m, endgameNow(this))) return null; m.read = true; return this.addRewards(m.rewards); }
+  unreadMail() { const now = endgameNow(this); return this.s.mail.filter((m) => !m.read && mailOpen(m, now)).length; }
   // ---------- 임무 ----------
   quests() {
     const q = this.s.quests; return [
@@ -1002,6 +1553,6 @@ export class Economy {
   questClaimable() { return this.quests().filter((q) => q.done && !q.claimed).length; }
 }
 
-export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
+export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], transferScroll: ['전승 보호 주문서', '/img/icon_protect.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
 // 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
-Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });
+Object.assign(REWARD_LABEL, { rune: ['룬', '/img/icon_fragment.webp'], runeDust: ['룬 가루', '/img/icon_fragment.webp'], blessingCharm: ['전운 부적', '/img/icon_bless.webp'], transcendStones: ['초월석', '/img/icon_stone_3.webp'], lineageSigil: ['계승 문장', '/img/icon_fragment.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });

@@ -38,6 +38,8 @@ interface Ctx { req: CoreRequest; keyHash: string | null; out: CoreResult; pre: 
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
+/** 소식 글 id(게임의 content/news 파일 이름). 게임 비종속 패키지라 형식만 검사한다. */
+const PATCH_NOTE_SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const LIMITS = { friends: 100, incoming: 50, blocks: 200, openRuns: 5, inbox: 100, keys: 5, sockets: 3, perSecond: 10, presenceMs: 2000, nonceMs: 600000 };
 const ADMIN_PATHS = new Set(['/admin/mute', '/admin/ban', '/admin/revoke-clear']);
 
@@ -222,13 +224,14 @@ export class SocialCore {
   private saveProfile(c: Ctx) {
     if (!c.keyHash) throw new SocialError('bad-key', 401);
     const body = object(c.req.body, ['name', 'hero']);
-    const name = this.cleanName(body.name);
     const hero = body.hero === undefined ? null : playerHero(body.hero);
     const now = this.d.now();
     const existing = this.one('SELECT p.* FROM player_keys k JOIN players p ON p.id = k.player_id WHERE k.key_hash = ?', c.keyHash);
+    // 같은 이름 재저장은 금칙어 검사를 다시 하지 않는다(금칙어 목록이 늘어도 기존 이름의 프로필 저장이 깨지지 않게).
+    if (existing && !existing.banned && existing.name === playerName(body.name)) return this.profile(existing);
+    const name = this.cleanName(body.name);
     if (existing) {
       if (existing.banned) throw new SocialError('banned', 403);
-      if (existing.name === name) return this.profile(existing);
       if (existing.renamed_at && now - existing.renamed_at < 24 * HOUR) throw new SocialError('rename-cooldown', 429, existing.renamed_at + 24 * HOUR - now);
       this.run('UPDATE players SET name = ?, tag = ?, renamed_at = ? WHERE id = ?', name, this.freeTag(name), now, existing.id);
       return this.profile(this.player(existing.id));
@@ -449,6 +452,27 @@ export class SocialCore {
     const p = this.player(playerId);
     return p ? { createdAt: Number(p.created_at), banned: !!p.banned } : { createdAt: null, banned: false };
   }
+  /**
+   * 게임 서버의 회원 탈퇴(Worker→DO 내부 전용). 기기 키·연동·친구·차단·모집·쪽지를 지우고 이름을 익명화한다.
+   * 플레이어 행과 id는 남긴다(게시글·명예의 전당 기록의 참조 유지). 없는 플레이어도 성공으로 본다(멱등).
+   */
+  internalDelete(playerId: unknown): { ok: true } {
+    if (typeof playerId !== 'string' || !/^p_[0-9a-f]{24}$/.test(playerId)) throw new SocialError('bad-player', 400);
+    this.tx(() => {
+      for (const [q, n] of [
+        ['DELETE FROM player_keys WHERE player_id = ?', 1], ['DELETE FROM account_links WHERE player_id = ?', 1],
+        ['DELETE FROM friends WHERE a = ? OR b = ?', 2], ['DELETE FROM friend_requests WHERE from_id = ? OR to_id = ?', 2],
+        ['DELETE FROM blocks WHERE owner = ? OR target = ?', 2], ['DELETE FROM listings WHERE host_id = ?', 1],
+        ['DELETE FROM dm_inbox WHERE to_id = ?', 1],
+      ] as const) this.run(q, ...Array(n).fill(playerId));
+      if (this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) this.run('DELETE FROM reserved_ids WHERE player_id = ?', playerId);
+      // (name, tag)는 고유하다. 'x'+번호(no)는 일반 숫자 태그와 겹치지 않아 누가 같은 이름을 써도 충돌하지 않는다.
+      // 가입 IP 해시·대표 영웅·명예 기록의 제공자 주체 해시도 지운다(기록 자체는 참조용으로 남김).
+      this.run("UPDATE players SET name = '탈퇴한 모험가', tag = 'x' || no, title_id = NULL, hero = NULL, created_ip_hash = NULL WHERE id = ?", playerId);
+      this.run('UPDATE clears SET subject_hash = NULL WHERE player_id = ?', playerId);
+    });
+    return { ok: true };
+  }
   private reservedId(keyHash: string): string | null {
     if (!this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) return null;
     const row = this.one('SELECT player_id FROM reserved_ids WHERE key_hash = ?', keyHash);
@@ -621,6 +645,8 @@ export class SocialCore {
     return {
       id: r.id, category: r.category, title: r.title, body: r.body, status: r.status, votes: r.votes, comments: r.comments,
       createdAt: r.created_at, updatedAt: r.updated_at, devReply: r.dev_reply ?? null, author: author ?? null, voted,
+      // 패치노트 연결은 '반영 완료' 글에서만 보인다(상태가 바뀌면 자동으로 숨는다).
+      patchNoteSlug: r.status === 'done' ? (r.patch_note_slug ?? null) : null,
       ...(withDiag ? { diag: r.diag ? JSON.parse(r.diag) : null, hidden: !!r.hidden } : {}),
     };
   }
@@ -702,15 +728,24 @@ export class SocialCore {
     return { id: row.id, body, createdAt: now, dev: admin, author: this.mini(me.id) };
   }
   private moderate(_admin: any, id: number, c: Ctx) {
-    const body = object(c.req.body, ['status', 'devReply', 'hidden']);
-    if (body.status === undefined && body.devReply === undefined && body.hidden === undefined) throw new SocialError('schema');
+    const body = object(c.req.body, ['status', 'devReply', 'hidden', 'patchNoteSlug']);
+    if (body.status === undefined && body.devReply === undefined && body.hidden === undefined && body.patchNoteSlug === undefined) throw new SocialError('schema');
     const r = this.one('SELECT * FROM posts WHERE id = ?', id);
     if (!r) throw new SocialError('post-not-found', 404);
     const status = body.status === undefined ? r.status : body.status;
     if (!(POST_STATUSES as readonly string[]).includes(status)) throw new SocialError('status');
     const reply = body.devReply === undefined ? r.dev_reply : (body.devReply === null ? null : text(body.devReply, 0, 1000, 'devReply') || null);
     const hidden = body.hidden === undefined ? r.hidden : (bool(body.hidden) ? 1 : 0);
-    this.run('UPDATE posts SET status = ?, dev_reply = ?, hidden = ?, updated_at = ? WHERE id = ?', status, reply, hidden, this.d.now(), id);
+    // 패치노트 연결: 소식 글 id(영문 소문자·숫자·-)만 받고 '반영 완료'일 때만 둔다. 상태가 done 이 아니게 되면 연결을 지운다.
+    let patchNoteSlug: string | null = r.patch_note_slug ?? null;
+    if (body.patchNoteSlug !== undefined) {
+      if (body.patchNoteSlug === null) patchNoteSlug = null;
+      else if (typeof body.patchNoteSlug !== 'string' || !PATCH_NOTE_SLUG.test(body.patchNoteSlug)) throw new SocialError('patch-note-slug');
+      else patchNoteSlug = body.patchNoteSlug;
+      if (patchNoteSlug !== null && status !== 'done') throw new SocialError('patch-note-status');
+    }
+    if (status !== 'done') patchNoteSlug = null;
+    this.run('UPDATE posts SET status = ?, dev_reply = ?, hidden = ?, patch_note_slug = ?, updated_at = ? WHERE id = ?', status, reply, hidden, patchNoteSlug, this.d.now(), id);
     const updated = this.one('SELECT * FROM posts WHERE id = ?', id);
     return this.postView(updated, this.minis([updated.author_id]).get(updated.author_id), false, true);
   }

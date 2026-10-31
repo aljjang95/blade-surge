@@ -18,7 +18,8 @@ b { font-weight: 900; }
 .hidden { display: none !important; }
 #gl { position: fixed; inset: 0; width: 100%; height: var(--app-height, 100%); display: block; touch-action: none; }
 #hud { touch-action: none; }
-#hud button, #joy { touch-action: manipulation; }
+/* 조작 요소는 브라우저 패닝·확대·인앱 브라우저 제스처를 받지 않는다(탭 click은 그대로 온다). */
+#hud button, #joy, #joy .joy-base { touch-action: none; }
 
 .screen { position: fixed; inset: 0; bottom: auto; height: var(--app-height, 100%); display: none; pointer-events: none; }
 .screen.show { display: block; }
@@ -382,10 +383,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-item img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
 .shop-item .si-name { font-weight: 900; font-size: 13px; }
 .shop-item .si-desc { font-size: 10px; color: var(--muted); line-height: 1.3; }
-.shop-item .si-bonus { font-size: 11px; color: var(--green); font-weight: 900; }
 .shop-item .btn { width: 100%; padding: 7px 4px; font-size: 13px; border-radius: 10px; margin-top: 4px; }
 .shop-item .badge { position: absolute; top: -6px; left: -4px; font-size: 9px; padding: 2px 7px; border-radius: 6px; background: var(--red); color: #fff; font-weight: 900; transform: rotate(-5deg); box-shadow: 0 2px 6px rgba(0,0,0,.5); }
-.shop-item .badge.first { background: var(--green); color: #052; }
 .shop-item .timer { font-size: 10px; color: var(--red); }
 .shop-item .sold { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--muted); }
 .avatar-shop-item { min-height: 178px; }
@@ -610,6 +609,17 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @keyframes boxIn { from { transform: scale(.6) translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
 .result-title { font-family: var(--disp); font-size: 48px; color: var(--gold); text-shadow: 0 0 24px rgba(255,170,40,.7), 0 4px 0 #7a3a00; letter-spacing: .1em; }
 .result-title.lose { color: #ff5a7a; text-shadow: 0 0 24px rgba(255,60,90,.6), 0 4px 0 #500; }
+.result-levelup { position: relative; display: inline-flex; align-items: baseline; gap: 10px; margin: 2px 0 0; padding: 4px 18px; font-family: var(--disp); isolation: isolate; }
+.result-levelup::before { content: ''; position: absolute; inset: -6px -10px; z-index: -1; border-radius: 999px; background: radial-gradient(ellipse at 50% 100%, rgba(255,211,106,.42), rgba(127,234,192,.16) 46%, transparent 72%); filter: blur(2px); }
+.result-levelup b { font-size: 15px; letter-spacing: .18em; background: linear-gradient(180deg,#fff7d6,#ffd36a 55%,#e8a63a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.result-levelup span { font-size: 24px; font-weight: 900; color: #fff1b8; text-shadow: 0 0 12px #ffb63a, 0 2px 0 #6b3d00; }
+.result-levelup small { font-size: .6em; color: #7feac0; }
+.result-levelup[hidden] { display: none; }
+.result-levelup.in { animation: resultLevelUp .9s cubic-bezier(.16,.9,.28,1) both; }
+.result-levelup.in::before { animation: resultAurora 1.6s ease-out both; }
+@keyframes resultLevelUp { 0% { opacity: 0; transform: translateY(10px) scale(.6) } 30% { opacity: 1; transform: translateY(-3px) scale(1.12) } 55% { transform: none } 100% { opacity: 1; transform: none } }
+@keyframes resultAurora { 0% { opacity: 0; transform: scaleX(.3) } 30% { opacity: 1; transform: scaleX(1.15) } 100% { opacity: .65; transform: none } }
+@media (prefers-reduced-motion: reduce) { .result-levelup.in, .result-levelup.in::before { animation: none; } }
 .stars { display: flex; gap: 8px; }
 .stars i { width: 44px; height: 44px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23444' d='M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17.5 6.5 21 8 13.5 3 9l6.5-.5z'/%3E%3C/svg%3E") center/contain no-repeat; transform: scale(0); }
 .stars i.on { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffcf5a' stroke='%23c77a12' stroke-width='1' d='M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17.5 6.5 21 8 13.5 3 9l6.5-.5z'/%3E%3C/svg%3E"); filter: drop-shadow(0 0 8px var(--gold)); }
@@ -1045,7 +1055,6 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .shop-item img { width:40px; height:40px; }
   .avatar-shop-item > img { width:64px; height:64px; }
   .shop-item .si-desc { font-size:9px; }
-  .shop-item .si-bonus { font-size:10px; }
   .shop-item .btn { margin-top:2px; padding:4px 3px; font-size:11px; }
   .shop-item .badge { font-size:8px; }
 }
@@ -1155,9 +1164,30 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .cust-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
 .cust-row span { flex: 0 0 52px; color: var(--muted); }
 .cust-row input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; font-size: 16px; color: inherit; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 10px; }
+.cust-methods { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.cust-methods legend { padding: 0 4px; color: var(--muted); }
+.cust-method { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
 @media (max-height: 460px) { .modal-box:has(.cust-row) { max-height: 100dvh; padding-bottom: 40vh; } }
 /* 세로 화면 장비 배너: 정사각 아이콘이 폭에 맞게 들어오도록 폭 기준으로 둔다. */
 @media (max-width: 600px) {
   .gacha-wrap[data-banner="gear"] .banner-art img { width: 100%; height: auto; top: 38%; transform: translate(-50%, -50%); }
   .banner-art[data-fit="square"] img { width: 100%; height: auto; -webkit-mask-image: none; mask-image: none; }
 }
+/* 방치 보급(docs/RPG_ESSENTIALS.md E2) */
+.idle-rewards { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; justify-content: center; }
+.idle-reward { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 76px; padding: 8px 6px; border-radius: 8px; background: #ffffff10; border: 1px solid #ffd35a40; }
+.idle-reward img { width: 34px; height: 34px; object-fit: contain; }
+.idle-reward b { font-size: 12px; color: #e5e5ce; }
+.idle-reward span { font-size: 15px; font-weight: 800; color: #ffd35a; }
+.idle-cb { margin: 12px 0 0; text-align: center; color: #ffd35a; font-size: 15px; }
+.idle-empty { opacity: .7; }
+/* 신규 7일 여정(docs/RPG_ESSENTIALS.md E3) */
+.nb-days { display: flex; gap: 4px; overflow-x: auto; margin: 8px 0; }
+.nb-day { position: relative; flex: 1 0 auto; min-width: 54px; min-height: 36px; padding: 6px 4px; border-radius: 8px; border: 1px solid #ffd35a40; background: #ffffff0d; color: #e5e5ce; font: inherit; font-size: 12px; font-weight: 700; }
+.nb-day.on { background: #5b3b16; border-color: #ffd35a; color: #fff0b3; }
+.nb-day.done { opacity: .6; }
+.nb-day[aria-disabled="true"] { opacity: .35; }
+.nb-day .dot { top: -2px; right: -2px; }
+.nb-final { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 10px; background: #ffd35a18; font-size: 12px; }
+/* 업적(docs/RPG_ESSENTIALS.md E4) */
+.ach-list { max-height: min(60vh, 420px); overflow-y: auto; }

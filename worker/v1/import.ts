@@ -19,7 +19,12 @@ async function paidContext(c: Ctx, accountId: string, serverState?: Record<strin
   // 서버 문서의 roster는 신뢰값이다(정책 1은 이 값에서만 유지된다). 결제 스키마와 무관하게 항상 준다.
   // 소환 상태(마일리지·픽업 확정·초보자 횟수)와 유료 보석 몫도 서버 문서 값만 믿는다(가져오기로 위조 금지, BM 12장).
   const hero = { serverRoster: serverState?.roster as Record<string, unknown> | undefined, serverGacha: serverState?.gacha as Record<string, unknown> | undefined,
-    serverPaidGems: Number(serverState?.paidGems) || 0 };
+    serverPaidGems: Number(serverState?.paidGems) || 0,
+    // 진행도 바닥값: 서버 문서가 이미 가진 진행(서버 정산·이전 정화 결과). 가져오기 원본은 이보다 낮게는 깎이지 않는다.
+    serverProgress: serverState?.progress as Record<string, unknown> | undefined, serverEndgame: serverState?.endgame as Record<string, unknown> | undefined, serverGearDex: serverState?.gearDex, serverLineageSigil: Number(serverState?.lineageSigil) || 0, serverSigilClaims: serverState?.sigilClaims,
+    serverIdle: serverState?.idle, serverNewbie: serverState?.newbie, serverAchievements: serverState?.achievements,
+    // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md): 서버 값이 바닥이고, 이미 병합된(seeded) 종 원장은 서버 값만 쓴다.
+    serverSlain: serverState?.slain, serverKills: Number((serverState?.quests as Record<string, unknown> | undefined)?.kills) || 0, serverJourney: serverState?.journey };
   if (!await iapSchemaReady(c.db)) return hero;
   const e = await entitlementsOf(c.db, accountId, c.now);
   return { ...hero, allowance: await iapAllowance(c.db, accountId), entitled: { passPremium: e.passPremium, monthlyUntil: e.monthlyUntil, heroes: e.heroes } };
@@ -104,7 +109,7 @@ export async function shadowSnapshot(c: Ctx, auth: Authed, body: Record<string, 
   // 가져오기 때 서버가 조회해 둔 소셜 시각을 재사용한다(이 PR 이전 가져오기 행에는 없으므로 그때만 허브를 부른다).
   const storedAt = (JSON.parse(imported.report || '{}') as { socialAt?: unknown }).socialAt;
   const age = await serverAge(c, accountId, storedAt === null || Number.isSafeInteger(storedAt) ? storedAt as number | null : undefined);
-  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: age.createdAt, legacyProof: age.legacyProof, ...await paidContext(c, accountId, doc.state) });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: age.createdAt, legacyProof: age.legacyProof, snapshot: true, ...await paidContext(c, accountId, doc.state) });
   if (!result.ok) fail(400, 'save');
   const eco = loadEconomy(result.state, { now: c.now });
   const next = docOf(eco), hash = parityHash(eco.s);

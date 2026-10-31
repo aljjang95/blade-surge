@@ -1,7 +1,7 @@
 {
   "_comment": "src/shared/iap-catalog.js 에서 생성됨(node tools/play-iap-register.mjs --write-json). 직접 고치지 말고 카탈로그를 고친다. 가격은 후보이며 등록·공개는 대표님 확인 뒤.",
   "packageName": "com.theluxurylord.bladesurge",
-  "catalogVersion": 2,
+  "catalogVersion": 3,
   "products": [
     {
       "id": "remove_ads_v1",

@@ -30,6 +30,7 @@ const NEEDS_PROFILE = new Set(['chat', 'party', 'friends']);
  *     diagnostics?: () => Record<string, string | number>,
  *     googleSignIn?: () => Promise<string | null>,
  *     discordInvite?: string | null,
+ *     patchNoteUrl?: (slug: string) => string | null,
  *     hudBottom?: () => number,
  *     controlsTop?: () => number,
  *     hudObstacles?: () => ({ left: number, top: number, right: number, bottom: number }[]),
@@ -329,6 +330,8 @@ export function createCommunityUI(options) {
     go: (next, params) => setTab(next, params),
     partyCode: () => (hooks.currentPartyCode ? safeCall(() => hooks.currentPartyCode()) : null),
     contentArt: id => (hooks.contentArt ? safeCall(() => hooks.contentArt(id)) : null),
+    // 반영 완료 글이 가리키는 패치노트 주소. 게임이 hooks.patchNoteUrl 로 정하고 http(s) 주소만 쓴다.
+    patchNoteUrl: slug => { const href = hooks.patchNoteUrl ? safeCall(() => hooks.patchNoteUrl(slug)) : null; return typeof href === 'string' && /^https?:\/\//.test(href) ? href : null; },
     discordInvite: () => (typeof hooks.discordInvite === 'string' && /^https:\/\//.test(hooks.discordInvite) ? hooks.discordInvite : null),
     meId: () => (client.state.me ? client.state.me.id : null),
     unread: () => unreadTotal(client.state.unread),

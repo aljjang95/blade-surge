@@ -1,14 +1,19 @@
+import { bossShortcutRule, bossShortcutShort } from '../game/boss-shortcut.js';
 import { $, fmt } from './ui.js';
 import { bindHeroPortrait } from './hero-portraits.js';
 import { SkillTreeView } from './skill-tree.js';
 import { TranscendView } from './transcend.js';
+import { LegendView } from './legend-rank.js';
+import { DifficultyPicker } from './difficulty-picker.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
-import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
+import { itemStats } from '../data/item-tier.js';
+import { gearDexClaimable } from '../game/reward-badges.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
@@ -18,13 +23,21 @@ import { heroBannerArt, beginnerBannerArt, FALLBACK_BANNER_ART } from '../data/b
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
 import { skuGate } from '../data/shop-gates.js';
 import './shop-gates.css';
+import { paymentNoticeHtml, legalLinksHtml, businessInfoHtml, PURCHASE_CHECKS } from './legal-links.js';
+import { cashOffer, payCash, PAY_VIA } from './cash-offer.js';
+import { ratingLabel } from '../data/game-rating.js';
+import './legal-links.css';
 import { revealPlan } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
+import { heroBuyButtonHtml } from './hero-buy.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { createFunnelLog } from '../game/funnel-events.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
+import { playChapterScene, sceneLinesFor, shouldAutoPlayScene, isScenePlaying, REGION_DUNGEON_ART } from './lore-scene.js';
+import { mountCodex } from './lore-codex.js';
+import { isChapterOpen, ecoClock } from '../data/chapter-open.js';
 import { guideHtml } from './guide.js';
 import { isFirstSortie } from './first-sortie.js';
 import { availableDifficulties } from '../game/difficulty.js';
@@ -37,6 +50,9 @@ import { heroCompare } from '../data/hero-traits.js';
 import { compareBarsHtml } from './starter-select.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { campaignTown } from '../data/campaign-towns.js';
+import { buildSaveExport } from './save-export.js';
+import { isAccountResetPhrase, PAYMENT_PENDING_MESSAGE } from '../game/account-reset.js';
+import { openTransferSheet } from './enhance-transfer-panel.js';
 import { IAP_BY_ID, heroProductId, HERO_ALL_PRODUCT_ID } from '../shared/iap-catalog.js';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
@@ -50,14 +66,6 @@ const funnelFor = (app) => (app?.funnel && typeof app.funnel.track === 'function
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
-const REGION_DUNGEON_ART = {
-  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
-  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
-  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
-  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
-  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
-  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
-};
 const dungeonMapSvg = (stage, { compact = false } = {}) => {
   const dungeon = stage?.dungeon;
   const layout = dungeon?.layout;
@@ -101,9 +109,12 @@ export class Meta {
     document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const k = b.dataset.open; if (k === 'energy') this.openTab('shop', 'energy'); else if (k === 'shop-gold') this.openTab('shop', 'gold'); else this.openTab('shop', 'gem'); }));
     $('btn-battle').addEventListener('click', () => this.launchNextChallenge());
     $('stage-pill').addEventListener('click', () => this.openTab('stage'));
-    $('btn-campaign-journal').addEventListener('click', () => this.ui.modal(journalHtml(this.eco.s.progress), { onOpen: (box) => { box.querySelector('#journal-close').onclick = () => this.ui.closeModal(); } }));
+    $('btn-campaign-journal').addEventListener('click', () => this.openJournal());
     $('btn-daily').addEventListener('click', () => this.showDaily());
     $('btn-mail').addEventListener('click', () => this.showMail());
+    $('btn-idle').addEventListener('click', () => this.showIdle());
+    $('btn-newbie').addEventListener('click', () => this.showNewbie());
+    $('btn-achieve').addEventListener('click', () => this.showAchievements());
     $('btn-quest').addEventListener('click', () => this.showQuests());
     $('btn-settings').addEventListener('click', () => this.showSettings());
     $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
@@ -134,22 +145,25 @@ export class Meta {
     this.eco.onChange(() => this.refreshTop());
     setInterval(() => this.tick(), 1000);
   }
-  /** 서버 검증 결제(Play 카탈로그)가 연결됐는지. 패스 프리미엄 줄처럼 "결제 가능" 자체를 묻는 곳에 쓴다. */
-  billingOn() { return this.eco.paymentAvailable?.() === true; }
+  /** 서버 검증 결제가 연결됐는지(Play 카탈로그 또는 웹 포트원). 패스 프리미엄 줄처럼 "결제 가능" 자체를 묻는 곳에 쓴다. */
+  billingOn() { return this.eco.paymentAvailable?.() === true || this.webPayOn(); }
+  /** 웹 채널에서 서버가 웹 결제를 켰는지(app.heroPurchase: 플래그·채널 키·서버 권위). 웹이 아니면 methods()가 비어 false. */
+  webPayOn() { try { const hp = this.app?.heroPurchase; return (hp?.methods?.()?.length ?? 0) > 0 && hp.available?.() === true; } catch { return false; } }
+  /** 상점 SKU의 채널별 판매 상태(cash-offer.js): play·web(구매 가능)·pending(웹 준비 중)·null(숨김). */
+  cashOfferFor(id) { return cashOffer(id, { billing: this.eco.billing, heroPurchase: this.app?.heroPurchase }); }
   /** 보석·패키지 같은 현금 상품 입구(보석 충전·초월 패키지 버튼)를 보일지. 카탈로그에서 실제 판매하는 상품이 그 탭에 있을 때만 true. */
   payOn() { return this.billingOn() && (this.shopSkus('gem').length > 0 || this.shopSkus('pack').length > 0); }
-  /** 현금 SKU는 서버 카탈로그에 매핑된(enabled·eligible) 상품이고 Play 가격이 있을 때만 판다. 카탈로그 밖·비활성 상품은 계속 숨긴다. */
+  /** 현금 SKU는 서버 카탈로그에 매핑된(enabled·eligible) 상품이고 확인된 가격(Play 문구 또는 웹 intent와 같은 카탈로그 금액)이 있을 때만 판다. */
   cashProduct(id) {
-    const billing = this.eco.billing;
-    if (!billing || !this.billingOn()) return null;
-    const p = billing.productForShopSku?.(id);
-    return p && p.sellable === true && typeof p.formattedPrice === 'string' ? p : null;
+    const o = this.cashOfferFor(id);
+    return o && o.mode !== 'pending' ? { id: o.productId, type: o.type, formattedPrice: o.formattedPrice, sellable: true, mode: o.mode } : null;
   }
   /** VIP 멤버십·누적 결제(spentKRW) 표시는 판매하지 않으므로 결제 연결과 무관하게 숨긴다. */
   vipShown() { return false; }
   /** 지금 상점 탭 id에 보여 줄 상품. 현금 상품은 카탈로그에서 판매 중인 것만(가격은 Play 값). */
   shopSkus(tab = this.shopTab) {
-    return SKUS.filter((x) => (x.kind !== 'cash' || this.cashProduct(x.id)) && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
+    // 웹에서 파는 상품은 웹 결제가 꺼져 있어도 '준비 중'으로 보인다(구매 버튼은 막고 서버를 부르지 않는다).
+    return SKUS.filter((x) => (x.kind !== 'cash' || this.cashOfferFor(x.id)) && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
   }
   /** 상품이 하나도 없는 탭(결제 없는 보석·패키지)은 감춘다. */
   shopTabs() { return SHOP_TABS.filter((t) => this.shopSkus(t.id).length); }
@@ -163,14 +177,21 @@ export class Meta {
     this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
+    // 영웅 화면은 미보유 영웅을 보다 떠났더라도 출전 영웅으로 연다. 시작 영웅 선택 전 기본값(검성)에 머물면
+    // 다른 영웅으로 시작한 이용자가 '미보유' 화면만 보고 아바타·장비 줄을 찾지 못했다(2026-10-28 대표님 지적).
+    if (tab === 'heroes') this.focusOwnedHero();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') { if (sub && Object.hasOwn(GACHA_BANNERS, sub)) this.gachaBanner = sub; this.refreshGacha(); }
     if (tab === 'home') this.refreshHome();
   }
+  /** 보고 있던 영웅이 미보유면 출전 영웅으로 되돌린다. */
+  focusOwnedHero() { if (!this.eco.ownHero(this.heroSel)) this.heroSel = this.eco.s.selected; return this.heroSel; }
   /** 메뉴 안(소환·상점·패스·우편 등)에 받을 것이 있으면 하단 메뉴 버튼에도 점을 띄워 첫 소환·보상 수령을 놓치지 않게 한다. */
   refreshMenuBadge() {
     const trigger = document.querySelector('#meta .oath-nav-menu'); if (!trigger) return;
     // 상점 점(스타터 미구매)은 결제 연결 전에는 해소할 수 없으므로 세지 않는다. 무료로 받을 수 있는 것만 알린다.
-    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-mail', 'dot-quest'].filter((id) => document.getElementById(id)?.classList.contains('on')).length;
+    // 소식 새 글 점(.news-open .dot)도 같은 메뉴 점에 합친다(src/ui/news.js).
+    const pending = ['dot-gacha', 'dot-pass', 'dot-daily', 'dot-idle', 'dot-newbie', 'dot-achieve', 'dot-mail', 'dot-quest', 'dot-journey'].filter((id) => document.getElementById(id)?.classList.contains('on')).length
+      + (document.querySelector('.news-open .dot.on') ? 1 : 0);
     let dot = trigger.querySelector('.dot');
     if (!dot) { dot = document.createElement('em'); dot.className = 'dot'; dot.setAttribute('aria-hidden', 'true'); trigger.append(dot); }
     dot.classList.toggle('on', pending > 0);
@@ -186,8 +207,10 @@ export class Meta {
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
     $('top-vip-wrap').hidden = !this.vipShown(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
-    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
+    $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-idle')?.classList.toggle('on', this.eco.idleQuote().notable); $('dot-achieve').classList.toggle('on', this.eco.achievementClaimable() > 0); { const nb = this.eco.newbieView(); $('btn-newbie').hidden = !nb.open; $('dot-newbie').classList.toggle('on', nb.open && nb.claimable > 0); } $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
+    // 장비 도감 마일스톤(영웅 → 가방 → 금고 → 도감)을 놓치지 않게 영웅 탭에 점(docs/RPG_ESSENTIALS.md E1).
+    $('dot-heroes')?.classList.toggle('on', gearDexClaimable(s, this.eco.ownedHeroIds()) > 0);
     this.refreshMenuBadge();
     this.refreshGachaOdds();
     // 홈 프로모션 버튼은 부트 때 결제가 없으면 DOM에서 치워진다(나중에 결제가 연결돼도 상점 탭으로만 판매).
@@ -213,6 +236,7 @@ export class Meta {
     return this.app.startStage(this.eco.nextStage());
   }
   tick() {
+    if (this.app.mode === 'lobby') this.eco.markSeen(); // 30분 간격 접속 표시(복귀 보상 기준)
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
     if (this.billingOn() && $('promo-timer')) $('promo-timer').textContent = '한정 상품';
     const rot = rotationWindow(Date.now()); $('banner-timer').textContent = hms(rot.end - Date.now());
@@ -223,6 +247,20 @@ export class Meta {
   }
 
   // ================= 스테이지 =================
+  /** 모험 기록(기억의 기록). 도감 버튼은 같은 모달 안을 도감으로 바꾸고, '기록으로'가 되돌린다. */
+  openJournal() {
+    const progress = this.eco.s.progress;
+    this.ui.modal(journalHtml(progress), { onOpen: (box) => {
+      box.querySelector('#journal-close').onclick = () => this.ui.closeModal();
+      box.querySelector('#journal-codex').onclick = () => mountCodex(box, { progress, track: (name, payload) => this.trackFunnel(name, payload), onBack: () => this.openJournal() });
+    } });
+  }
+  /** 지역 장면 재생(처음 열 때 자동, 다시 보기는 replay). 전투 밖 관문 선택 화면에서만 부른다. */
+  playRegionScene(ch, replay, art) {
+    return playChapterScene(ch, { replay, art, track: (name, payload) => this.trackFunnel(name, payload) });
+  }
+  /** 진행도와 시간 개방(chapter-open.js)이 모두 열린 지역인가. 장면 자동 재생·다시 보기 조건. */
+  regionOpen(ch) { return this.eco.isUnlocked(ch, 1) && isChapterOpen(ch, ecoClock(this.eco)); }
   renderStages() {
     const townNow = this.eco.campaignTownState().current;
     const clearedIn = (ch) => Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${ch}-${i + 1}`] || 0).filter(Boolean).length;
@@ -240,7 +278,10 @@ export class Meta {
       return `<span class="chapter-route-node${stopStars ? ' done' : ''}${stopStage.boss ? ' boss' : ''}" title="${storyText(stopStage.title)}"><i>${String(stop).padStart(2, '0')}</i><small>${stopStage.boss ? '보스' : '관문'}</small></span>`;
     }).join('');
     const regionArt = REGION_DUNGEON_ART[chapter.encounterPrefix || chapter.theme] || chapterCast.portrait;
-    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3><p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
+    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3>${sceneLinesFor(this.chapter).length && this.regionOpen(this.chapter) ? '<button type="button" class="lore-replay" id="lore-replay">장면 다시 보기</button>' : ''}<p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
+    const replayButton = $('lore-replay'); if (replayButton) replayButton.onclick = () => this.playRegionScene(this.chapter, true, regionArt);
+    // 그 지역이 열려 있고 아직 안 본 장이면 입장 장면을 자동 재생한다(관문 선택 화면에 있을 때만).
+    if (this.tab === 'stage' && !isScenePlaying() && shouldAutoPlayScene(this.chapter, { unlocked: this.regionOpen(this.chapter) })) this.playRegionScene(this.chapter, false, regionArt);
     for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
       const d = stageDef(this.chapter, st); const unlocked = this.eco.isUnlocked(this.chapter, st); const stars = this.eco.s.progress.stars[`${this.chapter}-${st}`] || 0;
       const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (d.midboss ? ' is-midboss' : '') + (d.regionBoss ? ' is-regionboss' : '') + (unlocked ? '' : ' lock') + (stars ? ' cleared' : '') + (this.stage.st === st ? ' on' : '');
@@ -269,7 +310,11 @@ export class Meta {
       <p class="stage-loot-guide" data-loot-difficulty="${selectedDifficulty.id}"><b>사냥 전리품 · ${selectedDifficulty.name}</b>${lootInfo.lines.map((line) => '<span>' + line + '</span>').join('')}<span class="stage-loot-note">${levelInfo.detail} · 처치 경험치는 전투 중 즉시 쌓입니다.</span></p>
       ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}</div>`;
     // 출격 버튼은 스크롤 밖 하단 고정 바에 둔다(낮은 가로 화면에서도 항상 보인다). id 와 동작은 그대로다.
-    $('campaign-sortie').innerHTML = `<div class="sortie-info"><b>${d.code} ${storyText(d.title)}</b><small>권장 전투력 <span style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</span> · 내 ${fmt(power)}</small></div><div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 -' + d.energy : '이전 관문을 먼저 정화하세요'}</small></button></div>`;
+    $('campaign-sortie').innerHTML = `<div class="sortie-info"><b>${d.code} ${storyText(d.title)}</b><small>권장 전투력 <span style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</span> · 내 ${fmt(power)}</small>${(() => { const r = bossShortcutRule({ power, recPower: d.recPower, stars }); return `<small class="boss-shortcut-rule${r.ok ? ' ready' : ''}" data-ready="${r.ok ? '1' : '0'}">${bossShortcutShort(r)}</small>`; })()}</div><div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked || selectedDifficulty.tormentTier ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 ' + (selectedDifficulty.tormentTier ? '0' : '-' + d.energy) : '이전 관문을 먼저 정화하세요'}</small></button></div>`;
+    // 고통 단계(지옥 위 난이도): 기존 난이도 카드 아래에 단계 선택 줄을 붙인다. 닫힌 이유·배율·에너지 0·오늘 풀 보상 판은 그 줄이 보여 준다.
+    this.tormentPicker ||= new DifficultyPicker(this.app, { includeBase: false, onChange: () => this.renderStages() });
+    this.tormentPicker.setStage(d.ch, d.st); this.tormentPicker.refresh();
+    $('stage-detail').querySelector('.difficulty-picker')?.append(this.tormentPicker.root);
     $('stage-detail').querySelectorAll('[data-difficulty]').forEach((button) => button.onclick = () => {
       const next = this.eco.setDifficulty(button.dataset.difficulty, d.ch, d.st);
       this.selectedDifficulty = next.id;
@@ -340,14 +385,15 @@ export class Meta {
     // 가격 문구는 app.heroPurchase.price(): 웹은 서버 intent 와 같은 카탈로그 금액, Play 는 스토어가 확인한 판매 가능 가격만. 없으면 null.
     const price = (productId) => { try { return payOn ? this.app.heroPurchase.price?.(productId) || null : null; } catch { return null; } };
     const lockedLeft = HERO_ORDER.filter((hid) => !this.eco.ownHero(hid) && heroReleased(hid, this.eco.now?.() ?? Date.now())).length;
-    const why = { progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
+    const viaCampaign = q.reason === 'campaign' || q.reason === 'campaign-pending', joinPending = q.reason === 'campaign-pending';
+    const why = { 'campaign-pending': '다음 관문을 클리어하면 이야기 속 동료로 바로 합류합니다', campaign: `캠페인 ${q.needLabel} 클리어 시 이야기 속 동료로 합류합니다 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, progress: `캠페인 ${q.needLabel} 클리어 필요 (현재 ${q.progress - 1 > 0 ? this.stageLabel(q.progress) : '시작 전'})`, gems: `보석이 ${fmt(q.gems - q.have)}개 부족합니다`, 'starter-pending': '시작 영웅을 먼저 골라 주세요', max: '무료 해금 슬롯을 모두 사용했습니다. 이 영웅은 바로 해금으로 열 수 있어요', policy: '', unknown: '' }[q.reason] || '';
     const viaGacha = q.reason === 'gacha';
     const hasFree = !viaGacha && !(q.reason === 'max' || q.reason === 'policy' || q.reason === 'unknown' || q.reason === 'owned' || q.reason === 'starter-pending');
     const need = Math.max(1, q.need - 1), done = Math.max(0, Math.min(need, q.progress - 1)), stageOk = done >= need, gemOk = q.have >= q.gems;
     const ratio = (n, m) => `${Math.round(Math.max(0, Math.min(1, m ? n / m : 0)) * 100)}%`;
     const freeRows = hasFree ? `<div class="hl-row ${stageOk ? 'ok' : ''}" data-cond="progress"><i class="hl-ico hl-ico-book" aria-hidden="true"></i><span class="hl-lab">${q.needLabel} 클리어</span><b class="hl-meter"><u style="width:${ratio(done, need)}"></u></b><span class="hl-val">${done} / ${need}</span><i class="hl-check" aria-label="${stageOk ? '조건 충족' : '조건 미충족'}">${stageOk ? '✓' : ''}</i></div>
-      <div class="hl-row hl-gem ${gemOk ? 'ok' : ''}" data-cond="gems"><i class="hl-ico hl-ico-gem" aria-hidden="true"></i><span class="hl-lab">보석 ${fmt(q.gems)}</span><b class="hl-meter"><u style="width:${ratio(q.have, q.gems)}"></u></b><span class="hl-val">${fmt(q.have)} / ${fmt(q.gems)}</span><i class="hl-check" aria-label="${gemOk ? '조건 충족' : '조건 미충족'}">${gemOk ? '✓' : ''}</i></div>` : '';
-    const freeBtn = viaGacha ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">소환에서 획득</button>` : q.canFree ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">보석 ${fmt(q.gems)}개로 해금</button>` : `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">조건 달성 후 해금</button>`;
+      ${viaCampaign ? '' : `<div class="hl-row hl-gem ${gemOk ? 'ok' : ''}" data-cond="gems"><i class="hl-ico hl-ico-gem" aria-hidden="true"></i><span class="hl-lab">보석 ${fmt(q.gems)}</span><b class="hl-meter"><u style="width:${ratio(q.have, q.gems)}"></u></b><span class="hl-val">${fmt(q.have)} / ${fmt(q.gems)}</span><i class="hl-check" aria-label="${gemOk ? '조건 충족' : '조건 미충족'}">${gemOk ? '✓' : ''}</i></div>`}` : '';
+    const freeBtn = viaCampaign ? `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">${joinPending ? '다음 관문 클리어 때 합류' : `${q.needLabel} 클리어 시 합류`}</button>` : viaGacha ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">소환에서 획득</button>` : q.canFree ? `<button type="button" class="hl-btn hl-gold" id="h-free" aria-describedby="hl-why">보석 ${fmt(q.gems)}개로 해금</button>` : `<button type="button" class="hl-btn hl-gray" id="h-free" disabled aria-describedby="hl-why">조건 달성 후 해금</button>`;
     const heroPrice = price(heroProductId(id)), allPrice = lockedLeft > 1 && IAP_BY_ID[HERO_ALL_PRODUCT_ID] ? price(HERO_ALL_PRODUCT_ID) : null;
     const buyBtn = payOn
       ? (heroPrice ? `<button type="button" class="hl-btn hl-gold hl-buy" id="h-buy" aria-label="${esc(def.name)} 바로 해금 ${esc(heroPrice)}"><i class="hl-pile" aria-hidden="true"></i><span>${esc(heroPrice)}</span><em aria-hidden="true">›</em></button>` : `<button type="button" class="hl-btn hl-gray hl-buy" id="h-buy" disabled>가격 확인 중</button>`)
@@ -356,17 +402,29 @@ export class Meta {
       <section class="hl-card"><div class="hl-art"><img class="hl-portrait" src="${esc(def.portrait || '')}" alt="${esc(def.name)}" onerror="this.style.visibility='hidden'"><span class="hl-badge"><i aria-hidden="true">🔒</i>미보유</span></div>
         <div class="hl-info"><h2>${esc(def.name)}</h2><div class="sub">${esc(cmp.role)}</div><p class="hl-intro">${esc(cmp.intro)}</p>${compareBarsHtml(cmp)}</div></section>
       <div class="hl-boards">
-        <section class="hl-box" data-lock="free"><h3>${viaGacha ? '소환으로 획득' : '무료 해금'}</h3><p class="hl-lead">${viaGacha ? '이 영웅은 소환에서 얻을 수 있습니다.' : '특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.'}</p>${freeRows}${viaGacha ? `<p class="hl-why" id="hl-why">영웅 소환(2주 교대 픽업)과 초보자 소환에서 나옵니다. 이미 가진 영웅이 나오면 조각 ${GACHA.dupShards}개로 바뀌어 초월에 쓰입니다.</p>` : why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
-        ${viaGacha ? '' : `<section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>`}
-        ${!viaGacha && allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
+        <section class="hl-box" data-lock="free"><h3>${viaCampaign ? '이야기 합류' : viaGacha ? '소환으로 획득' : '무료 해금'}</h3><p class="hl-lead">${viaCampaign ? '캠페인을 진행하면 이 영웅이 동료로 합류합니다. 소환으로도 얻을 수 있어요.' : viaGacha ? '이 영웅은 소환에서 얻을 수 있습니다.' : '특정 조건을 달성하여 영웅을 무료로 해금할 수 있습니다.'}</p>${freeRows}${viaGacha ? `<p class="hl-why" id="hl-why">영웅 소환(2주 교대 픽업)과 초보자 소환에서 나옵니다. 이미 가진 영웅이 나오면 조각 ${GACHA.dupShards}개로 바뀌어 초월에 쓰입니다.</p>` : why ? `<p class="hl-why" id="hl-why">${why}</p>` : '<p class="hl-ok" id="hl-why">조건을 채웠습니다</p>'}${freeBtn}</section>
+        ${heroBuyButtonHtml(this.eco, id)}
+        ${viaGacha || joinPending ? '' : `<section class="hl-box" data-lock="paid"><h3>바로 해금</h3><p class="hl-lead">${payOn ? '지금 바로 결제하여 영웅을 즉시 해금할 수 있습니다.' : '결제 준비 중입니다. 무료 해금은 지금도 가능해요.'}</p>${buyBtn}</section>`}
+        ${!viaGacha && !joinPending && allPrice ? `<button type="button" class="hl-all" id="h-buy-all" aria-label="전원 해금 ${esc(allPrice)}"><b>전원 해금 ${esc(allPrice)} ›</b><small>모든 영웅을 한 번에 해금할 수 있습니다.</small></button>` : ''}
         ${viaGacha ? '' : '<p class="hl-note"><i aria-hidden="true">!</i>결제는 서버 확인 후 지급됩니다.</p>'}
       </div></div>`;
     det.querySelector('#h-free').onclick = () => (viaGacha ? this.openTab('gacha', 'hero') : this.unlockHeroFree(id));
+    const gemBuy = det.querySelector('#h-gem-buy'); if (gemBuy) gemBuy.onclick = () => this.buyHeroWithGems(id);
     const buy = det.querySelector('#h-buy'); if (buy) buy.onclick = () => this.buyHero(heroProductId(id), id);
     const all = det.querySelector('#h-buy-all'); if (all) all.onclick = () => this.buyHero(HERO_ALL_PRODUCT_ID, id);
   }
   /** 다음 열릴 관문 번호 → '3-5' 식 표기(마지막으로 깬 관문). */
   stageLabel(unlocked) { const cleared = Math.max(1, unlocked - 1); return Math.ceil(cleared / STAGES_PER_CHAPTER) + '-' + (((cleared - 1) % STAGES_PER_CHAPTER) + 1); }
+  /** 보석 직접 영입(HERO_DIRECT_PURCHASE.enabled 일 때만 버튼이 있다). 확인창 → Economy.buyHero(서버 명령 큐가 같은 규칙으로 정산). */
+  async buyHeroWithGems(id) {
+    const q = this.eco.heroBuyQuote(id), def = HEROES[id]; if (!q.ok) { audio.play('ui_error'); return; }
+    const ok = await this.ui.confirm('영웅 영입', `${esc(def.name)}을(를) 유료 보석 ${fmt(q.price)}개로 바로 영입할까요?<br>기본 해금 1회만 드리며 조각·각성·별 재료는 소환에서만 나옵니다. 영입하면 되돌릴 수 없습니다.`, { ok: '영입' });
+    if (!ok) return;
+    const r = this.eco.buyHero(id);
+    if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 영입을 취소했습니다. 보석은 그대로입니다' : r?.reason === 'paid-gems' ? '유료 보석이 부족합니다' : '지금은 영입할 수 없습니다', 'red'); audio.play('ui_error'); this.renderHeroes(); return; }
+    audio.play('jingle_win0', { vol: 0.5 }); this.ui.toast(`${def.name} 영입!`, 'gold');
+    this.heroSel = id; this.renderHeroes(); this.refreshTop();
+  }
   async unlockHeroFree(id) {
     const q = this.eco.heroUnlockQuote(id), def = HEROES[id]; if (!q.canFree) { audio.play('ui_error'); return; }
     const ok = await this.ui.confirm('영웅 해금', `${esc(def.name)}을(를) 보석 ${fmt(q.gems)}개로 해금할까요?<br>해금하면 되돌릴 수 없습니다.`, { ok: '해금' });
@@ -381,6 +439,10 @@ export class Meta {
   async buyHero(productId, heroId) {
     if (!this.heroPurchaseOn()) { await this.ui.paySheet({ id: productId, name: HEROES[heroId]?.name }); return; }
     if (this._heroBuying) return;
+    // 웹·Play 공통: 결제 전에 청약철회 고지 + 즉시 지급 동의 체크(기본 미체크)를 거친다.
+    const price = (() => { try { return this.app.heroPurchase.price?.(productId) || ''; } catch { return ''; } })();
+    const ok = await this.ui.confirm('구매 확인', `${esc(HEROES[heroId]?.name || productId)}${price ? `<br>${esc(price)}` : ''}${paymentNoticeHtml({ id: productId })}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
+    if (!ok) return;
     this._heroBuying = true; this.trackFunnel('paysheet_open', { sku: productId });
     try {
       const r = await this.app.heroPurchase.buy(productId);
@@ -425,20 +487,31 @@ export class Meta {
     if (!this.eco.ownHero(id)) return false;
     this.skillTree ||= new SkillTreeView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
     this.transcendView?.close({ rerender: false, restoreFocus: false });
+    this.legendView?.close({ rerender: false, restoreFocus: false });
     return this.skillTree.open(id, i);
   }
   openTranscend(id = this.heroSel || this.eco.s.selected) {
     if (!this.eco.ownHero(id)) return false;
     this.transcendView ||= new TranscendView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
     this.skillTree?.close({ rerender: false, restoreFocus: false });
+    this.legendView?.close({ rerender: false, restoreFocus: false });
     return this.transcendView.open(id);
+  }
+  /** 전설 수련 판(계정 공통, 영웅 Lv.80 이후). 영웅 화면의 '전설' 탭에서 연다. */
+  openLegend(trigger) {
+    this.legendView ||= new LegendView(this);
+    this.skillTree?.close({ rerender: false, restoreFocus: false });
+    this.transcendView?.close({ rerender: false, restoreFocus: false });
+    return this.legendView.open(trigger);
   }
   /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
   showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }
+  /** 강화 전승 시트(공개 진입점): 그 장비를 원본(옮길 강화가 있으면) 또는 대상으로 미리 고른 채 연다. 규칙은 data/enhance-transfer.js. */
+  openTransfer(uid, heroId = this.eco.s.selected) { return openTransferSheet(this, uid, heroId); }
   /** 강화는 비교 시트의 강화 영역으로 연다. */
   showEnhance(uid, heroId) { return showItemSheet(this, uid, heroId, { focus: 'enhance' }); }
   offerStones() { setTimeout(() => this.ui.modal(`<h2>강화석이 부족합니다</h2><p>강화석은 전투 필드 드랍 또는 상점에서 얻을 수 있어요</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">강화 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'enh'); }; } }), 500); }
-  offerScroll(k) { setTimeout(() => this.ui.modal(`<h2>${k === 'bless' ? '축복' : '보호'} 주문서가 없습니다</h2><p>${k === 'bless' ? '성공률을 20% 올려줍니다.' : '실패해도 장비가 파괴되지 않습니다.'}<br>상점에서 구매할 수 있어요.</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">강화 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'enh'); }; } }), 500); }
+  offerScroll(k) { setTimeout(() => this.ui.modal(`<h2>${k === 'bless' ? '축복' : k === 'transfer' ? '전승 보호' : '보호'} 주문서가 없습니다</h2><p>${k === 'bless' ? '성공률을 20% 올려줍니다.' : k === 'transfer' ? '강화 전승 때 단계 손실(−1)을 없애 줍니다.' : '실패해도 장비가 파괴되지 않습니다.'}<br>상점에서 구매할 수 있어요.</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">강화 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'enh'); }; } }), 500); }
   offerGold() { setTimeout(() => this.ui.modal(`<h2>골드가 부족합니다</h2><p>보석으로 골드를 즉시 충전할 수 있어요</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">골드 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'gold'); }; } }), 600); }
 
   // ================= 가챠 =================
@@ -621,10 +694,28 @@ export class Meta {
       const hero = HEROES[avatar.heroId], ready = !!libraryAssetForAvatar(avatar.id), isOwned = owned.includes(avatar.id), isEquipped = equipped[avatar.heroId] === avatar.id;
       const heroLocked = !this.eco.ownHero(avatar.heroId); // 미보유 영웅은 입을 수 없으므로 구매·착용 대신 해금 안내만 보인다
       const d = document.createElement('div'); d.className = 'shop-item avatar-shop-item' + (ready ? '' : ' avatar-pending');
-      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready && !heroLocked ? '' : 'disabled'}>${ready ? (heroLocked ? '영웅 해금 후 이용' : isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button></div>`;
+      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready && !heroLocked ? '' : 'disabled'}>${ready ? (heroLocked ? '영웅 해금 후 이용' : isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button>${ready && !isEquipped && this.app.models?.[hero.model] ? `<button type="button" class="btn btn-ghost btn-sm avatar-tryon-btn" data-avatar-tryon="${avatar.id}">입어 보기</button>` : ''}</div>`;
       d.querySelector('[data-avatar]').onclick = () => this.buyOrEquipAvatar(avatar.id);
+      const tryButton = d.querySelector('[data-avatar-tryon]');
+      if (tryButton) tryButton.onclick = () => this.showAvatarTryOn(avatar.id);
       grid.appendChild(d);
     }
+  }
+  /** 상점 '입어 보기': 사기 전에 구매 없이 임시로 입혀 본다. 닫으면 원래대로(저장·결제·가격 불변). */
+  showAvatarTryOn(id) {
+    const avatar = AVATARS.find((entry) => entry.id === id), hero = avatar && HEROES[avatar.heroId];
+    if (!avatar || !hero || !libraryAssetForAvatar(id)) return;
+    const owned = this.eco.s.avatars.owned.includes(id), heroLocked = !this.eco.ownHero(avatar.heroId);
+    const stop = () => this.app.wardrobe?.previewStop?.();
+    const action = heroLocked ? '' : `<button class="btn ${owned ? 'btn-ghost' : 'btn-gold'}" id="m-buy">${owned ? '착용하기' : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`}</button>`;
+    this.ui.modal(`<div class="tryon-wrap"><h2>${avatar.name}</h2><p class="setting-help">${hero.name} · 입어 보기는 구매·착용 없이 모습만 보여 줍니다.</p>`
+      + `<div class="tryon-stage" id="tryon-stage" role="img" aria-label="${hero.name}이(가) ${avatar.name}을(를) 입어 본 모습"></div>`
+      + `<p class="tryon-note">${avatar.desc}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button>${action}</div></div>`, { onClose: stop, onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => { stop(); this.ui.closeModal(); };
+      const buy = b.querySelector('#m-buy');
+      if (buy) buy.onclick = () => { stop(); this.ui.closeModal(); void this.buyOrEquipAvatar(id); };
+      this.app.wardrobe?.tryOn?.(b.querySelector('#tryon-stage'), avatar.heroId, id);
+    } });
   }
   async buyOrEquipAvatar(id) {
     const avatar = AVATARS.find((entry) => entry.id === id), s = this.eco.s;
@@ -639,7 +730,7 @@ export class Meta {
     const result = this.eco.equipAvatar(avatar.heroId, equipped ? null : id);
     if (!result.ok) { this.ui.toast('아바타 착용 상태를 바꾸지 못했습니다.', 'red'); return; }
     this.ui.toast(equipped ? `${avatar.name} 해제` : `${avatar.name} 착용`, 'gold');
-    if (this.eco.s.selected === avatar.heroId) this.app.showcaseHero(avatar.heroId);
+    if (this.eco.s.selected === avatar.heroId) (this.app.refreshShowcaseAvatar || this.app.showcaseHero).call(this.app, avatar.heroId);
     this.renderShop(); this.refreshTop();
   }
   renderShop() {
@@ -648,25 +739,29 @@ export class Meta {
     const tabs = $('shop-tabs'); tabs.innerHTML = visibleTabs.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
+    const bizBox = $('shop-bizinfo'); if (bizBox && !bizBox.firstChild) bizBox.innerHTML = businessInfoHtml();
     const notice = $('shop-notice');
     const gemSplit = (() => { const st = this.eco.s, paid = Math.min(Math.max(0, Math.floor(st.paidGems || 0)), st.gems); return `<b>보석 유료 ${fmt(paid)} · 무료 ${fmt(st.gems - paid)}</b> (무료부터 사용) · `; })();
-    if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
+    if (notice) notice.innerHTML = gemSplit + (this.shopTab === 'avatar' ? '<b>아바타는 외형 상품입니다.</b> 착용 시 풀셋 효과(이동속도·줍기 범위 편의)만 있고 전투력에는 영향이 없습니다.'
       : `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`);
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
     for (const sku of this.shopSkus()) {
       const d = document.createElement('div'); const big = sku.tab === 'hot' || sku.tab === 'pack'; d.className = 'shop-item' + (sku.badge ? ' hot' : '') + (big ? ' big' : '');
-      const first = sku.gems && !s.firstPurchaseUsed[sku.id]; const sold = sku.once && s.purchases.includes(sku.id);
+      // 보석 팩은 서버 카탈로그 grant만 지급한다(첫 결제·추가 보너스 없음) — 화면에도 보너스를 적지 않는다.
+      const sold = sku.once && s.purchases.includes(sku.id);
       const cash = sku.kind === 'cash';
-      // 현금 상품 가격은 Play가 돌려준 문구만 쓴다(카탈로그 가격은 표시하지 않는다).
-      const priceText = cash ? this.cashProduct(sku.id)?.formattedPrice || '' : '';
+      // 현금 상품 가격은 확인된 문구만 쓴다(Play가 돌려준 값, 웹은 서버가 웹 결제를 켰을 때의 카탈로그 금액). 준비 중이면 가격 없이 막는다.
+      const offer = cash ? this.cashOfferFor(sku.id) : null, pending = offer?.mode === 'pending';
+      const priceText = offer && !pending ? offer.formattedPrice || '' : '';
       const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : esc(priceText);
       // 현금 상품은 결제가 연결됐을 때만 이 목록에 온다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
-      const value = cash && sku.gems && sku.priceLabel ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
-      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      const value = '';
+      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
+      if (pending) { const btn = d.querySelector('button'); btn.disabled = true; btn.textContent = '준비 중'; btn.setAttribute('aria-label', sku.name + ' · 결제 준비 중'); d.classList.add('si-pending'); }
       // 진행도 잠금: 버튼은 막고 언제 열리는지 보여 준다(shop-gates.js).
       const gate = sku.kind === 'gem' ? skuGate(sku, s) : null;
       if (gate && !gate.ok) { const btn = d.querySelector('button'); btn.disabled = true; btn.textContent = gate.label; btn.setAttribute('aria-label', sku.name + ' · ' + gate.text); d.classList.add('si-locked'); d.dataset.lockLevel = String(gate.need); const why = document.createElement('div'); why.className = 'si-lock'; why.textContent = gate.text; d.querySelector('.si-desc').after(why); }
@@ -695,12 +790,16 @@ export class Meta {
    * @param {{ id: string, name: string, icon?: string, desc?: string }} sku @param {string} productId
    */
   async payWithBilling(sku, productId) {
-    const product = this.cashProduct(sku.id), billing = this.eco.billing;
-    if (!product || !billing) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
-    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · Google Play 결제`, { ok: '구매하기', cancel: '취소' });
+    // Play 앱은 Play billing, 웹은 app.heroPurchase(포트원). 준비 중(웹 결제 꺼짐)이면 서버를 부르지 않는다.
+    const offer = this.cashOfferFor(sku.id), product = this.cashProduct(sku.id);
+    if (!product || offer?.productId !== productId) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
+    // 청약철회 고지(PAYMENT_COMPLIANCE 4.2): 모든 현금 상품은 구매 즉시 지급되므로 제한 사실에 동의(기본 미체크)해야 구매 버튼이 켜진다. 구독은 자동 갱신·해지 문구를 더한다.
+    const subscription = product.type === 'subscription' || sku.id === 'monthly';
+    const notice = paymentNoticeHtml({ ...sku, rewards: this.eco.sku(sku.id)?.rewards ?? sku.rewards }, { subscription });
+    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · ${PAY_VIA[offer.mode]}${notice}`, { ok: '구매하기', cancel: '취소', check: PURCHASE_CHECKS });
     if (!ok) return null;
-    const r = await billing.buy(productId);
-    if (r.reason === 'cancelled') return null;
+    const r = await payCash(offer, { billing: this.eco.billing, heroPurchase: this.app?.heroPurchase });
+    if (r.reason === 'cancelled' || r.reason === 'customer-cancelled') return null;
     if (r.ok) return r;
     if (r.reason === 'pending') this.ui.toast('결제 대기 중 — 승인되면 자동 지급', 'gold');
     else this.ui.toast(this.purchaseFailText(r), 'red');
@@ -723,6 +822,7 @@ export class Meta {
     if (reason === 'verify-failed') return '결제 확인이 늦어지고 있어요. 잠시 뒤 자동으로 반영됩니다';
     if (reason === 'refunded' || reason === 'expired') return '환불·만료된 결제입니다';
     if (reason === 'busy') return '결제 처리 중입니다';
+    if (reason === 'pay-method') return '선택한 결제수단을 지금 쓸 수 없어요. 다른 수단을 골라 주세요';
     if (reason === 'gems') return '보석이 부족합니다';
     if (reason === 'level') return result.need ? `영웅 Lv.${result.need} 달성 후 구매할 수 있습니다` : '아직 구매할 수 없는 단계입니다';
     return '구매하지 못했습니다';
@@ -733,10 +833,12 @@ export class Meta {
     if (sku.kind === 'gem') { const gate = skuGate(sku, s); if (!gate.ok) { audio.play('ui_error'); this.ui.toast(gate.text, 'red'); return; } if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.shopSkus('gem').length ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.shopSkus('gem').length) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
-    if (this.billingOn()) { await this.buyWithBilling(sku); return; }
+    if (this.cashProduct(id)) { await this.buyWithBilling(sku); return; }
+    // 웹 결제 준비 중 상품(프로모 등 다른 입구로 들어온 경우)은 가짜 결제창 없이 알린다.
+    if (this.cashOfferFor(id)?.mode === 'pending') { this.ui.toast('결제 준비 중입니다', 'gold'); return; }
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
-    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 보너스 적용!</p>' : ''));
+    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : '');
     if (this.tab === 'shop') this.renderShop(); this.refreshTop();
   }
 
@@ -754,7 +856,7 @@ export class Meta {
   }
   async buyPass() {
     if (this.eco.s.pass.premium) return;
-    const sku = { id: 'pass', name: '시즌 패스 프리미엄', priceLabel: '₩9,900', icon: '/img/icon_pass.webp', desc: '프리미엄 보상 30단계 해금 · SSR 확정권 3장 포함' };
+    const sku = { id: 'pass', name: '시즌 패스 프리미엄', icon: '/img/icon_pass.webp', desc: '프리미엄 보상 30단계 해금 · SSR 확정권 3장 포함' };
     this.trackFunnel('paysheet_open', { sku: sku.id });
     if (this.billingOn()) {
       // 패스는 카탈로그 상품 season_pass_s1(shopSku 'pass'). 가격 문구는 Play 값만 보인다.
@@ -770,9 +872,57 @@ export class Meta {
     const d = this.eco.s.daily; const avail = this.eco.dailyAvailable(); const idx = d.day % DAILY_REWARDS.length;
     this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('calendar')}" alt="">출석 보상</h2><p>매일 접속하고 보상을 받으세요! 7일차 SSR 확정권</p><div class="daily-grid">${DAILY_REWARDS.map((r, i) => { const k = Object.keys(r)[0]; const [nm, ic] = REWARD_LABEL[k]; const got = i < idx || (!avail && i === idx - 1 && false); return `<div class="daily-cell ${i < idx ? 'got' : ''} ${avail && i === idx ? 'today' : ''} ${i === 6 ? 'big' : ''}"><img src="${RESOURCE_ART[k]?resourceArt(k):ic}" onerror="this.remove()"><span>${i + 1}일차</span><b>${nm} ${r[k]}</b></div>`; }).join('')}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${avail ? '' : 'disabled'}>${avail ? '보상 받기' : '내일 다시'}</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { const r = this.eco.claimDaily(); if (r) { this.trackFunnel('reward_claim', { source: 'daily', day: idx + 1 }); audio.play('jingle_win0', { vol: 0.6 }); this.ui.rewardToast(r.got); } this.ui.closeModal(); }; } });
   }
+  /** 방치 보급·복귀 보상(docs/RPG_ESSENTIALS.md E2). 로비 진입 때 30분 이상 쌓였으면 자동으로, 메뉴 '보급'에서 언제든 연다. */
+  showIdle() {
+    const q = this.eco.idleQuote(); const h = Math.floor(q.minutes / 60), m = q.minutes % 60;
+    const row = (r) => Object.entries(r || {}).map(([k, n]) => { const [nm, ic] = REWARD_LABEL[k] || [k, '']; return `<div class="idle-reward"><img src="${RESOURCE_ART[k] ? resourceArt(k) : ic}" alt="" onerror="this.remove()"><b>${nm}</b><span>${fmt(n)}</span></div>`; }).join('');
+    const body = q.cleared === 0 ? '<p>첫 관문을 깨면 자리를 비운 동안 보급이 쌓입니다.</p>'
+      : `<p>자리를 비운 <b>${h ? h + '시간 ' : ''}${m}분</b> 동안 쌓인 보급입니다${q.capped ? ' (최대 12시간분)' : ''}. 강화에 쓰는 강화석이 쌓입니다.</p><div class="idle-rewards">${row(q.rewards) || '<p class="idle-empty">아직 쌓인 보급이 없습니다.</p>'}</div>`
+      + (q.comeback ? `<h3 class="idle-cb">돌아오신 것을 환영합니다 · ${q.awayDays}일 만</h3><div class="idle-rewards">${row(q.comebackRewards)}</div>` : '');
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('treasure-chest')}" alt="">방치 보급</h2>${body}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-ok" ${q.ready ? '' : 'disabled'}>${q.ready ? '받기' : '쌓이는 중'}</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelector('#m-ok').onclick = () => { const r = this.eco.claimIdle(); if (r) { this.trackFunnel('reward_claim', { source: 'offline' }); audio.play('jingle_win0', { vol: 0.6 }); this.ui.rewardToast(r.got); } this.ui.closeModal(); };
+    } });
+  }
+  /** 신규 7일 여정(docs/RPG_ESSENTIALS.md E3). 하루 3개 미션이 차례로 열리고 21개를 모두 받으면 마지막 상자. */
+  showNewbie(day = null) {
+    const v = this.eco.newbieView(); if (!v.open) { this.ui.toast('7일 여정이 끝났습니다.', 'red'); return; }
+    const sel = Math.min(7, Math.max(1, day || v.rows.find((x) => x.ready)?.day || v.dayNo));
+    const label = (r) => Object.entries(r).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const tabs = Array.from({ length: 7 }, (_, i) => { const d = i + 1, rows = v.rows.filter((x) => x.day === d), dot = rows.some((x) => x.ready);
+      return `<button type="button" class="nb-day${d === sel ? ' on' : ''}${rows.every((x) => x.claimed) ? ' done' : ''}" data-nb-day="${d}" ${d > v.dayNo ? 'aria-disabled="true"' : ''}>${d}일차${dot ? '<em class="dot on" aria-hidden="true"></em>' : ''}</button>`; }).join('');
+    const list = v.rows.filter((x) => x.day === sel).map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name}</div><div class="q-r">${label(x.rewards)}</div><div class="bar"><div style="width:${Math.round(x.cur / x.target * 100)}%"></div></div><small>${fmt(x.cur)} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-nb="${x.id}" ${x.ready ? '' : 'disabled'}>${x.claimed ? '완료' : !x.unlocked ? `${x.day}일차에 열림` : x.complete ? '받기' : '진행 중'}</button></div>`).join('');
+    const final = `<div class="nb-final"><b>21개 모두 달성 보상</b> · ${label({ ssrTicket: 1, gems: 300 })} <button class="btn btn-sm ${v.finalReady ? 'btn-gold' : 'btn-ghost'}" data-nb="final" ${v.finalReady ? '' : 'disabled'}>${v.final ? '완료' : `${v.done}/21`}</button></div>`;
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('calendar')}" alt="">7일 여정</h2><p>첫 주 동안 하루에 세 가지 목표가 열립니다. 남은 기간 ${v.daysLeft}일 (지난 날 목표도 기간 안에는 받을 수 있습니다)</p><div class="nb-days" role="tablist">${tabs}</div>${list}${final}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelectorAll('[data-nb-day]').forEach((el) => el.onclick = () => { if (+el.dataset.nbDay <= v.dayNo) this.showNewbie(+el.dataset.nbDay); });
+      b.querySelectorAll('[data-nb]').forEach((el) => el.onclick = () => { const got = this.eco.claimNewbie(el.dataset.nb); if (got) { this.trackFunnel('reward_claim', { source: 'quest' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showNewbie(sel); });
+    } });
+  }
+  /** 업적(docs/RPG_ESSENTIALS.md E4): 평생 누적 목표를 단계별로 받는다. */
+  showAchievements() {
+    const rows = this.eco.achievementRows();
+    const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const list = rows.map((x) => `<div class="quest-item"><div class="qi-body"><div class="q-t">${x.name} <small>${x.tier}/${x.tiers}단계</small></div><div class="q-r">${x.done ? '모든 단계 달성' : label(x.rewards)}</div><div class="bar"><div style="width:${Math.min(100, Math.round(x.cur / x.target * 100))}%"></div></div><small>${fmt(Math.min(x.cur, x.target))} / ${fmt(x.target)}</small></div><button class="btn btn-sm ${x.ready ? 'btn-gold' : 'btn-ghost'}" data-ach="${x.id}" ${x.ready ? '' : 'disabled'}>${x.done ? '완료' : x.ready ? '받기' : '진행 중'}</button></div>`).join('');
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('renown')}" alt="">업적</h2><p>처치·정복·성장·강화·탑·출석·동료 수집·몬스터 도감의 평생 기록입니다.</p><div class="ach-list">${list}</div><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      b.querySelectorAll('[data-ach]').forEach((el) => el.onclick = () => { const got = this.eco.claimAchievement(el.dataset.ach); if (got) { this.trackFunnel('reward_claim', { source: 'achievement' }); audio.pick('coin', 2); this.ui.rewardToast(got); } this.showAchievements(); });
+    } });
+  }
   showMail() {
-    const mails = this.eco.s.mail;
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('mail')}" alt="">우편함</h2>${mails.map((m) => `<div class="mail-item"><div class="mi-body"><div class="mi-t">${m.title}</div><div class="mi-d">${m.body}</div></div><button class="btn btn-gold btn-sm" data-mail="${m.id}" ${m.read ? 'disabled' : ''}>${m.read ? '수령' : '받기'}</button></div>`).join('') || '<p>우편이 없습니다</p>'}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelectorAll('[data-mail]').forEach((x) => x.onclick = () => { const got = this.eco.claimMail(+x.dataset.mail); if (got) { this.trackFunnel('reward_claim', { source: 'mail' }); audio.pick('coin', 2); this.ui.rewardToast(got); x.disabled = true; x.textContent = '수령'; } }); } });
+    // 받을 우편 먼저, 남은 기간 표시, 모두 받기(docs/RPG_ESSENTIALS.md E5). 받기는 우편마다 서버 명령 하나(claimMail).
+    const now = this.eco.trustedClock?.() ?? Date.now();
+    const mails = [...this.eco.mailbox()].sort((x, y) => (x.read - y.read) || (y.id - x.id));
+    const label = (r) => Object.entries(r || {}).map(([k, n]) => `${(REWARD_LABEL[k] || [k])[0]} ${fmt(n)}`).join(' · ');
+    const left = (m) => Number.isFinite(m.until) ? `<small class="mi-left">${Math.max(1, Math.ceil((m.until - now) / 86400000))}일 남음</small>` : '';
+    const unread = mails.filter((m) => !m.read).length;
+    const claim = (id) => { const got = this.eco.claimMail(id); if (got) this.trackFunnel('reward_claim', { source: 'mail' }); return got; };
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('mail')}" alt="">우편함</h2>${mails.map((m) => `<div class="mail-item"><div class="mi-body"><div class="mi-t">${m.title} ${left(m)}</div><div class="mi-d">${m.body}</div>${Object.keys(m.rewards || {}).length ? `<div class="q-r">${label(m.rewards)}</div>` : ''}</div><button class="btn btn-gold btn-sm" data-mail="${m.id}" ${m.read ? 'disabled' : ''}>${m.read ? '수령' : '받기'}</button></div>`).join('') || '<p>우편이 없습니다</p>'}<div class="modal-btns">${unread > 1 ? '<button class="btn btn-gold" id="m-all">모두 받기</button>' : ''}<button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
+      const all = b.querySelector('#m-all');
+      if (all) all.onclick = () => { const got = mails.filter((m) => !m.read).flatMap((m) => claim(m.id) || []); if (got.length) { audio.pick('coin', 2); this.ui.rewardToast(got); } this.showMail(); };
+      b.querySelectorAll('[data-mail]').forEach((x) => x.onclick = () => { const got = claim(+x.dataset.mail); if (got) { audio.pick('coin', 2); this.ui.rewardToast(got); } this.showMail(); });
+    } });
   }
   showQuests() {
     const qs = this.eco.quests();
@@ -790,12 +940,15 @@ export class Meta {
     const controlHelp = touchControls ? '왼쪽 조이스틱으로 이동 · 오른쪽 공격·회피 버튼 · 스킬 버튼 6개로 전투 · 빈 화면 드래그로 시점 회전, 두 손가락으로 확대'
       : '이동 WASD · 공격 J/Space · 회피 K/Shift · 스킬 1~6 (4~6은 R/Q/E도 가능)';
     const mixRows=[['sfx','효과음 음량'],['music','배경음악 음량'],['voice','목소리 음량']].map(([key,label])=>`<div class="setting-row"><label for="mix-${key}">${label}</label><div class="setting-mix"><input id="mix-${key}" data-mix="${key}" type="range" min="0" max="100" step="1" value="${Math.round(mix[key]*100)}"><output for="mix-${key}">${Math.round(mix[key]*100)}%</output></div></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${row('autoTarget', '공격 자동 타겟팅')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${row('autoTarget', '공격 자동 타겟팅')}${row('autoSalvageN', '노말 장비 자동 분해')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
       <div class="setting-row setting-description"><span id="cam-desc" class="setting-help">${CAM_DESC[st.camera || 'auto']}</span></div>
       ${row('cameraAuto', '전투 카메라 자동(AUTO)')}${row('cameraInvertX', '카메라 좌우 반전')}${row('cameraInvertY', '카메라 상하 반전')}<div class="setting-row setting-description"><span class="setting-help">시점을 끌어 돌릴 때 기본은 손가락을 끄는 쪽으로 화면이 따라옵니다. 반대가 편하면 켜세요. 로비·마을·전투에 바로 적용됩니다.</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
+      ${legalLinksHtml(undefined, 'legal-links setting-legal')}
+      ${businessInfoHtml('biz-info setting-biz')}
+      <p class="setting-rating">${ratingLabel()}</p>
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
-      <details class="danger-zone"><summary>위험 구역 · 데이터 초기화</summary><div class="danger-body"><p>모든 진행 데이터(영웅·장비·재화·진행도)가 삭제되고 되돌릴 수 없습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 초기화할까요?</b> 이 작업은 되돌릴 수 없습니다.</p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes">네, 모두 삭제합니다</button></div></div></div></details>`, { onOpen: (b) => {
+      <details class="danger-zone"><summary>위험 구역 · 계정 초기화(처음부터)</summary><div class="danger-body"><p>이 기기의 진행(영웅·장비·재화·진행도·튜토리얼)을 지우고 시작 영웅 선택부터 다시 합니다. 이름·친구와 결제로 받은 권한(광고 제거·월정액·구매한 영웅/아바타)은 유지됩니다. 되돌릴 수 없으니 먼저 저장을 내보내 두세요.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">계정 초기화(처음부터)</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>1단계 · 현재 저장 내보내기</b></p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-file">파일로 저장</button><button type="button" class="btn btn-ghost btn-sm" id="m-reset-copy">코드 복사</button></div><textarea id="m-reset-code" class="danger-input" readonly rows="3" aria-label="저장 내보내기 코드" hidden></textarea><p id="m-reset-export" role="status"></p><p><b>2단계 · 확인 문구</b><br>아래 칸에 <b>초기화</b>를 직접 입력하면 버튼이 켜집니다.</p><label class="danger-check"><input type="checkbox" id="m-reset-full"> 이름·친구까지 새로 시작(완전 초기화) — 기기 계정이 바뀌어 옛 결제 권한은 이어지지 않습니다</label><input type="text" id="m-reset-input" class="danger-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="확인 문구 입력" placeholder="초기화"><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes" disabled>네, 처음부터 다시 시작</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
       const pwa = this.app.pwa, pwaState = pwa?.getState();
@@ -834,10 +987,89 @@ export class Meta {
       b.querySelectorAll('[data-q]').forEach((q) => q.onclick = () => { st.quality = q.dataset.q; b.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === q)); this.app.applySettings(); this.eco.save(); });
       // 데이터 초기화는 위험 구역 안으로 옮기고, 확인은 창 안의 단계로 둔다(window.confirm 없음).
       const resetBtn = b.querySelector('#m-reset'), resetConfirm = b.querySelector('#m-reset-confirm');
-      resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; b.querySelector('#m-reset-no').focus({ preventScroll: true }); };
+      const resetInput = b.querySelector('#m-reset-input'), resetYes = b.querySelector('#m-reset-yes');
+      resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; resetInput.value = ''; resetYes.disabled = true; resetInput.focus({ preventScroll: true }); };
+      const fullBox = b.querySelector('#m-reset-full');
+      if (this.app.account?.authority === 'server') { fullBox.checked = true; fullBox.disabled = true; fullBox.parentElement.insertAdjacentHTML('beforeend', '<br><b>서버 계정은 서버에 진행이 저장돼 있어 완전 초기화만 가능합니다.</b>'); }
+      const exportNote = b.querySelector('#m-reset-export'), codeBox = b.querySelector('#m-reset-code');
+      b.querySelector('#m-reset-file').onclick = () => {
+        try {
+          const out = buildSaveExport(this.eco.s), url = URL.createObjectURL(new Blob([out.json], { type: 'application/json' })), link = document.createElement('a');
+          link.href = url; link.download = out.fileName; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+          exportNote.textContent = '파일 저장을 요청했습니다. 다운로드가 막히면 「코드 복사」를 쓰세요.';
+        } catch { exportNote.textContent = '파일 저장에 실패했습니다. 「코드 복사」를 쓰세요.'; }
+      };
+      b.querySelector('#m-reset-copy').onclick = async () => {
+        const out = buildSaveExport(this.eco.s); codeBox.value = out.code; codeBox.hidden = false;
+        try { await navigator.clipboard.writeText(out.code); exportNote.textContent = '코드를 복사했습니다. 메모장 등에 붙여 두세요.'; }
+        catch { codeBox.focus(); codeBox.select(); exportNote.textContent = '자동 복사가 막혀 있습니다. 아래 코드를 길게 눌러 직접 복사하세요.'; }
+      };
+      resetInput.oninput = () => { resetYes.disabled = !isAccountResetPhrase(resetInput.value); };
       b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
-      b.querySelector('#m-reset-yes').onclick = () => { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); };
+      resetYes.onclick = async () => {
+        if (!isAccountResetPhrase(resetInput.value) || this._resetting) return;
+        this._resetting = true; resetYes.disabled = true; resetInput.disabled = true; resetBtn.disabled = true; b.querySelector('#m-reset-no').disabled = true;
+        const out = await this.app.resetAccount({ fullReset: b.querySelector('#m-reset-full').checked });
+        if (out.ok) { location.reload(); return; }
+        this._resetting = false; resetInput.disabled = false; resetBtn.disabled = false; b.querySelector('#m-reset-no').disabled = false; resetYes.disabled = !isAccountResetPhrase(resetInput.value);
+        this.ui.toast(out.reason === 'server' ? '서버 계정은 완전 초기화만 가능합니다' : out.reason === 'busy' ? '전투를 마친 뒤 시도해 주세요' : out.reason === 'payment' ? PAYMENT_PENDING_MESSAGE : out.reason === 'identity' ? '기기 신원을 지우지 못했습니다. 아무것도 지우지 않았으니 다시 시도해 주세요' : '일부만 지워졌을 수 있습니다. 다시 시도해 주세요', 'red');
+      };
+      this.groupSettingsTabs(b);
     } });
+  }
+  /** 설정 항목을 탭 다섯(소리·진동 / 화면 / 카메라 / 조작 / 계정·데이터)으로 나눈다. 요소는 옮기기만 해 기존 핸들러·저장 동작이 그대로 유지된다. */
+  groupSettingsTabs(box) {
+    const TABS = [['sound', '소리 · 진동'], ['screen', '화면'], ['camera', '카메라'], ['control', '조작'], ['account', '계정 · 데이터']];
+    const KEY_GROUP = { sfx: 'sound', music: 'sound', voice: 'sound', haptics: 'sound', screenShake: 'screen', cameraAuto: 'camera', cameraInvertX: 'camera', cameraInvertY: 'camera', autoTarget: 'control', autoSalvageN: 'control' };
+    const panels = Object.fromEntries(TABS.map(([id]) => {
+      const panel = document.createElement('div');
+      panel.className = 'setting-panel'; panel.id = 'setting-panel-' + id; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'setting-tab-' + id);
+      return [id, panel];
+    }));
+    const nodes = [...box.children].filter((n) => n.tagName !== 'H2' && !n.classList.contains('modal-btns'));
+    let last = 'sound';
+    for (const n of nodes) {
+      let g = null;
+      if (n.matches('.setting-row')) {
+        const k = n.querySelector('[data-k]')?.dataset.k;
+        if (k) g = KEY_GROUP[k];
+        else if (n.querySelector('[data-mix]') || n.querySelector('#haptic-help')) g = 'sound';
+        else if (n.querySelector('[data-q]')) g = 'screen';
+        else if (n.querySelector('[data-cam], #cam-desc')) g = 'camera';
+        else if (n.querySelector('#input-help')) g = 'control';
+        else if (n.querySelector('#pwa-install')) g = 'account';
+        else if (n.classList.contains('setting-description')) g = last;
+      } else if (n.id === 'mix-notice') g = 'sound';
+      else if (n.id === 'pwa-notice' || n.matches('.setting-legal, .danger-zone')) g = 'account';
+      g = g || last;
+      last = g;
+      panels[g].append(n);
+    }
+    const bar = document.createElement('div');
+    bar.className = 'setting-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', '설정 묶음');
+    const tabs = TABS.map(([id, label]) => {
+      const t = document.createElement('button');
+      t.type = 'button'; t.className = 'setting-tab'; t.id = 'setting-tab-' + id; t.setAttribute('role', 'tab'); t.setAttribute('aria-controls', 'setting-panel-' + id); t.textContent = label;
+      t.dataset.settingTab = id;
+      bar.append(t);
+      return t;
+    });
+    const activate = (id) => {
+      tabs.forEach((t) => { const on = t.dataset.settingTab === id; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
+      Object.entries(panels).forEach(([pid, panel]) => { panel.hidden = pid !== id; });
+    };
+    tabs.forEach((t, i) => {
+      t.onclick = () => activate(t.dataset.settingTab);
+      t.onkeydown = (e) => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        e.preventDefault(); const nt = tabs[(i + d + tabs.length) % tabs.length]; activate(nt.dataset.settingTab); nt.focus();
+      };
+    });
+    const h2 = box.querySelector('h2');
+    (h2 || box).after(bar);
+    bar.after(...TABS.map(([id]) => panels[id]));
+    activate('sound');
   }
   showProfile() {
     const s = this.eco.s, pay = this.vipShown(), vipNext = [0, 1, 20000, 50000, 100000, 300000];
@@ -866,7 +1098,9 @@ export class Meta {
   /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
-    if (!this.eco.dailyAvailable()) return;
+    // 접속 표시는 팝업 판단 뒤에 남긴다(복귀 보상이 걸려 있으면 markSeen 이 스스로 건너뛴다).
+    if (!this.eco.dailyAvailable()) { if (!this.dailyDeferrable() && this.eco.idleQuote().notable) this.showIdle(); this.eco.markSeen(); return; }
+    this.eco.markSeen();
     // 신규 계정은 첫 전투 결과를 보기 전에는 출석 보상 팝업으로 흐름을 끊지 않는다. 보상은 그대로 남아 있고 첫 전투 뒤 로비·메뉴에서 받는다.
     if (this.dailyDeferrable()) { this.dailyDeferred = true; return; }
     this.dailyDeferred = false;

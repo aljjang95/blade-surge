@@ -1,3 +1,4 @@
+import { stageCurve } from '../src/game/squads.js';
 import {expect,test,spyOn} from 'bun:test';
 import * as THREE from 'three';
 import {BOSS_ENCOUNTERS,BOSS_SIGNATURES} from '../src/data/boss-encounters.js';
@@ -31,7 +32,7 @@ test('each campaign finale has two exclusive techniques and three authored phase
     for(const key of techniques){expect(used.has(key)).toBe(false);used.add(key);}
     for(let phase=0;phase<3;phase++)expect(config.phases[phase].map((_,i)=>nextBossPattern(def,i,phase))).toEqual(config.phases[phase]);
   }
-  expect(used.size).toBe(12);
+  expect(used.size).toBe(CHAPTERS.length*2);
   expect(nextBossPattern({pattern:['spin','slam']},0,1)).toBe('slam');
 });
 
@@ -140,13 +141,16 @@ test('finale ambient hazards yield to the boss schedule but regular rooms retain
   f.enemy.def={};h.cooldown=0;h.update(.1);expect(h.triggered).toBe(1);h.dispose();f.caster.dispose();
 });
 
-// 근접 종 수는 장마다 다르다(잠복종이 더해진 장은 7종). 모든 근접·원거리 종이 빠짐없이 돌고 방 정원은 그대로여야 한다.
-test('campaign rooms cycle every melee and all three ranged species without altering capacity',()=>{
-  for(const chapter of CHAPTERS){const stage=stageDef(chapter.id,4),roster=stage.rosterFor();
-    const room={id:5,type:'test',reinforced:0};
+// 2026-10-27 분대 편성: 방은 단계 곡선의 종만 쓰고(4단계 = 일반 6종·원거리 3종) 역할 조합 분대로 짠다. 방 정원·증원 차감·결정성은 그대로다.
+test('campaign rooms draw stage-curve species in squads without altering capacity',()=>{
+  for(const chapter of CHAPTERS){const stage=stageDef(chapter.id,4),roster=(stage as any).combatRosterFor(),curve=stageCurve(roster,4);
+    const room:any={id:5,type:'test',reinforced:0};
     const list=Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},room);
     expect(roster.trash.length).toBeGreaterThanOrEqual(6);
-    expect(list.length).toBe(18);expect(new Set(list.filter(id=>roster.trash.includes(id))).size).toBe(roster.trash.length);expect(new Set(list.filter(id=>roster.ranged.includes(id))).size).toBe(3);
+    expect(list.length).toBe(18);
+    for(const id of list)expect([...curve.trash,...curve.ranged]).toContain(id);
+    expect(room.squadPlan.squadOf.length).toBe(18);expect(new Set(room.squadPlan.squadOf).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(list).size).toBeLessThan(new Set([...roster.trash,...roster.ranged]).size);
     room.reinforced=4;expect(Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},room).length).toBe(14);
     expect(list).toEqual(Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},{...room,reinforced:0}));
   }

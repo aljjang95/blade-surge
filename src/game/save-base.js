@@ -1,5 +1,7 @@
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
+import { ITEM_LEVEL_MAX } from '../data/item-tier.js';
+import { progressItemLevel } from '../data/loot-tables.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { GACHA_BANNERS } from '../data/gacha-banners.js';
@@ -10,10 +12,12 @@ import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { resolveCampaignTown } from '../data/campaign-towns.js';
 import { normalizeRegionGate } from './region-dungeon-gate.js';
-import { AVATAR_BY_ID } from '../data/avatars.js';
+import { AVATAR_BY_ID, AVATAR_PARTS } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
 import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_DEFAULT, rosterOwns } from '../data/hero-roster.js';
 import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
+import { normalizeGearDex, seedGearDex, setGearDex } from './gear-dex.js';
+import { normalizeGearOwnership } from './gear-vault.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -91,7 +95,10 @@ export function normalizeSave(raw, fresh) {
   s.inventory = s.inventory.filter((item) => {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
     seen.add(item.uid); return true;
-  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX) }));
+  }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}),
+    ...(integer(item.tp, 0, 0, 50) === 0 && integer(item.il, 0, 0, ITEM_LEVEL_MAX) > 1 ? { il: integer(item.il, 0, 0, ITEM_LEVEL_MAX) } : {}),
+    // 무기 내구도(docs/CLEAR_LOOP.md): 100 미만일 때만 필드를 둔다(이전 저장·새 장비는 필드 없음 = 100).
+    ...(Number.isSafeInteger(item.dur) && item.dur >= 0 && item.dur < 100 && ITEM_BY_ID[item.id].slot === 'weapon' ? { dur: item.dur } : {}) }));
   const byUid = new Map(s.inventory.map((item) => [item.uid, item]));
   const equipped = new Set();
   for (const h of Object.values(s.heroes)) for (const slot of SLOTS) {
@@ -99,6 +106,10 @@ export function normalizeSave(raw, fresh) {
     if (!item || ITEM_BY_ID[item.id].slot !== slot || equipped.has(item.uid)) h.equip[slot] = null;
     else equipped.add(item.uid);
   }
+  // 장비 영웅 귀속(docs/GEAR_OWNERSHIP_VAULT.md 4절): 장착 = 소유, 귀속 이전 저장의 미장착 장비는 지금 고른 영웅 + 첫 이동 무료.
+  normalizeGearOwnership(s, raw);
+  // 장비 도감(5.1): 원본에 gearDex 가 있으면 정화만, 없으면(이전 저장) 지금 영웅 소유 장비로 한 번 소급한다. 소급이 비어도 빈 도감 표지를 남겨 다음 로드가 다시 소급하지 않게 한다.
+  setGearDex(s, record(raw.gearDex) ? normalizeGearDex(raw.gearDex) : seedGearDex(s));
   // 순번은 줄지 않는다: 가장 큰 uid를 팔아도 저장된 invSeq를 유지해 uid 재사용과 서버(로드마다 정규화)·클라이언트 순번 차이를 막는다.
   s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), integer(s.invSeq, 1, 1));
   // 이후 드랍에 쓸 순번을 확보하고, 전투 시작 전 장착 참조까지 함께 재배정한다.
@@ -108,6 +119,13 @@ export function normalizeSave(raw, fresh) {
     for (const item of s.inventory) item.uid = remap.get(item.uid);
     s.invSeq = s.inventory.length + 1;
   }
+  // 계승 문장(docs/GEAR_VAULT_INHERIT.md 5.1): 최상위 정수 재료. 0이면 필드를 두지 않아 이전 저장은 정규화 뒤에도 같다.
+  delete s.lineageSigil;
+  if (integer(raw.lineageSigil, 0, 0) > 0) s.lineageSigil = integer(raw.lineageSigil, 0, 0);
+  // 의뢰 문장 수령 기록(claimJourneySigil): 'daily|weekly:<의뢰>:<기간>' 문자열만, 최근 16개. 비면 필드를 두지 않는다.
+  delete s.sigilClaims;
+  { const claims = (Array.isArray(raw.sigilClaims) ? raw.sigilClaims : []).filter((k) => typeof k === 'string' && /^(daily|weekly):[A-Za-z0-9_-]{1,40}:\d{1,9}$/.test(k));
+    const uniq = [...new Set(claims)].slice(-16); if (uniq.length) s.sigilClaims = uniq; }
   const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
   s.progress.unlocked = integer(s.progress.unlocked, 1, 1, floors);
   s.progress.stars = {};
@@ -118,7 +136,14 @@ export function normalizeSave(raw, fresh) {
     // 장 확장 뒤에도 이전 마지막 관문의 실제 완료 별점으로 다음 장을 연다.
     if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
-  if (!['story', 'adept', 'nightmare', 'hell'].includes(s.progress.difficulty)) s.progress.difficulty = 'story';
+  // il(스테이지 장비 레벨) 도입 전 장비 이월(한 번): il·tp 가 없는 장비는 지금까지 깬 가장 깊은 관문의 장비 레벨을 받는다.
+  // 이월하지 않으면 il 이 붙은 새 필드 드랍(하위 등급)이 기존 유니크·레전드리보다 세게 나왔다(2026-10-29 신고). 새 저장은 gearIl 이 이미 1이다.
+  if (raw.gearIl !== 1) {
+    const il = progressItemLevel(s.progress);
+    if (il > 1) for (const item of s.inventory) if (!item.tp && !item.il) item.il = il;
+  }
+  s.gearIl = 1;
+  if (!['story', 'adept', 'nightmare', 'hell'].includes(s.progress.difficulty) && !/^torment-([1-9]\d?)$/.test(s.progress.difficulty)) s.progress.difficulty = 'story';
   // 캠페인 마을: 값이 없는 기존 저장은 이미 해금한 가장 먼 마을을 보여 주고 축하는 다시 하지 않는다.
   const town = resolveCampaignTown(s.progress, record(raw.campaignTown) ? raw.campaignTown : null);
   s.campaignTown = { current: town.current, celebrated: town.celebrated };
@@ -133,7 +158,20 @@ export function normalizeSave(raw, fresh) {
   }
   const showGear = {};
   for (const [heroId, on] of Object.entries(record(raw.avatars?.showGear) ? raw.avatars.showGear : {})) if (Object.hasOwn(HEROES, heroId) && on === true) showGear[heroId] = true;
-  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear };
+  // 모으는 중인 부위: 알려진 아바타·부위만, 풀셋 소유분과 네 부위가 다 찬 비정상 값은 버린다(부위만으로 소유를 만들지 않는다).
+  const parts = {};
+  for (const [avatarId, list] of Object.entries(record(raw.avatars?.parts) ? raw.avatars.parts : {})) {
+    if (!AVATAR_BY_ID[avatarId] || ownedAvatars.includes(avatarId) || !Array.isArray(list)) continue;
+    const kept = AVATAR_PARTS.filter((part) => list.includes(part));
+    if (kept.length && kept.length < AVATAR_PARTS.length) parts[avatarId] = kept;
+  }
+  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars, showGear, parts };
+  // 결제 지급 출처(avatarId → grantId). 소유 중인 알려진 아바타만 남기고, 비어 있으면 필드를 만들지 않는다(기존 저장·해시와 호환).
+  const paid = {};
+  for (const [avatarId, grantId] of Object.entries(record(raw.avatars?.paid) ? raw.avatars.paid : {})) {
+    if (AVATAR_BY_ID[avatarId] && ownedAvatars.includes(avatarId) && typeof grantId === 'string' && grantId.length > 0 && grantId.length <= 100) paid[avatarId] = grantId;
+  }
+  if (Object.keys(paid).length) s.avatars.paid = paid;
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
@@ -144,8 +182,12 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
+  // 노말 장비 자동 분해(장착 중보다 약한 노말만). 기본 꺼짐, 직접 켠 true/false 만 저장한다.
+  s.settings.autoSalvageN = raw.settings?.autoSalvageN === true;
   // 전투 카메라 AUTO 는 기본 켬. 이전 저장(키 없음)도 켬으로 옮긴다.
   s.settings.cameraAuto = typeof raw.settings?.cameraAuto === 'boolean' ? raw.settings.cameraAuto : true;
+  // 동료 네브 첫 등장 소개 카드를 이미 봤는지. 서버 소유 키가 아니라 기기 설정이다.
+  s.settings.companionIntroSeen = raw.settings?.companionIntroSeen === true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   dropUnownedJob(s);

@@ -1,5 +1,6 @@
 import { GACHA_BANNERS } from './gacha-banners.js';
-// 상점 SKU (전부 목업 — 실제 결제 없음)
+// 상점 SKU. kind:'gem'은 보석 소비 상품(게임 내 거래), kind:'cash'는 카탈로그(src/shared/iap-catalog.js)의 shopSku와 짝지어진 현금 상품이다.
+// 현금 상품은 서버 카탈로그에서 판매 중(enabled)이고 스토어가 가격을 돌려줄 때만 상점에 보인다. 가격은 스토어의 formattedPrice만 표시하며 여기에는 적지 않는다(price는 내부 분석용 참고값).
 export const SHOP_TABS = [
   { id: 'hot', name: '추천' },
   { id: 'gem', name: '보석' },
@@ -11,29 +12,21 @@ export const SHOP_TABS = [
 
 export const SKUS = [
   // ---- 추천/패키지 (한정) ----
-  { id: 'starter', tab: 'hot', kind: 'cash', name: '스타터 팩', price: 1200, priceLabel: '₩1,200', icon: '/img/icon_chest_legend.webp', badge: '92% 할인', limited: true, hours: 24, once: true,
+  { id: 'starter', tab: 'hot', kind: 'cash', name: '스타터 팩', price: 1200, icon: '/img/icon_chest_legend.webp', badge: '92% 할인', limited: true, hours: 24, once: true,
     desc: 'SSR 확정 소환권 1 · 보석 1,000 · 골드 50,000', rewards: { gems: 1000, gold: 50000, ssrTicket: 1 } },
-  { id: 'monthly', tab: 'hot', kind: 'cash', name: '월정액 카드', price: 5900, priceLabel: '₩5,900', icon: '/img/icon_gem.webp', badge: 'BEST',
+  { id: 'monthly', tab: 'hot', kind: 'cash', name: '월정액 카드', price: 5900, icon: '/img/icon_gem.webp', badge: 'BEST',
     desc: '즉시 보석 1,200 + 30일간 매일 보석 100 (총 4,200)', rewards: { gems: 1200, monthly: 30 } },
   // 가격 문구는 Play가 돌려준 값으로 덮어쓴다(priceLabel 없음). 카탈로그 밖·비활성이면 상점에 나오지 않는다.
   { id: 'remove_ads', tab: 'hot', kind: 'cash', name: '광고 제거', price: 4900, icon: '/img/icon_protect.webp',
     desc: '전면 광고를 영구히 끕니다 (계정 단위, 기기를 바꿔도 복원)', rewards: {} },
-  { id: 'growth', tab: 'pack', kind: 'cash', name: '성장 패키지', price: 12000, priceLabel: '₩12,000', icon: '/img/icon_chest_epic.webp', badge: '인기',
-    desc: '보석 2,400 · 소환권 30 · 골드 200,000 · 초월석 5 (초월 성장)', rewards: { gems: 2400, tickets: 30, gold: 200000, transcendStones: 5 } },
-  { id: 'boss_pack', tab: 'pack', kind: 'cash', name: '해골 군주 토벌 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_chest_legend.webp', badge: '한정', limited: true, hours: 72,
-    desc: 'SSR 장비 상자 · 보석 6,000 · 소환권 60 · 초월석 10 (초월 성장)', rewards: { gems: 6000, tickets: 60, ssrGear: 1, transcendStones: 10 } },
-  { id: 'transcend_pack', tab: 'pack', kind: 'cash', name: 'SSSR 초월 성장 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_stone_3.webp', badge: '결제 준비 중',
-    desc: '결제 준비 중 · 초월석 30 · SSR 확정권 3 · 소환권 60 (지급 없음)', rewards: { transcendStones: 30, ssrTicket: 3, tickets: 60 } },
-  { id: 'vip_pass', tab: 'pack', kind: 'cash', name: 'VIP 멤버십 (30일)', price: 19000, priceLabel: '₩19,000', icon: '/img/icon_vip.webp',
-    desc: '30일 에너지 최대치 +50 · 골드 획득 +30% · 보석 1,000 · 소환권 20', rewards: { vipDays: 30, gems: 1000, tickets: 20 } },
+  { id: 'growth', tab: 'pack', kind: 'cash', name: '성장 패키지', price: 12000, icon: '/img/icon_chest_epic.webp', badge: '인기',
+    once: true,
+    desc: '보석 2,400 · 골드 200,000 · 초월석 5 · 강화석 100 (계정당 1회)', rewards: { gems: 2400, gold: 200000, transcendStones: 5, stones: 100 } },
 
   // ---- 보석 ----
-  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   priceLabel: '₩3,900',   icon: '/img/icon_gem.webp', gems: 300,   bonus: 1500 },
-  { id: 'gem2', tab: 'gem', kind: 'cash', name: '보석 980',   price: 12000,  priceLabel: '₩12,000',  icon: '/img/icon_gem.webp', gems: 980,   bonus: 980 },
-  { id: 'gem3', tab: 'gem', kind: 'cash', name: '보석 1,980', price: 25000,  priceLabel: '₩25,000',  icon: '/img/icon_gem.webp', gems: 1980,  bonus: 1980, badge: '인기' },
-  { id: 'gem4', tab: 'gem', kind: 'cash', name: '보석 3,280', price: 39000,  priceLabel: '₩39,000',  icon: '/img/icon_gem.webp', gems: 3280,  bonus: 3280 },
-  { id: 'gem5', tab: 'gem', kind: 'cash', name: '보석 6,480', price: 79000,  priceLabel: '₩79,000',  icon: '/img/icon_gem.webp', gems: 6480,  bonus: 6480, badge: '최고 효율' },
-  { id: 'gem6', tab: 'gem', kind: 'cash', name: '보석 12,000', price: 129000, priceLabel: '₩129,000', icon: '/img/icon_gem.webp', gems: 12000, bonus: 12000 },
+  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   icon: '/img/icon_gem.webp', gems: 300 },
+  { id: 'gem2', tab: 'gem', kind: 'cash', name: '보석 980',   price: 12000,  icon: '/img/icon_gem.webp', gems: 980 },
+  { id: 'gem3', tab: 'gem', kind: 'cash', name: '보석 1,980', price: 22000,  icon: '/img/icon_gem.webp', gems: 1980, badge: '인기' },
 
   // ---- 강화 재료 (과금 핵심) ----
   { id: 'skill_reset1', tab: 'enh', kind: 'gem', name: '스킬 초기화서', price: 300, icon: '/img/icon_protect.webp', desc: '스킬 초기화서 ×1 · 투자 SP 반환', rewards: { skillResets: 1 } },
@@ -45,9 +38,9 @@ export const SKUS = [
   { id: 'stone_legend', tab: 'enh', kind: 'gem', name: '전설 강화석 3', price: 900, icon: '/img/icon_stone_3.webp', desc: '전설 강화석 ×3 (+15 이상 강화용)', rewards: { stones3: 3 } },
   { id: 'protect1', tab: 'enh', kind: 'gem', name: '보호 주문서', price: 300, icon: '/img/icon_protect.webp', desc: '강화 실패 시 파괴 방지 ×1', rewards: { protect: 1 } },
   { id: 'protect5', tab: 'enh', kind: 'gem', name: '보호 주문서 ×5', price: 1250, icon: '/img/icon_protect.webp', desc: '파괴 방지 ×5', rewards: { protect: 5 }, badge: '인기' },
+  // 전승 보호 주문서: 강화 전승의 −1 손실을 없앤다(보석 소모처). +11 기준 1단계 ≈ 확정 강화 웃돈 17만 골드 ≈ 골드 상점 환산 약 620 보석이라 500.
+  { id: 'transfer1', tab: 'enh', kind: 'gem', name: '전승 보호 주문서', price: 500, icon: '/img/icon_protect.webp', desc: '강화 전승 시 단계 손실 없음 ×1', rewards: { transferScroll: 1 } },
   { id: 'bless1', tab: 'enh', kind: 'gem', name: '축복 주문서', price: 200, icon: '/img/icon_bless.webp', desc: '강화 성공률 +20% ×1', rewards: { bless: 1 } },
-  { id: 'enh_pack', tab: 'enh', kind: 'cash', name: '강화 마스터 패키지', price: 22000, priceLabel: '₩22,000', icon: '/img/icon_protect.webp', badge: '한정', limited: true, hours: 48,
-    desc: '보호 주문서 10 · 축복 주문서 10 · 강화석 200 · 골드 300,000 · 소환권 20', rewards: { protect: 10, bless: 10, stones: 200, gold: 300000, tickets: 20 } },
 
   // ---- 골드 (보석 소모) ----
   { id: 'gold1', tab: 'gold', kind: 'gem', name: '골드 주머니', price: 100,  icon: '/img/icon_gold.webp', desc: '골드 20,000', rewards: { gold: 20000 } },
@@ -78,6 +71,8 @@ export const PASS_TRACK = Array.from({ length: 30 }, (_, i) => {
   const lv = i + 1;
   const free = lv % 5 === 0 ? { gems: 100 } : (lv % 2 ? { gold: 4000 * lv } : { tickets: 1 });
   const prem = lv % 10 === 0 ? { ssrTicket: 1 } : (lv % 5 === 0 ? { gems: 500 } : (lv % 2 ? { gems: 120 } : { tickets: 2 }));
+  // 계승 문장(docs/GEAR_VAULT_INHERIT.md): 콘텐츠 보상 소량만 — 무료 트랙 10·20·30레벨에 1개씩. 프리미엄 트랙·상점·IAP 에는 넣지 않는다(현금 판매 금지).
+  if (lv % 10 === 0) free.lineageSigil = 1;
   if ([5, 15, 25].includes(lv)) prem.transcendStones = 5;
   if ([8, 18, 28].includes(lv)) prem.skillResets = 1;
   return { lv, free, prem };

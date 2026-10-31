@@ -225,6 +225,17 @@ export function createBoardView(ctx) {
       reply.append(text);
       detailBody.append(reply);
     }
+    if (post.status === 'done' && post.patchNoteSlug) {
+      // 반영 완료 글은 고쳐진 패치노트로 이어 준다. 주소는 게임이 정한다(hooks.patchNoteUrl, 없으면 안내 문구만).
+      const note = el('div', 'tls-devreply');
+      note.append(icon('shield', 34));
+      const noteText = el('div');
+      noteText.append(el('b', '', '패치노트에 반영됐어요'));
+      const href = ctx.patchNoteUrl(post.patchNoteSlug);
+      if (href) noteText.append(el('a', 'tls-btn tls-btn-navy tls-btn-sm', '패치노트 보기', { href, target: '_blank', rel: 'noopener noreferrer', style: 'text-decoration:none;margin-top:.4em' }));
+      note.append(noteText);
+      detailBody.append(note);
+    }
     const actions = el('div', 'tls-dactions');
     const vote = button('tls-btn tls-btn-navy tls-btn-sm' + (post.voted ? ' voted' : ''), null, async () => {
       if (!(await ctx.requireProfile())) return;
@@ -281,8 +292,14 @@ export function createBoardView(ctx) {
     const renderStatus = () => {
       clear(chips);
       for (const id of STATUS_CHOICES) chips.append(button('tls-chip' + (status === id ? ' on' : ''), STATUS_LABELS[id], () => { status = id; renderStatus(); }));
+      syncSlug();
     };
-    renderStatus();
+    // '반영 완료'일 때만 보이는 패치노트 글 ID(예: 2026-10-27-patch-1-0-3). 비우면 연결 없음.
+    const slugRow = el('div');
+    const slugInput = el('input', 'tls-input', null, { type: 'text', maxlength: 80, placeholder: '패치노트 글 ID (선택)', 'aria-label': '패치노트 글 ID', autocapitalize: 'off', spellcheck: 'false' });
+    slugInput.value = post.patchNoteSlug || '';
+    slugRow.append(slugInput);
+    const syncSlug = () => { slugRow.hidden = status !== 'done'; };
     const reply = el('textarea', 'tls-input', null, { maxlength: 1000, placeholder: '개발자 답변 (비우면 답변 삭제)', 'aria-label': '개발자 답변' });
     reply.value = post.devReply || '';
     const hide = el('label', '');
@@ -291,15 +308,17 @@ export function createBoardView(ctx) {
     check.checked = !!post.hidden;
     hide.append(check, document.createTextNode('글 숨기기'));
     const save = button('tls-btn tls-btn-orange tls-btn-sm', '저장', async () => {
-      const r = await client.moderate(post.id, { status, devReply: reply.value.trim() ? reply.value.trim() : null, hidden: check.checked });
+      const slug = status === 'done' && slugInput.value.trim() ? slugInput.value.trim() : null;
+      const r = await client.moderate(post.id, { status, devReply: reply.value.trim() ? reply.value.trim() : null, hidden: check.checked, patchNoteSlug: slug });
       if (r.ok && r.data) {
-        patchItem(post.id, { status: r.data.status, devReply: r.data.devReply, hidden: r.data.hidden });
+        patchItem(post.id, { status: r.data.status, devReply: r.data.devReply, hidden: r.data.hidden, patchNoteSlug: r.data.patchNoteSlug ?? null });
         ctx.toast('저장했어요.', 'good');
         if (r.data.hidden) { items = items.filter(p => p.id !== post.id); selectedId = null; detail = null; }
         renderAll();
       } else ctx.toast(errorMessage(r.error), 'warn');
     });
-    box.append(chips, reply, hide, save);
+    box.append(chips, slugRow, reply, hide, save);
+    renderStatus();
     return box;
   }
 

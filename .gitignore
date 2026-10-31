@@ -1,5 +1,8 @@
 node_modules
 dist
+# 소식 빌드 생성물(tools/build-news.mjs). 원본은 content/news/*.md
+/public/news.json
+/public/news/
 .wrangler
 .apex/
 _autopipe/evidence/

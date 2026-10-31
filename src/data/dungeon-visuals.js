@@ -11,6 +11,8 @@ export const DUNGEON_VISUALS = Object.freeze({
   beacon: Object.freeze({ key: 'beacon', landmark: 'beacon', sky: { top: 0x061e2a, horizon: 0x55c4c2, ground: 0x0a3032, stars: 0xa5fff0, celestial: 0xb4fff0, density: .2 }, camera: { y: 7.8, z: 9.8, fov: 41, lookY: .95, lag: 6.6, yaw: 15, pitch: 1, zoom: 100, side: .28 } }),
   tribunal: Object.freeze({ key: 'tribunal', landmark: 'tribunal', sky: { top: 0x21102f, horizon: 0xc77da9, ground: 0x2b1739, stars: 0xffd2e9, celestial: 0xffb7d6, density: .24 }, camera: { y: 6.9, z: 8.1, fov: 43, lookY: 1.28, lag: 8.1, yaw: -18, pitch: 4, zoom: 104, side: -.5 } }),
   confluence: Object.freeze({ key: 'confluence', landmark: 'confluence', sky: { top: 0x09221e, horizon: 0x78c79c, ground: 0x10362c, stars: 0xd2ffb1, celestial: 0xd7ffb0, density: .2 }, camera: { y: 8.1, z: 8.9, fov: 42, lookY: .9, lag: 6.2, yaw: 22, pitch: -1, zoom: 98, side: .36 } }),
+  // 7장 종탑 도시: 석회빛 안개 낀 새벽과 낮은 구름. 3D 랜드마크 GLB 는 아직 없어 벽면 구조물(region-architecture)로 정체성을 낸다.
+  belltower: Object.freeze({ key: 'belltower', landmark: 'belltower', sky: { top: 0x1c242c, horizon: 0xb4b09a, ground: 0x2a2d2b, stars: 0xe6dfc4, celestial: 0xd9d0b0, density: .12 }, camera: { y: 7.6, z: 9.2, fov: 42, lookY: 1.08, lag: 7.8, yaw: -6, pitch: 2, zoom: 102, side: -.3 } }),
   // 컨셉 던전: 넓은 무리 전투가 보이도록 조금 높고 넓은 기본 구도. 남쪽(카메라 쪽) 볼륨은 지형이 낮게 둔다.
   glacier: Object.freeze({ key: 'glacier', landmark: 'glacier', sky: { top: 0x2f6fb0, horizon: 0xc6f3ff, ground: 0x1f7f8c, stars: 0xffffff, celestial: 0xfff4d6, density: .04 }, camera: { y: 8.6, z: 9.2, fov: 44, lookY: .95, lag: 6.8, yaw: -6, pitch: 2, zoom: 96, side: 0 } }),
   quarry: Object.freeze({ key: 'quarry', landmark: 'quarry', sky: { top: 0x6d4a7a, horizon: 0xffc785, ground: 0x8f4a24, stars: 0xffe1b0, celestial: 0xffb050, density: .03 }, camera: { y: 8.6, z: 9.4, fov: 44, lookY: .9, lag: 6.6, yaw: 8, pitch: 1, zoom: 96, side: 0 } }),
@@ -26,6 +28,7 @@ const VISUAL_BY_ROUTE = Object.freeze({
   ashforge_catacomb: 'kiln', astral_leviathan_spire: 'archive', verdigris_sanctum: 'confluence',
   sable_mirage_basin: 'tribunal', comet_bastion: 'tribunal',
   glacier_tide_basin: 'glacier', sunbrass_quarry: 'quarry',
+  bellstreet: 'belltower', belfry: 'belltower', crackedNave: 'belltower', crypt: 'belltower',
 });
 
 export function dungeonVisualFor(stage = {}) {

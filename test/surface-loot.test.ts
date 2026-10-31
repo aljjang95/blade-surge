@@ -283,7 +283,8 @@ test('tall weapon drops arc and spread before landing instead of settling on the
   try { system.spawn(new THREE.Vector3(0, 0, 0), 'item', { id: 'w_iron', rarity: 'N' }, { spread: 1.4 }); }
   finally { Math.random = random; }
   const it = system.items[0], restY = it.mesh.userData.lootRestY;
-  expect(restY).toBeGreaterThan(.9);   // 키 큰 무기: 예전 시작 높이(0.6~0.9)보다 높다
+  expect(restY).toBeGreaterThanOrEqual(.55);   // 2026-10-30 드랍 축소 뒤에도 바닥에 묻히지 않는 대기 높이
+  expect(restY).toBeLessThan(1);
   expect(it.mesh.position.y).toBeGreaterThan(restY);
   let peak = it.mesh.position.y, airborne = 0;
   for (let frame = 0; frame < 120 && it.state === 'fly'; frame++) { system.update(1 / 60); peak = Math.max(peak, it.mesh.position.y); airborne++; }

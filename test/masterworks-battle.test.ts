@@ -22,7 +22,7 @@ function fixture() {
     app:{eco:{s:{quests:{kills:0}},hero:()=>hero,heroEquipBonus:()=>({})}},
     masterworks:{s:state,transact:(fn:any)=>fn(state)},ensureRpg:()=>rpg,flushRpg:()=>true,
     chronicle:{refresh:noop,close:noop,tick:noop,open:()=>{throw Error('전투 중 각인 창이 자동으로 열렸습니다');}},rpgView:{levelUp:noop,refresh:noop},
-    ui:{toast:noop,awakenBanner:noop,setObjective:noop,setFloorLabel:noop},fx:{burst:noop,dustPuff:noop,groundTex:noop},
+    ui:{toast:noop,awakenBanner:noop,waveBanner:noop,setObjective:noop,setFloorLabel:noop},fx:{burst:noop,dustPuff:noop,groundTex:noop},
     drops:{onKill:noop,spawn:noop},after:noop,rollDrop:()=>null,input:{enabled:true,clear:noop},
   });
   game.appliedStats=game.player.stats;
@@ -313,4 +313,10 @@ test('real counter waits through misses and quiet damage and boosts only the fir
     game.damageEnemy(enemy,100);expect(game.counterUntil).toBe(0);expect(enemy.hits[1].amount).toBeCloseTo(135);
     game.damageEnemy(enemy,100);expect(enemy.hits[2].amount).toBeCloseTo(100);expect(enemy.hp).toBe(9665);
   }finally{Math.random=random;}
+});
+
+test('현상금 의뢰 출격은 전투 효과(룬·숙련)는 켜고 명성·개인 목표 보상만 끈다',async()=>{
+  const {game}=personalStart(['ember_edge'],{bounty:{id:'story:1-1:hunt',kind:'hunt',tier:'story'}});await runStart(game);
+  expect(game.run.enabled).toBe(true);expect(game.run.rewards).toBe(false);expect(game.run.personalGoal).toBeNull();
+  expect(Object.keys(game.effects).length).toBeGreaterThan(0);
 });

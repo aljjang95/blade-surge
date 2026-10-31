@@ -1,3 +1,4 @@
+import { chapterSpeciesId } from '../data/stages.js';
 import { Battle as SoloBattle } from '../game/apex-battle.js';
 import { Battle as BaseBattle } from '../game/battle-base.js';
 import { Battle as RpgBattle } from '../game/rpg-battle.js';
@@ -19,7 +20,8 @@ export class Battle extends SoloBattle {
   }
   spawnEnemy(type, ...args) {
     const enemy = this.stage?.party ? BaseBattle.prototype.spawnEnemy.call(this,type,...args) : super.spawnEnemy(type,...args);
-    if (enemy && this.stage?.party) this.app.party.attachEnemy(enemy, type);
+    // 게스트도 호스트와 같은 몸을 만들도록 1·2장 전용 종 치환을 거친 id를 보낸다(spawnEnemy 입구와 같은 규칙).
+    if (enemy && this.stage?.party) this.app.party.attachEnemy(enemy, chapterSpeciesId(this.stage, type));
     return enemy;
   }
   onEnemyDeath(enemy) {

@@ -2,18 +2,23 @@
 // 보상 수치는 클라이언트 입력이 아니라 서버 데이터(stageDef·lootTable)와 서버 lootSeed로 계산한다.
 // 클라이언트가 바꿀 수 있는 사실은 처치 수·경과 시간·별 등뿐이며 T1 상한이 막는다.
 import { stageDef, ENEMIES, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
-import { applyDifficulty, resolveDifficulty } from '../game/difficulty.js';
-import { lootTable } from '../data/loot-tables.js';
+import { applyDifficulty, resolveDifficulty, tormentTierOf } from '../game/difficulty.js';
+import { lootTable, dropItemLevel } from '../data/loot-tables.js';
+import { recordGearDex } from '../game/gear-dex.js';
+import { validItemLevel } from '../data/item-tier.js';
 import { HEROES, heroStats } from '../data/heroes.js';
 import { monsterXp } from '../game/rpg-core.js';
 import { seededStream } from './rng.js';
 import { rollKillLoot, sumLoot } from './loot-roll.js';
 import PLAUSIBILITY from '../data/plausibility-table.json';
+import { ecoClock, isChapterOpen } from '../data/chapter-open.js';
+import { applyKillLedger, SPECIES_PER_RUN } from '../game/kill-ledger.js';
 
-export const RULES_VERSION = 'p1-1';
+// p1-2: 정산 사실에 species(처치 종) 추가, 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md).
+export const RULES_VERSION = 'p1-2';
 export const KILL_RANKS = Object.freeze(['normal', 'elite', 'boss']);
 export const SETTLE_FIELDS = Object.freeze(['win', 'elapsedMs', 'kills', 'summonedKills', 'roomsCleared', 'hpLost', 'revives',
-  'consumables', 'damageDealt', 'inputDigest', 'stars', 'fullClear']);
+  'consumables', 'damageDealt', 'inputDigest', 'stars', 'fullClear', 'species']);
 export const PLAUSIBILITY_TABLE = PLAUSIBILITY;
 
 /** '1-1' → { ch, st }. 범위 밖이면 null. */
@@ -52,7 +57,7 @@ export function stageRankValues(stage) {
 export function killDrops(stage, lootSeed, rank, killIndex, { summoned = false, values = stageRankValues(stage) } = {}) {
   const table = lootTable(stage.ch, rank, stage.difficultyId || 'story');
   const rng = seededStream(lootSeed, summoned ? rank + ':s' : rank, killIndex);
-  return rollKillLoot(table, rng, { baseGold: values[rank].gold, scale: stage.scale, summoned, rank });
+  return rollKillLoot(table, rng, { baseGold: values[rank].gold, scale: stage.scale, summoned, rank, itemLevel: dropItemLevel(stage) });
 }
 
 /** 스테이지·난이도별 T1 상한. 표에 없는 값은 보수 기본값을 쓴다. */
@@ -60,11 +65,14 @@ export function plausibilityFor(stage) {
   const key = `${stage.code}:${stage.difficultyId || 'story'}`;
   const row = PLAUSIBILITY.stages?.[key] || {};
   const d = PLAUSIBILITY.defaults;
+  // 방 수는 맵 배치의 성질이라 난이도와 무관하다(difficulty.js 는 방을 건드리지 않는다). 난이도 행이 아직 없으면 같은 관문의 story 행 방 수를 쓴다 —
+  // 그렇지 않으면 보정된 장도 기본값 17방(기준 13방)으로 폴백해 완전 정화가 나올 수 없다. 처치·시간 상한은 난이도마다 달라 기본값 그대로 둔다.
+  const layoutRooms = row.maxRooms ?? PLAUSIBILITY.stages?.[`${stage.code}:story`]?.maxRooms;
   return {
     minClearMs: row.minClearMs ?? d.minClearMs,
     kills: { normal: row.kills?.normal ?? d.kills.normal, elite: row.kills?.elite ?? d.kills.elite, boss: row.kills?.boss ?? d.kills.boss },
     summonedKills: row.summonedKills ?? d.summonedKills,
-    maxRooms: row.maxRooms ?? d.maxRooms,
+    maxRooms: layoutRooms ?? d.maxRooms,
     dpsPerAtk: PLAUSIBILITY.dpsPerAtk, damageSlack: PLAUSIBILITY.damageSlack,
     maxRevives: PLAUSIBILITY.maxRevives, wallClockSlack: PLAUSIBILITY.wallClockSlack,
   };
@@ -111,6 +119,12 @@ export function validateFacts(facts) {
   if (facts.inputDigest !== undefined && (typeof facts.inputDigest !== 'string' || !/^[A-Za-z0-9_-]{0,128}$/.test(facts.inputDigest))) return 'digest';
   if (facts.stars !== undefined && !(Number.isInteger(facts.stars) && facts.stars >= 1 && facts.stars <= 3)) return 'stars';
   if (facts.fullClear !== undefined && typeof facts.fullClear !== 'boolean') return 'fullClear';
+  if (facts.species !== undefined) {
+    // 종 id 형식·개수만 본다. 어떤 종이 그 관문에 나올 수 있는지는 정산 때 관문 풀로 자른다(판정에는 영향 없음).
+    if (!facts.species || typeof facts.species !== 'object' || Array.isArray(facts.species)) return 'species';
+    const ids = Object.keys(facts.species);
+    if (ids.length > SPECIES_PER_RUN || ids.some((id) => !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id) || !finiteInt(facts.species[id], 100000))) return 'species';
+  }
   return null;
 }
 
@@ -139,10 +153,13 @@ export function plausibility(stage, facts, ctx) {
   return { verdict: issues.length ? 'rejected' : soft ? 'soft' : 'ok', issues };
 }
 
-/** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. */
-export function grantLootItem(eco, item) {
-  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0 };
+/** 장비 하나를 Economy.addItem과 같은 형태로 인벤토리에 넣는다. owner = 그 판을 뛴 영웅(docs/GEAR_OWNERSHIP_VAULT.md). */
+export function grantLootItem(eco, item, tp = 0, owner = eco.s.selected) {
+  // il(스테이지 장비 레벨)은 killDrops 가 굴림 결과에 실어 주는 값이다. 고통 단계 장비(tp)에는 붙이지 않는다.
+  const il = tp > 0 ? 0 : validItemLevel(item.il);
+  const inst = { uid: eco.s.invSeq++, id: item.id, enh: 0, ...(tp > 0 ? { tp } : {}), ...(il ? { il } : {}), owner: eco.s.heroes?.[owner] ? owner : eco.s.selected };
   eco.s.inventory.push(inst);
+  recordGearDex(eco.s, 'drop', inst.owner, inst.id);   // pushItem 과 같은 등재 지점(직접 얻은 드랍)
   return inst;
 }
 
@@ -165,19 +182,29 @@ export function heroCombatProfile(eco, heroId) {
   return { atk: Math.max(1, Math.floor(stats.atk || 1)), maxHp: Math.max(1, Math.floor(stats.hp || 1)), level: hero.level };
 }
 
+/** 서버 권위 정산의 클리어 카드 지급(#404 완주 증거 검증 뒤 true). */
+export const SERVER_CLEAR_CARDS = false;
+
 /**
  * 판정이 끝난 정산을 EconomyCore에 적용한다. 반환값이 영수증의 got/loot다.
  * verdict 'soft'는 골드·재료 수량을 절반으로 줄인다(첫 클리어 보석·경험치·장비는 그대로).
  */
 export function applySettlement(eco, stage, ticket, facts, verdict) {
   if (verdict === 'rejected') return { got: [], loot: [], ups: 0, first: false, exp: 0, combatExp: 0 };
+  // 아직 열리지 않은 지역의 판은 보상 없이 거부한다(서버는 요청 시각, 클라이언트는 신뢰 시계로 같은 함수를 쓴다).
+  if (!isChapterOpen(stage.ch, ecoClock(eco))) return { got: [], loot: [], ups: 0, first: false, exp: 0, combatExp: 0, closed: true };
   const heroId = ticket.heroId;
   const loot = rollRunLoot(stage, ticket.lootSeed, facts);
   const half = (n) => verdict === 'soft' ? Math.floor(n / 2) : n;
+  // 서버 처치 원장: 개연성 검사를 통과한 처치 수·종만 quests.kills·slain 에 더한다(승패 무관, 티켓당 1회는 호출자가 보장).
+  const lim = plausibilityFor(stage);
+  // ticket.killLedger === false(그림자 계정 정산)면 원장에 쓰지 않는다. 생략은 기존 호출자 호환(적용).
+  const killLedger = ticket.killLedger === false ? { kills: 0, species: 0, dropped: 0 } : applyKillLedger(eco.s, stage, facts, { wallMs: ticket.wallMs, minClearMs: lim.minClearMs,
+    killCap: lim.kills.normal + lim.kills.elite + lim.kills.boss + lim.summonedKills });
   if (!facts.win) {
     // 패배: 기존처럼 전투 중 처치 경험치만 남는다(필드 재화는 정산되지 않는다).
     const ups = eco.addHeroExp(heroId, loot.combatExp, { silent: true });
-    return { got: [], loot: [], ups, first: false, exp: 0, combatExp: loot.combatExp, win: false };
+    return { got: [], loot: [], ups, first: false, exp: 0, combatExp: loot.combatExp, win: false, killLedger };
   }
   // 정산 난수(풀클리어 장비·더블·보스 소환권)도 lootSeed 고정 stream을 쓴다.
   const previousRng = eco.rng;
@@ -189,12 +216,16 @@ export function applySettlement(eco, stage, ticket, facts, verdict) {
       ledger.heroShards = half(loot.heroShards); ledger.transcendStones = half(loot.transcendStones);
       for (const [id, n] of Object.entries(loot.materials)) ledger.materials[id] = half(n);
     }
-    const items = loot.items.map((item) => grantLootItem(eco, item));
+    const tormentTp = tormentTierOf(stage.difficultyId), items = loot.items.map((item) => grantLootItem(eco, item, tormentTp, heroId));
     const rating = serverRating(stage, facts, heroCombatProfile(eco, heroId)?.maxHp ?? 1);
     const receipt = eco.completeStage(stage, rating.stars, {
       fieldGold: half(loot.gold), fieldStones: half(loot.stones), fieldStones2: half(loot.stones2), fieldStones3: half(loot.stones3),
       fieldFragments: half(loot.fragments), fieldLoot: items, fullClear: rating.fullClear,
+      // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 권위 정산에서는 아직 만들지 않는다. 지금 개연성 검사는 보고 값(방·처치 수)만 보므로
+      // 가짜 승리를 막지 못한다(보안 리뷰, #404). 서버가 검증 가능한 완주 증거를 받기 전까지 카드 보상을 이 경로에 붙이지 않는다.
+      // 서버 권위 출시는 현재 0%이고, 클라이언트 정본(로컬·그림자) 판은 그대로 카드를 받는다.
+      clearCards: SERVER_CLEAR_CARDS && verdict === 'ok' && (facts.roomsCleared | 0) > 0,
     });
-    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear };
+    return { got: receipt.got, loot: receipt.loot, ups: receipt.ups, first: receipt.first, exp: receipt.exp, combatExp: receipt.combatExp, passUps: receipt.passUps, win: true, stars: rating.stars, fullClear: rating.fullClear, killLedger };
   } finally { eco.rng = previousRng; }
 }

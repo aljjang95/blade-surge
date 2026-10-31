@@ -1,0 +1,24 @@
+/* 관문 선택 시트의 난이도: 지역 줄의 버튼 + 시트 위로 열리는 난이도판(스토리~지옥 · 고통 단계). 판 안쪽 스타일은 difficulty-picker.css. */
+.oath-visual .ss-dialog .ss-diff-open, .ss-dialog .ss-diff-open {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; max-width: 46%; margin: 0 2px 0 4px; padding: 0 12px; border: 1px solid rgba(226, 178, 90, .6); border-radius: 22px;
+  background: linear-gradient(180deg, rgba(40, 70, 100, .95), rgba(10, 22, 38, .95)); color: #f3e7c6; font-size: 14px; line-height: 1;
+}
+.ss-diff-label { color: var(--ss-muted); font-size: 12px; font-weight: 700; }
+.ss-diff-value { font-size: 15px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-diff-value::after { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 0 3px 6px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.ss-dialog .ss-diff-open[data-tone="blood"] { border-color: #ffb09f; background: linear-gradient(180deg, #8e2f2b, #3d1114); }
+.ss-dialog .ss-diff-open[aria-expanded="true"] { box-shadow: 0 0 0 2px #ffe39a; }
+.ss-diff {
+  position: absolute; left: 6px; right: 6px; top: 52px; bottom: 6px; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  border: 1px solid rgba(226, 178, 90, .6); border-radius: 6px; background: linear-gradient(180deg, #14233a, #0a1422); box-shadow: 0 8px 22px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(0, 0, 0, .5);
+}
+.ss-diff-head { flex: none; display: flex; align-items: center; gap: 8px; }
+.ss-diff-title { margin: 0; color: #fff; font-size: 18px; font-weight: 800; line-height: 1.2; }
+.ss-diff-stage { flex: 1 1 auto; color: var(--ss-muted); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.oath-visual .ss-dialog .ss-diff-close, .ss-dialog .ss-diff-close { flex: none; min-height: 44px; min-width: 76px; margin: 0; padding: 0 16px; border: 2px solid #ffd79a; border-radius: 22px; background: linear-gradient(180deg, #ffb24f, #d96a17); color: #fff; font-size: 16px; font-weight: 800; text-shadow: 0 1px 0 rgba(90, 30, 0, .7); }
+@media (orientation: landscape) and (max-height: 430px) {
+  .ss-region { padding: 0 8px 0 10px; }
+  .ss-diff-label { display: none; }
+  .oath-visual .ss-dialog .ss-diff-open, .ss-dialog .ss-diff-open { padding: 0 10px; gap: 4px; }
+  .ss-diff { gap: 4px; padding: 6px 8px 8px; }
+}

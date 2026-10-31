@@ -50,6 +50,16 @@ export const HERO_FREE_UNLOCK_TOTAL_GEMS = HERO_FREE_UNLOCK.reduce((sum, step) =
  */
 export const HERO_UNLOCK_VIA_GACHA = true;
 
+/**
+ * 성장형 합류(2026-10-27 대표님 결정 "전체 오픈 아님, 성장형", 지휘 세션 전달): 원래 다섯 영웅은 캠페인 지역 마지막 관문을 처음 넘길 때
+ * 이야기 속에서 동료로 합류한다. SR(리아·카인·실바)이 먼저(2·3·4장 끝), SSR(아르카·드라칸)은 5·6장 끝. 시작 영웅은 건너뛴다.
+ * 순서는 docs/WORLD_BIBLE.md 합류 장(리아 3장·카인 4장)과 맞추고, SR→SSR 성장 곡선을 우선했다(실바 6장 → 5장 진입, 드라칸 2장 → 7장 진입).
+ * 소환·영웅 상품 경로는 그대로다(소환 전용 SSR 늑대인간·검은 고양이는 소환으로만). 서버 정산(src/shared/settlement.js)이 같은
+ * Economy.completeStage 를 돌리므로 서버 문서의 roster.owned 도 같은 값이 된다.
+ * 값 = 이 진행(progress.unlocked, 다음 열릴 관문 번호) 이상이면 합류. 21 = 2-10 클리어 후.
+ */
+export const HERO_CAMPAIGN_JOIN = Object.freeze({ mage: 21, rogue: 31, ranger: 41, knight: 51, barbarian: 61 });
+
 /** 시작 영웅 선택 화면이 열리기 전 임시 시작 영웅. */
 export const HERO_STARTER_DEFAULT = 'knight';
 

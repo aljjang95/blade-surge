@@ -33,7 +33,9 @@ function fakePortone() {
   /** intent 응답대로 결제가 PAID가 된 것처럼 등록한다(overrides로 변조). */
   const pay = (intent: any, overrides: Partial<PortonePayment> = {}) => payments.set(intent.paymentId, {
     status: 'PAID', storeId: STORE, currency: 'KRW', amount: { total: intent.totalAmount, paid: intent.totalAmount, cancelled: 0 },
-    channel: { key: intent.channelKey }, customData: intent.customData, ...overrides });
+    channel: { key: intent.channelKey }, customData: intent.customData,
+    // 실제 결제수단: intent가 고른 수단 그대로(카드 또는 간편결제 공급자).
+    method: intent.payMethod === 'EASY_PAY' ? { type: 'PaymentMethodEasyPay', provider: intent.easyPay?.easyPayProvider } : { type: 'PaymentMethodCard' }, ...overrides });
   return { api, payments, calls, state, pay };
 }
 
@@ -88,7 +90,7 @@ describe('웹 결제 스위치·채널 설정', () => {
     const t = await setup({ PORTONE_TEST_CHANNEL_KEY: 'channel-key-test-0001', IAP_ALLOW_TEST: 'true', IAP_TEST_ACCOUNTS: '' });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: CHANNEL, test: false });
     (t.h.env as any).IAP_TEST_ACCOUNTS = t.a.accountId;
-    expect((await t.intent(t.a.token, 'hero_mage_v1')).body).toMatchObject({ channelKey: CHANNEL, test: false });
+    expect((await t.intent(t.a.token, 'hero_ranger_v1')).body).toMatchObject({ channelKey: CHANNEL, test: false });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: true }, t.a.token)).body).toMatchObject({ channelKey: 'channel-key-test-0001', test: true });
     expect((await t.h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', test: 'yes' }, t.a.token)).status).toBe(400);
   });
@@ -133,23 +135,28 @@ describe('웹 결제 intent', () => {
     const { h, a, intent, count } = await setup();
     const r = await intent(a.token, 'hero_mage_v1');
     expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ productId: 'hero_mage_v1', storeId: STORE, channelKey: CHANNEL, totalAmount: 5900, currency: 'KRW' });
+    expect(r.body).toMatchObject({ productId: 'hero_mage_v1', storeId: STORE, channelKey: CHANNEL, totalAmount: 30000, currency: 'KRW' });
     expect(r.body.paymentId).toMatch(/^bsw_[0-9a-f]{32}$/);
     expect(JSON.parse(r.body.customData)).toEqual({ productId: 'hero_mage_v1' });
-    expect((await intent(a.token, 'hero_all_v1')).body.totalAmount).toBe(17900);
+    expect((await intent(a.token, 'hero_all_v1')).body.totalAmount).toBe(89000);
     expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', amount: 1 }, a.token)).body.error).toBe('unknown-field');
     expect(count('SELECT COUNT(*) AS n FROM iap_web_payments')).toBe(2);
   });
 
   test('없는 상품·Play 전용 상품·구독은 거부', async () => {
     const { a, intent } = await setup();
-    for (const id of ['nope', 'starter_pack_v1', 'monthly_card_v1', 'remove_ads_v1', 'gems_300_v1']) expect((await intent(a.token, id)).body.error).toBe('unknown-product');
+    // 보석 팩은 Play 단독(저장형 재화 충전은 웹에서 팔지 않음), 자동 갱신 구독은 웹 불가, 비활성 상품(웹 30일권·아바타)도 거부.
+    for (const id of ['nope', 'monthly_card_v1', 'gems_300_v1', 'monthly_pass_v1', 'avatar_fullset_knight_v1', 'growth_pack_v1']) expect((await intent(a.token, id)).body.error).toBe('unknown-product');
   });
 
   test('열린 의도는 계정당 시간당 10건까지', async () => {
-    const { a, intent } = await setup();
-    for (let i = 0; i < 10; i++) expect((await intent(a.token, 'hero_rogue_v1')).status).toBe(200);
-    expect((await intent(a.token, 'hero_rogue_v1')).body.error).toBe('too-many-intents');
+    const { h, a, intent } = await setup();
+    // 같은 1회성 상품은 결제창 10분 안에 또 낼 수 없으므로 상품을 돌려 가며 낸다(10분 넘긴 뒤 같은 상품 재발급).
+    const ids = ['hero_knight_v1', 'hero_barbarian_v1', 'hero_mage_v1', 'hero_rogue_v1', 'hero_ranger_v1', 'hero_all_v1'];
+    for (const id of ids) expect((await intent(a.token, id)).status).toBe(200);
+    h.advance(11 * 60000);
+    for (const id of ids.slice(0, 4)) expect((await intent(a.token, id)).status).toBe(200);
+    expect((await intent(a.token, 'hero_ranger_v1')).body.error).toBe('too-many-intents');
   });
 });
 
@@ -169,7 +176,7 @@ describe('웹 결제 complete — 포트원 조회 검증 후 멱등 지급', ()
     expect(again.body.state).toBe('already');
     expect(count("SELECT COUNT(*) AS n FROM wallet_ledger WHERE kind = 'iap:hero_knight_v1'")).toBe(1);
     expect(count('SELECT COUNT(*) AS n FROM iap_grants')).toBe(1);
-    expect(h.db.sqlite.query('SELECT price_krw FROM iap_grants').get()).toEqual({ price_krw: 5900 });
+    expect(h.db.sqlite.query('SELECT price_krw FROM iap_grants').get()).toEqual({ price_krw: 30000 });
     expect(h.db.sqlite.query("SELECT state FROM iap_web_payments").get()).toEqual({ state: 'granted' });
     // 첫 결제 퍼널은 서버 검증 지급에서만 기록된다.
     expect(count("SELECT COUNT(*) AS n FROM funnel_milestones WHERE step = 'first_purchase'")).toBe(1);
@@ -286,7 +293,7 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     await complete(a.token, it.paymentId);
     expect((await me(a.token)).doc.roster.paid.length).toBe(5);
-    pn.pay(it, { status: 'CANCELLED', amount: { total: 17900, paid: 0, cancelled: 17900 } });
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 89000, paid: 0, cancelled: 89000 } });
     const r = await complete(a.token, it.paymentId);
     expect(r.body.state).toBe('cancelled');
     expect(r.body.entitlements.heroes).toEqual([]);
@@ -306,7 +313,7 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     const row = h.db.sqlite.query('SELECT * FROM iap_web_payments WHERE payment_id = ?').get(it.paymentId) as any;
     const paid = structuredClone(pn.payments.get(it.paymentId)!);
-    const cancelled = { ...paid, status: 'CANCELLED' as const, amount: { total: 5900, paid: 0, cancelled: 5900 } };
+    const cancelled = { ...paid, status: 'CANCELLED' as const, amount: { total: 30000, paid: 0, cancelled: 30000 } };
     // 취소 처리가 결제 행을 cancelled로 쓰는 시점(역분개 이후)에 PAID를 본 다른 요청이 지급을 시도한다.
     let racer: Promise<unknown> | null = null;
     const base = ctx();
@@ -340,7 +347,7 @@ describe('웹 결제 취소 회수', () => {
     const all = (await t.intent(t.a.token, 'hero_all_v1')).body;
     t.pn.pay(all);
     await t.complete(t.a.token, all.paymentId);
-    t.pn.pay(all, { status: 'PARTIAL_CANCELLED', amount: { total: 17900, paid: 5000, cancelled: 12900 } });
+    t.pn.pay(all, { status: 'PARTIAL_CANCELLED', amount: { total: 89000, paid: 5000, cancelled: 84000 } });
     const r = await t.complete(t.a.token, all.paymentId);
     expect(r.body.state).toBe('cancelled');
     expect(r.body.entitlements.heroes).toEqual(['knight']);
@@ -353,7 +360,7 @@ describe('웹 결제 취소 회수', () => {
     pn.pay(it);
     await complete(a.token, it.paymentId);
     h.advance(7 * 3600000);
-    pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 30000, paid: 0, cancelled: 30000 } });
     const r = await reconcileWebPayments(ctx());
     expect(r).toMatchObject({ checked: 1, reversed: 1, failed: 0 });
     expect(paidOf(h, a.accountId)).toEqual([]);
@@ -389,7 +396,7 @@ describe('웹 결제 취소 회수', () => {
     expect(pn.calls).toEqual([it.paymentId]);
     // 지급 200일 뒤 카드 취소 → 회수된다.
     h.advance(163 * DAY);
-    pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 30000, paid: 0, cancelled: 30000 } });
     expect(h.now() - (h.db.sqlite.query('SELECT granted_at FROM iap_web_payments').get() as any).granted_at).toBeGreaterThan(200 * DAY);
     const r = await reconcileWebPayments(ctx());
     expect(r).toMatchObject({ checked: 1, reversed: 1 });
@@ -411,7 +418,7 @@ describe('웹 결제 취소 회수', () => {
     for (let i = 0; i < WEB_RECONCILE_MAX + 5; i++) {
       const id = 'bsw_' + i.toString(16).padStart(32, '0');
       h.db.sqlite.query(`INSERT INTO iap_web_payments(payment_id, account_id, product_id, amount_krw, store_id, channel_key, test, state, created_at, updated_at, granted_at)
-        VALUES (?, ?, 'hero_rogue_v1', 5900, ?, ?, 0, 'granted', ?, ?, ?)`).run(id, a.accountId, STORE, CHANNEL, h.now(), h.now(), h.now());
+        VALUES (?, ?, 'hero_rogue_v1', 30000, ?, ?, 0, 'granted', ?, ?, ?)`).run(id, a.accountId, STORE, CHANNEL, h.now(), h.now(), h.now());
       pn.payments.set(id, { status: 'READY' });
     }
     h.advance(3600000);
@@ -456,7 +463,7 @@ describe('웹 결제 취소 회수', () => {
     await complete(a.token, it.paymentId);
     (h.env as any).WEB_BILLING_ENABLED = 'false';
     h.advance(7 * 3600000);
-    pn.pay(it, { status: 'CANCELLED', amount: { total: 5900, paid: 0, cancelled: 5900 } });
+    pn.pay(it, { status: 'CANCELLED', amount: { total: 30000, paid: 0, cancelled: 30000 } });
     expect((await reconcileWebPayments(ctx())).reversed).toBe(1);
   });
 });
@@ -496,10 +503,11 @@ describe('Play 흐름 하위호환', () => {
     const a = await h.session();
     const cat = await h.send('GET', '/iap/catalog', undefined, a.token);
     const byId = Object.fromEntries(cat.body.products.map((p: any) => [p.id, p]));
-    expect(byId.hero_knight_v1.channels).toEqual(['web', 'play']);
-    expect(byId.hero_knight_v1.priceKRW).toBe(5900);
-    expect(byId.hero_all_v1.priceKRW).toBe(17900);
-    expect(byId.starter_pack_v1.channels).toEqual(['play']);
+    expect(byId.hero_knight_v1.channels).toEqual(['web', 'play', 'onestore']);
+    expect(byId.hero_knight_v1.priceKRW).toBe(30000);
+    expect(byId.hero_all_v1.priceKRW).toBe(89000);
+    expect(byId.starter_pack_v1.channels).toEqual(['web', 'play', 'onestore']);
+    expect(byId.gems_300_v1).toBeUndefined(); // 비활성 상품은 카탈로그에 나오지 않는다
     // 그림자 계정은 영웅 상품 Play intent가 거부되고 다른 상품은 기존대로 열린다.
     expect((await h.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, a.token)).body.error).toBe('server-authority-required');
     expect((await h.send('POST', '/iap/intent', { productId: 'hero_all_v1' }, a.token)).status).toBe(403);
@@ -510,5 +518,134 @@ describe('Play 흐름 하위호환', () => {
     const it = await hs.send('POST', '/iap/intent', { productId: 'hero_knight_v1' }, sa.token);
     expect(it.body.playType).toBe('inapp');
     expect(it.body.obfuscatedAccountId).toMatch(/^[0-9a-f]{48}$/);
+  });
+});
+
+describe('웹 즉시 지급형(B형) 상품: 스타터·30일 월정액·아바타 풀셋', () => {
+  // 판매 전 상품(웹 30일권·성장 패키지·아바타)은 이 블록 안에서만 켰다가 원복한다(카탈로그 기본값은 enabled:false).
+  const LATER = ['monthly_pass_v1', 'growth_pack_v1', 'avatar_fullset_knight_v1'].map((id) => IAP_BY_ID[id] as any);
+  beforeAll(() => { for (const p of LATER) p.enabled = true; });
+  afterAll(() => { for (const p of LATER) p.enabled = false; });
+  const docOf = (h: any, accountId: string) => JSON.parse((h.db.sqlite.query('SELECT doc FROM account_docs WHERE account_id = ?').get(accountId) as any).doc);
+
+  test('스타터 팩: 웹 결제 지급 보석은 유료 몫(paidGems)이고, 받은 뒤 다시 사려 하면 결제 전에 409', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    const it = (await intent(a.token, 'starter_pack_v1')).body;
+    expect(it.totalAmount).toBe(1200);
+    pn.pay(it);
+    expect((await complete(a.token, it.paymentId)).body.state).toBe('granted');
+    const doc = docOf(h, a.accountId);
+    expect(doc.paidGems).toBe(1000);
+    expect((await intent(a.token, 'starter_pack_v1')).body.error).toBe('not-eligible');
+  });
+
+  test('웹 월정액 30일권: monthly 권한이 30일 뒤 끝나고, 이용 중에는 다시 못 사며, 만료 뒤에는 살 수 있다', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    const it = (await intent(a.token, 'monthly_pass_v1')).body;
+    pn.pay(it);
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('granted');
+    const ent = h.db.sqlite.query("SELECT expires_at FROM iap_entitlements WHERE ent_key = 'monthly'").get() as any;
+    expect(ent.expires_at).toBe(h.now() + 30 * DAY);
+    expect(docOf(h, a.accountId).paidGems).toBe(1200);
+    expect((await intent(a.token, 'monthly_pass_v1')).body.error).toBe('already-subscribed');
+    h.advance(30 * DAY + 1000);
+    const again = await h.session(a.deviceKey); // 세션 토큰이 만료돼 같은 기기 키로 다시 로그인(같은 계정)
+    expect(again.accountId).toBe(a.accountId);
+    expect((await intent(again.token, 'monthly_pass_v1')).status).toBe(200);
+  });
+
+  test('아바타 풀셋: 운영 표(AVATAR_PREMIUM_BY_HERO)가 비어 있으면 결제 전에 409로 막는다(결제만 되고 미지급 방지)', async () => {
+    const { a, intent } = await setup();
+    expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
+  });
+
+  test('아바타 풀셋: 결제 확인 뒤 지급 불가면 지급·권한 없이 환불 필요 큐(web-avatar-undeliverable)로 남고 클라이언트는 refund-pending 을 받는다', async () => {
+    const { h, pn, a, intent, complete, count } = await setup();
+    (h.deps as any).avatarPremium = { knight: 'avatar_knight_sakura' };
+    const it = (await intent(a.token, 'avatar_fullset_knight_v1')).body;
+    pn.pay(it);
+    delete (h.deps as any).avatarPremium; // 결제창이 열린 사이 지급 불가가 된 경우(자산 표 회수 등)
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('refund-pending');
+    expect(r.granted).toEqual([]);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-avatar-undeliverable'")).toBe(1);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'avatar-undeliverable'")).toBe(1);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-once-declined'")).toBe(0);
+    expect(h.db.sqlite.query('SELECT state FROM iap_web_payments WHERE payment_id = ?').get(it.paymentId)).toEqual({ state: 'failed' });
+    expect(count('SELECT COUNT(*) AS n FROM iap_entitlements')).toBe(0);
+    expect(docOf(h, a.accountId).avatars.owned).toEqual([]);
+    // 같은 결제를 다시 확인해도 운영자 큐 항목은 늘지 않는다. 포트원 취소 API는 이 계층에 없다(자동 취소 없음).
+    await complete(a.token, it.paymentId);
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-avatar-undeliverable'")).toBe(1);
+  });
+
+  test('아바타 풀셋: 영구 권한 avatar:<id>:fullset 지급 + 풀셋 아바타 소유, 상태 요약 avatarFullsets, 중복 구매 거부', async () => {
+    const { h, pn, a, intent, complete } = await setup();
+    (h.deps as any).avatarPremium = { knight: 'avatar_knight_sakura' };
+    const it = (await intent(a.token, 'avatar_fullset_knight_v1')).body;
+    expect(it.totalAmount).toBe(14900);
+    pn.pay(it);
+    const r = (await complete(a.token, it.paymentId)).body;
+    expect(r.state).toBe('granted');
+    expect(h.db.sqlite.query("SELECT expires_at FROM iap_entitlements WHERE ent_key = 'avatar:knight:fullset'").get()).toEqual({ expires_at: null });
+    expect(docOf(h, a.accountId).avatars.owned).toEqual(['avatar_knight_sakura']);
+    const st = (await h.send('GET', '/iap/state', undefined, a.token)).body;
+    expect(JSON.stringify(st)).toContain('"avatarFullsets":["knight"]');
+    expect((await intent(a.token, 'avatar_fullset_knight_v1')).body.error).toBe('not-eligible');
+  });
+});
+
+describe('웹 1회성 상품 동시 결제 방어', () => {
+  const LATER = ['monthly_pass_v1', 'growth_pack_v1'].map((id) => IAP_BY_ID[id] as any);
+  beforeAll(() => { for (const p of LATER) p.enabled = true; });
+  afterAll(() => { for (const p of LATER) p.enabled = false; });
+
+  test('결제창이 열린 10분 안에는 같은 1회성 상품 의도를 또 낼 수 없고, 그 뒤엔 낼 수 있다', async () => {
+    const { h, a, intent } = await setup();
+    expect((await intent(a.token, 'growth_pack_v1')).status).toBe(200);
+    expect((await intent(a.token, 'growth_pack_v1')).body.error).toBe('payment-in-progress');
+    expect((await intent(a.token, 'monthly_pass_v1')).status).toBe(200);
+    expect((await intent(a.token, 'monthly_pass_v1')).body.error).toBe('payment-in-progress');
+    h.advance(11 * 60000);
+    expect((await intent(a.token, 'growth_pack_v1')).status).toBe(200);
+  });
+
+  test('두 의도가 모두 결제되면: 1회 상품 둘째 건은 지급 없이 failed + 감사 플래그, 30일권 둘째 건은 중복 감사 플래그', async () => {
+    const { h, pn, a, intent, complete, count } = await setup();
+    const g1 = (await intent(a.token, 'growth_pack_v1')).body; h.advance(11 * 60000);
+    const g2 = (await intent(a.token, 'growth_pack_v1')).body;
+    pn.pay(g1); pn.pay(g2);
+    expect((await complete(a.token, g1.paymentId)).body.state).toBe('granted');
+    expect((await complete(a.token, g2.paymentId)).body.state).toBe('cancelled');
+    expect(h.db.sqlite.query('SELECT state FROM iap_web_payments WHERE payment_id = ?').get(g2.paymentId)).toEqual({ state: 'failed' });
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-once-declined'")).toBe(1);
+    const m1 = (await intent(a.token, 'monthly_pass_v1')).body; h.advance(11 * 60000);
+    const m2 = (await intent(a.token, 'monthly_pass_v1')).body;
+    pn.pay(m1); pn.pay(m2);
+    expect((await complete(a.token, m1.paymentId)).body.state).toBe('granted');
+    expect((await complete(a.token, m2.paymentId)).body.state).toBe('granted');
+    expect(count("SELECT COUNT(*) AS n FROM audit_flags WHERE kind = 'web-duplicate-payment'")).toBe(1);
+  });
+});
+
+describe('웹 간편결제(카카오페이·네이버페이)', () => {
+  test('기본은 카드만: method 없으면 CARD, 꺼진 간편결제는 400 pay-method, /me 플래그도 꺼짐', async () => {
+    const { a, h, intent, me } = await setup();
+    expect((await intent(a.token, 'hero_knight_v1')).body.payMethod).toBe('CARD');
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', method: 'KAKAOPAY' }, a.token)).body.error).toBe('pay-method');
+    const f = (await me(a.token)).flags;
+    expect(f.webKakaoPay).toBe(false); expect(f.webNaverPay).toBe(false);
+  });
+  test('WEB_PAY_METHODS로 켜면 EASY_PAY + easyPayProvider를 내고, 지급 검증은 카드와 같다', async () => {
+    const { a, h, pn, me, complete } = await setup({ WEB_PAY_METHODS: 'CARD,KAKAOPAY,NAVERPAY' });
+    const f = (await me(a.token)).flags;
+    expect(f.webKakaoPay).toBe(true); expect(f.webNaverPay).toBe(true); expect(f.webTossPay).toBe(false);
+    const k = (await h.send('POST', '/iap/web/intent', { productId: 'hero_mage_v1', method: 'KAKAOPAY' }, a.token)).body;
+    expect(k).toMatchObject({ payMethod: 'EASY_PAY', easyPay: { easyPayProvider: 'KAKAOPAY' }, totalAmount: 30000 });
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', method: 'TOSSPAY' }, a.token)).body.error).toBe('pay-method');
+    expect((await h.send('POST', '/iap/web/intent', { productId: 'hero_rogue_v1', method: 42 }, a.token)).body.error).toBe('pay-method');
+    pn.pay(k);
+    expect((await complete(a.token, k.paymentId)).body.state).toBe('granted');
   });
 });
