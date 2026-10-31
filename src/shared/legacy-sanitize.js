@@ -191,8 +191,10 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     return cap;
   };
   const paid = (key) => (Number.isSafeInteger(allowance[key]) && allowance[key] > 0 ? allowance[key] : 0);
-  const daysFor = (key) => CURRENCY_SINCE[key] === undefined ? days : Math.min(days, Math.max(0, Math.floor((now - CURRENCY_SINCE[key]) / DAY)));
-  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * daysFor(key) + paid(key));
+  // 보석 500으로 상점에서 사는 재화: 출시 뒤 하루 보석 상한으로 살 수 있는 만큼은 정당한 보유다(구매 소비분을 절삭하지 않는다).
+  const purchasable = (key) => key === 'transferScroll' ? Math.floor(DAILY_MAX.gems * daysFor(key) / 500) : 0;
+  const daysFor = (key) => CURRENCY_SINCE[key] === undefined ? days : Math.min(days, Math.max(1, Math.ceil((now - CURRENCY_SINCE[key]) / DAY)));
+  for (const key of CURRENCIES) s[key] = clamp(key, Number(s[key]) || 0, (fresh[key] || 0) + ONE_TIME[key] + DAILY_MAX[key] * daysFor(key) + purchasable(key) + paid(key));
   for (const id of Object.keys(HEROES)) {
     const h = s.heroes[id];
     if (h) h.shards = clamp(`heroes.${id}.shards`, Number(h.shards) || 0, ONE_TIME.heroShards + DAILY_MAX.heroShards * days);
