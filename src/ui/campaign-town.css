@@ -49,3 +49,12 @@
 .town-arrival-banner em { font-style: normal; font-size: 11px; color: #e4d7b6; }
 @media (max-width: 520px) { .town-arrival-banner { gap: 6px; padding: 3px 12px 4px; } .town-arrival-banner b { font-size: 13px; } .town-arrival-banner em { font-size: 10px; } }
 @media (prefers-reduced-motion: reduce) { .town-arrival-banner { animation: none; } .town-arrival-veil { display: none; } }
+
+/* 세로 화면: 위 줄은 아바타 + 재화 세 칸만으로 꽉 차 칩이 27~37px 로 눌려 'RE/GIO/N/01'처럼 세로로 줄바꿈됐다(2026-10-31, 390x700 실측).
+   세로에서는 칩을 위 줄 흐름에서 빼 위 줄 바로 아래 왼쪽에 한 줄로 둔다. 지역 표시는 어느 화면에서도 줄바꿈하지 않는다. */
+.campaign-town-chip small { white-space: nowrap; }
+@media (orientation: portrait) {
+  .campaign-town-chip { position: absolute; left: calc(8px + var(--sal, 0px)); top: 100%; margin: 0; max-width: min(60vw, 240px); grid-template-columns: auto auto auto; grid-template-areas: 'tag name caret'; min-height: 30px; padding: 3px 10px; }
+  .campaign-town-chip b { font-size: 12px; }
+  .campaign-town-menu { left: calc(8px + var(--sal, 0px)); top: calc(112px + var(--sat, 0px)); width: min(330px, calc(100% - 16px)); }
+}
