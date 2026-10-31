@@ -5,8 +5,10 @@ import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
 import { handleV1Request, V1_PREFIX, defaultDeps, type V1Env } from './v1/router';
-import { reconcileVoided } from './v1/iap';
+import { reconcileOneVoided, reconcileVoided } from './v1/iap';
 import { reconcileWebPayments } from './v1/portone';
+import { archiveIdleGuests } from './v1/archive';
+import { runRetention } from './v1/retention';
 import { schemaReady, type D1Database } from './v1/db';
 export { PartyRoom };
 // 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
@@ -169,7 +171,13 @@ export async function reconcileIap(env: Env, now = Date.now()): Promise<void> {
   const db = v1.COMMERCE_DB as D1Database | undefined;
   // 판매(IAP_ENABLED)를 멈춰도 환불 대사는 계속한다. 커서는 D1 iap_meta(마지막 성공 시각, 최대 30일 창).
   if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
-  const r = await reconcileVoided({ env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') });
+  // 원스토어 취소 대사는 Play 대사 실패와 격리한다(한쪽 제공자 장애가 다른 쪽 회수를 막지 않게).
+  const ctx = { env: v1, db, deps: defaultDeps, now, request: new Request('https://cron.internal/iap/reconcile') };
+  try {
+    const one = await reconcileOneVoided(ctx);
+    if (one.failed) console.warn('iap one reconcile partial', one.failed);
+  } catch (error) { console.warn('iap one reconcile failed', error instanceof Error ? error.name : 'unknown'); }
+  const r = await reconcileVoided(ctx);
   if (r.failed) console.warn('iap reconcile partial', r.failed);
 }
 
@@ -182,9 +190,29 @@ export async function reconcileWeb(env: Env, now = Date.now()): Promise<void> {
   if (r.failed) console.warn('web payment reconcile partial', r.failed);
 }
 
+/** 시간당 미접속 게스트 보관(영구 삭제 아님, worker/v1/archive.ts). V1이 닫혀 있거나 스키마가 낮으면 하지 않는다. */
+export async function archiveIdle(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const n = await archiveIdleGuests(db, now);
+  if (n) console.log('idle guests archived', n);
+}
+
+/** 시간당 보관·파기(worker/v1/retention.ts): 탈퇴 30일·기기 이관 90일·미접속 보관본 1년 파기, 남용 방지 묘비 갱신·만료 삭제. 1회 최대 100건. */
+export async function purgeRetention(env: Env, now = Date.now()): Promise<void> {
+  const v1 = env as unknown as V1Env;
+  const db = v1.COMMERCE_DB as D1Database | undefined;
+  if (v1.V1_ENABLED !== 'true' || !db || !await schemaReady(db)) return;
+  const r = await runRetention(db, now);
+  if (r.withdrawn || r.archives || r.idleAccounts || r.tombstones || r.banned) console.log('retention', JSON.stringify(r));
+}
+
 export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
   // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
   await cleanupStoreMetadata(env);
   try { await reconcileIap(env); } catch (error) { console.warn('iap reconcile failed', error instanceof Error ? error.name : 'unknown'); }
   try { await reconcileWeb(env); } catch (error) { console.warn('web payment reconcile failed', error instanceof Error ? error.name : 'unknown'); }
+  try { await archiveIdle(env); } catch (error) { console.warn('idle archive failed', error instanceof Error ? error.name : 'unknown'); }
+  try { await purgeRetention(env); } catch (error) { console.warn('retention failed', error instanceof Error ? error.name : 'unknown'); }
 } };

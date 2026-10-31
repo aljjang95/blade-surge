@@ -55,11 +55,13 @@ test('화면을 가로지르는 큰 빌보드 고리(지름 3.5m 초과)·굵은
   }
 });
 
-test('지연 칸은 skills.js 판정 시각과 맞는다: 태양파쇄 2타 .18, 신벌 .28 착탄, 결박 파열 1.75', () => {
+test('지연 칸은 판정 시각과 맞는다: 태양파쇄 노드 0/.1/.2/.3 전진·.48~.78 되감기, 신벌 .28 착탄, 결박 파열 1.75', () => {
   const starts = (id: string, kind: number) => { const v = make(); SIGNATURES[id](ctxOf(v)); const s = slots(v).filter(x => x.kind === kind).map(x => x.start); v.dispose(); return s; };
-  expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerSecond: .18, heavenfallHit: .28, chainBurst: 1.75 });
-  expect(starts('sunbreaker', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(.18, 5));
-  expect(starts('sunbreaker', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.18, 5));
+  expect(KNIGHT_SIG_TIMING).toEqual({ sunbreakerStep: .1, sunbreakerReturn: .48, sunbreakerNodes: 4, sunbreakerGap: 2.5, heavenfallHit: .28, chainBurst: 1.75 });
+  // 태양파쇄 실제 구현(awakening-iii.js): 전진 판정 i×.1초, 되감기 .48+i×.1초. 원반 고리는 전진 노드마다, 초승달은 되감기마다 켜진다.
+  for (const t of [0, .1, .2, .3]) expect(starts('sunbreaker', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(t, 5));
+  for (const t of [.48, .58, .68, .78]) expect(starts('sunbreaker', IMPACT_KIND.cut)).toContainEqual(expect.closeTo(t, 5));
+  expect(starts('sunbreaker', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(.48, 5));
   expect(starts('heavenfall', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(.28, 5));
   expect(starts('chain_bind', IMPACT_KIND.beam)).toContainEqual(expect.closeTo(1.75, 5));
   expect(starts('chain_bind', IMPACT_KIND.ring)).toContainEqual(expect.closeTo(1.75, 5));
@@ -93,4 +95,82 @@ test('성역 기둥 지오메트리는 기둥 수별로 캐시돼 lite↔정상 
   expect(sanctumPillarGeometry(4)).toBe(a4);
   expect(a4).not.toBe(a8);
   expect(a4.getIndex()!.count).toBe(4 * 6);
+});
+
+test('검성 예비 표식(PRELUDES): 기본 3 + 궁극기 + 각성 4 모두 있고, 결정적이며 칸 상한·지면 표식 반경 안에서 그린다', async () => {
+  const { PRELUDES } = await import('../src/engine/sig-knight.js');
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  for (const id of HERO_SKILLS.knight) {
+    expect(typeof (PRELUDES as any)[id]).toBe('function');
+    expect((SKILL_PRELUDES as any)[id]).toBe((PRELUDES as any)[id]);
+    const v = make(), l = make(); const real = Math.random; let calls = 0;
+    Math.random = () => { calls++; return real(); };
+    try { (PRELUDES as any)[id](ctxOf(v)); (PRELUDES as any)[id](ctxOf(l, true)); } finally { Math.random = real; }
+    expect(calls).toBe(0);
+    expect(v.ring.high).toBeGreaterThan(0);
+    expect(v.ring.high).toBeLessThanOrEqual(KNIGHT_SIG_MAX_SLOTS);
+    expect(l.ring.high).toBeLessThanOrEqual(v.ring.high);
+    for (const s of slots(v)) if (s.kind === IMPACT_KIND.mark) expect(s.size).toBeLessThanOrEqual(KNIGHT_MARK_MAX_RADIUS);
+    v.dispose(); l.dispose();
+  }
+});
+
+test('뺀 텍스처 연출의 난수 소비(KNIGHT_RETIRED_DRAWS)는 실제 FX 호출의 캐시 뒤 횟수와 같고, 가짜 fx 에서는 소비하지 않는다', async () => {
+  const { FX } = await import('../src/engine/fx.js');
+  const { KNIGHT_RETIRED_DRAWS, knightRetiredDraws } = await import('../src/engine/sig-knight.js');
+  // 실제 게임처럼 원화가 로드된 경로로 잰다(원화가 없으면 firePillar 가 pillar 대체 경로로 빠져 횟수가 달라진다).
+  const { VFX_TEX: tex, VFX_LIST } = await import('../src/engine/assets.js');
+  const VFX_TEX = tex as Record<string, unknown>;
+  const savedTex = { ...VFX_TEX };
+  for (const n of VFX_LIST) VFX_TEX[n] ||= new THREE.Texture();
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const gradient = { addColorStop() {} };
+  const context = { createRadialGradient: () => gradient, createLinearGradient: () => gradient, fillRect() {}, clearRect() {} };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({ getContext: () => context }), getElementById: () => ({ firstChild: null }) } });
+  const fx: any = new FX(new THREE.Scene(), new THREE.PerspectiveCamera());
+  try {
+    const p = new THREE.Vector3();
+    const calls: Record<string, () => void> = {
+      rune: () => fx.groundTex(p, 'circle_gold', 0xffa018, { r0: 1, r1: 2.4, life: 1, spin: 1.6, y: .07, fadeIn: .2, hold: .35, gain: .45 }),
+      castCircle: () => fx.castCircle(p, 0xff9a18, { radius: 5, life: .25 }),
+      firePillar: () => fx.firePillar(p, { height: 10, width: 1.6, life: 1, color: 0xff9a18 }),
+      holyBurst: () => fx.holyBurst(p, { size: 1.6, life: .24, color: 0xff9a18 }),
+      shockTex: () => fx.shockTex(p, 0xff9a20, { r1: 6, life: .5 }),
+      explosion: () => fx.explosion(p, { size: 7, color: 0xd0a0ff, life: .5 }),
+    };
+    const count = (run: () => void) => { const real = Math.random; let n = 0; Math.random = () => { n++; return real(); }; try { run(); } finally { Math.random = real; } return n; };
+    for (const [k, run] of Object.entries(calls)) { run(); expect(count(run)).toBe((KNIGHT_RETIRED_DRAWS as any)[k]); }
+    expect(count(() => knightRetiredDraws(fx, 8))).toBe(8);
+    expect(count(() => knightRetiredDraws({ castCircle() {} }, 8))).toBe(0);
+  } finally {
+    fx.dispose();
+    if (descriptor) Object.defineProperty(globalThis, 'document', descriptor); else delete (globalThis as any).document;
+    for (const n of Object.keys(VFX_TEX)) if (!(n in savedTex)) delete VFX_TEX[n];
+  }
+});
+
+test('심판 표적 박자(knightJudgmentStrike): 하늘 별빛은 판정 .1초 전, 바닥 별빛·균열은 판정 순간에 켜진다', async () => {
+  const { knightJudgmentStrike } = await import('../src/engine/sig-knight.js');
+  const v = make(); const n = knightJudgmentStrike(v, new THREE.Vector3(2, 0, 3), .21, 3);
+  const s = slots(v);
+  expect(n).toBe(s.length);
+  expect(s.filter(x => x.kind === IMPACT_KIND.star).map(x => x.start).sort()).toEqual([expect.closeTo(.11, 5), expect.closeTo(.21, 5)]);
+  for (const b of s.filter(x => x.kind === IMPACT_KIND.beam)) expect(b.start).toBeCloseTo(.21, 5);
+  const lite = make(); expect(knightJudgmentStrike(lite, new THREE.Vector3(), 0, 0, true)).toBeLessThan(n);
+  v.dispose(); lite.dispose();
+});
+
+test('태양파쇄 서명의 원반 노드는 awakening-iii 판정 노드(solarLaneNodes)와 같은 자리다', async () => {
+  const { solarLaneNodes } = await import('../src/game/awakening-iii.js');
+  const ctx = ctxOf(make());
+  const nodes = solarLaneNodes(ctx.player.pos.clone().setY(0), ctx.f.clone(), KNIGHT_SIG_TIMING.sunbreakerNodes);
+  const v = ctx.impact; SIGNATURES.sunbreaker(ctx);
+  const rings = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.ring && v.ring.a.aLife[i * 2] < .35);
+  expect(rings.length).toBe(nodes.length);
+  for (const i of rings) {
+    const node = nodes[Math.round(v.ring.a.aLife[i * 2] / KNIGHT_SIG_TIMING.sunbreakerStep)];
+    expect(v.ring.a.aOrigin[i * 3]).toBeCloseTo(node.x, 4);
+    expect(v.ring.a.aOrigin[i * 3 + 2]).toBeCloseTo(node.z, 4);
+  }
+  v.dispose();
 });

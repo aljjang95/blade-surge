@@ -85,7 +85,7 @@ describe('영웅 상품 카탈로그', () => {
       expect(Object.hasOwn(HEROES, id)).toBe(true);
       expect(p.type).toBe('non_consumable');
       expect(p.priceKRW).toBe(30000);
-      expect(p.channels).toEqual(['web', 'play']);
+      expect(p.channels).toEqual(['web', 'play', 'onestore']);
       expect(entitlementKeys(p)).toEqual([heroEntitlementKey(id)]);
       expect(heroIdFromEntitlement(entitlementKeys(p)[0])).toBe(id);
       expect(soldOn(p, 'web') && soldOn(p, 'play')).toBe(true);

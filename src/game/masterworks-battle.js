@@ -2,6 +2,7 @@ import { Battle as RpgBattle } from './rpg-battle.js';
 import { MasterworksService } from './masterworks-service.js';
 import { MasterworksView } from '../ui/masterworks.js';
 import { TargetTag } from '../ui/target-tag.js';
+import { LootLabels } from '../ui/loot-labels.js';
 import { STORY_EVENTS } from '../data/masterworks.js';
 import { boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory, seedRunBoons, sumEffects } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
@@ -18,6 +19,8 @@ export class Battle extends RpgBattle {
     this.chronicle = new MasterworksView(app, this);
     // 대상 적 이름·HP·균형은 화면 위쪽 줄 대신 적 머리 위 표식으로 보인다.
     this.targetTag = typeof document !== 'undefined' ? new TargetTag() : null;
+    // 땅에 떨어진 장비 위 등급 색 이름표(대표님 2026-10-30).
+    this.lootLabels = typeof document !== 'undefined' ? new LootLabels() : null;
     app.eco.onChange(() => this.chronicle.refresh());
   }
   async start(...args) {
@@ -33,14 +36,17 @@ export class Battle extends RpgBattle {
       : this.masterworks.transact(s => { s.runSeq++; return {ok:true,id:s.runSeq}; }, {duringBattle:true});
     if (!ticket.ok) throw new Error(ticket.error);
     const s = this.masterworks.s;
-    const enabled=!this.stage.party && this.stage.expedition?.kind !== 'arena';
+    const runesOn=!this.stage.party && this.stage.expedition?.kind !== 'arena';
+    // 현상금 의뢰 판(docs/BOUNTY_BOARD.md)은 의뢰 보상만: rewards=false 로 명성·룬 처치·개인 목표·연대기 기록을 막는다.
+    // enabled(숙련·룬 전투 효과, 난이도 배율)는 그대로 켠다.
+    const enabled=runesOn, rewards=runesOn && !this.stage.bounty;
     // 출격 중 각인 보상은 없다(2026-10-24 대표님). 각인은 출격 전에 setPreRunBoons 로 정해진 것만 한 번 소비해 적용한다.
     const preRunBoons=enabled ? seedRunBoons(this.preRunBoons) : [];this.preRunBoons=null;
     this.run = {id:ticket.id,picked:[...preRunBoons],preRunBoons,storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
       // 영구 효과 = 숙련 + 장착 장비 룬(전운 각인 1개는 가문 공명 수에만 +1). 출격 시작 때 한 번 계산해 캐시한다.
-      enabled, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),enabled?this.app?.eco?.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
+      enabled, rewards, challenges:[...s.challengeIds], permanent:sumEffects([masteryEffects(s),enabled?this.app?.eco?.heroRuneEffects?.(args[1],{blessingBoonId:preRunBoons[0]||null})||{}:{}]),
       historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0,
-      personalGoal:!this.stage.party && this.stage.expedition?.kind !== 'arena' ? capturePersonalGoal(s) : null};
+      personalGoal:rewards ? capturePersonalGoal(s) : null};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
@@ -67,7 +73,7 @@ export class Battle extends RpgBattle {
   /** 길 위의 만남은 전투를 멈추지 않는다. 예전 선택이 있으면 재방문 회복, 없으면 첫 선택지로 기록하고 가장자리 알림만 띄운다. */
   resolveStoryEvent(eventId) {
     const event = STORY_EVENTS.find(e=>e.id===eventId);
-    if (!event || !this.active || !this.player?.alive || !this.run?.enabled || this.run.settled) return {ok:false,error:'만남이 종료됐습니다.'};
+    if (!event || !this.active || !this.player?.alive || !this.run?.enabled || this.run.rewards === false || this.run.settled) return {ok:false,error:'만남이 종료됐습니다.'};
     const remembered = event.choices.find(c=>c.id===this.masterworks.s.story[event.id]);
     let result;
     if (remembered) result = {ok:true,effects:{heal:remembered.effects.heal ? .12 : .06},renown:0,revisit:true,choiceId:remembered.id};
@@ -120,17 +126,20 @@ export class Battle extends RpgBattle {
     if (!this.run) return;
     if (this.player.stats !== this.appliedStats) { this.buildBase={...this.player.stats}; this.applyBuild(); }
     if (earn && !e.summoned && this.run.enabled) {
+      // 처치 회복은 전투 효과라 의뢰 판에서도 적용, 명성·진척·룬 처치만 보상 자격(rewards)에 묶는다.
+      if (this.player.alive && this.effects.healOnKill) this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*Math.min(.05,this.effects.healOnKill));
+    }
+    if (earn && !e.summoned && this.run.enabled && this.run.rewards !== false) {
       const previousKills=this.masterworks.s.bounties.counts.kills;
       const validKills=recordProgress(this.masterworks.s,'kills');
       if (e.isBoss || e.isElite) { recordProgress(this.masterworks.s,'eliteKills'); this.app?.eco?.recordRuneKill?.(this.stage,e.isBoss?'boss':'elite',this.heroId); }
       if (validKills>previousKills && validKills%5===0) { const gained=grantRenown(this.masterworks.s,1); this.run.renown+=gained; }
       this.rpgDirty=true;
-      if (this.player.alive && this.effects.healOnKill) this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*Math.min(.05,this.effects.healOnKill));
     }
   }
   markCleared(room) {
     const was = room.cleared; super.markCleared(room);
-    if (was || !room.cleared || !this.active || this.run?.settled || !this.run?.enabled || room.type==='start') return;
+    if (was || !room.cleared || !this.active || this.run?.settled || !this.run?.enabled || this.run.rewards === false || room.type==='start') return;
     const index=this.world.rooms.indexOf(room);
     const deep=this.stage.expedition?.depth==='deep';
     const key=this.stage.expedition ? `expedition:${this.stage.expedition.id}:${deep?'deep:':''}${index}` : `room:${this.stage.idx}:${index}`;
@@ -193,7 +202,7 @@ export class Battle extends RpgBattle {
     this.run.settled=true; this.chronicle.close();
     this.riftEncounter?.dispose();this.riftEncounter=null;
     const s=this.masterworks.s;
-    if (this.run.enabled) {
+    if (this.run.enabled && this.run.rewards !== false) {
       if(outcome==='victory') {
         recordProgress(s,'clears');
         const bonus=Math.floor((6+this.roomsCleared*2)*Math.min(1.8,this.run.difficulty.rewardMul+(this.effects.rewardMul||0)));
@@ -227,5 +236,6 @@ export class Battle extends RpgBattle {
     }
     this.chronicle?.tick(realDt);
     this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
+    this.lootLabels?.update(this, this.renderer, realDt, this.app?.mode);
   }
 }

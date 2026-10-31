@@ -54,10 +54,11 @@ npx wrangler d1 migrations list <DB> --remote
 ```
 
 - `v1_schema`가 없다는 오류(`no such table`) = 0001 미적용. `version`이 1/2/3/4 = 마지막으로 적용된 마이그레이션 번호.
-- 기대 표(0001~0004 적용 후 25개): `account_archive`, `account_docs`, `account_keys`, `account_links`, `accounts`, `audit_flags`, `funnel_active`, `funnel_milestones`, `iap_debt`, `iap_entitlements`, `iap_grants`, `iap_meta`, `iap_obf`, `iap_purchases`, `iap_refund_guard`, `iap_rtdn`, `iap_web_payments`, `legacy_saves`, `mail`, `oauth_states`, `parity_log`, `run_tickets`, `sanctions`, `v1_rate`, `v1_schema`, `wallet_ledger`. (0005 `oidc_providers`가 `oauth_states`를 더하고 `account_links`를 같은 이름으로 다시 만든다 — 카카오·ChatGPT 제공자 허용. 2026-10-29부터 `SCHEMA_VERSION = 5`라 0001~0005가 모두 적용돼야 V1이 열린다. `test/v1-rollout.test.ts`가 마이그레이션 파일과 이 목록의 일치를 고정한다.)
+- 기대 표(0001~0008 적용 후): `abuse_tombstones`, `account_archive`, `account_docs`, `account_flags`, `account_keys`, `account_links`, `accounts`, `audit_flags`, `funnel_active`, `funnel_milestones`, `iap_debt`, `iap_entitlements`, `iap_grants`, `iap_meta`, `iap_obf`, `iap_purchases`, `iap_refund_guard`, `iap_rtdn`, `iap_web_pay_methods`, `iap_web_payments`, `legacy_saves`, `mail`, `oauth_states`, `parity_log`, `run_tickets`, `sanctions`, `v1_rate`, `v1_schema`, `wallet_ledger`. (0005 `oidc_providers`가 `oauth_states`를 더하고 `account_links`를 같은 이름으로 다시 만든다 — 카카오·ChatGPT 제공자 허용. 0006 `account_flags`는 테스트 계정·미접속 게스트 보관 표시(계정 후속 PR부터 `SCHEMA_VERSION = 6`: 배포 전에 0006을 먼저 적용). 0007 `abuse_tombstones`는 탈퇴·정지 연동 해시 묘비(1회 보상 재수령 방지 전용), 보관·파기 크론 도입과 함께 `SCHEMA_VERSION = 7`: 배포 전에 0007을 먼저 적용). 0008 `iap_web_pay_methods`는 웹 결제수단 대조용이며 웹 결제만 스키마 v8을 요구한다(`WEB_SCHEMA_VERSION = 8`, 다른 v1 API의 `SCHEMA_VERSION`은 7 그대로 — 0008 적용 전에는 웹 결제만 `web-schema-missing`으로 닫힘). `test/v1-rollout.test.ts`가 마이그레이션 파일과 이 목록의 일치를 고정한다.)
 - 결제 표 행 수: `SELECT (SELECT COUNT(*) FROM iap_purchases), (SELECT COUNT(*) FROM iap_grants), (SELECT COUNT(*) FROM iap_web_payments)` — 0003/0004 적용 전엔 `no such table`이 정상.
 - 2026-10-24 기록: 운영 D1에는 결제 표가 없다(GACHA_HANDOFF).
 - 2026-10-29 확인(Cloudflare D1 조회, SELECT만): 운영 D1에는 `store_*` 표만 있고 `v1_schema`가 없다 = **0001부터 미적용**. 계정 로그인(docs/ACCOUNT_POLICY.md)을 켜려면 0001~0005를 한 번에 적용한다.
+- 2026-10-29 14:02 KST 운영 적용 완료: 0001~0005(v5), 직전 북마크 `000000d3-00000000-00005113-bc740526d7d0748cef9862d5e017163e`. V1 그림자 개방(#392).
 
 ### 2.3 SESSION_HMAC 바인딩 존재(값은 보지 않는다)
 

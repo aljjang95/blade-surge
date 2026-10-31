@@ -734,6 +734,16 @@ export class Player extends Actor {
       if (hl > .3) { out.x = hx / hl; out.y = hz / hl; }
       return out;
     }
+    // 쇳물(2장 용융 잔해) 위에 서 있으면 공격보다 먼저 밖으로 한 걸음 나간다. 공격 동작 중이면 타격 뒤 이동으로 넘어간다.
+    const slag = this.game.regionTraits?.autoEscape?.(this);
+    if (slag && (this.state !== 'attack' || this.hitDone)) {
+      const sx = slag.x - this.pos.x, sz = slag.z - this.pos.z, sl = Math.hypot(sx, sz);
+      if (sl > .3) {
+        out.x = sx / sl; out.y = sz / sl;
+        if (this.state === 'attack' && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+        return out;
+      }
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
@@ -864,17 +874,22 @@ export class Player extends Actor {
       return out;
     }
     let target = g.conquest?.autoRoom() || g.autoTarget;
+    // 보스 직행 동선: 보스 문까지 남은 경로의 첫 방 → 봉인이 풀리면 보스방(지도에서 고른 동선).
+    const direct = !g.conquest && g.directAutoRoom?.();
+    if (direct) { target = direct; g.autoTarget = direct; }
     if (!target || target.cleared || !W.rooms.includes(target)) {
+      // 전부 사냥(기본): 길로 봉인이 먼저 풀려도 남은 구역을 다 돈 뒤에 보스로 간다(직행 버튼으로 바꾼 판은 제외).
+      const holdBoss = W.sealed || (!g.bossRush && W.rooms.some((room) => !room.cleared && room !== W.bossRoom && room.type !== 'start'));
       let nearest = null, distance = Infinity;   // 봉인된 보스방은 못 들어간다
       for (const room of W.rooms) {
-        if (room.cleared || (W.sealed && room === W.bossRoom)) continue;
+        if (room.cleared || (holdBoss && room === W.bossRoom)) continue;
         const d = Math.hypot(room.x - this.pos.x, room.z - this.pos.z);
         if (d < distance) { distance = d; nearest = room; }
       }
       if (!nearest) return out;
       // 봉인이 풀린 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
       const boss = W.bossRoom;
-      target = (boss && !boss.cleared && boss.discovered && !W.sealed) ? boss
+      target = (boss && !boss.cleared && boss.discovered && !holdBoss) ? boss
         : nearest;
       g.autoTarget = target;
     }

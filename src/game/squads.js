@@ -5,7 +5,7 @@
 //  - 분대: 방패 전열·습격대·포격진·의식·매복·폭파조·종 대열·분쇄대. 방마다 주 분대(테마)가 정해져 같은 던전이라도 방의 성격이 다르다.
 //  - 보상: 명단 풀(stage.rosterFor())은 그대로 두고 고르는 방식만 바꾼다(정산 stageRankValues 와 같은 풀).
 // 순수 함수다. Battle.prototype.roomRoster.call({ stage, rosterSize }) 테스트 경로에서도 돈다.
-import { ENEMIES } from '../data/stages.js';
+import { ENEMIES, CH1_REC_POWER_MUL } from '../data/stages.js';
 
 /** 몬스터 정의의 역할. 행동 코드(behavior·meleeRole)에서 읽는다. */
 /** 분대 편성·정예 접두사·지역 특성을 쓰는 전투인지: 캠페인 혼자 플레이(원정·파티 제외 — 파티 게스트 스냅샷에 이 상태가 실리지 않는다). */
@@ -17,17 +17,27 @@ export const LATE_CHAPTER_FROM = 5, LATE_CHAPTER_ATK = 1.3;
 // 1장 램프: 1-1 한 판의 레벨(1→5)·장비·강화(당시 +8까지 100%, 2026-10-28부터 +3까지만 확정)로 전투력이 약 2.5배가 되어 1-2~1-10이 체력 2~10%만 깎이는 무위협 구간이었다
 // (신규 계정 연속 실입력 플레이). 1-1(첫 판·PRD 지표 측정 관문)은 그대로 두고 1-2부터 공격 ×1.8 → 1-10 ×1.3, 체력 ×1.15로 압박을 되살린다.
 // 보상·배율·드랍표·정산은 그대로(전투 생성자에서만 곱한다). 원정·파티·무한의 성 제외.
-export const CH1_RAMP = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze(i === 0 ? { atk: 1, hp: 1 } : { atk: +(1.8 - (i - 1) * .0625).toFixed(4), hp: 1.15 })));
+// 2026-10-29: 입문 레벨 곡선(1-1 은 Lv3)으로 영웅이 약해진 만큼 공격 램프는 그대로 두고, 1장 권장 전투력 배율(stages.js CH1_REC_POWER_MUL)의 √ 를 체력에 곱한다
+// (1-2 ×1.15×1.18 ≈ 1.36 → 1-10 ×1.15×1.02 ≈ 1.17). 전투력/권장을 약 1.6~1.9 로 맞추는 짝이다.
+export const CH1_RAMP = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze(i === 0 ? { atk: 1, hp: 1 }
+  : { atk: +(1.8 - (i - 1) * .0625).toFixed(4), hp: +(1.15 * Math.sqrt(CH1_REC_POWER_MUL[i])).toFixed(4) })));
+// 2장 위협 보정(2026-10-31, 3개월 ch2-entry). 같은 시작 상태·레벨만 바꾼 AUTO 스윕(tools/qa/stage-power-sweep.mjs)에서 2장은 권장 전투력의
+// 약 1.25배(2-1·2-2·2-10)~1.5배(2-5)가 되어야 이겼다(1-10 은 1.03배에서 승). 권장 전투력 식(배율^0.7)이 2장 종의 높은 기본 능력치(체력 +25%)와
+// 11관문부터 붙는 웨이브당 정예 +1 을 반영하지 못한 탓이다. 보상·배율(scale)·드랍·정산·권장 표시는 그대로 두고 전투 생성자에서만 곱한다.
+// 후반(2-8~2-10)은 0.95배로도 이겨 조금 되돌린다: 2-7 까지 공격 ×0.8·체력 ×0.82, 2-10 공격 ×0.86·체력 ×0.88 까지 선형.
+export const CH2_THREAT = Object.freeze(Array.from({ length: 10 }, (_, i) => Object.freeze({
+  atk: +(.8 + Math.max(0, i - 6) * .02).toFixed(4), hp: +(.82 + Math.max(0, i - 6) * .02).toFixed(4) })));
 export function campaignAtkMul(stage) {
   if (!campaignCombat(stage) || stage.tower) return 1;
   const ch = stage.chapter?.id ?? stage.ch;
   if (ch >= LATE_CHAPTER_FROM) return LATE_CHAPTER_ATK;
-  return ch === 1 ? CH1_RAMP[stage.st - 1]?.atk ?? 1 : 1;
+  return ch === 1 ? CH1_RAMP[stage.st - 1]?.atk ?? 1 : ch === 2 ? CH2_THREAT[stage.st - 1]?.atk ?? 1 : 1;
 }
-/** 1장 체력 배율(1-1은 1). 공격과 같은 이유로 1-2~1-10에만. */
+/** 1장 체력 배율(1-1은 1, 1-2~1-10 램프)과 2장 위협 보정. */
 export function campaignHpMul(stage) {
-  if (!campaignCombat(stage) || stage.tower || (stage.chapter?.id ?? stage.ch) !== 1) return 1;
-  return CH1_RAMP[stage.st - 1]?.hp ?? 1;
+  if (!campaignCombat(stage) || stage.tower) return 1;
+  const ch = stage.chapter?.id ?? stage.ch;
+  return ch === 1 ? CH1_RAMP[stage.st - 1]?.hp ?? 1 : ch === 2 ? CH2_THREAT[stage.st - 1]?.hp ?? 1 : 1;
 }
 
 export function speciesRole(def) {

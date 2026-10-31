@@ -190,3 +190,12 @@
 - Kim & Chang 확률형 아이템: <https://www.kimchang.com/ko/insights/detail.kc?sch_section=4&idx=28428>
 - 넥슨 청약철회 안내: <https://cs.nexon.com/helpBoard/popuphelpview/12606>
 - 고형석 「디지털콘텐츠계약에서 청약철회의 효과」(표준약관 제23조 항별 분석): <http://itnlaw.knu.ac.kr/?task=json&cmd=board-file-download&fid=255&filename=002-%EA%B3%A0%ED%98%95%EC%84%9D.pdf>
+
+- 앱 안 결제 경로 조사·추천(Play 한국 대체결제, 원스토어 외부결제): [docs/APP_PAYMENT_ROUTE.md](APP_PAYMENT_ROUTE.md)
+
+## 미성년자 결제 확인·연령 인증 (2026-10-30 결정)
+- 구매 확인 창에 필수 체크 두 개(기본 미체크): 즉시 지급 철회 제한 동의 + "만 19세 이상이거나, 만 19세 미만으로서 법정대리인(부모 등)의 동의를 받았습니다"(`src/ui/legal-links.js` `PURCHASE_CHECKS`). 둘 다 체크해야 구매 버튼이 켜진다.
+- 동의 없는 미성년자 결제의 사후 취소권은 약관 제10조·환불 정책 4장대로 유지한다.
+- 별도 연령 인증(본인인증·생년월일 입력)은 **보류**: 지금 상품 최대 1회 결제액이 ₩9,900이고 본인인증 비용·이탈 대비 이득이 작다. 다시 볼 조건 — 1회 결제액 상한 상향, 월 결제 한도 도입, 청소년 결제 민원·취소율 증가, 게임물 등급이 청소년이용불가로 결정될 때.
+- 탈퇴 시 남은 유료 재화: 청약철회 가능분은 탈퇴 전 환불 신청, 그 밖의 잔여 유료 재화는 탈퇴와 함께 소멸. 탈퇴 화면(`src/ui/login-sheet.js`, `WITHDRAW_PAID_NOTICE`)과 약관 제4조의2에서 사전 고지.
+- 정책 개정 공지 초안: [docs/notices/2026-10-30-policy-update.md](notices/2026-10-30-policy-update.md)(시행 2026-11-06).

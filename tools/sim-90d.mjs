@@ -21,6 +21,8 @@ import { TOWER, POWER_NEED, SEASON, TORMENT } from '../src/data/content-90d.js';
 import { normalizeLegend, grantLegendExp, allocate as allocateLegendNode, legendStats, LEGEND_NODES, LEGEND } from '../src/game/legend-rank.js';
 import { towerScale, towerFirstClearRewards, towerCap, activeEvents, applyEventRewards, seasonAt } from '../src/game/endgame-core.js';
 import { HEROES, heroStats, levelExp, starShards } from '../src/data/heroes.js';
+import { normalizeBounty, availableBounties, completeBounty, buyBountyItem } from '../src/game/bounty-board.js';
+import { BOUNTY_SHOP } from '../src/data/bounties.js';
 import { heroTrainingQuote } from '../src/game/hero-training.js';
 import { ITEMS_OF, SLOTS, RARITIES, enhanceCost, enhanceStones, enhanceChance, enhanceDown, destroyChance, enhanceStoneTier, STONE_KEY } from '../src/data/items.js';
 import { itemStats } from '../src/data/item-tier.js';
@@ -33,6 +35,8 @@ import { RUNE_SOURCES, RUNE_MERGE_COST, RUNE_DUPLICATE_CAP } from '../src/data/r
 import { socketCount, runeEffects } from '../src/game/rune-core.js';
 import { rollRuneDrops, giftBag, craftRuneExact } from '../src/game/rune-economy.js';
 import { applyBuildStats } from '../src/game/masterworks-combat.js';
+import { idleQuote } from '../src/game/idle-rewards.js';
+import { repairFullCost, DUR_WEAR, CLEAR_CARD_SIM } from '../src/game/clear-loop.js';
 
 const DAY_MS = 86400000;
 export const PERSONAS = Object.freeze({
@@ -70,7 +74,13 @@ export function spenderReport(base, days = 90) {
   }
   return out;
 }
-const MIN_STAGE = 3, MIN_HARD = 4;
+// 던전 동선(tools/route-economy.mjs): SIM_ROUTE_SHARE(0~1, SIM_ROUTE=direct 는 1)만큼의 판을 보스 직행으로 본다
+// (최단 경로 방 + 보스, 전체 정화 보너스 없음, 판 시간 = 방 수 비례 평균 0.61배). 기본 0 은 지금까지와 같은 전부 사냥 모형이다.
+const ROUTE_SHARE = process.env.SIM_ROUTE === 'direct' ? 1 : Math.min(1, Math.max(0, Number(process.env.SIM_ROUTE_SHARE) || 0));
+const ROUTE_TIME = 1 - ROUTE_SHARE * (1 - 0.61);
+// 별 3은 탐색 80% 초과가 필요하다(Battle.victory). 직행만 하는 모형은 별 2가 상한, 섞는 모형은 별이 필요한 판만 전부 사냥한다고 본다.
+const STAR_CAP = ROUTE_SHARE >= 1 ? 2 : 3;
+const MIN_STAGE = 3 * ROUTE_TIME, MIN_HARD = 4 * ROUTE_TIME;
 const LEGEND_COUNTED_DAYS_PER_WEEK = 3;
 const S2_MAJOR_MIN = CHAPTERS.length >= 12 ? 80 : 70;
 // 진행 모델 규약: POWER_NEED 판정은 기본 전투력(레벨·별·등급·장비)만 쓴다. 보너스층(숙련·세트·스킬·옛 출격 중 각인)은 빼고
@@ -92,18 +102,27 @@ export const towerNeed = (floor) => POWER_NEED.k * Math.pow(towerScale(floor), P
 const runCache = new Map();
 function runValue(idx, diffId) {
   const key = idx + diffId; if (runCache.has(key)) return runCache.get(key);
+  const full = runValueOf(idx, diffId, false);
+  if (!ROUTE_SHARE) { runCache.set(key, full); return full; }
+  // 직행 비율만큼 수입을 섞는다(에너지·관문 정보는 같다).
+  const direct = runValueOf(idx, diffId, true), mix = (a, b) => a * (1 - ROUTE_SHARE) + b * ROUTE_SHARE, out = { ...full, kills: { ...full.kills } };
+  for (const k of ['stageGold', 'fieldGold', 'combatExp', 'stageExp', 'stones', 'stones2', 'stones3', 'heroShards', 'transcendStones']) out[k] = mix(full[k], direct[k]);
+  for (const r of ['normal', 'elite', 'boss']) out.kills[r] = mix(full.kills[r], direct.kills[r]);
+  runCache.set(key, out); return out;
+}
+function runValueOf(idx, diffId, direct) {
   // 고통 단계는 깊이 칸(loot-tables difficultyDepth)으로 드랍 표·필드 골드를 읽고, 에너지 0·권장 레벨 80·처치 EXP ×(1 + expStep×n).
-  const base = perRun(idx, { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
+  const base = perRun(idx, direct ? { fullClear: false, route: 'direct' } : { fullClear: true }), d = DIFFICULTIES[diffId], tier = tormentTierOf(diffId), ch = base.ch;
   const dRank = tier ? difficultyDepth(diffId) : DIFFICULTY_ORDER.indexOf(diffId);
   const stage = stageDef(ch, base.st), out = { idx, ch, st: base.st, energy: tier ? 0 : base.energy, boss: base.boss, firstGems: base.firstGems,
     stageGold: Math.floor(base.stageGold * d.rewardMul), fieldGold: base.fieldGold * (1 + dRank * .2), combatExp: base.combatExp * (d.combatExpMul || 1),
-    stageExp: Math.floor(stage.rewards.exp * 1.5 * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
+    stageExp: Math.floor(stage.rewards.exp * (direct ? 1 : 1.5) * d.expMul), stones: stage.rewards.stones, stones2: 0, stones3: 0,
     heroShards: base.heroShards, transcendStones: base.transcendStones, kills: base.kills, recLevel: tier ? TORMENT.recLevel : recommendedLevel(ch, base.st) };
   for (const rank of ['normal', 'elite', 'boss']) {
     const t = lootTable(ch, rank, diffId), n = base.kills[rank];
     out.stones += n * t.stones * t.stoneChance; out.stones2 += n * t.stones2; out.stones3 += n * t.stones3;
   }
-  runCache.set(key, out); return out;
+  return out;
 }
 
 // ---------- 장비 ----------
@@ -127,6 +146,16 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
   const st = { level: 1, exp: 0, star: 1, shards: 0, grade: def.rarity, gold: 12000, stones: 12, stones2: 0, stones3: 0, gems: 1500, transcendStones: 0,
     energy: ENERGY.max, gear: Object.fromEntries(SLOTS.map((s) => [s, null])), storyUnlocked: 1, peak: {}, stars: {}, towerBest: 0, towerWeekCleared: 0, towerChestWeek: -1,
     tormentBest: 0, tormentRunsToday: 0, peakCount: 0 };
+  // 현상금 의뢰판(docs/BOUNTY_BOARD.md): 같은 규칙 함수로 돌린다. 저장은 게임 eco.s 모양 어댑터(별·최고 난이도)로 만들고, 별·난이도가 바뀔 때(peakCount)만 다시 만든다.
+  const bounty = normalizeBounty(null), bountyLog = [], bountyMinTotal = { v: 0 };
+  let bSave = { progress: { stars: {} }, endgame: { peak: {} } }, bSaveKey = -1;
+  const bountySave = () => {
+    if (bSaveKey === st.peakCount) return bSave;
+    const stars = {}, peak = {};
+    for (const [idx, n] of Object.entries(st.stars)) stars[`${Math.floor((idx - 1) / STAGES_PER_CHAPTER) + 1}-${(idx - 1) % STAGES_PER_CHAPTER + 1}`] = n;
+    for (const [idx, r] of Object.entries(st.peak)) peak[`${Math.floor((idx - 1) / STAGES_PER_CHAPTER) + 1}-${(idx - 1) % STAGES_PER_CHAPTER + 1}`] = r;
+    bSaveKey = st.peakCount; return (bSave = { progress: { stars }, endgame: { peak } });
+  };
   const totals = { goldEarned: 0, goldSpent: 0, trainingGold: 0, enhanceTries: 0, destroyed: 0 };
   const sssrDay = Math.round(ECONOMY_PACE.freeDays.SSSR * Math.pow(30 / P.minutes, .6));
   const daysLog = [], milestones = [];
@@ -226,6 +255,10 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     const mulG = decay * (1 + legendFx.goldPct), mulS = decay * (1 + legendFx.stonePct);
     earn('gold', Math.floor((comp.gold + v.fieldGold) * mulG)); earn('stones', Math.floor(comp.stones * mulS)); earn('stones2', Math.floor(v.stones2 * mulS)); earn('stones3', Math.floor(v.stones3 * mulS));
     if (first) earn('gems', v.firstGems);
+    // 클리어 루프(docs/CLEAR_LOOP.md): 카드 3장 중 1장(기댓값을 골드·강화석 몫으로) + 착용 무기 마모를 그 판에 수리한다고 본다(골드 소모처).
+    earn('gold', Math.floor(comp.gold * CLEAR_CARD_SIM.goldShare * mulG)); earn('stones', CLEAR_CARD_SIM.stones);
+    const w = st.gear.weapon;
+    if (w) { const fix = Math.ceil(repairFullCost(w, w.r) * DUR_WEAR.win / 100); if (st.gold >= fix) { st.gold -= fix; totals.goldSpent += fix; totals.repairGold = (totals.repairGold || 0) + fix; } }
     gainExp(v.combatExp + Math.floor(comp.exp * levelExperienceMultiplier(st.level, v.recLevel)));
     st.shards += v.heroShards * decay; st.transcendStones += v.transcendStones * decay;
     // 처치 수는 기댓값을 반올림해 장비 드랍을 굴린다(보스 1·정예·일반).
@@ -264,7 +297,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     const weekIndex = season.absoluteWeek;
     if (weekIndex !== st.towerWeek) { st.towerWeek = weekIndex; st.towerWeekCleared = 0; st.legendDaysCounted = 0; st.weekly = { hard: 0, tower: 0, boss: 0, upgrades: 0 }; }
     if (day === sssrDay && st.grade !== 'SSSR') { st.grade = 'SSSR'; mark(day, 'grade', '주력 영웅 SSSR(무과금 초월)'); }
-    st.dailyUpgrades = 0; let dayHard = 0, dayTower = 0, dayBoss = 0, newContent = 0, usedMin = 0, starvedMin = 0, dayTormentRuns = 0, dayTormentNew = 0;
+    st.dailyUpgrades = 0; let dayHard = 0, dayTower = 0, dayBoss = 0, newContent = 0, usedMin = 0, dayBountyMin = 0, dayBountyDone = 0, starvedMin = 0, dayTormentRuns = 0, dayTormentNew = 0;
     st.tormentRunsToday = 0; dayLegendFive = 0;
     const openIdxCap = chapterOpenIdx(day);
     const goldBefore = totals.goldEarned;
@@ -284,7 +317,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     for (let session = 0; session < P.sessions; session++) {
       // 세션 사이 회복(밤·낮 간격 ≥ 5시간 = 100 에너지). 마라톤은 세션 간격(energyGapH)만큼만 찬다.
       st.energy = P.energyGapH && session > 0 ? Math.min(ENERGY.max, st.energy + Math.floor(P.energyGapH * 3600 / ENERGY.regenSec)) : ENERGY.max;
-      let time = P.minutes / P.sessions;
+      const sessionMin = P.minutes / P.sessions; let time = sessionMin;
       while (time > 0) {
         const pw = power(), ok = (need) => pw >= need * P.skill;
         let acted = false;
@@ -293,7 +326,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
           const idx = st.storyUnlocked, v = runValue(idx, 'story');
           if (ok(stageNeed(idx)) && st.energy >= v.energy) {
             st.energy -= v.energy; time -= MIN_STAGE; playStage(idx, 'story', events, day);
-            st.stars[idx] = pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2; st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
+            st.stars[idx] = Math.min(STAR_CAP, pw >= stageNeed(idx) * P.skill * 1.08 ? 3 : 2); st.peak[idx] = 0; st.peakCount++; st.storyUnlocked++; newContent++; if (v.boss) dayBoss++;
             if (v.st === STAGES_PER_CHAPTER) mark(day, 'story', `스토리 ${v.ch}-10`);
             acted = true;
           }
@@ -307,7 +340,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
             const v = runValue(next.idx, next.diff);
             if (ok(stageNeed(next.idx, next.diff)) && st.energy >= v.energy) {
               st.energy -= v.energy; time -= MIN_HARD; playStage(next.idx, next.diff, events, day);
-              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = 3;
+              st.peakCount++; st.peak[next.idx] = DIFFICULTY_ORDER.indexOf(next.diff); if (next.diff === 'adept' || next.diff === 'nightmare') st.stars[next.idx] = STAR_CAP;
               dayHard++; newContent++; if (v.boss) dayBoss++;
               if (v.st === STAGES_PER_CHAPTER) mark(day, next.diff, `${DIFFICULTIES[next.diff].name} ${v.ch}-10`);
               acted = true;
@@ -326,6 +359,23 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
             acted = true;
           }
         }
+        // 3b) 현상금 의뢰(에너지 0): 열린 의뢰 중 가장 앞 하나를 def.minutes 분에 끝낸다. 판정은 항상 통과하는 숙련 플레이로 본다(조건 재시도 시간은 분에 포함).
+        let bountyLeft = false;
+        if (!acted) {
+          const save = bountySave(), def = availableBounties(bounty, save, { limit: 1 })[0];
+          if (def) {
+            if (time < 3) bountyLeft = true; // 의뢰 한 건 미만 자투리는 '할 일 없음'이 아니다(고통 단계 자투리와 같은 취급)
+            else if (time >= def.minutes) {
+              time -= def.minutes; dayBountyMin += def.minutes; bountyMinTotal.v += def.minutes;
+              const r = completeBounty(bounty, save, def.id, { win: true, fullClear: true, time: 0, revives: 0, maxCombo: 999, stars: 3 });
+              if (r.ok) {
+                dayBountyDone++; earn('gold', r.rewards.gold); earn('stones', r.rewards.stones);
+                for (const u of r.ups) bountyLog.push({ day, minuteOfDay: Math.round(usedMin + sessionMin - time), rank: u.rank });
+                acted = true;
+              }
+            }
+          }
+        }
         // 4) 고통 단계(마라톤): 최고 단계 도전 → 남는 시간 반복. 에너지 0, 하루 fullRuns 판 뒤 골드·재료 감쇠.
         if (!acted && P.torment && time >= TORMENT.minutesPerRun) {
           const run = tormentChoice(st, pw, P.skill, st.tormentRunsToday < TORMENT.fullRuns);
@@ -339,7 +389,7 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
           }
         }
         // 세션 끝의 한 판 미만 자투리는 '할 일 없음'이 아니다(마라톤만 — 다른 페르소나의 기준선은 그대로).
-        if (!acted) { if (!(P.torment && time < TORMENT.minutesPerRun)) starvedMin += time; break; }
+        if (!acted) { if (!(P.torment && time < TORMENT.minutesPerRun) && !bountyLeft) starvedMin += time; break; }
         train(); enhanceAll();
       }
       usedMin += P.minutes / P.sessions;
@@ -351,6 +401,10 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
     const daily = { towerFloors: dayTower, hardClears: dayHard, bossAttempts: dayBoss, upgrades: st.dailyUpgrades };
     st.weekly.hard += dayHard; st.weekly.tower += dayTower; st.weekly.boss += dayBoss; st.weekly.upgrades += st.dailyUpgrades;
     for (const c of DAILY_CONTRACTS) if (c.stat in daily && daily[c.stat] >= c.target) { earn('gold', c.rewards.gold || 0); earn('stones', c.rewards.stones || 0); }
+    // 방치 보급(docs/RPG_ESSENTIALS.md E2): 세션마다 직전 공백(상한 12시간)만큼. 마라톤은 세션 사이 energyGapH.
+    { const gapH = Math.min(12, P.energyGapH ?? Math.max(0, (24 - P.minutes / 60) / P.sessions));
+      const idle = idleQuote({ since: 0, comebackAt: 0 }, { unlocked: st.storyUnlocked }, Math.round(gapH * 3600000)).rewards;
+      for (let i = 0; i < P.sessions; i++) { earn('gold', idle.gold || 0); earn('stones', idle.stones || 0); totals.idleGold = (totals.idleGold || 0) + (idle.gold || 0); } }
     if (season.day === 6) { // 주의 마지막 날 주간 임무·탑 보급 정산
       const weekly = { towerFloors: st.weekly.tower, hardClears: st.weekly.hard, bossAttempts: st.weekly.boss, upgrades: st.weekly.upgrades };
       for (const c of WEEKLY_CONTRACTS) if (c.stat in weekly && weekly[c.stat] >= c.target) { earn('gold', c.rewards.gold || 0); earn('stones', c.rewards.stones || 0); }
@@ -358,17 +412,19 @@ export function simulate(personaId, seed, { days = 90, tormentAll = false } = {}
       const tier = [...TOWER.weeklyChest].reverse().find((row) => st.towerBest >= row.floor);
       if (tier && st.towerWeekCleared > 0) for (const k of ['gold', 'stones', 'stones2', 'stones3', 'gems']) earn(k, tier[k] || 0);
     }
+    // 현상금 상인: 하루 끝에 증표로 강화석 꾸러미를 되는 만큼 산다(장식은 제외).
+    for (const item of BOUNTY_SHOP) if (item.grant.stones || item.grant.stones2) for (let i = 0; i < 10; i++) { const r = buyBountyItem(bounty, item.id, weekIndex); if (!r.ok) break; earn('stones', r.grant.stones || 0); earn('stones2', r.grant.stones2 || 0); }
     train(); enhanceAll(); craftRunes(); mergeAll();
     while (st.star < 5 && st.shards >= starShards(st.star)) { st.shards -= starShards(st.star); st.star++; mark(day, 'star', `별 ${st.star}`); }
     daysLog.push({ day, level: st.level, power: power(), story: st.storyUnlocked - 1, hard: hardCounts(st), tower: st.towerBest,
       gold: st.gold, goldEarned: totals.goldEarned - goldBefore, stones: st.stones, stones2: st.stones2, stones3: st.stones3,
-      enh: SLOTS.map((s) => st.gear[s] ? `${st.gear[s].r}+${st.gear[s].enh}` : '-').join(' '), newContent, usedMin: Math.round(usedMin), starvedMin: Math.round(starvedMin),
+      enh: SLOTS.map((s) => st.gear[s] ? `${st.gear[s].r}+${st.gear[s].enh}` : '-').join(' '), newContent, usedMin: Math.round(usedMin), starvedMin: Math.round(starvedMin), bountyMin: dayBountyMin, bountyDone: dayBountyDone, hunterRank: bounty.rank, bountyMarks: bounty.marks,
       legendCounted, torment: st.tormentBest, tormentRuns: dayTormentRuns, tormentNew: dayTormentNew, legendRank: legend.rank, legendPoints: legend.points, legendFive: dayLegendFive,
       legendPowerPct: +(((basePower().power / powerWithout()) - 1) * 100).toFixed(1),
       events: events.map((e) => e.id), runes: runeCounts(), runeDust: runes.dust, runeDropped: runes.dropped, runeCrafted: runes.crafted,
       runePowerPct: +(((runePower() / basePower().power) - 1) * 100).toFixed(1) });
   }
-  return { persona: personaId, seed, days: daysLog, milestones, totals, sssrDay };
+  return { persona: personaId, seed, days: daysLog, milestones, totals, sssrDay, bountyLog, bountyMinTotal: bountyMinTotal.v };
 }
 
 function hardCounts(st) {
@@ -502,6 +558,7 @@ export function summarize(runs, days) {
   const lastWeek = (run) => run.days.slice(-7);
   return {
     persona: runs[0].persona, seeds: runs.length,
+    bounty: { totalMin: dist((r) => r.bountyMinTotal), done: dist((r) => r.days.reduce((a, d) => a + d.bountyDone, 0)), hunterRankEnd: dist((r) => r.days.at(-1).hunterRank), marksEnd: dist((r) => r.days.at(-1).bountyMarks) },
     milestones: {
       story_6_10: dist((r) => firstDay(r, 'story', '스토리 6-10')),
       adept_6_10: dist((r) => firstDay(r, 'adept', '숙련 6-10')),

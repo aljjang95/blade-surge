@@ -1,0 +1,27 @@
+{
+  "purpose": "검성 무기 3D 4차(도감·마을 15) + 5차(원정 3) + w_blood 재생성. 1차 weapon-3d-brief.json과 같은 흐름·conceptPrompt. Tripo 계정은 heartytn(대표님 2026-10-30), 공유 계정·tripo 금고는 쓰지 않음.",
+  "conceptPromptRef": "weapon-3d-brief.json#conceptPrompt",
+  "targetTriangles": 3000,
+  "maxTriangles": 4000,
+  "weapons": [
+    { "id": "gear_weapon_n_1", "wave": 4, "rarity": "N", "form": "sword", "extra": "plain steel arming sword, straight double-edged blade, flat square cross guard, navy wrapped grip, silver ring pommel" },
+    { "id": "gear_weapon_n_2", "wave": 4, "rarity": "N", "form": "sword", "extra": "very wide flat steel broad blade like a cleaver with an angled tip, no cross guard, brown leather grip, round steel ball pommel" },
+    { "id": "gear_weapon_n_3", "wave": 4, "rarity": "N", "form": "sword", "extra": "curved bronze scimitar blade, small bronze cross guard with round center boss, brown leather grip, bronze ball pommel" },
+    { "id": "gear_weapon_s_1", "wave": 4, "rarity": "S", "form": "sword", "extra": "steel sword with large saw teeth along one edge, no cross guard, navy wrapped grip, steel ball pommel" },
+    { "id": "gear_weapon_s_2", "wave": 4, "rarity": "S", "form": "sword", "extra": "light blue faceted ice-crystal blade, gold cross guard with a blue diamond gem, brown grip, blue crystal pommel" },
+    { "id": "gear_weapon_s_3", "wave": 4, "rarity": "S", "form": "sword", "extra": "steel blade with a gold center ridge, gold feather-wing cross guard with a round amber gem, brown grip, gold spike pommel" },
+    { "id": "gear_weapon_e_1", "wave": 4, "rarity": "E", "form": "sword", "extra": "heavy wide steel cleaver blade with two small blue diamond inlays along the fuller, silver cross guard, dark grip, spiked silver star pommel with a blue gem" },
+    { "id": "gear_weapon_e_2", "wave": 4, "rarity": "E", "form": "sword", "extra": "thin needle rapier blade, silver crescent-moon shaped guard with a small blue star gem, navy grip, blue gem pommel" },
+    { "id": "gear_weapon_e_3", "wave": 4, "rarity": "E", "form": "sword", "extra": "straight steel rapier blade, ornate gold swept-hilt basket of looping rings around a large blue sphere gem, gold pommel with blue gem" },
+    { "id": "gear_weapon_l_1", "wave": 4, "rarity": "L", "form": "greatsword", "extra": "large curved golden greatsword blade with red engraved inlay lines, gold horn-shaped guard with a red round gem, dark red grip, red gem pommel" },
+    { "id": "gear_weapon_l_2", "wave": 4, "rarity": "L", "form": "greatsword", "extra": "golden greatsword with a dark brown jagged dragon-scale blade core and glowing orange molten cracks, golden spiked sun guard, the golden star rays fused solidly to the guard, gold sun pommel with orange gem" },
+    { "id": "gear_weapon_l_3", "wave": 4, "rarity": "L", "form": "greatsword", "extra": "wavy flame-shaped lilac-silver greatsword blade with a gold edge, gold looped ring guard with an amber center, gold radiant star rays fused solidly to the guard, gold ring pommel with an orange tassel" },
+    { "id": "w_town_oath", "wave": 4, "rarity": "S", "form": "sword", "extra": "straight steel longsword, white feather wings on the gold cross guard with a green emerald gem, navy grip, green gem pommel" },
+    { "id": "w_town_ember", "wave": 4, "rarity": "E", "form": "sword", "extra": "steel sword with notched serrated edges, silver cross guard with a red ruby, brown grip, spiked silver pommel with a red gem" },
+    { "id": "w_town_star", "wave": 4, "rarity": "L", "form": "greatsword", "extra": "broad ivory-gold greatsword blade with orange diamond inlays, large golden sun-star guard with an orange gem, the radiant rays fused solidly to the guard, dark purple grip, gold ring pommel with orange gem" },
+    { "id": "exp_glasswarden_weapon", "wave": 5, "rarity": "U", "form": "greatsword", "extra": "translucent pale-blue glass crystal greatsword blade with jagged shard edges, silver crescent leaf guard with a blue gem, navy grip, blue bead pommel with a light blue tassel, all crystal shards solidly attached to the blade" },
+    { "id": "exp_emberknight_weapon", "wave": 5, "rarity": "U", "form": "greatsword", "extra": "dark charcoal stone greatsword blade with glowing orange lava cracks and orange flame-shaped edges solidly attached, bronze cross guard with an orange diamond gem, brown grip, orange gem pommel" },
+    { "id": "exp_starreader_weapon", "wave": 5, "rarity": "U", "form": "greatsword", "extra": "deep navy blue greatsword blade with glowing white constellation lines and star dots, silver edge, silver four-point star guard with a blue sphere gem, navy grip, blue crystal pommel, no floating sparkles" },
+    { "id": "w_blood", "wave": 3, "rarity": "U", "form": "greatsword", "regen": true, "extra": "the blade itself is dark blackish crimson red metal, not white or ivory, curved jagged blood greatsword with bright red edge highlights, black bat-wing cross guard with a red diamond gem, dark red wrapped grip, black spiked pommel with a red drop" }
+  ]
+}

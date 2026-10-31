@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { EliteAffixes } from './elite-affixes.js';
-import { speciesSourceId } from '../data/stages.js';
+import { ENEMIES, speciesSourceId } from '../data/stages.js';
 
 export const REGION_TRAITS = {
   garden: { id: 'echo', name: '망각의 잔향', hint: '평타로 쓰러진 해골은 한 번 다시 일어납니다. 마무리 타격·스킬로 뼈를 부수세요.' },
@@ -23,8 +23,14 @@ export const REGION_SPECIES_VERBS = {
   tide: { squidle: { key: 'tether', name: '촉수 낚아채기' } },
   crown: { ninja: { key: 'blink', name: '그림자 걸음' } },
 };
-// 1장 전용 Tripo 몸(Ch1_*: 관꾼·곡하는 원령 갈래)도 언데드라 망각의 잔향으로 되살아난다.
+// 1장 전용 Tripo 몸(Ch1_*)도 언데드라 망각의 잔향으로 되살아난다.
 export const SKELETAL = /^Skeleton_|Skull|^Ch1_/;
+// 다른 장의 Tripo 몸 갈래(3장 사서·6장 승객 등)는 몸이 아니라 원본 종이 해골일 때만 되살아난다 — 교체 전과 같은 적만 부활한다.
+export function isSkeletalSpecies(model, speciesId) {
+  if (SKELETAL.test(model || '')) return true;
+  const src = speciesId ? speciesSourceId(speciesId) : null;
+  return !!(src && src !== speciesId && SKELETAL.test(ENEMIES[src]?.model || ''));
+}
 const POOLS = 12;
 const _v = new THREE.Vector3();
 
@@ -85,7 +91,7 @@ export class RegionTraits {
   onDeath(e, flair) {
     if (!this.trait || e.isBoss) return;
     const g = this.game, id = this.trait.id;
-    if (id === 'echo' && !flair && !e.echoed && !e.summoned && !e.isElite && SKELETAL.test(e.def.model || '')) {
+    if (id === 'echo' && !flair && !e.echoed && !e.summoned && !e.isElite && isSkeletalSpecies(e.def.model, e.runtimeSpeciesId)) {
       const room = e.homeRoom, type = e.runtimeSpeciesId, x = e.pos.x, z = e.pos.z;
       if (!room || !type) return;
       room.spawnsDue = (room.spawnsDue || 0) + 1;
@@ -108,6 +114,23 @@ export class RegionTraits {
       this.pool(e.pos.x, e.pos.z, 'undertow', 1.2); this.announce();
       g.fx.groundTex(_v.set(e.pos.x, 0, e.pos.z), 'circle_gold', 0x48dabd, { r0: 5, r1: .6, life: 1.2, spin: -2.5, fadeIn: .05 });
     }
+  }
+  /** AUTO 회피: 영웅이 쇳물(예고 중 포함) 안에 서 있으면 가장 가까운 바깥 지점을 돌려준다. 없으면 null. 고정 객체를 재사용한다.
+   *  쇳물 힌트("쇳물 밖에서 싸우세요")를 AUTO 도 따른다 — 2장 실측에서 AUTO 가 쇳물 위에 서서 받은 피해가 전체의 13~29%였다. */
+  autoEscape(p) {
+    if (!p) return null;
+    let best = null, bestD = Infinity;
+    for (const pl of this.pools) {
+      if (pl.life <= 0 || pl.kind !== 'slag') continue;
+      const d = Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z);
+      if (d < 1.3 + .45 && d < bestD) { bestD = d; best = pl; }
+    }
+    if (!best) return null;
+    const out = this._escape || (this._escape = { x: 0, z: 0 });
+    const dx = p.pos.x - best.x, dz = p.pos.z - best.z, l = Math.hypot(dx, dz);
+    const ux = l > 1e-3 ? dx / l : 1, uz = l > 1e-3 ? dz / l : 0;
+    out.x = best.x + ux * 2.4; out.z = best.z + uz * 2.4;
+    return out;
   }
   activePools(kind) { let n = 0; for (const p of this.pools) if (p.life > 0 && p.kind === kind) n++; return n; }
   pool(x, z, kind, life) {

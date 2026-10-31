@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { gearLook } from '../data/gear-catalog.js';
 import { fitForgedWeapon } from './forged-weapons.js';
+import { itemWeaponGlb } from './item-weapon-glb.js';
 
 const cache = new Map();
 export const ITEM_WEAPON_FORMS = Object.freeze({
@@ -291,6 +292,9 @@ function buildBoots(a, b) {
 }
 
 export function buildItemGeometry(form, item) {
+  // 형태별 Tripo GLB(8형태). 없거나 형태가 다르면 아래 절차적 생성으로 폴백한다.
+  const glb = itemWeaponGlb(item.id, form);
+  if (glb) return glb.geometry.clone();
   const look = gearLook(item), spec = look.weapon || look.ring || look.boots;
   const a = assembler(spec.palette, spec.surface);
   if (form === 'ring') buildRing(a, look.ring);
@@ -343,7 +347,7 @@ export function buildItemGeometry(form, item) {
  * @param {THREE.Box3|null} bounds
  */
 export function acquireItemGeometry(form, item, bounds = null) {
-  const key = `${form}:${item.id}`;
+  const key = `${form}:${item.id}${itemWeaponGlb(item.id, form) ? ':glb' : ''}`;
   let entry = cache.get(key);
   if (!entry) { entry = { geometry: buildItemGeometry(form, item), fitted: new Map(), refs: 0 }; cache.set(key, entry); }
   let geometry = entry.geometry;
@@ -370,7 +374,10 @@ export function acquireItemGeometry(form, item, bounds = null) {
 }
 
 export function itemForgeCacheSize() { return cache.size; }
-export function createItemMaterial(item) {
+/** @param {any} item @param {string|null} [form] 무기 형태(GLB 가 있을 때만 GLB 재질). 생략하면 절차적 재질. */
+export function createItemMaterial(item, form = null) {
+  const glb = form ? itemWeaponGlb(item.id, form) : null;
+  if (glb) return [glb.material.clone()];
   const surface = gearLook(item).weapon?.surface;
   const metal = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: surface === 'ice' ? .25 : .33, metalness: .82 });
   // 균열 파츠만 발광한다. 날·손잡이 전체를 발광 덩어리로 만들지 않는다.
@@ -388,7 +395,7 @@ export function createItemMaterial(item) {
 
 /** 아이콘과 런타임이 같은 원본 형상을 소비한다. 반환 메시가 자신의 참조를 소유한다. */
 export function buildGearModel(item, form = item.slot === 'weapon' ? 'sword' : item.slot) {
-  const lease = acquireItemGeometry(form, item), material = createItemMaterial(item);
+  const lease = acquireItemGeometry(form, item), material = createItemMaterial(item, form);
   const mesh = new THREE.Mesh(lease.geometry, material); mesh.name = `Gear_${item.id}`;
   let disposed = false;
   mesh.userData.dispose = () => { if (disposed) return; disposed = true; mesh.removeFromParent(); lease.release(); for (const part of material) part.dispose(); };

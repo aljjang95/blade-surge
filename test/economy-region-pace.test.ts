@@ -4,7 +4,7 @@ import { lootTable, recommendedLevel, levelExperienceMultiplier } from '../src/d
 import { DIFFICULTY_ORDER, DIFFICULTIES, applyDifficulty } from '../src/game/difficulty.js';
 import { stageDef, ENEMIES } from '../src/data/stages.js';
 import { MATERIALS } from '../src/data/expansion.js';
-import { levelExp } from '../src/data/heroes.js';
+import { levelExp, baseLevelExp, EARLY_LEVEL_EXP_FLOOR } from '../src/data/heroes.js';
 import { Economy } from '../src/game/economy.js';
 import { DropSystem } from '../src/game/drops.js';
 import { Battle } from '../src/game/battle.js';
@@ -73,7 +73,8 @@ test('실제 onKill은 출격 스냅샷 난이도로 두 재료를 지급하고 
 
 test('장 끝 도달 레벨과 다음 장 권장 차이는 -3~+1이며 하루 시간·에너지 한도를 지킨다', () => {
   const report = progressionEstimate();
-  expect(report.chapters.map(c => c.level)).toEqual([20, 29, 35, 39, 42, 44, 46]);
+  // 2026-10-29 입문 레벨 곡선(1-1 Lv3·첫 각성 약 1시간): 예전 [20, 29, 35, 39, 42, 44, 46]. 1·2장 권장 레벨도 같은 곡선으로 옮겨 간격 규칙(-3~+1)은 그대로다.
+  expect(report.chapters.map(c => c.level)).toEqual([8, 21, 33, 38, 41, 44, 45]);
   for (const chapter of report.chapters.filter(c => c.gap !== null)) {
     expect(chapter.gap!).toBeGreaterThanOrEqual(-3); expect(chapter.gap!).toBeLessThanOrEqual(1);
     expect(chapter.nextRecommended).toBe(recommendedLevel(chapter.chapter + 1));
@@ -109,6 +110,6 @@ test('처치 XP는 실제 roster·monsterXp와 같고 정산 XP에만 마지막 
     const receipt = eco.completeStage(stage, 3, { fullClear: true });
     expect(receipt.combatExp).toBe(0);
     expect(receipt.exp).toBe(Math.floor((stage.rewards.exp + Math.floor(stage.rewards.exp * .5)) * levelExperienceMultiplier(beforeLevel, recommendedLevel(1, 1))));
-    expect(levelExp(20)).toBe(2321);
+    expect(baseLevelExp(20)).toBe(2321); expect(levelExp(20)).toBe(Math.max(2321, EARLY_LEVEL_EXP_FLOOR));
   } finally { Math.random = random; }
 });

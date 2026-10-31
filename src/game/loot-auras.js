@@ -10,11 +10,12 @@ import { RARITY_COLOR } from '../data/items.js';
  * N 은 아주 약한 바닥 링만, S 부터 기둥이 생기고 E·U·L 로 갈수록 높고 넓고 밝다.
  */
 export const LOOT_AURA = Object.freeze({
-  N: { ground: [.7, .08, .14, .45, 0], beam: null, gain: 1 },
-  S: { ground: [.88, .14, .42, .65, 0], beam: [1.7, .6, .42], gain: 1.15 },
-  E: { ground: [1.05, .2, .62, .85, .25], beam: [3.6, .85, .62], gain: 1.45 },
-  U: { ground: [1.25, .26, .8, 1, .6], beam: [5.2, 1.05, .78], gain: 1.85 },
-  L: { ground: [1.5, .32, 1, 1, 1], beam: [7.4, 1.3, .95], gain: 2.4 },
+  // 2026-10-30 드랍 모델 축소에 맞춰 바닥 반지름 · 기둥 폭을 줄였다(높이 · 세기 = 등급 신호는 유지).
+  N: { ground: [.48, .08, .14, .45, 0], beam: null, gain: 1 },
+  S: { ground: [.58, .14, .42, .65, 0], beam: [1.7, .42, .42], gain: 1.15 },
+  E: { ground: [.68, .2, .62, .85, .25], beam: [3.6, .6, .62], gain: 1.45 },
+  U: { ground: [.8, .26, .8, 1, .6], beam: [5.2, .74, .78], gain: 1.85 },
+  L: { ground: [.95, .32, 1, 1, 1], beam: [7.4, .9, .95], gain: 2.4 },
 });
 /** 저화질: 기둥 높이 · 세기를 줄인다(바닥 링은 그대로 둬 등급은 계속 읽힌다). */
 export const LOOT_AURA_LITE = Object.freeze({ height: .68, intensity: .8 });

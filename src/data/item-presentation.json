@@ -4,7 +4,7 @@
     "src/data/gear-catalog.js": "4c28bb17f47bb1a77d39b9a44241483cd71361c0e62e42cac51a890643ab7cc9",
     "src/data/items.js": "d2dc940822c31e32831f7f6f549074350719b72c47dd359b81b149cacb76f20a",
     "src/data/armory.js": "5551d3b7a8543b08bd5e53d350027877a7f6283535c0ca489bbd9c222346efeb",
-    "src/engine/item-forge.js": "7c71d0722677a0e95cfd06dcfd324fe805c444e68a4469fd060886dcf5cc8391",
+    "src/engine/item-forge.js": "9e99f134e99fabf49ebeb5c71ab99ed563cd828020d49b490daa4f778c0ea117",
     "src/game/armor-appearance.js": "1fec39abb9bb229ebcbf99043ee99aaf291afc9dc1c22d3c1a9be9513dfd15d8",
     "tools/item-render-studio.html": "fe0f7417efdd000463bedd90cf19483b5da6aa7ad3b98c35b43cb76742227832"
   },

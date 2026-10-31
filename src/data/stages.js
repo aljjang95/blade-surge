@@ -68,26 +68,77 @@ const DUNGEON_ROSTERS = {
 export const CHAPTER_SPECIES = Object.freeze({
   // 2026-10-28 운영 캡처: 편성 곡선(squads stageCurve)이 먼저 세우는 종(1장 방패·원거리, 2장 부족 전사·임프)이 옛 몸이라
   // 2-1 일반 방에 새 몸이 하나도 없었다. 처음 소개되는 주력 종도 장 전용 몸으로 바꾼다(수치·행동은 각 원본 복사).
-  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp' }),
-  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp' }),
+  1: Object.freeze({ skel_minion: 'ch1_coffinbearer', ghost: 'ch1_mourner', skel_shield: 'ch1_tombguard', ghost_skull: 'ch1_mourner_wail', skel_mage: 'ch1_mourner_dirge', skel_rogue: 'ch1_hoodbearer', grave_burrower: 'ch1_gravewisp',
+    bell_wisp: 'ch1_mourner_bell', comet_spark: 'ch1_mourner_comet', nightglass_page: 'ch1_mourner_night', mirage_hound: 'ch1_hoodbearer_mirage', mossbound_scout: 'ch1_coffinbearer_moss', frost_mirror: 'ch1_tombguard_frost' }),
+  2: Object.freeze({ orc: 'ch2_smith', tribal_shaman: 'ch2_emberimp', tribal: 'ch2_smith_line', imp: 'ch2_emberimp_line', bomb_imp: 'ch2_emberimp_bomb', cacto_wall: 'ch2_anvilguard', ash_burrower: 'ch2_ashimp',
+    orc_blob: 'ch2_emberimp_hammer', chain_forger: 'ch2_anvilguard_chain', mirage_hound: 'ch2_emberimp_haze', skel_minion: 'ch2_smith_apprentice', nightglass_page: 'ch2_emberimp_scribe', frost_mirror: 'ch2_anvilguard_mirror', comet_spark: 'ch2_emberimp_spark', astral_orbitling: 'ch2_anvilguard_star' }),
   // 3장(2026-10-28 Tripo): 서리 해골 사서(방패·자객·뼈 오크·굴착 자리)·망령 검열관(원령·해골 망령·주술사·사제 자리).
   // 3-1·3-2 일반 방은 부패 슬라임이 31%라 그 자리도 사서 몸으로 바꾼다(곰팡이 핀 사서). 골렘 수호자는 옛 몸 그대로 소수로 남긴다.
   // 4장(2026-10-29 Tripo): 따개비 수부(부유 촉수·심연 슬라임·이계 침입자·포자 괴물·골렘 수호자 자리, 합류 경로의 해골 병사·원령)·
   // 미끼등 아귀(심연 눈알·심연 폭탄·심연 주시자 자리, 합류 경로의 해골 망령). 진화한 독침벌은 옛 몸 그대로 소수로 남긴다.
-  4: Object.freeze({ squidle: 'ch4_drowned', blob_pink: 'ch4_drowned_line', alien: 'ch4_drowned_anchor', mushnub: 'ch4_drowned_coral', golem_guard: 'ch4_plankguard', skel_minion: 'ch4_deckhand', ghost: 'ch4_drowned_drift', bomb_abyss: 'ch4_lurer_bomb', glub: 'ch4_lurer', abyss_seer: 'ch4_lurer_seer', ghost_skull: 'ch4_lurer_glim' }),
-  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer' }),
+  4: Object.freeze({ squidle: 'ch4_drowned', blob_pink: 'ch4_drowned_line', alien: 'ch4_drowned_anchor', mushnub: 'ch4_drowned_coral', golem_guard: 'ch4_plankguard', skel_minion: 'ch4_deckhand', ghost: 'ch4_drowned_drift', bomb_abyss: 'ch4_lurer_bomb', glub: 'ch4_lurer', abyss_seer: 'ch4_lurer_seer', ghost_skull: 'ch4_lurer_glim',
+    comet_spark: 'ch4_lurer_comet', nightglass_page: 'ch4_lurer_night', frost_mirror: 'ch4_plankguard_mirror', mirage_hound: 'ch4_drowned_mist' }),
+  3: Object.freeze({ blob_green: 'ch3_moldkeeper', ghost: 'ch3_censor', ghost_skull: 'ch3_censor_slip', skel_mage: 'ch3_censor_tome', skel_priest: 'ch3_censor_quill', skel_shield: 'ch3_shelfguard', skel_rogue: 'ch3_librarian', bone_orc: 'ch3_keykeeper', frost_burrower: 'ch3_icecrawler', skel_minion: 'ch3_pagebearer',
+    nightglass_page: 'ch3_censor_night', frost_mirror: 'ch3_shelfguard_mirror', mirage_hound: 'ch3_librarian_shade', comet_spark: 'ch3_censor_comet', bell_wisp: 'ch3_censor_bell', astral_pagelet: 'ch3_censor_astral', astral_orbitling: 'ch3_shelfguard_star' }),
+  // 5장(2026-10-29 Tripo): 새벽 가면 닌자(닌자·임프·심연 폭탄 자리)·왕관 병사(방패병·뼈 오크·이계 침입자 자리)·
+  // 왕관 고리 주술사(심연 주시자·화염 정령·부족 주술사 자리). 왕관 일반 방의 9종을 모두 바꾸고 정예만 옛 몸으로 남긴다.
+  // 소환으로만 나오는 자리도 5장 몸으로 바꾼다(2026-10-29): 법정·빈 왕좌 경로 던전 대장의 환영 사냥개(옛 Big_Ninja 몸),
+  // 행렬·등대·합류 경로 던전 대장의 종의 잔영·해골 병사·혜성 불씨, 왕관 고리 주술사의 부유 촉수·칙령 낭독 주술사의 꼬마 오크가
+  // 5장 방에 옛 몸으로 섞이던 문제.
+  5: Object.freeze({ ninja: 'ch5_dawnninja', imp: 'ch5_dawnninja_squire', bomb_abyss: 'ch5_dawnninja_flare', skel_shield: 'ch5_swordwall', bone_orc: 'ch5_crownsoldier_chain', alien: 'ch5_crownsoldier', abyss_seer: 'ch5_seer', hywirl: 'ch5_seer_ember', tribal_shaman: 'ch5_seer_herald',
+    mirage_hound: 'ch5_dawnninja_mirage', squidle: 'ch5_dawnninja_called', orc_blob: 'ch5_crownsoldier_levy',
+    bell_wisp: 'ch5_dawnninja_wisp', comet_spark: 'ch5_dawnninja_spark', skel_minion: 'ch5_crownsoldier_watch' }),
+  // 6장(2026-10-29 Tripo, 잔향 장): 경로마다 가장 흔한 근접 졸병 자리를 귀환 열차 승객 잔향 갈래로 바꾼다(일반 방의 약 40~60%).
+  // 나머지 자리는 그 경로의 고향 장(DUNGEON_HOME) 전용 몸으로 나온다 — 1~5장 적의 잔향이다(chapterSpeciesSwap).
+  6: Object.freeze({ skel_minion: 'ch6_passenger', ghost: 'ch6_passenger_drift', skel_rogue: 'ch6_passenger_hurry', imp: 'ch6_passenger_child', tribal: 'ch6_passenger_porter', cacto_wall: 'ch6_passenger_trunk', golem_guard: 'ch6_passenger_gate', squidle: 'ch6_passenger_tide', mushnub: 'ch6_passenger_moss', frost_burrower: 'ch6_passenger_lost',
+    orc_blob: 'ch6_passenger_stray' }),
+  // 1~4·6장 소환 전용 갈래(2026-10-29 3차): 경로 던전 대장(행렬 종의 잔영·법정 환영 사냥개·온실 이끼 척후·합류 혜성 불씨·서고 밤유리 서기관·
+  // 역류 성운 쪽지령·용광로 사슬 주조공·봉기 해골 병사)과 그 주술사들이 부르는 졸병(서리 거울·별자리 궤도령·불씨 임프의 꼬마 오크)이
+  // 장 전용 몸 방에 옛 몸으로 섞이던 자리. 6장은 고향 장 표(잔향)가 대부분을 덮고, 6-3 주소 경로의 꼬마 오크만 승객 갈래로 둔다.
+  // 7장(2026-10-29 Tripo): 해골 시민(졸병·방패병·자객·뼈 오크·폭탄 슬라임 자리)·굽쇠 주술사(주술사·사제·해골 망령·원령 자리).
+  // 종지기는 이미 7장 전용 Tripo 몸이라 그대로 두고, 부패 슬라임(경로 6~10에서 약 12%)만 옛 몸으로 소수 남긴다. 정예도 옛 몸 그대로.
+  7: Object.freeze({ skel_minion: 'ch7_citizen', skel_rogue: 'ch7_citizen_late', skel_shield: 'ch7_citizen_ledger', bone_orc: 'ch7_citizen_hauler', bomb_slime: 'ch7_citizen_fuse', skel_mage: 'ch7_tuner', skel_priest: 'ch7_tuner_cantor', ghost_skull: 'ch7_tuner_echo', ghost: 'ch7_tuner_drift' }),
 });
-/** 캠페인 1~4장에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
+// 잔향 장(homecoming)이 고향 장 전용 몸을 찾을 때의 테마 → 장 번호.
+const ECHO_HOME_CHAPTER = Object.freeze({ garden: 1, forge: 2, frost: 3, tide: 4, crown: 5 });
+const echoSwaps = new Map();
+/**
+ * 이 장·경로의 적 id → 장 전용 종 표. 잔향 장(6장)은 경로의 고향 장 표 위에 6장 승객 갈래를 덮는다
+ * (예: 6-4 귀항 등대 → 4장 수부·아귀 + 승객). 다른 장은 CHAPTER_SPECIES 그대로.
+ */
+export function chapterSpeciesSwap(chapterId, dungeonId) {
+  const own = CHAPTER_SPECIES[chapterId];
+  if (!CHAPTER_FLAGS[chapterId]?.homecoming) return own;
+  const home = ECHO_HOME_CHAPTER[DUNGEON_HOME[dungeonId]];
+  const key = `${chapterId}:${home || ''}`;
+  if (!echoSwaps.has(key)) echoSwaps.set(key, Object.freeze({ ...(home && home !== chapterId ? CHAPTER_SPECIES[home] : {}), ...own }));
+  return echoSwaps.get(key);
+}
+/**
+ * 장 전용 몸을 고르는 기준(장 번호·경로 던전 id). 캠페인 관문은 그 관문의 장·던전이다.
+ * 원정은 전용 로스터·아트라 제외하되, 잔향 장(6장) 심층 원정은 6장 관문(stageDef)을 펼친 전투라 6장 몸을 입는다 —
+ * 심층은 dungeon 을 null 로 비우므로 고향 장은 그 관문의 경로 던전(심층 보상 명단 rosterFor 의 출처)에서 찾는다.
+ * @param {any} stage
+ * @returns {{ chapterId: number, dungeonId: string | undefined } | null}
+ */
+export function speciesStageOf(stage) {
+  if (!stage) return null;
+  const chapterId = stage.chapter?.id ?? stage.ch;
+  const homecoming = !!CHAPTER_FLAGS[chapterId]?.homecoming;
+  if (stage.expedition && !(homecoming && stage.expedition.depth === 'deep')) return null;
+  const dungeonId = stage.dungeon?.id ?? (homecoming && stage.st ? dungeonForStage(chapterId, stage.st)?.id : undefined);
+  return { chapterId, dungeonId };
+}
+/** 캠페인 1~7장(과 6장 심층 원정)에서 적 id를 장 전용 종으로 바꾼다(소환·정예 접두사·지역 특성처럼 편성 밖에서 생기는 적도 같은 몸으로). */
 export function chapterSpeciesId(stage, id) {
-  if (!stage || stage.expedition) return id;
-  return CHAPTER_SPECIES[stage.chapter?.id]?.[id] || id;
+  const key = speciesStageOf(stage);
+  return key ? chapterSpeciesSwap(key.chapterId, key.dungeonId)?.[id] || id : id;
 }
 const swappedRosters = new Map();
-function chapterSpecies(chapterId, roster) {
-  const swap = CHAPTER_SPECIES[chapterId];
+function chapterSpecies(swap, roster) {
   if (!swap || !roster) return roster;
-  let byRoster = swappedRosters.get(chapterId);
-  if (!byRoster) swappedRosters.set(chapterId, byRoster = new Map());
+  let byRoster = swappedRosters.get(swap);
+  if (!byRoster) swappedRosters.set(swap, byRoster = new Map());
   if (!byRoster.has(roster)) byRoster.set(roster, Object.fromEntries(Object.entries(roster).map(([key, ids]) => [key, ids.map((id) => swap[id] || id)])));
   return byRoster.get(roster);
 }
@@ -111,6 +162,10 @@ const DUNGEON_BOSS_NAMES = {
 const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
 /** 권장 전투력: 적 공격과 같은 배율^0.7. 배율에 비례하던 값은 7-10에서 실제 승리선의 약 3.6배로 부풀었다(61%로도 승리). */
 export function recommendedPowerFor(scale) { return Math.floor(2600 * Math.pow(scale, 0.7)); }
+// 1장 권장 전투력 배율(2026-10-29). 신규 계정 연속 실입력 플레이(시드 4)에서 1장 전투력/권장이 입문 레벨 곡선 뒤에도 1-2 2.47 → 1-10 1.80으로
+// 목표(약 1.6~1.9)보다 높았다. 1-1(첫 판·PRD 지표 측정 관문)은 그대로, 1-2 ×1.40 에서 1-10 ×1.03 으로 줄여 권장이 실제 위협을 따라오게 한다.
+// 적 체력도 같은 표의 √ 만큼 올린다(squads.js CH1_RAMP). 보상·배율(scale)·드랍·정산은 그대로다.
+export const CH1_REC_POWER_MUL = Object.freeze(Array.from({ length: 10 }, (_, i) => i === 0 ? 1 : +(1.4 - (i - 1) * .0411).toFixed(4)));
 
 export function stageDef(ch, st) {
   if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError(`스테이지는 1-1부터 ${CHAPTERS.length}-${STAGES_PER_CHAPTER}까지입니다.`);
@@ -121,7 +176,7 @@ export function stageDef(ch, st) {
   // 지역 정체성: 경로가 다른 지역의 던전 배치를 빌려도 몬스터는 그 지역 무리다(2-3 용광로에서 정원 해골이 나오던 문제).
   // 던전 고유 편성은 그 던전의 고향 지역에서만 쓴다. 다섯 지역을 순례하는 귀환 장(homecoming)은 던전 편성을 그대로 둔다.
   const home = DUNGEON_HOME[dungeon.id];
-  const R = chapterSpecies(chapter.id, (DUNGEON_ROSTERS[dungeon.id] && (home === chapter.theme || CHAPTER_FLAGS[chapter.id]?.homecoming) ? DUNGEON_ROSTERS[dungeon.id] : null) || ROSTER[chapter.theme]), scene = stageStory(ch, st);
+  const R = chapterSpecies(chapterSpeciesSwap(chapter.id, dungeon.id), (DUNGEON_ROSTERS[dungeon.id] && (home === chapter.theme || CHAPTER_FLAGS[chapter.id]?.homecoming) ? DUNGEON_ROSTERS[dungeon.id] : null) || ROSTER[chapter.theme]), scene = stageStory(ch, st);
   // rosterFor()(보상·정산 stageRankValues·원정 waves·확장 던전이 펼쳐 쓰는 명단)는 기존 던전 편성을 그대로 둔다.
   // 캠페인 전투 방 편성만 열거되지 않는 combatRosterFor()로 지역 무리를 쓴다 — 90일 경제 밴드·원정 지문이 움직이지 않는다.
   const rewardR = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme];
@@ -145,7 +200,7 @@ export function stageDef(ch, st) {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: chapter.homecoming && st === STAGES_PER_CHAPTER,
     boss, finale: chapter.finale && st === STAGES_PER_CHAPTER, waves, scale, energy: 6 + Math.floor(idx / 6),
-    rosterFor: () => rewardR, recPower: recommendedPowerFor(scale),
+    rosterFor: () => rewardR, recPower: Math.floor(recommendedPowerFor(scale) * (ch === 1 ? CH1_REC_POWER_MUL[st - 1] : 1)),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
@@ -478,25 +533,102 @@ const CHAPTER_SPECIES_DEFS = {
   ch4_lurer_bomb: ['bomb_abyss', '경고등 아귀', 'Ch4_Lurer'],
   ch4_lurer_seer: ['abyss_seer', '빛주머니 아귀', 'Ch4_Lurer'],
   ch4_lurer_glim: ['ghost_skull', '깜빡이 아귀', 'Ch4_LurerGlim'],
+  // 5장: 새벽 가면 닌자(tll_ch5_dawnninja) 갈래 3종·왕관 병사(tll_ch5_crownsoldier) 갈래 3종·왕관 고리 주술사(tll_ch5_seer) 갈래 3종.
+  ch5_dawnninja: ['ninja', '새벽 가면 닌자', 'Ch5_DawnNinja'],
+  ch5_dawnninja_squire: ['imp', '새벽 견습 닌자', 'Ch5_DawnNinjaSquire'],
+  ch5_dawnninja_flare: ['bomb_abyss', '봉화 닌자', 'Ch5_DawnNinjaBare'],
+  ch5_crownsoldier: ['alien', '왕관 병사', 'Ch5_CrownSoldier'],
+  ch5_crownsoldier_chain: ['bone_orc', '금사슬 왕관 병사', 'Ch5_CrownSoldier'],
+  ch5_swordwall: ['skel_shield', '성벽 검 방패병', 'Ch5_SwordWall'],
+  ch5_seer: ['abyss_seer', '왕관 고리 주술사', 'Ch5_Seer'],
+  ch5_seer_ember: ['hywirl', '새벽불 주술사', 'Ch5_Seer'],
+  ch5_seer_herald: ['tribal_shaman', '칙령 낭독 주술사', 'Ch5_Seer'],
+  // 5장 소환 전용 갈래(전투 편성에는 없어 도감에 싣지 않는다): 던전 대장의 환영 사냥개·주술사들이 부르는 졸병.
+  ch5_dawnninja_mirage: ['mirage_hound', '신기루 새벽 닌자', 'Ch5_DawnNinja'],
+  ch5_dawnninja_called: ['squidle', '고리에 불려 온 견습', 'Ch5_DawnNinjaSquire'],
+  ch5_crownsoldier_levy: ['orc_blob', '칙령 징집병', 'Ch5_CrownLevy'],
+  ch5_crownsoldier_watch: ['skel_minion', '왕관 파수병', 'Ch5_CrownSoldier'],
+  ch5_dawnninja_wisp: ['bell_wisp', '종소리에 홀린 닌자', 'Ch5_DawnNinjaSpirit'],
+  ch5_dawnninja_spark: ['comet_spark', '혜성불 닌자', 'Ch5_DawnNinjaSpirit'],
+  // 1~4장 소환 갈래(꼬마 오크 자리만 일반 방에도 나와 도감에 싣고, 나머지는 소환 전용이라 싣지 않는다). 원본 수치·행동 그대로, 몸만 그 장 전용 Tripo 몸.
+  ch1_mourner_bell: ['bell_wisp', '종소리 원령', 'Ch1_Mourner'],
+  ch1_mourner_comet: ['comet_spark', '혜성불 원령', 'Ch1_Mourner'],
+  ch1_mourner_night: ['nightglass_page', '밤유리 만가 원령', 'Ch1_Mourner'],
+  ch1_hoodbearer_mirage: ['mirage_hound', '신기루 길잡이', 'Ch1_CoffinBearer'],
+  ch1_coffinbearer_moss: ['mossbound_scout', '이끼 낀 관꾼', 'Ch1_CoffinBearer'],
+  ch1_tombguard_frost: ['frost_mirror', '서리 묘비 방패병', 'Ch1_TombGuard'],
+  // 꼬마 오크는 2장 일반 방(과 6-2·6-7 용광로 경로)에도 나와 도감에 싣는다. 나머지 소환 전용 갈래는 도감 제외.
+  ch2_emberimp_hammer: ['orc_blob', '망치 멘 꼬마 임프', 'Ch2_EmberImp'],
+  ch2_anvilguard_chain: ['chain_forger', '사슬 방패 장인', 'Ch2_Smith'],
+  ch2_emberimp_haze: ['mirage_hound', '아지랑이 임프', 'Ch2_EmberImp'],
+  ch2_smith_apprentice: ['skel_minion', '견습 장인', 'Ch2_Smith'],
+  ch2_emberimp_scribe: ['nightglass_page', '잿불 기록 임프', 'Ch2_EmberImpSpirit'],
+  ch2_anvilguard_mirror: ['frost_mirror', '담금질 방패 장인', 'Ch2_Smith'],
+  ch2_emberimp_spark: ['comet_spark', '불똥 임프', 'Ch2_EmberImpSpirit'],
+  // 6장 심층 혜성 요새(용광로 고향)의 궤도 붕괴에서 부르는 별자리 궤도령 — 6장 잔향이 2장 몸으로 입는다.
+  ch2_anvilguard_star: ['astral_orbitling', '별빛 모루 방패 장인', 'Ch2_Smith'],
+  ch3_censor_night: ['nightglass_page', '밤유리 검열관', 'Ch3_Censor'],
+  ch3_shelfguard_mirror: ['frost_mirror', '거울 서가 방패 사서', 'Ch3_ShelfGuard'],
+  ch3_librarian_shade: ['mirage_hound', '그림자 사서', 'Ch3_Librarian'],
+  ch3_censor_comet: ['comet_spark', '혜성 쪽지 검열관', 'Ch3_Censor'],
+  ch3_censor_bell: ['bell_wisp', '종소리 검열관', 'Ch3_Censor'],
+  ch3_censor_astral: ['astral_pagelet', '성운 쪽지 검열관', 'Ch3_Censor'],
+  ch3_shelfguard_star: ['astral_orbitling', '별자리 서가 사서', 'Ch3_ShelfGuard'],
+  ch4_lurer_comet: ['comet_spark', '혜성불 아귀', 'Ch4_LurerGlim'],
+  ch4_lurer_night: ['nightglass_page', '밤유리 아귀', 'Ch4_LurerGlim'],
+  ch4_plankguard_mirror: ['frost_mirror', '거울 판자 방패 수부', 'Ch4_PlankGuard'],
+  ch4_drowned_mist: ['mirage_hound', '물안개 수부', 'Ch4_Drowned'],
+  // 6장: 귀환 열차 승객 잔향(tll_ch6_passenger) 갈래 10종. 원본 종 크기가 다른 자리(원령 1.25)는 로스터 항목을 나눴다.
+  ch6_passenger: ['skel_minion', '귀환 열차 승객', 'Ch6_Passenger'],
+  ch6_passenger_drift: ['ghost', '떠도는 승객 잔향', 'Ch6_PassengerDrift'],
+  ch6_passenger_hurry: ['skel_rogue', '서두르는 승객', 'Ch6_PassengerBare'],
+  ch6_passenger_child: ['imp', '꼬마 승객', 'Ch6_PassengerSmall'],
+  ch6_passenger_porter: ['tribal', '짐꾼 승객', 'Ch6_Passenger'],
+  ch6_passenger_trunk: ['cacto_wall', '가방 방패 승객', 'Ch6_PassengerTrunk'],
+  ch6_passenger_gate: ['golem_guard', '개찰구 승객', 'Ch6_PassengerTrunk'],
+  ch6_passenger_tide: ['squidle', '바닷길 승객', 'Ch6_PassengerBare'],
+  ch6_passenger_moss: ['mushnub', '이끼 낀 승객', 'Ch6_PassengerBare'],
+  ch6_passenger_lost: ['frost_burrower', '길 잃은 승객', 'Ch6_PassengerBare'],
+  // 꼬마 오크 자리: 6-3 주소 경로의 부족 주술사 소환과 6-2·6-7 용광로 경로 일반 방(도감에 싣는다).
+  ch6_passenger_stray: ['orc_blob', '짐 진 꼬마 승객', 'Ch6_PassengerSmall'],
+  // 7장: 해골 시민(tll_ch7_citizen) 갈래 5종·굽쇠 주술사(tll_ch7_tuner) 갈래 4종. 원본 종 크기가 다른 자리(폭탄 슬라임 0.33·해골 망령 1.2·원령 1.25)는 로스터 항목을 나눴다.
+  ch7_citizen: ['skel_minion', '해골 시민', 'Ch7_Citizen'],
+  ch7_citizen_late: ['skel_rogue', '늦은 해골 시민', 'Ch7_CitizenLate'],
+  ch7_citizen_ledger: ['skel_shield', '명부 방패 시민', 'Ch7_CitizenLedger'],
+  ch7_citizen_hauler: ['bone_orc', '종루 짐꾼 시민', 'Ch7_CitizenHauler'],
+  ch7_citizen_fuse: ['bomb_slime', '폭음 시민', 'Ch7_CitizenFuse'],
+  ch7_tuner: ['skel_mage', '굽쇠 주술사', 'Ch7_Tuner'],
+  ch7_tuner_cantor: ['skel_priest', '명부 낭송 주술사', 'Ch7_TunerLedger'],
+  ch7_tuner_echo: ['ghost_skull', '울림 잔향 주술사', 'Ch7_TunerEcho'],
+  ch7_tuner_drift: ['ghost', '떠도는 조율사', 'Ch7_TunerDrift'],
 };
 /** 장 전용 종 id → 수치를 복사한 원래 적 id(지역 동사처럼 원래 종에 묶인 규칙을 찾을 때). 원래 종이면 그대로. */
 const SPECIES_SOURCE = Object.freeze(Object.fromEntries(Object.entries(CHAPTER_SPECIES_DEFS).map(([id, [sourceId]]) => [id, sourceId])));
 export function speciesSourceId(id) { return SPECIES_SOURCE[id] || id; }
 // 3장 검열관 몸은 흰 법복이 텍스처에 이미 그려져 있어, 원령의 반투명·청색 발광(ghostly)을 물려받으면 무늬가 하얗게 날아간다 — 불투명으로 둔다.
 // 4장 수부·아귀도 원령·해골 망령 자리(ch4_drowned_drift·ch4_lurer_glim)를 맡지만 불투명한 Tripo 몸이다.
-const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim']);
+// 6장 떠도는 승객 잔향(원령 자리)도 불투명한 Tripo 몸이다(얼굴의 청록 발광은 텍스처에 있다). 7장 굽쇠 주술사의 해골 망령·원령 자리도 같다.
+const OPAQUE_SPIRIT_BODIES = new Set(['Ch3_Censor', 'Ch3_CensorTome', 'Ch4_DrownedDrift', 'Ch4_LurerGlim', 'Ch5_DawnNinjaSpirit', 'Ch2_EmberImpSpirit', 'Ch6_PassengerDrift', 'Ch7_TunerEcho', 'Ch7_TunerDrift']);
 // 몸 색조(enemies.js lerp 0.32)만 원본과 다르게 두는 갈래(null = 색조 없음). 심연 폭탄·주시자의 분홍·보라 색조가 남색 아귀 몸을
 // 보라로 물들였다 — 붉은 색조도 남색과 섞이면 보라가 되어, 경고등 아귀는 색조를 빼고 의상의 붉은 발광으로 경고한다. 빛주머니 아귀는 청록.
 // 수치·행동은 그대로다.
-const BODY_TINTS = Object.freeze({ ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4' });
+// 5장 봉화 닌자(심연 폭탄 분홍)·주술사 갈래(주시자 연보라·부족 주술사 살구)·6장 길 잃은 승객(서리 하늘색)은 원본 색조가 보라·금, 회색·청록
+// 몸을 탁하게 물들여 색조를 뺀다(봉화 닌자는 의상의 붉은 금 발광으로 자폭을 경고한다). 7장 명부 낭송 주술사도 해골 사제의 연두 색조가
+// 바랜 황동·석회 몸을 초록으로 물들여 뺀다(폭음 시민은 폭탄 슬라임의 금빛 색조가 황동과 맞아 그대로 둔다).
+// 1~4·6장 소환 전용 갈래(3차)도 원본 종의 보라·하늘·연두 색조가 전용 몸 팔레트를 물들여 색조를 빼고 의상으로만 구분한다.
+const SUMMON_ONLY_SPECIES = ['ch1_mourner_bell', 'ch1_mourner_comet', 'ch1_mourner_night', 'ch1_hoodbearer_mirage', 'ch1_coffinbearer_moss', 'ch1_tombguard_frost',
+  'ch2_emberimp_hammer', 'ch2_anvilguard_chain', 'ch2_emberimp_haze', 'ch2_smith_apprentice', 'ch2_emberimp_scribe', 'ch2_anvilguard_mirror', 'ch2_emberimp_spark', 'ch2_anvilguard_star',
+  'ch3_censor_night', 'ch3_shelfguard_mirror', 'ch3_librarian_shade', 'ch3_censor_comet', 'ch3_censor_bell', 'ch3_censor_astral', 'ch3_shelfguard_star',
+  'ch4_lurer_comet', 'ch4_lurer_night', 'ch4_plankguard_mirror', 'ch4_drowned_mist', 'ch6_passenger_stray'];
+const BODY_TINTS = Object.freeze({ ...Object.fromEntries(SUMMON_ONLY_SPECIES.map((id) => [id, null])), ch4_lurer_bomb: null, ch4_lurer_seer: '#a8f0e4', ch5_dawnninja_flare: null, ch5_seer: null, ch5_seer_herald: null, ch5_dawnninja_mirage: null, ch5_dawnninja_wisp: null, ch5_dawnninja_spark: null, ch6_passenger_lost: null, ch7_tuner_cantor: null });
 for (const [id, [sourceId, name, model]] of Object.entries(CHAPTER_SPECIES_DEFS)) {
   ENEMIES[id] = { ...ENEMIES[sourceId], name, model };
   if (OPAQUE_SPIRIT_BODIES.has(model)) delete ENEMIES[id].ghostly;
   if (id in BODY_TINTS) { if (BODY_TINTS[id]) ENEMIES[id].tint = BODY_TINTS[id]; else delete ENEMIES[id].tint; }
 }
-// 1~4장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본).
+// 1~7장 중간·최종 보스가 부르는 지원병도 그 장 전용 몸으로 나온다(수치는 같은 원본 복사본). 5장 = 새벽 가면 닌자, 6장 = 귀환 열차 승객, 7장 = 해골 시민.
 for (const rank of ['captain', 'warden', 'midboss', 'finalboss']) {
-  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3], ['tide', 4]]) {
+  for (const [prefix, chapterId] of [['garden', 1], ['forge', 2], ['frost', 3], ['tide', 4], ['crown', 5], ['homecoming', 6], ['belltower', 7]]) {
     const def = ENEMIES[`${prefix}_${rank}`];
     if (def && CHAPTER_SPECIES[chapterId][def.summon]) def.summon = CHAPTER_SPECIES[chapterId][def.summon];
   }

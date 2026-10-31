@@ -17,7 +17,7 @@ const LAND_SQUASH_TIME = .32;
 const hash01 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // Free AI practice pays its catalog reward only; it never creates field loot.
-export const fieldDropsAllowed = stage => !stage?.party && stage?.expedition?.kind !== 'arena';
+export const fieldDropsAllowed = stage => !stage?.party && !stage?.bounty && stage?.expedition?.kind !== 'arena';
 
 /**
  * 필드 드랍: 코인/장비/강화석이 3D 로 튀어나오고, 플레이어가 가까이 가면 자석처럼 빨려온다.
@@ -269,6 +269,9 @@ export class DropSystem {
   onSeededKill(enemy, stage, rank) {
     const counts = enemy.summoned ? (this.summonedKills ||= { normal: 0, elite: 0, boss: 0 }) : (this.killCounts ||= { normal: 0, elite: 0, boss: 0 });
     const index = counts[rank]++, pos = enemy.pos.clone(), eco = this.game.app?.eco;
+    // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md): 정산 사실 species. 서버가 관문 종 풀·처치 합으로 다시 자른다.
+    const species = enemy.speciesId || enemy.def?.id;
+    if (typeof species === 'string') { const k = (this.speciesKills ||= Object.create(null)); k[species] = (k[species] || 0) + 1; }
     for (const d of killDrops(stage, this.game.v1Run.lootSeed, rank, index, { summoned: !!enemy.summoned })) {
       if (d.kind === 'gold') this.spawn(pos, 'gold', d.amount, { count: d.count, spread: rank === 'boss' ? 2 : 1 });
       else if (d.kind === 'material') this.spawn(pos, 'material', { id: d.id, n: d.n });
@@ -285,6 +288,6 @@ export class DropSystem {
     while (this.items.length) this._remove(this.items.length - 1);
     this.auras.update(0);
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
-    this.killCounts = null; this.summonedKills = null;
+    this.killCounts = null; this.summonedKills = null; this.speciesKills = null;
   }
 }

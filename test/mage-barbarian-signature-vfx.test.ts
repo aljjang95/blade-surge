@@ -86,7 +86,8 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(8);
   v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;
-  expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(16);
+  // 3박자(궤적·착탄·용암 균열)로 늘었지만 한 발은 한 프레임에 낸다: 프레임 예산(72)의 절반 이하.
+  expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(30);
   const blast = slots(v).slice(before).filter((s) => s.kind === IMPACT_KIND.core);
   expect(blast.length).toBe(1); expect(blast[0].start).toBeCloseTo(.4, 5);
   v.dispose();
@@ -166,4 +167,57 @@ test('h1b 대마도사 평타 마무리: 넓은 옅은 원판 대신 바닥 작�
   expect(v.ring.a.aOrigin[mi * 3 + 1]).toBeLessThan(.1);
   expect(all.filter((s) => s.kind === IMPACT_KIND.beam).length).toBe(6);
   v.dispose();
+});
+
+test('대마도사 각성(슬롯 4~7): 서명 한 번 ≤ 60칸·lite 는 더 적게, 예비 표식(별감옥·절대영도)·해제 파편도 예산 안·Math.random 미사용', async () => {
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  const { mageChronoRelease } = await import('../src/engine/sig-mage.js');
+  const awaken = HERO_SKILLS.mage.slice(4);
+  expect(awaken).toEqual(['arc_reflect', 'chrono_seal', 'star_prison', 'absolute_zero']);
+  // 봉인 대상·첫 굴절 대상이 있는 실전 상태(적 여섯)에서 잰다: 모래시계·예고 표식까지 포함한 최대치.
+  const enemies = Array.from({ length: 6 }, (_, i) => ({ alive: true, pos: new THREE.Vector3((i - 2.5) * .9, 0, 3 + (i % 2)), def: { scale: 1 } }));
+  const ctxWith = (v: ImpactVfx, lite = false) => ({ ...ctxOf(v, lite), player: { pos: new THREE.Vector3(), game: { enemies } } }) as any;
+  const pool: ImpactVfx[] = Array.from({ length: 14 }, () => make());
+  const real = Math.random; let calls = 0; Math.random = () => { calls++; return real(); };
+  try {
+    awaken.forEach((id, i) => {
+      const v = pool[i * 2], l = pool[i * 2 + 1];
+      SKILL_SIGNATURES[id](ctxWith(v)); SKILL_SIGNATURES[id](ctxWith(l, true));
+      expect(v.spawned).toBeGreaterThan(0); expect(v.spawned).toBeLessThanOrEqual(60);
+      expect(l.spawned).toBeLessThan(v.spawned);
+    });
+    ['star_prison', 'absolute_zero'].forEach((id, i) => {
+      expect(typeof SKILL_PRELUDES[id]).toBe('function');
+      const v = pool[8 + i * 2], l = pool[9 + i * 2];
+      SKILL_PRELUDES[id](ctxOf(v)); SKILL_PRELUDES[id](ctxOf(l, true));
+      expect(v.spawned).toBeGreaterThan(0); expect(v.spawned).toBeLessThanOrEqual(30);
+      expect(l.spawned).toBeLessThan(v.spawned);
+    });
+    const g = gameOf(pool[12]);
+    let total = 0;
+    for (let i = 0; i < 12; i++) total += mageChronoRelease(g, new THREE.Vector3(i, 0, 0), i);
+    // 여덟 적까지만 낸다(봉인 최대 24명이 .05초 간격으로 터져도 프레임 예산을 지킨다).
+    expect(mageChronoRelease(g, new THREE.Vector3(), 8)).toBe(0);
+    expect(total).toBeGreaterThan(0); expect(total).toBeLessThanOrEqual(8 * 9);
+    expect(mageChronoRelease(gameOf(pool[13], false, true), new THREE.Vector3(), 0)).toBe(0);
+  } finally { Math.random = real; }
+  expect(calls).toBe(0);
+  pool.forEach((p) => p.dispose());
+});
+
+test('대마도사 각성 실루엣: 프리즘 = 전방 분광 쓸기, 시간 봉인 = 시계 바늘(선), 별감옥 = 수직 기둥, 절대영도 = 여섯 팔 눈결정', () => {
+  const beamsOf = (id: string) => {
+    const v = make(); SKILL_SIGNATURES[id](ctxOf(v));
+    const out = slots(v).map((s, i) => ({ ...s, vel: [v.ring.a.aVel[i * 3], v.ring.a.aVel[i * 3 + 1], v.ring.a.aVel[i * 3 + 2]] })).filter((s) => s.kind === IMPACT_KIND.beam);
+    v.dispose(); return out;
+  };
+  // 프리즘: 앞(+z)으로 뻗는 분광 선이 열두 줄 이상(삼각 윤곽 제외)
+  expect(beamsOf('arc_reflect').filter((b) => b.vel[2] > 3).length).toBeGreaterThanOrEqual(12);
+  // 시간 봉인: 바닥에 눕는 6m 바늘이 여러 방향(쓸기)
+  const hands = beamsOf('chrono_seal').filter((b) => Math.abs(Math.hypot(b.vel[0], b.vel[2]) - 6) < .01);
+  expect(new Set(hands.map((b) => Math.atan2(b.vel[2], b.vel[0]).toFixed(2))).size).toBeGreaterThanOrEqual(8);
+  // 별감옥: 판정 순간 하늘로 솟는 수직 기둥
+  expect(beamsOf('star_prison').filter((b) => b.vel[1] > 8 && Math.abs(b.start - .24) < .001).length).toBeGreaterThanOrEqual(2);
+  // 절대영도: 판정 순간 바깥으로 뻗는 8m 팔 여섯
+  expect(beamsOf('absolute_zero').filter((b) => Math.abs(b.start - .35) < .001 && Math.abs(Math.hypot(b.vel[0], b.vel[2]) - 8) < .01).length).toBe(6);
 });

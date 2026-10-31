@@ -3,6 +3,8 @@
 import './login-sheet.css';
 import { isNativeBuild } from '../platform/api-base.js';
 import { googleSignIn } from '../social/google-signin.js';
+import { applyTheme, injectStyles } from '../../packages/tll-social/src/ui/styles.js';
+import { WITHDRAW_PAID_NOTICE } from './legal-links.js';
 import { PROVIDER_LABEL, loadProviders, startProviderLogin, googleLogin, linkProvider, consumeLoginReturn, takeLoginReturn, deleteAccount, failText } from '../net/account-login.js';
 
 // 모듈이 불러와지는 즉시(부팅 코드보다 먼저) 콜백 쿼리를 읽고 주소에서 지운다. ticket 이 주소창에 남지 않게 한다.
@@ -44,6 +46,27 @@ export function askConfirm(message, yes = '네', no = '아니요') {
   });
 }
 
+/**
+ * 구글 로그인 대화상자는 커뮤니티 UI의 스타일과 .tls-root 층(z 70)을 쓴다. 첫 실행 시트는 커뮤니티 초기화보다 먼저 뜨므로
+ * 스타일과 빈 층을 먼저 만들어 대화상자가 시트(z 60) 위에, 모양을 갖춰 뜨게 한다. 커뮤니티가 나중에 자기 층을 만들어도 무해하다.
+ */
+function ensureSocialLayer() {
+  try {
+    injectStyles(document);
+    if (document.querySelector('.tls-root')) return null;
+    const root = document.createElement('div');
+    root.className = 'tls-root';
+    applyTheme(root);
+    document.body.append(root);
+    return root;
+  } catch { return null; /* 층을 못 만들면 대화상자가 body에 붙는다 */ }
+}
+/** 임시 층은 대화상자가 끝나면 지운다(커뮤니티가 나중에 만든 층과 겹쳐 이후 구글 대화상자를 가리지 않게). */
+const signInGoogle = async () => {
+  const temp = ensureSocialLayer();
+  try { return await googleSignIn(); } finally { temp?.remove(); }
+};
+
 const toastOf = (app) => (message) => { try { app.ui.toast(message); } catch {} };
 
 /** 첫 실행(로컬 저장 없음·등록 표시 없음)이면 로그인 시트를 한 번 띄운다. 띄울 제공자가 없으면 아무 것도 하지 않는다(= 게스트). */
@@ -65,7 +88,7 @@ export async function maybeShowLoginSheet(app, { native = isNativeBuild() } = {}
     if (out.ok) { if (out.action) toast(out.action === 'recovered' ? '진행을 불러왔어요.' : '계정을 연동했어요.'); d.close(); }
     else if (out.reason !== 'cancel' && out.reason !== 'linked-elsewhere-declined') toast(failText(out.reason));
   };
-  if (found.google) d.body.append(button('Google로 계속', 'ls-google', () => run(() => googleLogin(app, { signIn: googleSignIn, confirm: askConfirm }))));
+  if (found.google) d.body.append(button('Google로 계속', 'ls-google', () => run(() => googleLogin(app, { signIn: signInGoogle, confirm: askConfirm }))));
   if (found.kakao) d.body.append(button('카카오로 계속', 'ls-kakao', () => run(() => startProviderLogin(app, 'kakao'))));
   if (found.chatgpt) d.body.append(button('ChatGPT로 계속', 'ls-chatgpt', () => run(() => startProviderLogin(app, 'chatgpt'))));
   d.body.append(button('게스트로 시작', 'ls-ghost', () => d.close()));
@@ -89,7 +112,7 @@ export async function openAccountMenu(app, { native = isNativeBuild() } = {}) {
     for (const p of ['google', 'kakao', 'chatgpt']) {
       if (!found?.[p] || linked.includes(p)) continue;
       d.body.append(button(`${PROVIDER_LABEL[p]} 계정 연동`, 'ls-primary', async () => {
-        const out = await linkProvider(app, p, { signIn: googleSignIn, confirm: askConfirm });
+        const out = await linkProvider(app, p, { signIn: signInGoogle, confirm: askConfirm });
         if (out.ok && out.action) { toast('계정을 연동했어요.'); render(); }
         else if (!out.ok && out.reason !== 'cancel' && out.reason !== 'linked-elsewhere-declined') toast(failText(out.reason));
         else if (out.action === 'recovered') render();
@@ -100,6 +123,8 @@ export async function openAccountMenu(app, { native = isNativeBuild() } = {}) {
       const ask = button('회원 탈퇴', 'ls-danger-btn', () => {
         danger.replaceChildren(
           node('p', 'ls-note', '서버에 저장된 계정과 진행이 삭제돼요. 되돌릴 수 없어요. 정말 탈퇴할까요?'),
+          // 약관 제4조의2: 남은 유료 재화 소멸을 탈퇴 전에 고지한다.
+          node('p', 'ls-note', WITHDRAW_PAID_NOTICE),
           button('네, 탈퇴합니다', 'ls-danger-btn', async () => {
             const out = await deleteAccount(app);
             if (out.ok) { toast('탈퇴했어요. 새로 시작합니다.'); d.close(); }

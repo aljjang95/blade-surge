@@ -41,6 +41,9 @@ export const OPS = {
   gearDexClaim: { args: [str, str], run: (e, h, m) => e.gearDexClaim(h, m), ok: okResult },
   claimJourneySigil: { args: [(v) => v === 'daily' || v === 'weekly', str], run: (e, kind, id) => e.claimJourneySigil(kind, id), ok: okResult },
   vaultExpand: { args: [], run: (e) => e.vaultExpand(), ok: okResult },
+  // 클리어 루프(docs/CLEAR_LOOP.md): 카드는 정산 때 해시로 정해져 고르기만 한다. 수리는 닳은 만큼 골드.
+  pickClearCard: { args: [(v) => int(v, 0, 2)], run: (e, i) => e.pickClearCard(i), ok: okResult },
+  repairItem: { args: [(v) => int(v, 1)], run: (e, uid) => e.repairItem(uid), ok: okResult },
   craftSetItem: { args: [str, SLOT], run: (e, set, slot) => e.craftSetItem(set, slot), ok: okResult },
   // 장비 (서버 난수)
   // 네 번째 인자 sure(확정 강화, 골드 웃돈)는 선택이다: 이전 클라이언트의 3인자 명령도 그대로 받는다.
@@ -57,6 +60,13 @@ export const OPS = {
   claimPass: { args: [(v) => int(v, 1, 1000), bool], run: (e, lv, prem) => e.claimPass(lv, prem), ok: okValue },
   claimMail: { args: [(v) => int(v, 0)], run: (e, id) => e.claimMail(id), ok: okValue },
   claimQuest: { args: [str], run: (e, id) => e.claimQuest(id), ok: okValue },
+  claimIdle: { args: [], run: (e) => e.claimIdle(), ok: okValue },
+  // 서버는 이미 표시돼 바뀐 것이 없어도 거절하지 않는다(ok). 기기는 실제로 표시를 남긴 때만 보낸다(send) — 로비 1초 틱마다 명령이 쌓이지 않게.
+  markSeen: { args: [], run: (e) => e.markSeen(), ok: () => true, send: (r) => r === true },
+  claimNewbie: { args: [str], run: (e, id) => e.claimNewbie(id), ok: okValue },
+  claimAchievement: { args: [str], run: (e, id) => e.claimAchievement(id), ok: okValue },
+  // 성장 여정 단계(docs/SERVER_AUTHORITY_GATES.md 4절). 서버만 attest 로 판정한다(기기 전용 단계는 순서 + 서버 진행 바닥값).
+  claimJourneyStep: { args: [str], run: (e, id) => e.claimJourneyStep(id, { attest: true }), ok: okResult },
   // 외형·설정
   buyAvatar: { args: [str], run: (e, id) => e.buyAvatar(id), ok: okResult },
   equipAvatar: { args: [str, (v) => v === null || str(v)], run: (e, h, id) => e.equipAvatar(h, id), ok: okResult, offline: true },

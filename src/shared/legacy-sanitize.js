@@ -11,6 +11,11 @@ import { HERO_LEGACY_IDS, HERO_POLICY, HERO_STARTER_POLICY_SINCE } from '../data
 import { normalizeGearDex, seedGearDex, setGearDex } from '../game/gear-dex.js';
 import { normalizeRunes, normalizeBlessing } from '../game/rune-economy.js';
 import { normalizeLegend } from '../game/legend-rank.js';
+import { normalizeIdle, importedIdle } from '../game/idle-rewards.js';
+import { normalizeNewbie } from '../game/newbie-event.js';
+import { normalizeAchievements } from '../game/achievements.js';
+import { trustedSlain } from '../game/kill-ledger.js';
+import { periodAt, normalizeJourney, journeySteps } from '../game/journey-core.js';
 import { CHAPTERS } from '../data/stages.js';
 import { progressItemLevel } from '../data/loot-tables.js';
 import { STAGES_PER_CHAPTER } from '../data/campaign-shape.js';
@@ -26,11 +31,14 @@ export const INVENTORY_CAP = 3000;
 export const DAILY_MAX = Object.freeze({
   gold: 3000000, gems: 5000, tickets: 40, ssrTickets: 2, sweep: 30, stones: 600, stones2: 200, stones3: 80,
   fragments: 500, protect: 10, bless: 10, transferScroll: 5, transcendStones: 40, skillResets: 3, heroShards: 200, material: 500,
+  // 처치 수(quests.kills): 8시간 연속 사냥(판당 최대 수백 마리)보다 넉넉히. docs/SERVER_AUTHORITY_GATES.md 3절.
+  kills: 20000,
 });
 /** 일회성 원천 합(환영 우편·임무·첫 클리어·패스 무료 트랙 등, 가정). */
 export const ONE_TIME = Object.freeze({
   gold: 2000000, gems: 40000, tickets: 200, ssrTickets: 10, sweep: 30, stones: 2000, stones2: 500, stones3: 200,
   fragments: 2000, protect: 20, bless: 20, transferScroll: 5, transcendStones: 100, skillResets: 10, heroShards: 400, material: 2000,
+  kills: 3000,
 });
 /**
  * 나중에 생긴 재화는 계정 나이가 아니라 출시 뒤 경과일로만 일일 상한을 쌓는다(출시 전 잔액은 정당하게 생길 수 없다).
@@ -157,13 +165,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, snapshot?: boolean }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, serverJourney?: any, snapshot?: boolean }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, snapshot = false }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, serverJourney, snapshot = false }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -218,6 +226,8 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 그림자 스냅샷(snapshot)은 외부 가져오기가 아니라 같은 계정의 반복 동기화다: 문장 잔액·도감은 서버 문서 값을 그대로 유지하고(소급·삭제 없음),
   // 로컬이 보낸 값은 쓰지 않는다. 문장·도감은 서버 명령(vaultRitual·gearDexClaim·claimJourneySigil)으로만 바뀐다.
   delete s.lineageSigil; delete s.sigilClaims;
+  // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 정산(completeStage)만 만든다. 가져온 카드 보상은 버린다(조작 세이브로 보상 주입 방지, 보안 리뷰 P2).
+  delete s.clearCard;
   if (snapshot) {
     const claims = (Array.isArray(serverSigilClaims) ? serverSigilClaims : []).filter((k) => typeof k === 'string');   // 의뢰 문장 수령 기록도 서버 값 그대로(재수령 차단)
     if (claims.length) s.sigilClaims = claims.slice(-16);
@@ -234,6 +244,36 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
     const sv = normalizeGearDex(serverGearDex), mine = seedGearDex(s), merge = (a, b) => { const o = {}; for (const h of Object.keys(HEROES)) { const l = [...new Set([...(a?.[h] || []), ...(b?.[h] || [])])]; if (l.length) o[h] = l; } return o; };
     setGearDex(s, normalizeGearDex({ drop: merge(sv?.drop, mine?.drop), kin: sv?.kin, claimed: sv?.claimed }));
   }
+  // 방치 보급·7일 여정·업적(docs/RPG_ESSENTIALS.md)은 수령 기록이다. 반복 스냅샷은 서버 문서 값을 그대로 쓴다(편집 저장으로 재수령 방지).
+  // 외부 가져오기(계정당 1회)는 방치 시각만 서버 지금으로 다시 시작하고, 여정·업적 수령 기록은 원본을 정규화해 이어받는다
+  // (정직한 이용자의 진행을 지우지 않고 그림자 명령이 같은 상태에서 판정되게. 재화 주입은 기존 일일 한도가 막는다).
+  if (snapshot) {
+    s.idle = normalizeIdle(serverIdle, importedIdle(now));
+    s.newbie = normalizeNewbie(serverNewbie, { start: periodAt(now).day });
+    s.achievements = normalizeAchievements(serverAchievements);
+    // 여정 단계 수령 기록도 서버 명령(claimJourneyStep)이 소유한다: 반복 스냅샷으로 비워 재수령하지 못하게 서버 값만(docs/SERVER_AUTHORITY_GATES.md 4절).
+    if (s.journey && typeof s.journey === 'object') s.journey.claimedSteps = normalizeJourney(serverJourney).claimedSteps;
+  } else {
+    // 외부 가져오기의 여정 단계 기록은 서버 판정(attest)으로도 받을 수 있는 단계만 순서대로 남긴다(파생 보상 wayfarer·d3c·7일 최종 상자 위조 차단, 교차 리뷰).
+    if (s.journey && typeof s.journey === 'object') {
+      const device = new Set(normalizeJourney(raw?.journey).claimedSteps), kept = new Set(normalizeJourney(serverJourney).claimedSteps);
+      for (const step of journeySteps({ ...s, journey: { claimedSteps: [] } }, { attest: true })) {
+        if (kept.has(step.id)) continue;
+        if (!device.has(step.id) || !step.complete) break;
+        kept.add(step.id);
+      }
+      s.journey.claimedSteps = [...kept];
+    }
+    s.idle = importedIdle(now);
+    s.newbie = normalizeNewbie(raw?.newbie, { start: periodAt(now).day });
+    s.achievements = normalizeAchievements(raw?.achievements);
+  }
+  // 서버 처치 원장(docs/SERVER_AUTHORITY_GATES.md 3절): 처치 수는 경과일 상한으로 자르고 서버 값을 바닥으로 둔다.
+  // 종 원장은 서버 문서가 이미 병합했으면(seeded) 서버 값만, 아니면 기기 기록을 정화된 진행 범위 종 풀·처치 수 상한으로 한 번 옮긴다.
+  const killsFloor = Number.isSafeInteger(serverKills) && serverKills > 0 ? serverKills : 0;
+  s.quests.kills = Math.max(killsFloor, clamp('quests.kills', Number(s.quests?.kills) || 0, ONE_TIME.kills + DAILY_MAX.kills * days));
+  // 외부 가져오기는 계정당 1회라 서버 문서의 seeded 와 무관하게 한 번 병합한다(새 계정 문서는 seeded:true 로 만들어진다). 스냅샷은 서버가 아직 병합 전일 때만.
+  s.slain = trustedSlain(raw, { server: snapshot ? serverSlain : { ...(serverSlain && typeof serverSlain === 'object' ? serverSlain : {}), seeded: false }, floor: Math.max(1, Number(s.progress?.unlocked) || 1), killsCap: s.quests.kills });
   // 결제 기록·기간제 권한은 세이브에서 가져오지 않는다(정본은 서버 결제 원장·권한 표, worker/v1/iap.ts).
   // 단 서버 권한이 유효하면 그 권한으로 이미 받은 기록(패스 프리미엄 수령 단계·월정액 수령일)은 지우지 않는다(중복 수령 차단).
   const droppedPaid = { purchases: s.purchases.length, spentKRW: s.spentKRW, vip: s.vip, premiumPass: !!s.pass.premium };

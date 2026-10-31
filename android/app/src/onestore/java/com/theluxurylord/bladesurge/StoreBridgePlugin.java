@@ -265,6 +265,10 @@ public class StoreBridgePlugin extends Plugin {
   }
 
   private void onPurchaseUpdate(IapResult iapResult, List<PurchaseData> purchases) {
+    if (catalogPurchase) {
+      onCatalogPurchaseUpdate(iapResult, purchases);
+      return;
+    }
     if (!iapResult.isSuccess()) {
       completeBilling(billingFailure(iapResult));
       return;
@@ -302,6 +306,222 @@ public class StoreBridgePlugin extends Plugin {
               }
               completeBilling(result("restored").put("purchases", receipts)
                   .put("requiresServerVerification", true));
+            }));
+      });
+    });
+  }
+
+  // ---- 카탈로그 결제 (v1 일회성 상품, 서버가 검증·acknowledge·consume·지급을 모두 한다) ----
+  private static final int CATALOG_MAX_PRODUCTS = 20;
+  private static final int CATALOG_MAX_OWNED = 40;
+  private static final int DEVELOPER_PAYLOAD_MAX_BYTES = 200;
+  // 원스토어는 inapp만 판다. 구독은 허용하지 않는다.
+  private static final Set<String> CATALOG_INAPP_IDS = new HashSet<>(java.util.Arrays.asList(
+      "remove_ads_v1", "starter_pack_v1", "season_pass_s1",
+      "hero_knight_v1", "hero_barbarian_v1", "hero_mage_v1", "hero_rogue_v1", "hero_ranger_v1", "hero_all_v1"));
+
+  // 허용 목록과 타입이 맞는 항목만 통과시킨다. 실패하면 call을 해결하고 null을 반환한다.
+  private List<String> catalogItems(PluginCall call) {
+    JSArray input = call.getArray("products");
+    if (input == null || input.length() == 0 || input.length() > CATALOG_MAX_PRODUCTS) {
+      call.resolve(error("INVALID_PRODUCT_IDS"));
+      return null;
+    }
+    Set<String> unique = new HashSet<>();
+    List<String> ids = new ArrayList<>();
+    for (int i = 0; i < input.length(); i++) {
+      Object value = input.opt(i);
+      if (!(value instanceof org.json.JSONObject)) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return null;
+      }
+      org.json.JSONObject entry = (org.json.JSONObject) value;
+      Object id = entry.opt("productId");
+      Object type = entry.opt("type");
+      if (!(id instanceof String) || !(type instanceof String) || !validProductId((String) id)) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return null;
+      }
+      if (!CATALOG_INAPP_IDS.contains(id) || !"inapp".equals(type)) {
+        call.resolve(error("PRODUCT_NOT_ALLOWED"));
+        return null;
+      }
+      if (unique.add((String) id)) ids.add((String) id);
+    }
+    return ids;
+  }
+
+  @PluginMethod
+  public void listCatalog(PluginCall call) {
+    run(call, () -> {
+      List<String> ids = catalogItems(call);
+      if (ids == null || !beginBilling(call)) return;
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        purchaseClient.queryProductDetailsAsync(queryParams(ids), (iapResult, detailsList) ->
+            callback(call, () -> {
+              if (!ownsBilling(call, epoch)) return;
+              if (!iapResult.isSuccess()) {
+                completeBilling(billingFailure(iapResult));
+                return;
+              }
+              JSArray products = new JSArray();
+              Set<String> found = new HashSet<>();
+              if (detailsList != null) {
+                for (ProductDetail details : detailsList) {
+                  String price = details.getPrice();
+                  String currency = details.getPriceCurrencyCode();
+                  String micros = String.valueOf(details.getPriceAmountMicros());
+                  if (!ids.contains(details.getProductId())
+                      || !PurchaseClient.ProductType.INAPP.equals(details.getType())
+                      || price == null || price.isEmpty() || currency == null || currency.isEmpty()
+                      || !found.add(details.getProductId())) continue;
+                  products.put(new JSObject().put("productId", details.getProductId()).put("type", "inapp")
+                      .put("title", details.getTitle()).put("formattedPrice", price)
+                      .put("priceAmountMicros", micros).put("currencyCode", currency));
+                }
+              }
+              JSArray unavailable = new JSArray();
+              for (String id : ids) {
+                if (!found.contains(id)) unavailable.put(id);
+              }
+              completeBilling(result(unavailable.length() == 0 ? "products" : "partial")
+                  .put("products", products).put("unavailableProductIds", unavailable));
+            }));
+      });
+    });
+  }
+
+  @PluginMethod
+  public void purchaseCatalog(PluginCall call) {
+    run(call, () -> {
+      String id = call.getString("productId");
+      String type = call.getString("type");
+      String account = call.getString("obfuscatedAccountId");
+      if (id == null || !validProductId(id) || type == null) {
+        call.resolve(error("INVALID_PRODUCT_IDS"));
+        return;
+      }
+      if (!CATALOG_INAPP_IDS.contains(id) || !"inapp".equals(type)) {
+        call.resolve(error("PRODUCT_NOT_ALLOWED"));
+        return;
+      }
+      // 서버가 만든 해시/HMAC만 developerPayload로 전달한다(서버가 getPurchaseDetails 값과 대조).
+      if (account == null || !account.matches("[A-Za-z0-9_-]{1,64}")
+          || account.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > DEVELOPER_PAYLOAD_MAX_BYTES) {
+        call.resolve(error("INVALID_OBFUSCATED_ACCOUNT_ID"));
+        return;
+      }
+      if (!beginReceiptOperation(call)) return;
+      catalogPurchase = true;
+      catalogPurchaseProductId = id;
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        purchaseClient.queryProductDetailsAsync(queryParams(Collections.singletonList(id)),
+            (iapResult, detailsList) -> callback(call, () -> {
+              if (!ownsBilling(call, epoch)) return;
+              if (!iapResult.isSuccess()) {
+                completeBilling(billingFailure(iapResult));
+                return;
+              }
+              boolean found = false;
+              if (detailsList != null) {
+                for (ProductDetail details : detailsList) {
+                  if (id.equals(details.getProductId())
+                      && PurchaseClient.ProductType.INAPP.equals(details.getType())) {
+                    found = true;
+                    break;
+                  }
+                }
+              }
+              if (!found) {
+                completeBilling(error("PRODUCT_UNAVAILABLE"));
+                return;
+              }
+              if (!foregroundActivity()) {
+                completeBilling(error("ACTIVITY_NOT_FOREGROUND"));
+                return;
+              }
+              PurchaseFlowParams params = PurchaseFlowParams.newBuilder().setProductId(id)
+                  .setProductType(PurchaseClient.ProductType.INAPP).setQuantity(1)
+                  .setDeveloperPayload(account).build();
+              purchaseLaunched = true;
+              armBillingTimeout(PURCHASE_TIMEOUT_MS);
+              IapResult launched = purchaseClient.launchPurchaseFlow(getActivity(), params);
+              if (ownsBilling(call, epoch) && !launched.isSuccess()) {
+                completeBilling(billingFailure(launched));
+              }
+            }));
+      });
+    });
+  }
+
+  private boolean allowedCatalogReceipt(PurchaseData purchase) {
+    return purchase != null && getContext().getPackageName().equals(purchase.getPackageName())
+        && CATALOG_INAPP_IDS.contains(purchase.getProductId()) && purchase.getQuantity() == 1;
+  }
+
+  // 토큰은 응답으로만 전달한다. 로그/이벤트/저장소에 복사하지 않는다. 지급·acknowledge·consume은 서버 몫이다.
+  private JSObject catalogReceipt(PurchaseData purchase) {
+    if (!receiptTransportSafe()) return error("SENSITIVE_BRIDGE_LOGGING_ENABLED");
+    String token = purchase.getPurchaseToken();
+    if (token == null || token.isEmpty()) return error("PURCHASE_TOKEN_MISSING");
+    if (purchase.getPurchaseState() != PurchaseData.PurchaseState.PURCHASED) {
+      return error("UNKNOWN_PURCHASE_STATE");
+    }
+    JSObject data = result("purchased").put("productId", purchase.getProductId()).put("type", "inapp")
+        .put("purchaseToken", token).put("acknowledged", purchase.isAcknowledged())
+        .put("marketCode", storeCode).put("requiresServerVerification", true)
+        .put("acknowledgement", "server");
+    String orderId = purchase.getPurchaseId();
+    if (orderId != null && !orderId.isEmpty()) data.put("orderId", orderId);
+    return data;
+  }
+
+  private void onCatalogPurchaseUpdate(IapResult iapResult, List<PurchaseData> purchases) {
+    if (!iapResult.isSuccess()) {
+      completeBilling(billingFailure(iapResult));
+      return;
+    }
+    String productId = catalogPurchaseProductId;
+    if (purchases == null || purchases.size() != 1 || productId == null
+        || !allowedCatalogReceipt(purchases.get(0)) || !productId.equals(purchases.get(0).getProductId())) {
+      completeBilling(error("PURCHASE_CALLBACK_MISMATCH").put("recovery", "queryOwned"));
+      return;
+    }
+    PurchaseData purchase = purchases.get(0);
+    if (!billingCall.getString("obfuscatedAccountId").equals(purchase.getDeveloperPayload())) {
+      completeBilling(error("PURCHASE_ACCOUNT_MISMATCH").put("recovery", "queryOwned"));
+      return;
+    }
+    completeBilling(catalogReceipt(purchase));
+  }
+
+  @PluginMethod
+  public void queryOwned(PluginCall call) {
+    run(call, () -> {
+      if (!beginReceiptOperation(call)) return;
+      connect(call, () -> {
+        int epoch = billingEpoch;
+        purchaseClient.queryPurchasesAsync(PurchaseClient.ProductType.INAPP,
+            (iapResult, purchases) -> callback(call, () -> {
+              if (!ownsBilling(call, epoch)) return;
+              if (!iapResult.isSuccess()) {
+                completeBilling(billingFailure(iapResult));
+                return;
+              }
+              JSArray owned = new JSArray();
+              if (purchases != null) {
+                for (PurchaseData purchase : purchases) {
+                  if (owned.length() >= CATALOG_MAX_OWNED) break;
+                  if (!allowedCatalogReceipt(purchase)) continue;
+                  JSObject receipt = catalogReceipt(purchase);
+                  if (!"purchased".equals(receipt.optString("status"))) continue;
+                  receipt.put("productIds", new JSArray(Collections.singletonList(purchase.getProductId())));
+                  owned.put(receipt);
+                }
+              }
+              completeBilling(result("owned").put("purchases", owned).put("requiresServerVerification", true));
             }));
       });
     });
@@ -486,6 +706,9 @@ public class StoreBridgePlugin extends Plugin {
   private Runnable billingTimeout;
   private int billingEpoch;
   private boolean purchaseLaunched;
+  // 현재 billing 호출이 catalog 구매인지와 그 대상. beginBilling/completeBilling에서 초기화한다.
+  private boolean catalogPurchase;
+  private String catalogPurchaseProductId;
   private PluginCall consentCall;
   private PluginCall adLoadCall;
   private PluginCall adShowCall;
@@ -632,6 +855,8 @@ public class StoreBridgePlugin extends Plugin {
     }
     billingCall = call;
     purchaseLaunched = false;
+    catalogPurchase = false;
+    catalogPurchaseProductId = null;
     armBillingTimeout(QUERY_TIMEOUT_MS);
     return true;
   }
@@ -656,6 +881,8 @@ public class StoreBridgePlugin extends Plugin {
     PluginCall owner = billingCall;
     billingCall = null;
     purchaseLaunched = false;
+    catalogPurchase = false;
+    catalogPurchaseProductId = null;
     if (billingTimeout != null) main.removeCallbacks(billingTimeout);
     billingTimeout = null;
     // 호출마다 연결을 닫아 이전 구매 콜백이 새 호출을 완료하지 못하게 한다.
@@ -724,7 +951,8 @@ public class StoreBridgePlugin extends Plugin {
           .put("requiresServerVerification", true).put("acknowledgement", "server")
           .put("consumable", false).put("rewardedAds", false).put("missingConfiguration", missing)
           .put("methods", new JSArray(java.util.Arrays.asList("getCapabilities", "authenticate", "listProducts", "purchase",
-              "restorePurchases", "requestAdConsent", "loadInterstitial", "showInterstitial"))));
+              "restorePurchases", "requestAdConsent", "loadInterstitial", "showInterstitial",
+              "listCatalog", "purchaseCatalog", "queryOwned"))).put("catalogBilling", billingError == null));
     });
   }
 

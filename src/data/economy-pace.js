@@ -58,8 +58,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 25,
-      "days": 1
+      "withDays": 26,
+      "days": 0
     },
     "gem2": {
       "key": "gem2",
@@ -67,8 +67,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 25,
-      "days": 1
+      "withDays": 26,
+      "days": 0
     },
     "gem3": {
       "key": "gem3",
@@ -76,8 +76,8 @@ export const ECONOMY_PACE = {
       "hero": "mage",
       "grade": "SSR",
       "freeDays": 26,
-      "withDays": 24,
-      "days": 2
+      "withDays": 25,
+      "days": 1
     },
     "skill_reset1": {
       "key": "skill_reset1",

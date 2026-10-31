@@ -39,7 +39,8 @@
       <details><summary>문의용 정보 보기</summary><pre id="boot-failure-detail"></pre><button type="button" class="btn btn-ghost btn-sm" id="boot-failure-copy">정보 복사</button></details>
     </section>
     <div id="boot-tip" class="boot-tip"></div>
-    <nav class="legal-links boot-legal" aria-label="약관 및 정책"><a href="/terms.html" target="_blank" rel="noopener">이용약관</a><span aria-hidden="true"> · </span><a href="/refund.html" target="_blank" rel="noopener">청약철회·환불</a><span aria-hidden="true"> · </span><a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a><span aria-hidden="true"> · </span><a href="/support.html" target="_blank" rel="noopener">고객센터</a><span aria-hidden="true"> · </span><a href="/odds.html" target="_blank" rel="noopener">확률 정보</a></nav>
+    <nav class="legal-links boot-legal" aria-label="약관 및 정책"><a href="/terms.html" target="_blank" rel="noopener">이용약관</a><span aria-hidden="true"> · </span><a href="/refund.html" target="_blank" rel="noopener">청약철회·환불</a><span aria-hidden="true"> · </span><a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a><span aria-hidden="true"> · </span><a href="/support.html" target="_blank" rel="noopener">고객센터</a><span aria-hidden="true"> · </span><a href="/odds.html" target="_blank" rel="noopener">확률 정보</a><span aria-hidden="true"> · </span><a href="/game-info.html" target="_blank" rel="noopener">게임 등급</a></nav>
+    <p id="boot-rating" class="boot-rating" aria-label="게임물 등급">게임물 등급분류 신청 준비 중</p>
     <div class="boot-credit">3D: KayKit (CC0) · BGM: 자체 생성</div>
   </div>
 
@@ -74,6 +75,9 @@
       </div>
       <div class="lobby-left">
         <button class="sq-btn" id="btn-daily"><i class="ic ic-gift"></i><span>출석</span><em class="dot" id="dot-daily"></em></button>
+        <button class="sq-btn" id="btn-newbie" hidden><i class="ic ic-quest"></i><span>7일 여정</span><em class="dot" id="dot-newbie"></em></button>
+        <button class="sq-btn" id="btn-achieve"><i class="ic ic-quest"></i><span>업적</span><em class="dot" id="dot-achieve"></em></button>
+        <button class="sq-btn" id="btn-idle"><i class="ic ic-gift"></i><span>보급</span><em class="dot" id="dot-idle"></em></button>
         <button class="sq-btn" id="btn-mail"><i class="ic ic-mail"></i><span>우편</span><em class="dot" id="dot-mail"></em></button>
         <button class="sq-btn" id="btn-quest"><i class="ic ic-quest"></i><span>임무</span><em class="dot" id="dot-quest"></em></button>
         <button class="sq-btn" id="btn-guide"><i class="ic ic-pass"></i><span>안내</span></button>
@@ -147,7 +151,8 @@
         <div class="panel-head"><h2>상점</h2><div class="chapter-tabs" id="shop-tabs"></div></div>
         <p class="shop-notice" id="shop-notice" role="note" style="margin:0 0 4px;font-size:10px;line-height:1.25;color:var(--muted)"></p>
         <div class="shop-grid" id="shop-grid"></div>
-        <nav class="legal-links" id="shop-legal" aria-label="약관 및 정책"><a href="/terms.html" target="_blank" rel="noopener">이용약관</a><span aria-hidden="true"> · </span><a href="/refund.html" target="_blank" rel="noopener">청약철회·환불</a><span aria-hidden="true"> · </span><a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a><span aria-hidden="true"> · </span><a href="/support.html" target="_blank" rel="noopener">고객센터</a><span aria-hidden="true"> · </span><a href="/odds.html" target="_blank" rel="noopener">확률 정보</a></nav>
+        <nav class="legal-links" id="shop-legal" aria-label="약관 및 정책"><a href="/terms.html" target="_blank" rel="noopener">이용약관</a><span aria-hidden="true"> · </span><a href="/refund.html" target="_blank" rel="noopener">청약철회·환불</a><span aria-hidden="true"> · </span><a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a><span aria-hidden="true"> · </span><a href="/support.html" target="_blank" rel="noopener">고객센터</a><span aria-hidden="true"> · </span><a href="/odds.html" target="_blank" rel="noopener">확률 정보</a><span aria-hidden="true"> · </span><a href="/game-info.html" target="_blank" rel="noopener">게임 등급</a></nav>
+        <div id="shop-bizinfo"></div>
       </div>
     </div>
 
@@ -236,8 +241,12 @@
     <div class="result-box">
       <div class="result-title" id="result-title">VICTORY</div>
       <div class="stars" id="result-stars"><i></i><i></i><i></i></div>
+      <p class="result-levelup" id="result-levelup" role="status" hidden></p>
       <p class="result-endless" id="result-endless" role="status" aria-label="고통 단계와 전설 수련 결과" hidden></p>
       <div class="result-stats" id="result-stats"></div>
+      <section class="cl-cards" id="result-cards" aria-label="보상 카드 선택" hidden></section>
+      <div class="cl-chips" id="result-chips" aria-label="이번 판 정산 요약" hidden></div>
+      <section class="cl-shop" id="result-shop" aria-label="즉석 정비소" hidden></section>
       <section class="campaign-result" id="result-story" aria-label="전투 후 이야기" hidden></section>
       <section class="result-growth" id="result-growth" aria-label="다음 도전 준비" hidden></section>
       <div class="loot" id="result-loot"></div>

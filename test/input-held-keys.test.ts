@@ -39,6 +39,7 @@ beforeEach(() => {
   Object.defineProperty(globalThis, 'window', { configurable: true, value: host });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: doc });
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { getGamepads: () => [] } });
+  (host as any).innerWidth = 390; (host as any).innerHeight = 700;
   input = new Input(); input.enabled = true;
 });
 
@@ -160,6 +161,7 @@ describe('눌린 이동 키 되살리기', () => {
   test('resize·orientationchange 는 keys 를 비우지만 held 는 남아 다음 갱신에서 이동이 이어진다(키는 계속 눌려 있다)', () => {
     for (const type of ['resize', 'orientationchange']) {
       key('keydown', 'KeyD'); input.update();
+      if (type === 'resize') (host as any).innerWidth += 100; // 폭이 바뀐 resize만 clear 한다
       host.dispatchEvent(new Event(type));
       expect(keys().KeyD).toBeUndefined();
       input.update();

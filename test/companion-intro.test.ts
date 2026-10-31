@@ -40,3 +40,24 @@ test('띄운 카드는 저장된 본 기록이 바로 true 가 돼도 6초 뒤 �
   for (let t = 0; t < 10; t += 0.1) CompanionPresence.prototype.updateCard.call(fake, 0.1);
   expect(shown).toBe(1); expect(hidden).toBe(1); expect(fake.cardState).toBe('done');
 });
+
+test('소개 카드 자리: 주인공 둘레·HUD와 겹치는 후보는 건너뛰고, 맞는 자리가 없으면 null', async () => {
+  const { pickCardSlot, rectHitsCircle } = await import('../src/ui/companion-intro.js');
+  // 세로 390x700: 왼쪽 띠(가운데까지 넘어옴)는 주인공 둘레(195,343,r86)에 닿고 위쪽 띠는 비켜 간다.
+  const side = { left: 64, top: 300, width: 150, height: 180 };
+  const top = { left: 14, top: 150, width: 270, height: 70 };
+  const hero = { x: 195, y: 343, r: 86 };
+  expect(rectHitsCircle({ left: 64, top: 300, right: 214, bottom: 480 }, hero.x, hero.y, hero.r)).toBe(true);
+  expect(pickCardSlot([side, top], [], hero, 390, 700)).toBe(top);
+  // HUD와 겹치면 건너뛴다.
+  expect(pickCardSlot([top], [{ left: 200, top: 140, right: 300, bottom: 200 }], hero, 390, 700)).toBeNull();
+  // 화면 밖이면 건너뛴다.
+  expect(pickCardSlot([{ left: 300, top: 150, width: 200, height: 60 }], [], null, 390, 700)).toBeNull();
+});
+
+test('띄울 자리가 없으면(showCard false) 카드를 띄우지 않고 본 기록도 남기지 않는다', () => {
+  let seen = false, hidden = 0;
+  const fake: any = { elapsed: 0, cardState: 'idle', getSeen: () => seen, markSeen: () => { seen = true; }, showCard: () => false, hideCard: () => { hidden++; } };
+  for (let t = 0; t < 10; t += 0.1) CompanionPresence.prototype.updateCard.call(fake, 0.1);
+  expect(seen).toBe(false); expect(fake.cardState).toBe('done');
+});
