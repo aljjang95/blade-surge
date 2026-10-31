@@ -29,7 +29,7 @@
     "TOSS_AD_GROUP_ID": "ait.v2.live.b311470e6321418c",
     "TOSS_AD_GROUP_ENABLED": "true",
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
-    // 앱 광고(AdMob 전면, 전투 밖·보상형 위치만): 빌드에 넣은 ID(config/store-providers.json)와 승인 ID가 같아야 켜진다(worker/store.ts nativeAdConfiguration).
+    // 앱 광고(AdMob 전면, 전투 밖 스토어 모달에서 사용자가 누를 때만): 빌드에 넣은 ID(config/store-providers.json)와 승인 ID가 같아야 켜진다(worker/store.ts nativeAdConfiguration).
     "BLADESURGE_ADMOB_PACKAGE_NAME": "com.theluxurylord.bladesurge",
     "BLADESURGE_GOOGLEPLAY_ADS_ENABLED": "true",
     "BLADESURGE_GOOGLEPLAY_ADMOB_APP_ID": "ca-app-pub-2682150499836559~7085430828",
