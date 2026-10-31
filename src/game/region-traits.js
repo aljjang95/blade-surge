@@ -115,6 +115,23 @@ export class RegionTraits {
       g.fx.groundTex(_v.set(e.pos.x, 0, e.pos.z), 'circle_gold', 0x48dabd, { r0: 5, r1: .6, life: 1.2, spin: -2.5, fadeIn: .05 });
     }
   }
+  /** AUTO 회피: 영웅이 쇳물(예고 중 포함) 안에 서 있으면 가장 가까운 바깥 지점을 돌려준다. 없으면 null. 고정 객체를 재사용한다.
+   *  쇳물 힌트("쇳물 밖에서 싸우세요")를 AUTO 도 따른다 — 2장 실측에서 AUTO 가 쇳물 위에 서서 받은 피해가 전체의 13~29%였다. */
+  autoEscape(p) {
+    if (!p) return null;
+    let best = null, bestD = Infinity;
+    for (const pl of this.pools) {
+      if (pl.life <= 0 || pl.kind !== 'slag') continue;
+      const d = Math.hypot(p.pos.x - pl.x, p.pos.z - pl.z);
+      if (d < 1.3 + .45 && d < bestD) { bestD = d; best = pl; }
+    }
+    if (!best) return null;
+    const out = this._escape || (this._escape = { x: 0, z: 0 });
+    const dx = p.pos.x - best.x, dz = p.pos.z - best.z, l = Math.hypot(dx, dz);
+    const ux = l > 1e-3 ? dx / l : 1, uz = l > 1e-3 ? dz / l : 0;
+    out.x = best.x + ux * 2.4; out.z = best.z + uz * 2.4;
+    return out;
+  }
   activePools(kind) { let n = 0; for (const p of this.pools) if (p.life > 0 && p.kind === kind) n++; return n; }
   pool(x, z, kind, life) {
     // 쇳물은 0.9초 동안 식은 테두리로 예고한 뒤에만 데운다(몰이 중 발밑에서 바로 데이지 않게).

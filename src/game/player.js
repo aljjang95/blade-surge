@@ -734,6 +734,16 @@ export class Player extends Actor {
       if (hl > .3) { out.x = hx / hl; out.y = hz / hl; }
       return out;
     }
+    // 쇳물(2장 용융 잔해) 위에 서 있으면 공격보다 먼저 밖으로 한 걸음 나간다. 공격 동작 중이면 타격 뒤 이동으로 넘어간다.
+    const slag = this.game.regionTraits?.autoEscape?.(this);
+    if (slag && (this.state !== 'attack' || this.hitDone)) {
+      const sx = slag.x - this.pos.x, sz = slag.z - this.pos.z, sl = Math.hypot(sx, sz);
+      if (sl > .3) {
+        out.x = sx / sl; out.y = sz / sl;
+        if (this.state === 'attack' && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+        return out;
+      }
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.

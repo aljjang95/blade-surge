@@ -100,7 +100,7 @@
    "source": "calc:1관문 × 3분(sim MIN_STAGE; 실측 AUTO 전투 1-1 168초·1-2 144초·1-3 211초, HUNT_GROWTH_V2.md) + 온보딩 2분 누적; 1일차 스토리 우선 순서",
    "status": "live",
    "evidence": "tools/sim-90d.mjs:75, docs/HUNT_GROWTH_V2.md:39",
-   "note": " | 2026-10-30 운영 표본(AUTO만, 성장 개입 없음): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(부활창 표시) — docs/playtest/2026-10-30-first-hour.md |  | 2026-10-30 운영 표본(AUTO만·장비 미착용): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(전투력 3676~3914 < 권장 4140). 같은 봇이 소환·장비 착용·강화·스킬을 하면 전투력 4664~4774(권장의 1.13배)로 첫 시도에 넘음 — docs/playtest/2026-10-30-bot-growth.md. 2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 286초(n=3), 직전 승리→이 승리 평균 5.3분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
+   "note": "2026-10-30 운영 표본(AUTO만·장비 미착용): Lv.4 기사가 1-3에서 237초·251초에 두 번 쓰러짐(전투력 3676~3914 < 권장 4140; docs/playtest/2026-10-30-first-hour.md). 같은 봇이 소환·장비 착용·강화·스킬을 하면 전투력 4664~4774(권장의 1.13배)로 첫 시도에 넘음 — docs/playtest/2026-10-30-bot-growth.md. 2026-10-30 [telemetry:tools/qa/playtest-first-hour.mjs 성장 봇 3런(로컬 a·b + 운영 a 게스트; CDP 터치 실입력, AUTO 전투만 app.step 가속, 소프트웨어 GL)] AUTO 전투 평균 286초(n=3), 직전 승리→이 승리 평균 5.3분(n=3, 성장 라운드 제외). minutes는 calc 3분 유지 — 측정값은 봇의 보수적 사람 속도 대기·소프트웨어 GL 로딩을 포함해 과대 가능, 판단 보류."
   },
   {
    "id": "story-1-4",
