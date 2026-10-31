@@ -26,7 +26,7 @@ export const CH1_RAMP = Object.freeze(Array.from({ length: 10 }, (_, i) => Objec
 // 11관문부터 붙는 웨이브당 정예 +1 을 반영하지 못한 탓이다. 보상·배율(scale)·드랍·정산·권장 표시는 그대로 두고 전투 생성자에서만 곱한다.
 // 후반(2-8~2-10)은 0.95배로도 이겨 조금 되돌린다: 2-7 까지 공격 ×0.8·체력 ×0.82, 2-10 공격 ×0.86·체력 ×0.88 까지 선형.
 // 2-2(잠복형 대표 관문)는 AUTO 가 잠복 예고 원을 피하게 된 뒤(2026-10-31 ch2-ch3) 0.94배로도 3판 모두 이겨 따로 올린다 — CH2_2_THREAT.
-export const CH2_2_THREAT = Object.freeze({ atk: .95, hp: .88 });
+export const CH2_2_THREAT = Object.freeze({ atk: 1, hp: .95 });
 export const CH2_THREAT = Object.freeze(Array.from({ length: 10 }, (_, i) => i === 1 ? CH2_2_THREAT : Object.freeze({
   atk: +(.8 + Math.max(0, i - 6) * .02).toFixed(4), hp: +(.82 + Math.max(0, i - 6) * .02).toFixed(4) })));
 export function campaignAtkMul(stage) {
