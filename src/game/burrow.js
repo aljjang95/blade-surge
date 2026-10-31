@@ -134,6 +134,29 @@ export class Burrow {
   }
 }
 
+/** AUTO 회피: 영웅이 잠복 예고 원(반경 + 여유) 안에 있으면 가장 먼저 솟구칠 원의 바깥 지점과 남은 시간을 돌려준다. 없으면 null.
+ *  2장 실측에서 잠복형 솟구침이 2-2 받은 피해의 28~39%, 1-10 에서도 17~22%였다 — AUTO 는 예고 원을 보지 않고 그 자리에서 계속 쳤다.
+ *  고정 객체를 재사용한다(프레임 할당 없음). */
+export const BURROW_AUTO = Object.freeze({ margin: .45, out: 1.1 });
+export function burrowEscape(player, enemies, out) {
+  let best = null, left = Infinity;
+  for (const e of enemies) {
+    const b = e?.burrow;
+    if (!b || b.phase !== 'mark' || !e.alive) continue;
+    const d = Math.hypot(player.pos.x - b.x, player.pos.z - b.z);
+    if (d >= BURROW.radius + BURROW_AUTO.margin) continue;
+    const t = BURROW.mark - b.t;
+    if (t < left) { left = t; best = b; }
+  }
+  if (!best) return null;
+  const dx = player.pos.x - best.x, dz = player.pos.z - best.z, l = Math.hypot(dx, dz);
+  // 원 한가운데면 영웅이 보는 반대쪽(뒤)으로 빠진다.
+  const ux = l > 1e-3 ? dx / l : -Math.sin(player.yaw || 0), uz = l > 1e-3 ? dz / l : -Math.cos(player.yaw || 0);
+  const r = BURROW.radius + BURROW_AUTO.out;
+  out.x = best.x + ux * r; out.z = best.z + uz * r; out.left = left; out.need = Math.max(0, r - BURROW_AUTO.out - l + BURROW_AUTO.margin);
+  return out;
+}
+
 function burrowTargets(game) {
   const list = game.stage?.party ? game.app?.party?.livingPlayers?.() || [] : [game.player];
   return [...new Set(list)].filter((p) => p?.alive);
