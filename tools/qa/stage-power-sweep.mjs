@@ -93,13 +93,19 @@ async function runOne(job) {
           if (!P.alive) return { active: b.active, dead: true, elapsed: b.elapsed };
           try { globalThis.__metricsDriver.step(1 / 60, false); }
           catch (err) { pauseError = String(err.message) + ' reasons=' + [...b.pauseReasons].join('|'); break; }
-          if (b.elapsed > maxGameS) return { active: true, timeout: true, elapsed: b.elapsed };
+          if (b.elapsed > maxGameS) {
+            // 시간 초과 진단: 남은 적·영웅 상태(어디서 왜 멈췄는지).
+            const r2 = (v) => Math.round(v * 10) / 10;
+            const stuck = { hero: { x: r2(P.pos.x), z: r2(P.pos.z), state: P.state }, enemies: (b.enemies || []).filter((e) => e.alive).slice(0, 8)
+              .map((e) => ({ id: e.runtimeSpeciesId || e.def?.id, x: r2(e.pos.x), z: r2(e.pos.z), spawning: !!e.spawning, burrow: e.burrow?.phase || null, state: e.state })) };
+            return { active: true, timeout: true, elapsed: b.elapsed, stuck };
+          }
         }
         return { active: b.active, pauseError, elapsed: b.elapsed, win: b.result?.win ?? null, rooms: b.roomsCleared | 0 };
       }, maxGameS);
       if (s.pauseError) { row.status = 'paused-blocked'; row.pauseError = s.pauseError; break; }
       if (s.dead) { row.status = 'lost'; row.elapsed = Math.round(s.elapsed); break; }
-      if (s.timeout) { row.status = 'timeout'; row.elapsed = Math.round(s.elapsed); break; }
+      if (s.timeout) { row.status = 'timeout'; row.elapsed = Math.round(s.elapsed); row.stuck = s.stuck; break; }
       if (!s.active) { row.status = s.win === false ? 'lost' : 'win'; row.elapsed = Math.round(s.elapsed); break; }
     }
     const out = await page.evaluate(() => {
@@ -114,7 +120,7 @@ async function runOne(job) {
       .map(([k, s]) => ({ src: k, pct: +(s.dmg / total * 100).toFixed(1), hits: s.hits, avg: Math.round(s.dmg / s.hits) }));
   } catch (err) { row.status = 'error'; row.error = String(err.message).slice(0, 300); }
   finally { await context.close().catch(() => {}); await browser.close().catch(() => {}); }
-  console.log(JSON.stringify({ code: row.code, lv: row.level, seed: row.seed, ratio: row.ratio, status: row.status, t: row.elapsed, rooms: row.rooms, minHp: row.minHp, boss: row.bossHpLeft, dmgX: row.dmgPerMaxHp, top: row.sources?.slice(0, 3).map((s) => s.src + ' ' + s.pct + '%'), err: row.error }));
+  console.log(JSON.stringify({ code: row.code, lv: row.level, seed: row.seed, ratio: row.ratio, status: row.status, t: row.elapsed, rooms: row.rooms, minHp: row.minHp, boss: row.bossHpLeft, dmgX: row.dmgPerMaxHp, top: row.sources?.slice(0, 3).map((s) => s.src + ' ' + s.pct + '%'), err: row.error, stuck: row.stuck }));
   return row;
 }
 
