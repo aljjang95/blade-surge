@@ -85,7 +85,7 @@ try {
     run.labels = await page.evaluate(() => {
       const ll = window.app.battle.lootLabels; if (!ll) return null;
       const labels = ll.snapshot();
-      const hud = [...document.querySelectorAll('#hud .hud-player, #hud .hud-right-top, #hud .joy-base, #hud .actions .skill-btn, #hud #btn-dodge, #hud #btn-attack, #hud #objective, #hud .exp-potions, #hud #btn-map')]
+      const hud = [...document.querySelectorAll('#hud .hud-player, #hud .hud-right-top, #hud .joy-base, #hud .actions .skill-btn, #hud #btn-dodge, #hud #btn-attack, #hud #objective, #hud .exp-potions, #hud #btn-map, #toast-layer .toast')]
         .map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
       const area = (a, c) => { const w = Math.min(a.right, c.right) - Math.max(a.left, c.left), h = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top); return w > 0 && h > 0 ? w * h : 0; };
       let labelLabel = 0, labelHud = 0;
