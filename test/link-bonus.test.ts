@@ -54,6 +54,19 @@ describe('로그인 연동 보상 — 서버 /cmd', () => {
     expect((await h.cmd(a.token, 'claimLinkBonus', [])).status).toBe(422);
     expect((await h.send('GET', '/me', undefined, a.token)).body.doc.gems).toBe(before + 300);
   });
+
+  test('해제한 제공자 계정을 다른 게스트에 재연동해도 보상은 다시 나오지 않는다(묘비)', async () => {
+    const h = await v1Harness();
+    h.google.set('tok-a', 'sub-a');
+    const a = await h.session();
+    expect((await h.send('POST', '/auth/link', { provider: 'google', idToken: 'tok-a' }, a.token)).status).toBe(200);
+    expect((await h.cmd(a.token, 'claimLinkBonus', [])).status).toBe(200);
+    expect((await h.send('POST', '/auth/unlink', { provider: 'google', idToken: 'tok-a' }, a.token)).status).toBe(200);
+    const b = await h.session();
+    expect((await h.send('POST', '/auth/link', { provider: 'google', idToken: 'tok-a' }, b.token)).status).toBe(200);
+    const r = await h.cmd(b.token, 'claimLinkBonus', []);
+    expect(r.status).toBe(422); expect(r.body.reason).toBe('claimed');
+  });
 });
 
 describe('로그인 연동 보상 — 가져오기 정화', () => {

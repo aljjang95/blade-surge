@@ -1,6 +1,7 @@
 // MMO P1-D: POST /api/v1/cmd 멱등 명령 실행, GET /api/v1/me 문서 조회 (docs/MMO_DESIGN.md 3.3).
 import { casCommit, ledgerReceipt, readDoc, REV_GUARD, type D1Database, type GuardedWrite } from './db';
 import { CID, fail, onlyKeys, isInt } from './http';
+import { hasRecentTombstone } from './tombstone';
 import { links, type Authed, type Ctx } from './auth';
 import { docOf, loadEconomy } from './state';
 import { validateOp } from '../../src/shared/v1-ops.js';
@@ -34,6 +35,11 @@ export async function runCommand(c: Ctx, auth: Authed, body: Record<string, unkn
   if (replay) return { ...(replay.receipt as object), replayed: true };
   // 로그인 연동 보상은 연동된 제공자가 하나 이상 있는 계정만 받는다(클라이언트 단독 요청 차단). 이미 받은 계정은 아래에서 422 claimed.
   if (body.op === 'claimLinkBonus' && !(await links(c.db, accountId)).length) fail(403, 'not-linked');
+  // 이 계정에 묶인 제공자 계정이 최근 탈퇴·해제·정지한 적 있으면 이미 받은 것으로 본다(탈퇴 후 재가입·해제 후 다른 게스트 재연동으로 300 반복 수령 차단, docs/ACCOUNT_POLICY.md 7장).
+  if (body.op === 'claimLinkBonus') {
+    const rows = await c.db.prepare('SELECT provider, subject_hash FROM account_links WHERE account_id = ?').bind(accountId).all<{ provider: string; subject_hash: string }>();
+    for (const r of rows.results ?? []) if (await hasRecentTombstone(c.db, r.provider, r.subject_hash, c.now)) fail(422, 'rejected', { op: body.op, reason: 'claimed' });
+  }
   const doc = await loadAccountDoc(c.db, accountId);
   if (body.baseRev !== undefined && body.baseRev !== doc.rev) fail(409, 'stale', { rev: doc.rev });
   // 결제 권한(월정액·시즌 패스)은 문서가 아니라 서버 권한 표가 정본이다. 명령 직전에 얹는다.
