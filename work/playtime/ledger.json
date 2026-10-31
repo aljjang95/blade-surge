@@ -696,12 +696,13 @@
    "phase": "P1",
    "kind": "unique",
    "track": "story",
-   "minutes": 12,
+   "minutes": 21,
    "cumMinutes": 240,
    "day": 1,
-   "source": "calc:4관문 × 3분(sim MIN_STAGE); 도달일 sim marathon(8h/일=120분×4세션, 손기술 0.85) 16시드(0~15) p50 관문 24 클리어 D1(최소 D1~최대 D1)",
+   "source": "telemetry:tools/qa/stage-power-sweep.mjs ch3-frost (2026-11-01, 3-1~3-4 × 전투력/권장 1.01~1.19배 × 2시드, AUTO 끝까지·부활 없음, 16판 전승) 판당 게임 시간 평균 5.2분(254~430초) × 4관문; 도달일은 기존 sim marathon p50 D1",
    "status": "live",
-   "evidence": "src/data/stages.js:13, tools/sim-90d.mjs:75"
+   "evidence": "docs/playtest/2026-11-01-ch3-entry.md, tools/qa/stage-power-sweep.mjs, src/game/region-hazards.js(autoEscape)",
+   "note": "실측(SwiftShader 소프트웨어 GL, 실기기 아님, 성장 행동 없이 레벨·E등급 장비 고정). 기존 calc 3분/관문보다 길다 — 3-3이 6.5~7.2분으로 가장 김."
   },
   {
    "id": "story-3-b",
@@ -5795,6 +5796,7 @@
   "2026-10-30 재고 조사(Sonnet, 기준 HEAD e44884f3, sim-90d 마라톤 16시드). 경고: 고통 단계 파밍이 약 502h(70%) — 반복 상한 60% 규칙과 목표 간격으로 판정. 진짜 고유 콘텐츠는 live 37.8h.",
   "2026-10-30 던전 동선(보스 직행/전부 사냥, docs/DUNGEON_ROUTE.md). 출처 sim:tools/route-economy.mjs + SIM_ROUTE_SHARE sim-90d 16시드: 직행 판 시간 평균 0.61배, 판당 골드 0.67·경험치 0.56배. 단위 minutes는 전부 사냥(기본 AUTO) 기준 그대로. 직행 비율 30%까지 sim:90d 밴드 전부 통과, 50%·100%는 일부 실패(100%: 미드 스토리 6-10 4일·라이트 골드 잔액 115일, 50%: 미드 최장 정체 10일) — 직행을 기본값으로 바꾸지 않는 근거.",
   "2026-10-30 3month-highend#1: 현상금 의뢰판 단위 bounty-rank-* 추가(마라톤 1~3일차 할 일 없음 감소분만, 고통·반복 시간과 이중 계산 없음).",
-  "2026-10-30 3month-highend#3 봇 성장 표본: 첫 소환·착용·강화·스킬·보상 수령은 로비 도착 직후(0:34~1:45), 첫 승리 5~7.5분, 1-3 통과 15:18~17:07(성장 행동 시), 1-10 클리어 47~56분, 의뢰판 수락 47~56분. 증거=telemetry:bot(실입력·AUTO 가속). 2·3일차 의뢰 소진 공백은 simulated(sim-90d 16시드): 의뢰 OFF 1~3일 공백 약 926분 → ON 약 253분, 4일차부터 0."
+  "2026-10-30 3month-highend#3 봇 성장 표본: 첫 소환·착용·강화·스킬·보상 수령은 로비 도착 직후(0:34~1:45), 첫 승리 5~7.5분, 1-3 통과 15:18~17:07(성장 행동 시), 1-10 클리어 47~56분, 의뢰판 수락 47~56분. 증거=telemetry:bot(실입력·AUTO 가속). 2·3일차 의뢰 소진 공백은 simulated(sim-90d 16시드): 의뢰 OFF 1~3일 공백 약 926분 → ON 약 253분, 4일차부터 0.",
+  "2026-11-01 3month-highend#5: AUTO가 3장 지연 기록 원판을 피한다. 3-1~3-5 스윕 20판 전승(패치 전 3-5 1.08배 0/2), 원판 피해 비중 40~52% → 1% 미만. story-3-a minutes 12→21(telemetry:sweep). 3-5는 단위 경계상 story-3-mid/boss 쪽이라 이 단위에 넣지 않음."
  ]
 }
