@@ -287,7 +287,13 @@ export async function unlink(c: Ctx, auth: Authed, body: Record<string, unknown>
   const owned = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND subject_hash = ? AND account_id = ?')
     .bind(body.provider as string, hash, auth.account.account_id).first();
   if (!owned) fail(403, 'reauth-mismatch');
-  await c.db.prepare('DELETE FROM account_links WHERE provider = ? AND account_id = ?').bind(body.provider as string, auth.account.account_id).run();
+  // 해제한 제공자 계정도 90일 묘비로 남긴다: 다른 게스트에 재연동해 1회 보상(연동 보상)을 되풀이 받는 것을 막는다(리뷰 P1).
+  await c.db.batch([
+    c.db.prepare(`INSERT INTO abuse_tombstones(provider, subject_hash, reason, created_at, expires_at) VALUES(?, ?, 'withdrawn', ?, ?)
+      ON CONFLICT(provider, subject_hash) DO UPDATE SET expires_at = max(expires_at, excluded.expires_at), reason = CASE WHEN reason = 'banned' THEN reason ELSE excluded.reason END`)
+      .bind(body.provider as string, hash, c.now, c.now + WITHDRAWN_TOMBSTONE_MS),
+    c.db.prepare('DELETE FROM account_links WHERE provider = ? AND account_id = ?').bind(body.provider as string, auth.account.account_id),
+  ]);
   return { linked: await links(c.db, auth.account.account_id) };
 }
 

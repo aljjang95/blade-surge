@@ -165,13 +165,13 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, serverJourney?: any, snapshot?: boolean }} opts
+ * @param {{ now: number, createdAt?: number, allowance?: Record<string, number>, entitled?: { passPremium?: boolean, monthlyUntil?: number, heroes?: readonly string[] }, serverRoster?: any, serverGacha?: any, serverPaidGems?: number, legacyProof?: { source: string, at: number } | null, serverProgress?: any, serverEndgame?: any, serverGearDex?: any, serverLineageSigil?: number, serverSigilClaims?: any, serverIdle?: any, serverNewbie?: any, serverAchievements?: any, serverSlain?: any, serverKills?: number, serverJourney?: any, serverLinkBonus?: number, snapshot?: boolean }} opts
  *   서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다),
  *   allowance = 서버가 영수증 검증 뒤 지급한 유료 보상 합(필드별 상한 가산), entitled = 서버 권한 표의 유효 결제 권한(heroes = 영웅 권한),
  *   serverRoster = 서버 문서의 현재 roster(신뢰값), legacyProof = 서버가 조회한 컷오버 전 기록({ source, at }; 클라이언트 값 금지)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, serverJourney, snapshot = false }) {
+export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitled = {}, serverRoster, serverGacha, serverPaidGems = 0, legacyProof = null, serverProgress, serverEndgame, serverGearDex, serverLineageSigil, serverSigilClaims, serverIdle, serverNewbie, serverAchievements, serverSlain, serverKills = 0, serverJourney, serverLinkBonus = 0, snapshot = false }) {
   let eco;
   // 영웅 소유는 클라이언트 값(roster.paid·owned)을 믿지 않고 서버 값으로 덮어쓴 원본을 정화한다.
   const { roster, grandfathered, legacyClaim } = trustedRoster(raw, { serverRoster, entitledHeroes: entitled.heroes, legacyProof });
@@ -228,6 +228,7 @@ export function sanitizeLegacySave(raw, { now, createdAt, allowance = {}, entitl
   // 그림자 스냅샷(snapshot)은 외부 가져오기가 아니라 같은 계정의 반복 동기화다: 문장 잔액·도감은 서버 문서 값을 그대로 유지하고(소급·삭제 없음),
   // 로컬이 보낸 값은 쓰지 않는다. 문장·도감은 서버 명령(vaultRitual·gearDexClaim·claimJourneySigil)으로만 바뀐다.
   delete s.lineageSigil; delete s.sigilClaims;
+  s.linkBonus = serverLinkBonus === 1 ? 1 : 0;   // 연동 보상 수령 표시는 서버 소유: 클라이언트가 보낸 값은 버리고 서버 문서 값만 유지한다(1을 0으로 되돌려 재수령하는 것도 차단).
   // 클리어 카드(docs/CLEAR_LOOP.md)는 서버 정산(completeStage)만 만든다. 가져온 카드 보상은 버린다(조작 세이브로 보상 주입 방지, 보안 리뷰 P2).
   delete s.clearCard;
   if (snapshot) {

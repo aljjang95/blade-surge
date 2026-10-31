@@ -3,6 +3,7 @@ import { isAccountResetting } from './reset-lock.js';
 import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { itemStats, validItemLevel } from '../data/item-tier.js';
+import { LINK_BONUS_GEMS } from '../data/link-bonus.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { GACHA_BANNERS, GACHA_MILEAGE, HERO_PICKUP_ROTATION, GEAR_PICKUP_ROTATION, bannerChances, bannerSsrWeight, bannerPullsPerSsr, bannerMaterials, pickupAt, heroReleased } from '../data/gacha-banners.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
@@ -203,7 +204,7 @@ export class Economy {
       campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       regionGate: { v: 1, kept: [] }, // 지역 던전 노출의 소급 보존 목록(새 저장은 비어 있음, region-dungeon-gate.js)
       towns: freshTownState(),
-      pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
+      pity: 0, gacha: { pity: 0, guarantee: false, gearPity: 0, gearGuarantee: false, beginner: 0, beginnerSsr: false, mileage: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0, linkBonus: 0,
       iapApplied: [], adsRemoved: false, // 서버 검증 결제로 적용한 grant/reversal opId(최근 300개)와 광고 제거 권한
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: freshMailbox(),
@@ -1457,6 +1458,14 @@ export class Economy {
     this.emit(); return { ok: true };
   }
   claimMonthly() { const s = this.s; if (s.monthlyUntil < nowOf(this)) return false; const day = Math.floor(nowOf(this) / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100, blessingCharm: Runes.BLESSING_MONTHLY_CHARMS }); return true; }
+  /** 로그인 연동 보상(계정당 1회, 무료 보석만). 서버 /cmd 는 연동된 제공자가 있을 때만 이 메서드를 부른다. 난수 없음. */
+  claimLinkBonus() {
+    const s = this.s;
+    if (s.linkBonus === 1) return { ok: false, reason: 'claimed' };
+    s.linkBonus = 1;
+    this.addRewards({ gems: LINK_BONUS_GEMS }, { applyVip: false });
+    return { ok: true, gems: LINK_BONUS_GEMS };
+  }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }

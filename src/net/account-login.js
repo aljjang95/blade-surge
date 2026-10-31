@@ -40,6 +40,23 @@ export async function startOAuth(app, provider, mode, { assign = (url) => global
   }
 }
 
+/**
+ * 로그인 연동 보상(계정당 1회, 무료 보석 300). 연동 직후(link 성공)에만 부른다. 복구·기존 계정 로그인 흐름에서는 부르지 않는다.
+ * 일반 명령 경로(Economy 메서드 → 명령 큐 → 서버 /cmd)로 보내고, 서버가 받아들였을 때만 보석 수를 돌려준다(아니면 0).
+ * 서버가 거절하면(422 claimed·403 not-linked) 명령 큐가 서버 문서로 되돌린다.
+ */
+export async function claimLinkBonus(app) {
+  const eco = app?.eco, queue = app?.account?.queue;
+  if (!eco?.claimLinkBonus || !queue) return 0;
+  try {
+    const r = eco.claimLinkBonus();
+    if (!r?.ok) return 0;
+    const res = await queue.settled(queue.lastCid);
+    return res?.ok === true ? r.gems : 0;
+  } catch { return 0; }
+}
+export const linkBonusText = (gems) => `로그인 연동 보상: 보석 ${gems}`;
+
 /** 구글: 기존 진행 복원을 먼저 시도한다. 연동이 없으면(404 no-link) 게스트 세션을 만들고 바로 연동한다. */
 export async function googleLogin(app, { signIn, confirm } = {}) {
   const state = app.account;
@@ -62,7 +79,7 @@ export async function googleLinkWith(app, idToken, { confirm } = {}) {
   if (!(await state.ensure())) return { ok: false, reason: 'unavailable' };
   try {
     await state.client.link('google', idToken);
-    return { ok: true, action: 'linked' };
+    return { ok: true, action: 'linked', bonus: await claimLinkBonus(app) };
   } catch (error) {
     if (error?.status === 409) {
       const yes = confirm ? await confirm('이미 다른 진행에 연결된 계정입니다. 그 진행으로 바꿀까요?') : false;
@@ -137,7 +154,9 @@ export async function consumeLoginReturn(app, ret, { toast = (/** @type {string}
     if (!(await state.ensure())) { toast(RESULT_TEXT.unavailable); return { handled: true, result: 'unavailable', mode }; }
     await state.client.oauthFinish(ticket, 'link');
     toast(`${label} 계정을 연동했어요. 다른 기기에서도 이어서 할 수 있어요.`);
-    return { handled: true, result, mode, action: 'linked' };
+    const bonus = await claimLinkBonus(app);
+    if (bonus) toast(linkBonusText(bonus));
+    return { handled: true, result, mode, action: 'linked', bonus };
   } catch (error) {
     const code = errCode(error);
     if (code === 'no-link' && mode === 'recover') {
