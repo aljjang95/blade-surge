@@ -188,8 +188,11 @@ test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력
   expect(campaignAtkMul({ ...stageDef(1, 5), party: true })).toBe(1); expect(campaignHpMul({ ...stageDef(1, 5), expedition: true })).toBe(1);
 });
 
-test('2장 위협 보정: 2-1~2-7 공격 ×0.8·체력 ×0.82, 2-10 까지 ×0.86·×0.88 로 선형, 권장 전투력·원정·파티·무한의 성은 그대로', () => {
-  for (let st = 1; st <= 7; st++) { expect(campaignAtkMul(stageDef(2, st))).toBe(.8); expect(campaignHpMul(stageDef(2, st))).toBe(.82); }
+test('2장 위협 보정: 2-1~2-7 공격 ×0.8·체력 ×0.82(2-2 는 공격 ×1·체력 ×0.95), 2-10 까지 ×0.86·×0.88 로 선형, 권장 전투력·원정·파티·무한의 성은 그대로', () => {
+  for (let st = 1; st <= 7; st++) {
+    if (st === 2) { expect(campaignAtkMul(stageDef(2, st))).toBe(1); expect(campaignHpMul(stageDef(2, st))).toBe(.95); continue; }
+    expect(campaignAtkMul(stageDef(2, st))).toBe(.8); expect(campaignHpMul(stageDef(2, st))).toBe(.82);
+  }
   expect(campaignAtkMul(stageDef(2, 10))).toBe(.86); expect(campaignHpMul(stageDef(2, 10))).toBe(.88);
   for (let st = 8; st <= 10; st++) expect(CH2_THREAT[st - 1].atk).toBeGreaterThan(CH2_THREAT[st - 2].atk);
   for (let st = 1; st <= 10; st++) expect(stageDef(2, st).recPower).toBe(recommendedPowerFor(stageDef(2, st).scale));
