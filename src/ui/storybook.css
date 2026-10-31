@@ -126,7 +126,6 @@
 :root:root .shop-item .si-desc, :root:root .shop-notice { color: #eaf6fb; }
 :root:root .shop-item .badge { border: 2px solid #fff; background: linear-gradient(#ff7088, #e0284e); box-shadow: 0 2px 0 #861a2c; }
 :root:root .shop-item .si-desc { color: #e6f4fa; }
-:root:root .shop-item .si-bonus { color: #b8ff9a; }
 :root:root .pass-cell { border: 3px solid #e6c066; background: linear-gradient(180deg, #2f89a4, #1a5a76); box-shadow: 0 3px 0 rgba(8, 30, 48, .5); }
 :root:root .pass-cell.prem { border-color: #e2b2ff; background: linear-gradient(180deg, #8a54d6, #50278f); }
 :root:root .bar { background: rgba(8, 30, 48, .6); border: 2px solid rgba(255, 255, 255, .35); box-shadow: inset 0 2px 3px rgba(0, 0, 0, .4); }

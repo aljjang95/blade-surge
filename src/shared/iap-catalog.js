@@ -18,7 +18,7 @@ export const CURRENT_SEASON = 's1';
  * type: consumable(지급 뒤 consume) · non_consumable(acknowledge만, 영구/기간 권한) · subscription(자동 갱신, 기간마다 지급)
  * grant.rewards: 구매 1건당 1회 지급 / grant.perPeriod: 구독 결제 주기(주문)마다 1회 / grant.entitlement: 권한 키 하나
  * grant.entitlements: 권한 키 여러 개(영웅 전원 해금 등, `[{ key }]`). entitlement와 함께 있어도 둘 다 지급한다. entitlementKeys(product)로 읽는다.
- * channels: 이 상품을 파는 결제 채널(['web','play']). 없으면 Play만(기존 상품). 웹·Play 동일가.
+ * channels: 이 상품을 파는 결제 채널(['web','play','onestore']). 없으면 Play만(기존 상품). 웹·Play 동일가.
  *   웹(KG이니시스) 채널은 구매 즉시 지급형(B형)만 판다: 영구 권한·계정당 1회 패키지·기간 이용권. 저장형 보석 팩·확률형 상품은 웹에 올리지 않는다(docs/PAYMENT_COMPLIANCE.md 4.1).
  * periodDays(구독이 아닌 상품): 권한이 구매 시각부터 이 일수 뒤 끝나는 기간 이용권(자동 갱신 없음).
  * enabled=false 상품은 서버가 의도(intent)·검증 모두 거부한다(판매 전 게이트가 남은 상품).
@@ -34,7 +34,8 @@ export const HERO_ALL_PRICE_KRW = 89000;
 /** hero_<id>_v1 상품 id ↔ 영웅 id. */
 export const heroProductId = (heroId) => `hero_${heroId}_v1`;
 export const HERO_ALL_PRODUCT_ID = 'hero_all_v1';
-const CHANNELS_ALL = Object.freeze(['web', 'play']);
+// 원스토어(onestore)는 일회성 상품만 판다. 정기 결제는 iap.ts intent가 막고, channels가 없는 보석 팩은 soldOn으로 Play만 판다.
+const CHANNELS_ALL = Object.freeze(['web', 'play', 'onestore']);
 const CHANNELS_WEB = Object.freeze(['web']);
 const DAY_MS = 86400000;
 /** 영웅 아바타 풀셋(외형 + 작은 풀셋 효과) 상품. 아바타 시스템 레인이 외형·효과를 만들고, 이 표는 상품 id·권한 키·지급만 정한다. */
@@ -89,13 +90,14 @@ export const IAP_PRODUCTS = Object.freeze([
   { id: HERO_ALL_PRODUCT_ID, type: 'non_consumable', enabled: false, gate: 'gacha-only', priceKRW: HERO_ALL_PRICE_KRW, shopSku: 'hero_all', channels: CHANNELS_ALL,
     title: '영웅 전원 해금', description: '다섯 영웅을 모두 계정에 영구 해금합니다(4명 개별 구매 합계 120,000원 대비 약 26% 할인).',
     grant: { entitlements: HERO_LEGACY_IDS.map((id) => ({ key: heroEntitlementKey(id) })) } },
+  // 보석 팩 가격 사다리(docs/PRICING.md): 보석 1개당 13.0 → 12.2 → 11.1원, 묶음이 클수록 싸다(최대 약 15%). 지급은 grant의 보석만(첫 결제 보너스 없음).
   // 보석 팩: 유료/무료 분리(paidGems, 무료부터 소비, 환불 역분개)는 BM 12.4로 준비됐다. 판매 시작·가격 공개는 대표님 확인 뒤(gate 유지).
   // Play 단독(channels 없음): 저장형 재화 충전은 웹(KG이니시스)에서 팔지 않는다(PAYMENT_COMPLIANCE 4.1-2).
   { id: 'gems_300_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 3900, shopSku: 'gem1',
     title: '보석 300', description: '보석 300', grant: { rewards: { gems: 300 } } },
   { id: 'gems_980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 12000, shopSku: 'gem2',
     title: '보석 980', description: '보석 980', grant: { rewards: { gems: 980 } } },
-  { id: 'gems_1980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 25000, shopSku: 'gem3',
+  { id: 'gems_1980_v1', type: 'consumable', enabled: false, gate: 'paid-gem-split', priceKRW: 22000, shopSku: 'gem3',
     title: '보석 1,980', description: '보석 1,980', grant: { rewards: { gems: 1980 } } },
 ]);
 

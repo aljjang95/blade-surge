@@ -14,7 +14,8 @@ test('actual blizzard start captures its ground cue once and leaves the host ren
   const p={pos:pos()};
   SKILLS.blizzard.start({fx} as any,p as any,{data:{}} as any);
   expect(hostDraws).toBe(1);expect(events).toHaveLength(1);
-  expect(events[0]).toEqual(circle());
+  // 대마도사 VFX 레인: 눈보라 시전 원은 옅은 큰 원 번짐을 줄이려 짧고 어둡게(0x1650c8, .5초) 바뀌었다. 파티 동기화는 같은 값을 그대로 옮긴다.
+  expect(events[0]).toEqual(capturePartyVisual('castCircle',[pos(),0x1650c8,{radius:6.8,life:.5}],10));
   p.pos.set(99,99,99);expect(events[0].pos).toEqual({x:3,y:0,z:-4});
   expect(fx.castCircle(pos(),0x2a8cff,{radius:6.8,life:3.2})).toBe('drawn');
 });

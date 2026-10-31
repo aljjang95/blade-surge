@@ -71,6 +71,7 @@ function makeFetch(handler) {
 const ME = { id: 'p_' + 'a'.repeat(24), name: '모험가', tag: '0001', no: 1, title: null, linked: false };
 const FRIEND = { id: 'p_' + 'b'.repeat(24), name: '친구', tag: '0002', no: 2, title: null, linked: false };
 const STRANGER = { id: 'p_' + 'c'.repeat(24), name: '낯선이', tag: '0003', no: 3, title: null, linked: false };
+const EXISTING_KEY = 'A'.repeat(43);
 const ID_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl';
 
 function defaultHandler(call) {
@@ -84,6 +85,8 @@ function setup(overrides = {}) {
   FakeSocket.instances = [];
   const clock = makeClock();
   const storage = overrides.storage ?? memoryStorage();
+  // 기본은 이미 키가 있는 기기(서버에 프로필이 있을 수 있음). 첫 실행 기기는 freshKey: true.
+  if (!overrides.storage && !overrides.freshKey) storage.setItem('tll-social:blade-surge:key', EXISTING_KEY);
   const fetch = makeFetch(overrides.handler ?? defaultHandler);
   const docListeners = {};
   const document = { visibilityState: 'visible', addEventListener: (name, fn) => { docListeners[name] = fn; }, removeEventListener() {} };
@@ -187,6 +190,53 @@ describe('REST 오류 정규화', () => {
     await env.clock.advance(1);
     expect(settled).toEqual({ ok: false, error: 'timeout', status: 0 });
     expect(env.fetch.calls[0].headers.Authorization).toBeUndefined();
+  });
+});
+
+describe('프로필 없는 기기의 /me 호출 줄이기', () => {
+  const meCalls = env => env.fetch.calls.filter(call => call.url.endsWith('/me')).length;
+  const noProfile = call => (call.url.endsWith('/me') ? json(401, { error: 'no-profile' }) : defaultHandler(call));
+
+  test('새 키 클라이언트의 me()는 fetch 없이 no-profile', async () => {
+    const env = setup({ freshKey: true });
+    expect(await env.client.me()).toEqual({ ok: false, error: 'no-profile', status: 401 });
+    expect(env.fetch.calls).toHaveLength(0);
+  });
+
+  test('profile() 성공 뒤 me()는 서버에 묻는다', async () => {
+    const env = setup({ freshKey: true, handler: call => (call.url.endsWith('/profile') ? json(201, ME) : defaultHandler(call)) });
+    expect((await env.client.profile(ME.name)).ok).toBe(true);
+    expect((await env.client.me()).ok).toBe(true);
+    expect(meCalls(env)).toBe(1);
+  });
+
+  test('기존 키에서 서버가 401 no-profile을 주면 다음 me()는 fetch 없음', async () => {
+    const env = setup({ handler: noProfile });
+    expect(await env.client.me()).toMatchObject({ error: 'no-profile', status: 401 });
+    expect(await env.client.me()).toMatchObject({ error: 'no-profile', status: 401 });
+    expect(meCalls(env)).toBe(1);
+    expect(env.storage.getItem('tll-social:blade-surge:noprofile')).toBe(env.client.exportKey());
+  });
+
+  test('force: true는 표지가 있어도 요청하고, 성공하면 표지를 지운다', async () => {
+    let hasProfile = false;
+    const env = setup({ freshKey: true, handler: call => (hasProfile ? defaultHandler(call) : noProfile(call)) });
+    await env.client.me({ force: true });
+    expect(meCalls(env)).toBe(1);
+    hasProfile = true;
+    expect((await env.client.me({ force: true })).ok).toBe(true);
+    expect(meCalls(env)).toBe(2);
+    expect(env.storage.getItem('tll-social:blade-surge:noprofile')).toBeNull();
+    expect((await env.client.me()).ok).toBe(true);
+    expect(meCalls(env)).toBe(3);
+  });
+
+  test('importKey로 키를 바꾸면 표지가 무효가 되어 서버에 묻는다', async () => {
+    const env = setup({ freshKey: true });
+    const other = createSocialClient({ gameId: 'other-game', storage: memoryStorage(), fetch: env.fetch, WebSocket: FakeSocket, window: null, document: null }).exportKey();
+    await env.client.importKey(other);
+    expect((await env.client.me()).ok).toBe(true);
+    expect(meCalls(env)).toBe(1);
   });
 });
 

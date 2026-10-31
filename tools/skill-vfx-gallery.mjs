@@ -53,6 +53,9 @@ try {
       const app = window.app; app.testPause = true; const b = app.battle; b.player.auto = false;
       window.__stage = () => {
         const p = b.player; p.yaw = Math.PI; p.mp = p.maxMp; p.cds?.fill?.(0); p.ult = p.ultMax; p.invuln = 1e9; p.hp = p.maxHp;
+        // 각성 스킬(슬롯 4~7)도 찍도록 레벨·습득을 연다(갤러리 전용, 저장하지 않는다). 앞 스킬이 길면 다음 시전이 막히므로 시전 상태를 끝낸다.
+        p.heroLevel = Math.max(p.heroLevel || 1, 99); if (Array.isArray(p.skillLevels)) p.skillLevels = p.skillLevels.map(v => Math.max(v || 0, 1)); else p.skillLevels = Array(8).fill(1);
+        if (p.skillCtx) p.skillCtx.done = true; if (p.state === 'skill' || p.state === 'ult') p.state = 'idle';
         // 적이 생길 때까지 진행한 뒤 4마리를 영웅 앞 고정 자리로 옮긴다.
         if (!window.__foeType) window.__foeType = Object.keys(window.__EN).find(k => { const d = window.__EN[k]; return d && !d.boss && app.models?.[d.model] && (d.scale || 1) <= 1.2; });
         for (let k = b.enemies.filter(e => e.alive).length; k < 4 && window.__foeType; k++) b.spawnEnemy(window.__foeType, p.pos);
@@ -67,6 +70,8 @@ try {
     const sheet = [];
     for (const slot of SLOTS) {
       const placed = await page.evaluate(() => window.__stage());
+      // --probe "<식>": 시전 직전 페이지에서 평가(원인 추적용, 예: "app.battle.fx.impact.mesh.visible=false"). 기본 실행에는 영향 없음.
+      if (arg('probe')) await page.evaluate(code => { const app = window.app; void app; return eval(code); }, arg('probe'));
       const started = await page.evaluate(slot => { const p = window.app.battle.player; p.yaw = Math.PI; return p.tryCastSkill(slot); }, slot);
       const skill = await page.evaluate(slot => window.app.battle.player.def.skills?.[slot]?.id || String(slot), slot);
       let elapsed = 0; const frames = [];
@@ -75,6 +80,16 @@ try {
         await page.evaluate(n => { for (let i = 0; i < n; i++) window.app.step(1 / 60, i === n - 1); }, n);
         const file = path.join(out, `${hero}-s${slot}-${String(t).replace('.', '_')}.jpg`);
         await page.screenshot({ path: file, type: 'jpeg', quality: 82 }); frames.push(file);
+        // --dump: 이 프레임에 살아 있는 fx 항목(종류·텍스처·색·크기·영웅 거리)과 점광원을 report 에 남긴다(백화 원인 추적용).
+        if (process.argv.includes('--dump')) (report.dump ||= {})[path.basename(file)] = await page.evaluate(() => {
+          const b = window.app.battle, fx = b.fx, p = b.player.pos;
+          const items = fx.items.map(it => { const o = it.obj, m = o.material, u = m?.uniforms;
+            return { type: o.type, mat: m?.type, map: m?.map?.name || m?.map?.image?.src?.split('/').pop() || (u?.uTex?.value?.image?.src || '').split('/').pop() || '', color: (m?.color || u?.uColor?.value)?.getHexString?.(), opacity: +(m?.opacity ?? u?.uAlpha?.value ?? 1).toFixed(2), scale: +o.scale.x.toFixed(2), d: +Math.hypot(o.position.x - p.x, o.position.z - p.z).toFixed(1), t: +(it.t / it.life).toFixed(2) }; });
+          const lights = (fx.impactLights?.lights || fx.impactLights?.pool || []).filter(l => l.intensity > 0).map(l => ({ i: +l.intensity.toFixed(1), c: l.color.getHexString(), d: +Math.hypot(l.position.x - p.x, l.position.z - p.z).toFixed(1) }));
+          const glow = []; const v = new (fx.scene.position.constructor)();
+          fx.scene.traverseVisible(o => { const m = o.material; if (!m || Array.isArray(m) || o.isSkinnedMesh || !o.getWorldPosition || !(m.transparent || m.blending === 2)) return; o.getWorldPosition(v); const d = Math.hypot(v.x - p.x, v.z - p.z); if (d < 3.5) glow.push({ name: o.name || o.parent?.name || '', type: o.type, blend: m.blending, map: m.map?.name || m.map?.image?.src?.split?.('/').pop() || '', parents: (() => { let n = [], q = o.parent; while (q && n.length < 4) { n.push(q.name || q.type); q = q.parent; } return n.join('<'); })(), mat: m.type, color: m.color?.getHexString?.(), op: +(m.opacity ?? 1).toFixed(2), s: +o.scale.x.toFixed(2), y: +v.y.toFixed(1), d: +d.toFixed(1), fx: fx.items.some(it => it.obj === o), u: m.uniforms ? Object.keys(m.uniforms).slice(0, 8).join(',') : '' }); });
+          return { items, lights, glow, impactLive: fx.impact?.live ?? null };
+        });
       }
       sheet.push({ slot, skill, started, placed, frames });
       await page.evaluate(() => { for (let i = 0; i < 150; i++) window.app.step(1 / 60, false); });

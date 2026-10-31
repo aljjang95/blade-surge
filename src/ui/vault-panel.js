@@ -9,6 +9,8 @@ import { itemIconHtml } from './item-presentation.js';
 import { tierName } from '../game/item-tier-label.js';
 import { GEAR_DEX_MILESTONES, dexCount, milestoneClaimed, milestoneReached } from '../game/gear-dex.js';
 import { VAULT_INHERIT } from '../game/gear-vault.js';
+import { gearDexClaimable } from '../game/reward-badges.js';
+
 
 const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const short = (heroId) => HEROES[heroId]?.name.split(' ').pop() || '';
@@ -213,7 +215,7 @@ export function openVault(meta, heroId, { tab = 'vault', selected = null, view =
   }
 
   function tabsHtml(cur, mm, hid) {
-    return '<button type="button" role="tab" data-vault-tab="vault" aria-selected="' + (cur === 'vault') + '">금고에서 꺼내기 <small>' + mm.used + '</small></button><button type="button" role="tab" data-vault-tab="bag" aria-selected="' + (cur === 'bag') + '">' + esc(short(hid)) + ' 가방에서 맡기기 <small>' + mm.bag.length + '</small></button><button type="button" role="tab" data-vault-tab="dex" aria-selected="' + (cur === 'dex') + '">도감</button>';
+    return '<button type="button" role="tab" data-vault-tab="vault" aria-selected="' + (cur === 'vault') + '">금고에서 꺼내기 <small>' + mm.used + '</small></button><button type="button" role="tab" data-vault-tab="bag" aria-selected="' + (cur === 'bag') + '">' + esc(short(hid)) + ' 가방에서 맡기기 <small>' + mm.bag.length + '</small></button><button type="button" role="tab" data-vault-tab="dex" aria-selected="' + (cur === 'dex') + '">도감' + (gearDexClaimable(meta.eco.s, meta.eco.ownedHeroIds()) > 0 ? ' <em class="dot on vault-tab-dot" aria-label="받을 보상 있음"></em>' : '') + '</button>';
   }
   function bindTabs(b) {
     b.querySelectorAll('[data-vault-tab]').forEach((el) => el.onclick = () => { audio.play('ui_click', { vol: 0.4 }); openVault(meta, heroId, { tab: el.dataset.vaultTab, dexHero }); });

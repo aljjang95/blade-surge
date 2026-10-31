@@ -19,6 +19,8 @@ export const READABILITY = Object.freeze({
   meleeReach: 5.5, rangedReach: 13,
 });
 
+// 대표님 2026-10-30 "피아 식별 반경이 너무 커서 UI 가 보기 불편": 적 고리를 몸 폭 쪽으로 줄이고(1.15→.8) 비대상은 더 옅게.
+export const FOE_RING_SCALE = .8;
 const ringRows = Array.from({ length: 64 }, () => ({ x: 0, z: 0, radius: 1, alpha: 1 }));
 const barRows = Array.from({ length: 24 }, () => ({ x: 0, y: 0, z: 0, fill: 1, lag: 1, width: 1, elite: 0, alpha: 1 }));
 
@@ -88,7 +90,7 @@ export class CombatReadability {
       if (!e.alive || e.spawning) continue;
       const scale = e.def?.scale || 1;
       // 정예·보스는 이미 자기 색 고리(금·적)가 있다. 일반 적만 붉은 고리를 얹는다.
-      if (!e.isBoss && !e.isElite && nr < ringRows.length) { const r = ringRows[nr++]; r.x = e.pos.x; r.z = e.pos.z; r.radius = e.radius * 1.15; r.alpha = e === t ? 1 : .48; }
+      if (!e.isBoss && !e.isElite && nr < ringRows.length) { const r = ringRows[nr++]; r.x = e.pos.x; r.z = e.pos.z; r.radius = e.radius * FOE_RING_SCALE; r.alpha = e === t ? .85 : .3; }
       const hitT = e._rdHitT || 0;
       if (hitT > 0) e._rdHitT = hitT - dt;
       const fill = Math.max(0, Math.min(1, e.hp / (e.maxHp || 1)));

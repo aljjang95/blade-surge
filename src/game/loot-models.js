@@ -15,9 +15,13 @@ import { applyArmorAppearance } from './armor-appearance.js';
 import { itemRenderSource } from '../ui/item-presentation.js';
 import { resolveItemForm } from '../ui/item-visual-forms.js';
 import { createLootVisual } from './loot-visual.js';
+import { itemWeaponGlb, loadItemWeaponGlbsFor } from '../engine/item-weapon-glb.js';
 
-/** 부위별 드랍 대각선 길이(월드 단위). 기존 0.5~2 범위 안에서 멀리서도 실루엣이 읽히게 키운다. */
-export const LOOT_MODEL_SIZE = Object.freeze({ weapon: 1.75, armor: 1.3, boots: 1.1, ring: .95 });
+/** 부위별 드랍 대각선 길이(월드 단위). 2026-10-30 대표님 "드랍이 너무 크다": 영웅 키(≈1.9) 대비 0.3~0.5 배로 줄인다.
+ *  이름이 이름표로 읽히므로 실루엣을 크게 키울 필요가 줄었다. 줍기(자석·획득) 반경은 그대로다. */
+export const LOOT_MODEL_SIZE = Object.freeze({ weapon: 1, armor: .8, boots: .7, ring: .6 });
+/** 폴백 슬롯 형상(loot-visual) 배율. 무기 폴백 길이 ≈1.35 → ≈.85. */
+export const LOOT_FALLBACK_SCALE = .62;
 /** 등급 윤곽광: [윤곽 세기, 바탕 발광]. N 은 거의 없고 S 부터 단계적으로 강해진다. 블룸이 꺼진 저화질에서도 테두리 색으로 읽힌다. */
 export const LOOT_RIM = Object.freeze({ N: [.22, 0], S: [.75, .03], E: [1.15, .06], U: [1.55, .1], L: [2.1, .16] });
 const RIM_PULSE = Object.freeze({ N: 0, S: .12, E: .18, U: .24, L: .3 });
@@ -152,6 +156,7 @@ export class LootModelLibrary {
     else if (info.kind === 'armory-glb') return null;
     else {
       // 인벤 3D 보기와 같은 공유 버퍼를 영구 임대한다(미리보기가 반환해도 드랍 쪽은 남는다).
+      void loadItemWeaponGlbsFor(def.id).catch(() => {});   // APK 밖 무기 GLB 는 뒤에서 받아 다음 드랍부터 쓴다
       const lease = acquireItemGeometry(info.form, def); this.leases.push(lease);
       parts = [{ geometry: lease.geometry, material: null }];
       if (info.count > 1) {
@@ -161,15 +166,17 @@ export class LootModelLibrary {
         parts.push({ geometry: lease.geometry, material: null, matrix: new THREE.Matrix4().makeRotationZ(Math.PI / 2).setPosition(mid, mid, -.06 * Math.max(.5, length)) });
       }
     }
-    const source = { parts, slot: def.slot, kind: info.kind, fit: fitTransform(boxOf(parts), def.slot) };
+    // 재질 형태는 지오메트리를 임대한 그 순간의 GLB 여부로 고정한다(선로드 전에 절차적으로 캐시된 소스에 GLB 재질이 붙지 않게).
+    const glbForm = info.form && itemWeaponGlb(def.id, info.form) ? info.form : null;
+    const source = { parts, slot: def.slot, kind: info.kind, form: glbForm, fit: fitTransform(boxOf(parts), def.slot) };
     this.sources.set(info.key, source);
     return source;
   }
-  _material(def, rarity, index, base) {
-    const key = `${def.id}|${rarity}|${index}`;
+  _material(def, rarity, index, base, form = null) {
+    const key = `${def.id}|${rarity}|${index}${form ? '|' + form : ''}`;
     if (!this.materials.has(key)) {
       // 대장간 재질은 장비 표면(얼음 등)을 읽어 새로 만들고, 방어구 · 병기고 원본 재질은 복제해 등급 윤곽만 더한다.
-      const material = base ? base.clone() : createItemMaterial(def)[0];
+      const material = base ? base.clone() : createItemMaterial(def, form)[0];
       if (base?.onBeforeCompile && base.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
         material.onBeforeCompile = base.onBeforeCompile; material.customProgramCacheKey = base.customProgramCacheKey;
       }
@@ -205,7 +212,7 @@ export class LootModelLibrary {
     const pivot = new THREE.Group(); pivot.name = 'loot-pivot';
     pivot.scale.setScalar(source.fit.scale); pivot.position.copy(source.fit.offset);
     source.parts.forEach((part, index) => {
-      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material);
+      const material = Array.isArray(part.material) ? part.material.map((m, j) => this._material(def, rarity, `${index}.${j}`, m)) : this._material(def, rarity, index, part.material, source.form);
       const mesh = new THREE.Mesh(part.geometry, material);
       if (part.matrix) part.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
       mesh.castShadow = false; mesh.receiveShadow = false; mesh.name = `loot-mesh-${def.id}`;
@@ -232,8 +239,9 @@ export class LootModelLibrary {
     catch (error) { console.warn('loot model fallback', item?.id, error?.message); source = null; }
     if (source) { this._attach(root, def, rarity, source); return root; }
     const fallback = this._fallback(item);
-    for (const child of [...fallback.children]) root.add(child);
-    root.userData.lootSource = 'fallback'; root.userData.lootRestY = .72;
+    // 폴백 슬롯 형상도 원본 드랍과 같은 비율로 줄인다(2026-10-30). 메시는 원점에 있고 형상은 공유하므로 크기만 바꾼다.
+    for (const child of [...fallback.children]) { child.scale.multiplyScalar(LOOT_FALLBACK_SCALE); root.add(child); }
+    root.userData.lootSource = 'fallback'; root.userData.lootRestY = .6;
     if (def && info.kind === 'armory-glb') {
       root.userData.lootPendingSource = 'armory-glb';
       this._armory(def).then(async (ready) => {

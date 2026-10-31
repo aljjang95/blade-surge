@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ENEMIES, stageDef, CHAPTERS, recommendedPowerFor, CH1_REC_POWER_MUL } from '../src/data/stages.js';
-import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, campaignHpMul, CH1_RAMP, LATE_CHAPTER_ATK } from '../src/game/squads.js';
+import { campaignCombat, speciesRole, stageCurve, composeRoom, SQUADS, campaignAtkMul, campaignHpMul, CH1_RAMP, CH2_THREAT, LATE_CHAPTER_ATK } from '../src/game/squads.js';
 import { Battle } from '../src/game/battle.js';
 import { towerStage } from '../src/game/endgame-core.js';
 
@@ -172,7 +172,7 @@ test('후반 곡선: 권장 전투력은 배율^0.7, 5장부터 캠페인 적 �
   expect(tower.recPower).toBe(recommendedPowerFor(tower.scale));
 });
 
-test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력 ×1.15, 2장·원정·파티는 1', () => {
+test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력 ×1.15, 3장·원정·파티는 1', () => {
   expect(campaignAtkMul(stageDef(1, 1))).toBe(1); expect(campaignHpMul(stageDef(1, 1))).toBe(1);
   expect(campaignAtkMul(stageDef(1, 2))).toBe(1.8); expect(campaignAtkMul(stageDef(1, 10))).toBe(1.3);
   // 2026-10-29: 1장 체력은 ×1.15 에 권장 전투력 배율(CH1_REC_POWER_MUL)의 √ 를 곱한다. 1-2 가 가장 높고 1-10 쪽으로 줄어든다.
@@ -183,7 +183,16 @@ test('1장 램프: 1-1은 그대로, 1-2부터 공격 ×1.8→1-10 ×1.3·체력
   }
   expect(stageDef(1, 1).recPower).toBe(recommendedPowerFor(1)); expect(stageDef(2, 1).recPower).toBe(recommendedPowerFor(stageDef(2, 1).scale));
   expect(stageDef(1, 10).recPower).toBeLessThan(stageDef(2, 1).recPower);
-  expect(campaignAtkMul(stageDef(2, 1))).toBe(1); expect(campaignHpMul(stageDef(2, 1))).toBe(1);
+  expect(campaignHpMul(stageDef(3, 1))).toBe(1); expect(campaignAtkMul(stageDef(3, 1))).toBe(1);
   expect(campaignHpMul(stageDef(5, 1))).toBe(1);
   expect(campaignAtkMul({ ...stageDef(1, 5), party: true })).toBe(1); expect(campaignHpMul({ ...stageDef(1, 5), expedition: true })).toBe(1);
+});
+
+test('2장 위협 보정: 2-1~2-7 공격 ×0.8·체력 ×0.82, 2-10 까지 ×0.86·×0.88 로 선형, 권장 전투력·원정·파티·무한의 성은 그대로', () => {
+  for (let st = 1; st <= 7; st++) { expect(campaignAtkMul(stageDef(2, st))).toBe(.8); expect(campaignHpMul(stageDef(2, st))).toBe(.82); }
+  expect(campaignAtkMul(stageDef(2, 10))).toBe(.86); expect(campaignHpMul(stageDef(2, 10))).toBe(.88);
+  for (let st = 8; st <= 10; st++) expect(CH2_THREAT[st - 1].atk).toBeGreaterThan(CH2_THREAT[st - 2].atk);
+  for (let st = 1; st <= 10; st++) expect(stageDef(2, st).recPower).toBe(recommendedPowerFor(stageDef(2, st).scale));
+  expect(campaignAtkMul({ ...stageDef(2, 3), party: true })).toBe(1); expect(campaignHpMul({ ...stageDef(2, 3), expedition: true })).toBe(1);
+  expect(campaignHpMul({ ...stageDef(2, 3), tower: true })).toBe(1);
 });

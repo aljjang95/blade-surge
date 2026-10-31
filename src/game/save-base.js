@@ -96,7 +96,9 @@ export function normalizeSave(raw, fresh) {
     if (!record(item) || !Object.hasOwn(ITEM_BY_ID, item.id) || !Number.isSafeInteger(item.uid) || item.uid < 1 || item.uid >= Number.MAX_SAFE_INTEGER || seen.has(item.uid)) return false;
     seen.add(item.uid); return true;
   }).map((item) => ({ uid: item.uid, id: item.id, enh: integer(item.enh, 0, 0, ENH_MAX), ...(integer(item.tp, 0, 0, 50) > 0 ? { tp: integer(item.tp, 0, 0, 50) } : {}),
-    ...(integer(item.tp, 0, 0, 50) === 0 && integer(item.il, 0, 0, ITEM_LEVEL_MAX) > 1 ? { il: integer(item.il, 0, 0, ITEM_LEVEL_MAX) } : {}) }));
+    ...(integer(item.tp, 0, 0, 50) === 0 && integer(item.il, 0, 0, ITEM_LEVEL_MAX) > 1 ? { il: integer(item.il, 0, 0, ITEM_LEVEL_MAX) } : {}),
+    // 무기 내구도(docs/CLEAR_LOOP.md): 100 미만일 때만 필드를 둔다(이전 저장·새 장비는 필드 없음 = 100).
+    ...(Number.isSafeInteger(item.dur) && item.dur >= 0 && item.dur < 100 && ITEM_BY_ID[item.id].slot === 'weapon' ? { dur: item.dur } : {}) }));
   const byUid = new Map(s.inventory.map((item) => [item.uid, item]));
   const equipped = new Set();
   for (const h of Object.values(s.heroes)) for (const slot of SLOTS) {

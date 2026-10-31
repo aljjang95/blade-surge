@@ -1,0 +1,439 @@
+import * as THREE from 'three';
+import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
+import { screenSweep } from './sig-screen.js';
+
+/**
+ * 스킬별 '모양 언어' 서명. castSkillVfx 가 레시피(바닥 룬·텍스처) 뒤에 한 번 부른다.
+ * 모두 인스턴스 임팩트 층(드로우콜 1, 이미 존재)의 광선·지면 표식·고리·별빛·불똥만 쓰므로 드로우콜이 늘지 않는다.
+ * 타이밍은 skills.js 의 실제 판정 시각(game.after 지연)에 맞춘 지연 칸(delay)으로 미리 예약한다. 판정·난수와 무관하다.
+ * 궁수: 관통 일직선 / 세 갈래 부채 / 회피 폭발 / 폭풍 나침 / 연사 조준 / 덩굴 부채 / 바람 소용돌이 / 하늘 화살비 표식.
+ */
+const JADE = 0x3fe0a0, JADE_HOT = 0x9fffd8, VINE = 0x63e08a;
+/** 검은 고양이 사냥꾼(고유 스킬 2종) 보라 팔레트. 명사수 비취와 한눈에 갈린다. */
+const CAT = 0xb070ff, CAT_HOT = 0xe6ccff, CAT_DEEP = 0x5a2a9a;
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
+const yawOf = (f) => Math.atan2(f.z, f.x);
+
+/** @typedef {{ fx: any, impact: any, player: any, at: THREE.Vector3, f: THREE.Vector3, lite: boolean, scale: number }} SigCtx */
+
+/** 활 끝(대략) 위치. 실제 화살 원점은 활 뼈대지만 서명 장식은 발사 높이·앞 0.9m 로 충분하다. */
+function bow(ctx, out) { return out.copy(ctx.player.pos).addScaledVector(ctx.f, .9).setY(1.25); }
+
+/** 수평 방향 f 를 y 축으로 a 라디안 돌린 단위 벡터(skills.js applyAxisAngle 과 같은 회전). */
+function rotY(f, a, out) { const c = Math.cos(a), s = Math.sin(a); return out.set(f.x * c + f.z * s, 0, -f.x * s + f.z * c).normalize(); }
+/** 바닥 번짐용 어두운 비취·이끼빛. 가산 혼합에서 흰 심이 땅색과 더해져 백화되지 않게 밝기를 낮춘 색이다. */
+const DEEP = 0x1c9a6c, MOSS = 0x2fae5a;
+/** 금·금연두 하이라이트: 청록 돌바닥과 같은 색인 비취 대신 화면에서 바닥과 갈리는 대비색(작은 면적·가는 선으로만). */
+const GOLD = 0xffc840, GOLD_HOT = 0xffe7a0, LIME = 0xc8f25a;
+const _e = new THREE.Vector3(), _a2 = new THREE.Vector3();
+
+/**
+ * 바닥 '레일': 광선 한 줄은 머리(앞)만 밝고 시작점 쪽이 흐려 영웅 앞 화면에서는 거의 안 보였다.
+ * 그래서 seg m 짜리 짧은 광선(앞이 밝은 화살촉 모양 대시)을 d0~d1 사이에 이어 깔고, 화살(speed m/s)이 그 지점을 지나는 순간 켠다.
+ * side 는 진행 방향 오른쪽으로의 옆 간격(m). 반환값은 쓴 대시 수.
+ */
+function rail(impact, from, dir, d0, d1, seg, color, { width = .2, speed = 28, life = .6, style = BEAM_STYLE.line, side = 0 } = {}) {
+  let n = 0;
+  for (let d = d0; d < d1 - .01; d += seg, n++) {
+    _e.copy(from).addScaledVector(dir, d);
+    if (side) { _e.x += -dir.z * side; _e.z += dir.x * side; }
+    impact.beam(_e, dir, seg * .82, color, { width, style, fade: life, delay: d / speed });
+  }
+  return n;
+}
+
+/** 화면 안 표시 한계(NDC): 끝점 표식 바깥 가장자리가 위 HUD 띠·좌우 가장자리 안쪽에 남게 한다. */
+export const SCREEN_REACH = Object.freeze({ x: .86, y: .78, step: .5, min: 5 });
+const _ndc = new THREE.Vector3();
+/** 지면 한 점이 카메라 시야(SCREEN_REACH 안쪽)에 들어오는지. */
+function onScreen(camera, x, y, z) {
+  _ndc.set(x, y, z).project(camera);
+  return _ndc.z < 1 && Math.abs(_ndc.x) <= SCREEN_REACH.x && _ndc.y <= SCREEN_REACH.y && _ndc.y >= -1;
+}
+/**
+ * 표시 전용 사거리: from 에서 dir 로 max(m)까지 가되, 끝점 표식 바깥 가장자리(+edge m)가 화면 밖으로 나가면
+ * 화면 안쪽 최장 거리로 줄인다(.5m 단위, 최소 SCREEN_REACH.min). 카메라가 없으면(테스트·미초기화) max 그대로.
+ * 판정·피해·투사체 사거리는 바꾸지 않는다(관통 화살은 27m/s × .85초 그대로 날아간다). 프레임당이 아니라 시전 한 번에 한 번, 할당 없음.
+ */
+export function screenReach(camera, from, dir, max, edge = 0) {
+  if (!camera?.projectionMatrix || !camera.matrixWorldInverse) return max;
+  for (let d = max; d > SCREEN_REACH.min; d -= SCREEN_REACH.step) {
+    const e = d + edge;
+    if (onScreen(camera, from.x + dir.x * e, 0, from.z + dir.z * e) && onScreen(camera, from.x + dir.x * d, 1.6, from.z + dir.z * d)) return d;
+  }
+  return SCREEN_REACH.min;
+}
+
+/** @type {Record<string, (ctx: SigCtx) => void>} */
+export const SIGNATURES = {
+  // 관통(바람 터널): 바닥 비취 돌과 같은 색이라 묻히던 비취 단색을 버리고 '진한 심 + 금연두·금 하이라이트' 대비로 바꾼다.
+  // 1박 활 끝 금 별빛 → 2박 화살과 같은 속도로 나아가는 금연두 쌍나선 머리 + 그 뒤에 남는 진한 비취 쌍나선 터널(바람 터널)
+  // → 관통점(3.5·6.5·9.5m)마다 화면 가로로 그어지는 금 충격 자국 + 양옆으로 튀는 금연두 파편 + 가시 매듭(약 1초 잔광)
+  // → 끝점(11m)에 금 관통 나침 고리. 세로 요소는 영웅 위 좁은 띠에 몰리므로 '어디까지 꿰뚫었나'는 가로 요소가 맡는다.
+  // 화면 클램프(h1c): 표시 거리만 screenReach 로 화면 안쪽까지 비례 축소(지연은 화살이 그 거리를 지나는 시각 d/27 그대로).
+  ranger_pierce(ctx) {
+    const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 27;
+    const END = screenReach(ctx.fx?.camera, player.pos, f, 11, 2.2), k = END / 11;
+    _b.copy(player.pos).setY(.1);
+    // 바람 터널: 화살이 지난 자리부터 차례로 깔리는 진한 쌍나선(어두운 심이 금 하이라이트를 받쳐 바닥과 갈린다).
+    rail(impact, _b, f, .8, 12.2 * k, 2.3, DEEP, { width: 1.25, speed: SPEED, life: .85, style: BEAM_STYLE.gale });
+    // 터널 머리: 금연두 쌍나선이 화살과 같은 속도로 나아가고, 가는 금 심이 그 안을 꿰뚫는다.
+    impact.beam(_b, f, 13 * k, LIME, { speed: SPEED, tail: 5, width: 1, style: BEAM_STYLE.gale });
+    impact.beam(o, f, 16, GOLD, { speed: SPEED, tail: 9, width: .2 });
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.2, GOLD, .1, { angle: yawOf(f) * .2, grow: .5 });
+    // 바람 갈래: 화살이 지나는 순간 길 양옆으로 뒤로 젖혀 갈라지는 바람(화살 뒤로 벌어지는 물결). 2개 중 1개는 금연두.
+    if (!lite) for (let d = 2.5; d <= 10 * k + .01; d += 2.5 * k) {
+      _e.copy(_b).addScaledVector(f, d);
+      for (const s of [-1, 1]) impact.beam(_e, rotY(f, s * 2.5, _d), 2, Math.round(d / k) % 5 ? LIME : JADE, { width: .34, style: BEAM_STYLE.gale, fade: .8, delay: d / SPEED });
+    }
+    const ang = (impact._screenAngle?.(f) ?? 0) + 1.5708;
+    _d.set(-f.z, 0, f.x);
+    for (const d0 of [3.5, 6.5, 9.5]) {
+      const d = d0 * k, t = d / SPEED;
+      // 관통점 가로 충격 자국(금): 바닥에 진행 수직으로 양쪽 2.6m 씩 그어지고(끝이 밝다) 1초 가까이 남는다.
+      _e.copy(_b).addScaledVector(f, d);
+      impact.beam(_e, _d, 2.6, GOLD, { width: .18, fade: 1, delay: t });
+      _d.negate(); impact.beam(_e, _d, 2.6, GOLD, { width: .18, fade: 1, delay: t }); _d.negate();
+      if (!lite) impact.mark(_e, DEEP, { radius: 1.5, life: .95, style: MARK_STYLE.thorn, angle: d0 * .4, delay: t });
+      // 서 있는 빛(참격·별빛·고리)은 적 몸통(약 1m) 아래 발목 높이에 작게: 활 높이에서는 관통점에 선 적 몸을 흰 덩어리로 덮었다.
+      _e.copy(_b).addScaledVector(f, d).setY(.45);
+      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 1.5, LIME, .3, { angle: ang, stretch: 1.6, grow: .9, delay: t });
+      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1, GOLD, .2, { angle: .785, grow: .4, delay: t });
+      impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.4, DEEP, .32, { grow: 1, delay: t });
+      // 금연두 폭발 파편: 관통점에서 길 양옆(화면 가로)으로 튄다. 결정적 수식(관통점·순번)만 쓴다.
+      if (!lite) for (let j = 0; j < 4; j++) {
+        const s = j % 2 ? 1 : -1, sp = 6 + (j >> 1) * 3;
+        impact._emit(IMPACT_KIND.shard, _e.x, _e.y, _e.z, .3, j < 2 ? GOLD : LIME, .5,
+          { vx: _d.x * s * sp + f.x * 2.5, vy: 3 + (j >> 1) * 1.5, vz: _d.z * s * sp + f.z * 2.5, angle: d0 + j, stretch: 1.8, grow: .8, gravity: 12, delay: t });
+      }
+    }
+    // 끝점: 금 관통 나침 고리 + 별빛 + 고리(어디까지 꿰뚫었나).
+    const te = END / SPEED;
+    _e.copy(_b).addScaledVector(f, END);
+    impact.mark(_e, GOLD, { radius: 2.2, life: .9, style: MARK_STYLE.compass, angle: yawOf(f), delay: te });
+    // 끝점 별빛·고리는 바닥 가까이(.45m) — 활 높이의 화면 정렬 고리는 화면에서 더 위로 떠 위 가장자리에 잘렸다.
+    _e.copy(_b).addScaledVector(f, END).setY(.45);
+    impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.8, GOLD_HOT, .24, { angle: .3, grow: .4, delay: te });
+    impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 2.6, LIME, .4, { grow: 1, delay: te });
+  },
+  // 삼중 추적: 실제 세 발(±0.24rad)을 따라 바닥에 '휘어 들어가는' 세 갈래 궤적이 화살 속도로 그어진다.
+  // 양옆 갈래는 바깥으로 크게 벌어졌다가 실제 화살 방향으로 감겨 들고(추적), 가운데는 금 심 직선. 갈래마다 진한 번짐 + 밝은 심 두 겹.
+  // 7.5m 지점(약 .33초)에 갈래마다 금 화살촉 자국과 금연두 파편, 발밑엔 금 부채 테.
+  ranger_volley(ctx) {
+    const { impact, f, player, lite } = ctx; const SPEED = 23, SEG = 2, N = 5;
+    impact.mark(player.pos, GOLD, { radius: 6, life: .6, style: MARK_STYLE.fan, angle: yawOf(f) });
+    const o = bow(ctx, _a);
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, GOLD, .1, { angle: .3, grow: .5 });
+    for (let i = -1; i <= 1; i++) {
+      _e.copy(player.pos).setY(.1);
+      for (let s = 0; s < N; s++) {
+        // 머리 방향: 바깥 .3rad 더 벌어진 데서 시작해 끝에서 실제 화살 방향(i × .24)으로 감긴다.
+        rotY(f, i * (.24 + .3 * (1 - s / (N - 1)) ** 1.5), _d);
+        const t = (.6 + s * SEG) / SPEED;
+        if (!lite || !i) impact.beam(_e, _d, SEG * .96, DEEP, { width: .62, style: BEAM_STYLE.gale, fade: .7, delay: t });
+        impact.beam(_e, _d, SEG * .96, i ? LIME : GOLD, { width: i ? .2 : .24, fade: .55, delay: t });
+        _e.addScaledVector(_d, SEG);
+      }
+      // 끝 자국: 궤적 끝 바로 앞(화살이 7.5m 를 지나는 무렵).
+      _a2.copy(_e).setY(1);
+      impact._emit(IMPACT_KIND.cut, _a2.x, _a2.y, _a2.z, 1.6, GOLD, .32, { angle: impact._screenAngle?.(_d) ?? 0, stretch: 1, grow: .9, delay: 7.5 / SPEED });
+      if (!lite) for (let j = 0; j < 3; j++) {
+        const a = yawOf(_d) + (j - 1) * .9;
+        impact._emit(IMPACT_KIND.shard, _a2.x, _a2.y, _a2.z, .26, j === 1 ? GOLD : LIME, .42,
+          { vx: Math.cos(a) * 6, vy: 3, vz: Math.sin(a) * 6, angle: a, stretch: 1.8, grow: .8, gravity: 12, delay: 7.5 / SPEED });
+      }
+    }
+  },
+  // 이탈 사격: 뒤로 미끄러지는 길(초속 8m)을 따라 뒤로 튀는 금연두 바람 잔상(뒤를 가리키는 V 자 넷이 차례로) +
+  // 시작점 발밑에서 바깥으로 터지는 돌풍(여덟 갈래 쌍나선 바람, 진한 비취) + 앞으로 쏘는 금 화살 한 줄.
+  ranger_retreat(ctx) {
+    const { impact, f, player, lite } = ctx; const o = bow(ctx, _a);
+    _d.set(-f.x, 0, -f.z);
+    _b.copy(player.pos).setY(.1);
+    // 발밑 돌풍: 시작 자리에서 사방으로 뻗는 바람 갈래.
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + .2; _e.set(_b.x + Math.cos(a) * .6, .1, _b.z + Math.sin(a) * .6); _a2.set(Math.cos(a), 0, Math.sin(a));
+      impact.beam(_e, _a2, 2.4, i % 2 ? DEEP : JADE, { width: .5, style: BEAM_STYLE.gale, fade: .5, speed: 12, tail: 1.6 });
+    }
+    impact.mark(_b, GOLD, { radius: 1.6, life: .4, style: MARK_STYLE.compass, angle: yawOf(f) });
+    // 앞으로 쏘는 금 화살(실제 한 발과 같은 방향·속도).
+    impact.beam(o, f, 13, GOLD, { speed: 28, tail: 6, width: .2 });
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.2, GOLD, .1, { angle: .3, grow: .5 });
+    // 뒤로 튀는 바람 잔상: 영웅이 지나는 자리마다 뒤를 가리키는 V(금연두 겉 + 금 안쪽)가 남는다.
+    for (let i = 0; i < 4; i++) {
+      const t = .04 + i * .12; _e.copy(player.pos).addScaledVector(_d, 8 * t * .85).setY(.1);
+      for (const s of [-1, 1]) {
+        rotY(_d, s * .6, _a2); _e.addScaledVector(_a2, -1.3 - i * .15);
+        impact.beam(_e, _a2, 1.3 + i * .15, i % 2 ? GOLD : LIME, { width: .26, fade: .45, delay: t });
+        _e.addScaledVector(_a2, 1.3 + i * .15);
+      }
+      if (i % 2 === 0) impact._emit(IMPACT_KIND.ring, _e.x, .7, _e.z, 1.6 + i * .4, i ? DEEP : LIME, .3, { grow: 1, delay: t });
+    }
+    impact._streaks(_b.setY(.6), _d, lite ? 3 : 6, 9, .34, LIME, { up: 1.6, spread: 1.4, size: .26 });
+  },
+  // 폭풍의 일곱 화살(궁극기) 3박자: ① 활 끝으로 감겨드는 바람 소용돌이(접선 불똥 두 겹) + 금 별빛
+  // ② 실제 일곱 발(±3×0.18rad) 방향으로 화살 속도의 금·비취 빛줄기(진한 쌍나선 번짐 위 밝은 심)
+  // ③ 빛줄기가 부채 끝(화면 안 최장 거리)에 닿는 순간 갈래마다 금연두 폭풍 고리·가시 매듭. 영웅 발밑 큰 흰 고리는 쓰지 않는다(백화).
+  ranger_tempest(ctx) {
+    const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 28;
+    const END = screenReach(ctx.fx?.camera, player.pos, f, 12, 2);
+    // 발밑은 진한 비취 작은 나침만: 금 3.4m 나침은 시전 마법진과 겹쳐 영웅 둘레를 노란 큰 원판으로 덮었다(iter2).
+    impact.mark(player.pos, DEEP, { radius: 2.4, life: .6, style: MARK_STYLE.compass, angle: yawOf(f) });
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 2.2, GOLD, .1, { angle: .3, grow: .4 });
+    impact._emit(IMPACT_KIND.ring, o.x, o.y, o.z, 2.6, LIME, .3, { grow: 1 });
+    // ① 소용돌이: 활 둘레에서 접선으로 감겨 들며 솟는 불똥(안쪽 금연두, 바깥 비취).
+    const n = lite ? 3 : 6;
+    for (let w = 0; w < 2; w++) for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + w * .5, r = 1.3 + w * .9;
+      impact._emit(IMPACT_KIND.streak, o.x + Math.cos(a) * r, .5 + w * .4, o.z + Math.sin(a) * r, .32, w ? JADE : LIME, .5,
+        { vx: -Math.sin(a) * 10 - Math.cos(a) * 3, vy: 2.4, vz: Math.cos(a) * 10 - Math.sin(a) * 3, stretch: 1, grow: 1, delay: w * .08 });
+    }
+    _b.copy(player.pos).setY(.1);
+    for (let i = -3; i <= 3; i++) {
+      rotY(f, i * .18, _d);
+      // ② 빛줄기: 진한 쌍나선 번짐(바닥) + 화살 높이 밝은 심(홀수 갈래 금, 짝수 갈래 금연두).
+      if (!lite || !(i % 2)) impact.beam(_b, _d, END, DEEP, { speed: SPEED, tail: 7, width: .7, style: BEAM_STYLE.gale });
+      _e.copy(_b).setY(.9);
+      impact.beam(_e, _d, END + 1, i % 2 ? GOLD : LIME, { speed: SPEED, tail: 9, width: .2 });
+      // ③ 부채 끝 폭풍 고리.
+      const te = END / SPEED; _e.copy(_b).addScaledVector(_d, END);
+      impact._emit(IMPACT_KIND.ring, _e.x, .5, _e.z, 2.2, i % 2 ? GOLD : LIME, .42, { grow: 1, delay: te });
+      if (!lite && !(i % 2)) impact.mark(_e, DEEP, { radius: 1.6, life: .7, style: MARK_STYLE.thorn, angle: i, delay: te });
+    }
+    _e.copy(_b).addScaledVector(f, END);
+    impact._emit(IMPACT_KIND.star, _e.x, .6, _e.z, 2, GOLD_HOT, .2, { angle: .3, grow: .4, delay: END / SPEED + .04 });
+  },
+  // 각성 · 연속 관통(실루엣 = 세 줄 창 다발 + 앞으로 달리는 쐐기): 박자(0, .12, .24초)마다 옆으로 조금씩 비켜 그은 금·금연두 심이
+  // 한 다발로 꽂히고, 화살이 지나는 자리마다 바닥에 뒤로 젖힌 V(>>)가 찍혀 앞으로 달려 나간다.
+  // 과녁(화면 안 최장 6.5m)에는 세 겹 가시 고리가 박자마다 한 겹씩 바깥으로 늘며(진한 비취 → 금연두 → 금) 함께 남고, 옆엔 박자 막대(≡).
+  ranger_quickshot(ctx) {
+    const { impact, f, player, lite } = ctx; const SPEED = 28;
+    const AIM = screenReach(ctx.fx?.camera, player.pos, f, 6.5, 3.7), FLY = AIM / SPEED;
+    _b.copy(player.pos).addScaledVector(f, AIM);
+    impact.mark(_b, GOLD, { radius: 2.2, life: .6, style: MARK_STYLE.reticle });
+    const o = bow(ctx, _a), BEAT = [DEEP, LIME, GOLD];
+    _d.set(-f.z, 0, f.x);
+    for (let i = 0; i < 3; i++) {
+      const d = i * .12, hit = d + FLY, c = BEAT[i], side = (i - 1) * .22;
+      // 창 다발: 박자마다 옆 간격만 다른 가는 심(금 → 금연두 → 금, 흰 기둥이 되지 않게 .14m) + 바닥 진한 쌍나선 번짐.
+      _e.copy(o).addScaledVector(_d, side);
+      impact.beam(_e, f, AIM + 5, i === 1 ? LIME : GOLD, { speed: SPEED, tail: 4, width: .14, delay: d });
+      _e.copy(player.pos).setY(.1).addScaledVector(_d, side);
+      impact.beam(_e, f, AIM + 1, DEEP, { width: .42, fade: .4, delay: d, style: BEAM_STYLE.gale });
+      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + i * .25, i === 2 ? GOLD_HOT : GOLD, .09, { angle: .3 + i * .5, grow: .5, delay: d });
+      // 쐐기(>>): 화살이 30·55·80% 지점을 지나는 순간 바닥에 뒤로 젖힌 V. lite 는 마지막 박자만.
+      if (!lite || i === 2) for (const dc of [.3, .55, .8]) {
+        const dd = AIM * dc;
+        for (const s of [-1, 1]) {
+          _e.copy(player.pos).setY(.1).addScaledVector(f, dd).addScaledVector(_d, side);
+          impact.beam(_e, rotY(f, Math.PI + s * .7, _a2), 1.1 + i * .15, i ? c : JADE, { width: .22, fade: .42, delay: d + dd / SPEED });
+        }
+      }
+      // 화면 가로 진행(2차): 마지막 박자 화살이 지나는 자리마다 화면 가로 빗장(정면 카메라에서 쐐기·심이 영웅 위 좁은 띠로 몰린다).
+      if (i === 2) screenSweep(impact, ctx.fx?.camera, player.pos, f, AIM * .3, AIM * .8, { n: 3, speed: SPEED, half: 1.9, width: .28, delay: d, colors: [GOLD, LIME] });
+      // 과녁 세 겹 고리(1.5·2.6·3.7m): 모두 같은 때(마지막 박자 + .8초) 사라지므로 1 → 2 → 3 겹으로 쌓인다. 가운데 빌보드 고리는 쓰지 않는다(백화).
+      impact.mark(_b, c, { radius: 1.5 + i * 1.1, life: 1.05 - d, style: MARK_STYLE.thorn, angle: i * .6, delay: hit });
+      impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9 + i * .3, i ? c : JADE, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: hit });
+      // 박자 막대: 고리 바깥 양옆에서 가로로 뻗는다(과녁 가운데는 비워 흰 덩어리를 만들지 않는다). 세 박자 = 앞뒤로 세 줄.
+      for (const s of [-1, 1]) {
+        _e.copy(_b).setY(.08).addScaledVector(f, (i - 1) * .7).addScaledVector(_d, s * 3.9);
+        _a2.copy(_d).multiplyScalar(s);
+        impact.beam(_e, _a2, 1 + i * .45, c, { width: .16, fade: .95 - d, delay: hit });
+      }
+    }
+  },
+  // 각성 · 숲의 속박(실루엣 = 다섯 갈래 덩굴이 기어가 끝에서 올가미로 조여듦): 다섯 발 방향으로 바닥을 기는 덩굴 물결(이끼빛 번짐 +
+  // 화살과 함께 나아가는 금연두 덩굴 채찍), 화살이 갈래 끝(화면 안 6m)에 닿는 순간 가시 매듭이 돋고 금연두 고리가 바깥에서 안으로
+  // 조여들며(grow > 1 = 줄어듦) 덩굴 가시가 땅에서 솟는다. 가운데 갈래만 금(속박의 심).
+  ranger_binding(ctx) {
+    const { impact, f, player, lite } = ctx; const SPEED = 28;
+    const SN = screenReach(ctx.fx?.camera, player.pos, f, 6, 1.6);
+    impact.mark(player.pos, MOSS, { radius: 8, life: .6, style: MARK_STYLE.fan, angle: yawOf(f) });
+    _b.copy(player.pos).setY(.08);
+    for (let i = -2; i <= 2; i++) {
+      if (lite && i % 2) continue;
+      rotY(f, i * .18, _d);
+      rail(impact, _b, _d, 1, 10, 3, i ? MOSS : VINE, { width: .5, speed: SPEED, life: .75, style: BEAM_STYLE.vine });
+      impact.beam(_b, _d, SN + 1.5, i ? LIME : GOLD, { speed: SPEED, tail: 3.5, width: .16, style: BEAM_STYLE.vine });
+      // 올가미: 바깥 갈래는 조금 짧고 늦게(부채 끝이 둥글게 닫힌다).
+      const a0 = Math.abs(i), t = SN / SPEED + a0 * .03;
+      _e.copy(_b).addScaledVector(_d, SN * (1 - a0 * .06));
+      impact.mark(_e, i ? VINE : GOLD, { radius: 1.1, life: .9, style: MARK_STYLE.thorn, angle: i * 1.3, delay: t });
+      // 조이는 빌보드 고리는 가운데 갈래만(2차): 다섯 갈래 끝이 적 무리 위에서 겹치면 가산 고리 다섯 겹이 적 몸을 흰빛으로 덮었다.
+      if (!i) impact._emit(IMPACT_KIND.ring, _e.x, .45, _e.z, .9, GOLD, .45, { grow: 1.9, delay: t });
+      // 덩굴 가시: 매듭 둘레 세 곳에서 위로 솟았다가 떨어진다(결정적 수식).
+      // 가시는 매듭마다 두 개·어두운 덩굴빛(2차: 다섯 매듭 × 연두 가시 셋이 적 몸 앞 세로 흰 줄로 겹쳤다).
+      for (let j = 0; j < 2; j++) {
+        const a = j * 3.14 + i;
+        impact._emit(IMPACT_KIND.shard, _e.x + Math.cos(a) * .5, .1, _e.z + Math.sin(a) * .5, .28, j ? VINE : MOSS, .55,
+          { vx: Math.cos(a) * 1.2, vy: 7 + j, vz: Math.sin(a) * 1.2, angle: a, stretch: 2.2, grow: .6, gravity: 14, delay: t });
+      }
+    }
+  },
+  // 질풍 · 사냥각인(실루엣 = 앞으로 감겨 나가는 나선 드릴 + 끝점 각인): 발밑은 뒤로 젖혀 터지는 반동 바람 두 갈래뿐(영웅 둘레 원 없음).
+  // 중심선을 따라 금연두·금·비취 불똥이 나선으로 돌며 화살 속도로 차례로 나아가고, 세 연발(0, .12, .24초)마다 세 갈래 바람 화살.
+  // 끝점에는 박자마다 가시 고리가 한 겹씩 찍히고(진한 비취 → 금연두) 마지막 박자에 금 나침 각인 + 금·금연두 X 자.
+  gale_hunt(ctx) {
+    const { impact, f, player, lite } = ctx; const SPEED = 28, o = bow(ctx, _a);
+    const END = screenReach(ctx.fx?.camera, player.pos, f, 9, 2.4), k = END / 9;
+    _d.set(-f.z, 0, f.x);
+    _b.copy(player.pos).setY(.08);
+    for (const s of [-1, 1]) impact.beam(_b, rotY(f, Math.PI + s * .5, _e), 2.2, DEEP, { width: .5, style: BEAM_STYLE.gale, fade: .45, speed: 14, tail: 1.5 });
+    // 질풍 드릴: 접선 속도(회전 + 앞으로)를 가진 불똥이 나선 위상대로 놓여, 화살이 지나는 순간 차례로 튄다.
+    const n = lite ? 6 : 12;
+    for (let j = 0; j < n; j++) {
+      const d = (1 + j * (8 / (n - 1))) * k, th = j * (12 / n) * 1.1, r = 1 + j * (.6 / n);
+      const c = Math.cos(th), s = Math.sin(th);
+      impact._emit(IMPACT_KIND.streak, player.pos.x + f.x * d + _d.x * c * r, 1 + s * r, player.pos.z + f.z * d + _d.z * c * r, .42, j % 3 === 1 ? GOLD : j % 3 ? JADE : LIME, .36,
+        { vx: -_d.x * s * 7 + f.x * 6, vy: c * 7, vz: -_d.z * s * 7 + f.z * 6, stretch: 1, grow: 1, delay: d / SPEED });
+    }
+    // 화면 가로 진행(2차): 정면 카메라에서 앞으로 뻗는 드릴이 영웅 위 좁은 띠로 몰리므로, 첫 연발이 지나는 자리마다 화면 가로 빗장이 지그재그로 켜진다.
+    _b.copy(player.pos);
+    screenSweep(impact, ctx.fx?.camera, _b, f, 2 * k, END, { n: lite ? 3 : 5, speed: SPEED, half: 2.2, width: .3, colors: [LIME, GOLD, JADE] });
+    for (let w = 0; w < 3; w++) {
+      const t0 = w * .12;
+      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + w * .2, GOLD, .09, { angle: .3 + w * .6, grow: .5, delay: t0 });
+      for (let i = -1; i <= 1; i++) {
+        if (lite && i && w !== 2) continue;
+        impact.beam(o, rotY(f, i * .18, _e), END + 3, i ? LIME : GOLD, { speed: SPEED, tail: i ? 4 : 6, width: i ? .26 : .14, style: i ? BEAM_STYLE.gale : BEAM_STYLE.line, delay: t0 });
+      }
+      const hit = t0 + END / SPEED; _b.copy(player.pos).addScaledVector(f, END);
+      if (w < 2) impact.mark(_b, w ? LIME : DEEP, { radius: 1.3 + w * .5, life: .9 - t0, style: MARK_STYLE.thorn, angle: w, delay: hit });
+      else {
+        impact.mark(_b, GOLD, { radius: 2.4, life: .8, style: MARK_STYLE.compass, angle: yawOf(f), delay: hit });
+        for (const s of [-1, 1]) impact._emit(IMPACT_KIND.cut, _b.x, .9, _b.z, 1.8, s > 0 ? GOLD : LIME, .32, { angle: s * .785, stretch: 1.2, grow: .9, delay: hit });
+        impact._emit(IMPACT_KIND.ring, _b.x, .5, _b.z, 2.2, DEEP, .36, { grow: 1, delay: hit });
+      }
+    }
+  },
+  // 천궁 · 유성화살비(실루엣 = 하늘에서 비스듬히 꽂히는 유성 다섯 줄): 위치 예고(큰 금 원화)는 skills.js 의 groundTex 가 맡으므로
+  // 서명은 큰 나침 고리를 더 겹치지 않는다(백화). 착탄점마다 작은 조준 원 → 판정 순간(.16+i×.09초)에 정확히 꽂히는 유성
+  // (진한 비취 번짐 + 금연두 쌍나선 꼬리 + 금 심, 꽂힌 뒤 비스듬한 꼬리 잔상) → 금·금연두 고리, 별빛, 진한 가시 자국, 사방으로 튀는 파편.
+  skyfall_arrows(ctx) {
+    const { impact, at, lite } = ctx;
+    const FALL = 16, SPEED = 110;
+    for (let i = 0; i < 5; i++) {
+      const hitT = .16 + i * .09, c = i % 2 ? LIME : GOLD;
+      _b.set(at.x + Math.cos(i * 2.4) * 2.2, 0, at.z + Math.sin(i * 2.4) * 2.2);
+      impact.mark(_b, c, { radius: 1, life: hitT + .2, style: MARK_STYLE.reticle, angle: i });
+      _a.set(_b.x - 1.4, FALL, _b.z - .8); _d.copy(_b).sub(_a); const len = _d.length();
+      const start = Math.max(0, hitT - len / SPEED);
+      if (!lite) impact.beam(_a, _d, len, DEEP, { speed: SPEED, tail: 10, width: .42, delay: start });
+      impact.beam(_a, _d, len, LIME, { speed: SPEED, tail: 6, width: .26, style: BEAM_STYLE.gale, delay: start });
+      impact.beam(_a, _d, len, i % 2 ? GOLD_HOT : GOLD, { speed: SPEED, tail: 7, width: .14, delay: start });
+      // 유성 꼬리 잔상: 낙하가 .15초로 짧아 눈에 남지 않으므로, 꽂힌 순간 하늘→착탄점 비스듬한 바람 줄이 잠깐 남는다(사선 실루엣).
+      if (!lite) impact.beam(_a, _d, len, i % 2 ? LIME : JADE, { width: .24, style: BEAM_STYLE.gale, fade: .32, delay: hitT });
+      impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 1.8, c, .28, { grow: 1, delay: hitT });
+      impact._emit(IMPACT_KIND.star, _b.x, .5, _b.z, 1.1, GOLD, .1, { angle: .3 + i, grow: .5, delay: hitT });
+      if (!lite) {
+        impact._emit(IMPACT_KIND.mark, _b.x, .06, _b.z, 2.4, DEEP, .55, { stretch: MARK_STYLE.thorn, angle: i, delay: hitT });
+        for (let j = 0; j < 3; j++) {
+          const a = i * 1.3 + j * 2.094;
+          impact._emit(IMPACT_KIND.shard, _b.x, .4, _b.z, .26, j === 2 ? JADE_HOT : j ? LIME : GOLD, .45,
+            { vx: Math.cos(a) * 5, vy: 6, vz: Math.sin(a) * 5, angle: a, stretch: 1.8, grow: .8, gravity: 14, delay: hitT });
+        }
+      }
+    }
+  },
+  // 불길한 징조: 발밑 보라 부채 표식 + 세 갈래 보라 대시(표적 셋의 저주 화살) + 끝점 별빛. 맞은 적의 표식은 skills.js 가 따로 찍는다.
+  cat_omen(ctx) {
+    const { impact, f, player } = ctx; const SPEED = 34;
+    impact.mark(player.pos, CAT, { radius: 5.5, life: .7, style: MARK_STYLE.fan, angle: yawOf(f) });
+    _b.copy(player.pos).setY(.08);
+    for (let i = -1; i <= 1; i++) {
+      rotY(f, i * .2, _d);
+      rail(impact, _b, _d, .8, 12, 2.4, i ? CAT : CAT_HOT, { width: .2, speed: SPEED, life: .55 });
+      _e.copy(_b).addScaledVector(_d, 9).setY(1);
+      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.4, CAT_HOT, .22, { angle: .3, grow: .5, delay: 9 / SPEED });
+    }
+  },
+  // 아홉 목숨의 밤: 무적 물러남 길(7m)을 따라 보라 고리가 차례로 터지고, 둘레에 아홉 갈래 그믐 나침이 돌며 접선 불똥이 감긴다.
+  nine_lives(ctx) {
+    const { impact, f, player, lite } = ctx; const o = bow(ctx, _a);
+    impact.mark(player.pos, CAT_HOT, { radius: 4.6, life: 1.2, style: MARK_STYLE.compass, angle: yawOf(f) });
+    _d.set(-f.x, 0, -f.z);
+    for (let i = 0; i < 4; i++) {
+      const t = i * .1; _e.copy(player.pos).addScaledVector(_d, 7 * t * 1.4);
+      impact._emit(IMPACT_KIND.ring, _e.x, .6, _e.z, 2 + i * .4, i % 2 ? CAT : CAT_HOT, .34, { grow: 1, delay: t });
+    }
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 2.2, CAT_HOT, .1, { angle: .3, grow: .4 });
+    const n = lite ? 4 : 9;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 1.8;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .34, i % 2 ? CAT : CAT_HOT, .6,
+        { vx: -Math.sin(a) * 11, vy: 2.2, vz: Math.cos(a) * 11, stretch: 1, grow: 1, delay: i * .09 });
+    }
+  },
+};
+
+/**
+ * 궁극기 예비 표식: 궁극기는 시전 연출(ultCinematic) 동안 판정이 늦게 오므로, skills.js start 에서 바로 부르는 예비 표식이다.
+ * 시전 전부터 '어디로 무엇이 올지'가 보인다. 서명과 같은 인스턴스 층만 쓰고 Math.random 을 쓰지 않는다.
+ * @type {Record<string, (ctx: SigCtx) => void>}
+ */
+export const PRELUDES = {
+  // 각성 · 연속 관통(예비): 활 끝에 세 발을 재듯 금·금연두·뜨거운 금 별빛이 차례로 쌓이고, 바닥에 짧은 진한 조준 바람이 깔린다.
+  ranger_quickshot(ctx) {
+    const { impact, f, lite } = ctx; const o = bow(ctx, _a);
+    for (let i = 0; i < 3; i++) impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .6 + i * .2, [GOLD, LIME, GOLD_HOT][i], .14, { angle: .3 + i * .5, grow: .6, delay: i * .08 });
+    _b.copy(ctx.player.pos).setY(.08).addScaledVector(f, .8);
+    impact.beam(_b, f, 3.2, DEEP, { width: .36, style: BEAM_STYLE.gale, fade: .45 });
+    if (!lite) impact.beam(_b, f, 3.2, GOLD, { width: .1, fade: .4, speed: 14, tail: 2 });
+  },
+  // 각성 · 숲의 속박(예비): 둘레에서 발밑으로 덩굴이 기어 모이고, 발밑에 이끼빛 가시 매듭이 돋는다.
+  ranger_binding(ctx) {
+    const { impact, player, lite } = ctx;
+    impact.mark(player.pos, MOSS, { radius: 1.6, life: .6, style: MARK_STYLE.thorn, angle: .4 });
+    for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + .3; _e.set(player.pos.x + Math.cos(a) * 3, .08, player.pos.z + Math.sin(a) * 3); _d.set(-Math.cos(a), 0, -Math.sin(a));
+      impact.beam(_e, _d, 2.3, i % 2 ? VINE : LIME, { width: .3, style: BEAM_STYLE.vine, speed: 9, tail: 1.6, delay: (i % 3) * .06 });
+    }
+  },
+  // 질풍 · 사냥각인(예비): 둘레 바람이 활 쪽으로 감겨 모이고, 앞으로 짧은 금연두 바람 화살 예고선.
+  gale_hunt(ctx) {
+    const { impact, f, player, lite } = ctx;
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 2.6;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5 + (i % 2) * .4, player.pos.z + Math.sin(a) * r, .26, i % 2 ? LIME : GOLD, .45,
+        { vx: -Math.cos(a) * 5 - Math.sin(a) * 6, vy: 1.8, vz: -Math.sin(a) * 5 + Math.cos(a) * 6, stretch: 1, grow: 1, delay: (i % 4) * .07 });
+    }
+    _b.copy(player.pos).setY(.08).addScaledVector(f, 1);
+    impact.beam(_b, f, 4, LIME, { width: .3, style: BEAM_STYLE.gale, fade: .5 });
+  },
+  // 천궁 · 유성화살비(예비): 활 끝에서 하늘로 쏘아 올리는 금 화살 한 줄(진한 비취 바람 꼬리) — 그 화살이 유성으로 떨어진다.
+  skyfall_arrows(ctx) {
+    const { impact, lite } = ctx; const o = bow(ctx, _a);
+    _d.set(0, 1, 0);
+    if (!lite) impact.beam(o, _d, 15, DEEP, { speed: 38, tail: 7, width: .4, style: BEAM_STYLE.gale });
+    impact.beam(o, _d, 15, GOLD, { speed: 38, tail: 6, width: .16 });
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, GOLD_HOT, .12, { angle: .3, grow: .5 });
+    impact._emit(IMPACT_KIND.ring, o.x, o.y, o.z, 1.6, LIME, .3, { grow: 1 });
+    for (const s of [-1, 1]) impact._emit(IMPACT_KIND.streak, o.x + s * .3, o.y, o.z, .26, LIME, .4, { vx: s * 1.5, vy: 9, vz: 0, stretch: 1, grow: 1, delay: .04 });
+  },
+  // 아홉 목숨의 밤: 발밑에 어두운 보라 고리가 조여들고 그믐 불똥이 둘레에서 모여든다(보라).
+  nine_lives(ctx) {
+    const { impact, f, player, lite } = ctx;
+    impact.mark(player.pos, CAT_DEEP, { radius: 4.2, life: 1.3, style: MARK_STYLE.compass, angle: yawOf(f) + .2 });
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 3.4;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .28, i % 2 ? CAT : CAT_HOT, .5,
+        { vx: -Math.cos(a) * 6 - Math.sin(a) * 5, vy: 2, vz: -Math.sin(a) * 6 + Math.cos(a) * 5, stretch: 1, grow: 1, delay: (i % 4) * .15 });
+    }
+  },
+  // 폭풍의 일곱 화살(예비 = 3박자의 0박): 발밑 진한 나침 고리가 조여들고, 일곱 갈래 방향으로 가는 금·진한 비취 바람 예고선이 깔리며,
+  // 둘레 금연두 바람이 활 쪽으로 감겨 모인다. 비취 단색 큰 고리는 청록 바닥과 섞여 흐린 원판으로 보였다.
+  ranger_tempest(ctx) {
+    const { impact, f, player, lite } = ctx;
+    impact.mark(player.pos, DEEP, { radius: 3.6, life: 1.3, style: MARK_STYLE.compass, angle: yawOf(f) + .2 });
+    _b.copy(player.pos).setY(.08);
+    for (let i = -3; i <= 3; i++) {
+      rotY(f, i * .18, _d); _e.copy(_b).addScaledVector(_d, 1.2);
+      impact.beam(_e, _d, 6, i % 2 ? DEEP : GOLD, { width: i % 2 ? .3 : .12, style: i % 2 ? BEAM_STYLE.gale : BEAM_STYLE.line, fade: 1.2 });
+    }
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, r = 3.4;
+      impact._emit(IMPACT_KIND.streak, player.pos.x + Math.cos(a) * r, .5, player.pos.z + Math.sin(a) * r, .28, i % 2 ? LIME : GOLD, .5,
+        { vx: -Math.cos(a) * 6 - Math.sin(a) * 5, vy: 2, vz: -Math.sin(a) * 6 + Math.cos(a) * 5, stretch: 1, grow: 1, delay: (i % 4) * .15 });
+    }
+  },
+};

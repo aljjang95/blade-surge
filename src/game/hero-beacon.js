@@ -25,13 +25,14 @@ export class HeroBeacon {
       const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
       mesh.renderOrder = order; mesh.rotation.x = -Math.PI / 2; this.root.add(mesh); return mesh;
     };
-    this.shadowRing = add(new THREE.RingGeometry(.66, .92, 32), 0x10252c, 990);
+    // 2026-10-30 "피아 식별 반경이 너무 크다": 고리 전체를 약 .72 배로 줄이고 어두운 받침 띠를 가늘게 한다.
+    this.shadowRing = add(new THREE.RingGeometry(.5, .64, 32), 0x10252c, 990);
     // 위치 표시는 유지하면서 밝은 선이 발과 전투 바닥을 덮는 면적을 줄인다.
-    this.primaryRing = add(new THREE.RingGeometry(.785, .84, 32), 0xb9ffee, 991);
-    this.focusRing = add(new THREE.RingGeometry(1, 1.06, 32), 0xffe6a0, 992);
+    this.primaryRing = add(new THREE.RingGeometry(.565, .6, 32), 0xb9ffee, 991);
+    this.focusRing = add(new THREE.RingGeometry(.72, .76, 32), 0xffe6a0, 992);
     this.focusRing.visible = false; this.focused = false; this.focusColor = new THREE.Color(0xffe6a0);
     const shape = new THREE.Shape();
-    shape.moveTo(-.28, -.91); shape.lineTo(0, -1.35); shape.lineTo(.28, -.91); shape.lineTo(0, -1.06); shape.closePath();
+    shape.moveTo(-.2, -.66); shape.lineTo(0, -.97); shape.lineTo(.2, -.66); shape.lineTo(0, -.76); shape.closePath();
     this.arrow = add(new THREE.ShapeGeometry(shape), 0xffe6a0, 993);
     this.root.position.y = .08;
     // One crisp, camera-facing locator. No text, pulses or lighting cost.

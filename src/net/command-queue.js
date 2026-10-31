@@ -13,7 +13,7 @@ const TO_ARGS = {
   enhanceTransfer: (src, dst, opts) => [src, dst, !!opts?.scroll],
   equipAvatar: (heroId, id = null) => [heroId, id ?? null],
   setDifficulty: (id, ch = 1, st = 1) => [id, ch, st],
-  claimDaily: () => [], claimMonthly: () => [],
+  claimDaily: () => [], claimIdle: () => [], markSeen: () => [], claimMonthly: () => [],
   pull: (n, banner = 'hero') => [n, banner], pullSSR: () => [], exchangeMileage: () => [],
 };
 
@@ -39,8 +39,10 @@ export class CommandQueue {
       if (outer) this.lastSelected = eco.s.selected;
       // 다른 명령 안에서 불린 호출과 서버 문서 적용 중의 호출은 보내지 않는다.
       // 반환값이 없는 기존 메서드(equip·unequip)는 상태가 바뀌었을 때만 성공으로 본다.
-      const ok = result === undefined ? before !== parityHash(eco.s) : OPS[op].ok(result);
-      if (outer && ok) this.push(op, toArgs(...args));
+      const ok = result === undefined ? before !== parityHash(eco.s) : OPS[op].ok(result) && (!OPS[op].send || OPS[op].send(result));
+      // 그림자 계정의 카드 선택: 서버 그림자 문서에는 카드가 없다(스냅샷이 clearCard 를 버린다). 명령 대신 스냅샷으로 보상 결과를 맞춘다.
+      if (outer && ok && op === 'pickClearCard' && this.hooks.authority() === 'shadow') this.snapshot();
+      else if (outer && ok) this.push(op, toArgs(...args));
       return result;
     };
   }

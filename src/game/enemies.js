@@ -153,11 +153,11 @@ export class Enemy extends Actor {
     else if (def.elite) game.fx.groundTex(pos, 'shockwave', 0xffc040, { r0: 0.3, r1: 3.5, life: 0.6 });
     else game.fx.ring(pos, 0x40ff80, { r0: 0.2, r1: 2, life: 0.4 });
     audio.spawnRise({ vol: def.boss ? 0.5 : def.elite ? 0.35 : 0.14, boss: !!def.boss });
-    // 엘리트/보스는 발밑 마커로 난전 중에도 식별
+    // 엘리트/보스는 발밑 마커로 난전 중에도 식별. 2026-10-30 몸 폭에 맞게 줄이고 선을 가늘게(화면 붐빔 감소).
     if (def.elite || def.boss || def.behavior === 'shield' || def.behavior === 'shaman') {
       const col = def.boss ? 0xff3040 : def.elite ? 0xffc040 : def.behavior === 'shield' ? 0x60a0ff : 0x80ff90;
-      const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.5 : 0.95, def.boss ? 1.9 : 1.25, 28),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.25 : 0.62, def.boss ? 1.45 : 0.74, 28),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       mk.rotation.x = -Math.PI / 2; mk.position.y = 0.07; mk.renderOrder = 3;
       this.root.add(mk); this.marker = mk;
     }
@@ -311,7 +311,7 @@ export class Enemy extends Actor {
     const stride = MONSTER_STRIDE[this.def.model]?.[clip];
     return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
   }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null, tint = null } = {}) {
     this.absorbed = 0;   // 이번 타격에서 종지기의 종이 받아 낸 양. 몸 체력 피해(반환값)와 별개로 '적중 성공' 판정에 쓴다
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
@@ -347,7 +347,8 @@ export class Enemy extends Actor {
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
-    this.flash(crit ? 0xffd040 : 0xffffff, crit ? 0.18 : 0.12);
+    // tint: 겹쳐 맞는 다단 화살(숲의 속박)은 흰 몸 번쩍임 대신 어두운 색·낮은 세기로 실루엣을 남긴다.
+    this.flash(crit ? 0xffd040 : tint ?? 0xffffff, crit ? 0.18 : 0.12, tint && !crit ? .6 : 1);
     this.receiveImpact(dirx, dirz, Math.min(1, .35 + kb * .08));
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));

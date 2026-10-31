@@ -1,0 +1,1228 @@
+{
+  "items": [
+    {
+      "id": "exp_emberknight_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_emberknight_weapon.glb",
+      "sha256": "beab4e08c44943a144e31fdae830e76d3f82f48fc805c566f5dbe2b425dc877d",
+      "bytes": 369488,
+      "triangles": 2823,
+      "source": {
+        "tripoTaskId": "3a566ba9-7a2f-4e52-8421-27230d1a21e6",
+        "concept": "dark charcoal stone greatsword blade with glowing orange lava cracks and orange flame-shaped edges solidly attached, bronze cross guard with an orange diamond gem, brown grip, orange gem pommel"
+      }
+    },
+    {
+      "id": "exp_glasswarden_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_glasswarden_weapon.glb",
+      "sha256": "d5bd12f03ddac5b02e8786676feff6e5ba55c469084b0bf05206bbdccbdabedf",
+      "bytes": 476788,
+      "triangles": 2913,
+      "source": {
+        "tripoTaskId": "6b588bba-4b91-4245-a968-d6ddc53b39ed",
+        "concept": "translucent pale-blue glass crystal greatsword blade with jagged shard edges, silver crescent leaf guard with a blue gem, navy grip, blue bead pommel with a light blue tassel, all crystal shards solidly attached to the blade"
+      }
+    },
+    {
+      "id": "exp_starreader_weapon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/exp_starreader_weapon.glb",
+      "sha256": "c7ba2a91292dbd5be91f3fa095fb91cf67372dbaea03461a7fb266cd710c5aa5",
+      "bytes": 412088,
+      "triangles": 2586,
+      "source": {
+        "tripoTaskId": "08ace6d0-5def-4edb-a899-9f3912a44aca",
+        "concept": "deep navy blue greatsword blade with glowing white constellation lines and star dots, silver edge, silver four-point star guard with a blue sphere gem, navy grip, blue crystal pommel, no floating sparkles"
+      }
+    },
+    {
+      "id": "gear_weapon_e_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_1.glb",
+      "sha256": "75c3085ae6ab2675ee5812a33cca622fef60a8409fdd0c5988adce8d096adc98",
+      "bytes": 350004,
+      "triangles": 2662,
+      "source": {
+        "tripoTaskId": "55dfe5f6-a75f-43eb-9ea4-c0e9461bc5d7",
+        "concept": "heavy wide steel cleaver blade with two small blue diamond inlays along the fuller, silver cross guard, dark grip, spiked silver star pommel with a blue gem"
+      }
+    },
+    {
+      "id": "gear_weapon_e_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_2.glb",
+      "sha256": "234c9f58faa81290318d8c1e0f334ca2bf34256ffed00f793cb0d67117de94f9",
+      "bytes": 353992,
+      "triangles": 2758,
+      "source": {
+        "tripoTaskId": "e2310d56-a96b-4f10-b201-740667ac8523",
+        "concept": "thin needle rapier blade, silver crescent-moon shaped guard with a small blue star gem, navy grip, blue gem pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_e_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_e_3.glb",
+      "sha256": "d390bff1928797109d4d6fc4333d9012dd698938db4dfa6d91d35d6529eaf7e2",
+      "bytes": 341572,
+      "triangles": 2842,
+      "source": {
+        "tripoTaskId": "5c856bce-0ef3-49b0-a2ae-feccaa06be0a",
+        "concept": "straight steel rapier blade, ornate gold swept-hilt basket of looping rings around a large blue sphere gem, gold pommel with blue gem"
+      }
+    },
+    {
+      "id": "gear_weapon_l_1",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_1.glb",
+      "sha256": "aa6de3dbf594dbd1496ced99df41f8fd256443e2fa2223e7fa006f53b790885e",
+      "bytes": 417644,
+      "triangles": 2708,
+      "source": {
+        "tripoTaskId": "b262d176-1a59-43a3-a376-8ac638fa7dae",
+        "concept": "large curved golden greatsword blade with red engraved inlay lines, gold horn-shaped guard with a red round gem, dark red grip, red gem pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_l_2",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_2.glb",
+      "sha256": "981e524c8b58bd84e8a15be832c37b55337d32369b3a992450cdb8c7eddba40c",
+      "bytes": 446416,
+      "triangles": 2830,
+      "source": {
+        "tripoTaskId": "c67e0eae-2ea5-447d-b08e-5be40a466e2b",
+        "concept": "golden greatsword with a dark brown jagged dragon-scale blade core and glowing orange molten cracks, golden spiked sun guard, the golden star rays fused solidly to the guard, gold sun pommel with orange gem"
+      }
+    },
+    {
+      "id": "gear_weapon_l_3",
+      "form": "greatsword",
+      "file": "/models/item-weapons/gear_weapon_l_3.glb",
+      "sha256": "433f4d7156d6b389835617701a4fa3e82a1fb3fed87af776a6972f0b60679a64",
+      "bytes": 423788,
+      "triangles": 2898,
+      "source": {
+        "tripoTaskId": "1a5a422c-ca08-4b54-b409-1195ca8da3d8",
+        "concept": "wavy flame-shaped lilac-silver greatsword blade with a gold edge, gold looped ring guard with an amber center, gold radiant star rays fused solidly to the guard, gold ring pommel with an orange tassel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_1.glb",
+      "sha256": "86f0b498011964e4cf369983777c45a31281df4b5bb5bcd6df3f34dfb9a80a99",
+      "bytes": 291932,
+      "triangles": 2568,
+      "source": {
+        "tripoTaskId": "c44eb935-7738-4b6f-bbdb-31b103c479b6",
+        "concept": "plain steel arming sword, straight double-edged blade, flat square cross guard, navy wrapped grip, silver ring pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_2.glb",
+      "sha256": "32f2d8020cab410e114d017f2bf9f800490730260ed992f4bc13cad58e09c196",
+      "bytes": 222412,
+      "triangles": 2734,
+      "source": {
+        "tripoTaskId": "6744655e-15ed-4450-aee0-ae5ec46a8706",
+        "concept": "very wide flat steel broad blade like a cleaver with an angled tip, no cross guard, brown leather grip, round steel ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_n_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_n_3.glb",
+      "sha256": "c5039c4d2f5ff00a29d1aad96e4242c2ed1fd4a844ec517af9eeb56225ac92c6",
+      "bytes": 263656,
+      "triangles": 2898,
+      "source": {
+        "tripoTaskId": "edcb652f-8f48-4098-ac1d-ec9b8437d995",
+        "concept": "curved bronze scimitar blade, small bronze cross guard with round center boss, brown leather grip, bronze ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_1",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_1.glb",
+      "sha256": "86603cbea11f614732170154ae9ac67f288a85deb9b6d1b0ace4825581299a4b",
+      "bytes": 284948,
+      "triangles": 2884,
+      "source": {
+        "tripoTaskId": "13194ca7-b00d-41bc-9730-61615bbf124e",
+        "concept": "steel sword with large saw teeth along one edge, no cross guard, navy wrapped grip, steel ball pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_2",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_2.glb",
+      "sha256": "db49ea09f506ff41a20c82d408e8e2c09885919c73fdc568fba8a0849d988ad8",
+      "bytes": 327280,
+      "triangles": 2872,
+      "source": {
+        "tripoTaskId": "4277c812-4911-4030-b855-dd368d28c89f",
+        "concept": "light blue faceted ice-crystal blade, gold cross guard with a blue diamond gem, brown grip, blue crystal pommel"
+      }
+    },
+    {
+      "id": "gear_weapon_s_3",
+      "form": "sword",
+      "file": "/models/item-weapons/gear_weapon_s_3.glb",
+      "sha256": "aea5de5000209465febcbda116e45d2ee306299e9d5c20d2c887b63fde348b44",
+      "bytes": 377488,
+      "triangles": 2730,
+      "source": {
+        "tripoTaskId": "254d1160-3d29-4307-8e3d-9cb965139c07",
+        "concept": "steel blade with a gold center ridge, gold feather-wing cross guard with a round amber gem, brown grip, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_blood",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_blood.glb",
+      "sha256": "d7a5369b21f25d9afe1a9bc99c31345bebdff23380ce16e243e46c118878fdee",
+      "bytes": 343876,
+      "triangles": 2797,
+      "source": {
+        "tripoTaskId": "63c36763-2217-4178-873a-406dc3f6ae8c",
+        "concept": "the blade itself is dark blackish crimson red metal, not white or ivory, curved jagged blood greatsword with bright red edge highlights, black bat-wing cross guard with a red diamond gem, dark red wrapped grip, black spiked pommel with a red drop"
+      }
+    },
+    {
+      "id": "w_bronze",
+      "form": "axe",
+      "file": "/models/item-weapons/w_bronze--axe.glb",
+      "sha256": "48dd49f83ad5f72be64618c3146345f7e1209447f2a888aab2952c9fe2475475",
+      "bytes": 290120,
+      "triangles": 2918,
+      "source": {
+        "tripoTaskId": "c9b57c40-bb9f-4406-8d08-06b7fb7cee18",
+        "concept": "w_bronze@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_bronze",
+      "form": "bow",
+      "file": "/models/item-weapons/w_bronze--bow.glb",
+      "sha256": "a9026b332ebd9f96964ec89f7d941a473e69d632ede17f7929d5eacf103aabc0",
+      "bytes": 368512,
+      "triangles": 2782,
+      "source": {
+        "tripoTaskId": "6cb9a2f7-a9c6-4daa-8fe3-d953cf698053",
+        "concept": "w_bronze@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_bronze",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_bronze--dagger.glb",
+      "sha256": "78be811127f01bbea7de0fd072bc5fece765adea30ea8606cb86066fcd9df5f1",
+      "bytes": 274728,
+      "triangles": 2716,
+      "source": {
+        "tripoTaskId": "28d365bd-18c3-4844-afe5-c3ccba187034",
+        "concept": "w_bronze@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_bronze",
+      "form": "staff",
+      "file": "/models/item-weapons/w_bronze--staff.glb",
+      "sha256": "17e86087743d0c287d5e31355438cea6c7533b7a4206c5571552f3dd53b3d531",
+      "bytes": 353556,
+      "triangles": 2856,
+      "source": {
+        "tripoTaskId": "9a4ed651-a145-495d-a32e-875cad4fc931",
+        "concept": "w_bronze@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_bronze",
+      "form": "sword",
+      "file": "/models/item-weapons/w_bronze.glb",
+      "sha256": "dc0378e377f1fb543d848a3bce34742bdb90b8c71677e8641fb40846af75bf01",
+      "bytes": 485736,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "5f939b04-1e00-4126-b522-66961ece5425",
+        "concept": "curved bronze scimitar-like saber, golden-bronze blade curving to one side with a fuller groove and a faint green edge glow, bronze cross guard with downward curled tips and a round green gem in the center, dark brown cord-wrapped grip, round bronze pommel"
+      }
+    },
+    {
+      "id": "w_chain",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_chain.glb",
+      "sha256": "90852258d3cc6687cf4cf7e2595158b3aef2cb8bf4c7e84b2baa9bde48af01f9",
+      "bytes": 648488,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "15dcf295-c1ed-4dde-bd1b-f9255f7275d4",
+        "concept": "abyss chain greatsword: teal-green crystal blade wrapped by a heavy dark iron chain spiraling around it, teal crystal cross guard with a teal gem, grip with the chain end hanging solidly attached at the pommel with a teal crystal tip"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "axe",
+      "file": "/models/item-weapons/w_cleaver--axe.glb",
+      "sha256": "c79cf76ae63d10507efbc36c61660b14b8e03d21713da9bd343c444420120842",
+      "bytes": 239392,
+      "triangles": 2602,
+      "source": {
+        "tripoTaskId": "a3243726-9a59-4a66-a186-76067fc00ac1",
+        "concept": "w_cleaver@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "bow",
+      "file": "/models/item-weapons/w_cleaver--bow.glb",
+      "sha256": "3dcc55a2a1bc5feb98a4fec7e0ee1a3e9f684907fcb87fbef68aeff2561dfd51",
+      "bytes": 306636,
+      "triangles": 2696,
+      "source": {
+        "tripoTaskId": "359ee719-0cef-409f-b0dd-9c34e7b4c3a5",
+        "concept": "w_cleaver@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_cleaver--dagger.glb",
+      "sha256": "72d5960297e2e46c4fe35bf0ef111ddde1df76e3484e5482385868f9a6b313b0",
+      "bytes": 226232,
+      "triangles": 2692,
+      "source": {
+        "tripoTaskId": "8c7a001e-ca4b-4799-b4a8-1229f6f5987e",
+        "concept": "w_cleaver@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "sword",
+      "file": "/models/item-weapons/w_cleaver.glb",
+      "sha256": "b713d9fef34e18d62eefd233875487b08ea0fd737a5d954ac859649a55a09def",
+      "bytes": 487732,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "69c05944-f982-4704-8431-2860d8e9d6a3",
+        "concept": "butcher's cleaver: broad rectangular steel blade with a round hole near the spine top, beveled bright edge, short silver ferrule, dark brown wooden handle with two silver rivets, angular handle end; vertical with blade on top"
+      }
+    },
+    {
+      "id": "w_cleaver",
+      "form": "wand",
+      "file": "/models/item-weapons/w_cleaver--wand.glb",
+      "sha256": "6a3a0791cd1cebb1dd4fae6796a105732132c1d078c56efa426f8f33278cdb05",
+      "bytes": 302780,
+      "triangles": 2736,
+      "source": {
+        "tripoTaskId": "aac7a511-c11a-4634-97bc-b0dbacf65794",
+        "concept": "w_cleaver@wand (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "bow",
+      "file": "/models/item-weapons/w_dragon--bow.glb",
+      "sha256": "4a66eb12ed36c7508e275b5c7bbf6795363e3813492f736bf1c36928e94d49ad",
+      "bytes": 338384,
+      "triangles": 2719,
+      "source": {
+        "tripoTaskId": "5a1667ca-b0ac-4278-9851-09f8389256f2",
+        "concept": "w_dragon@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_dragon--dagger.glb",
+      "sha256": "f407838df543098ff6578a189a98000d93f4f106bd3dc980e1f572ff3fc373ab",
+      "bytes": 389212,
+      "triangles": 2621,
+      "source": {
+        "tripoTaskId": "19efa35a-46e6-4046-8738-f128ee96a58a",
+        "concept": "w_dragon@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "greataxe",
+      "file": "/models/item-weapons/w_dragon--greataxe.glb",
+      "sha256": "24697745ddd005470638d37fb1f2c82a54e5cb1f3e34bc2faa0a4bf7ef41ee3d",
+      "bytes": 406660,
+      "triangles": 2749,
+      "source": {
+        "tripoTaskId": "4270fcbc-dd39-4f7c-a3a2-5d8b73ace7cd",
+        "concept": "w_dragon@greataxe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_dragon.glb",
+      "sha256": "e3043f7fa61b62b96bdb2583d87ca57fd114251b72586c6df3b108150d007590",
+      "bytes": 599136,
+      "triangles": 2998,
+      "source": {
+        "tripoTaskId": "4d1b2e05-829e-4af6-930c-512fed4931d7",
+        "concept": "dragonslayer greatsword: very large dark brown-bronze blade with a golden central fuller, golden wing-shaped cross guard with a red gem in the center, a golden radiant halo ring with spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_dragon",
+      "form": "staff",
+      "file": "/models/item-weapons/w_dragon--staff.glb",
+      "sha256": "28bb56f5433c920899c43e832ed2662fe8b3f13671112b9afad49439328a654c",
+      "bytes": 394412,
+      "triangles": 2802,
+      "source": {
+        "tripoTaskId": "d8e9a0db-0470-4ffa-8ce3-e361d0f163c0",
+        "concept": "w_dragon@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "axe",
+      "file": "/models/item-weapons/w_flame--axe.glb",
+      "sha256": "8b4ca08ddc8bd60579ee0bd426541b1cc6e38c54af0ce985a1db81ecb68cf749",
+      "bytes": 338780,
+      "triangles": 2903,
+      "source": {
+        "tripoTaskId": "db5cd386-0f69-4a76-adc4-899c700b68bf",
+        "concept": "w_flame@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "bow",
+      "file": "/models/item-weapons/w_flame--bow.glb",
+      "sha256": "c14ebf8d07c551827777f58768b67bfb0e9bb5ba58c98ff8abcd5179dee46f5c",
+      "bytes": 390292,
+      "triangles": 2707,
+      "source": {
+        "tripoTaskId": "aa807131-1a69-4287-809e-1d9ba2ecc70a",
+        "concept": "w_flame@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_flame--dagger.glb",
+      "sha256": "e1d9a45eb7a77d9437cf290dcd07214faf9b4866fcf6c3f9ee5c9a7d2f271267",
+      "bytes": 367712,
+      "triangles": 2781,
+      "source": {
+        "tripoTaskId": "d226d191-3043-4209-b7bf-15870231d16d",
+        "concept": "w_flame@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "staff",
+      "file": "/models/item-weapons/w_flame--staff.glb",
+      "sha256": "ccdfd99868244253ea28cbdab46c33b30132e483c37eae1312b4f9d3ad58e96c",
+      "bytes": 416944,
+      "triangles": 2822,
+      "source": {
+        "tripoTaskId": "77d0dad2-ccdb-488d-a204-718d05bd1d8c",
+        "concept": "w_flame@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_flame",
+      "form": "sword",
+      "file": "/models/item-weapons/w_flame.glb",
+      "sha256": "210f2e3a98a485d01146f38d2c9668cd5f8524de8ae8e7d3d8da15cac5bd69d9",
+      "bytes": 546632,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fced7943-80db-4ac4-9fb2-d4fb3a1cf928",
+        "concept": "flame sword: grey steel blade with a wavy zig-zag edge and a glowing orange-red flame pattern inlaid in the center, diamond-shaped gold guard with a red gem at the blade base plus curved gold crescent quillons, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "axe",
+      "file": "/models/item-weapons/w_frost--axe.glb",
+      "sha256": "55eb4cf5502ee036a16e0ecf91fa0555c909623575a7daafb3a09da8d775ca6f",
+      "bytes": 361844,
+      "triangles": 2926,
+      "source": {
+        "tripoTaskId": "3dd90189-b531-4095-bcfc-4d415732f7bd",
+        "concept": "w_frost@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "bow",
+      "file": "/models/item-weapons/w_frost--bow.glb",
+      "sha256": "274180efbf478f13048c2816f59a081993501ef89719a0fac7f80a035323fa6a",
+      "bytes": 471268,
+      "triangles": 2911,
+      "source": {
+        "tripoTaskId": "31f0ec2e-6c10-4059-9974-730d25f54e9a",
+        "concept": "w_frost@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_frost--dagger.glb",
+      "sha256": "a13ef4764783904afb414da10741ae7657be6dcfc99ba517d487cad5f46798c4",
+      "bytes": 375176,
+      "triangles": 2844,
+      "source": {
+        "tripoTaskId": "833714a0-5b40-418a-b177-992030221191",
+        "concept": "w_frost@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "staff",
+      "file": "/models/item-weapons/w_frost--staff.glb",
+      "sha256": "30d628a42270b2046b599450648d83ee3e43279764ff1b0bce276a3971acc001",
+      "bytes": 379180,
+      "triangles": 2922,
+      "source": {
+        "tripoTaskId": "a79c2889-d336-4493-ac60-b51b116f76f6",
+        "concept": "w_frost@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_frost",
+      "form": "sword",
+      "file": "/models/item-weapons/w_frost.glb",
+      "sha256": "de52adec6a9a6c7f518bce4b97d5c70cc8f5163e80bcdf704379347c22500179",
+      "bytes": 1060868,
+      "triangles": 2503,
+      "source": {
+        "tripoTaskId": "f30e3e71-1232-457f-9480-2a003ab3095b",
+        "concept": "R2 tripo-3d/weapons/w_frost/w_frost-concept.png"
+      }
+    },
+    {
+      "id": "w_gravity",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_gravity.glb",
+      "sha256": "a55dd7a138990907f0beca552471e7f600f5d1232c5830eb34189c2cc4bf3ddc",
+      "bytes": 637916,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "459b04c7-7bd7-4e58-8dfe-09f627f81167",
+        "concept": "singularity greatsword: broad dark grey-silver frame blade with a starry purple-black cosmic inlay and a swirling purple black-hole spiral in the middle, ornate silver cross guard with a purple black-hole disc, thin purple rings with small dark orbs fused solidly to the blade, dark purple grip, purple crystal pommel"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "axe",
+      "file": "/models/item-weapons/w_guard--axe.glb",
+      "sha256": "e29f62a715c8c7f7b7fd5b73fa3e9f8b956e95a4dc4ebab3a9a9adacb3ac4fac",
+      "bytes": 299248,
+      "triangles": 2688,
+      "source": {
+        "tripoTaskId": "5e20ead3-ba1c-4fbb-9c8b-d9b928f0b4be",
+        "concept": "w_guard@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "bow",
+      "file": "/models/item-weapons/w_guard--bow.glb",
+      "sha256": "59cf3f9e093ee65191754ef3b4ba6da3e1992bc67eeac812a1deebd99445b7bd",
+      "bytes": 329484,
+      "triangles": 2742,
+      "source": {
+        "tripoTaskId": "f1980e4b-43c5-42ef-9151-db73ac4787de",
+        "concept": "w_guard@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_guard--dagger.glb",
+      "sha256": "ae9526b99a9546c00d401971fce6851ed3446b3f36b752179bac6fc795ba4a5a",
+      "bytes": 268116,
+      "triangles": 2556,
+      "source": {
+        "tripoTaskId": "2efba1a4-d06f-4a4c-adaf-737df6125e66",
+        "concept": "w_guard@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "staff",
+      "file": "/models/item-weapons/w_guard--staff.glb",
+      "sha256": "b1d7338cd262d0851f61f4650734e5769999c37ccf86ca66d44566a075090701",
+      "bytes": 361976,
+      "triangles": 2846,
+      "source": {
+        "tripoTaskId": "d0e19b89-7068-4435-9ac1-aa8906af1468",
+        "concept": "w_guard@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_guard",
+      "form": "sword",
+      "file": "/models/item-weapons/w_guard.glb",
+      "sha256": "ed27f990eadd155de118fe2d125615213bc1872327355306382c00fddb249336",
+      "bytes": 504812,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "139c93a4-b2cc-4552-97a5-c2a3c05e2221",
+        "concept": "city guard longsword, wide grey steel blade with a fuller groove and chisel point, flat silver cross guard, brown leather grip with silver ring bands, round silver pommel with a small green tassel hanging from it"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "axe",
+      "file": "/models/item-weapons/w_hunter--axe.glb",
+      "sha256": "353a1ed7e13fb8b722cb285b2c0eab23cde064c4a40db1452254a37ca85ec31a",
+      "bytes": 277484,
+      "triangles": 2736,
+      "source": {
+        "tripoTaskId": "988e0f78-dcb2-4a5c-8f0e-aa2a82b94b69",
+        "concept": "w_hunter@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "bow",
+      "file": "/models/item-weapons/w_hunter--bow.glb",
+      "sha256": "9821430317fc4b74130cf0571323d41e30c4185d34f0a4f6eb19450a0f9c9a9a",
+      "bytes": 293648,
+      "triangles": 2835,
+      "source": {
+        "tripoTaskId": "b82330a9-8f04-45ae-a0fc-0552b8257ea0",
+        "concept": "w_hunter@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_hunter--dagger.glb",
+      "sha256": "6112f4a64b72d3572bd84e54460eaba4c23180015f712f0e6ab9455845f0d825",
+      "bytes": 271804,
+      "triangles": 2770,
+      "source": {
+        "tripoTaskId": "f12764c2-753d-489b-9acf-d8e58c04854a",
+        "concept": "w_hunter@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "staff",
+      "file": "/models/item-weapons/w_hunter--staff.glb",
+      "sha256": "6d8b16c83dd39a767a41f3658142313066183aeee6fdc3d473e9d7944eebad4c",
+      "bytes": 345788,
+      "triangles": 2758,
+      "source": {
+        "tripoTaskId": "64d9199d-dd0c-49dd-aae7-3b2fcb6d660d",
+        "concept": "w_hunter@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_hunter",
+      "form": "sword",
+      "file": "/models/item-weapons/w_hunter.glb",
+      "sha256": "aa394848132c1d8e794e6989e4d5908baf2be944960fee66241836f55ff174e8",
+      "bytes": 742020,
+      "triangles": 2756,
+      "source": {
+        "tripoTaskId": "2cc3b2c5-1945-410f-b3fa-bd26c06a05da",
+        "concept": "R2 tripo-3d/weapons/w_hunter/w_hunter-concept.png"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "axe",
+      "file": "/models/item-weapons/w_iron--axe.glb",
+      "sha256": "0d96003c4abd11591c96a18995934ca662b7f868eeb68c041308001584bd4300",
+      "bytes": 275592,
+      "triangles": 2916,
+      "source": {
+        "tripoTaskId": "3728e20c-6a49-4c73-be02-c0eceb9e3a70",
+        "concept": "w_iron@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "bow",
+      "file": "/models/item-weapons/w_iron--bow.glb",
+      "sha256": "7862d28666eb051adbfcf2f7a1efe394350cec07ac193a4cf9a2c22a8c6ff252",
+      "bytes": 289088,
+      "triangles": 2646,
+      "source": {
+        "tripoTaskId": "6de08ede-ae8a-41e2-9bb0-4bef0582c29d",
+        "concept": "w_iron@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_iron--dagger.glb",
+      "sha256": "d920d568f5ed50bc24aecfbf8560da45ecabe49e97f679f33d12e4951acecadf",
+      "bytes": 261092,
+      "triangles": 2758,
+      "source": {
+        "tripoTaskId": "166c5994-cd8f-46aa-9c83-4a749aa152e0",
+        "concept": "w_iron@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "sword",
+      "file": "/models/item-weapons/w_iron.glb",
+      "sha256": "0b5351e1c2c8ea5df5abd11c7cd604b7dab12231c9ac389370e3f2f103cd3f16",
+      "bytes": 467524,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "30576d06-3f9b-48a3-840c-4cf5e2ef33a1",
+        "concept": "plain iron short sword, wide flat silver-grey blade with a central fuller groove and a chisel-shaped point, simple flat silver cross guard, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
+      "id": "w_iron",
+      "form": "wand",
+      "file": "/models/item-weapons/w_iron--wand.glb",
+      "sha256": "623a21f7c7ca69ebbd727cee97757f118aff5e8ad25bf33ff2c17fe4f5f66167",
+      "bytes": 264884,
+      "triangles": 2860,
+      "source": {
+        "tripoTaskId": "8f0d3c43-d6a9-45e9-b3a5-a50042599b25",
+        "concept": "w_iron@wand (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "bow",
+      "file": "/models/item-weapons/w_king--bow.glb",
+      "sha256": "135abc16d4c76d597816972184161c57eb56bb531213060ad538de033a45e6ca",
+      "bytes": 376540,
+      "triangles": 2798,
+      "source": {
+        "tripoTaskId": "b6b28bc0-0e98-4b4d-81cc-d47e8a947f6e",
+        "concept": "w_king@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_king--dagger.glb",
+      "sha256": "d322b324f51e6c289c8947a578265cfffd03f4a7b0621661c5d126a1c55fe894",
+      "bytes": 385036,
+      "triangles": 2739,
+      "source": {
+        "tripoTaskId": "096d9c58-1078-461a-b47f-e1ceceac568a",
+        "concept": "w_king@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "greataxe",
+      "file": "/models/item-weapons/w_king--greataxe.glb",
+      "sha256": "7474636cbbb2aa0ae1a32f26e897421fb022aa807bcbda72868e126fd87d6125",
+      "bytes": 445352,
+      "triangles": 2858,
+      "source": {
+        "tripoTaskId": "036b134c-064d-49bb-90a4-48928522f871",
+        "concept": "w_king@greataxe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_king.glb",
+      "sha256": "caa859dbde73b8896512398b66a6bcf399e2477174c680638aa3c41407216e81",
+      "bytes": 1189452,
+      "triangles": 2999,
+      "source": {
+        "tripoTaskId": "bf43e6f7-efa4-49f4-99b1-740bd1ce44a9",
+        "concept": "R2 tripo-3d/weapons/w_king/w_king-concept.png"
+      }
+    },
+    {
+      "id": "w_king",
+      "form": "staff",
+      "file": "/models/item-weapons/w_king--staff.glb",
+      "sha256": "1826f3306807125d3c5069a3ce3812f8665a8b9b32bcb1908f18f0aee4848f6c",
+      "bytes": 403236,
+      "triangles": 2812,
+      "source": {
+        "tripoTaskId": "f3f698c9-0abc-4ccd-8d10-2e152406d40a",
+        "concept": "w_king@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "axe",
+      "file": "/models/item-weapons/w_knight--axe.glb",
+      "sha256": "a6a683fbda3739b7d2c95a21dc322234bf9d7bd7b97225c6d83690a461eda1da",
+      "bytes": 325208,
+      "triangles": 2854,
+      "source": {
+        "tripoTaskId": "9ece4991-bd45-4dcd-81ef-a6cc1f844cca",
+        "concept": "w_knight@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "bow",
+      "file": "/models/item-weapons/w_knight--bow.glb",
+      "sha256": "d422ff98b9051da31307cb45acb7b8df411a5629c79a1c648514a7a003accaf5",
+      "bytes": 397792,
+      "triangles": 2751,
+      "source": {
+        "tripoTaskId": "e539c93b-2120-4ed4-9ea3-6c82bdbe94f3",
+        "concept": "w_knight@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_knight--dagger.glb",
+      "sha256": "0d502e647a1b5fae5d0cb7ea8431c3c0a4a730b785c369122beeebaed24d1944",
+      "bytes": 398276,
+      "triangles": 2868,
+      "source": {
+        "tripoTaskId": "00e5f108-a57f-4160-a4df-ef374126253b",
+        "concept": "w_knight@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "staff",
+      "file": "/models/item-weapons/w_knight--staff.glb",
+      "sha256": "2769c022600beca0866f5c6afd352b7999002d66cbb87ece4a5ec977d4ac562d",
+      "bytes": 394584,
+      "triangles": 2833,
+      "source": {
+        "tripoTaskId": "87cc6414-9fd8-40ca-bdd2-8f02c9d831ca",
+        "concept": "w_knight@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_knight",
+      "form": "sword",
+      "file": "/models/item-weapons/w_knight.glb",
+      "sha256": "b4f2ff8119dae3b0fec50da55edc99cde9f731d534d485c2287542e04b2cd661",
+      "bytes": 554968,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "b73938b8-24cc-44b7-a206-5faac25a16ce",
+        "concept": "knight order longsword: grey steel blade with a wavy edge and a golden central fuller stripe ending in an arrow tip, gold cross guard with two red diamond gems and a central gold diamond boss, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_phoenix",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_phoenix.glb",
+      "sha256": "68f3c9735bfeaaa7b3376cf16bc8dbde3e75fe4da8dfc3ea3bab39c34efc05e5",
+      "bytes": 678784,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "2beae90c-ed18-48ae-9bdc-ffe94cd53e8a",
+        "concept": "phoenix greatsword: very WIDE blade shaped like a large spread flame-feather wing with layered orange, yellow and red feathers and flame tongues at the sides, a golden phoenix bird emblem with red gem at the cross guard, brown wrapped grip, gold and red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_plague",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_plague.glb",
+      "sha256": "91c98b6bf7f2259afd1c41ec1be6aaf5bbe92d871ed7f6c194360aa65f4cc290",
+      "bytes": 599392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "6f49b2f3-444e-4a2d-b3f4-51ecb659478c",
+        "concept": "plague scythe-like weapon: long twisted dark brown wooden vine staff handle with green moss and glowing green mushrooms along it, large curved crescent bone-cream blade with holes and sickly green glow at the top, small mushrooms at the bottom end; vertical staff with the curved blade on top"
+      }
+    },
+    {
+      "id": "w_rime",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_rime.glb",
+      "sha256": "7f1245c0ff80d76b0a4f274ea3842af42b5aa3cd0ec37a2b5dd4998c11cce034",
+      "bytes": 515856,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "79cb7b6b-382f-4e83-ac85-ca5b0b241b4d",
+        "concept": "frost greatsword: translucent pale ice-blue crystal blade with a white snowflake emblem near the top, faceted ice crystal shards fused to the cross guard around a silver diamond, steel-blue wrapped grip, ice crystal pommel"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "axe",
+      "file": "/models/item-weapons/w_rune--axe.glb",
+      "sha256": "0f78ffd8987e61b7003ee3e444cd55c24ffad90cd02f809a75a58fa4e2c964db",
+      "bytes": 391932,
+      "triangles": 2740,
+      "source": {
+        "tripoTaskId": "f9143b14-ac1c-4cad-9143-a17d7fe0545d",
+        "concept": "w_rune@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "bow",
+      "file": "/models/item-weapons/w_rune--bow.glb",
+      "sha256": "f81f58843f83794e02a7019d271e6aaa6e054a65109d90974e0b9f0722682c8c",
+      "bytes": 427888,
+      "triangles": 2701,
+      "source": {
+        "tripoTaskId": "ef0a4e0c-0d03-4d00-adcd-2fbd384f352a",
+        "concept": "w_rune@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_rune--dagger.glb",
+      "sha256": "38faf0c7913d56b92339ee81442847076c308f35ae74a36e0d27bfa1c1c8999c",
+      "bytes": 374604,
+      "triangles": 2804,
+      "source": {
+        "tripoTaskId": "a57f0f7f-7a42-43dc-800d-a35fd9d0112c",
+        "concept": "w_rune@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "staff",
+      "file": "/models/item-weapons/w_rune--staff.glb",
+      "sha256": "c6772986431014b64bf02521fa81535283c8ed3faadb0df7b0b523e701c79e50",
+      "bytes": 388372,
+      "triangles": 2742,
+      "source": {
+        "tripoTaskId": "a90f9e3f-7728-458a-9a9e-dcf2fffd77c0",
+        "concept": "w_rune@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rune",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rune.glb",
+      "sha256": "0a884de8a4913d35b2dfebd345265d8561b796d21a33b1f4415dd99eb949f869",
+      "bytes": 586656,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "505d9ec1-3f11-42fd-bd07-db521bf0823d",
+        "concept": "rune sword: grey steel blade with a wavy edge and a glowing orange-yellow angular rune pattern inlaid in the center, gold winged cross guard with two red gems, dark leather grip with gold ring bands, red crystal spike pommel"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "axe",
+      "file": "/models/item-weapons/w_rusty--axe.glb",
+      "sha256": "38a75478b30f096bfd921d4c7bce4a75d5a8080960418a856d37d8f25123e2fd",
+      "bytes": 353368,
+      "triangles": 2859,
+      "source": {
+        "tripoTaskId": "329fb291-1313-4c80-96c6-147ca033a492",
+        "concept": "w_rusty@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "bow",
+      "file": "/models/item-weapons/w_rusty--bow.glb",
+      "sha256": "755fae14c92a4ac246028a7edf5432b4c28f5fb94d8f7f9fa3d42a66153d2ccb",
+      "bytes": 418016,
+      "triangles": 2507,
+      "source": {
+        "tripoTaskId": "23b5ea34-fe91-44be-9e73-7a1073d04f5c",
+        "concept": "w_rusty@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_rusty--dagger.glb",
+      "sha256": "e25aae936db779e7f3ca11992de6bebe2ba9f3b6d367fd48e16940362b6e7fbc",
+      "bytes": 367076,
+      "triangles": 2882,
+      "source": {
+        "tripoTaskId": "1a74f8c1-edf6-4f6b-a43f-08d4f1393ca5",
+        "concept": "w_rusty@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "sword",
+      "file": "/models/item-weapons/w_rusty.glb",
+      "sha256": "48b3fe84ebf73a3db50cf9df2a869b08c98029a8b18e7f7ffdcaede9c71cd862",
+      "bytes": 822420,
+      "triangles": 2700,
+      "source": {
+        "tripoTaskId": "39724b82-1247-4d09-bf32-30fc0a121032",
+        "concept": "R2 tripo-3d/weapons/w_rusty/w_rusty-concept.png"
+      }
+    },
+    {
+      "id": "w_rusty",
+      "form": "wand",
+      "file": "/models/item-weapons/w_rusty--wand.glb",
+      "sha256": "be58bdd61a63d86a89058599af116e27ab635552eb195d3fd15d25bb22ca2c34",
+      "bytes": 403680,
+      "triangles": 2946,
+      "source": {
+        "tripoTaskId": "11113622-4378-4b08-ae2e-eb259ce80d56",
+        "concept": "w_rusty@wand (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_sigil",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sigil.glb",
+      "sha256": "7d8dcfb299fe7560584f5f2a657ecd440f87edc7a338a7312b32bff831ab6ec7",
+      "bytes": 621532,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "77a728f2-ea23-4562-838f-6c0ae48ca1e4",
+        "concept": "sigil greatsword: broad stone-tan blade with glowing orange-yellow angular rune patterns inlaid, gold cross guard with square diamond ornaments and a round gold gem, brown wrapped grip, gold diamond-shaped pommel"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "axe",
+      "file": "/models/item-weapons/w_steel--axe.glb",
+      "sha256": "d8d7222373c67fd53b3e94b406f2cdb2b0822eba1e26d52e192b19fcdbe911d1",
+      "bytes": 285556,
+      "triangles": 2757,
+      "source": {
+        "tripoTaskId": "df2e7572-a57b-4fba-b9cc-123898873b23",
+        "concept": "w_steel@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "bow",
+      "file": "/models/item-weapons/w_steel--bow.glb",
+      "sha256": "e3b50808788b0f393fdfa87f831e1815093be3bd0dfbb223a2100f17f0c25f70",
+      "bytes": 328164,
+      "triangles": 2786,
+      "source": {
+        "tripoTaskId": "256be2ee-73e7-4a10-866b-f7ea9add41c7",
+        "concept": "w_steel@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_steel--dagger.glb",
+      "sha256": "f0703807f812f45930f6378e624d1cfb13f0c12ea71272e461dcdb2ef78e8554",
+      "bytes": 282400,
+      "triangles": 2690,
+      "source": {
+        "tripoTaskId": "82e1915a-0b90-4017-aa0a-5c49d459aa67",
+        "concept": "w_steel@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "staff",
+      "file": "/models/item-weapons/w_steel--staff.glb",
+      "sha256": "72362ea8ea72449f3f7ed0c24ac5b4257a48efa00defded50f5abb462e6dca1c",
+      "bytes": 370452,
+      "triangles": 2864,
+      "source": {
+        "tripoTaskId": "c9a4a8b7-5671-4a91-aa64-46ecb696a502",
+        "concept": "w_steel@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_steel",
+      "form": "sword",
+      "file": "/models/item-weapons/w_steel.glb",
+      "sha256": "d44d760f50a6f8018eaf95a0a773f498a93f29fd743dbb375289e6347e7a43be",
+      "bytes": 498664,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "72abb372-bc6f-48bd-aada-6eba2835fad0",
+        "concept": "steel broadsword, wide grey-silver blade with a fuller groove and chisel point, flat silver cross guard with a square green emerald gem in the center, brown leather grip with silver ring bands, round silver pommel"
+      }
+    },
+    {
+      "id": "w_storm",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_storm.glb",
+      "sha256": "393e2178e7638f8d73fcfbc9a6ab0b0dd08203dc9c2f73b15584470cb865cec4",
+      "bytes": 659392,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "4102c457-fccc-4cca-a188-85fd56699614",
+        "concept": "thunder greatsword: wide wavy blade of glowing electric blue with white lightning-crack patterns inside a silver-grey frame, silver winged cross guard with a round blue gem, dark blue wrapped grip with silver bands, blue crystal pommel; electric arcs rendered as solid blue crystal shards attached to the blade edges"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "bow",
+      "file": "/models/item-weapons/w_sun--bow.glb",
+      "sha256": "4fba2440de380a84d0f80a9d433e9fb55d15004944a3e612d7d0c38d0fa2c935",
+      "bytes": 404736,
+      "triangles": 2868,
+      "source": {
+        "tripoTaskId": "56895584-6f61-475f-95c5-e73e51b471f5",
+        "concept": "w_sun@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_sun--dagger.glb",
+      "sha256": "b3d7e0f5f5d42c8ebb61488fe6aa2cd94b51c683b1f8fefe79ddb2f6f5030fad",
+      "bytes": 367568,
+      "triangles": 2690,
+      "source": {
+        "tripoTaskId": "90aeae0f-4459-425b-9318-1628ea130e35",
+        "concept": "w_sun@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "greataxe",
+      "file": "/models/item-weapons/w_sun--greataxe.glb",
+      "sha256": "3866948a3805fc3ba10881cfcb3788a12d6296d9d8c169bc27a824497faa13a0",
+      "bytes": 414320,
+      "triangles": 2812,
+      "source": {
+        "tripoTaskId": "06ba8152-d035-471f-a8b0-a3ef12c40c99",
+        "concept": "w_sun@greataxe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_sun.glb",
+      "sha256": "5dc4f5fcafce029a384ab53753d7c661fb08e63f7777b3a76368b50a12d36d9d",
+      "bytes": 640948,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "8186b758-9d60-4f9d-a346-d478209ffd72",
+        "concept": "sun greatsword: very large dark brown-bronze blade with a golden central fuller, golden winged cross guard with a sunburst of gold spikes around a red round gem, a golden radiant sun ring with big star spikes fused solidly behind the blade base, red leather grip with gold ring bands, gold spike pommel"
+      }
+    },
+    {
+      "id": "w_sun",
+      "form": "staff",
+      "file": "/models/item-weapons/w_sun--staff.glb",
+      "sha256": "448251c63a15efccaab28d2c5369b3043240dc6125403e42c34388a337e2a1e9",
+      "bytes": 389112,
+      "triangles": 2714,
+      "source": {
+        "tripoTaskId": "7e3be388-6eec-422c-991c-7753f82e99a5",
+        "concept": "w_sun@staff (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_town_ember",
+      "form": "sword",
+      "file": "/models/item-weapons/w_town_ember.glb",
+      "sha256": "9413db74fe0d8fa05d21a8598b3c463fd0cc8873e3e9e2f9e01be3a2dbd5b130",
+      "bytes": 340340,
+      "triangles": 2796,
+      "source": {
+        "tripoTaskId": "374f479d-6e73-41ad-a225-151ce7174363",
+        "concept": "steel sword with notched serrated edges, silver cross guard with a red ruby, brown grip, spiked silver pommel with a red gem"
+      }
+    },
+    {
+      "id": "w_town_oath",
+      "form": "sword",
+      "file": "/models/item-weapons/w_town_oath.glb",
+      "sha256": "ac7e49f46a4a44107a54b4aa6655db979bac1fcdd1f04d1f93979c8ab336180d",
+      "bytes": 355132,
+      "triangles": 2883,
+      "source": {
+        "tripoTaskId": "fc822fd5-508d-4097-9315-23d652e027d4",
+        "concept": "straight steel longsword, white feather wings on the gold cross guard with a green emerald gem, navy grip, green gem pommel"
+      }
+    },
+    {
+      "id": "w_town_star",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_town_star.glb",
+      "sha256": "e68f99f73db93a905539b15dcf9fd21d707bbe99c476f3dedf39a0a2e1734d8e",
+      "bytes": 427440,
+      "triangles": 2844,
+      "source": {
+        "tripoTaskId": "f1e34fe6-7a09-4fa3-aad0-ce5ddc2aaff1",
+        "concept": "broad ivory-gold greatsword blade with orange diamond inlays, large golden sun-star guard with an orange gem, the radiant rays fused solidly to the guard, dark purple grip, gold ring pommel with orange gem"
+      }
+    },
+    {
+      "id": "w_void",
+      "form": "greatsword",
+      "file": "/models/item-weapons/w_void.glb",
+      "sha256": "2969a9664827da38936a3a4e0d175f808c966b9f780a04eb2b0063b060ce83a5",
+      "bytes": 652288,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "7774bd9d-f2d7-4b74-b1f2-a8ef09a6682e",
+        "concept": "void shard greatsword: dark black-grey cracked stone blade with glowing purple cracks, broken blade fragments fused to the blade as solid attached shards, black-grey claw-like cross guard with a purple gem, dark grip, purple crystal pommel"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "axe",
+      "file": "/models/item-weapons/w_wood--axe.glb",
+      "sha256": "d0ae67965dae7e3a9b9dcb696a9d6c94450774ddca693ecb97a75be4375b8881",
+      "bytes": 268464,
+      "triangles": 2898,
+      "source": {
+        "tripoTaskId": "883fc7ce-50c5-4612-a26a-c4b063fc6ad3",
+        "concept": "w_wood@axe (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "bow",
+      "file": "/models/item-weapons/w_wood--bow.glb",
+      "sha256": "addcefbb4bdbd2109f6953b75256f79bc13d98485d842593b55ed43062c5e40f",
+      "bytes": 281452,
+      "triangles": 2946,
+      "source": {
+        "tripoTaskId": "b4b6cb12-4f4b-491b-b946-f5b30f89bc74",
+        "concept": "w_wood@bow (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "dagger",
+      "file": "/models/item-weapons/w_wood--dagger.glb",
+      "sha256": "9b1515e48a1c13915ec2318fc99a7cdc05b3f4e920c013375876f9602173b4a1",
+      "bytes": 232304,
+      "triangles": 2802,
+      "source": {
+        "tripoTaskId": "87da3ba9-7d6c-4da6-9edd-1edd499c3d14",
+        "concept": "w_wood@dagger (아이콘 정체성 형태 변환)"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "sword",
+      "file": "/models/item-weapons/w_wood.glb",
+      "sha256": "c041856ffb6361dbd8324451a3612ad872d10a5717394693944c1d8e1c5e54f8",
+      "bytes": 441336,
+      "triangles": 3000,
+      "source": {
+        "tripoTaskId": "fc04553d-3fb1-45aa-9db1-6bd23b9445e5",
+        "concept": "wooden training sword carved from light brown wood with visible grain, wide flat blade with chisel point, wooden cross guard, grip wrapped with dark brown leather bands, round wooden pommel"
+      }
+    },
+    {
+      "id": "w_wood",
+      "form": "wand",
+      "file": "/models/item-weapons/w_wood--wand.glb",
+      "sha256": "c3ea2f9424e159c3f95b31266780f24c61695b65ebccc707db282f0dd55ab0df",
+      "bytes": 268532,
+      "triangles": 2806,
+      "source": {
+        "tripoTaskId": "4835fdc0-2f4e-4f8c-b492-565b1e0b5397",
+        "concept": "w_wood@wand (아이콘 정체성 형태 변환)"
+      }
+    }
+  ]
+}

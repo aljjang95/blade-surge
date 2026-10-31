@@ -196,3 +196,37 @@ test("sync: 판매 내린 gate 'gacha-only' 영웅 상품은 미승인 구매만
     .toEqual([['verify', hero.id, 'HERO-UNACKED']]);
   expect(await verifies([{ productId: hero.id, type: 'inapp', purchaseToken: 'HERO-ACKED', status: 'purchased', acknowledged: true }])).toEqual([]);
 });
+
+// ---- 원스토어 채널 ----
+test('원스토어: 채널 상품만 보여 주고 intent·verify에 채널과 marketCode를 보낸다', async () => {
+  const products = [
+    { ...PRODUCTS[1], channels: ['play', 'onestore'] },
+    { ...PRODUCTS[0] }, // channels 없음 = play 전용
+    { ...PRODUCTS[2], channels: ['play', 'onestore'] }, // subs는 원스토어 불가
+  ];
+  const s = setup({ products, playIds: ['starter_pack_v1'] });
+  const intents: any[] = [], verifies: any[] = [];
+  s.account.iapIntent = async (id: string, channel: string) => { intents.push([id, channel]); return { productId: id, playType: 'inapp', basePlanId: null, obfuscatedAccountId: 'obf1' }; };
+  s.account.iapVerify = async (id: string, token: string, meta: any) => { verifies.push([id, token, meta]); return granted(id); };
+  const billing = createBillingService({ account: s.account, loadAdapter: async () => ({
+    billingChannel: 'onestore',
+    list: async (req: any[]) => { expect(req).toEqual([{ productId: 'starter_pack_v1', type: 'inapp' }]); return { status: 'products', products: [play('starter_pack_v1')], unavailableProductIds: [] }; },
+    purchase: async (c: any) => ({ purchaseToken: 'TK', productId: c.productId, type: 'inapp', marketCode: 'MKT_ONE' }),
+    owned: async () => [{ productId: 'starter_pack_v1', type: 'inapp', purchaseToken: 'OW', status: 'purchased', acknowledged: false, marketCode: 'MKT_ONE' }],
+  }), economy: s.economy, minSyncGapMs: 0, storage: memory() });
+  expect(await billing.init()).toBe(true);
+  expect(billing.product('remove_ads_v1')).toBeNull();
+  expect((await billing.buy('starter_pack_v1')).ok).toBe(true);
+  expect(intents).toEqual([['starter_pack_v1', 'onestore']]);
+  expect(verifies[0]).toEqual(['starter_pack_v1', 'TK', { channel: 'onestore', marketCode: 'MKT_ONE' }]);
+  await billing.sync();
+  expect(verifies[1]).toEqual(['starter_pack_v1', 'OW', { channel: 'onestore', marketCode: 'MKT_ONE' }]);
+});
+
+test('Play: verify에 채널 메타를 보내지 않는다(기존 본문 유지)', async () => {
+  const s = setup();
+  let meta: any = 'unset';
+  s.account.iapVerify = async (id: string, _t: string, m: any) => { meta = m; return granted(id); };
+  await s.billing.init(); await s.billing.buy('starter_pack_v1');
+  expect(meta).toEqual({});
+});

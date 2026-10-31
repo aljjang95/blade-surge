@@ -4,7 +4,7 @@ import { SKUS } from '../src/data/shop.js';
 import { IAP_BY_SHOP_SKU } from '../src/shared/iap-catalog.js';
 import { Meta } from '../src/ui/meta.js';
 import { Economy } from '../src/game/economy.js';
-import { WITHDRAWAL_NOTICE, INSTANT_GRANT_CONSENT, SUBSCRIPTION_NOTICE, LEGAL_PAGES, paymentNoticeHtml, legalLinksHtml } from '../src/ui/legal-links.js';
+import { WITHDRAWAL_NOTICE, INSTANT_GRANT_CONSENT, PURCHASE_CHECKS, MINOR_CONSENT, SUBSCRIPTION_NOTICE, LEGAL_PAGES, paymentNoticeHtml, legalLinksHtml } from '../src/ui/legal-links.js';
 
 // 카탈로그(IAP_BY_SHOP_SKU)에 아직 없는 현금 SKU 허용 목록(지금은 없음 — 모든 현금 SKU가 카탈로그 정본과 짝이다).
 const PENDING_CATALOG: string[] = [];
@@ -59,7 +59,9 @@ test('구매 확인 창은 철회 고지와 동의 체크를 요구하고, 구�
   expect(calls.length).toBe(2);
   for (const [, body, opt] of calls) {
     expect(body).toContain(WITHDRAWAL_NOTICE); expect(body).toContain('/refund.html'); expect(body).not.toMatch(/환불\s*불가/);
-    expect(opt.check).toBe(INSTANT_GRANT_CONSENT);
+    // 즉시 지급 철회 제한 동의 + 연령·법정대리인 동의 확인, 둘 다 필수(기본 미체크)
+    expect(opt.check).toEqual(PURCHASE_CHECKS);
+    expect(opt.check).toContain(INSTANT_GRANT_CONSENT); expect(opt.check).toContain(MINOR_CONSENT);
   }
   expect(calls[0][1]).not.toContain('자동 갱신'); expect(calls[1][1]).toContain('자동 갱신');
 });
@@ -69,4 +71,32 @@ test('상점·로딩 화면(index.html)에 정책 링크 줄이 있고 가챠에
   for (const page of Object.values(LEGAL_PAGES)) expect(html.split(`href="${page.href}"`).length - 1).toBeGreaterThanOrEqual(2);
   expect(html).toContain('id="shop-legal"');
   expect(html).not.toMatch(/환불\s*불가/);
+});
+
+test('구매 확인 창: 필수 체크 두 개(기본 미체크)를 모두 체크해야 구매 버튼이 켜진다', async () => {
+  const { UI } = await import('../src/ui/ui.js');
+  let html = '', onOpen: any = null;
+  const ui: any = Object.assign(Object.create(UI.prototype), { modal: (h: string, o: any) => { html = h; onOpen = o.onOpen; }, closeModal() {} });
+  const done = ui.confirm('구매 확인', '본문', { ok: '구매하기', check: PURCHASE_CHECKS });
+  expect(html).toContain(INSTANT_GRANT_CONSENT); expect(html).toContain(MINOR_CONSENT);
+  expect(html).not.toContain('checked');
+  const boxes = [{ checked: false, onchange: null as any }, { checked: false, onchange: null as any }];
+  const ok: any = { disabled: false, onclick: null };
+  const root: any = { querySelector: (q: string) => (q === '#m-ok' ? ok : null), querySelectorAll: () => boxes, onkeydown: null };
+  ok.focus = () => {};
+  onOpen(root);
+  expect(ok.disabled).toBe(true);
+  boxes[0].checked = true; boxes[0].onchange();
+  expect(ok.disabled).toBe(true);
+  boxes[1].checked = true; boxes[1].onchange();
+  expect(ok.disabled).toBe(false);
+  ok.onclick();
+  expect(await done).toBe(true);
+});
+
+test('정책 시행일·결정 반영: 세 페이지 시행일 2026년 11월 6일, 탈퇴 시 소멸 사전 고지, 결제대행 국외이전 해당 없음', () => {
+  const read = (p: string) => readFileSync(new URL(`../public/${p}`, import.meta.url), 'utf8');
+  for (const p of ['terms.html', 'refund.html', 'privacy.html']) expect(read(p)).toContain('시행일: 2026년 11월 6일');
+  expect(read('terms.html')).toContain('탈퇴와 함께 소멸');
+  expect(read('privacy.html')).toContain('국외 이전에 해당하지 않습니다(국내 처리)');
 });

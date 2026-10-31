@@ -24,9 +24,9 @@ export const SKUS = [
     desc: '보석 2,400 · 골드 200,000 · 초월석 5 · 강화석 100 (계정당 1회)', rewards: { gems: 2400, gold: 200000, transcendStones: 5, stones: 100 } },
 
   // ---- 보석 ----
-  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   icon: '/img/icon_gem.webp', gems: 300,   bonus: 1500 },
-  { id: 'gem2', tab: 'gem', kind: 'cash', name: '보석 980',   price: 12000,  icon: '/img/icon_gem.webp', gems: 980,   bonus: 980 },
-  { id: 'gem3', tab: 'gem', kind: 'cash', name: '보석 1,980', price: 25000,  icon: '/img/icon_gem.webp', gems: 1980,  bonus: 1980, badge: '인기' },
+  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   icon: '/img/icon_gem.webp', gems: 300 },
+  { id: 'gem2', tab: 'gem', kind: 'cash', name: '보석 980',   price: 12000,  icon: '/img/icon_gem.webp', gems: 980 },
+  { id: 'gem3', tab: 'gem', kind: 'cash', name: '보석 1,980', price: 22000,  icon: '/img/icon_gem.webp', gems: 1980, badge: '인기' },
 
   // ---- 강화 재료 (과금 핵심) ----
   { id: 'skill_reset1', tab: 'enh', kind: 'gem', name: '스킬 초기화서', price: 300, icon: '/img/icon_protect.webp', desc: '스킬 초기화서 ×1 · 투자 SP 반환', rewards: { skillResets: 1 } },

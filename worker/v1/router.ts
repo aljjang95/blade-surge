@@ -11,6 +11,7 @@ import { importLegacy, settleLegacyCompensation, shadowSnapshot } from './import
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
 import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
 import { handleRtdn } from './rtdn';
+import { handlePortoneWebhook } from './portone-webhook';
 import { webBillingOn, webComplete, webIntent, webPayMethods, type PortoneDeps, type PortoneEnv } from './portone';
 import { ingestFunnel } from './funnel';
 
@@ -32,10 +33,10 @@ export const defaultDeps: AuthDeps & IapDeps & PortoneDeps = {
 };
 
 /** webBilling은 서버 권위 계정에게만 켠다(그림자·로컬 계정은 roster를 서버가 강제하지 못해 현금 판매를 열지 않는다). */
-export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId),
+export function v1Flags(env: V1Env, accountId?: string | null, authority?: string | null, deps: PortoneDeps = {}): Record<string, boolean> {
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true', webBilling: authority === 'server' && webBillingOn(env, accountId, deps.webRating),
     // 웹 결제창의 간편결제 선택지(카드는 항상). 웹 결제가 켜진 계정에만 의미가 있다.
-    ...(() => { const on = authority === 'server' && webBillingOn(env, accountId), m = webPayMethods(env);
+    ...(() => { const on = authority === 'server' && webBillingOn(env, accountId, deps.webRating), m = webPayMethods(env);
       return { webKakaoPay: on && m.includes('KAKAOPAY'), webNaverPay: on && m.includes('NAVERPAY'), webTossPay: on && m.includes('TOSSPAY') }; })() };
 }
 
@@ -53,6 +54,16 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       const rc: Ctx = { env, db: rtdnDb, deps, now: deps.now(), request };
       await rateLimit(rc, 'rtdn', 'global');
       const r = await handleRtdn(rc);
+      return json({ outcome: r.outcome }, r.status);
+    }
+    // 포트원 웹훅은 포트원 서버가 부른다(Origin 없음). Standard Webhooks 서명으로 따로 인증하고, 본문은 paymentId만 쓴다(portone-webhook.ts).
+    if (path === '/iap/web/webhook') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      const whDb = env.COMMERCE_DB as D1Database | undefined;
+      if (!whDb || !await schemaReady(whDb)) return json({ error: 'unavailable' }, 503);
+      const wc: Ctx = { env, db: whDb, deps, now: deps.now(), request };
+      await rateLimit(wc, 'portoneWebhook', 'global');
+      const r = await handlePortoneWebhook(wc);
       return json({ outcome: r.outcome }, r.status);
     }
     // 리다이렉트 로그인 콜백은 제공자 페이지에서 오는 최상위 이동이다(cross-site, Origin 없음). state(1회용)로 인증한다.
@@ -96,11 +107,11 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       return json(await oauthFinish(c, auth, await readJson(request)));
     }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
-    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority))); }
+    if (method === 'GET' && path === '/me') { const auth = await requireSession(c); return json(await getMe(c, auth, v1Flags(env, auth.account.account_id, auth.account.authority, deps))); }
     if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
       const auth = await requireSession(c);
       await rateLimit(c, 'iapRead', auth.account.account_id);
-      return json(path === '/iap/catalog' ? await catalog(c, auth) : await iapState(c, auth));
+      return json(path === '/iap/catalog' ? await catalog(c, auth, new URL(request.url).searchParams.get('channel')) : await iapState(c, auth));
     }
     if (method === 'POST') {
       const auth = await requireSession(c);

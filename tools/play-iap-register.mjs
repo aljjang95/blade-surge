@@ -6,6 +6,7 @@
 //     (클라우드 세션은 프록시 경유가 필요하다. 환경변수 없이 401이 나오면 이 때문이다.)
 //   node tools/play-iap-register.mjs --write-json     store/googleplay/iap-products.json 재생성
 //   node tools/play-iap-register.mjs --apply --i-have-owner-approval   실제 쓰기(대표님 확인 뒤에만)
+//   ... --register-only   활성화 요청 없이 생성만(비활성). 게이트 paid-gem-split·owner-price 상품도 포함
 // 키는 스크립트에 없다. APEX_CLOUD_URL 프록시(/p/play/...)가 붙인다.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -20,10 +21,20 @@ export const EN_LISTINGS = Object.freeze({
   starter_pack_v1: { title: 'First Purchase Starter Pack', description: '1 guaranteed SSR summon ticket, 1,000 gems, 50,000 gold (once per account).' },
   monthly_card_v1: { title: 'Monthly Card', description: '1,200 gems on every payment plus 100 gems daily while active (auto-renews, cancel anytime).' },
   season_pass_s1: { title: 'Season 1 Premium Pass', description: 'Unlocks the premium reward track for Season 1 (already reached tiers can be claimed).' },
+  // 아래는 판매 게이트가 닫힌 상품. --register-only 로 비활성 상태 등록만 한다(판매 시작은 대표님 금액 확인 뒤 활성화).
+  growth_pack_v1: { title: 'Growth Pack', description: '2,400 gems, 200,000 gold, 5 transcend stones, 100 enhancement stones (once per account).' },
+  gems_300_v1: { title: '300 Gems', description: '300 gems' },
+  gems_980_v1: { title: '980 Gems', description: '980 gems' },
+  gems_1980_v1: { title: '1,980 Gems', description: '1,980 gems' },
   // 영웅 직접 판매(hero_*_v1, hero_all_v1)는 소환 전용 결정으로 판매하지 않는다(docs/GACHA_HANDOFF.md). 카탈로그에서 enabled:false라 등록 대상이 아니므로 listing도 두지 않는다.
 });
 
 const enabled = (catalog) => catalog.filter((p) => p.enabled);
+/** 비활성 등록 대상 게이트: 판매만 닫혀 있고 Play 에서 팔 예정인 상품. 영웅(gacha-only)·아바타(avatar-system)·웹 전용은 제외. */
+export const REGISTER_ONLY_GATES = Object.freeze(['paid-gem-split', 'owner-price']);
+const playSold = (p) => (p.channels || ['play']).includes('play');
+export const registerOnlyProducts = (catalog = IAP_PRODUCTS) =>
+  catalog.filter((p) => playSold(p) && (p.enabled || REGISTER_ONLY_GATES.includes(p.gate)));
 
 /** 카탈로그 → Play 등록 형식 정의(iap-products.json 의 내용). */
 export function buildDefinition(catalog = IAP_PRODUCTS) {
@@ -56,9 +67,9 @@ export function buildDefinition(catalog = IAP_PRODUCTS) {
  * 필드명은 monetization.onetimeproducts / monetization.subscriptions 문서 기준이며,
  * "apply 전 확인" 표시는 읽기 응답·공식 문서로 재확인할 항목이다.
  */
-export function buildRequests(catalog = IAP_PRODUCTS) {
+export function buildRequests(catalog = IAP_PRODUCTS, { registerOnly = false } = {}) {
   const reqs = [];
-  for (const p of enabled(catalog)) {
+  for (const p of registerOnly ? registerOnlyProducts(catalog) : enabled(catalog)) {
     const en = EN_LISTINGS[p.id];
     if (!en) throw new Error(`영어 listing 누락: ${p.id}`);
     const price = { currencyCode: 'KRW', units: String(p.priceKRW) };
@@ -91,7 +102,7 @@ export function buildRequests(catalog = IAP_PRODUCTS) {
           // taxAndComplianceSettings(세금 분류): 대표님 확인 사항, 필드 형식 apply 전 확인
         },
       });
-      reqs.push({
+      if (!registerOnly) reqs.push({
         step: `${p.id} 기본 요금제 활성화`,
         method: 'POST',
         path: `/subscriptions/${p.id}/basePlans/${basePlanId}:activate`,
@@ -102,7 +113,8 @@ export function buildRequests(catalog = IAP_PRODUCTS) {
       reqs.push({
         step: `${p.id} 생성/수정`,
         method: 'PATCH',
-        path: `/oneTimeProducts/${p.id}`,
+        // PATCH 경로만 소문자(onetimeproducts) — discovery 문서 기준(2026-10-30 실측: camelCase PATCH는 HTML 404).
+        path: `/onetimeproducts/${p.id}`,
         query: {
           allowMissing: 'true',
           'regionsVersion.version': REGIONS_VERSION,
@@ -123,7 +135,7 @@ export function buildRequests(catalog = IAP_PRODUCTS) {
           // taxAndComplianceSettings: 대표님 확인 후 값 지정. updateMask 에는 있으나 본문 생략 시 기본값 적용 여부 apply 전 확인
         },
       });
-      reqs.push({
+      if (!registerOnly) reqs.push({
         step: `${p.id} 구매 옵션 활성화`,
         method: 'POST',
         path: `/oneTimeProducts/${p.id}/purchaseOptions:batchUpdateStates`,
@@ -151,8 +163,8 @@ const fullUrl = (base, r) => {
  * 반환: { mode, requests, results }. 실패 시 apply 는 즉시 멈추고 failed 에 요청·상태만 담는다.
  */
 /** @param {{ fetch?: any, mode?: string, approved?: boolean, base?: string, catalog?: readonly any[], log?: (m: string) => void }} [opts] */
-export async function run({ fetch: f, mode = 'dry-run', approved = false, base = baseUrl(), catalog = IAP_PRODUCTS, log = () => {} } = {}) {
-  const requests = buildRequests(catalog);
+export async function run({ fetch: f, mode = 'dry-run', approved = false, registerOnly = false, base = baseUrl(), catalog = IAP_PRODUCTS, log = () => {} } = {}) {
+  const requests = buildRequests(catalog, { registerOnly });
   if (mode === 'apply' && !approved) {
     throw new Error('apply 는 --apply 와 --i-have-owner-approval 둘 다 필요하다(대표님 확인 사항).');
   }
@@ -205,7 +217,7 @@ async function main(argv) {
     console.error('APEX_CLOUD_URL 이 없다.');
     return 2;
   }
-  const out = await run({ fetch: globalThis.fetch, mode, approved: has('--i-have-owner-approval'), log: console.log });
+  const out = await run({ fetch: globalThis.fetch, mode, approved: has('--i-have-owner-approval'), registerOnly: has('--register-only'), log: console.log });
   if (mode === 'dry-run') console.log(`\n(dry-run) 요청 ${out.requests.length}건, 네트워크 호출 없음.`);
   return out.failed ? 1 : 0;
 }

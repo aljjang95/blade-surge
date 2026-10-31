@@ -83,7 +83,8 @@ test('암살자 레시피는 원화를 나눠 쓴다(전부 같은 그림자 참
 
 test('궁극기 예비 표식(시전 연출 중): 폭풍·천 개의 칼날 둘 다 있고, Math.random 미사용·칸 상한·lite 는 더 적게', async () => {
   const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
-  expect(Object.keys(SKILL_PRELUDES).sort()).toEqual(['hell_axe', 'meteor', 'moonlit_hunt', 'nine_lives', 'ranger_tempest', 'thousand']);
+  // 검성 기본 3 + 궁극기 예비 표식(sig-knight PRELUDES)도 같은 합본에 든다.
+  expect(Object.keys(SKILL_PRELUDES).sort()).toEqual(['absolute_zero', 'cataclysm', 'chain_bind', 'dragon_slash', 'gale_hunt', 'heavenfall', 'hell_axe', 'holy_slash', 'judgment', 'magma_zone', 'meteor', 'moonlit_hunt', 'nine_lives', 'ranger_binding', 'ranger_quickshot', 'ranger_tempest', 'sanctuary', 'shield_bash', 'skyfall_arrows', 'star_prison', 'sunbreaker', 'thousand']);
   for (const id of Object.keys(SKILL_PRELUDES)) {
     const v = make(); const nativeRandom = Math.random; let calls = 0;
     Math.random = () => { calls++; return nativeRandom(); };
@@ -97,4 +98,38 @@ test('궁극기 예비 표식(시전 연출 중): 폭풍·천 개의 칼날 둘 
     expect(lite.ring.high).toBeLessThanOrEqual(v.ring.high);
     lite.dispose(); v.dispose();
   }
+});
+
+test('환영 난무 서명은 시전 시각(.28초) 뒤에 불리므로 마무리 X 가 마지막 베기 틱(9×.115초)에 맞춰 당겨져 있다', () => {
+  const v = make(); SIGNATURES.flurry(ctxOf(v));
+  const starts = slots(v).map(s => s.start);
+  const lastHit = 9 * .115 - .28;
+  expect(Math.max(...starts)).toBeLessThan(lastHit + .1);
+  expect(Math.max(...starts)).toBeGreaterThan(lastHit - .01);
+  expect(Math.min(...starts)).toBeGreaterThanOrEqual(0);
+});
+
+test('암살자 각성 서명 박자: 공허 보법은 시전 시각(.045초)만큼 당겨 0 이상, 표식 끌어당김 실·일식 하늘 일섬·사슬은 판정 순간에 닿는다', () => {
+  const beams = (id: string) => {
+    const v = make(); SIGNATURES[id](ctxOf(v)); const A = v.ring.a, out: { start: number, arrive: number, vy: number }[] = [];
+    for (let i = 0; i < v.ring.high; i++) {
+      if (A.aShape[i * 4] !== IMPACT_KIND.beam || !(A.aMotion[i * 2] > 0)) continue;
+      out.push({ start: A.aLife[i * 2], arrive: A.aLife[i * 2] + Math.hypot(A.aVel[i * 3], A.aVel[i * 3 + 1], A.aVel[i * 3 + 2]) / A.aMotion[i * 2], vy: A.aVel[i * 3 + 1] });
+    }
+    v.dispose(); return out;
+  };
+  // 공허 보법: 모든 칸이 0초 이후, 마지막 닫힘 선은 total 2초 - 시전 .045초에 시작점에 닿는다.
+  { const v = make(); SIGNATURES.void_step(ctxOf(v)); expect(Math.min(...slots(v).map(s => s.start))).toBeGreaterThanOrEqual(0); v.dispose(); }
+  expect(Math.max(...beams('void_step').map(b => b.arrive))).toBeCloseTo(2 - .045, 3);
+  // 그림자 표식: 끌어당김 실(표식 6개 기준)은 HUB(.18+6×.09+.43초)에 중심에 닿는다.
+  const HUB = .18 + 6 * .09 + .43;
+  expect(beams('shadow_mark').filter(b => b.arrive > HUB - .01).length).toBe(6);
+  for (const b of beams('shadow_mark').filter(b => b.arrive > HUB - .01)) expect(b.arrive).toBeCloseTo(HUB, 3);
+  // 일식: 하늘 일섬(아래로 내리꽂는 광선 2)은 .3초에 바닥에 닿고, 지그재그 사슬은 그 전에 착탄점에 닿는다.
+  const ecl = beams('eclipse_edge');
+  const sky = ecl.filter(b => b.vy < -5); expect(sky.length).toBe(2);
+  for (const b of sky) expect(b.arrive).toBeCloseTo(.3, 3);
+  const chain = ecl.filter(b => b.start < .3 && b.vy === 0 && b.arrive <= .3);
+  expect(chain.length).toBe(5);
+  expect(Math.max(...chain.map(b => b.arrive))).toBeCloseTo(.24, 3);
 });

@@ -1,6 +1,7 @@
 import './style.css';
 import { setupLogin } from './ui/login-sheet.js'; // 콜백 쿼리(ticket)를 다른 부팅 코드보다 먼저 지우려고 앞쪽에서 불러온다
 import { autoSalvageNormal } from './game/gear-advice.js';
+import { ratingLabel } from './data/game-rating.js';
 import { resetAccountFromScratch, SAVE_STORAGE_KEY } from './game/account-reset.js';
 import { ALL_DUNGEONS as __ALL_DUNGEONS } from './data/expansion.js';
 import { FIELD_DUNGEONS as __FIELD_DUNGEONS } from './data/open-fields.js';
@@ -45,6 +46,7 @@ import { playExpeditionIntro } from './expansion/cinematic.js';
 import { Wardrobe } from './expansion/wardrobe.jsx';
 import { JourneyService } from './game/journey-service.js';
 import { JourneyView } from './ui/journey.js';
+import { BountyView } from './ui/bounty.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
@@ -106,6 +108,7 @@ import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 import './ui/density.css';
 import './ui/density-hero.css';
 import './ui/density-result.css';
+import './ui/clear-loop.css';
 import './ui/density-panels.css';
 import './ui/density-shell.css';
 import './ui/density-hud.css';
@@ -210,6 +213,7 @@ class App {
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
     // 팁 로테이션 — 로딩 중에도 손이 배운다
+    const ratingEl = $('boot-rating'); if (ratingEl) ratingEl.textContent = ratingLabel();
     const tipEl = $('boot-tip'); let tipI = Math.floor(Math.random() * BOOT_TIPS.length);
     const showTip = () => { tipEl.classList.remove('on'); setTimeout(() => { tipEl.innerHTML = BOOT_TIPS[tipI++ % BOOT_TIPS.length]; tipEl.classList.add('on'); }, 450); };
     showTip(); this._tipTimer = setInterval(showTip, 3600);
@@ -233,6 +237,7 @@ class App {
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks, this.models);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
+    this.bountyView = new BountyView(this);
     this.arsenalView = new ArsenalView(this);
     this.endgameHub = new EndgameHubView(this);
     await this.showcaseHero(this.eco.s.selected, true);
@@ -277,6 +282,8 @@ class App {
     document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden) suspend(); if (!document.hidden) { this.last = performance.now(); audio.resume(); } });
     window.addEventListener('pagehide', suspend);
     window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
+    // 인앱 브라우저(WebView)는 앱 전환 뒤 제스처 없는 resume()을 막아 소리가 멈춘 채 남는다. 다음 터치·키 입력에서 다시 켠다(켜져 있으면 아무 일도 안 함).
+    for (const type of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(type, () => audio.resume(), { capture: true, passive: true });
     requestAnimationFrame((t) => this.loop(t));
   }
   /** 화면 흔들림: 직접 고른 값이 우선이고, 미선택이면 동작 줄이기 선호일 때만 기본 OFF 다. */
@@ -476,7 +483,13 @@ class App {
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     // 무한의 성: 넘겨받은 층이 지금 도전할 다음 층일 때만, 저장 상태로 다시 만든 정의로 출격한다(에너지 없음).
     const tower = stage?.tower ? this.eco.nextTowerStage() : null;
-    if (stage?.tower) {
+    // 현상금 의뢰: 저장에서 열림·미완료를 다시 확인해 만든 스테이지(에너지 0)로만 출격한다.
+    const bountyStart = stage?.bounty ? this.eco.startBounty(stage.bounty.id) : null;
+    if (stage?.bounty) {
+      if (this.account?.authority === 'server') { this.ui.toast('서버 계정의 현상금 의뢰는 준비 중입니다.', 'red'); return false; }
+      if (!bountyStart?.ok) { this.ui.toast('지금 받을 수 없는 의뢰입니다.', 'red'); return false; }
+      stage = bountyStart.stage;
+    } else if (stage?.tower) {
       if (!tower || tower.tower.floor !== stage.tower.floor || this.account?.authority === 'server') { this.ui.toast('지금 도전할 수 있는 층이 아닙니다.', 'red'); return false; }
       stage = tower;
     } else {
@@ -492,16 +505,23 @@ class App {
     }
     this.stageStarting = true;
     // 그 지역에 처음 들어가는 출격이면 입장 장면을 먼저 보여 준다(어느 진입 경로든 한 번, 건너뛰기 가능, docs/WORLD_BIBLE.md 5장).
-    if (!tower) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
+    if (!tower && !bountyStart) { try { await playSceneBeforeSortie(stage.ch, { track: (name, payload) => this.funnel?.track(name, payload) }); } catch { /* 장면 실패는 출격을 막지 않는다 */ } }
     this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
     try {
       // 무한의 성은 에너지를 쓰지 않으므로 실패 시 되돌릴 것도 없다(spent=false).
-      if (!tower) {
+      if (!tower && !bountyStart) {
         spent = this.eco.spendEnergy(stage.energy);
         if (!spent) {
           audio.play('ui_error');
+          // 현상금 의뢰판이 열려 있으면 에너지 0 활동으로 먼저 안내한다(리텐션 순간). 충전은 상점 메뉴에 그대로 있다.
+          const board = this.eco.bountySummary();
+          if (board.open && board.available > 0) {
+            const go = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 에너지 없이 받을 수 있는 현상금 의뢰가 ${board.available}건 있습니다. (충전은 상점에서)`, { ok: '의뢰판 열기', cancel: '닫기' });
+            if (go) { if (this.mode === 'battle') this.toLobby(); setTimeout(() => this.bountyView?.open(), 0); }
+            return false;
+          }
           const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
           if (ok) this.meta.openTab('shop', 'energy');
           return false;
@@ -704,5 +724,7 @@ try {
   window.__skillAimShape = playerSkillAimShape;
   // 전투 자세 QA(tools/combat-pose-qa.mjs)가 정식 빌드에서도 무기·방어구 노드 이름을 읽도록 읽기 전용 표만 노출한다.
   window.__LOOKS = LOOKS;
+  // 인앱 터치 QA(tools/qa/inapp-touch.mjs)가 첫 터치 뒤 소리 재개를 확인하도록 상태 문자열만 노출한다.
+  window.__audioState = () => audio.ctx?.state ?? 'none';
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));

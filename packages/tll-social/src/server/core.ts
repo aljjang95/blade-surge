@@ -224,13 +224,14 @@ export class SocialCore {
   private saveProfile(c: Ctx) {
     if (!c.keyHash) throw new SocialError('bad-key', 401);
     const body = object(c.req.body, ['name', 'hero']);
-    const name = this.cleanName(body.name);
     const hero = body.hero === undefined ? null : playerHero(body.hero);
     const now = this.d.now();
     const existing = this.one('SELECT p.* FROM player_keys k JOIN players p ON p.id = k.player_id WHERE k.key_hash = ?', c.keyHash);
+    // 같은 이름 재저장은 금칙어 검사를 다시 하지 않는다(금칙어 목록이 늘어도 기존 이름의 프로필 저장이 깨지지 않게).
+    if (existing && !existing.banned && existing.name === playerName(body.name)) return this.profile(existing);
+    const name = this.cleanName(body.name);
     if (existing) {
       if (existing.banned) throw new SocialError('banned', 403);
-      if (existing.name === name) return this.profile(existing);
       if (existing.renamed_at && now - existing.renamed_at < 24 * HOUR) throw new SocialError('rename-cooldown', 429, existing.renamed_at + 24 * HOUR - now);
       this.run('UPDATE players SET name = ?, tag = ?, renamed_at = ? WHERE id = ?', name, this.freeTag(name), now, existing.id);
       return this.profile(this.player(existing.id));
@@ -450,6 +451,27 @@ export class SocialCore {
     if (typeof playerId !== 'string' || !/^p_[0-9a-f]{24}$/.test(playerId)) throw new SocialError('bad-player', 400);
     const p = this.player(playerId);
     return p ? { createdAt: Number(p.created_at), banned: !!p.banned } : { createdAt: null, banned: false };
+  }
+  /**
+   * 게임 서버의 회원 탈퇴(Worker→DO 내부 전용). 기기 키·연동·친구·차단·모집·쪽지를 지우고 이름을 익명화한다.
+   * 플레이어 행과 id는 남긴다(게시글·명예의 전당 기록의 참조 유지). 없는 플레이어도 성공으로 본다(멱등).
+   */
+  internalDelete(playerId: unknown): { ok: true } {
+    if (typeof playerId !== 'string' || !/^p_[0-9a-f]{24}$/.test(playerId)) throw new SocialError('bad-player', 400);
+    this.tx(() => {
+      for (const [q, n] of [
+        ['DELETE FROM player_keys WHERE player_id = ?', 1], ['DELETE FROM account_links WHERE player_id = ?', 1],
+        ['DELETE FROM friends WHERE a = ? OR b = ?', 2], ['DELETE FROM friend_requests WHERE from_id = ? OR to_id = ?', 2],
+        ['DELETE FROM blocks WHERE owner = ? OR target = ?', 2], ['DELETE FROM listings WHERE host_id = ?', 1],
+        ['DELETE FROM dm_inbox WHERE to_id = ?', 1],
+      ] as const) this.run(q, ...Array(n).fill(playerId));
+      if (this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) this.run('DELETE FROM reserved_ids WHERE player_id = ?', playerId);
+      // (name, tag)는 고유하다. 'x'+번호(no)는 일반 숫자 태그와 겹치지 않아 누가 같은 이름을 써도 충돌하지 않는다.
+      // 가입 IP 해시·대표 영웅·명예 기록의 제공자 주체 해시도 지운다(기록 자체는 참조용으로 남김).
+      this.run("UPDATE players SET name = '탈퇴한 모험가', tag = 'x' || no, title_id = NULL, hero = NULL, created_ip_hash = NULL WHERE id = ?", playerId);
+      this.run('UPDATE clears SET subject_hash = NULL WHERE player_id = ?', playerId);
+    });
+    return { ok: true };
   }
   private reservedId(keyHash: string): string | null {
     if (!this.one("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = 'reserved_ids'")) return null;

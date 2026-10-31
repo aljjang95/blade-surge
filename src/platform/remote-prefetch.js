@@ -10,8 +10,10 @@ export const EARLY_GROUP = 'early-music';
 /** 초보자 마을 소품 GLB(약 4.1MB): 첫 로비 장면이 곧바로 쓰므로 보스 곡 묶음과 같이 로비 진입 때 받는다. */
 export const STARTER_VILLAGE_GROUP = 'starter-village';
 /** 로비에 들어오면 네트워크 종류와 상관없이(데이터 절약 모드만 제외) 바로 받는 묶음. */
-export const EARLY_GROUPS = Object.freeze([EARLY_GROUP, STARTER_VILLAGE_GROUP]);
-export const IDLE_GROUP_ORDER = Object.freeze(['heroes-t2', 'expeditions', 'avatars', 'arena', 'heroes-t3', 'cinematic', 'bgm-extra']);
+/** 장비 렌더 아이콘(약 2.8MB): 인벤토리·드랍 아이콘이 곧바로 쓴다. */
+export const ITEM_ICONS_GROUP = 'item-icons';
+export const EARLY_GROUPS = Object.freeze([EARLY_GROUP, STARTER_VILLAGE_GROUP, ITEM_ICONS_GROUP]);
+export const IDLE_GROUP_ORDER = Object.freeze(['heroes-t2', 'expeditions', 'weapons', 'ui-art', 'avatars', 'arena', 'heroes-t3', 'cinematic', 'bgm-extra']);
 
 export function connectionKind(nav = globalThis.navigator) {
   const c = nav?.connection;

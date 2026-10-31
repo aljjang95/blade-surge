@@ -1,5 +1,7 @@
 /* 장비 금고(docs/GEAR_OWNERSHIP_VAULT.md 6절). 가로 844×390에서 한 화면에 칸·꺼내기 버튼이 함께 보이게 한다. */
 .bag-bar .bag-vault { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 32px; padding: 3px 10px 3px 6px; border: 2px solid #ffd35a; border-radius: 10px; background: linear-gradient(180deg, #5b3b16, #3a250c); color: #fff0b3; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.bag-bar .bag-vault { position: relative; }
+.bag-bar .bag-vault .dot { top: -3px; right: -3px; }
 .bag-bar .bag-vault img { width: 22px; height: 22px; object-fit: contain; }
 .bag-bar .bag-vault b { color: #fff; }
 .bag-bar .bag-vault:focus-visible { outline: 3px solid #fff0b3; outline-offset: 2px; }
@@ -112,3 +114,6 @@
   .vault-actions .btn { min-width: 0; flex: 1 1 96px; }
   .vault-tabs button { font-size: 12px; padding: 3px 4px; }
 }
+
+/* 도감 탭 받을 보상 점(docs/RPG_ESSENTIALS.md E1): 글자 옆에 붙인다. */
+.vault-tabs .vault-tab-dot { position: static; display: inline-block; vertical-align: super; width: 7px; height: 7px; }

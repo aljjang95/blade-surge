@@ -17,7 +17,9 @@ export const SOCIAL_CONFIG = Object.freeze({
   completion: { titleId: 'conqueror', label: '전 지역 정복자' },
   dmFriendsOnly: true,
   chat: { maxLen: 120, minGapMs: 1200, burst: 5, burstWindowMs: 10000, history: 50 },
-  bannedWords: [],
+  // 공용 기본 목록(packages/tll-social filter.ts) 위에 얹는 게임 금칙어. 이름·일상 문장 안에 들어가는 낱말(보지·자지·꺼져·졸라·애비·dick 등)은 넣지 않는다(PR #450 리뷰).
+  // 등급분류 '부적절한 언어' 대응 — 채팅·이름·게시판에 같이 적용(docs/release/RATING_DECISION.md).
+  bannedWords: ['ㅅㅂ', 'ㅆㅂ', '씨빨', '씨바', '시바새', '쌍놈', '썅', '개세끼', 'ㅂㅅ', '븅신', '빙신', '지랄', 'ㅈㄹ', '존나', 'ㅈㄴ', '니애미', '느금마', '엠창', '미친놈', '미친년', '또라이', '좆까', 'motherfucker', 'nigger', 'faggot'],
   fame: { requireLinked: false },
 });
 export default SOCIAL_CONFIG;

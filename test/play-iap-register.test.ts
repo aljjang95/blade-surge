@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { EN_LISTINGS, buildDefinition, buildRequests, run, JSON_PATH } from '../tools/play-iap-register.mjs';
+import { EN_LISTINGS, buildDefinition, buildRequests, registerOnlyProducts, run, JSON_PATH } from '../tools/play-iap-register.mjs';
 import { IAP_PRODUCTS } from '../src/shared/iap-catalog.js';
 
 const sellable = IAP_PRODUCTS.filter((p: any) => p.enabled);
@@ -35,7 +35,7 @@ test('일회성은 PATCH + 활성화, 구독은 POST + basePlan 활성화이고 
       expect(bp.regionalConfigs[0].price).toEqual({ currencyCode: 'KRW', units: String(p.priceKRW) });
       expect(reqs.some((r: any) => r.path === `/subscriptions/${p.id}/basePlans/${p.basePlanId}:activate`)).toBe(true);
     } else {
-      const patch = reqs.find((r: any) => r.method === 'PATCH' && r.path === `/oneTimeProducts/${p.id}`);
+      const patch = reqs.find((r: any) => r.method === 'PATCH' && r.path === `/onetimeproducts/${p.id}`);
       expect(patch).toBeTruthy();
       expect(patch.query.allowMissing).toBe('true');
       expect(patch.body.purchaseOptions[0].regionalPricingAndAvailabilityConfigs[0].price).toEqual({ currencyCode: 'KRW', units: String(p.priceKRW) });
@@ -95,4 +95,18 @@ test('영웅 직접 판매(hero_*)는 dry-run 요청·정의·listing 어디에�
   expect(JSON.stringify(buildDefinition())).not.toMatch(/hero_/);
   expect(Object.keys(EN_LISTINGS).some((k) => k.startsWith('hero_'))).toBe(false);
   expect(out.requests.length).toBe(8);
+});
+
+test('register-only는 활성화 요청이 없고 보석 팩·성장 패키지를 비활성 등록하며 영웅·아바타·웹 전용은 뺀다', () => {
+  const reqs: any[] = buildRequests(IAP_PRODUCTS, { registerOnly: true });
+  const text = JSON.stringify(reqs);
+  expect(text).not.toContain(':activate');
+  expect(text).not.toContain('batchUpdateStates');
+  for (const id of ['remove_ads_v1', 'starter_pack_v1', 'monthly_card_v1', 'season_pass_s1', 'growth_pack_v1', 'gems_300_v1', 'gems_980_v1', 'gems_1980_v1']) expect(text).toContain(id);
+  expect(text).not.toContain('hero_');
+  expect(text).not.toContain('avatar_fullset');
+  expect(text).not.toContain('monthly_pass_v1');
+  expect(reqs.length).toBe(registerOnlyProducts().length);
+  const gem = reqs.find((r: any) => r.body.productId === 'gems_1980_v1');
+  expect(gem.body.purchaseOptions[0].regionalPricingAndAvailabilityConfigs[0].price.units).toBe('22000');
 });
