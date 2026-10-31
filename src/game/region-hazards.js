@@ -137,6 +137,8 @@ export const hazardFragmentShader = `
     gl_FragColor=vec4(c,opacity*(.18+edge*(.62+urgent*.3)+stripe*.12+fill*.2+front*.45+fired*.15));
   }`;
 
+export const HAZARD_AUTO = Object.freeze({ margin: .45, out: 1.1 });
+
 export class RegionHazards {
   constructor(game) {
     this.game = game; this.rule = RULES[game.stage.chapter.theme];
@@ -178,6 +180,38 @@ export class RegionHazards {
       u.fired.value = 0; u.opacity.value = .8; u.progress.value = 0;
     }
     if (this.triggered === 1 || room.type === 'boss') g.ui.toast(CONCEPT_HAZARD_TOASTS[g.stage.expedition?.id] || this.rule.name, 'red');
+  }
+  /** AUTO 회피(3장 지연 기록 원판만): 영웅이 아직 터지지 않은 원판(반경 + 여유) 안에 있으면 모든 대기 원판 밖의 가까운 지점과 남은 시간을 돌려준다.
+   *  3-5 실측에서 원판이 받은 피해의 40~52%였다 — AUTO 는 예고를 보지 않고 제자리에서 쳤다. 원판 두 개가 4칸 떨어져 겹칠 수 있어
+   *  가장 이른 원판 반대쪽부터 여덟 방향을 돌며 다른 원판에도 안 걸리는 첫 지점을 고른다. 고정 객체 재사용(프레임 할당 없음). */
+  autoEscape(p, out = this._escape || (this._escape = { x: 0, z: 0, left: 0, need: 0 })) {
+    if (!p || this.game.stage?.chapter?.theme !== 'frost') return null;
+    let best = null, left = Infinity;
+    for (const s of this.slots) {
+      const h = s.hazard;
+      if (!h || h.type !== 'disk' || s.age >= h.delay) continue;
+      if (Math.hypot(p.pos.x - h.x, p.pos.z - h.z) >= h.radius + HAZARD_AUTO.margin) continue;
+      const t = h.delay - s.age;
+      if (t < left) { left = t; best = h; }
+    }
+    if (!best) return null;
+    const dx = p.pos.x - best.x, dz = p.pos.z - best.z, l = Math.hypot(dx, dz);
+    const base = l > 1e-3 ? Math.atan2(dz, dx) : Math.atan2(-Math.cos(p.yaw || 0), -Math.sin(p.yaw || 0));
+    const r = best.radius + HAZARD_AUTO.out;
+    for (let k = 0; k < 8; k++) {
+      const a = base + (k ? Math.ceil(k / 2) * (k % 2 ? 1 : -1) * Math.PI / 4 : 0);
+      const x = best.x + Math.cos(a) * r, z = best.z + Math.sin(a) * r;
+      let clear = true;
+      for (const s of this.slots) {
+        const h = s.hazard;
+        if (!h || h === best || h.type !== 'disk' || s.age >= h.delay) continue;
+        if (Math.hypot(x - h.x, z - h.z) < h.radius + HAZARD_AUTO.margin) { clear = false; break; }
+      }
+      if (!clear && k < 7) continue;
+      out.x = x; out.z = z; out.left = left; out.need = Math.hypot(x - p.pos.x, z - p.pos.z) - (HAZARD_AUTO.out - HAZARD_AUTO.margin);
+      return out;
+    }
+    return null;
   }
   getPartyWarnings() {
     return this.slots.flatMap((s, i) => {

@@ -12,6 +12,7 @@ import { HeroBeacon } from './hero-beacon.js';
 import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
+import { burrowEscape } from './burrow.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
 import { FEEL, attackBlend, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, heroRunTempo } from './feel.js';
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
@@ -741,6 +742,29 @@ export class Player extends Actor {
       if (sl > .3) {
         out.x = sx / sl; out.y = sz / sl;
         if (this.state === 'attack' && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+        return out;
+      }
+    }
+    // 잠복 예고 원(솟구침 0.75초 전) 안이면 공격보다 먼저 원 밖으로 나간다. 걸어서 못 나갈 만큼 남은 시간이 짧으면 그 방향으로 구른다.
+    // 공격 동작 중이면 타격 뒤(또는 지금 캔슬 가능한 프레임)에 끊는다 — 쇳물 회피와 같은 규칙.
+    const burrowOut = burrowEscape(this, list, this._burrowOut || (this._burrowOut = { x: 0, z: 0, left: 0, need: 0 }));
+    if (burrowOut && (this.state !== 'attack' || this.hitDone || this.canDodgeCancel())) {
+      const bx = burrowOut.x - this.pos.x, bz = burrowOut.z - this.pos.z, bl = Math.hypot(bx, bz);
+      if (bl > .3) {
+        out.x = bx / bl; out.y = bz / bl;
+        const walk = burrowOut.need / Math.max(1, this.stats?.spd || 6);
+        if ((this.dodgeCd || 0) <= 0 && !(this.invuln > 0) && (this.state === 'attack' || walk + .12 > burrowOut.left)) this.game.input.press('dodge');
+        return out;
+      }
+    }
+    // 3장 지연 기록 원판(1.7초 예고)도 같은 규칙으로 원판 밖으로 나간다.
+    const frostOut = this.game.hazards?.autoEscape?.(this);
+    if (frostOut && (this.state !== 'attack' || this.hitDone || this.canDodgeCancel())) {
+      const fx = frostOut.x - this.pos.x, fz = frostOut.z - this.pos.z, fl = Math.hypot(fx, fz);
+      if (fl > .3) {
+        out.x = fx / fl; out.y = fz / fl;
+        const walk = Math.max(0, frostOut.need) / Math.max(1, this.stats?.spd || 6);
+        if ((this.dodgeCd || 0) <= 0 && !(this.invuln > 0) && (this.state === 'attack' || walk + .12 > frostOut.left)) this.game.input.press('dodge');
         return out;
       }
     }

@@ -17,6 +17,8 @@ const stages = opt('stages', '1-10,2-1,2-2').split(',').filter(Boolean);
 const levels = opt('levels', '6,8,10,12').split(',').map(Number);
 const seeds = Number(opt('seeds', 3));
 const hero = opt('hero', '');
+// --gear=N|S|E|U|L: 네 칸에 그 등급 장비(장비 레벨 = 그 관문까지 깬 진행 기준)를 끼운다. 3장 이후는 레벨만으로 권장에 닿지 않는다(3-1 Lv26 = 0.76배).
+const gear = opt('gear', '');
 const tag = opt('tag', 'sweep');
 const concurrency = Math.max(1, Number(opt('concurrency', 2)));
 const maxGameS = Number(opt('max-s', 600));
@@ -48,19 +50,20 @@ async function runOne(job) {
     }, { hero });
     await page.locator('#boot-start').tap({ force: true });
     await page.waitForFunction(() => window.app?.mode === 'lobby', null, { timeout: 180000 });
-    const pre = await page.evaluate(({ ch, st, level, seed }) => {
+    const pre = await page.evaluate(({ ch, st, level, seed, gear }) => {
       const a = window.app, e = a.eco;
       a.testPause = true; a.ui.closeModal();
       e.s.energy = 9999; e.s.tutorial = { completed: true };
       e.s.progress.unlocked = Math.max(e.s.progress.unlocked, e.stageIndex(ch, st));
       const h = e.hero(e.s.selected); h.level = level; h.exp = 0;
+      if (gear) { for (const slot of ['weapon', 'armor', 'ring', 'boots']) { const it = e.addItem(gear, slot, Math.random, 0, e.s.selected); e.equip(e.s.selected, it.uid); } }
       e.save();
       a.journey.s.autoBattle = true;
       let state = seed >>> 0;
       Math.random = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
       return { heroId: e.s.selected, power: e.heroPower(e.s.selected), stats: e.heroBuildStats(e.s.selected) };
-    }, { ch, st, level: job.level, seed: job.seed });
-    row.heroId = pre.heroId; row.power = pre.power; row.atk = pre.stats.atk; row.hp = pre.stats.hp; row.def = pre.stats.def;
+    }, { ch, st, level: job.level, seed: job.seed, gear });
+    row.gear = gear || null; row.heroId = pre.heroId; row.power = pre.power; row.atk = pre.stats.atk; row.hp = pre.stats.hp; row.def = pre.stats.def;
     const started = await page.evaluate(({ ch, st }) => window.app.startStage({ ch, st }), { ch, st });
     if (started === false) throw Error('출격 실패');
     await page.waitForFunction(() => window.app.battle?.active && !window.app.stageStarting && !!window.app.battle.player, null, { timeout: 180000 });
@@ -93,13 +96,19 @@ async function runOne(job) {
           if (!P.alive) return { active: b.active, dead: true, elapsed: b.elapsed };
           try { globalThis.__metricsDriver.step(1 / 60, false); }
           catch (err) { pauseError = String(err.message) + ' reasons=' + [...b.pauseReasons].join('|'); break; }
-          if (b.elapsed > maxGameS) return { active: true, timeout: true, elapsed: b.elapsed };
+          if (b.elapsed > maxGameS) {
+            // 시간 초과 진단: 남은 적·영웅 상태(어디서 왜 멈췄는지).
+            const r2 = (v) => Math.round(v * 10) / 10;
+            const stuck = { hero: { x: r2(P.pos.x), z: r2(P.pos.z), state: P.state }, enemies: (b.enemies || []).filter((e) => e.alive).slice(0, 8)
+              .map((e) => ({ id: e.runtimeSpeciesId || e.def?.id, x: r2(e.pos.x), z: r2(e.pos.z), spawning: !!e.spawning, burrow: e.burrow?.phase || null, state: e.state })) };
+            return { active: true, timeout: true, elapsed: b.elapsed, stuck };
+          }
         }
         return { active: b.active, pauseError, elapsed: b.elapsed, win: b.result?.win ?? null, rooms: b.roomsCleared | 0 };
       }, maxGameS);
       if (s.pauseError) { row.status = 'paused-blocked'; row.pauseError = s.pauseError; break; }
       if (s.dead) { row.status = 'lost'; row.elapsed = Math.round(s.elapsed); break; }
-      if (s.timeout) { row.status = 'timeout'; row.elapsed = Math.round(s.elapsed); break; }
+      if (s.timeout) { row.status = 'timeout'; row.elapsed = Math.round(s.elapsed); row.stuck = s.stuck; break; }
       if (!s.active) { row.status = s.win === false ? 'lost' : 'win'; row.elapsed = Math.round(s.elapsed); break; }
     }
     const out = await page.evaluate(() => {
@@ -114,7 +123,7 @@ async function runOne(job) {
       .map(([k, s]) => ({ src: k, pct: +(s.dmg / total * 100).toFixed(1), hits: s.hits, avg: Math.round(s.dmg / s.hits) }));
   } catch (err) { row.status = 'error'; row.error = String(err.message).slice(0, 300); }
   finally { await context.close().catch(() => {}); await browser.close().catch(() => {}); }
-  console.log(JSON.stringify({ code: row.code, lv: row.level, seed: row.seed, ratio: row.ratio, status: row.status, t: row.elapsed, rooms: row.rooms, minHp: row.minHp, boss: row.bossHpLeft, dmgX: row.dmgPerMaxHp, top: row.sources?.slice(0, 3).map((s) => s.src + ' ' + s.pct + '%'), err: row.error }));
+  console.log(JSON.stringify({ code: row.code, lv: row.level, seed: row.seed, ratio: row.ratio, status: row.status, t: row.elapsed, rooms: row.rooms, minHp: row.minHp, boss: row.bossHpLeft, dmgX: row.dmgPerMaxHp, top: row.sources?.slice(0, 3).map((s) => s.src + ' ' + s.pct + '%'), err: row.error, stuck: row.stuck }));
   return row;
 }
 
